@@ -9,14 +9,18 @@ Regenerate from the repository root with:
     uv run --locked --script engine/tests/fixtures/generate.py
 
 The scheduler matches the engine's configuration: default parameters, desired
-retention 0.9, no learning or relearning steps, no fuzzing.
+retention 0.9, no learning or relearning steps. "sequences" are run without
+fuzzing; "fuzzed_sequences" run the same steps with fuzzing, its draws taken from
+a seeded source, and record the factor each review drew.
 """
 
 import json
+import random
 from datetime import datetime, timedelta, timezone
 from importlib.metadata import version
 from pathlib import Path
 
+import fsrs.scheduler
 from fsrs import Card, Rating, Scheduler
 
 START = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -74,8 +78,32 @@ SEQUENCES = {
 }
 
 
-def run(steps):
-    scheduler = Scheduler(learning_steps=(), relearning_steps=(), enable_fuzzing=False)
+# Each sequence is fuzzed once with each of these seeds.
+FUZZ_SEEDS = (1, 2)
+
+
+class Draws:
+    """Stands in for the `random()` py-fsrs fuzzes with: seeded, and keeping each draw."""
+
+    def __init__(self, seed):
+        self._source = random.Random(seed)
+        self.drawn = []
+
+    def __call__(self):
+        value = self._source.random()
+        self.drawn.append(value)
+        return value
+
+
+def run(steps, seed=None):
+    draws = None
+    if seed is not None:
+        draws = Draws(seed)
+        # `Scheduler._get_fuzzed_interval` calls the `random` its module imported.
+        fsrs.scheduler.random = draws
+    scheduler = Scheduler(
+        learning_steps=(), relearning_steps=(), enable_fuzzing=seed is not None
+    )
     card = Card(card_id=1, due=START)
     at = START
     reviews = []
@@ -87,9 +115,17 @@ def run(steps):
             if card.last_review is not None
             else None
         )
+        drawn_before = len(draws.drawn) if draws else 0
         card, _ = scheduler.review_card(card, rating, review_datetime=at)
+        step = {}
+        if draws:
+            # py-fsrs draws once for an interval it fuzzes and not at all otherwise.
+            step["fuzz_factor"] = (
+                draws.drawn[-1] if len(draws.drawn) > drawn_before else None
+            )
         reviews.append(
-            {
+            step
+            | {
                 "rating": int(rating),
                 "at": int(at.timestamp()),
                 "retrievability": retrievability,
@@ -107,6 +143,11 @@ def main():
         "generator": f"py-fsrs {version('fsrs')}",
         "sequences": [
             {"name": name, "reviews": run(steps)} for name, steps in SEQUENCES.items()
+        ],
+        "fuzzed_sequences": [
+            {"name": name, "seed": seed, "reviews": run(steps, seed)}
+            for name, steps in SEQUENCES.items()
+            for seed in FUZZ_SEEDS
         ],
     }
     out = Path(__file__).with_name("reference.json")

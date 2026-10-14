@@ -35,13 +35,15 @@ pub enum Error {
     },
 }
 
-/// A floating-point quantity of a memory state.
+/// A floating-point quantity the engine takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Quantity {
     /// Stability: at least 0.001 days.
     Stability,
     /// Difficulty: from 1 to 10.
     Difficulty,
+    /// Fuzz factor: from 0, inclusive, to 1, exclusive.
+    FuzzFactor,
 }
 
 impl fmt::Display for Error {
@@ -202,6 +204,34 @@ impl MemoryState {
     }
 }
 
+/// The draw that picks a fuzzed interval within its range, as py-fsrs's `random()` does.
+///
+/// The engine draws nothing itself: the caller supplies the factor and keeps it, so a
+/// review computed again with the same factor falls due at the same time.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FuzzFactor(f64);
+
+impl FuzzFactor {
+    /// Accepts a value from 0, inclusive, to 1, exclusive.
+    pub fn new(value: f64) -> Result<FuzzFactor, Error> {
+        if !value.is_finite() {
+            Err(Error::NonFinite(Quantity::FuzzFactor))
+        } else if !(0.0..1.0).contains(&value) {
+            Err(Error::OutOfRange {
+                quantity: Quantity::FuzzFactor,
+                value,
+            })
+        } else {
+            Ok(FuzzFactor(value))
+        }
+    }
+
+    /// The factor, from 0, inclusive, to 1, exclusive.
+    pub fn value(&self) -> f64 {
+        self.0
+    }
+}
+
 fn check(quantity: Quantity, value: f64, min: f64, max: f64) -> Result<(), Error> {
     if !value.is_finite() {
         Err(Error::NonFinite(quantity))
@@ -213,10 +243,14 @@ fn check(quantity: Quantity, value: f64, min: f64, max: f64) -> Result<(), Error
 }
 
 /// Reviews a card, or a new card when `state` is `None`, and returns its new state and due time.
+///
+/// With a `fuzz` factor, an interval of at least 2.5 days is spread as py-fsrs fuzzes it;
+/// without one, the interval is not fuzzed. The state is the same either way.
 pub fn review(
     state: Option<&MemoryState>,
     rating: Rating,
     now: Timestamp,
+    fuzz: Option<FuzzFactor>,
 ) -> Result<(MemoryState, Timestamp), Error> {
     let (stability, difficulty) = match state {
         None => (
@@ -242,13 +276,20 @@ pub fn review(
         difficulty,
         last_review: now,
     };
-    Ok((next, now.plus_days(fsrs::interval_days(stability))))
+    let days = fsrs::interval_days(stability);
+    let days = match fuzz {
+        Some(fuzz) => fsrs::fuzzed_interval_days(days, fuzz.0),
+        None => days,
+    };
+    Ok((next, now.plus_days(days)))
 }
 
 /// Replays a history, in the order the reviews happened, into the card's state; `None` when empty.
+///
+/// Fuzz moves only due times, never a state, so the history carries no fuzz factor.
 pub fn replay(history: &[Review]) -> Result<Option<MemoryState>, Error> {
     history.iter().try_fold(None, |state, step| {
-        review(state.as_ref(), step.rating, step.at).map(|(next, _)| Some(next))
+        review(state.as_ref(), step.rating, step.at, None).map(|(next, _)| Some(next))
     })
 }
 

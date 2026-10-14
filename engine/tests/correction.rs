@@ -21,10 +21,10 @@ fn flipping_the_last_good_to_again_equals_reviewing_fresh_with_again() {
     assert_eq!(last.rating, Rating::Good);
 
     let reviewed = replay(earlier).expect("history is in order");
-    let fresh_again = review(reviewed.as_ref(), Rating::Again, last.at)
+    let fresh_again = review(reviewed.as_ref(), Rating::Again, last.at, None)
         .expect("review is after the last")
         .0;
-    let fresh_good = review(reviewed.as_ref(), Rating::Good, last.at)
+    let fresh_good = review(reviewed.as_ref(), Rating::Good, last.at, None)
         .expect("review is after the last")
         .0;
 
