@@ -38,13 +38,7 @@ struct Expected {
 }
 
 fn rating(value: u8) -> Rating {
-    match value {
-        1 => Rating::Again,
-        2 => Rating::Hard,
-        3 => Rating::Good,
-        4 => Rating::Easy,
-        other => panic!("fixture rating {other} is not an FSRS rating"),
-    }
+    Rating::try_from(value).expect("fixture rating is an FSRS rating")
 }
 
 fn assert_close(what: &str, actual: f64, expected: f64) {
@@ -79,13 +73,16 @@ fn every_fixture_review_matches_py_fsrs() {
                 (None, None) => {}
                 (Some(previous), Some(reference)) => assert_close(
                     &format!("{what} retrievability"),
-                    previous.retrievability(at),
+                    previous
+                        .retrievability(at)
+                        .expect("review is not before the last"),
                     reference,
                 ),
                 _ => panic!("{what}: retrievability is present on one side only"),
             }
 
-            let (next, due) = review(state.as_ref(), rating(expected.rating), at);
+            let (next, due) = review(state.as_ref(), rating(expected.rating), at)
+                .expect("fixture reviews are in order");
             assert_close(
                 &format!("{what} stability"),
                 next.stability(),
@@ -115,7 +112,7 @@ fn every_fixture_review_matches_py_fsrs() {
                 at: Timestamp(step.at),
             })
             .collect();
-        assert_eq!(replay(&history), state, "{} replay", sequence.name);
+        assert_eq!(replay(&history), Ok(state), "{} replay", sequence.name);
     }
     println!(
         "checked {checked} reviews in {} sequences from {}",

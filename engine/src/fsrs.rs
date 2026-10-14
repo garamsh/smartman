@@ -11,9 +11,9 @@ const W: [f64; 21] = [
 const DESIRED_RETENTION: f64 = 0.9;
 const MAXIMUM_INTERVAL_DAYS: u32 = 36_500;
 
-const STABILITY_MIN: f64 = 0.001;
-const DIFFICULTY_MIN: f64 = 1.0;
-const DIFFICULTY_MAX: f64 = 10.0;
+pub(crate) const STABILITY_MIN: f64 = 0.001;
+pub(crate) const DIFFICULTY_MIN: f64 = 1.0;
+pub(crate) const DIFFICULTY_MAX: f64 = 10.0;
 
 fn decay() -> f64 {
     -W[20]
