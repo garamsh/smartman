@@ -57,6 +57,7 @@ test:
 	echo "ran the tests flutter test selects by default: app/test/**/*_test.dart"
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
+	./supabase/test-db.sh
 
 build:
 	cd app && flutter build apk --debug $(APP_CONFIG) && \

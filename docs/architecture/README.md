@@ -26,6 +26,7 @@ Current architecture of the system and the decisions behind it. This file is the
 - `account.md` — the `account` domain: Google sign-in through Supabase Auth, the session, and the configuration it reads from `app/config/`.
 - `design.md` — the app's design language: the principles every screen follows, where each is applied today, and the shared light and dark theme.
 - `study.md` — the `study` domain: the study session over one or more decks, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
+- `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, and the pgTAP tests `make test` runs.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
 - `adr/0002-domain-public-surface-and-shared-database.md` — declare a domain's surface in one library file, and keep the drift database below the domains.
 - `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz.
@@ -35,5 +36,6 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0007-study-swipe-screen-and-session-toggle.md` — answer by swiping a split card, keep every session answer in a toggleable stack, and reschedule a toggle by replaying the card's session answers; supersedes ADR 0005's screen and correction rules.
 - `adr/0008-google-sign-in-nonce.md` — send Google sign-in a nonce drawn once per run, its SHA-256 hex to Google and the raw value to Supabase, superseding ADR 0006's "No nonce is sent".
 - `adr/0009-multi-deck-session-and-random-queue-order.md` — study a non-empty selection of decks in one session, with a header count and a "study all" action, and draw the queue's order and the re-show gap from one seeded random source; supersedes ADR 0005's queue order, re-show gap and single-deck entry point.
+- `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence drawn under a per-user lock, composite foreign keys between a user's rows, and pgTAP tests in `make test`.
 - `adr/0011-shared-app-theme-bundled-font-and-today-builder.md` — draw every screen from one shared light and dark theme with a bundled IBM Plex Sans KR, chosen per device, and show study's counts in deck screens through one builder provider; supersedes ADR 0009's header provider and ADR 0007's study colour constants.
 - `adr/0000-template.md` — the template every ADR is written from.
