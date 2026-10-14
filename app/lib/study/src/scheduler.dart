@@ -16,12 +16,22 @@ class Scheduler {
   }
 
   /// The state of a card in [state] (null for a new card) after [answer] at
-  /// [at]. The engine counts time in whole seconds, so [at] is truncated.
-  Future<CardState> review(CardState? state, Answer answer, DateTime at) async {
+  /// [at], its interval fuzzed by [fuzz]. The engine counts time in whole
+  /// seconds, so [at] is truncated.
+  Future<CardState> review(
+    CardState? state,
+    Answer answer,
+    DateTime at, {
+    required FuzzFactor fuzz,
+  }) async {
     final seconds = _toSeconds(at);
     try {
       final scheduled = state == null
-          ? await reviewNewCard(answer: answer, at: seconds)
+          ? await reviewNewCard(
+              answer: answer,
+              at: seconds,
+              fuzzFactor: fuzz.value,
+            )
           : await reviewCard(
               state: MemoryStateParts(
                 stability: state.stability,
@@ -30,6 +40,7 @@ class Scheduler {
               ),
               answer: answer,
               at: seconds,
+              fuzzFactor: fuzz.value,
             );
       return CardState(
         stability: scheduled.state.stability,

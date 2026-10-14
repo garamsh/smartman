@@ -47,12 +47,14 @@ pub struct ReviewRecord {
     pub at: i64,
 }
 
-/// A floating-point quantity of a memory state.
+/// A floating-point quantity the engine takes.
 pub enum Quantity {
     /// Stability: at least 0.001 days.
     Stability,
     /// Difficulty: from 1 to 10.
     Difficulty,
+    /// Fuzz factor: from 0, inclusive, to 1, exclusive.
+    FuzzFactor,
 }
 
 /// Why the engine refused its input; one variant per engine `Error` variant.
@@ -83,22 +85,35 @@ pub enum EngineError {
     },
 }
 
-/// Reviews a new card for the first time.
-pub fn review_new_card(answer: Answer, at: i64) -> Result<Scheduled, EngineError> {
-    scheduled(engine::review(None, answer.into(), engine::Timestamp(at))?)
+/// Reviews a new card for the first time, its interval fuzzed by `fuzz_factor`, a value in
+/// `[0, 1)`, or not fuzzed when it is `None`.
+pub fn review_new_card(
+    answer: Answer,
+    at: i64,
+    fuzz_factor: Option<f64>,
+) -> Result<Scheduled, EngineError> {
+    scheduled(engine::review(
+        None,
+        answer.into(),
+        engine::Timestamp(at),
+        fuzz(fuzz_factor)?,
+    )?)
 }
 
-/// Reviews a card whose state the app persisted as `state`.
+/// Reviews a card whose state the app persisted as `state`, its interval fuzzed by
+/// `fuzz_factor`, a value in `[0, 1)`, or not fuzzed when it is `None`.
 pub fn review_card(
     state: MemoryStateParts,
     answer: Answer,
     at: i64,
+    fuzz_factor: Option<f64>,
 ) -> Result<Scheduled, EngineError> {
     let state = engine::MemoryState::try_from(state)?;
     scheduled(engine::review(
         Some(&state),
         answer.into(),
         engine::Timestamp(at),
+        fuzz(fuzz_factor)?,
     )?)
 }
 
@@ -111,6 +126,10 @@ pub fn replay(history: Vec<ReviewRecord>) -> Result<Option<MemoryStateParts>, En
 /// Probability of recall at `at` of a card whose state the app persisted as `state`.
 pub fn retrievability(state: MemoryStateParts, at: i64) -> Result<f64, EngineError> {
     Ok(engine::MemoryState::try_from(state)?.retrievability(engine::Timestamp(at))?)
+}
+
+fn fuzz(factor: Option<f64>) -> Result<Option<engine::FuzzFactor>, engine::Error> {
+    factor.map(engine::FuzzFactor::new).transpose()
 }
 
 fn scheduled(
@@ -173,6 +192,7 @@ impl From<engine::Quantity> for Quantity {
         match quantity {
             engine::Quantity::Stability => Quantity::Stability,
             engine::Quantity::Difficulty => Quantity::Difficulty,
+            engine::Quantity::FuzzFactor => Quantity::FuzzFactor,
         }
     }
 }

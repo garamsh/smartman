@@ -27,8 +27,9 @@ class _InstantScheduler implements Scheduler {
   Future<CardState> review(
     CardState? state,
     Answer answer,
-    DateTime at,
-  ) async => CardState(
+    DateTime at, {
+    required FuzzFactor fuzz,
+  }) async => CardState(
     stability: 1,
     difficulty: 5,
     lastReview: at,
@@ -144,6 +145,7 @@ Future<_Study> _open(
             answer: Answer.know,
             reviewedAt: states[name]!.lastReview,
             duration: Duration.zero,
+            fuzzFactor: FuzzFactor.draw(FirstDraw()),
           ),
         ], states[name]!);
       }

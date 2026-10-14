@@ -174,10 +174,16 @@ fn wire__crate__api__engine__review_card_impl(
             let api_state = <crate::api::engine::MemoryStateParts>::sse_decode(&mut deserializer);
             let api_answer = <crate::api::engine::Answer>::sse_decode(&mut deserializer);
             let api_at = <i64>::sse_decode(&mut deserializer);
+            let api_fuzz_factor = <Option<f64>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::engine::EngineError>((move || {
-                    let output_ok = crate::api::engine::review_card(api_state, api_answer, api_at)?;
+                    let output_ok = crate::api::engine::review_card(
+                        api_state,
+                        api_answer,
+                        api_at,
+                        api_fuzz_factor,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -208,10 +214,12 @@ fn wire__crate__api__engine__review_new_card_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_answer = <crate::api::engine::Answer>::sse_decode(&mut deserializer);
             let api_at = <i64>::sse_decode(&mut deserializer);
+            let api_fuzz_factor = <Option<f64>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::engine::EngineError>((move || {
-                    let output_ok = crate::api::engine::review_new_card(api_answer, api_at)?;
+                    let output_ok =
+                        crate::api::engine::review_new_card(api_answer, api_at, api_fuzz_factor)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -318,6 +326,17 @@ impl SseDecode for crate::api::engine::MemoryStateParts {
     }
 }
 
+impl SseDecode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<f64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::engine::MemoryStateParts> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -338,6 +357,7 @@ impl SseDecode for crate::api::engine::Quantity {
         return match inner {
             0 => crate::api::engine::Quantity::Stability,
             1 => crate::api::engine::Quantity::Difficulty,
+            2 => crate::api::engine::Quantity::FuzzFactor,
             _ => unreachable!("Invalid variant for Quantity: {}", inner),
         };
     }
@@ -504,6 +524,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::engine::Quantity {
         match self {
             Self::Stability => 0.into_dart(),
             Self::Difficulty => 1.into_dart(),
+            Self::FuzzFactor => 2.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -644,6 +665,16 @@ impl SseEncode for crate::api::engine::MemoryStateParts {
     }
 }
 
+impl SseEncode for Option<f64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <f64>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::engine::MemoryStateParts> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -661,6 +692,7 @@ impl SseEncode for crate::api::engine::Quantity {
             match self {
                 crate::api::engine::Quantity::Stability => 0,
                 crate::api::engine::Quantity::Difficulty => 1,
+                crate::api::engine::Quantity::FuzzFactor => 2,
                 _ => {
                     unimplemented!("");
                 }

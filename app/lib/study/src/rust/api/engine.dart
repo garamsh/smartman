@@ -9,24 +9,33 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'engine.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `scheduled`
+// These functions are ignored because they are not marked as `pub`: `fuzz`, `scheduled`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `try_from`
 
-/// Reviews a new card for the first time.
+/// Reviews a new card for the first time, its interval fuzzed by `fuzz_factor`, a value in
+/// `[0, 1)`, or not fuzzed when it is `None`.
 Future<Scheduled> reviewNewCard({
   required Answer answer,
   required PlatformInt64 at,
-}) => RustLib.instance.api.crateApiEngineReviewNewCard(answer: answer, at: at);
+  double? fuzzFactor,
+}) => RustLib.instance.api.crateApiEngineReviewNewCard(
+  answer: answer,
+  at: at,
+  fuzzFactor: fuzzFactor,
+);
 
-/// Reviews a card whose state the app persisted as `state`.
+/// Reviews a card whose state the app persisted as `state`, its interval fuzzed by
+/// `fuzz_factor`, a value in `[0, 1)`, or not fuzzed when it is `None`.
 Future<Scheduled> reviewCard({
   required MemoryStateParts state,
   required Answer answer,
   required PlatformInt64 at,
+  double? fuzzFactor,
 }) => RustLib.instance.api.crateApiEngineReviewCard(
   state: state,
   answer: answer,
   at: at,
+  fuzzFactor: fuzzFactor,
 );
 
 /// Replays a history, in the order the reviews happened, into the card's state; `None` when empty.
@@ -114,13 +123,16 @@ class MemoryStateParts {
           lastReview == other.lastReview;
 }
 
-/// A floating-point quantity of a memory state.
+/// A floating-point quantity the engine takes.
 enum Quantity {
   /// Stability: at least 0.001 days.
   stability,
 
   /// Difficulty: from 1 to 10.
   difficulty,
+
+  /// Fuzz factor: from 0, inclusive, to 1, exclusive.
+  fuzzFactor,
 }
 
 /// One review in a card's history.

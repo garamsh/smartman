@@ -47,6 +47,12 @@ class Reviews extends Table {
   DateTimeColumn get reviewedAt => dateTime()();
   IntColumn get durationMs => integer()();
 
+  /// The fuzz factor the review was scheduled with; null for a review written
+  /// before schema v3, which was scheduled without fuzz.
+  RealColumn get fuzzFactor => real().nullable().check(
+    const CustomExpression('fuzz_factor >= 0 AND fuzz_factor < 1'),
+  )();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -72,13 +78,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: stepByStep(
       from1To2: (m, schema) async {
         await m.createTable(schema.cardStates);
+      },
+      from2To3: (m, schema) async {
+        await m.addColumn(schema.reviews, schema.reviews.fuzzFactor);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.
