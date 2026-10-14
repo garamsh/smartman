@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+
+import '../../deck/deck.dart';
+import '../../shared/l10n/app_localizations.dart';
+import 'study_style.dart';
+
+/// A card side's content blocks, in order, each through its block widget.
+///
+/// With [maxLines], the blocks run together as one paragraph cut to that many
+/// lines with an ellipsis.
+class ContentView extends StatelessWidget {
+  const ContentView(this.blocks, {super.key, this.style, this.maxLines});
+
+  final List<Content> blocks;
+  final TextStyle? style;
+  final int? maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (maxLines case final maxLines?) {
+      return Text.rich(
+        TextSpan(
+          children: [
+            for (final (index, block) in blocks.indexed) ...[
+              if (index > 0) const TextSpan(text: '\n'),
+              _span(l10n, block),
+            ],
+          ],
+        ),
+        style: style,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: StudyStyle.blockGap,
+      children: [
+        for (final block in blocks)
+          switch (block) {
+            TextContent(:final text) => Text(text, style: style),
+            UnsupportedContent(:final type) => _UnsupportedBlock(
+              label: l10n.unsupportedContent(type),
+            ),
+          },
+      ],
+    );
+  }
+
+  InlineSpan _span(AppLocalizations l10n, Content block) => switch (block) {
+    TextContent(:final text) => TextSpan(text: text),
+    UnsupportedContent(:final type) => TextSpan(
+      text: l10n.unsupportedContent(type),
+      style: const TextStyle(fontStyle: FontStyle.italic),
+    ),
+  };
+}
+
+/// The labelled placeholder for a block this version cannot show.
+class _UnsupportedBlock extends StatelessWidget {
+  const _UnsupportedBlock({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outline),
+        borderRadius: BorderRadius.circular(StudyStyle.blockGap),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(StudyStyle.blockGap),
+        child: Row(
+          spacing: StudyStyle.blockGap,
+          children: [
+            Icon(Icons.help_outline, color: theme.colorScheme.onSurfaceVariant),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

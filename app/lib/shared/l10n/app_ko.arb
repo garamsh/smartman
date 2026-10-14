@@ -76,19 +76,47 @@
   "@delete": {"description": "Confirms a deletion."},
   "study": "학습",
   "@study": {"description": "Button on a deck that starts a study session."},
-  "know": "알아요",
-  "@know": {"description": "Answer button: the user knew the card."},
-  "dontKnow": "몰라요",
-  "@dontKnow": {"description": "Answer button: the user did not know the card."},
-  "previousCard": "이전 카드",
-  "@previousCard": {"description": "Heading of the panel showing the card answered just before."},
-  "correctToDontKnow": "탭하면 '몰라요'로 고칩니다",
-  "@correctToDontKnow": {"description": "Hint on the previous-card panel: tapping it changes a Know answer to Don't know."},
-  "previousCardSemantics": "이전 카드. 앞면: {front}. 뒷면: {back}. 답: {answer}",
-  "@previousCardSemantics": {
-    "description": "Accessibility label of the previous-card panel.",
-    "placeholders": {"front": {"type": "String"}, "back": {"type": "String"}, "answer": {"type": "String"}}
+  "know": "안다",
+  "@know": {"description": "Answer: the user knew the card. Shown on the current card while it is dragged right, and the name of its screen-reader action."},
+  "dontKnow": "모른다",
+  "@dontKnow": {"description": "Answer: the user did not know the card. Shown on the current card while it is dragged left, and the name of its screen-reader action."},
+  "close": "닫기",
+  "@close": {"description": "Label of the study screen's close button."},
+  "studyProgress": "{answered} / {total}",
+  "@studyProgress": {
+    "description": "Study screen top bar: cards answered so far out of the cards in the session.",
+    "placeholders": {"answered": {"type": "int"}, "total": {"type": "int"}}
   },
+  "studyProgressSemantics": "{total}장 중 {answered}장 답함",
+  "@studyProgressSemantics": {
+    "description": "Accessibility label of the study progress: cards answered out of the cards in the session.",
+    "placeholders": {"answered": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "currentCardSemantics": "앞면: {front}",
+  "@currentCardSemantics": {
+    "description": "Accessibility label of the current card while its answer is hidden.",
+    "placeholders": {"front": {"type": "String"}}
+  },
+  "currentCardRevealedSemantics": "앞면: {front}. 뒷면: {back}",
+  "@currentCardRevealedSemantics": {
+    "description": "Accessibility label of the current card while its answer is shown.",
+    "placeholders": {"front": {"type": "String"}, "back": {"type": "String"}}
+  },
+  "showAnswer": "답 보기",
+  "@showAnswer": {"description": "Accessibility hint of tapping the current card while its answer is hidden."},
+  "hideAnswer": "답 가리기",
+  "@hideAnswer": {"description": "Accessibility hint of tapping the current card while its answer is shown."},
+  "previousCardSemantics": "앞면: {front}. 뒷면: {back}. 답: {answer}{changed, select, yes{. 수정됨} other{}}",
+  "@previousCardSemantics": {
+    "description": "Accessibility label of a card answered earlier in the session; changed is 'yes' when the answer differs from the one first given.",
+    "placeholders": {"front": {"type": "String"}, "back": {"type": "String"}, "answer": {"type": "String"}, "changed": {"type": "String"}}
+  },
+  "toggleAnswer": "답 바꾸기",
+  "@toggleAnswer": {"description": "Accessibility hint of tapping a card answered earlier: it changes the answer."},
+  "showWholeCard": "카드 전체 보기",
+  "@showWholeCard": {"description": "Accessibility hint of long-pressing a card answered earlier: it opens the whole card."},
+  "answerChanged": "수정됨",
+  "@answerChanged": {"description": "Small label on a card answered earlier whose answer differs from the one first given."},
   "sessionSummaryTitle": "학습 끝",
   "@sessionSummaryTitle": {"description": "Heading of the end-of-session summary."},
   "nothingToStudy": "지금 학습할 카드가 없습니다.",
@@ -98,14 +126,14 @@
     "description": "Summary line: distinct cards answered in the session.",
     "placeholders": {"count": {"type": "int"}}
   },
-  "knowCount": "알아요: {count}번",
+  "knowCount": "안다: {count}번",
   "@knowCount": {
-    "description": "Summary line: how many times Know was answered.",
+    "description": "Summary line: how many answers stand as Know.",
     "placeholders": {"count": {"type": "int"}}
   },
-  "dontKnowCount": "몰라요: {count}번",
+  "dontKnowCount": "모른다: {count}번",
   "@dontKnowCount": {
-    "description": "Summary line: how many times Don't know was answered.",
+    "description": "Summary line: how many answers stand as Don't know.",
     "placeholders": {"count": {"type": "int"}}
   },
   "timeSpent": "걸린 시간: {minutes}분 {seconds}초",

@@ -120,21 +120,62 @@ class AppLocalizationsKo extends AppLocalizations {
   String get study => '학습';
 
   @override
-  String get know => '알아요';
+  String get know => '안다';
 
   @override
-  String get dontKnow => '몰라요';
+  String get dontKnow => '모른다';
 
   @override
-  String get previousCard => '이전 카드';
+  String get close => '닫기';
 
   @override
-  String get correctToDontKnow => '탭하면 \'몰라요\'로 고칩니다';
-
-  @override
-  String previousCardSemantics(String front, String back, String answer) {
-    return '이전 카드. 앞면: $front. 뒷면: $back. 답: $answer';
+  String studyProgress(int answered, int total) {
+    return '$answered / $total';
   }
+
+  @override
+  String studyProgressSemantics(int answered, int total) {
+    return '$total장 중 $answered장 답함';
+  }
+
+  @override
+  String currentCardSemantics(String front) {
+    return '앞면: $front';
+  }
+
+  @override
+  String currentCardRevealedSemantics(String front, String back) {
+    return '앞면: $front. 뒷면: $back';
+  }
+
+  @override
+  String get showAnswer => '답 보기';
+
+  @override
+  String get hideAnswer => '답 가리기';
+
+  @override
+  String previousCardSemantics(
+    String front,
+    String back,
+    String answer,
+    String changed,
+  ) {
+    String _temp0 = intl.Intl.selectLogic(changed, {
+      'yes': '. 수정됨',
+      'other': '',
+    });
+    return '앞면: $front. 뒷면: $back. 답: $answer$_temp0';
+  }
+
+  @override
+  String get toggleAnswer => '답 바꾸기';
+
+  @override
+  String get showWholeCard => '카드 전체 보기';
+
+  @override
+  String get answerChanged => '수정됨';
 
   @override
   String get sessionSummaryTitle => '학습 끝';
@@ -149,12 +190,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String knowCount(int count) {
-    return '알아요: $count번';
+    return '안다: $count번';
   }
 
   @override
   String dontKnowCount(int count) {
-    return '몰라요: $count번';
+    return '모른다: $count번';
   }
 
   @override

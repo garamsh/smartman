@@ -33,28 +33,34 @@ class StudyRepository {
     }
   }
 
-  /// Stores [review] and the card's [state] after it, in one transaction.
-  /// A review already stored under the same id is replaced, which is how a
-  /// corrected answer is written.
-  Future<void> record(Review review, CardState state) async {
+  /// Stores [reviews] of [card] and the card's [state] after the last of
+  /// them, in one transaction. A review already stored under the same id is
+  /// replaced, which is how a toggled answer is rewritten.
+  Future<void> record(
+    CardId card,
+    List<Review> reviews,
+    CardState state,
+  ) async {
     try {
       await _db.transaction(() async {
-        await _db
-            .into(_db.reviews)
-            .insertOnConflictUpdate(
-              ReviewRow(
-                id: review.id.value,
-                cardId: review.cardId.value,
-                rating: _rating(review.answer),
-                reviewedAt: review.reviewedAt,
-                durationMs: review.duration.inMilliseconds,
-              ),
-            );
+        for (final review in reviews) {
+          await _db
+              .into(_db.reviews)
+              .insertOnConflictUpdate(
+                ReviewRow(
+                  id: review.id.value,
+                  cardId: review.cardId.value,
+                  rating: _rating(review.answer),
+                  reviewedAt: review.reviewedAt,
+                  durationMs: review.duration.inMilliseconds,
+                ),
+              );
+        }
         await _db
             .into(_db.cardStates)
             .insertOnConflictUpdate(
               CardStateRow(
-                cardId: review.cardId.value,
+                cardId: card.value,
                 stability: state.stability,
                 difficulty: state.difficulty,
                 lastReview: state.lastReview,

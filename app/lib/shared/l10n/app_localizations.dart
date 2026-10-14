@@ -290,35 +290,88 @@ abstract class AppLocalizations {
   /// **'학습'**
   String get study;
 
-  /// Answer button: the user knew the card.
+  /// Answer: the user knew the card. Shown on the current card while it is dragged right, and the name of its screen-reader action.
   ///
   /// In ko, this message translates to:
-  /// **'알아요'**
+  /// **'안다'**
   String get know;
 
-  /// Answer button: the user did not know the card.
+  /// Answer: the user did not know the card. Shown on the current card while it is dragged left, and the name of its screen-reader action.
   ///
   /// In ko, this message translates to:
-  /// **'몰라요'**
+  /// **'모른다'**
   String get dontKnow;
 
-  /// Heading of the panel showing the card answered just before.
+  /// Label of the study screen's close button.
   ///
   /// In ko, this message translates to:
-  /// **'이전 카드'**
-  String get previousCard;
+  /// **'닫기'**
+  String get close;
 
-  /// Hint on the previous-card panel: tapping it changes a Know answer to Don't know.
+  /// Study screen top bar: cards answered so far out of the cards in the session.
   ///
   /// In ko, this message translates to:
-  /// **'탭하면 \'몰라요\'로 고칩니다'**
-  String get correctToDontKnow;
+  /// **'{answered} / {total}'**
+  String studyProgress(int answered, int total);
 
-  /// Accessibility label of the previous-card panel.
+  /// Accessibility label of the study progress: cards answered out of the cards in the session.
   ///
   /// In ko, this message translates to:
-  /// **'이전 카드. 앞면: {front}. 뒷면: {back}. 답: {answer}'**
-  String previousCardSemantics(String front, String back, String answer);
+  /// **'{total}장 중 {answered}장 답함'**
+  String studyProgressSemantics(int answered, int total);
+
+  /// Accessibility label of the current card while its answer is hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면: {front}'**
+  String currentCardSemantics(String front);
+
+  /// Accessibility label of the current card while its answer is shown.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면: {front}. 뒷면: {back}'**
+  String currentCardRevealedSemantics(String front, String back);
+
+  /// Accessibility hint of tapping the current card while its answer is hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'답 보기'**
+  String get showAnswer;
+
+  /// Accessibility hint of tapping the current card while its answer is shown.
+  ///
+  /// In ko, this message translates to:
+  /// **'답 가리기'**
+  String get hideAnswer;
+
+  /// Accessibility label of a card answered earlier in the session; changed is 'yes' when the answer differs from the one first given.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면: {front}. 뒷면: {back}. 답: {answer}{changed, select, yes{. 수정됨} other{}}'**
+  String previousCardSemantics(
+    String front,
+    String back,
+    String answer,
+    String changed,
+  );
+
+  /// Accessibility hint of tapping a card answered earlier: it changes the answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'답 바꾸기'**
+  String get toggleAnswer;
+
+  /// Accessibility hint of long-pressing a card answered earlier: it opens the whole card.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 전체 보기'**
+  String get showWholeCard;
+
+  /// Small label on a card answered earlier whose answer differs from the one first given.
+  ///
+  /// In ko, this message translates to:
+  /// **'수정됨'**
+  String get answerChanged;
 
   /// Heading of the end-of-session summary.
   ///
@@ -338,16 +391,16 @@ abstract class AppLocalizations {
   /// **'학습한 카드: {count}장'**
   String cardsStudied(int count);
 
-  /// Summary line: how many times Know was answered.
+  /// Summary line: how many answers stand as Know.
   ///
   /// In ko, this message translates to:
-  /// **'알아요: {count}번'**
+  /// **'안다: {count}번'**
   String knowCount(int count);
 
-  /// Summary line: how many times Don't know was answered.
+  /// Summary line: how many answers stand as Don't know.
   ///
   /// In ko, this message translates to:
-  /// **'몰라요: {count}번'**
+  /// **'모른다: {count}번'**
   String dontKnowCount(int count);
 
   /// Summary line: time from the first card to the end of the session.

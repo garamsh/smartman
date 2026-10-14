@@ -128,15 +128,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dontKnow => 'Don\'t know';
 
   @override
-  String get previousCard => 'Previous card';
+  String get close => 'Close';
 
   @override
-  String get correctToDontKnow => 'Tap to change to Don\'t know';
-
-  @override
-  String previousCardSemantics(String front, String back, String answer) {
-    return 'Previous card. Front: $front. Back: $back. Answer: $answer';
+  String studyProgress(int answered, int total) {
+    return '$answered / $total';
   }
+
+  @override
+  String studyProgressSemantics(int answered, int total) {
+    return '$answered of $total cards answered';
+  }
+
+  @override
+  String currentCardSemantics(String front) {
+    return 'Front: $front';
+  }
+
+  @override
+  String currentCardRevealedSemantics(String front, String back) {
+    return 'Front: $front. Back: $back';
+  }
+
+  @override
+  String get showAnswer => 'show the answer';
+
+  @override
+  String get hideAnswer => 'hide the answer';
+
+  @override
+  String previousCardSemantics(
+    String front,
+    String back,
+    String answer,
+    String changed,
+  ) {
+    String _temp0 = intl.Intl.selectLogic(changed, {
+      'yes': '. Changed',
+      'other': '',
+    });
+    return 'Front: $front. Back: $back. Answer: $answer$_temp0';
+  }
+
+  @override
+  String get toggleAnswer => 'change the answer';
+
+  @override
+  String get showWholeCard => 'show the whole card';
+
+  @override
+  String get answerChanged => 'Changed';
 
   @override
   String get sessionSummaryTitle => 'Session complete';

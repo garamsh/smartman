@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/study/src/model.dart';
+import 'package:smartman/study/src/session.dart';
 
 /// A text card named [name] created at [createdAt]; its front reads
 /// "[name] front" and its back "[name] back".
@@ -21,3 +24,17 @@ CardState dueAt(DateTime due) => CardState(
   lastReview: due.subtract(const Duration(days: 3)),
   due: due,
 );
+
+/// Completes once [session] has read its queue.
+Future<void> untilLoaded(StudySession session) {
+  final loaded = Completer<void>();
+  void check() {
+    if (session.state is! SessionLoading && !loaded.isCompleted) {
+      loaded.complete();
+    }
+  }
+
+  session.addListener(check);
+  check();
+  return loaded.future.whenComplete(() => session.removeListener(check));
+}
