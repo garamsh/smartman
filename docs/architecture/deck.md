@@ -7,7 +7,13 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Surface and location
 
 - The domain lives in `app/lib/deck/`; its public surface is `app/lib/deck/deck.dart`, with internals under `app/lib/deck/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
-- The surface exports the model (`Deck`, `Card`, `DeckId`, `CardId`, `CardSource`), content (`Content`, `TextContent`, `UnsupportedContent`), `CardKey`, `DeckRepository` and its save results, `deckRepositoryProvider`, and `DeckListScreen`.
+- The surface exports:
+  - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`;
+  - content: `Content`, `TextContent`, `UnsupportedContent`;
+  - `CardKey`;
+  - `DeckRepository` and its save results;
+  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`;
+  - `deckRepositoryProvider` and `DeckListScreen`.
 
 ### Model
 
@@ -31,6 +37,22 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - A duplicate is another card in the same deck with an equal key. Cards in other decks are never duplicates.
 - Adding or editing a card whose key collides is refused with the existing card, unless the caller allows the duplicate. The editor then offers to open the existing card or to save anyway. No card is overwritten or deleted by the rule.
 - The check is one lookup on the `(deck_id, card_key)` index, inside the same transaction as the write.
+
+### Failures
+
+- Each expected failure has a type:
+  - a colliding key is the save result `DuplicateFront`;
+  - a block of an unknown type is `UnsupportedContent`;
+  - a database exception is `StorageFailure`;
+  - stored content that cannot be decoded is `UnreadableCard`.
+- `StorageFailure` and `UnreadableCard` are `DeckFailure`s the repository throws, or emits on a watched stream.
+- The screens show a `DeckFailure` to the user as a localized message, in a snack bar for an action or in place of a list. Any other error propagates.
+
+### Interface
+
+- Every string the screens show comes from the shared ARB set.
+- Every tap target carries a semantic label: its text, or a tooltip for an icon button. A widget test checks each screen against Flutter's `labeledTapTargetGuideline`.
+- An empty deck name or card side is refused with a message on its field.
 
 ### State and composition
 

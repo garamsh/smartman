@@ -15,18 +15,31 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - One database per domain: a review could not reference its card with a foreign key, and no transaction could span two domains.
   - Tables owned by each domain and the database class assembled at the composition site: the composition site would then own the schema version and migrations, which is deciding rather than constructing, and every domain would export its tables.
   - The database owned by `deck` and reached through its surface: `study` would add its tables inside `deck`.
+- The PM asked that the layout follow drift's and Riverpod's documented structure, with each deliberate departure recorded here with its reason (issue #4, PM addendum comment). The same holds for Flutter's localization tool, which the addendum also requires.
 
 ## Decision
 
 - A domain declares its public surface in one library file named for it, `app/lib/<domain>/<domain>.dart`, which exports with `show` the names a caller may use. Everything else the domain holds lives under `app/lib/<domain>/src/`.
 - Code below every domain lives under `app/lib/shared/`. Nothing there imports a domain; any domain may import it. The drift database, holding every domain's tables, lives there.
+- The drift database is `app/lib/shared/database.dart`. Its schema dumps and migration tests sit where drift's `make-migrations` puts them by default: `app/drift_schemas/` and `app/test/drift/`.
+- The localization ARB files and the classes `gen-l10n` writes from them are in `app/lib/shared/l10n/`.
+- Generated Dart is committed: `database.g.dart`, the `gen-l10n` output, and the schema helpers under `app/test/drift/*/generated/`.
+
+### Departures from the tools' documented layout
+
+- **The database is in `app/lib/shared/`, not at the top of `lib/` as drift's setup guide shows.** The rule that shared code sits below the domains takes precedence over that example. drift prescribes no folder.
+- **The ARB files are in `app/lib/shared/l10n/`, not in `lib/l10n/`, which is Flutter's default `arb-dir`.** One app-wide localization class serves every domain, so it is shared code. At `lib/l10n/` it would sit beside the domains as a folder none of them owns. `app/l10n.yaml` names the directory.
+- **Providers are declared by hand, not with `riverpod_generator`.** Riverpod's documentation presents both forms, so this departs from no rule. Writing them by hand avoids a second code generator for a handful of providers.
+- **Generated Dart is committed.** Every tool documents generating it at build time. The project's checks have no generation step, though, so committing it is what lets `make ci` analyze, format-check, and test the generated files as they ship.
 
 ## Consequences
 
 - A reviewer checks a cross-domain reference by one rule: an import of another domain's `src/` path is a defect. The composition site imports domains through their library files too.
 - A domain's own tests may import its `src/` files, since they are inside the boundary they test.
 - Each domain maps database rows into its own types; row classes do not appear on a domain's surface.
-- Adding a domain's tables means editing `app/lib/shared/database.dart` and regenerating `database.g.dart`, which is committed so that the checks need no code generation step.
+- Adding a domain's tables means editing `app/lib/shared/database.dart`, raising its schema version, and running drift's `make-migrations`, which exports the new schema dump and its test helpers. Then `database.g.dart` is regenerated.
+- Every user-facing string of every domain goes through the one ARB set in `app/lib/shared/l10n/`.
+- A committed generated file can fall out of step with its source, and no check catches that yet.
 - The schema of every domain sits in one file, so a table is not owned by the domain whose rows it holds; that ownership is recorded in the domain's responsibility document instead.
 - `app/lib/shared/` is a folder no domain owns. What makes it below rather than beside is the import direction, which a reviewer checks.
 
@@ -35,4 +48,5 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - Domains routinely need a sibling's internals and the library files keep growing to export them.
 - `app/lib/shared/` gathers code that belongs to one domain, or starts importing a domain.
 - Schema changes for two domains collide in `database.dart` often enough to slow both.
-- The committed `database.g.dart` is found out of date with `database.dart` on the default branch.
+- A committed generated file is found out of date with its source on the default branch.
+- The shared ARB set grows conflicting keys between domains, or one domain's strings dominate it.

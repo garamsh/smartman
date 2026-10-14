@@ -21,7 +21,10 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - **A domain declares its public surface in one library file named for it**, `app/lib/<domain>/<domain>.dart`, which exports with `show` the names a caller may use ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - **Everything else a domain holds lives under `app/lib/<domain>/src/`.** An import of another domain's `src/` path is a defect, from a sibling or from the composition site. A domain's own tests may import its `src/` files.
 - **Code below every domain lives under `app/lib/shared/`.** Nothing there imports a domain; any domain may import it.
-- **The drift database is shared code.** `app/lib/shared/database.dart` holds every domain's tables; a domain maps rows into its own types and does not export row classes. Its generated `database.g.dart` is committed and regenerated with `dart run build_runner build` in `app/` after a schema change.
+- **The drift database is shared code.** `app/lib/shared/database.dart` holds every domain's tables. A domain maps rows into its own types and does not export row classes.
+- **Every schema change goes through a migration.** The change raises `schemaVersion`. In `app/`, `dart run drift_dev make-migrations` then exports the new schema to `drift_schemas/` and its helpers to `test/drift/`, and the migration test there must pass.
+- **User-facing strings come from one ARB set.** It lives in `app/lib/shared/l10n/`, with Korean as the template and default locale. No widget hardcodes a string the user reads.
+- **Generated Dart is committed and regenerated from its source.** This covers `database.g.dart` (via `dart run build_runner build`), the `gen-l10n` output (via `flutter gen-l10n`), and the drift schema helpers.
 
 ### Composition
 
