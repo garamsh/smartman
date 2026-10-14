@@ -1,0 +1,26 @@
+[
+  { "label": "Claude Haiku 5.5", "primary": "^anthropic/claude-haiku-5\\.5$" },
+  {
+    "label": "Claude Sonnet 5.5",
+    "primary": "^anthropic/claude-sonnet-5\\.5$"
+  },
+  { "label": "Claude Opus 5.5", "primary": "^anthropic/claude-opus-5\\.5$" },
+  {
+    "label": "Claude Haiku 5.5, Sonnet 5.5 retry",
+    "primary": "^anthropic/claude-haiku-5\\.5$",
+    "retry": "^anthropic/claude-sonnet-5\\.5$"
+  },
+  {
+    "label": "Google Gemini Flash, newest",
+    "primary": "^google/gemini-[0-9.]+-flash$"
+  },
+  {
+    "label": "Google Gemini Pro, newest",
+    "primary": "^google/gemini-[0-9.]+-pro$"
+  },
+  {
+    "label": "OpenAI GPT mini, newest",
+    "primary": "^openai/gpt-[0-9.]+-mini$"
+  },
+  { "label": "OpenAI GPT, newest", "primary": "^openai/gpt-[0-9.]+$" }
+]

@@ -1,0 +1,102 @@
+/** The eval's spend cap: the ledger of past runs, the dry estimate, and the per-call guard. */
+
+import { MAX_OUTPUT_TOKENS } from "../../supabase/functions/extract-cards/openrouter.ts";
+import type { Candidate, Pricing } from "./models.ts";
+
+/** The committed record of every run's spend; `budgetUsd` is the cap across all runs. */
+export type Ledger = {
+  readonly budgetUsd: number;
+  readonly runs: readonly {
+    readonly date: string;
+    readonly spentUsd: number;
+    readonly note: string;
+  }[];
+};
+
+export function parseLedger(value: unknown): Ledger {
+  const malformed = new Error(
+    "spend.json is not a ledger of {budgetUsd, runs: [{date, spentUsd, note}]}",
+  );
+  if (
+    !isRecord(value) || typeof value.budgetUsd !== "number" ||
+    !Array.isArray(value.runs)
+  ) throw malformed;
+  const runs = value.runs.map((run: unknown) => {
+    if (
+      !isRecord(run) || typeof run.date !== "string" ||
+      typeof run.spentUsd !== "number" || run.spentUsd < 0 ||
+      typeof run.note !== "string"
+    ) throw malformed;
+    return { date: run.date, spentUsd: run.spentUsd, note: run.note };
+  });
+  return { budgetUsd: value.budgetUsd, runs };
+}
+
+export function spent(ledger: Ledger): number {
+  return ledger.runs.reduce((total, run) => total + run.spentUsd, 0);
+}
+
+export function remaining(ledger: Ledger): number {
+  return ledger.budgetUsd - spent(ledger);
+}
+
+// Typical tokens of one call: the system prompt with one photo, and a reply per card with
+// room for hidden reasoning. The dry estimate uses these.
+export const TYPICAL_PROMPT_TOKENS = 2000;
+export const TYPICAL_REPLY_TOKENS_PER_CARD = 30;
+export const TYPICAL_REASONING_TOKENS = 1000;
+// The most one call's prompt is taken to cost: the guard before each call uses this, with
+// the reply at the function's output cap.
+export const WORST_PROMPT_TOKENS = 6000;
+
+function cost(
+  pricing: Pricing,
+  promptTokens: number,
+  completionTokens: number,
+): number {
+  return pricing.request + pricing.image + pricing.prompt * promptTokens +
+    pricing.completion * completionTokens;
+}
+
+/** What one call to a model costs at most, the reply running to the output cap. */
+export function worstCallUsd(pricing: Pricing): number {
+  return cost(pricing, WORST_PROMPT_TOKENS, MAX_OUTPUT_TOKENS);
+}
+
+/**
+ * The dry estimate of a run: every candidate over every image, each image priced as one
+ * typical call to the primary model plus one to the retry model, as if every image retried.
+ */
+export function estimateUsd(
+  candidates: readonly Candidate[],
+  cardCounts: readonly number[],
+): number {
+  let total = 0;
+  for (const candidate of candidates) {
+    for (const cards of cardCounts) {
+      const reply = TYPICAL_REASONING_TOKENS +
+        TYPICAL_REPLY_TOKENS_PER_CARD * cards;
+      total += cost(candidate.primary.pricing, TYPICAL_PROMPT_TOKENS, reply);
+      total += cost(candidate.retry.pricing, TYPICAL_PROMPT_TOKENS, reply);
+    }
+  }
+  return total;
+}
+
+/** The cost of a call as OpenRouter reported it, or priced from its tokens when it reported none. */
+export function callUsd(
+  pricing: Pricing,
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    costUsd: number | null;
+  } | null,
+): number {
+  if (usage === null) return worstCallUsd(pricing);
+  return usage.costUsd ??
+    cost(pricing, usage.promptTokens, usage.completionTokens);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

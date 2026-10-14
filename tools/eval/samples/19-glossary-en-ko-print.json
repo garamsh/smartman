@@ -1,0 +1,79 @@
+{
+  "image": "19-glossary-en-ko-print.jpg",
+  "layout": "glossary",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "garden",
+      "back": "정원"
+    },
+    {
+      "front": "young",
+      "back": "젊은"
+    },
+    {
+      "front": "ticket",
+      "back": "표"
+    },
+    {
+      "front": "memory",
+      "back": "기억"
+    },
+    {
+      "front": "reason",
+      "back": "이유"
+    },
+    {
+      "front": "quickly",
+      "back": "빨리"
+    },
+    {
+      "front": "empty",
+      "back": "빈"
+    },
+    {
+      "front": "friendship",
+      "back": "우정"
+    },
+    {
+      "front": "repeat",
+      "back": "반복하다"
+    },
+    {
+      "front": "gentle",
+      "back": "온화한"
+    },
+    {
+      "front": "cheap",
+      "back": "싼"
+    },
+    {
+      "front": "habit",
+      "back": "습관"
+    },
+    {
+      "front": "careful",
+      "back": "조심스러운"
+    },
+    {
+      "front": "prepare",
+      "back": "준비하다"
+    },
+    {
+      "front": "direction",
+      "back": "방향"
+    },
+    {
+      "front": "mirror",
+      "back": "거울"
+    }
+  ]
+}

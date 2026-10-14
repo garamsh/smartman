@@ -1,0 +1,52 @@
+{
+  "image": "16-dictionary-ja-ko-print.jpg",
+  "layout": "dictionary",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "SawarabiGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "学校",
+      "back": "학교"
+    },
+    {
+      "front": "空",
+      "back": "하늘"
+    },
+    {
+      "front": "明るい",
+      "back": "밝다"
+    },
+    {
+      "front": "椅子",
+      "back": "의자"
+    },
+    {
+      "front": "売る",
+      "back": "팔다"
+    },
+    {
+      "front": "雨",
+      "back": "비"
+    },
+    {
+      "front": "教える",
+      "back": "가르치다"
+    },
+    {
+      "front": "料理",
+      "back": "요리"
+    },
+    {
+      "front": "写真",
+      "back": "사진"
+    }
+  ]
+}

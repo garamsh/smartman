@@ -1,0 +1,91 @@
+{
+  "image": "21-glossary-en-ko-harsh.jpg",
+  "layout": "glossary",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "price",
+      "back": "가격"
+    },
+    {
+      "front": "village",
+      "back": "마을"
+    },
+    {
+      "front": "borrow",
+      "back": "빌리다"
+    },
+    {
+      "front": "build",
+      "back": "짓다"
+    },
+    {
+      "front": "neighbor",
+      "back": "이웃"
+    },
+    {
+      "front": "never",
+      "back": "결코"
+    },
+    {
+      "front": "garden",
+      "back": "정원"
+    },
+    {
+      "front": "early",
+      "back": "일찍"
+    },
+    {
+      "front": "suddenly",
+      "back": "갑자기"
+    },
+    {
+      "front": "ticket",
+      "back": "표"
+    },
+    {
+      "front": "choice",
+      "back": "선택"
+    },
+    {
+      "front": "memory",
+      "back": "기억"
+    },
+    {
+      "front": "customer",
+      "back": "손님"
+    },
+    {
+      "front": "remember",
+      "back": "기억하다"
+    },
+    {
+      "front": "almost",
+      "back": "거의"
+    },
+    {
+      "front": "ocean",
+      "back": "바다"
+    },
+    {
+      "front": "habit",
+      "back": "습관"
+    },
+    {
+      "front": "decide",
+      "back": "결정하다"
+    },
+    {
+      "front": "always",
+      "back": "항상"
+    }
+  ]
+}

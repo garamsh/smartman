@@ -1,0 +1,47 @@
+{
+  "image": "14-dictionary-en-ko-handwriting.jpg",
+  "layout": "dictionary",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "kitchen",
+      "back": "부엌"
+    },
+    {
+      "front": "decide",
+      "back": "결정하다"
+    },
+    {
+      "front": "health",
+      "back": "건강"
+    },
+    {
+      "front": "grow",
+      "back": "자라다"
+    },
+    {
+      "front": "journey",
+      "back": "여행"
+    },
+    {
+      "front": "price",
+      "back": "가격"
+    },
+    {
+      "front": "careful",
+      "back": "조심스러운"
+    },
+    {
+      "front": "schedule",
+      "back": "일정"
+    }
+  ]
+}

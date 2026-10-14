@@ -1,0 +1,52 @@
+{
+  "image": "17-dictionary-ja-ko-handwriting.jpg",
+  "layout": "dictionary",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumPenScript-Regular.ttf",
+    "Yomogi-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "教える",
+      "back": "가르치다"
+    },
+    {
+      "front": "古い",
+      "back": "낡다"
+    },
+    {
+      "front": "明るい",
+      "back": "밝다"
+    },
+    {
+      "front": "閉める",
+      "back": "닫다"
+    },
+    {
+      "front": "図書館",
+      "back": "도서관"
+    },
+    {
+      "front": "駅",
+      "back": "역"
+    },
+    {
+      "front": "泳ぐ",
+      "back": "헤엄치다"
+    },
+    {
+      "front": "音楽",
+      "back": "음악"
+    },
+    {
+      "front": "高い",
+      "back": "비싸다"
+    }
+  ]
+}

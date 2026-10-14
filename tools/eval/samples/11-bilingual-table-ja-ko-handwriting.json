@@ -1,0 +1,56 @@
+{
+  "image": "11-bilingual-table-ja-ko-handwriting.jpg",
+  "layout": "bilingual-table",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumPenScript-Regular.ttf",
+    "Yomogi-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "旅行",
+      "back": "여행"
+    },
+    {
+      "front": "木",
+      "back": "나무"
+    },
+    {
+      "front": "雪",
+      "back": "눈"
+    },
+    {
+      "front": "始める",
+      "back": "시작하다"
+    },
+    {
+      "front": "空",
+      "back": "하늘"
+    },
+    {
+      "front": "答える",
+      "back": "대답하다"
+    },
+    {
+      "front": "山",
+      "back": "산"
+    },
+    {
+      "front": "送る",
+      "back": "보내다"
+    },
+    {
+      "front": "古い",
+      "back": "낡다"
+    },
+    {
+      "front": "安い",
+      "back": "싸다"
+    }
+  ]
+}

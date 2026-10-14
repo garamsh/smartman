@@ -1,0 +1,996 @@
+{
+  "en-ko": [
+    {
+      "front": "apple",
+      "back": "사과",
+      "pos": "n.",
+      "example": "She ate an apple after lunch."
+    },
+    {
+      "front": "river",
+      "back": "강",
+      "pos": "n.",
+      "example": "The river runs through the city."
+    },
+    {
+      "front": "mountain",
+      "back": "산",
+      "pos": "n.",
+      "example": "We climbed the mountain in spring."
+    },
+    {
+      "front": "library",
+      "back": "도서관",
+      "pos": "n.",
+      "example": "I study at the library every evening."
+    },
+    {
+      "front": "window",
+      "back": "창문",
+      "pos": "n.",
+      "example": "Please open the window."
+    },
+    {
+      "front": "kitchen",
+      "back": "부엌",
+      "pos": "n.",
+      "example": "He is cooking in the kitchen."
+    },
+    {
+      "front": "weather",
+      "back": "날씨",
+      "pos": "n.",
+      "example": "The weather is warm today."
+    },
+    {
+      "front": "breakfast",
+      "back": "아침 식사",
+      "pos": "n.",
+      "example": "We had breakfast at seven."
+    },
+    {
+      "front": "umbrella",
+      "back": "우산",
+      "pos": "n.",
+      "example": "Take an umbrella with you."
+    },
+    {
+      "front": "neighbor",
+      "back": "이웃",
+      "pos": "n.",
+      "example": "Our neighbor has a big dog."
+    },
+    {
+      "front": "holiday",
+      "back": "휴일",
+      "pos": "n.",
+      "example": "Monday is a holiday."
+    },
+    {
+      "front": "journey",
+      "back": "여행",
+      "pos": "n.",
+      "example": "The journey took three days."
+    },
+    {
+      "front": "village",
+      "back": "마을",
+      "pos": "n.",
+      "example": "She grew up in a small village."
+    },
+    {
+      "front": "answer",
+      "back": "대답",
+      "pos": "n.",
+      "example": "I know the answer."
+    },
+    {
+      "front": "question",
+      "back": "질문",
+      "pos": "n.",
+      "example": "May I ask a question?"
+    },
+    {
+      "front": "mirror",
+      "back": "거울",
+      "pos": "n.",
+      "example": "He looked in the mirror."
+    },
+    {
+      "front": "garden",
+      "back": "정원",
+      "pos": "n.",
+      "example": "Flowers grow in the garden."
+    },
+    {
+      "front": "bridge",
+      "back": "다리",
+      "pos": "n.",
+      "example": "They walked across the bridge."
+    },
+    {
+      "front": "island",
+      "back": "섬",
+      "pos": "n.",
+      "example": "The island is far from the coast."
+    },
+    {
+      "front": "forest",
+      "back": "숲",
+      "pos": "n.",
+      "example": "Deer live in the forest."
+    },
+    {
+      "front": "ocean",
+      "back": "바다",
+      "pos": "n.",
+      "example": "The ocean was calm."
+    },
+    {
+      "front": "pocket",
+      "back": "주머니",
+      "pos": "n.",
+      "example": "The key is in my pocket."
+    },
+    {
+      "front": "ticket",
+      "back": "표",
+      "pos": "n.",
+      "example": "I bought a train ticket."
+    },
+    {
+      "front": "price",
+      "back": "가격",
+      "pos": "n.",
+      "example": "The price is too high."
+    },
+    {
+      "front": "health",
+      "back": "건강",
+      "pos": "n.",
+      "example": "Exercise is good for your health."
+    },
+    {
+      "front": "memory",
+      "back": "기억",
+      "pos": "n.",
+      "example": "I have a clear memory of that day."
+    },
+    {
+      "front": "future",
+      "back": "미래",
+      "pos": "n.",
+      "example": "Nobody knows the future."
+    },
+    {
+      "front": "example",
+      "back": "예시",
+      "pos": "n.",
+      "example": "Can you give me an example?"
+    },
+    {
+      "front": "mistake",
+      "back": "실수",
+      "pos": "n.",
+      "example": "Everyone makes mistakes."
+    },
+    {
+      "front": "reason",
+      "back": "이유",
+      "pos": "n.",
+      "example": "Tell me the reason."
+    },
+    {
+      "front": "habit",
+      "back": "습관",
+      "pos": "n.",
+      "example": "Reading is a good habit."
+    },
+    {
+      "front": "choice",
+      "back": "선택",
+      "pos": "n.",
+      "example": "It was a difficult choice."
+    },
+    {
+      "front": "voice",
+      "back": "목소리",
+      "pos": "n.",
+      "example": "She has a soft voice."
+    },
+    {
+      "front": "truth",
+      "back": "진실",
+      "pos": "n.",
+      "example": "He told the truth."
+    },
+    {
+      "front": "friendship",
+      "back": "우정",
+      "pos": "n.",
+      "example": "Their friendship lasted for years."
+    },
+    {
+      "front": "festival",
+      "back": "축제",
+      "pos": "n.",
+      "example": "The festival starts tomorrow."
+    },
+    {
+      "front": "customer",
+      "back": "손님",
+      "pos": "n.",
+      "example": "The customer asked for the bill."
+    },
+    {
+      "front": "direction",
+      "back": "방향",
+      "pos": "n.",
+      "example": "We went in the wrong direction."
+    },
+    {
+      "front": "experience",
+      "back": "경험",
+      "pos": "n.",
+      "example": "She has a lot of experience."
+    },
+    {
+      "front": "schedule",
+      "back": "일정",
+      "pos": "n.",
+      "example": "My schedule is full this week."
+    },
+    {
+      "front": "borrow",
+      "back": "빌리다",
+      "pos": "v.",
+      "example": "Can I borrow your pen?"
+    },
+    {
+      "front": "explain",
+      "back": "설명하다",
+      "pos": "v.",
+      "example": "Please explain the rule again."
+    },
+    {
+      "front": "forget",
+      "back": "잊다",
+      "pos": "v.",
+      "example": "Don't forget your keys."
+    },
+    {
+      "front": "remember",
+      "back": "기억하다",
+      "pos": "v.",
+      "example": "I remember her name."
+    },
+    {
+      "front": "arrive",
+      "back": "도착하다",
+      "pos": "v.",
+      "example": "The train will arrive at noon."
+    },
+    {
+      "front": "decide",
+      "back": "결정하다",
+      "pos": "v.",
+      "example": "We decided to stay home."
+    },
+    {
+      "front": "prepare",
+      "back": "준비하다",
+      "pos": "v.",
+      "example": "They prepared dinner together."
+    },
+    {
+      "front": "choose",
+      "back": "고르다",
+      "pos": "v.",
+      "example": "Choose one color."
+    },
+    {
+      "front": "carry",
+      "back": "나르다",
+      "pos": "v.",
+      "example": "He carried the box upstairs."
+    },
+    {
+      "front": "finish",
+      "back": "끝내다",
+      "pos": "v.",
+      "example": "I finished my homework."
+    },
+    {
+      "front": "build",
+      "back": "짓다",
+      "pos": "v.",
+      "example": "They built a new school."
+    },
+    {
+      "front": "follow",
+      "back": "따라가다",
+      "pos": "v.",
+      "example": "Follow me, please."
+    },
+    {
+      "front": "grow",
+      "back": "자라다",
+      "pos": "v.",
+      "example": "Plants grow fast in summer."
+    },
+    {
+      "front": "invite",
+      "back": "초대하다",
+      "pos": "v.",
+      "example": "She invited us to her party."
+    },
+    {
+      "front": "laugh",
+      "back": "웃다",
+      "pos": "v.",
+      "example": "The children laughed loudly."
+    },
+    {
+      "front": "promise",
+      "back": "약속하다",
+      "pos": "v.",
+      "example": "I promise to call you."
+    },
+    {
+      "front": "protect",
+      "back": "보호하다",
+      "pos": "v.",
+      "example": "Helmets protect your head."
+    },
+    {
+      "front": "repeat",
+      "back": "반복하다",
+      "pos": "v.",
+      "example": "Repeat after me."
+    },
+    {
+      "front": "travel",
+      "back": "여행하다",
+      "pos": "v.",
+      "example": "They travel every summer."
+    },
+    {
+      "front": "wait",
+      "back": "기다리다",
+      "pos": "v.",
+      "example": "Wait here for a moment."
+    },
+    {
+      "front": "bright",
+      "back": "밝은",
+      "pos": "adj.",
+      "example": "The room is bright and clean."
+    },
+    {
+      "front": "quiet",
+      "back": "조용한",
+      "pos": "adj.",
+      "example": "The library is quiet."
+    },
+    {
+      "front": "heavy",
+      "back": "무거운",
+      "pos": "adj.",
+      "example": "This bag is heavy."
+    },
+    {
+      "front": "cheap",
+      "back": "싼",
+      "pos": "adj.",
+      "example": "The shoes were cheap."
+    },
+    {
+      "front": "famous",
+      "back": "유명한",
+      "pos": "adj.",
+      "example": "He is a famous singer."
+    },
+    {
+      "front": "hungry",
+      "back": "배고픈",
+      "pos": "adj.",
+      "example": "I am hungry."
+    },
+    {
+      "front": "narrow",
+      "back": "좁은",
+      "pos": "adj.",
+      "example": "The street is narrow."
+    },
+    {
+      "front": "strange",
+      "back": "이상한",
+      "pos": "adj.",
+      "example": "I heard a strange noise."
+    },
+    {
+      "front": "gentle",
+      "back": "온화한",
+      "pos": "adj.",
+      "example": "She has a gentle smile."
+    },
+    {
+      "front": "honest",
+      "back": "정직한",
+      "pos": "adj.",
+      "example": "He is an honest man."
+    },
+    {
+      "front": "careful",
+      "back": "조심스러운",
+      "pos": "adj.",
+      "example": "Be careful on the stairs."
+    },
+    {
+      "front": "dangerous",
+      "back": "위험한",
+      "pos": "adj.",
+      "example": "The road is dangerous at night."
+    },
+    {
+      "front": "empty",
+      "back": "빈",
+      "pos": "adj.",
+      "example": "The box is empty."
+    },
+    {
+      "front": "fresh",
+      "back": "신선한",
+      "pos": "adj.",
+      "example": "We need fresh vegetables."
+    },
+    {
+      "front": "polite",
+      "back": "공손한",
+      "pos": "adj.",
+      "example": "The staff were polite."
+    },
+    {
+      "front": "simple",
+      "back": "간단한",
+      "pos": "adj.",
+      "example": "The question is simple."
+    },
+    {
+      "front": "tired",
+      "back": "피곤한",
+      "pos": "adj.",
+      "example": "I feel tired today."
+    },
+    {
+      "front": "useful",
+      "back": "유용한",
+      "pos": "adj.",
+      "example": "This map is useful."
+    },
+    {
+      "front": "wide",
+      "back": "넓은",
+      "pos": "adj.",
+      "example": "The river is wide here."
+    },
+    {
+      "front": "young",
+      "back": "젊은",
+      "pos": "adj.",
+      "example": "My teacher is young."
+    },
+    {
+      "front": "always",
+      "back": "항상",
+      "pos": "adv.",
+      "example": "She always smiles."
+    },
+    {
+      "front": "often",
+      "back": "자주",
+      "pos": "adv.",
+      "example": "We often eat out."
+    },
+    {
+      "front": "never",
+      "back": "결코",
+      "pos": "adv.",
+      "example": "I never drink coffee."
+    },
+    {
+      "front": "quickly",
+      "back": "빨리",
+      "pos": "adv.",
+      "example": "He ran quickly."
+    },
+    {
+      "front": "slowly",
+      "back": "천천히",
+      "pos": "adv.",
+      "example": "Please speak slowly."
+    },
+    {
+      "front": "together",
+      "back": "함께",
+      "pos": "adv.",
+      "example": "Let's go together."
+    },
+    {
+      "front": "already",
+      "back": "이미",
+      "pos": "adv.",
+      "example": "I have already eaten."
+    },
+    {
+      "front": "almost",
+      "back": "거의",
+      "pos": "adv.",
+      "example": "It is almost noon."
+    },
+    {
+      "front": "suddenly",
+      "back": "갑자기",
+      "pos": "adv.",
+      "example": "It suddenly started to rain."
+    },
+    {
+      "front": "early",
+      "back": "일찍",
+      "pos": "adv.",
+      "example": "She gets up early."
+    }
+  ],
+  "ja-ko": [
+    {
+      "front": "食べる",
+      "back": "먹다",
+      "pos": "동"
+    },
+    {
+      "front": "飲む",
+      "back": "마시다",
+      "pos": "동"
+    },
+    {
+      "front": "読む",
+      "back": "읽다",
+      "pos": "동"
+    },
+    {
+      "front": "書く",
+      "back": "쓰다",
+      "pos": "동"
+    },
+    {
+      "front": "話す",
+      "back": "말하다",
+      "pos": "동"
+    },
+    {
+      "front": "聞く",
+      "back": "듣다",
+      "pos": "동"
+    },
+    {
+      "front": "見る",
+      "back": "보다",
+      "pos": "동"
+    },
+    {
+      "front": "歩く",
+      "back": "걷다",
+      "pos": "동"
+    },
+    {
+      "front": "走る",
+      "back": "달리다",
+      "pos": "동"
+    },
+    {
+      "front": "泳ぐ",
+      "back": "헤엄치다",
+      "pos": "동"
+    },
+    {
+      "front": "待つ",
+      "back": "기다리다",
+      "pos": "동"
+    },
+    {
+      "front": "買う",
+      "back": "사다",
+      "pos": "동"
+    },
+    {
+      "front": "売る",
+      "back": "팔다",
+      "pos": "동"
+    },
+    {
+      "front": "借りる",
+      "back": "빌리다",
+      "pos": "동"
+    },
+    {
+      "front": "教える",
+      "back": "가르치다",
+      "pos": "동"
+    },
+    {
+      "front": "習う",
+      "back": "배우다",
+      "pos": "동"
+    },
+    {
+      "front": "忘れる",
+      "back": "잊다",
+      "pos": "동"
+    },
+    {
+      "front": "休む",
+      "back": "쉬다",
+      "pos": "동"
+    },
+    {
+      "front": "始める",
+      "back": "시작하다",
+      "pos": "동"
+    },
+    {
+      "front": "答える",
+      "back": "대답하다",
+      "pos": "동"
+    },
+    {
+      "front": "開ける",
+      "back": "열다",
+      "pos": "동"
+    },
+    {
+      "front": "閉める",
+      "back": "닫다",
+      "pos": "동"
+    },
+    {
+      "front": "起きる",
+      "back": "일어나다",
+      "pos": "동"
+    },
+    {
+      "front": "寝る",
+      "back": "자다",
+      "pos": "동"
+    },
+    {
+      "front": "作る",
+      "back": "만들다",
+      "pos": "동"
+    },
+    {
+      "front": "使う",
+      "back": "사용하다",
+      "pos": "동"
+    },
+    {
+      "front": "送る",
+      "back": "보내다",
+      "pos": "동"
+    },
+    {
+      "front": "笑う",
+      "back": "웃다",
+      "pos": "동"
+    },
+    {
+      "front": "泣く",
+      "back": "울다",
+      "pos": "동"
+    },
+    {
+      "front": "働く",
+      "back": "일하다",
+      "pos": "동"
+    },
+    {
+      "front": "学校",
+      "back": "학교",
+      "pos": "명"
+    },
+    {
+      "front": "先生",
+      "back": "선생님",
+      "pos": "명"
+    },
+    {
+      "front": "学生",
+      "back": "학생",
+      "pos": "명"
+    },
+    {
+      "front": "友達",
+      "back": "친구",
+      "pos": "명"
+    },
+    {
+      "front": "家族",
+      "back": "가족",
+      "pos": "명"
+    },
+    {
+      "front": "電車",
+      "back": "전철",
+      "pos": "명"
+    },
+    {
+      "front": "駅",
+      "back": "역",
+      "pos": "명"
+    },
+    {
+      "front": "病院",
+      "back": "병원",
+      "pos": "명"
+    },
+    {
+      "front": "銀行",
+      "back": "은행",
+      "pos": "명"
+    },
+    {
+      "front": "図書館",
+      "back": "도서관",
+      "pos": "명"
+    },
+    {
+      "front": "天気",
+      "back": "날씨",
+      "pos": "명"
+    },
+    {
+      "front": "雨",
+      "back": "비",
+      "pos": "명"
+    },
+    {
+      "front": "雪",
+      "back": "눈",
+      "pos": "명"
+    },
+    {
+      "front": "空",
+      "back": "하늘",
+      "pos": "명"
+    },
+    {
+      "front": "海",
+      "back": "바다",
+      "pos": "명"
+    },
+    {
+      "front": "山",
+      "back": "산",
+      "pos": "명"
+    },
+    {
+      "front": "川",
+      "back": "강",
+      "pos": "명"
+    },
+    {
+      "front": "花",
+      "back": "꽃",
+      "pos": "명"
+    },
+    {
+      "front": "木",
+      "back": "나무",
+      "pos": "명"
+    },
+    {
+      "front": "水",
+      "back": "물",
+      "pos": "명"
+    },
+    {
+      "front": "お茶",
+      "back": "차",
+      "pos": "명"
+    },
+    {
+      "front": "朝ご飯",
+      "back": "아침밥",
+      "pos": "명"
+    },
+    {
+      "front": "時間",
+      "back": "시간",
+      "pos": "명"
+    },
+    {
+      "front": "今日",
+      "back": "오늘",
+      "pos": "명"
+    },
+    {
+      "front": "明日",
+      "back": "내일",
+      "pos": "명"
+    },
+    {
+      "front": "昨日",
+      "back": "어제",
+      "pos": "명"
+    },
+    {
+      "front": "部屋",
+      "back": "방",
+      "pos": "명"
+    },
+    {
+      "front": "窓",
+      "back": "창문",
+      "pos": "명"
+    },
+    {
+      "front": "机",
+      "back": "책상",
+      "pos": "명"
+    },
+    {
+      "front": "椅子",
+      "back": "의자",
+      "pos": "명"
+    },
+    {
+      "front": "手紙",
+      "back": "편지",
+      "pos": "명"
+    },
+    {
+      "front": "写真",
+      "back": "사진",
+      "pos": "명"
+    },
+    {
+      "front": "音楽",
+      "back": "음악",
+      "pos": "명"
+    },
+    {
+      "front": "映画",
+      "back": "영화",
+      "pos": "명"
+    },
+    {
+      "front": "仕事",
+      "back": "일",
+      "pos": "명"
+    },
+    {
+      "front": "宿題",
+      "back": "숙제",
+      "pos": "명"
+    },
+    {
+      "front": "質問",
+      "back": "질문",
+      "pos": "명"
+    },
+    {
+      "front": "約束",
+      "back": "약속",
+      "pos": "명"
+    },
+    {
+      "front": "旅行",
+      "back": "여행",
+      "pos": "명"
+    },
+    {
+      "front": "料理",
+      "back": "요리",
+      "pos": "명"
+    },
+    {
+      "front": "新しい",
+      "back": "새롭다",
+      "pos": "형"
+    },
+    {
+      "front": "古い",
+      "back": "낡다",
+      "pos": "형"
+    },
+    {
+      "front": "高い",
+      "back": "비싸다",
+      "pos": "형"
+    },
+    {
+      "front": "安い",
+      "back": "싸다",
+      "pos": "형"
+    },
+    {
+      "front": "大きい",
+      "back": "크다",
+      "pos": "형"
+    },
+    {
+      "front": "小さい",
+      "back": "작다",
+      "pos": "형"
+    },
+    {
+      "front": "長い",
+      "back": "길다",
+      "pos": "형"
+    },
+    {
+      "front": "短い",
+      "back": "짧다",
+      "pos": "형"
+    },
+    {
+      "front": "暑い",
+      "back": "덥다",
+      "pos": "형"
+    },
+    {
+      "front": "寒い",
+      "back": "춥다",
+      "pos": "형"
+    },
+    {
+      "front": "明るい",
+      "back": "밝다",
+      "pos": "형"
+    },
+    {
+      "front": "暗い",
+      "back": "어둡다",
+      "pos": "형"
+    },
+    {
+      "front": "忙しい",
+      "back": "바쁘다",
+      "pos": "형"
+    },
+    {
+      "front": "楽しい",
+      "back": "즐겁다",
+      "pos": "형"
+    },
+    {
+      "front": "難しい",
+      "back": "어렵다",
+      "pos": "형"
+    },
+    {
+      "front": "易しい",
+      "back": "쉽다",
+      "pos": "형"
+    },
+    {
+      "front": "静か",
+      "back": "조용하다",
+      "pos": "형"
+    },
+    {
+      "front": "元気",
+      "back": "건강하다",
+      "pos": "형"
+    },
+    {
+      "front": "きれい",
+      "back": "예쁘다",
+      "pos": "형"
+    },
+    {
+      "front": "いつも",
+      "back": "항상",
+      "pos": "부"
+    }
+  ]
+}
