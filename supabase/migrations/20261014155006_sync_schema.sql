@@ -8,13 +8,16 @@ create schema private;
 -- One sequence for every table, so a client pulls each table by one cursor.
 create sequence private.revision as bigint;
 
--- Overwrites any revision the client sent, on insert and on update.
+-- Overwrites any revision the client sent, on insert and on update. The lock, held until
+-- commit, serializes one user's writing transactions, so for each user a later commit
+-- always holds the higher revision and a pull cursor cannot pass a row still uncommitted.
 create function private.set_revision() returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
+  perform pg_advisory_xact_lock(hashtextextended(new.user_id::text, 0));
   new.revision := nextval('private.revision');
   return new;
 end;

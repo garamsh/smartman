@@ -34,5 +34,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0006-account-native-google-sign-in.md` — sign in with native Google Sign-In through Supabase Auth in an `account` domain, configured per environment from `app/config/`, with flavors deferred to M7.
 - `adr/0007-study-swipe-screen-and-session-toggle.md` — answer by swiping a split card, keep every session answer in a toggleable stack, and reschedule a toggle by replaying the card's session answers; supersedes ADR 0005's screen and correction rules.
 - `adr/0008-google-sign-in-nonce.md` — send Google sign-in a nonce drawn once per run, its SHA-256 hex to Google and the raw value to Supabase, superseding ADR 0006's "No nonce is sent".
-- `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence, composite foreign keys between a user's rows, and pgTAP tests in `make test`.
+- `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence drawn under a per-user lock, composite foreign keys between a user's rows, and pgTAP tests in `make test`.
 - `adr/0000-template.md` — the template every ADR is written from.

@@ -23,6 +23,8 @@ The Supabase schema the app syncs to: its tables, row-level security, revisions,
 - `updated_at` — the device's edit time, set by the client; #24 orders concurrent edits by it.
 - `deleted_at` — a tombstone, null while the row is live. Sync never deletes a row.
 - `revision` — set on every insert and update by a trigger, from the one sequence `private.revision` shared by all four tables. Whatever the client sends is overwritten. Each table is indexed on `(user_id, revision)`, the pull cursor.
+- Before drawing, the trigger takes a transaction-level advisory lock keyed by a 64-bit hash of the row's `user_id`, held until commit. One user's writing transactions therefore run one after another, so for each user a later commit holds the higher revision, and a pull by revision cannot pass a row that commits later. Different users never wait on each other, except on a hash collision ([ADR 0010](adr/0010-server-schema-and-row-level-security.md)).
+- The cost: one user's concurrent writes, from two devices or two requests, serialize.
 - The sequence and the trigger function live in the schema `private`, which the API does not expose. The function runs as its owner, so clients need no privilege on the sequence and have none.
 
 ### Access
@@ -45,6 +47,7 @@ The Supabase schema the app syncs to: its tables, row-level security, revisions,
   - `reviews_test.sql` — a client changes a review's rating and nothing else, and deletes no review;
   - `anon_test.sql` — `anon` is refused on every table, with an authenticated read as control;
   - `revision_test.sql` — `revision` comes from the sequence on insert and update, whatever the client sends;
+  - `revision_lock_test.sql` — a write to each table holds its user's advisory lock, and only that user's;
   - `integrity_test.sql` — references to another user's deck or card are refused.
 - `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts the local stack with only Postgres if none is running, resets the local database to the migrations, runs the tests and prints their count, and stops the stack it started. Where Docker does not, it prints that the tests were skipped and why.
 - CI's ubuntu job installs the Supabase CLI and runs them; the macOS runner has no Docker, so its log shows the skip.
@@ -56,4 +59,4 @@ The Supabase schema the app syncs to: its tables, row-level security, revisions,
 
 ## Open questions
 
-- A revision is drawn when a row is written, not when its transaction commits, so a row can become visible with a revision lower than one a client has already pulled past. How #24's pull accounts for that is open.
+- None.
