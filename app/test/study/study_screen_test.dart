@@ -458,79 +458,67 @@ void main() {
       }
 
       final stack = find.byType(PreviousCards);
-      for (final name in names) {
-        expect(
-          find.descendant(of: stack, matching: _previous('$name front')),
-          findsOneWidget,
-        );
-      }
-      expect(
-        find.descendant(of: stack, matching: find.byType(Scrollable)),
-        findsOneWidget,
+      final scrollable = find.descendant(
+        of: stack,
+        matching: find.byType(Scrollable),
       );
-      // Opaque: no translucent layer or colour once the stack has settled.
-      expect(
-        tester
-            .widgetList<Opacity>(
-              find.descendant(of: stack, matching: find.byType(Opacity)),
-            )
-            .where((opacity) => opacity.opacity < 1),
-        isEmpty,
-      );
-      final colors = [
-        for (final name in names)
+      expect(scrollable, findsOneWidget);
+      // Every answer is reached in the one scroll view, newest to oldest, and
+      // read as it comes into view.
+      final colors = <Color>[];
+      final scales = <double>[];
+      final blurred = <bool>[];
+      for (final name in names.reversed) {
+        final card = _previous('$name front');
+        await tester.scrollUntilVisible(card, -50, scrollable: scrollable);
+        await tester.pumpAndSettle();
+        colors.add(
           (tester
                       .widget<AnimatedContainer>(
                         find.descendant(
-                          of: _previous('$name front'),
+                          of: card,
                           matching: find.byType(AnimatedContainer),
                         ),
                       )
                       .decoration!
                   as BoxDecoration)
               .color!,
-      ];
-      expect(colors.every((color) => color.a == 1), isTrue);
-      // Depth: the newest is white and sharp, older cards greyer, smaller and
-      // blurred, down to the floor scale.
-      expect(colors.last, StudyStyle.cardColor);
-      expect(colors.first, isNot(StudyStyle.cardColor));
-      final scales = [
-        for (final name in names)
+        );
+        scales.add(
           tester
               .widget<AnimatedScale>(
-                find.ancestor(
-                  of: _previous('$name front'),
-                  matching: find.byType(AnimatedScale),
-                ),
+                find.ancestor(of: card, matching: find.byType(AnimatedScale)),
               )
               .scale,
-      ];
-      expect(scales, orderedEquals([...scales]..sort()));
-      expect(scales.first, StudyStyle.depthScaleFloor);
+        );
+        blurred.add(
+          find
+              .descendant(of: card, matching: find.byType(ImageFiltered))
+              .evaluate()
+              .isNotEmpty,
+        );
+        // Opaque: no translucent layer once the stack has settled.
+        expect(
+          tester
+              .widgetList<Opacity>(
+                find.descendant(of: stack, matching: find.byType(Opacity)),
+              )
+              .where((opacity) => opacity.opacity < 1),
+          isEmpty,
+        );
+      }
+      expect(colors.every((color) => color.a == 1), isTrue);
+      // Depth, newest first: white and sharp, then greyer, smaller and
+      // blurred, down to the floor scale; past the depth cap, unblurred.
+      expect(colors.first, StudyStyle.cardColor);
+      expect(colors.last, isNot(StudyStyle.cardColor));
       expect(
-        find.descendant(
-          of: _previous('h front'),
-          matching: find.byType(ImageFiltered),
-        ),
-        findsNothing,
+        scales,
+        orderedEquals(List<double>.of(scales)..sort((a, b) => b.compareTo(a))),
       );
-      expect(
-        find.descendant(
-          of: _previous('a front'),
-          matching: find.byType(ImageFiltered),
-        ),
-        findsOneWidget,
-      );
+      expect(scales.last, StudyStyle.depthScaleFloor);
+      expect(blurred, [false, true, true, true, true, true, false, false]);
 
-      await tester.scrollUntilVisible(
-        _previous('a front'),
-        -100,
-        scrollable: find.descendant(
-          of: stack,
-          matching: find.byType(Scrollable),
-        ),
-      );
       await tester.tap(_previous('a front'));
       await tester.pumpAndSettle();
 

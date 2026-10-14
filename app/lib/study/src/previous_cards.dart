@@ -10,9 +10,13 @@ import 'rust/api/engine.dart';
 import 'session.dart';
 import 'study_style.dart';
 
-/// Every card answered in the session, newest at the bottom, in one scroll
-/// view that opens at the newest.
-class PreviousCards extends StatelessWidget {
+/// Every card answered in the session, oldest at the top and newest at the
+/// bottom, in one scroll view that opens at the newest and returns there after
+/// each answer. Only the cards near the viewport are built.
+///
+/// The list runs oldest first, not reversed, because a list paints its
+/// children in index order and each card must paint over the one above it.
+class PreviousCards extends StatefulWidget {
   const PreviousCards({super.key, required this.cards, required this.onToggle});
 
   /// Oldest first.
@@ -20,73 +24,102 @@ class PreviousCards extends StatelessWidget {
   final void Function(int position) onToggle;
 
   @override
+  State<PreviousCards> createState() => _PreviousCardsState();
+}
+
+class _PreviousCardsState extends State<PreviousCards> {
+  ScrollController? _controller;
+  var _count = 0;
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  /// The height of the slot of the card at [index] of [count].
+  static double _extent(int index, int count) {
+    final depth = count - index;
+    final height = StudyStyle.previousHeight * _scale(depth);
+    return depth == 1 ? height : height - StudyStyle.previousOverlap;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      reverse: true,
-      child: Column(
-        children: [
-          for (final (index, card) in cards.indexed)
-            _Slot(
+    final cards = widget.cards;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var total = 0.0;
+        for (var index = 0; index < cards.length; index++) {
+          total += _extent(index, cards.length);
+        }
+        final viewport = constraints.maxHeight;
+        final end = max(0.0, total - viewport);
+        final controller = _controller ??= ScrollController(
+          initialScrollOffset: end,
+        );
+        if (cards.length != _count) {
+          _count = cards.length;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (controller.hasClients) {
+              controller.jumpTo(controller.position.maxScrollExtent);
+            }
+          });
+        }
+        return ListView.builder(
+          controller: controller,
+          // Fewer cards than fill the view sit at its bottom.
+          padding: EdgeInsets.only(top: max(0, viewport - total)),
+          itemCount: cards.length,
+          itemExtentBuilder: (index, _) =>
+              index < cards.length ? _extent(index, cards.length) : null,
+          findChildIndexCallback: (key) => switch (key) {
+            ValueKey<int>(:final value) when value < cards.length => value,
+            _ => null,
+          },
+          itemBuilder: (context, index) {
+            final card = cards[index];
+            final depth = cards.length - index;
+            return _Slot(
               key: ValueKey(card.position),
-              depth: cards.length - index,
-              last: index == cards.length - 1,
+              depth: depth,
               child: _PreviousCardView(
                 card: card,
-                depth: cards.length - index,
-                onTap: () => onToggle(card.position),
+                depth: depth,
+                onTap: () => widget.onToggle(card.position),
               ),
-            ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
+/// How far a card [depth] steps from the current one is scaled down.
+double _scale(int depth) =>
+    max(StudyStyle.depthScaleFloor, 1 - StudyStyle.depthScaleStep * depth);
+
 /// Where a previous card [depth] steps from the current one sits: scaled down
-/// a step per card and overlapping the card above it by
-/// [StudyStyle.previousOverlap].
+/// a step per card, its bottom under the card below it by
+/// [StudyStyle.previousOverlap]. The newest card rises into place.
 class _Slot extends StatelessWidget {
-  const _Slot({
-    super.key,
-    required this.depth,
-    required this.last,
-    required this.child,
-  });
+  const _Slot({super.key, required this.depth, required this.child});
 
   final int depth;
-
-  /// Whether this is the newest card, which nothing overlaps.
-  final bool last;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final duration = _settle(context);
-    final scale = max(
-      StudyStyle.depthScaleFloor,
-      1 - StudyStyle.depthScaleStep * depth,
-    );
-    final height = StudyStyle.previousHeight * scale;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(
-        begin: height,
-        end: last ? height : height - StudyStyle.previousOverlap,
-      ),
-      duration: duration,
-      builder: (context, slotHeight, child) => SizedBox(
-        height: slotHeight,
-        child: OverflowBox(
-          alignment: Alignment.topCenter,
-          minHeight: StudyStyle.previousHeight,
-          maxHeight: StudyStyle.previousHeight,
-          child: child,
-        ),
-      ),
+    return OverflowBox(
+      alignment: Alignment.topCenter,
+      minHeight: StudyStyle.previousHeight,
+      maxHeight: StudyStyle.previousHeight,
       child: AnimatedScale(
-        scale: scale,
+        scale: _scale(depth),
         alignment: Alignment.topCenter,
-        duration: duration,
-        child: _Entrance(child: child),
+        duration: _settle(context),
+        child: _Entrance(rising: depth == 1, child: child),
       ),
     );
   }
@@ -98,18 +131,20 @@ Duration _settle(BuildContext context) =>
     ? Duration.zero
     : StudyStyle.settleDuration;
 
-/// Rises a card answered just now into the stack, or fades it in under
-/// reduce motion.
+/// Rises the card answered just now into the stack, or fades it in under
+/// reduce motion. A card built while [rising] is false, as one scrolled into
+/// view is, appears in place.
 class _Entrance extends StatelessWidget {
-  const _Entrance({required this.child});
+  const _Entrance({required this.rising, required this.child});
 
+  final bool rising;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     if (MediaQuery.disableAnimationsOf(context)) {
       return TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
+        tween: Tween(begin: rising ? 0 : 1, end: 1),
         duration: StudyStyle.fadeDuration,
         builder: (context, opacity, child) =>
             Opacity(opacity: opacity, child: child),
@@ -117,7 +152,7 @@ class _Entrance extends StatelessWidget {
       );
     }
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: StudyStyle.emergeOffset, end: 0),
+      tween: Tween(begin: rising ? StudyStyle.emergeOffset : 0, end: 0),
       duration: StudyStyle.settleDuration,
       curve: Curves.easeOutCubic,
       builder: (context, offset, child) =>
@@ -144,7 +179,11 @@ class _PreviousCardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final steps = min(depth - 1, StudyStyle.depthSteps) / StudyStyle.depthSteps;
-    final sigma = StudyStyle.depthMaxBlur * steps;
+    // Past the cap no card blurs: its blur would no longer change, and a long
+    // session would otherwise composite a blur layer for every card.
+    final sigma = depth - 1 > StudyStyle.depthSteps
+        ? 0.0
+        : StudyStyle.depthMaxBlur * steps;
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final style = theme.textTheme.bodyLarge;
