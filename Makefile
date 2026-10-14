@@ -15,7 +15,7 @@ lint:
 format:
 	cd app && $(DART_FILES); \
 	dart format --output=none --set-exit-if-changed $$files && \
-	echo "format checked Dart files in app/, selected by: $(DART_SCOPE)"
+	echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
 
 test:
 	cd app && flutter test --reporter expanded && \
