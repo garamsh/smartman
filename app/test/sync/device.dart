@@ -5,6 +5,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
+import 'package:uuid/uuid.dart';
 
 /// One device: its own in-memory database, the repositories that write it,
 /// and the synchronizer that syncs it through [server].
@@ -28,9 +29,8 @@ class Device {
 
   /// The device's clock, which every write reads.
   DateTime now = DateTime.utc(2026, 10, 15, 9);
-  var _ids = 0;
-
-  String _newId() => '$name-${_ids++}';
+  /// Ids are UUIDs as the app's are, so no two devices or runs share one.
+  String _newId() => const Uuid().v4();
 
   Future<void> sync(UserId account) => synchronizer.run(account);
 

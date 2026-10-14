@@ -26,12 +26,14 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Storage
 
-- The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` and `card_states` tables there belong to the `study` domain ([`study.md`](study.md)); deleting a card deletes its rows in both through cascading foreign keys.
+- The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` and `card_states` tables there belong to the `study` domain ([`study.md`](study.md)).
+- Every write sets the row's `updated_at` and leaves it unsynced (`dirty`), for sync to push ([`sync.md`](sync.md)).
 - A card side is stored as a JSON array of blocks, each with a `type` discriminator and a `payload`. A new block type adds a discriminator value; stored rows need no migration.
 - A stored block of an unknown type is read as `UnsupportedContent` and written back unchanged, so a card a later version wrote is shown, not lost.
-- Deleting a deck deletes its cards through a cascading foreign key. The UI asks for confirmation first and states how many cards go with it.
-- Deleting a card deletes its study history. The editor asks for confirmation first.
-- Every write is local. Nothing in the domain touches the network.
+- Deleting a deck sets `deleted_at` on it and on each of its cards, a tombstone sync pushes. The UI asks for confirmation first and states how many cards go with it.
+- Deleting a card sets its `deleted_at`. Its reviews and state stay in the database, out of every screen. The editor asks for confirmation first.
+- Every read leaves tombstoned decks and cards out: the lists, the counts, `listCards`, and the duplicate check.
+- Every write is local. Nothing in the domain touches the network or imports `sync`.
 
 ### Card key and duplicates
 
@@ -102,6 +104,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why the entry point takes a `DeckSelection`.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md): why the counts reach this domain through one builder provider rather than a function or a widget per place.
 - Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM. Issue #19 records the selection mode and the header card, and issue #22 the current screens.
+- [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md): why a delete is a tombstone and every write leaves its row unsynced.
 
 ## Open questions
 

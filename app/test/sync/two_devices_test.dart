@@ -40,8 +40,10 @@ void main() {
     if (skip != null) return;
     final email = 'sync-${DateTime.now().microsecondsSinceEpoch}@example.com';
     const password = 'two-devices-password';
-    final first = SupabaseClient(url!, key!);
-    final second = SupabaseClient(url, key);
+    // Password sign-in needs no PKCE flow, and so no storage for its verifier.
+    const options = AuthClientOptions(authFlowType: AuthFlowType.implicit);
+    final first = SupabaseClient(url!, key!, authOptions: options);
+    final second = SupabaseClient(url, key, authOptions: options);
     clients.addAll([first, second]);
     final signUp = await first.auth.signUp(email: email, password: password);
     await second.auth.signInWithPassword(email: email, password: password);

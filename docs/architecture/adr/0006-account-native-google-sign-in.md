@@ -1,6 +1,6 @@
 # ADR 0006: Sign in with native Google Sign-In through Supabase Auth in an `account` domain, configured per environment from `app/config/`
 
-> Status: accepted; its "No nonce is sent" superseded by ADR-0008
+> Status: accepted; its "No nonce is sent" superseded by ADR-0008; its "only domain importing `supabase_flutter`" superseded by ADR-0015
 > Date: 2026-10-14
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

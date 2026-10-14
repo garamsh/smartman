@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
@@ -201,7 +202,7 @@ void main() {
       expect((await repository.watchDecks().first).single.name, 'French');
     });
 
-    test('deleting a deck deletes its cards and leaves other decks', () async {
+    test('deleting a deck tombstones it and its cards, unsynced, and leaves other decks', () async {
       final french = await repository.createDeck('French');
       final spanish = await repository.createDeck('Spanish');
       await repository.addCard(french.id, front: _text('a'), back: _text('1'));
@@ -210,11 +211,76 @@ void main() {
 
       await repository.deleteDeck(french.id);
 
-      final remaining = await db.select(db.cards).get();
-      expect(remaining.map((row) => row.deckId), [spanish.id.value]);
+      final rows = await db.select(db.cards).get();
+      expect(
+        {
+          for (final row in rows)
+            row.deckId: (row.deletedAt != null, row.dirty),
+        },
+        {french.id.value: (true, true), spanish.id.value: (false, true)},
+      );
+      final deck = await (db.select(
+        db.decks,
+      )..where((row) => row.id.equals(french.id.value))).getSingle();
+      expect([deck.deletedAt != null, deck.dirty], [true, true]);
       expect((await repository.watchDecks().first).map((deck) => deck.id), [
         spanish.id,
       ]);
+      expect(await repository.countCards(french.id), 0);
+      expect(await repository.watchCardCounts().first, {spanish.id: 1});
+    });
+
+    test(
+      'a tombstoned card is out of every list and of the duplicate check',
+      () async {
+        final deck = await repository.createDeck('French');
+        final removed = _saved(
+          await repository.addCard(
+            deck.id,
+            front: _text('chat'),
+            back: _text('1'),
+          ),
+        );
+
+        await repository.deleteCard(removed.id);
+
+        expect(await repository.listCards(deck.id), isEmpty);
+        expect(await cardsOf(deck.id), isEmpty);
+        final again = await repository.addCard(
+          deck.id,
+          front: _text('Chat'),
+          back: _text('2'),
+        );
+        expect(again, isA<CardSaved>());
+        // Control: a live card with the same key is still a duplicate.
+        expect(
+          await repository.addCard(
+            deck.id,
+            front: _text('chat'),
+            back: _text('3'),
+          ),
+          isA<DuplicateFront>(),
+        );
+      },
+    );
+
+    test('every edit leaves its row unsynced', () async {
+      final deck = await repository.createDeck('French');
+      final card = _saved(
+        await repository.addCard(deck.id, front: _text('a'), back: _text('1')),
+      );
+      await db
+          .update(db.decks)
+          .write(const DecksCompanion(dirty: Value(false)));
+      await db
+          .update(db.cards)
+          .write(const CardsCompanion(dirty: Value(false)));
+
+      await repository.renameDeck(deck.id, 'Français');
+      await repository.editCard(card, front: _text('b'), back: _text('2'));
+
+      expect((await db.select(db.decks).getSingle()).dirty, isTrue);
+      expect((await db.select(db.cards).getSingle()).dirty, isTrue);
     });
 
     test('reads a stored block of an unknown type without failing', () async {
