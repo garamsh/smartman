@@ -3,16 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/study/study.dart';
+
+import 'account/fake_account_service.dart';
 
 void main() {
   late Scheduler scheduler;
   setUpAll(() async => scheduler = await Scheduler.load());
 
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(composeApp(NativeDatabase.memory(), scheduler));
+    await tester.pumpWidget(
+      composeApp(NativeDatabase.memory(), scheduler, FakeAccountService()),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -138,6 +143,19 @@ void main() {
     expect(find.text('Chat'), findsOneWidget);
     expect(find.text('Know'), findsOneWidget);
     expect(find.text("Don't know"), findsOneWidget);
+    await unmountApp(tester);
+  });
+
+  testWidgets('the deck list opens the account screen, signed out', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('Account'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountScreen), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsOneWidget);
     await unmountApp(tester);
   });
 

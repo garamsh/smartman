@@ -20,6 +20,15 @@ final studyScreenProvider = Provider<Widget Function(Deck deck)>(
   ),
 );
 
+/// Builds the account screen the deck list opens. The composition site
+/// overrides it, so this domain does not depend on the one that holds
+/// accounts.
+final accountScreenProvider = Provider<Widget Function()>(
+  (ref) => throw UnimplementedError(
+    'accountScreenProvider is overridden at the composition site',
+  ),
+);
+
 /// Every deck, kept current.
 final decksProvider = StreamProvider.autoDispose<List<Deck>>(
   (ref) => ref.watch(deckRepositoryProvider).watchDecks(),

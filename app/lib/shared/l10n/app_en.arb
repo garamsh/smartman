@@ -45,5 +45,17 @@
   "timeSpent": "Time spent: {minutes} min {seconds} s",
   "done": "Done",
   "answerNotSaved": "Couldn't save your answer on this device. This card's schedule did not change.",
-  "schedulingFailure": "Couldn't work out this card's next review. Its schedule did not change."
+  "schedulingFailure": "Couldn't work out this card's next review. Its schedule did not change.",
+  "account": "Account",
+  "accountTitle": "Account",
+  "signedOutBody": "Everything works without an account.",
+  "signInWithGoogle": "Sign in with Google",
+  "signingIn": "Signing in",
+  "signedInAs": "Signed in as {email}",
+  "signedIn": "Signed in",
+  "signOut": "Sign out",
+  "signingOut": "Signing out",
+  "accountOffline": "Couldn't reach the server. Check your internet connection.",
+  "accountMisconfigured": "Sign-in isn't set up correctly in this app, so you can't sign in.",
+  "accountRejected": "Google sign-in was refused. Please try again."
 }

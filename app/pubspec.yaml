@@ -46,6 +46,8 @@ dependencies:
   flutter_rust_bridge: 2.13.0
   flutter_rust_bridge_hooks: 2.13.0
   freezed_annotation: ^3.1.0
+  supabase_flutter: ^2.18.3
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -60,6 +62,9 @@ dev_dependencies:
   drift_dev: ^2.35.1
   build_runner: ^2.16.2
   freezed: ^4.0.2
+  google_sign_in_platform_interface: ^3.1.0
+  http: ^1.6.0
+  plugin_platform_interface: ^2.1.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

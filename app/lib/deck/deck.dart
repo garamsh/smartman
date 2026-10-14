@@ -11,4 +11,5 @@ export 'src/deck_repository.dart'
 export 'src/failure.dart' show DeckFailure, StorageFailure, UnreadableCard;
 export 'src/failure_message.dart' show describeFailure;
 export 'src/model.dart' show Card, CardId, CardSource, Deck, DeckId;
-export 'src/providers.dart' show deckRepositoryProvider, studyScreenProvider;
+export 'src/providers.dart'
+    show accountScreenProvider, deckRepositoryProvider, studyScreenProvider;

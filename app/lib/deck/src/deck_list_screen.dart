@@ -17,7 +17,20 @@ class DeckListScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final decks = ref.watch(decksProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.decksTitle)),
+      appBar: AppBar(
+        title: Text(l10n.decksTitle),
+        actions: [
+          IconButton(
+            tooltip: l10n.account,
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ref.read(accountScreenProvider)(),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: switch (decks) {
         AsyncData(:final value) when value.isEmpty => Center(
           child: Text(l10n.noDecks),
