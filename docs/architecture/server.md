@@ -49,12 +49,15 @@ The Supabase schema the app syncs to: its tables, row-level security, revisions,
   - `revision_test.sql` — `revision` comes from the sequence on insert and update, whatever the client sends;
   - `revision_lock_test.sql` — a write to each table holds its user's advisory lock, and only that user's;
   - `integrity_test.sql` — references to another user's deck or card are refused.
-- `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts the local stack with only Postgres if none is running, resets the local database to the migrations, runs the tests and prints their count, and stops the stack it started. Where Docker does not, it prints that the tests were skipped and why.
+- `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts a throwaway stack of its own with only Postgres, which applies the migrations, runs the tests and prints their count ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)). Where Docker does not, it prints that the tests were skipped and why.
+- The throwaway stack is named `smartman_test_<port>` and publishes its database on the first port in 54400–54499 that the run reserves under `${TMPDIR:-/tmp}/smartman-test-db/` and that nothing listens on. Concurrent runs, from several checkouts on one host, each get their own, and none touches the `smartman` stack or its rows.
+- The script stops its stack, deleting its data, on every exit, interrupts included, and retries a stop that fails because another stack is stopping at the same moment. A stack it cannot stop fails the run, which prints how to remove it. A run killed with `SIGKILL` leaves its stack and reservation behind, to remove by hand.
 - CI's ubuntu job installs the Supabase CLI and runs them; the macOS runner has no Docker, so its log shows the skip.
 
 ## Rationale
 
-- [ADR 0010](adr/0010-server-schema-and-row-level-security.md) records the schema, the access rules, the revision mechanism, and how the tests run.
+- [ADR 0010](adr/0010-server-schema-and-row-level-security.md) records the schema, the access rules and the revision mechanism.
+- [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) records why the tests run on a throwaway stack per run, superseding ADR 0010's "Tests" decision.
 - Issue #23 records the decisions made by the PM.
 
 ## Open questions

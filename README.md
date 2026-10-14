@@ -46,7 +46,7 @@ Without the file the app still runs, with Google sign-in unavailable.
 
 - `make lint` — checks Markdown Contents lists, fails on a Supabase secret or service-role key in any file, checks that the iOS URL scheme matches the iOS client ID in `app/config/dev.json`, checks that the app's committed generated code (flutter_rust_bridge's included) matches its generators, runs `flutter analyze` over the app's Dart files, and runs clippy over the engine and the bridge crate with warnings denied.
 - `make format` — fails when a Dart file in the app or a Rust file in the engine or the bridge crate is not formatted; `dart format` or `cargo fmt` fixes it.
-- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, and the database tests in `supabase/tests/` against the local stack (`supabase/test-db.sh`). It resets the local database first, and stops the stack afterwards if it started it. Without Docker it skips the database tests and prints why.
+- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, and the database tests in `supabase/tests/` on a throwaway local stack of their own (`supabase/test-db.sh`), stopped afterwards, so concurrent checkouts do not collide and a running local stack is left untouched. Without Docker it skips the database tests and prints why.
 - `make build` — builds, given `app/config/dev.json`, a debug Android APK holding the bridge library, on macOS also the iOS simulator app without code signing, and the engine crate with its rustdoc, warnings denied. It reports which builds it ran.
 - `make ci` — runs all four in that order. CI runs the same target.
 
