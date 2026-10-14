@@ -35,4 +35,9 @@ jobs:
         with:
           tool: flutter_rust_bridge_codegen@${{ steps.frb.outputs.version }}
           fallback: cargo-install
+      # make test runs the database tests where Docker is; only the ubuntu runner has it.
+      - if: runner.os == 'Linux'
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.120.0
       - run: make ci
