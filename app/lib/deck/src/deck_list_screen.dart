@@ -64,18 +64,12 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 48),
                   child: Text(l10n.noDecks, textAlign: TextAlign.center),
                 )
-              else ...[
+              else if (DeckSelection.of([for (final d in decks) d.id])
+                  case final all?) ...[
                 ref.watch(todayProvider)(
-                  DeckSelection(decks.first.id, decks.skip(1).map((d) => d.id)),
-                  (context, count) => _TodayHeader(
-                    count: count,
-                    onStudy: () => _study(
-                      DeckSelection(
-                        decks.first.id,
-                        decks.skip(1).map((d) => d.id),
-                      ),
-                    ),
-                  ),
+                  all,
+                  (context, count) =>
+                      _TodayHeader(count: count, onStudy: () => _study(all)),
                 ),
                 _DecksLabel(count: decks.length, showHint: selected == null),
                 for (final deck in decks)
