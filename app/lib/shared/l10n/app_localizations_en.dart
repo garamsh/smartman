@@ -16,7 +16,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get decksTitle => 'Decks';
 
   @override
-  String get noDecks => 'No decks yet';
+  String get noDecks => 'No decks yet. Create a new deck to start.';
 
   @override
   String get newDeck => 'New deck';
@@ -54,10 +54,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckNameRequired => 'Enter a name';
 
   @override
-  String get noCards => 'No cards yet';
+  String get noCards => 'No cards yet. Add a card to start.';
 
   @override
-  String get newCard => 'New card';
+  String get newCard => 'Add card';
 
   @override
   String get editCard => 'Edit card';
@@ -66,24 +66,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteCard => 'Delete card';
 
   @override
-  String get cardFront => 'Front';
+  String get cardFront => 'Question';
 
   @override
-  String get cardBack => 'Back';
+  String get cardBack => 'Answer';
 
   @override
   String get cardSideRequired => 'Enter some text';
 
   @override
-  String get saveCard => 'Save card';
+  String get duplicateTitle => 'This deck already has this card';
 
   @override
-  String get duplicateTitle => 'Duplicate front';
-
-  @override
-  String duplicateBody(String front) {
-    return 'This deck already has a card with the front \"$front\".';
-  }
+  String get duplicateBody => 'Case and spacing are ignored when comparing.';
 
   @override
   String get openExistingCard => 'Open existing card';
@@ -117,9 +112,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get delete => 'Delete';
-
-  @override
-  String get study => 'Study';
 
   @override
   String get clearSelection => 'Clear selection';
@@ -288,4 +280,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountRejected => 'Google sign-in was refused. Please try again.';
+
+  @override
+  String get displaySection => 'Display';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String todayBreakdown(int review, int fresh) {
+    return 'Review $review · New $fresh';
+  }
+
+  @override
+  String myDecks(int count) {
+    return 'My decks $count';
+  }
+
+  @override
+  String get selectHint => 'Long-press to select several decks';
+
+  @override
+  String cardCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String todayChip(int count) {
+    return 'Today $count';
+  }
+
+  @override
+  String get createFromPhoto => 'Create from photo';
+
+  @override
+  String get addFromPhoto => 'Add from photo';
+
+  @override
+  String deckSummary(int cards, int review, int fresh) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cards,
+      locale: localeName,
+      other: '$cards cards',
+      one: '1 card',
+    );
+    return '$_temp0 · $review to review today · $fresh new';
+  }
+
+  @override
+  String studyCount(int count) {
+    return 'Study · $count';
+  }
+
+  @override
+  String get searchCards => 'Search';
+
+  @override
+  String get noMatches => 'No card matches. Try other words.';
+
+  @override
+  String get saveAndNext => 'Save and next card';
+
+  @override
+  String get deleteCardTitle => 'Delete this card?';
+
+  @override
+  String get deleteCardBody => 'Its study history is deleted with it.';
 }

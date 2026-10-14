@@ -49,6 +49,7 @@ dependencies:
   supabase_flutter: ^2.18.3
   google_sign_in: ^7.2.0
   crypto: ^3.0.7
+  shared_preferences: ^2.5.6
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +67,7 @@ dev_dependencies:
   google_sign_in_platform_interface: ^3.1.0
   http: ^1.6.0
   plugin_platform_interface: ^2.1.8
+  shared_preferences_platform_interface: ^2.4.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -89,6 +91,20 @@ flutter:
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
+
+  # IBM Plex Sans KR, under the SIL Open Font License in assets/fonts/OFL.txt.
+  assets:
+    - assets/fonts/OFL.txt
+  fonts:
+    - family: IBM Plex Sans KR
+      fonts:
+        - asset: assets/fonts/IBMPlexSansKR-Regular.ttf
+        - asset: assets/fonts/IBMPlexSansKR-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansKR-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansKR-Bold.ttf
+          weight: 700
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

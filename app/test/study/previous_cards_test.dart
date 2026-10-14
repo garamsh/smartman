@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
+import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/src/previous_cards.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/session.dart';
@@ -42,6 +43,7 @@ void main() {
       final toggled = <int>[];
       await tester.pumpWidget(
         MaterialApp(
+          theme: lightTheme,
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

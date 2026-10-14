@@ -16,7 +16,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get decksTitle => '덱';
 
   @override
-  String get noDecks => '아직 덱이 없습니다';
+  String get noDecks => '아직 덱이 없습니다. 새 덱을 만들어 시작하세요.';
 
   @override
   String get newDeck => '새 덱';
@@ -53,10 +53,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckNameRequired => '이름을 입력하세요';
 
   @override
-  String get noCards => '아직 카드가 없습니다';
+  String get noCards => '아직 카드가 없습니다. 카드를 추가해 시작하세요.';
 
   @override
-  String get newCard => '새 카드';
+  String get newCard => '카드 추가';
 
   @override
   String get editCard => '카드 편집';
@@ -65,24 +65,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteCard => '카드 삭제';
 
   @override
-  String get cardFront => '앞면';
+  String get cardFront => '문제';
 
   @override
-  String get cardBack => '뒷면';
+  String get cardBack => '답';
 
   @override
   String get cardSideRequired => '내용을 입력하세요';
 
   @override
-  String get saveCard => '카드 저장';
+  String get duplicateTitle => '이 덱에 이미 있는 카드예요';
 
   @override
-  String get duplicateTitle => '같은 앞면의 카드가 있습니다';
-
-  @override
-  String duplicateBody(String front) {
-    return '이 덱에 앞면이 \"$front\"인 카드가 이미 있습니다.';
-  }
+  String get duplicateBody => '대소문자와 띄어쓰기는 구분하지 않아요.';
 
   @override
   String get openExistingCard => '기존 카드 열기';
@@ -115,9 +110,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get delete => '삭제';
-
-  @override
-  String get study => '학습';
 
   @override
   String get clearSelection => '선택 해제';
@@ -270,4 +262,70 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountRejected => 'Google 로그인이 거부되었습니다. 다시 시도해 주세요.';
+
+  @override
+  String get displaySection => '화면';
+
+  @override
+  String get themeSystem => '시스템';
+
+  @override
+  String get themeLight => '라이트';
+
+  @override
+  String get themeDark => '다크';
+
+  @override
+  String todayBreakdown(int review, int fresh) {
+    return '복습 $review · 새 카드 $fresh';
+  }
+
+  @override
+  String myDecks(int count) {
+    return '내 덱 $count';
+  }
+
+  @override
+  String get selectHint => '길게 눌러 여러 덱 선택';
+
+  @override
+  String cardCount(int count) {
+    return '카드 $count장';
+  }
+
+  @override
+  String todayChip(int count) {
+    return '오늘 $count';
+  }
+
+  @override
+  String get createFromPhoto => '사진으로 만들기';
+
+  @override
+  String get addFromPhoto => '사진으로 추가';
+
+  @override
+  String deckSummary(int cards, int review, int fresh) {
+    return '카드 $cards장 · 오늘 복습 $review · 새 카드 $fresh';
+  }
+
+  @override
+  String studyCount(int count) {
+    return '학습 · $count장';
+  }
+
+  @override
+  String get searchCards => '검색';
+
+  @override
+  String get noMatches => '찾는 카드가 없습니다. 다른 말로 검색해 보세요.';
+
+  @override
+  String get saveAndNext => '저장하고 다음 카드';
+
+  @override
+  String get deleteCardTitle => '이 카드를 삭제할까요?';
+
+  @override
+  String get deleteCardBody => '이 카드의 학습 기록도 함께 삭제됩니다.';
 }

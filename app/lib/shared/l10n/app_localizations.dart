@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// Shown when there is no deck.
   ///
   /// In ko, this message translates to:
-  /// **'아직 덱이 없습니다'**
+  /// **'아직 덱이 없습니다. 새 덱을 만들어 시작하세요.'**
   String get noDecks;
 
   /// Button and dialog title for creating a deck.
@@ -167,13 +167,13 @@ abstract class AppLocalizations {
   /// Shown when a deck has no card.
   ///
   /// In ko, this message translates to:
-  /// **'아직 카드가 없습니다'**
+  /// **'아직 카드가 없습니다. 카드를 추가해 시작하세요.'**
   String get noCards;
 
-  /// Button and screen title for adding a card.
+  /// Bottom-bar button and editor title for adding a card.
   ///
   /// In ko, this message translates to:
-  /// **'새 카드'**
+  /// **'카드 추가'**
   String get newCard;
 
   /// Screen title for editing a card.
@@ -188,16 +188,16 @@ abstract class AppLocalizations {
   /// **'카드 삭제'**
   String get deleteCard;
 
-  /// Label of the card front field.
+  /// Label of the card front field: the question side.
   ///
   /// In ko, this message translates to:
-  /// **'앞면'**
+  /// **'문제'**
   String get cardFront;
 
-  /// Label of the card back field.
+  /// Label of the card back field: the answer side.
   ///
   /// In ko, this message translates to:
-  /// **'뒷면'**
+  /// **'답'**
   String get cardBack;
 
   /// Error shown when a card side is empty.
@@ -206,23 +206,17 @@ abstract class AppLocalizations {
   /// **'내용을 입력하세요'**
   String get cardSideRequired;
 
-  /// Button for saving a card.
+  /// Title of the sheet shown when a card's front duplicates another in the deck.
   ///
   /// In ko, this message translates to:
-  /// **'카드 저장'**
-  String get saveCard;
-
-  /// Title of the dialog shown when a card's front duplicates another in the deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'같은 앞면의 카드가 있습니다'**
+  /// **'이 덱에 이미 있는 카드예요'**
   String get duplicateTitle;
 
-  /// Body of the duplicate dialog, quoting the existing card's front.
+  /// Line under the duplicate sheet's title: comparing fronts ignores case and spacing.
   ///
   /// In ko, this message translates to:
-  /// **'이 덱에 앞면이 \"{front}\"인 카드가 이미 있습니다.'**
-  String duplicateBody(String front);
+  /// **'대소문자와 띄어쓰기는 구분하지 않아요.'**
+  String get duplicateBody;
 
   /// Duplicate dialog action that opens the existing card.
   ///
@@ -283,12 +277,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'삭제'**
   String get delete;
-
-  /// Button on a deck that starts a study session.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습'**
-  String get study;
 
   /// Label of the button that leaves the deck list's selection mode.
   ///
@@ -528,6 +516,114 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'Google 로그인이 거부되었습니다. 다시 시도해 주세요.'**
   String get accountRejected;
+
+  /// Heading of the account screen section that chooses the theme.
+  ///
+  /// In ko, this message translates to:
+  /// **'화면'**
+  String get displaySection;
+
+  /// Theme choice: follow the device light or dark setting.
+  ///
+  /// In ko, this message translates to:
+  /// **'시스템'**
+  String get themeSystem;
+
+  /// Theme choice: always light.
+  ///
+  /// In ko, this message translates to:
+  /// **'라이트'**
+  String get themeLight;
+
+  /// Theme choice: always dark.
+  ///
+  /// In ko, this message translates to:
+  /// **'다크'**
+  String get themeDark;
+
+  /// Line under the today count: how many of the cards are due reviews and how many are new.
+  ///
+  /// In ko, this message translates to:
+  /// **'복습 {review} · 새 카드 {fresh}'**
+  String todayBreakdown(int review, int fresh);
+
+  /// Label above the deck rows, with how many decks there are.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 덱 {count}'**
+  String myDecks(int count);
+
+  /// Hint beside the deck rows label: a long-press selects several decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'길게 눌러 여러 덱 선택'**
+  String get selectHint;
+
+  /// How many cards a deck holds, under its name.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장'**
+  String cardCount(int count);
+
+  /// Chip on a deck row: how many of its cards a session would study now.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 {count}'**
+  String todayChip(int count);
+
+  /// Deck list bottom-bar button that creates a deck from a photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진으로 만들기'**
+  String get createFromPhoto;
+
+  /// Card list bottom-bar button that adds cards from a photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진으로 추가'**
+  String get addFromPhoto;
+
+  /// Line under a deck name: its cards, and how many due reviews and new cards a session would study now.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {cards}장 · 오늘 복습 {review} · 새 카드 {fresh}'**
+  String deckSummary(int cards, int review, int fresh);
+
+  /// Card list button that studies the deck, with how many cards the session would study.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습 · {count}장'**
+  String studyCount(int count);
+
+  /// Hint of the card list search field.
+  ///
+  /// In ko, this message translates to:
+  /// **'검색'**
+  String get searchCards;
+
+  /// Shown when no card matches the card list search.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾는 카드가 없습니다. 다른 말로 검색해 보세요.'**
+  String get noMatches;
+
+  /// Editor button that saves the card and opens an empty editor for the next one.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하고 다음 카드'**
+  String get saveAndNext;
+
+  /// Title of the card deletion confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 카드를 삭제할까요?'**
+  String get deleteCardTitle;
+
+  /// Body of the card deletion confirmation: the card review history goes with it.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 카드의 학습 기록도 함께 삭제됩니다.'**
+  String get deleteCardBody;
 }
 
 class _AppLocalizationsDelegate

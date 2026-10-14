@@ -6,13 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
+import 'package:smartman/shared/theme.dart';
 
 /// A deck list over decks named "Alpha", "Beta" and "Gamma", whose study
-/// screen and header card record the decks they were given.
+/// screen and today counts record the decks they were given.
 class _List {
-  _List(this.tester, this.repository, this.ids);
+  _List(this.tester, this.repository, this.ids)
+    : _semantics = tester.ensureSemantics();
 
   final WidgetTester tester;
+  final SemanticsHandle _semantics;
   final DeckRepository repository;
 
   /// Each deck's id by name.
@@ -21,8 +24,8 @@ class _List {
   /// The decks of every study session opened.
   final sessions = <Set<DeckId>>[];
 
-  /// The decks the header card was last given.
-  Set<DeckId>? header;
+  /// Every selection a today count was built for.
+  final counted = <Set<DeckId>>[];
 
   Future<void> longPress(String deck) async {
     await tester.longPress(find.text(deck));
@@ -34,21 +37,31 @@ class _List {
     await tester.pumpAndSettle();
   }
 
-  /// The deck tile showing [deck].
-  Finder tile(String deck) =>
-      find.ancestor(of: find.text(deck), matching: find.byType(ListTile));
+  /// The row showing [deck].
+  Finder row(String deck) =>
+      find.ancestor(of: find.text(deck), matching: find.byType(InkWell)).first;
 
-  bool selected(String deck) => tester.widget<ListTile>(tile(deck)).selected;
+  bool selected(String deck) =>
+      isSemantics(isSelected: true).matches(tester.getSemantics(row(deck)), {});
 
   /// Unmounts the list. Unmounting cancels drift's stream query, whose
   /// cleanup timer must fire before the test body ends.
   Future<void> close() async {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
+    _semantics.dispose();
   }
 }
 
-Future<_List> _open(WidgetTester tester) async {
+/// Opens the deck list. [today] gives the count of a selection by the names
+/// of its decks, joined by "+"; a selection it leaves out counts nothing.
+/// [photoImport] stands in for the photo import screen when given.
+Future<_List> _open(
+  WidgetTester tester, {
+  Map<String, TodayCount> today = const {},
+  Widget Function(DeckId? deck)? photoImport,
+  Map<String, int> cards = const {},
+}) async {
   final db = AppDatabase(NativeDatabase.memory());
   addTearDown(db.close);
   var ids = 0;
@@ -57,13 +70,26 @@ Future<_List> _open(WidgetTester tester) async {
     clock: () => DateTime.utc(2026, 10, 15),
     newId: () => 'deck${ids++}',
   );
-  final created = (await tester.runAsync(
-    () async => {
+  final created = (await tester.runAsync(() async {
+    final created = {
       for (final name in ['Alpha', 'Beta', 'Gamma'])
         name: (await repository.createDeck(name)).id,
-    },
-  ))!;
+    };
+    for (final MapEntry(key: name, value: count) in cards.entries) {
+      for (var i = 0; i < count; i++) {
+        await repository.addCard(
+          created[name]!,
+          front: [TextContent('$name $i')],
+          back: [TextContent('$i')],
+        );
+      }
+    }
+    return created;
+  }))!;
   final list = _List(tester, repository, created);
+  final names = {
+    for (final MapEntry(:key, :value) in created.entries) value: key,
+  };
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -72,13 +98,24 @@ Future<_List> _open(WidgetTester tester) async {
           list.sessions.add(decks.ids);
           return const Scaffold(body: Text('session'));
         }),
-        todayCardProvider.overrideWithValue((decks) {
-          list.header = decks.ids;
-          return const SizedBox();
+        todayProvider.overrideWithValue((decks, builder) {
+          list.counted.add(decks.ids);
+          final key = ([
+            for (final id in decks.ids) names[id]!,
+          ]..sort()).join('+');
+          return Builder(
+            builder: (context) => builder(
+              context,
+              today[key] ?? const TodayCounted(review: 0, fresh: 0),
+            ),
+          );
         }),
         accountScreenProvider.overrideWithValue(Scaffold.new),
+        if (photoImport != null)
+          photoImportProvider.overrideWithValue(photoImport),
       ],
       child: MaterialApp(
+        theme: lightTheme,
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -92,6 +129,94 @@ Future<_List> _open(WidgetTester tester) async {
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  testWidgets(
+    'each row shows its deck name, card count and chevron, and a today chip only when the deck has cards for today',
+    (tester) async {
+      final list = await _open(
+        tester,
+        cards: {'Alpha': 2, 'Beta': 1},
+        today: {
+          'Alpha': const TodayCounted(review: 1, fresh: 2),
+          'Beta': const TodayCounted(review: 0, fresh: 0),
+          'Gamma': const TodayUnavailable('Could not count'),
+        },
+      );
+
+      Finder inRow(String deck, Finder finder) =>
+          find.descendant(of: list.row(deck), matching: finder);
+      expect(inRow('Alpha', find.text('2 cards')), findsOneWidget);
+      expect(inRow('Alpha', find.text('Today 3')), findsOneWidget);
+      expect(inRow('Alpha', find.byIcon(Icons.chevron_right)), findsOneWidget);
+      expect(inRow('Beta', find.text('1 card')), findsOneWidget);
+      expect(inRow('Beta', find.textContaining('Today')), findsNothing);
+      expect(inRow('Gamma', find.text('0 cards')), findsOneWidget);
+      expect(inRow('Gamma', find.textContaining('Today')), findsNothing);
+      expect(inRow('Gamma', find.byTooltip('Could not count')), findsOneWidget);
+      expect(find.text('My decks 3'), findsOneWidget);
+      expect(find.text('Long-press to select several decks'), findsOneWidget);
+      await list.close();
+    },
+  );
+
+  testWidgets(
+    'the header counts every deck, splits due from new, and Study all studies every deck',
+    (tester) async {
+      final list = await _open(
+        tester,
+        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 4, fresh: 3)},
+      );
+
+      expect(list.counted, contains(equals(list.ids.values.toSet())));
+      expect(find.text('7 cards for today'), findsOneWidget);
+      expect(find.text('Review 4 · New 3'), findsOneWidget);
+
+      await list.tap('Study all');
+
+      expect(list.sessions, [list.ids.values.toSet()]);
+      await list.close();
+    },
+  );
+
+  testWidgets('a header count that cannot be read says why', (tester) async {
+    final list = await _open(
+      tester,
+      today: {'Alpha+Beta+Gamma': const TodayUnavailable('Storage failed')},
+    );
+
+    expect(find.text('Storage failed'), findsOneWidget);
+    expect(find.textContaining('for today'), findsNothing);
+    await list.close();
+  });
+
+  testWidgets('the photo button is absent until photo import exists', (
+    tester,
+  ) async {
+    final list = await _open(tester);
+
+    expect(find.text('New deck'), findsOneWidget);
+    expect(find.text('Create from photo'), findsNothing);
+    await list.close();
+  });
+
+  testWidgets('with photo import, the photo button opens it for a new deck', (
+    tester,
+  ) async {
+    final opened = <DeckId?>[];
+    final list = await _open(
+      tester,
+      photoImport: (deck) {
+        opened.add(deck);
+        return const Scaffold(body: Text('photo import'));
+      },
+    );
+
+    await list.tap('Create from photo');
+
+    expect(find.text('photo import'), findsOneWidget);
+    expect(opened, [null]);
+    await list.close();
+  });
 
   testWidgets('a long-press enters selection mode with that deck selected', (
     tester,
@@ -115,7 +240,7 @@ void main() {
       final list = await _open(tester);
       // Control: outside selection mode a tap opens the deck.
       await list.tap('Alpha');
-      expect(find.text('No cards yet'), findsOneWidget);
+      expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
 
@@ -128,7 +253,7 @@ void main() {
       expect(find.text('1 selected'), findsOneWidget);
       expect(find.text('Study (1)'), findsOneWidget);
       expect(list.selected('Alpha'), isFalse);
-      expect(find.text('No cards yet'), findsNothing);
+      expect(find.text('No cards yet. Add a card to start.'), findsNothing);
       await list.close();
     },
   );
@@ -159,7 +284,7 @@ void main() {
     expect(find.text('Decks'), findsOneWidget);
     expect(find.textContaining('selected'), findsNothing);
     await list.tap('Alpha');
-    expect(find.text('No cards yet'), findsOneWidget);
+    expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
     await list.close();
   });
 
@@ -189,33 +314,25 @@ void main() {
     },
   );
 
-  testWidgets('the header card is given every deck', (tester) async {
-    final list = await _open(tester);
-
-    expect(list.header, list.ids.values.toSet());
-    await list.close();
-  });
-
   testWidgets(
     'a screen reader hears whether each deck is selected and how many are',
     (tester) async {
-      final semantics = tester.ensureSemantics();
       final list = await _open(tester);
       await list.longPress('Alpha');
 
       expect(
-        tester.getSemantics(list.tile('Alpha')),
+        tester.getSemantics(list.row('Alpha')),
         isSemantics(
-          label: 'Alpha',
+          label: 'Alpha\n0 cards',
           hasSelectedState: true,
           isSelected: true,
           hasTapAction: true,
         ),
       );
       expect(
-        tester.getSemantics(list.tile('Beta')),
+        tester.getSemantics(list.row('Beta')),
         isSemantics(
-          label: 'Beta',
+          label: 'Beta\n0 cards',
           hasSelectedState: true,
           isSelected: false,
           hasTapAction: true,
@@ -223,7 +340,6 @@ void main() {
       );
       expect(find.semantics.byLabel('1 selected'), findsOne);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-      semantics.dispose();
       await list.close();
     },
   );

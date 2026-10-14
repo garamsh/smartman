@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
 import 'content_view.dart';
 import 'rust/api/engine.dart';
 import 'study_style.dart';
@@ -139,9 +140,22 @@ class _DragFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     if (offset.abs() < StudyStyle.dragFeedbackDistance) return child;
     final l10n = AppLocalizations.of(context);
-    final (label, color, alignment) = offset > 0
-        ? (l10n.know, StudyStyle.knowColor, Alignment.topLeft)
-        : (l10n.dontKnow, StudyStyle.dontKnowColor, Alignment.topRight);
+    final colors = AppColors.of(context);
+    final (label, tint, chip, onChip, alignment) = offset > 0
+        ? (
+            l10n.know,
+            colors.know,
+            colors.know,
+            colors.onKnow,
+            Alignment.topLeft,
+          )
+        : (
+            l10n.dontKnow,
+            colors.dontKnow,
+            colors.dontKnowText,
+            colors.onDontKnowText,
+            Alignment.topRight,
+          );
     final strength =
         ((offset.abs() - StudyStyle.dragFeedbackDistance) /
                 (StudyStyle.commitDistance - StudyStyle.dragFeedbackDistance))
@@ -153,7 +167,7 @@ class _DragFeedback extends StatelessWidget {
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: color.withValues(
+                color: tint.withValues(
                   alpha: StudyStyle.tintOpacity * strength,
                 ),
                 borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
@@ -168,8 +182,8 @@ class _DragFeedback extends StatelessWidget {
               padding: const EdgeInsets.all(StudyStyle.cardPadding),
               child: Chip(
                 label: Text(label),
-                labelStyle: const TextStyle(color: StudyStyle.onAnswerColor),
-                backgroundColor: color,
+                labelStyle: TextStyle(color: onChip),
+                backgroundColor: chip,
                 side: BorderSide.none,
               ),
             ),
@@ -192,11 +206,12 @@ class _CardFace extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.titleLarge;
     final textScaler = MediaQuery.textScalerOf(context);
+    final colors = AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: StudyStyle.cardColor,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
-        boxShadow: StudyStyle.currentShadow,
+        boxShadow: StudyStyle.currentShadow(colors),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),

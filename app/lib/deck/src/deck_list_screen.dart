@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
+import 'bottom_actions.dart';
 import 'card_list_screen.dart';
 import 'failure_message.dart';
 import 'model.dart';
 import 'name_dialog.dart';
 import 'providers.dart';
 
-/// Lists decks and creates, renames, and deletes them. A long-press enters a
+/// Lists decks under today's count and creates them. A long-press enters a
 /// selection mode that studies several decks in one session.
 class DeckListScreen extends ConsumerStatefulWidget {
   const DeckListScreen({super.key});
@@ -25,6 +27,8 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final decks = ref.watch(decksProvider);
+    final counts = ref.watch(cardCountsProvider);
+    final photoImport = ref.watch(photoImportProvider);
     // A deck deleted while selected drops out of the selection.
     final selected = switch ((_selected, decks)) {
       (final selected?, AsyncData(:final value)) => {
@@ -36,7 +40,6 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     return Scaffold(
       appBar: selected == null
           ? AppBar(
-              title: Text(l10n.decksTitle),
               actions: [
                 IconButton(
                   tooltip: l10n.account,
@@ -50,32 +53,63 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
               ],
             )
           : _selectionBar(l10n, selected),
-      body: switch (decks) {
-        AsyncData(:final value) when value.isEmpty => Center(
-          child: Text(l10n.noDecks),
-        ),
-        AsyncData(:final value) => ListView(
-          children: [
-            ref.watch(todayCardProvider)(
-              DeckSelection(value.first.id, value.skip(1).map((d) => d.id)),
-            ),
-            for (final deck in value)
-              _DeckTile(
-                deck: deck,
-                selected: selected?.contains(deck.id),
-                onSelect: () => _toggle(deck.id),
-              ),
-          ],
-        ),
-        AsyncError(:final error, :final stackTrace) => Center(
-          child: Text(describeProviderError(l10n, error, stackTrace)),
+      body: switch ((decks, counts)) {
+        (AsyncData(value: final decks), AsyncData(value: final counts)) =>
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              _LargeTitle(l10n.decksTitle),
+              if (decks.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Text(l10n.noDecks, textAlign: TextAlign.center),
+                )
+              else ...[
+                ref.watch(todayProvider)(
+                  DeckSelection(decks.first.id, decks.skip(1).map((d) => d.id)),
+                  (context, count) => _TodayHeader(
+                    count: count,
+                    onStudy: () => _study(
+                      DeckSelection(
+                        decks.first.id,
+                        decks.skip(1).map((d) => d.id),
+                      ),
+                    ),
+                  ),
+                ),
+                _DecksLabel(count: decks.length, showHint: selected == null),
+                for (final deck in decks)
+                  _DeckRow(
+                    deck: deck,
+                    cardCount: counts[deck.id] ?? 0,
+                    selected: selected?.contains(deck.id),
+                    onSelect: () => _toggle(deck.id),
+                  ),
+              ],
+            ],
+          ),
+        (AsyncError(:final error, :final stackTrace), _) ||
+        (_, AsyncError(:final error, :final stackTrace)) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(describeProviderError(l10n, error, stackTrace)),
+          ),
         ),
         _ => const Center(child: CircularProgressIndicator()),
       },
-      floatingActionButton: FloatingActionButton(
-        tooltip: l10n.newDeck,
-        onPressed: _create,
-        child: const Icon(Icons.add),
+      bottomNavigationBar: BottomActions(
+        secondary: OutlinedButton(
+          onPressed: _create,
+          child: Text(l10n.newDeck),
+        ),
+        primary: photoImport == null
+            ? null
+            : FilledButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => photoImport(null)),
+                ),
+                child: Text(l10n.createFromPhoto),
+              ),
       ),
     );
   }
@@ -91,18 +125,18 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
       title: Text(l10n.decksSelected(selected.length)),
       actions: [
         TextButton(
-          onPressed: study == null
-              ? null
-              : () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => ref.read(studyScreenProvider)(study),
-                  ),
-                ),
+          onPressed: study == null ? null : () => _study(study),
           child: Text(l10n.studySelected(selected.length)),
         ),
       ],
     );
   }
+
+  void _study(DeckSelection decks) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => ref.read(studyScreenProvider)(decks),
+    ),
+  );
 
   /// Enters selection mode with [deck], or adds or removes it once there.
   void _toggle(DeckId deck) => setState(() {
@@ -121,16 +155,127 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
   }
 }
 
-enum _DeckAction { rename, delete }
+/// A screen's large title, read as a heading.
+class _LargeTitle extends StatelessWidget {
+  const _LargeTitle(this.text);
 
-class _DeckTile extends ConsumerWidget {
-  const _DeckTile({
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.headlineLarge
+            ?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
+}
+
+/// How many cards a session over every deck would study now, split into due
+/// and new, and the action that studies them.
+class _TodayHeader extends StatelessWidget {
+  const _TodayHeader({required this.count, required this.onStudy});
+
+  final TodayCount count;
+  final VoidCallback onStudy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 4,
+        children: [
+          ...switch (count) {
+            TodayCounted(:final review, :final fresh, :final total) => [
+              Text(
+                l10n.todayCards(total),
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                l10n.todayBreakdown(review, fresh),
+                style: textTheme.bodyMedium?.copyWith(color: colors.muted),
+              ),
+            ],
+            TodayUnavailable(:final message) => [Text(message)],
+            TodayPending() => [const SizedBox(height: 56)],
+          },
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.know,
+              foregroundColor: colors.onKnow,
+            ),
+            onPressed: onStudy,
+            child: Text(l10n.studyAll),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "내 덱 n" above the rows, with the hint that a long-press selects.
+class _DecksLabel extends StatelessWidget {
+  const _DecksLabel({required this.count, required this.showHint});
+
+  final int count;
+  final bool showHint;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.myDecks(count),
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (showHint)
+            Text(
+              l10n.selectHint,
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.of(context).muted,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeckRow extends ConsumerWidget {
+  const _DeckRow({
     required this.deck,
+    required this.cardCount,
     required this.selected,
     required this.onSelect,
   });
 
   final Deck deck;
+  final int cardCount;
 
   /// Whether the deck is selected, or null outside selection mode.
   final bool? selected;
@@ -141,80 +286,107 @@ class _DeckTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final selected = this.selected;
-    if (selected != null) {
-      return ListTile(
-        selected: selected,
-        leading: Icon(
-          selected ? Icons.check_circle : Icons.radio_button_unchecked,
-        ),
-        title: Text(deck.name),
-        onTap: onSelect,
-        onLongPress: onSelect,
-      );
-    }
-    return ListTile(
-      title: Text(deck.name),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
-      ),
-      onLongPress: onSelect,
-      trailing: PopupMenuButton<_DeckAction>(
-        tooltip: l10n.deckActions,
-        onSelected: (action) => switch (action) {
-          _DeckAction.rename => _rename(context, ref),
-          _DeckAction.delete => _delete(context, ref),
-        },
-        itemBuilder: (_) => [
-          PopupMenuItem(value: _DeckAction.rename, child: Text(l10n.rename)),
-          PopupMenuItem(
-            value: _DeckAction.delete,
-            child: Text(l10n.deleteDeck),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: MergeSemantics(
+        child: Semantics(
+          selected: selected,
+          child: Material(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.row),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.row),
+              onTap: selected == null
+                  ? () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => CardListScreen(deck: deck),
+                      ),
+                    )
+                  : onSelect,
+              onLongPress: onSelect,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                child: Row(
+                  spacing: 12,
+                  children: [
+                    if (selected != null)
+                      Icon(
+                        selected
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: selected ? colors.know : colors.muted,
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 2,
+                        children: [
+                          Text(
+                            deck.name,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            l10n.cardCount(cardCount),
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ref.watch(todayProvider)(
+                      DeckSelection(deck.id),
+                      (context, count) => _TodayChip(count: count),
+                    ),
+                    if (selected == null)
+                      Icon(Icons.chevron_right, color: colors.muted),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
+}
 
-  Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final repository = ref.read(deckRepositoryProvider);
-    final name = await showNameDialog(
-      context,
-      title: AppLocalizations.of(context).renameDeck,
-      initial: deck.name,
-    );
-    if (name == null || !context.mounted) return;
-    await reportingFailure(context, () => repository.renameDeck(deck.id, name));
-  }
+/// A green "오늘 n" when a session over the deck would study any card now.
+class _TodayChip extends StatelessWidget {
+  const _TodayChip({required this.count});
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final repository = ref.read(deckRepositoryProvider);
-    await reportingFailure(context, () async {
-      final cardCount = await repository.countCards(deck.id);
-      if (!context.mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return AlertDialog(
-            title: Text(l10n.deleteDeckTitle(deck.name)),
-            content: Text(l10n.deleteDeckBody(cardCount)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l10n.delete),
-              ),
-            ],
-          );
-        },
-      );
-      if (confirmed == true) {
-        await repository.deleteDeck(deck.id);
-      }
-    });
+  final TodayCount count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return switch (count) {
+      TodayCounted(:final total) when total > 0 => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: colors.know,
+          borderRadius: BorderRadius.circular(AppRadius.row),
+        ),
+        child: Text(
+          AppLocalizations.of(context).todayChip(total),
+          style: Theme.of(context).textTheme.labelMedium
+              ?.copyWith(color: colors.onKnow, fontWeight: FontWeight.w600),
+        ),
+      ),
+      TodayUnavailable(:final message) => Tooltip(
+        message: message,
+        child: Icon(
+          Icons.error_outline,
+          color: colors.muted,
+          semanticLabel: message,
+        ),
+      ),
+      TodayCounted() || TodayPending() => const SizedBox.shrink(),
+    };
   }
 }

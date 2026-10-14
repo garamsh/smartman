@@ -16,5 +16,11 @@ export 'src/providers.dart'
     show
         accountScreenProvider,
         deckRepositoryProvider,
+        photoImportProvider,
         studyScreenProvider,
-        todayCardProvider;
+        TodayBuilder,
+        TodayCount,
+        TodayCounted,
+        TodayPending,
+        TodayUnavailable,
+        todayProvider;

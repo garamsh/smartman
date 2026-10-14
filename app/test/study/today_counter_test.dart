@@ -6,13 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
+import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/src/failure.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/providers.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/scheduler.dart';
 import 'package:smartman/study/src/study_repository.dart';
-import 'package:smartman/study/src/today_card.dart';
+import 'package:smartman/study/src/study_screen.dart';
+import 'package:smartman/study/src/today_counter.dart';
 
 import 'fixtures.dart';
 
@@ -99,7 +101,8 @@ class _Decks {
   }
 }
 
-/// Shows a [TodayCard] over both decks of [decks].
+/// Shows a [TodayCounter] over both decks of [decks], as the count's text and
+/// a "Study all" button that opens the session over them.
 Future<GlobalKey<NavigatorState>> _pump(
   WidgetTester tester,
   _Decks decks, {
@@ -117,11 +120,33 @@ Future<GlobalKey<NavigatorState>> _pump(
       ],
       child: MaterialApp(
         navigatorKey: navigator,
+        theme: lightTheme,
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: TodayCard(decks: DeckSelection(decks.a, [decks.b])),
+          body: TodayCounter(
+            decks: DeckSelection(decks.a, [decks.b]),
+            builder: (context, count) => Column(
+              children: [
+                Text(switch (count) {
+                  TodayCounted(:final review, :final fresh) =>
+                    '$review due, $fresh new',
+                  TodayUnavailable(:final message) => message,
+                  TodayPending() => 'pending',
+                }),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          StudyScreen(decks: DeckSelection(decks.a, [decks.b])),
+                    ),
+                  ),
+                  child: const Text('Study all'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     ),
@@ -141,12 +166,12 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   testWidgets(
-    'the count is the length of the queue Study all opens over every deck',
+    'the due and new counts add up to the length of the queue a session over the decks opens',
     (tester) async {
       final decks = await _seed(tester);
       await _pump(tester, decks);
 
-      expect(find.text('5 cards for today'), findsOneWidget);
+      expect(find.text('2 due, 3 new'), findsOneWidget);
 
       await tester.tap(find.text('Study all'));
       await tester.pumpAndSettle();
@@ -160,7 +185,7 @@ void main() {
   ) async {
     final decks = await _seed(tester);
     final navigator = await _pump(tester, decks);
-    expect(find.text('5 cards for today'), findsOneWidget);
+    expect(find.text('2 due, 3 new'), findsOneWidget);
 
     navigator.currentState!.push(
       MaterialPageRoute<void>(builder: (_) => const Scaffold()),
@@ -169,12 +194,12 @@ void main() {
     await tester.runAsync(() => decks.add(decks.b, 'b new 2'));
     await tester.pumpAndSettle();
     // Control: nothing reads the count while another route covers it.
-    expect(find.text('5 cards for today', skipOffstage: false), findsOneWidget);
+    expect(find.text('2 due, 3 new', skipOffstage: false), findsOneWidget);
 
     navigator.currentState!.pop();
     await tester.pumpAndSettle();
 
-    expect(find.text('6 cards for today'), findsOneWidget);
+    expect(find.text('2 due, 4 new'), findsOneWidget);
   });
 
   testWidgets('a count that cannot be read says why', (tester) async {

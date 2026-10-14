@@ -11,4 +11,4 @@ export 'src/providers.dart'
 export 'src/scheduler.dart' show Scheduler;
 export 'src/study_repository.dart' show StudyRepository;
 export 'src/study_screen.dart' show StudyScreen;
-export 'src/today_card.dart' show TodayCard;
+export 'src/today_counter.dart' show TodayCounter;

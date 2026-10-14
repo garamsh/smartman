@@ -21,13 +21,53 @@ final studyScreenProvider = Provider<Widget Function(DeckSelection decks)>(
   ),
 );
 
-/// Builds the deck list's header card: how many cards a session over every
-/// deck in the selection would study today, and the action that starts it.
+/// What a session over a selection would study now, as the domain that
+/// studies decks counts it.
+sealed class TodayCount {
+  const TodayCount();
+}
+
+/// The count is being read.
+final class TodayPending extends TodayCount {
+  const TodayPending();
+}
+
+/// [review] cards are due and [fresh] cards are new.
+final class TodayCounted extends TodayCount {
+  const TodayCounted({required this.review, required this.fresh});
+
+  final int review;
+  final int fresh;
+
+  /// The size of the session: every due card and every new one.
+  int get total => review + fresh;
+}
+
+/// The count could not be read; [message] says why, for the user.
+final class TodayUnavailable extends TodayCount {
+  const TodayUnavailable(this.message);
+
+  final String message;
+}
+
+/// Builds what this domain shows of a [TodayCount].
+typedef TodayBuilder = Widget Function(BuildContext context, TodayCount count);
+
+/// Builds a widget that counts what a session over the decks would study now,
+/// keeps the count current, and shows it through the given [TodayBuilder].
 /// The composition site overrides it, as it does [studyScreenProvider].
-final todayCardProvider = Provider<Widget Function(DeckSelection decks)>(
-  (ref) => throw UnimplementedError(
-    'todayCardProvider is overridden at the composition site',
-  ),
+final todayProvider =
+    Provider<Widget Function(DeckSelection decks, TodayBuilder builder)>(
+      (ref) => throw UnimplementedError(
+        'todayProvider is overridden at the composition site',
+      ),
+    );
+
+/// Builds the screen that adds cards from a photo to a deck, or creates a
+/// deck from one when no deck is given; null while the app has none, which
+/// hides the buttons that open it.
+final photoImportProvider = Provider<Widget Function(DeckId? deck)?>(
+  (ref) => null,
 );
 
 /// Builds the account screen the deck list opens. The composition site
@@ -37,6 +77,11 @@ final accountScreenProvider = Provider<Widget Function()>(
   (ref) => throw UnimplementedError(
     'accountScreenProvider is overridden at the composition site',
   ),
+);
+
+/// How many cards each deck holds, kept current; a deck with none is absent.
+final cardCountsProvider = StreamProvider.autoDispose<Map<DeckId, int>>(
+  (ref) => ref.watch(deckRepositoryProvider).watchCardCounts(),
 );
 
 /// Every deck, kept current.

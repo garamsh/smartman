@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
+import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/previous_cards.dart';
@@ -109,6 +110,7 @@ Future<_Study> _open(
   double textScale = 1,
   bool disableAnimations = false,
   Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -163,6 +165,9 @@ Future<_Study> _open(
       ],
       child: MaterialApp(
         navigatorKey: navigator,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: themeMode,
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -515,8 +520,8 @@ void main() {
       expect(colors.every((color) => color.a == 1), isTrue);
       // Depth, newest first: white and sharp, then greyer, smaller and
       // blurred, down to the floor scale; past the depth cap, unblurred.
-      expect(colors.first, StudyStyle.cardColor);
-      expect(colors.last, isNot(StudyStyle.cardColor));
+      expect(colors.first, AppColors.light.surface);
+      expect(colors.last, isNot(AppColors.light.surface));
       expect(
         scales,
         orderedEquals(List<double>.of(scales)..sort((a, b) => b.compareTo(a))),
@@ -554,8 +559,8 @@ void main() {
                       .decoration!
                   as BoxDecoration)
               .color!;
-      expect(dot('a'), StudyStyle.dontKnowColor);
-      expect(dot('b'), StudyStyle.knowColor);
+      expect(dot('a'), AppColors.light.dontKnow);
+      expect(dot('b'), AppColors.light.knowDot);
       // Control: the untouched answer still reads as given.
       expect(
         find.descendant(
@@ -783,6 +788,46 @@ void main() {
       findsOneWidget,
     );
   });
+
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+      'in the ${mode.name} theme the current card, the stack, the drag feedback and the summary meet the contrast and tap target guidelines',
+      (tester) async {
+        final study = await _open(tester, ['a', 'b', 'c'], themeMode: mode);
+        expect(
+          Theme.of(tester.element(_currentCard)).brightness,
+          mode == ThemeMode.dark ? Brightness.dark : Brightness.light,
+        );
+        await study.know();
+        await study.dontKnow();
+        await tester.tap(_currentCard);
+        await tester.pumpAndSettle();
+
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+
+        for (final dx in [80.0, -80.0]) {
+          final drag = await tester.startGesture(
+            tester.getCenter(_currentCard),
+          );
+          await drag.moveBy(Offset(dx, 0));
+          await tester.pump();
+          expect(find.text(dx > 0 ? 'Know' : "Don't know"), findsOneWidget);
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+          await drag.moveBy(Offset(-dx, 0));
+          await drag.up();
+          await tester.pumpAndSettle();
+        }
+
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        expect(find.text('Session complete'), findsOneWidget);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      },
+    );
+  }
 
   for (final (name, leave) in [
     ('going back', (WidgetTester tester) => tester.binding.handlePopRoute()),
