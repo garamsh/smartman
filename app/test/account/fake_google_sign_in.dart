@@ -2,13 +2,15 @@ import 'package:google_sign_in_platform_interface/google_sign_in_platform_interf
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 /// Stands in for the platform's Google Sign-In: [authenticate] answers with
-/// [result], or throws [error] when one is set.
+/// [result], or throws [error] when one is set. [nonce] holds the nonce of the
+/// last initialization.
 class FakeGoogleSignIn extends GoogleSignInPlatform
     with MockPlatformInterfaceMixin {
   AuthenticationResults? result;
   GoogleSignInException? error;
   String accessToken = 'google-access-token';
   int signOuts = 0;
+  String? nonce;
 
   static AuthenticationResults signedIn({
     String? idToken = 'google-id-token',
@@ -18,7 +20,7 @@ class FakeGoogleSignIn extends GoogleSignInPlatform
   );
 
   @override
-  Future<void> init(InitParameters params) async {}
+  Future<void> init(InitParameters params) async => nonce = params.nonce;
 
   @override
   Future<AuthenticationResults?>? attemptLightweightAuthentication(
