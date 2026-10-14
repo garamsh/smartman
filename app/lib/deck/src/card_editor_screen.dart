@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/l10n/app_localizations.dart';
 import 'content.dart';
 import 'deck_repository.dart';
+import 'failure_message.dart';
 import 'model.dart';
 import 'providers.dart';
 
@@ -26,6 +28,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   late final _back = TextEditingController(
     text: plainText(widget.card?.back ?? const []),
   );
+  bool _showRequired = false;
 
   bool get _isNew => widget.card == null;
 
@@ -37,59 +40,64 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   }
 
   Future<void> _save({bool allowDuplicate = false}) async {
-    if (_front.text.trim().isEmpty || _back.text.trim().isEmpty) return;
+    if (_front.text.trim().isEmpty || _back.text.trim().isEmpty) {
+      setState(() => _showRequired = true);
+      return;
+    }
     final repository = ref.read(deckRepositoryProvider);
     final card = widget.card;
     final front = _replaceText(card?.front ?? const [], _front.text);
     final back = _replaceText(card?.back ?? const [], _back.text);
-    final result = card == null
-        ? await repository.addCard(
-            widget.deck.id,
-            front: front,
-            back: back,
-            allowDuplicate: allowDuplicate,
-          )
-        : await repository.editCard(
-            card,
-            front: front,
-            back: back,
-            allowDuplicate: allowDuplicate,
-          );
-    if (!mounted) return;
-    switch (result) {
-      case CardSaved():
-        Navigator.of(context).pop();
-      case DuplicateFront(:final existing):
-        await _resolveDuplicate(existing);
-    }
+    await reportingFailure(context, () async {
+      final result = card == null
+          ? await repository.addCard(
+              widget.deck.id,
+              front: front,
+              back: back,
+              allowDuplicate: allowDuplicate,
+            )
+          : await repository.editCard(
+              card,
+              front: front,
+              back: back,
+              allowDuplicate: allowDuplicate,
+            );
+      if (!mounted) return;
+      switch (result) {
+        case CardSaved():
+          Navigator.of(context).pop();
+        case DuplicateFront(:final existing):
+          await _resolveDuplicate(existing);
+      }
+    });
   }
 
   Future<void> _resolveDuplicate(Card existing) async {
     final choice = await showDialog<_DuplicateChoice>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Duplicate front'),
-        content: Text(
-          'This deck already has a card with this front: '
-          '"${plainText(existing.front)}".',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.of(context).pop(_DuplicateChoice.openExisting),
-            child: const Text('Open existing card'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.of(context).pop(_DuplicateChoice.saveAnyway),
-            child: Text(_isNew ? 'Add anyway' : 'Save anyway'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l10n.duplicateTitle),
+          content: Text(l10n.duplicateBody(plainText(existing.front))),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(_DuplicateChoice.openExisting),
+              child: Text(l10n.openExistingCard),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(_DuplicateChoice.saveAnyway),
+              child: Text(_isNew ? l10n.addAnyway : l10n.saveAnyway),
+            ),
+          ],
+        );
+      },
     );
     if (!mounted) return;
     switch (choice) {
@@ -106,10 +114,14 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     }
   }
 
+  String? _requiredError(AppLocalizations l10n, TextEditingController side) =>
+      _showRequired && side.text.trim().isEmpty ? l10n.cardSideRequired : null;
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? 'New card' : 'Edit card')),
+      appBar: AppBar(title: Text(_isNew ? l10n.newCard : l10n.editCard)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -117,18 +129,26 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             controller: _front,
             autofocus: _isNew,
             maxLines: null,
-            decoration: const InputDecoration(labelText: 'Front'),
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: l10n.cardFront,
+              errorText: _requiredError(l10n, _front),
+            ),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _back,
             maxLines: null,
-            decoration: const InputDecoration(labelText: 'Back'),
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: l10n.cardBack,
+              errorText: _requiredError(l10n, _back),
+            ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Save card',
+        tooltip: l10n.saveCard,
         onPressed: _save,
         child: const Icon(Icons.check),
       ),

@@ -216,6 +216,56 @@ void main() {
       expect(card.front.last, isA<UnsupportedContent>());
     });
 
+    test('a write the database refuses is a storage failure, and a valid one is not', () async {
+      final deck = await repository.createDeck('French');
+
+      final valid = repository.addCard(
+        deck.id,
+        front: _text('chat'),
+        back: _text('cat'),
+      );
+      final orphan = repository.addCard(
+        const DeckId('missing'),
+        front: _text('chien'),
+        back: _text('dog'),
+      );
+
+      await expectLater(valid, completion(isA<CardSaved>()));
+      await expectLater(orphan, throwsA(isA<StorageFailure>()));
+    });
+
+    test(
+      'a stored card that cannot be decoded is reported as unreadable',
+      () async {
+        final deck = await repository.createDeck('French');
+        await db
+            .into(db.cards)
+            .insert(
+              CardsCompanion.insert(
+                id: 'broken',
+                deckId: deck.id.value,
+                front: 'not json',
+                back: '[]',
+                cardKey: 'broken',
+                source: 'manual',
+                createdAt: DateTime.utc(2026),
+                updatedAt: DateTime.utc(2026),
+              ),
+            );
+
+        await expectLater(
+          cardsOf(deck.id),
+          throwsA(
+            isA<UnreadableCard>().having(
+              (failure) => failure.cardId,
+              'cardId',
+              const CardId('broken'),
+            ),
+          ),
+        );
+      },
+    );
+
     test('the cards table indexes deck id and card key', () async {
       final indexes = await db
           .customSelect(

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'deck/deck.dart';
 import 'shared/database.dart';
+import 'shared/l10n/app_localizations.dart';
 
 /// The composition site: the one place that constructs the application.
 void main() {
@@ -30,10 +31,13 @@ Widget composeApp(QueryExecutor executor) {
 class SmartmanApp extends StatelessWidget {
   const SmartmanApp({super.key});
 
-  static const String name = 'smartman';
-
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(title: name, home: DeckListScreen());
+    return MaterialApp(
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const DeckListScreen(),
+    );
   }
 }

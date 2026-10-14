@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 
 import '../../shared/database.dart';
 import 'card_key.dart';
 import 'content.dart';
+import 'failure.dart';
 import 'model.dart';
 
 /// The outcome of saving a card.
@@ -25,6 +28,9 @@ final class DuplicateFront extends SaveCardResult {
 }
 
 /// Reads and writes decks and cards in the local database.
+///
+/// Every database failure reaches the caller as [StorageFailure], and a card
+/// whose stored content cannot be decoded as [UnreadableCard].
 class DeckRepository {
   DeckRepository(this._db, {required this._clock, required this._newId});
 
@@ -36,10 +42,12 @@ class DeckRepository {
   Stream<List<Deck>> watchDecks() {
     final query = _db.select(_db.decks)
       ..orderBy([(deck) => OrderingTerm.asc(deck.name)]);
-    return query.watch().map((rows) => rows.map(_toDeck).toList());
+    return _guardStream(
+      query.watch().map((rows) => rows.map(_toDeck).toList()),
+    );
   }
 
-  Future<Deck> createDeck(String name) async {
+  Future<Deck> createDeck(String name) => _guard(() async {
     final now = _clock();
     final row = DeckRow(
       id: _newId(),
@@ -49,36 +57,38 @@ class DeckRepository {
     );
     await _db.into(_db.decks).insert(row);
     return _toDeck(row);
-  }
+  });
 
-  Future<void> renameDeck(DeckId id, String name) async {
+  Future<void> renameDeck(DeckId id, String name) => _guard(() async {
     await (_db.update(_db.decks)..where((deck) => deck.id.equals(id.value)))
         .write(DecksCompanion(name: Value(name), updatedAt: Value(_clock())));
-  }
+  });
 
   /// Deletes the deck and, through the foreign key, every card in it.
-  Future<void> deleteDeck(DeckId id) async {
+  Future<void> deleteDeck(DeckId id) => _guard(() async {
     await (_db.delete(
       _db.decks,
     )..where((deck) => deck.id.equals(id.value))).go();
-  }
+  });
 
   /// The number of cards in the deck.
-  Future<int> countCards(DeckId deckId) async {
+  Future<int> countCards(DeckId deckId) => _guard(() async {
     final count = _db.cards.id.count();
     final query = _db.selectOnly(_db.cards)
       ..addColumns([count])
       ..where(_db.cards.deckId.equals(deckId.value));
     final row = await query.getSingle();
     return row.read(count) ?? 0;
-  }
+  });
 
   /// The deck's cards, oldest first, re-emitted on each change.
   Stream<List<Card>> watchCards(DeckId deckId) {
     final query = _db.select(_db.cards)
       ..where((card) => card.deckId.equals(deckId.value))
       ..orderBy([(card) => OrderingTerm.asc(card.createdAt)]);
-    return query.watch().map((rows) => rows.map(_toCard).toList());
+    return _guardStream(
+      query.watch().map((rows) => rows.map(_toCard).toList()),
+    );
   }
 
   /// Adds a manual card. A card in the same deck with an equal key blocks the
@@ -90,27 +100,29 @@ class DeckRepository {
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
-    return _db.transaction(() async {
-      if (!allowDuplicate) {
-        final existing = await _findByKey(deckId, key);
-        if (existing != null) {
-          return DuplicateFront(existing);
+    return _guard(
+      () => _db.transaction(() async {
+        if (!allowDuplicate) {
+          final existing = await _findByKey(deckId, key);
+          if (existing != null) {
+            return DuplicateFront(existing);
+          }
         }
-      }
-      final now = _clock();
-      final row = CardRow(
-        id: _newId(),
-        deckId: deckId.value,
-        front: encodeContent(front),
-        back: encodeContent(back),
-        cardKey: key.value,
-        source: CardSource.manual.name,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await _db.into(_db.cards).insert(row);
-      return CardSaved(_toCard(row));
-    });
+        final now = _clock();
+        final row = CardRow(
+          id: _newId(),
+          deckId: deckId.value,
+          front: encodeContent(front),
+          back: encodeContent(back),
+          cardKey: key.value,
+          source: CardSource.manual.name,
+          createdAt: now,
+          updatedAt: now,
+        );
+        await _db.into(_db.cards).insert(row);
+        return CardSaved(_toCard(row));
+      }),
+    );
   }
 
   /// Replaces [card]'s front and back. Another card in the same deck with an
@@ -122,44 +134,46 @@ class DeckRepository {
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
-    return _db.transaction(() async {
-      if (!allowDuplicate) {
-        final existing = await _findByKey(card.deckId, key, except: card.id);
-        if (existing != null) {
-          return DuplicateFront(existing);
+    return _guard(
+      () => _db.transaction(() async {
+        if (!allowDuplicate) {
+          final existing = await _findByKey(card.deckId, key, except: card.id);
+          if (existing != null) {
+            return DuplicateFront(existing);
+          }
         }
-      }
-      final now = _clock();
-      await (_db.update(
-        _db.cards,
-      )..where((row) => row.id.equals(card.id.value))).write(
-        CardsCompanion(
-          front: Value(encodeContent(front)),
-          back: Value(encodeContent(back)),
-          cardKey: Value(key.value),
-          updatedAt: Value(now),
-        ),
-      );
-      return CardSaved(
-        Card(
-          id: card.id,
-          deckId: card.deckId,
-          front: front,
-          back: back,
-          cardKey: key,
-          source: card.source,
-          createdAt: card.createdAt,
-          updatedAt: now,
-        ),
-      );
-    });
+        final now = _clock();
+        await (_db.update(
+          _db.cards,
+        )..where((row) => row.id.equals(card.id.value))).write(
+          CardsCompanion(
+            front: Value(encodeContent(front)),
+            back: Value(encodeContent(back)),
+            cardKey: Value(key.value),
+            updatedAt: Value(now),
+          ),
+        );
+        return CardSaved(
+          Card(
+            id: card.id,
+            deckId: card.deckId,
+            front: front,
+            back: back,
+            cardKey: key,
+            source: card.source,
+            createdAt: card.createdAt,
+            updatedAt: now,
+          ),
+        );
+      }),
+    );
   }
 
-  Future<void> deleteCard(CardId id) async {
+  Future<void> deleteCard(CardId id) => _guard(() async {
     await (_db.delete(
       _db.cards,
     )..where((card) => card.id.equals(id.value))).go();
-  }
+  });
 
   /// One lookup on the `(deck_id, card_key)` index.
   Future<Card?> _findByKey(DeckId deckId, CardKey key, {CardId? except}) async {
@@ -184,14 +198,44 @@ class DeckRepository {
     updatedAt: row.updatedAt,
   );
 
-  Card _toCard(CardRow row) => Card(
-    id: CardId(row.id),
-    deckId: DeckId(row.deckId),
-    front: decodeContent(row.front),
-    back: decodeContent(row.back),
-    cardKey: CardKey.stored(row.cardKey),
-    source: CardSource.values.byName(row.source),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+  Card _toCard(CardRow row) {
+    final id = CardId(row.id);
+    try {
+      return Card(
+        id: id,
+        deckId: DeckId(row.deckId),
+        front: decodeContent(row.front),
+        back: decodeContent(row.back),
+        cardKey: CardKey.stored(row.cardKey),
+        source: CardSource.values.byName(row.source),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      );
+    } on FormatException catch (cause) {
+      throw UnreadableCard(id, cause);
+    }
+  }
+
+  /// Runs [operation], reporting a database exception as [StorageFailure].
+  Future<T> _guard<T>(Future<T> Function() operation) async {
+    try {
+      return await operation();
+    } on DeckFailure {
+      rethrow;
+    } on Exception catch (cause, stackTrace) {
+      Error.throwWithStackTrace(StorageFailure(cause), stackTrace);
+    }
+  }
+
+  /// [stream] with each database exception reported as [StorageFailure].
+  Stream<T> _guardStream<T>(Stream<T> stream) => stream.transform(
+    StreamTransformer.fromHandlers(
+      handleError: (error, stackTrace, sink) => sink.addError(
+        error is Exception && error is! DeckFailure
+            ? StorageFailure(error)
+            : error,
+        stackTrace,
+      ),
+    ),
   );
 }

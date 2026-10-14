@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/l10n/app_localizations.dart';
+
 /// Asks for a deck name; returns it trimmed, or null when cancelled.
 Future<String?> showNameDialog(
   BuildContext context, {
@@ -22,6 +24,7 @@ class _NameDialog extends StatefulWidget {
 
 class _NameDialogState extends State<_NameDialog> {
   late final _controller = TextEditingController(text: widget.initial);
+  bool _showRequired = false;
 
   @override
   void dispose() {
@@ -31,25 +34,33 @@ class _NameDialogState extends State<_NameDialog> {
 
   void _submit() {
     final name = _controller.text.trim();
-    if (name.isNotEmpty) Navigator.of(context).pop(name);
+    if (name.isEmpty) {
+      setState(() => _showRequired = true);
+    } else {
+      Navigator.of(context).pop(name);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(widget.title),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(labelText: 'Name'),
+        decoration: InputDecoration(
+          labelText: l10n.deckName,
+          errorText: _showRequired ? l10n.deckNameRequired : null,
+        ),
         onSubmitted: (_) => _submit(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
-        TextButton(onPressed: _submit, child: const Text('Save')),
+        TextButton(onPressed: _submit, child: Text(l10n.save)),
       ],
     );
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/l10n/app_localizations.dart';
 import 'card_list_screen.dart';
+import 'failure_message.dart';
 import 'model.dart';
 import 'name_dialog.dart';
 import 'providers.dart';
@@ -12,21 +14,24 @@ class DeckListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final decks = ref.watch(decksProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Decks')),
+      appBar: AppBar(title: Text(l10n.decksTitle)),
       body: switch (decks) {
-        AsyncData(:final value) when value.isEmpty => const Center(
-          child: Text('No decks yet'),
+        AsyncData(:final value) when value.isEmpty => Center(
+          child: Text(l10n.noDecks),
         ),
         AsyncData(:final value) => ListView(
           children: [for (final deck in value) _DeckTile(deck: deck)],
         ),
-        AsyncError(:final error) => Center(child: Text('$error')),
+        AsyncError(:final error, :final stackTrace) => Center(
+          child: Text(describeProviderError(l10n, error, stackTrace)),
+        ),
         _ => const Center(child: CircularProgressIndicator()),
       },
       floatingActionButton: FloatingActionButton(
-        tooltip: 'New deck',
+        tooltip: l10n.newDeck,
         onPressed: () => _create(context, ref),
         child: const Icon(Icons.add),
       ),
@@ -34,10 +39,13 @@ class DeckListScreen extends ConsumerWidget {
   }
 
   Future<void> _create(BuildContext context, WidgetRef ref) async {
-    final name = await showNameDialog(context, title: 'New deck');
-    if (name != null) {
-      await ref.read(deckRepositoryProvider).createDeck(name);
-    }
+    final repository = ref.read(deckRepositoryProvider);
+    final name = await showNameDialog(
+      context,
+      title: AppLocalizations.of(context).newDeck,
+    );
+    if (name == null || !context.mounted) return;
+    await reportingFailure(context, () => repository.createDeck(name));
   }
 }
 
@@ -50,62 +58,68 @@ class _DeckTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       title: Text(deck.name),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
       ),
       trailing: PopupMenuButton<_DeckAction>(
-        tooltip: 'Deck actions',
+        tooltip: l10n.deckActions,
         onSelected: (action) => switch (action) {
           _DeckAction.rename => _rename(context, ref),
           _DeckAction.delete => _delete(context, ref),
         },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: _DeckAction.rename, child: Text('Rename')),
-          PopupMenuItem(value: _DeckAction.delete, child: Text('Delete')),
+        itemBuilder: (_) => [
+          PopupMenuItem(value: _DeckAction.rename, child: Text(l10n.rename)),
+          PopupMenuItem(
+            value: _DeckAction.delete,
+            child: Text(l10n.deleteDeck),
+          ),
         ],
       ),
     );
   }
 
   Future<void> _rename(BuildContext context, WidgetRef ref) async {
+    final repository = ref.read(deckRepositoryProvider);
     final name = await showNameDialog(
       context,
-      title: 'Rename deck',
+      title: AppLocalizations.of(context).renameDeck,
       initial: deck.name,
     );
-    if (name != null) {
-      await ref.read(deckRepositoryProvider).renameDeck(deck.id, name);
-    }
+    if (name == null || !context.mounted) return;
+    await reportingFailure(context, () => repository.renameDeck(deck.id, name));
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final repository = ref.read(deckRepositoryProvider);
-    final cardCount = await repository.countCards(deck.id);
-    if (!context.mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete "${deck.name}"?'),
-        content: Text(
-          'Its $cardCount ${cardCount == 1 ? 'card' : 'cards'} '
-          'will be deleted too.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await repository.deleteDeck(deck.id);
-    }
+    await reportingFailure(context, () async {
+      final cardCount = await repository.countCards(deck.id);
+      if (!context.mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return AlertDialog(
+            title: Text(l10n.deleteDeckTitle(deck.name)),
+            content: Text(l10n.deleteDeckBody(cardCount)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.delete),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed == true) {
+        await repository.deleteDeck(deck.id);
+      }
+    });
   }
 }
