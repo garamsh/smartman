@@ -41,8 +41,8 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 ### Storage
 
 - The `reviews` and `card_states` tables in `app/lib/shared/database.dart` belong to this domain. `card_states` holds each reviewed card's stability, difficulty, last review and due time; a new card has no row. Schema v2 added it ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
-- Every answer writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time and duration on screen).
-- Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer. It then rewrites those `reviews` rows, keeping their ids and times, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)).
+- Every answer writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time, duration on screen and fuzz factor, which the answer draws from the session's `Random`). Schema v3 added `fuzz_factor`, checked to `[0, 1)`; a row written before it holds null, as its review was not fuzzed ([ADR 0012](adr/0012-fuzz-review-intervals.md)).
+- Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer with that answer's fuzz factor. It then rewrites those `reviews` rows, keeping their ids, times and factors, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)).
 - The engine calls and the write run after the screen has changed, chained in the order given.
 - `StudyRepository` receives its id generator, and the session its clock (`studyClockProvider`) and random source (`studyRandomProvider`), so tests fix all three.
 
@@ -50,8 +50,8 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 - The app calls the engine ([`engine.md`](engine.md)) through flutter_rust_bridge 2.13.0, built with its native-assets backend ([ADR 0004](adr/0004-flutter-rust-bridge.md)).
 - The bridge crate is `rust_lib_smartman` in `app/rust/`. It depends on `engine/` by path and declares the Dart surface in `app/rust/src/api/engine.rs`:
-  - `review_new_card` — a new card's first review;
-  - `review_card` — a review of a card from its persisted state parts;
+  - `review_new_card` — a new card's first review, with an optional fuzz factor;
+  - `review_card` — a review of a card from its persisted state parts, with an optional fuzz factor;
   - `replay` — a history folded into a state;
   - `retrievability` — the probability of recall at a time.
 - Times cross the bridge as whole seconds since the Unix epoch, as the engine holds them. Answers cross as the app's two buttons, `Answer.know` and `Answer.dontKnow`.
@@ -75,8 +75,8 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 ### Tests
 
-- `app/test/study/engine_bridge_test.dart` calls the engine through the bridge. It checks one step of `engine/tests/fixtures/reference.json`, and the arrival of a refused review as an `EngineError`.
-- `app/test/study/correction_test.dart` runs a session over an in-memory database and the real engine, and checks the state stored after each toggle against a chain of the bridge's `review_card` calls over the corrected history, from the state before the session.
+- `app/test/study/engine_bridge_test.dart` calls the engine through the bridge. It checks one step of `engine/tests/fixtures/reference.json` without fuzz and one with, and the arrival of a refused review as an `EngineError`.
+- `app/test/study/correction_test.dart` runs a session over an in-memory database and the real engine, and checks the state stored after each toggle against a chain of the bridge's `review_card` calls over the corrected history, from the state before the session. It also checks that toggling a fuzzed answer twice gives back the stored state, with the review's factor kept.
 - `app/test/study/toggle_test.dart` covers the queue effects of a toggle; `app/test/study/queue_test.dart` covers the queue's membership over several decks, its order under seeded sources, and the re-show gap.
 - `app/test/study/today_card_test.dart` checks that the header's count is the length of the queue "모두 학습" opens, and when the count is read again.
 - `app/test/study/previous_cards_test.dart` checks that a stack of 300 answers builds only the cards near the view.
@@ -94,8 +94,10 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - [ADR 0005](adr/0005-study-queue-and-card-state.md) records the queue policy, the re-show gap, why the state is stored as parts in `card_states`, and how `deck` opens the session.
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md) records the session over several decks, the header card, the random order and gap, and why they supersede ADR 0005's.
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the swipe screen, the toggleable stack, and why a toggle replays the card's session answers in Dart rather than through the bridge's `replay`.
+- [ADR 0012](adr/0012-fuzz-review-intervals.md) records where each answer's fuzz factor comes from and why it is stored on its review.
 - Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, issue #18 the current screen, and issue #19 the session over several decks, as decided by the PM.
 
 ## Open questions
 
+- Whether the server's reviews carry `fuzz_factor` waits on the server schema (issue #23), which had not merged when ADR 0012 was written.
 - Whether the header count should follow writes as they land rather than being read when the deck list returns on top. A write still running at that moment is missed until the next read (ADR 0009).
