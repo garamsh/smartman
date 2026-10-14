@@ -1,0 +1,57 @@
+#!/bin/sh
+# Runs deno lint, format or test, as make lint, format and test ask, over the TypeScript of the
+# Edge Functions in supabase/functions/ and the eval in tools/eval/. Where deno is not
+# installed it prints that the step was skipped and why. The tests run with read access to
+# tools/eval/ only: no write, network or environment access, so a test that writes fails.
+set -euf
+
+scope="git ls-files --cached --others --exclude-standard -- 'supabase/functions/*.ts' 'tools/eval/*.ts'"
+
+cd "$(dirname "$0")"
+
+if ! command -v deno >/dev/null 2>&1; then
+	echo "skipped deno $1 over supabase/functions/ and tools/eval/: this host has no deno command"
+	exit 0
+fi
+
+files=$(eval "$scope")
+if [ -z "$files" ]; then
+	echo "no TypeScript file was selected by: $scope" >&2
+	exit 1
+fi
+count=$(echo "$files" | wc -l | tr -d ' ')
+
+case "$1" in
+lint)
+	# shellcheck disable=SC2086 # one path per line, none with spaces
+	deno lint $files
+	# shellcheck disable=SC2086
+	deno check --quiet $files
+	echo "linted and type-checked $count TypeScript files, selected by: $scope"
+	;;
+format)
+	# shellcheck disable=SC2086
+	deno fmt --check $files
+	echo "format checked $count TypeScript files, selected by: $scope"
+	;;
+test)
+	tests=$(echo "$files" | grep '_test\.ts$' || true)
+	if [ -z "$tests" ]; then
+		echo "no *_test.ts file was selected by: $scope" >&2
+		exit 1
+	fi
+	# shellcheck disable=SC2086
+	output=$(NO_COLOR=1 deno test --no-prompt --allow-read=tools/eval $tests 2>&1) || { echo "$output"; exit 1; }
+	echo "$output"
+	passed=$(echo "$output" | sed -n 's/.*ok | \([0-9]*\) passed.*/\1/p' | tail -n 1)
+	if [ -z "$passed" ] || [ "$passed" -eq 0 ]; then
+		echo "deno test ran no test" >&2
+		exit 1
+	fi
+	echo "ran $passed Deno tests in $(echo "$tests" | wc -l | tr -d ' ') files, selected as the *_test.ts files among: $scope"
+	;;
+*)
+	echo "usage: $0 lint|format|test" >&2
+	exit 2
+	;;
+esac

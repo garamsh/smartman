@@ -1,0 +1,43 @@
+{
+  "image": "13-dictionary-en-ko-print.jpg",
+  "layout": "dictionary",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "health",
+      "back": "건강"
+    },
+    {
+      "front": "window",
+      "back": "창문"
+    },
+    {
+      "front": "borrow",
+      "back": "빌리다"
+    },
+    {
+      "front": "bright",
+      "back": "밝은"
+    },
+    {
+      "front": "carry",
+      "back": "나르다"
+    },
+    {
+      "front": "early",
+      "back": "일찍"
+    },
+    {
+      "front": "village",
+      "back": "마을"
+    }
+  ]
+}

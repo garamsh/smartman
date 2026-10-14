@@ -1,0 +1,71 @@
+{
+  "image": "03-two-column-en-ko-harsh.jpg",
+  "layout": "two-column",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "example",
+      "back": "예시"
+    },
+    {
+      "front": "always",
+      "back": "항상"
+    },
+    {
+      "front": "fresh",
+      "back": "신선한"
+    },
+    {
+      "front": "slowly",
+      "back": "천천히"
+    },
+    {
+      "front": "never",
+      "back": "결코"
+    },
+    {
+      "front": "decide",
+      "back": "결정하다"
+    },
+    {
+      "front": "friendship",
+      "back": "우정"
+    },
+    {
+      "front": "window",
+      "back": "창문"
+    },
+    {
+      "front": "hungry",
+      "back": "배고픈"
+    },
+    {
+      "front": "simple",
+      "back": "간단한"
+    },
+    {
+      "front": "explain",
+      "back": "설명하다"
+    },
+    {
+      "front": "holiday",
+      "back": "휴일"
+    },
+    {
+      "front": "weather",
+      "back": "날씨"
+    },
+    {
+      "front": "experience",
+      "back": "경험"
+    }
+  ]
+}

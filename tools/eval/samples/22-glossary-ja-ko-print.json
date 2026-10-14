@@ -1,0 +1,92 @@
+{
+  "image": "22-glossary-ja-ko-print.jpg",
+  "layout": "glossary",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "SawarabiGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "静か",
+      "back": "조용하다"
+    },
+    {
+      "front": "歩く",
+      "back": "걷다"
+    },
+    {
+      "front": "買う",
+      "back": "사다"
+    },
+    {
+      "front": "小さい",
+      "back": "작다"
+    },
+    {
+      "front": "雪",
+      "back": "눈"
+    },
+    {
+      "front": "話す",
+      "back": "말하다"
+    },
+    {
+      "front": "教える",
+      "back": "가르치다"
+    },
+    {
+      "front": "いつも",
+      "back": "항상"
+    },
+    {
+      "front": "暑い",
+      "back": "덥다"
+    },
+    {
+      "front": "部屋",
+      "back": "방"
+    },
+    {
+      "front": "机",
+      "back": "책상"
+    },
+    {
+      "front": "休む",
+      "back": "쉬다"
+    },
+    {
+      "front": "空",
+      "back": "하늘"
+    },
+    {
+      "front": "約束",
+      "back": "약속"
+    },
+    {
+      "front": "明るい",
+      "back": "밝다"
+    },
+    {
+      "front": "閉める",
+      "back": "닫다"
+    },
+    {
+      "front": "雨",
+      "back": "비"
+    },
+    {
+      "front": "旅行",
+      "back": "여행"
+    },
+    {
+      "front": "先生",
+      "back": "선생님"
+    }
+  ]
+}

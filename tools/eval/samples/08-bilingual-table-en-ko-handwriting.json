@@ -1,0 +1,55 @@
+{
+  "image": "08-bilingual-table-en-ko-handwriting.jpg",
+  "layout": "bilingual-table",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "carry",
+      "back": "나르다"
+    },
+    {
+      "front": "festival",
+      "back": "축제"
+    },
+    {
+      "front": "slowly",
+      "back": "천천히"
+    },
+    {
+      "front": "hungry",
+      "back": "배고픈"
+    },
+    {
+      "front": "library",
+      "back": "도서관"
+    },
+    {
+      "front": "often",
+      "back": "자주"
+    },
+    {
+      "front": "already",
+      "back": "이미"
+    },
+    {
+      "front": "careful",
+      "back": "조심스러운"
+    },
+    {
+      "front": "mountain",
+      "back": "산"
+    },
+    {
+      "front": "empty",
+      "back": "빈"
+    }
+  ]
+}

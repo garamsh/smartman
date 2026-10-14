@@ -1,0 +1,47 @@
+{
+  "image": "15-dictionary-en-ko-harsh.jpg",
+  "layout": "dictionary",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "tired",
+      "back": "피곤한"
+    },
+    {
+      "front": "choose",
+      "back": "고르다"
+    },
+    {
+      "front": "repeat",
+      "back": "반복하다"
+    },
+    {
+      "front": "direction",
+      "back": "방향"
+    },
+    {
+      "front": "narrow",
+      "back": "좁은"
+    },
+    {
+      "front": "reason",
+      "back": "이유"
+    },
+    {
+      "front": "already",
+      "back": "이미"
+    },
+    {
+      "front": "forget",
+      "back": "잊다"
+    }
+  ]
+}

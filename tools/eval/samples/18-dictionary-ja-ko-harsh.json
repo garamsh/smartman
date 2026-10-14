@@ -1,0 +1,52 @@
+{
+  "image": "18-dictionary-ja-ko-harsh.jpg",
+  "layout": "dictionary",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "SawarabiGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "映画",
+      "back": "영화"
+    },
+    {
+      "front": "きれい",
+      "back": "예쁘다"
+    },
+    {
+      "front": "海",
+      "back": "바다"
+    },
+    {
+      "front": "明日",
+      "back": "내일"
+    },
+    {
+      "front": "易しい",
+      "back": "쉽다"
+    },
+    {
+      "front": "走る",
+      "back": "달리다"
+    },
+    {
+      "front": "歩く",
+      "back": "걷다"
+    },
+    {
+      "front": "昨日",
+      "back": "어제"
+    },
+    {
+      "front": "楽しい",
+      "back": "즐겁다"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "image": "07-bilingual-table-en-ko-print.jpg",
+  "layout": "bilingual-table",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "slowly",
+      "back": "천천히"
+    },
+    {
+      "front": "bridge",
+      "back": "다리"
+    },
+    {
+      "front": "useful",
+      "back": "유용한"
+    },
+    {
+      "front": "weather",
+      "back": "날씨"
+    },
+    {
+      "front": "always",
+      "back": "항상"
+    },
+    {
+      "front": "grow",
+      "back": "자라다"
+    },
+    {
+      "front": "dangerous",
+      "back": "위험한"
+    },
+    {
+      "front": "carry",
+      "back": "나르다"
+    },
+    {
+      "front": "reason",
+      "back": "이유"
+    },
+    {
+      "front": "young",
+      "back": "젊은"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "image": "02-two-column-en-ko-handwriting.jpg",
+  "layout": "two-column",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "already",
+      "back": "이미"
+    },
+    {
+      "front": "choose",
+      "back": "고르다"
+    },
+    {
+      "front": "bridge",
+      "back": "다리"
+    },
+    {
+      "front": "remember",
+      "back": "기억하다"
+    },
+    {
+      "front": "forest",
+      "back": "숲"
+    },
+    {
+      "front": "careful",
+      "back": "조심스러운"
+    },
+    {
+      "front": "voice",
+      "back": "목소리"
+    },
+    {
+      "front": "forget",
+      "back": "잊다"
+    },
+    {
+      "front": "strange",
+      "back": "이상한"
+    },
+    {
+      "front": "repeat",
+      "back": "반복하다"
+    },
+    {
+      "front": "young",
+      "back": "젊은"
+    },
+    {
+      "front": "answer",
+      "back": "대답"
+    },
+    {
+      "front": "future",
+      "back": "미래"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "image": "06-two-column-ja-ko-harsh.jpg",
+  "layout": "two-column",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "SawarabiGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "料理",
+      "back": "요리"
+    },
+    {
+      "front": "易しい",
+      "back": "쉽다"
+    },
+    {
+      "front": "暗い",
+      "back": "어둡다"
+    },
+    {
+      "front": "楽しい",
+      "back": "즐겁다"
+    },
+    {
+      "front": "忘れる",
+      "back": "잊다"
+    },
+    {
+      "front": "新しい",
+      "back": "새롭다"
+    },
+    {
+      "front": "椅子",
+      "back": "의자"
+    },
+    {
+      "front": "音楽",
+      "back": "음악"
+    },
+    {
+      "front": "家族",
+      "back": "가족"
+    },
+    {
+      "front": "見る",
+      "back": "보다"
+    },
+    {
+      "front": "古い",
+      "back": "낡다"
+    },
+    {
+      "front": "開ける",
+      "back": "열다"
+    },
+    {
+      "front": "お茶",
+      "back": "차"
+    },
+    {
+      "front": "聞く",
+      "back": "듣다"
+    }
+  ]
+}

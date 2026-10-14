@@ -1,0 +1,63 @@
+{
+  "image": "01-two-column-en-ko-print.jpg",
+  "layout": "two-column",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "prepare",
+      "back": "준비하다"
+    },
+    {
+      "front": "often",
+      "back": "자주"
+    },
+    {
+      "front": "bright",
+      "back": "밝은"
+    },
+    {
+      "front": "remember",
+      "back": "기억하다"
+    },
+    {
+      "front": "reason",
+      "back": "이유"
+    },
+    {
+      "front": "heavy",
+      "back": "무거운"
+    },
+    {
+      "front": "festival",
+      "back": "축제"
+    },
+    {
+      "front": "forget",
+      "back": "잊다"
+    },
+    {
+      "front": "polite",
+      "back": "공손한"
+    },
+    {
+      "front": "arrive",
+      "back": "도착하다"
+    },
+    {
+      "front": "weather",
+      "back": "날씨"
+    },
+    {
+      "front": "customer",
+      "back": "손님"
+    }
+  ]
+}

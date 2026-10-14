@@ -1,0 +1,96 @@
+{
+  "image": "23-glossary-ja-ko-handwriting.jpg",
+  "layout": "glossary",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumPenScript-Regular.ttf",
+    "Yomogi-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "借りる",
+      "back": "빌리다"
+    },
+    {
+      "front": "窓",
+      "back": "창문"
+    },
+    {
+      "front": "木",
+      "back": "나무"
+    },
+    {
+      "front": "図書館",
+      "back": "도서관"
+    },
+    {
+      "front": "飲む",
+      "back": "마시다"
+    },
+    {
+      "front": "花",
+      "back": "꽃"
+    },
+    {
+      "front": "始める",
+      "back": "시작하다"
+    },
+    {
+      "front": "水",
+      "back": "물"
+    },
+    {
+      "front": "椅子",
+      "back": "의자"
+    },
+    {
+      "front": "読む",
+      "back": "읽다"
+    },
+    {
+      "front": "食べる",
+      "back": "먹다"
+    },
+    {
+      "front": "走る",
+      "back": "달리다"
+    },
+    {
+      "front": "短い",
+      "back": "짧다"
+    },
+    {
+      "front": "高い",
+      "back": "비싸다"
+    },
+    {
+      "front": "聞く",
+      "back": "듣다"
+    },
+    {
+      "front": "学校",
+      "back": "학교"
+    },
+    {
+      "front": "海",
+      "back": "바다"
+    },
+    {
+      "front": "雪",
+      "back": "눈"
+    },
+    {
+      "front": "起きる",
+      "back": "일어나다"
+    },
+    {
+      "front": "寒い",
+      "back": "춥다"
+    }
+  ]
+}

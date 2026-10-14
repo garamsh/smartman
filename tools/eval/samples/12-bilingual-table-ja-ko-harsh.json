@@ -1,0 +1,68 @@
+{
+  "image": "12-bilingual-table-ja-ko-harsh.jpg",
+  "layout": "bilingual-table",
+  "languages": {
+    "front": "ja",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "SawarabiGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "写真",
+      "back": "사진"
+    },
+    {
+      "front": "習う",
+      "back": "배우다"
+    },
+    {
+      "front": "休む",
+      "back": "쉬다"
+    },
+    {
+      "front": "食べる",
+      "back": "먹다"
+    },
+    {
+      "front": "仕事",
+      "back": "일"
+    },
+    {
+      "front": "明日",
+      "back": "내일"
+    },
+    {
+      "front": "泣く",
+      "back": "울다"
+    },
+    {
+      "front": "天気",
+      "back": "날씨"
+    },
+    {
+      "front": "笑う",
+      "back": "웃다"
+    },
+    {
+      "front": "易しい",
+      "back": "쉽다"
+    },
+    {
+      "front": "起きる",
+      "back": "일어나다"
+    },
+    {
+      "front": "忘れる",
+      "back": "잊다"
+    },
+    {
+      "front": "図書館",
+      "back": "도서관"
+    }
+  ]
+}
