@@ -29,6 +29,7 @@ class Device {
 
   /// The device's clock, which every write reads.
   DateTime now = DateTime.utc(2026, 10, 15, 9);
+
   /// Ids are UUIDs as the app's are, so no two devices or runs share one.
   String _newId() => const Uuid().v4();
 
