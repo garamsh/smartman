@@ -27,7 +27,8 @@ class CardListScreen extends ConsumerWidget {
             icon: const Icon(Icons.play_arrow),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => ref.read(studyScreenProvider)(deck),
+                builder: (_) =>
+                    ref.read(studyScreenProvider)(DeckSelection(deck.id)),
               ),
             ),
           ),

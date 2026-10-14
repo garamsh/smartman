@@ -290,6 +290,36 @@ abstract class AppLocalizations {
   /// **'학습'**
   String get study;
 
+  /// Label of the button that leaves the deck list's selection mode.
+  ///
+  /// In ko, this message translates to:
+  /// **'선택 해제'**
+  String get clearSelection;
+
+  /// Deck list title in selection mode: how many decks are selected.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}개 선택됨'**
+  String decksSelected(int count);
+
+  /// Deck list action in selection mode that studies the selected decks in one session, with how many are selected.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습 ({count})'**
+  String studySelected(int count);
+
+  /// Deck list header: how many cards a session over every deck would study now.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드 {count}장'**
+  String todayCards(int count);
+
+  /// Deck list header action that studies every deck in one session.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 학습'**
+  String get studyAll;
+
   /// Answer: the user knew the card. Shown on the current card while it is dragged right, and the name of its screen-reader action.
   ///
   /// In ko, this message translates to:

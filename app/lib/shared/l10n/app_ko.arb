@@ -76,6 +76,25 @@
   "@delete": {"description": "Confirms a deletion."},
   "study": "학습",
   "@study": {"description": "Button on a deck that starts a study session."},
+  "clearSelection": "선택 해제",
+  "@clearSelection": {"description": "Label of the button that leaves the deck list's selection mode."},
+  "decksSelected": "{count}개 선택됨",
+  "@decksSelected": {
+    "description": "Deck list title in selection mode: how many decks are selected.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "studySelected": "학습 ({count})",
+  "@studySelected": {
+    "description": "Deck list action in selection mode that studies the selected decks in one session, with how many are selected.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "todayCards": "오늘 할 카드 {count}장",
+  "@todayCards": {
+    "description": "Deck list header: how many cards a session over every deck would study now.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "studyAll": "모두 학습",
+  "@studyAll": {"description": "Deck list header action that studies every deck in one session."},
   "know": "안다",
   "@know": {"description": "Answer: the user knew the card. Shown on the current card while it is dragged right, and the name of its screen-reader action."},
   "dontKnow": "모른다",

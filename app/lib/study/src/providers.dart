@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'scheduler.dart';
@@ -23,5 +25,13 @@ final schedulerProvider = Provider<Scheduler>(
 final studyClockProvider = Provider<DateTime Function()>(
   (ref) => throw UnimplementedError(
     'studyClockProvider is overridden at the composition site',
+  ),
+);
+
+/// The source of every random choice a session makes, given the time the
+/// session starts.
+final studyRandomProvider = Provider<Random Function(DateTime start)>(
+  (ref) => throw UnimplementedError(
+    'studyRandomProvider is overridden at the composition site',
   ),
 );

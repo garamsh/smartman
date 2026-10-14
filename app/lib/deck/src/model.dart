@@ -7,6 +7,19 @@ extension type const DeckId(String value) {}
 /// Identifies a card.
 extension type const CardId(String value) {}
 
+/// One or more decks studied together; never empty.
+final class DeckSelection {
+  /// The selection of [first] and every deck in [rest].
+  DeckSelection(DeckId first, [Iterable<DeckId> rest = const []])
+    : ids = Set.unmodifiable({first, ...rest});
+
+  final Set<DeckId> ids;
+
+  /// The selection of [decks], or null when there is none.
+  static DeckSelection? of(Iterable<DeckId> decks) =>
+      decks.isEmpty ? null : DeckSelection(decks.first, decks.skip(1));
+}
+
 /// A named collection of cards.
 final class Deck {
   const Deck({

@@ -13,12 +13,12 @@ import 'providers.dart';
 import 'session.dart';
 import 'study_style.dart';
 
-/// Studies [deck] one card at a time, answered by swiping, below every card
-/// answered so far; then shows a summary.
+/// Studies the cards of [decks] in one session, one card at a time, answered
+/// by swiping, below every card answered so far; then shows a summary.
 class StudyScreen extends ConsumerStatefulWidget {
-  const StudyScreen({super.key, required this.deck});
+  const StudyScreen({super.key, required this.decks});
 
-  final Deck deck;
+  final DeckSelection decks;
 
   @override
   ConsumerState<StudyScreen> createState() => _StudyScreenState();
@@ -32,12 +32,14 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   @override
   void initState() {
     super.initState();
+    final clock = ref.read(studyClockProvider);
     _session = StudySession(
-      deckId: widget.deck.id,
+      decks: widget.decks,
       cards: ref.read(deckRepositoryProvider),
       repository: ref.read(studyRepositoryProvider),
       scheduler: ref.read(schedulerProvider),
-      clock: ref.read(studyClockProvider),
+      clock: clock,
+      random: ref.read(studyRandomProvider)(clock()),
       onFailure: _report,
     );
   }
