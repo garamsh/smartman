@@ -10,10 +10,11 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The surface exports:
   - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`;
   - content: `Content`, `TextContent`, `UnsupportedContent`;
-  - `CardKey`;
+  - `CardKey`, and `describeContent`, the one line of text a card side shows;
   - `DeckRepository` and its save results;
-  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`;
-  - `deckRepositoryProvider` and `DeckListScreen`.
+  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, and `describeFailure`, the message a user reads for one;
+  - `deckRepositoryProvider`, `studyScreenProvider` and `DeckListScreen`.
+- The `study` domain reads a deck's cards through `DeckRepository.listCards`, oldest first.
 
 ### Model
 
@@ -24,7 +25,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Storage
 
-- The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` table there belongs to the `study` domain; nothing writes it yet.
+- The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` and `card_states` tables there belong to the `study` domain ([`study.md`](study.md)); deleting a card deletes its rows in both through cascading foreign keys.
 - A card side is stored as a JSON array of blocks, each with a `type` discriminator and a `payload`. A new block type adds a discriminator value; stored rows need no migration.
 - A stored block of an unknown type is read as `UnsupportedContent` and written back unchanged, so a card a later version wrote is shown, not lost.
 - Deleting a deck deletes its cards through a cascading foreign key. The UI asks for confirmation first and states how many cards go with it.
@@ -57,11 +58,13 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### State and composition
 
 - State and injection use Riverpod. `deckRepositoryProvider` has no implementation of its own; the composition site, `app/lib/main.dart`, overrides it with the repository it constructs.
+- The card list's "Study" button opens the screen `studyScreenProvider` builds. It has no implementation of its own either: the composition site overrides it with the `study` domain's screen, so this domain does not depend on `study` ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
 - The repository receives its clock and id generator, so tests fix both.
 
 ## Rationale
 
 - [ADR 0002](adr/0002-domain-public-surface-and-shared-database.md): why the surface is one library file and why the tables live in a shared database below the domains.
+- [ADR 0005](adr/0005-study-queue-and-card-state.md): why the study entry point is a provider the composition site overrides.
 - Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM.
 
 ## Open questions

@@ -283,6 +283,96 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'삭제'**
   String get delete;
+
+  /// Button on a deck that starts a study session.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습'**
+  String get study;
+
+  /// Answer button: the user knew the card.
+  ///
+  /// In ko, this message translates to:
+  /// **'알아요'**
+  String get know;
+
+  /// Answer button: the user did not know the card.
+  ///
+  /// In ko, this message translates to:
+  /// **'몰라요'**
+  String get dontKnow;
+
+  /// Heading of the panel showing the card answered just before.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전 카드'**
+  String get previousCard;
+
+  /// Hint on the previous-card panel: tapping it changes a Know answer to Don't know.
+  ///
+  /// In ko, this message translates to:
+  /// **'탭하면 \'몰라요\'로 고칩니다'**
+  String get correctToDontKnow;
+
+  /// Accessibility label of the previous-card panel.
+  ///
+  /// In ko, this message translates to:
+  /// **'이전 카드. 앞면: {front}. 뒷면: {back}. 답: {answer}'**
+  String previousCardSemantics(String front, String back, String answer);
+
+  /// Heading of the end-of-session summary.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습 끝'**
+  String get sessionSummaryTitle;
+
+  /// Shown in the summary when the deck had nothing due and no new card.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 학습할 카드가 없습니다.'**
+  String get nothingToStudy;
+
+  /// Summary line: distinct cards answered in the session.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습한 카드: {count}장'**
+  String cardsStudied(int count);
+
+  /// Summary line: how many times Know was answered.
+  ///
+  /// In ko, this message translates to:
+  /// **'알아요: {count}번'**
+  String knowCount(int count);
+
+  /// Summary line: how many times Don't know was answered.
+  ///
+  /// In ko, this message translates to:
+  /// **'몰라요: {count}번'**
+  String dontKnowCount(int count);
+
+  /// Summary line: time from the first card to the end of the session.
+  ///
+  /// In ko, this message translates to:
+  /// **'걸린 시간: {minutes}분 {seconds}초'**
+  String timeSpent(int minutes, int seconds);
+
+  /// Closes the session summary.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료'**
+  String get done;
+
+  /// Shown when an answer could not be written to the local database.
+  ///
+  /// In ko, this message translates to:
+  /// **'답을 기기에 저장하지 못했습니다. 이 카드의 일정은 바뀌지 않았습니다.'**
+  String get answerNotSaved;
+
+  /// Shown when the scheduling engine refused a review.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.'**
+  String get schedulingFailure;
 }
 
 class _AppLocalizationsDelegate

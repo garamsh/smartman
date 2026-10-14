@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import 'database.steps.dart';
+
 part 'database.g.dart';
 
 /// Decks, each a named collection of cards.
@@ -34,7 +36,7 @@ class Cards extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-/// Reviews of a card. Defined for the study domain; nothing writes it yet.
+/// Reviews of a card, written by the study domain.
 @DataClassName('ReviewRow')
 class Reviews extends Table {
   TextColumn get id => text()();
@@ -49,16 +51,36 @@ class Reviews extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// A reviewed card's scheduling state, owned by the study domain. A card that
+/// was never reviewed has no row.
+@DataClassName('CardStateRow')
+class CardStates extends Table {
+  TextColumn get cardId =>
+      text().references(Cards, #id, onDelete: KeyAction.cascade)();
+  RealColumn get stability => real()();
+  RealColumn get difficulty => real()();
+  DateTimeColumn get lastReview => dateTime()();
+  DateTimeColumn get due => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {cardId};
+}
+
 /// The app's local SQLite database, shared by every domain below which it sits.
-@DriftDatabase(tables: [Decks, Cards, Reviews])
+@DriftDatabase(tables: [Decks, Cards, Reviews, CardStates])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: stepByStep(
+      from1To2: (m, schema) async {
+        await m.createTable(schema.cardStates);
+      },
+    ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

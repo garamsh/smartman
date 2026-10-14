@@ -6,7 +6,7 @@
 # the index keeps the check true on an uncommitted edit as well as on a clean checkout.
 set -euf
 
-scope="git ls-files --cached --others --exclude-standard -- 'lib/*.g.dart' 'lib/shared/l10n/app_localizations*.dart' 'drift_schemas' 'test/drift/*/generated/*' 'lib/study/src/rust' 'rust/src/frb_generated.rs'"
+scope="git ls-files --cached --others --exclude-standard -- 'lib/*.g.dart' 'lib/*.steps.dart' 'lib/shared/l10n/app_localizations*.dart' 'drift_schemas' 'test/drift/*/generated/*' 'lib/study/src/rust' 'rust/src/frb_generated.rs'"
 
 cd "$(dirname "$0")/app"
 

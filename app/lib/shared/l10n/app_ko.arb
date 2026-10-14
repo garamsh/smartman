@@ -73,5 +73,50 @@
   "rename": "이름 바꾸기",
   "@rename": {"description": "Deck menu item for renaming."},
   "delete": "삭제",
-  "@delete": {"description": "Confirms a deletion."}
+  "@delete": {"description": "Confirms a deletion."},
+  "study": "학습",
+  "@study": {"description": "Button on a deck that starts a study session."},
+  "know": "알아요",
+  "@know": {"description": "Answer button: the user knew the card."},
+  "dontKnow": "몰라요",
+  "@dontKnow": {"description": "Answer button: the user did not know the card."},
+  "previousCard": "이전 카드",
+  "@previousCard": {"description": "Heading of the panel showing the card answered just before."},
+  "correctToDontKnow": "탭하면 '몰라요'로 고칩니다",
+  "@correctToDontKnow": {"description": "Hint on the previous-card panel: tapping it changes a Know answer to Don't know."},
+  "previousCardSemantics": "이전 카드. 앞면: {front}. 뒷면: {back}. 답: {answer}",
+  "@previousCardSemantics": {
+    "description": "Accessibility label of the previous-card panel.",
+    "placeholders": {"front": {"type": "String"}, "back": {"type": "String"}, "answer": {"type": "String"}}
+  },
+  "sessionSummaryTitle": "학습 끝",
+  "@sessionSummaryTitle": {"description": "Heading of the end-of-session summary."},
+  "nothingToStudy": "지금 학습할 카드가 없습니다.",
+  "@nothingToStudy": {"description": "Shown in the summary when the deck had nothing due and no new card."},
+  "cardsStudied": "학습한 카드: {count}장",
+  "@cardsStudied": {
+    "description": "Summary line: distinct cards answered in the session.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "knowCount": "알아요: {count}번",
+  "@knowCount": {
+    "description": "Summary line: how many times Know was answered.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "dontKnowCount": "몰라요: {count}번",
+  "@dontKnowCount": {
+    "description": "Summary line: how many times Don't know was answered.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "timeSpent": "걸린 시간: {minutes}분 {seconds}초",
+  "@timeSpent": {
+    "description": "Summary line: time from the first card to the end of the session.",
+    "placeholders": {"minutes": {"type": "int"}, "seconds": {"type": "int"}}
+  },
+  "done": "완료",
+  "@done": {"description": "Closes the session summary."},
+  "answerNotSaved": "답을 기기에 저장하지 못했습니다. 이 카드의 일정은 바뀌지 않았습니다.",
+  "@answerNotSaved": {"description": "Shown when an answer could not be written to the local database."},
+  "schedulingFailure": "이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.",
+  "@schedulingFailure": {"description": "Shown when the scheduling engine refused a review."}
 }

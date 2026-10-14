@@ -5,10 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/study/study.dart';
 
 void main() {
+  late Scheduler scheduler;
+  setUpAll(() async => scheduler = await Scheduler.load());
+
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(composeApp(NativeDatabase.memory()));
+    await tester.pumpWidget(composeApp(NativeDatabase.memory(), scheduler));
     await tester.pumpAndSettle();
   }
 
@@ -118,6 +122,22 @@ void main() {
       ),
       findsOneWidget,
     );
+    await unmountApp(tester);
+  });
+
+  testWidgets("a deck's Study button opens a session on its cards", (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await createDeckAndOpen(tester, 'French');
+    await addCard(tester, 'Chat', 'cat');
+
+    await tester.tap(find.byTooltip('Study'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chat'), findsOneWidget);
+    expect(find.text('Know'), findsOneWidget);
+    expect(find.text("Don't know"), findsOneWidget);
     await unmountApp(tester);
   });
 

@@ -19,7 +19,20 @@ class CardListScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final cards = ref.watch(cardsProvider(deck.id));
     return Scaffold(
-      appBar: AppBar(title: Text(deck.name)),
+      appBar: AppBar(
+        title: Text(deck.name),
+        actions: [
+          IconButton(
+            tooltip: l10n.study,
+            icon: const Icon(Icons.play_arrow),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ref.read(studyScreenProvider)(deck),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: switch (cards) {
         AsyncData(:final value) when value.isEmpty => Center(
           child: Text(l10n.noCards),

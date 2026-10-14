@@ -1182,12 +1182,384 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
   }
 }
 
+class $CardStatesTable extends CardStates
+    with TableInfo<$CardStatesTable, CardStateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CardStatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cardIdMeta = const VerificationMeta('cardId');
+  @override
+  late final GeneratedColumn<String> cardId = GeneratedColumn<String>(
+    'card_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cards (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _stabilityMeta = const VerificationMeta(
+    'stability',
+  );
+  @override
+  late final GeneratedColumn<double> stability = GeneratedColumn<double>(
+    'stability',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _difficultyMeta = const VerificationMeta(
+    'difficulty',
+  );
+  @override
+  late final GeneratedColumn<double> difficulty = GeneratedColumn<double>(
+    'difficulty',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastReviewMeta = const VerificationMeta(
+    'lastReview',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastReview = GeneratedColumn<DateTime>(
+    'last_review',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dueMeta = const VerificationMeta('due');
+  @override
+  late final GeneratedColumn<DateTime> due = GeneratedColumn<DateTime>(
+    'due',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cardId,
+    stability,
+    difficulty,
+    lastReview,
+    due,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'card_states';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CardStateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('card_id')) {
+      context.handle(
+        _cardIdMeta,
+        cardId.isAcceptableOrUnknown(data['card_id']!, _cardIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cardIdMeta);
+    }
+    if (data.containsKey('stability')) {
+      context.handle(
+        _stabilityMeta,
+        stability.isAcceptableOrUnknown(data['stability']!, _stabilityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stabilityMeta);
+    }
+    if (data.containsKey('difficulty')) {
+      context.handle(
+        _difficultyMeta,
+        difficulty.isAcceptableOrUnknown(data['difficulty']!, _difficultyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_difficultyMeta);
+    }
+    if (data.containsKey('last_review')) {
+      context.handle(
+        _lastReviewMeta,
+        lastReview.isAcceptableOrUnknown(data['last_review']!, _lastReviewMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lastReviewMeta);
+    }
+    if (data.containsKey('due')) {
+      context.handle(
+        _dueMeta,
+        due.isAcceptableOrUnknown(data['due']!, _dueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cardId};
+  @override
+  CardStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CardStateRow(
+      cardId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}card_id'],
+      )!,
+      stability: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}stability'],
+      )!,
+      difficulty: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}difficulty'],
+      )!,
+      lastReview: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_review'],
+      )!,
+      due: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}due'],
+      )!,
+    );
+  }
+
+  @override
+  $CardStatesTable createAlias(String alias) {
+    return $CardStatesTable(attachedDatabase, alias);
+  }
+}
+
+class CardStateRow extends DataClass implements Insertable<CardStateRow> {
+  final String cardId;
+  final double stability;
+  final double difficulty;
+  final DateTime lastReview;
+  final DateTime due;
+  const CardStateRow({
+    required this.cardId,
+    required this.stability,
+    required this.difficulty,
+    required this.lastReview,
+    required this.due,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['card_id'] = Variable<String>(cardId);
+    map['stability'] = Variable<double>(stability);
+    map['difficulty'] = Variable<double>(difficulty);
+    map['last_review'] = Variable<DateTime>(lastReview);
+    map['due'] = Variable<DateTime>(due);
+    return map;
+  }
+
+  CardStatesCompanion toCompanion(bool nullToAbsent) {
+    return CardStatesCompanion(
+      cardId: Value(cardId),
+      stability: Value(stability),
+      difficulty: Value(difficulty),
+      lastReview: Value(lastReview),
+      due: Value(due),
+    );
+  }
+
+  factory CardStateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CardStateRow(
+      cardId: serializer.fromJson<String>(json['cardId']),
+      stability: serializer.fromJson<double>(json['stability']),
+      difficulty: serializer.fromJson<double>(json['difficulty']),
+      lastReview: serializer.fromJson<DateTime>(json['lastReview']),
+      due: serializer.fromJson<DateTime>(json['due']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cardId': serializer.toJson<String>(cardId),
+      'stability': serializer.toJson<double>(stability),
+      'difficulty': serializer.toJson<double>(difficulty),
+      'lastReview': serializer.toJson<DateTime>(lastReview),
+      'due': serializer.toJson<DateTime>(due),
+    };
+  }
+
+  CardStateRow copyWith({
+    String? cardId,
+    double? stability,
+    double? difficulty,
+    DateTime? lastReview,
+    DateTime? due,
+  }) => CardStateRow(
+    cardId: cardId ?? this.cardId,
+    stability: stability ?? this.stability,
+    difficulty: difficulty ?? this.difficulty,
+    lastReview: lastReview ?? this.lastReview,
+    due: due ?? this.due,
+  );
+  CardStateRow copyWithCompanion(CardStatesCompanion data) {
+    return CardStateRow(
+      cardId: data.cardId.present ? data.cardId.value : this.cardId,
+      stability: data.stability.present ? data.stability.value : this.stability,
+      difficulty: data.difficulty.present
+          ? data.difficulty.value
+          : this.difficulty,
+      lastReview: data.lastReview.present
+          ? data.lastReview.value
+          : this.lastReview,
+      due: data.due.present ? data.due.value : this.due,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CardStateRow(')
+          ..write('cardId: $cardId, ')
+          ..write('stability: $stability, ')
+          ..write('difficulty: $difficulty, ')
+          ..write('lastReview: $lastReview, ')
+          ..write('due: $due')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(cardId, stability, difficulty, lastReview, due);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CardStateRow &&
+          other.cardId == this.cardId &&
+          other.stability == this.stability &&
+          other.difficulty == this.difficulty &&
+          other.lastReview == this.lastReview &&
+          other.due == this.due);
+}
+
+class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
+  final Value<String> cardId;
+  final Value<double> stability;
+  final Value<double> difficulty;
+  final Value<DateTime> lastReview;
+  final Value<DateTime> due;
+  final Value<int> rowid;
+  const CardStatesCompanion({
+    this.cardId = const Value.absent(),
+    this.stability = const Value.absent(),
+    this.difficulty = const Value.absent(),
+    this.lastReview = const Value.absent(),
+    this.due = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CardStatesCompanion.insert({
+    required String cardId,
+    required double stability,
+    required double difficulty,
+    required DateTime lastReview,
+    required DateTime due,
+    this.rowid = const Value.absent(),
+  }) : cardId = Value(cardId),
+       stability = Value(stability),
+       difficulty = Value(difficulty),
+       lastReview = Value(lastReview),
+       due = Value(due);
+  static Insertable<CardStateRow> custom({
+    Expression<String>? cardId,
+    Expression<double>? stability,
+    Expression<double>? difficulty,
+    Expression<DateTime>? lastReview,
+    Expression<DateTime>? due,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cardId != null) 'card_id': cardId,
+      if (stability != null) 'stability': stability,
+      if (difficulty != null) 'difficulty': difficulty,
+      if (lastReview != null) 'last_review': lastReview,
+      if (due != null) 'due': due,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CardStatesCompanion copyWith({
+    Value<String>? cardId,
+    Value<double>? stability,
+    Value<double>? difficulty,
+    Value<DateTime>? lastReview,
+    Value<DateTime>? due,
+    Value<int>? rowid,
+  }) {
+    return CardStatesCompanion(
+      cardId: cardId ?? this.cardId,
+      stability: stability ?? this.stability,
+      difficulty: difficulty ?? this.difficulty,
+      lastReview: lastReview ?? this.lastReview,
+      due: due ?? this.due,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cardId.present) {
+      map['card_id'] = Variable<String>(cardId.value);
+    }
+    if (stability.present) {
+      map['stability'] = Variable<double>(stability.value);
+    }
+    if (difficulty.present) {
+      map['difficulty'] = Variable<double>(difficulty.value);
+    }
+    if (lastReview.present) {
+      map['last_review'] = Variable<DateTime>(lastReview.value);
+    }
+    if (due.present) {
+      map['due'] = Variable<DateTime>(due.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CardStatesCompanion(')
+          ..write('cardId: $cardId, ')
+          ..write('stability: $stability, ')
+          ..write('difficulty: $difficulty, ')
+          ..write('lastReview: $lastReview, ')
+          ..write('due: $due, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $DecksTable decks = $DecksTable(this);
   late final $CardsTable cards = $CardsTable(this);
   late final $ReviewsTable reviews = $ReviewsTable(this);
+  late final $CardStatesTable cardStates = $CardStatesTable(this);
   late final Index cardsDeckIdCardKey = Index(
     'cards_deck_id_card_key',
     'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key)',
@@ -1200,6 +1572,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     decks,
     cards,
     reviews,
+    cardStates,
     cardsDeckIdCardKey,
   ];
   @override
@@ -1217,6 +1590,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('reviews', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'cards',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('card_states', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -1556,6 +1936,24 @@ final class $$CardsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$CardStatesTable, List<CardStateRow>>
+  _cardStatesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cardStates,
+    aliasName: 'cards__id__card_states__card_id',
+  );
+
+  $$CardStatesTableProcessedTableManager get cardStatesRefs {
+    final manager = $$CardStatesTableTableManager(
+      $_db,
+      $_db.cardStates,
+    ).filter((f) => f.cardId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cardStatesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
@@ -1640,6 +2038,31 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
           }) => $$ReviewsTableFilterComposer(
             $db: $db,
             $table: $db.reviews,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cardStatesRefs(
+    Expression<bool> Function($$CardStatesTableFilterComposer f) f,
+  ) {
+    final $$CardStatesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cardStates,
+      getReferencedColumn: (t) => t.cardId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardStatesTableFilterComposer(
+            $db: $db,
+            $table: $db.cardStates,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1795,6 +2218,31 @@ class $$CardsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> cardStatesRefs<T extends Object>(
+    Expression<T> Function($$CardStatesTableAnnotationComposer a) f,
+  ) {
+    final $$CardStatesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cardStates,
+      getReferencedColumn: (t) => t.cardId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardStatesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cardStates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CardsTableTableManager
@@ -1810,7 +2258,11 @@ class $$CardsTableTableManager
           $$CardsTableUpdateCompanionBuilder,
           (CardRow, $$CardsTableReferences),
           CardRow,
-          PrefetchHooks Function({bool deckId, bool reviewsRefs})
+          PrefetchHooks Function({
+            bool deckId,
+            bool reviewsRefs,
+            bool cardStatesRefs,
+          })
         > {
   $$CardsTableTableManager(_$AppDatabase db, $CardsTable table)
     : super(
@@ -1875,59 +2327,88 @@ class $$CardsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({deckId = false, reviewsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (reviewsRefs) db.reviews],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (deckId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.deckId,
-                        referencedTable: $$CardsTableReferences._deckIdTable(
-                          db,
-                        ),
-                        referencedColumn: $$CardsTableReferences
-                            ._deckIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({deckId = false, reviewsRefs = false, cardStatesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (reviewsRefs) db.reviews,
+                    if (cardStatesRefs) db.cardStates,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (deckId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.deckId,
+                            referencedTable: $$CardsTableReferences
+                                ._deckIdTable(db),
+                            referencedColumn: $$CardsTableReferences
+                                ._deckIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (reviewsRefs)
+                        await $_getPrefetchedData<
+                          CardRow,
+                          $CardsTable,
+                          ReviewRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CardsTableReferences
+                              ._reviewsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CardsTableReferences(db, table, p0).reviewsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cardId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (cardStatesRefs)
+                        await $_getPrefetchedData<
+                          CardRow,
+                          $CardsTable,
+                          CardStateRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CardsTableReferences
+                              ._cardStatesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CardsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cardStatesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cardId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (reviewsRefs)
-                    await $_getPrefetchedData<CardRow, $CardsTable, ReviewRow>(
-                      currentTable: table,
-                      referencedTable: $$CardsTableReferences._reviewsRefsTable(
-                        db,
-                      ),
-                      managerFromTypedResult: (p0) =>
-                          $$CardsTableReferences(db, table, p0).reviewsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.cardId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1944,7 +2425,11 @@ typedef $$CardsTableProcessedTableManager =
       $$CardsTableUpdateCompanionBuilder,
       (CardRow, $$CardsTableReferences),
       CardRow,
-      PrefetchHooks Function({bool deckId, bool reviewsRefs})
+      PrefetchHooks Function({
+        bool deckId,
+        bool reviewsRefs,
+        bool cardStatesRefs,
+      })
     >;
 typedef $$ReviewsTableCreateCompanionBuilder = ReviewsCompanion Function({
   required String id,
@@ -2264,6 +2749,323 @@ typedef $$ReviewsTableProcessedTableManager =
       ReviewRow,
       PrefetchHooks Function({bool cardId})
     >;
+typedef $$CardStatesTableCreateCompanionBuilder = CardStatesCompanion Function({
+  required String cardId,
+  required double stability,
+  required double difficulty,
+  required DateTime lastReview,
+  required DateTime due,
+  Value<int> rowid,
+});
+typedef $$CardStatesTableUpdateCompanionBuilder = CardStatesCompanion Function({
+  Value<String> cardId,
+  Value<double> stability,
+  Value<double> difficulty,
+  Value<DateTime> lastReview,
+  Value<DateTime> due,
+  Value<int> rowid,
+});
+
+final class $$CardStatesTableReferences
+    extends BaseReferences<_$AppDatabase, $CardStatesTable, CardStateRow> {
+  $$CardStatesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CardsTable _cardIdTable(_$AppDatabase db) =>
+      db.cards.createAlias('card_states__card_id__cards__id');
+
+  $$CardsTableProcessedTableManager get cardId {
+    final $_column = $_itemColumn<String>('card_id')!;
+
+    final manager = $$CardsTableTableManager(
+      $_db,
+      $_db.cards,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cardIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CardStatesTableFilterComposer
+    extends Composer<_$AppDatabase, $CardStatesTable> {
+  $$CardStatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<double> get stability => $composableBuilder(
+    column: $table.stability,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastReview => $composableBuilder(
+    column: $table.lastReview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get due => $composableBuilder(
+    column: $table.due,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CardsTableFilterComposer get cardId {
+    final $$CardsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cardId,
+      referencedTable: $db.cards,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardsTableFilterComposer(
+            $db: $db,
+            $table: $db.cards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CardStatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CardStatesTable> {
+  $$CardStatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<double> get stability => $composableBuilder(
+    column: $table.stability,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastReview => $composableBuilder(
+    column: $table.lastReview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get due => $composableBuilder(
+    column: $table.due,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CardsTableOrderingComposer get cardId {
+    final $$CardsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cardId,
+      referencedTable: $db.cards,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardsTableOrderingComposer(
+            $db: $db,
+            $table: $db.cards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CardStatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CardStatesTable> {
+  $$CardStatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<double> get stability =>
+      $composableBuilder(column: $table.stability, builder: (column) => column);
+
+  GeneratedColumn<double> get difficulty => $composableBuilder(
+    column: $table.difficulty,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastReview => $composableBuilder(
+    column: $table.lastReview,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get due =>
+      $composableBuilder(column: $table.due, builder: (column) => column);
+
+  $$CardsTableAnnotationComposer get cardId {
+    final $$CardsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cardId,
+      referencedTable: $db.cards,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cards,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CardStatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CardStatesTable,
+          CardStateRow,
+          $$CardStatesTableFilterComposer,
+          $$CardStatesTableOrderingComposer,
+          $$CardStatesTableAnnotationComposer,
+          $$CardStatesTableCreateCompanionBuilder,
+          $$CardStatesTableUpdateCompanionBuilder,
+          (CardStateRow, $$CardStatesTableReferences),
+          CardStateRow,
+          PrefetchHooks Function({bool cardId})
+        > {
+  $$CardStatesTableTableManager(_$AppDatabase db, $CardStatesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CardStatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CardStatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CardStatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cardId = const Value.absent(),
+                Value<double> stability = const Value.absent(),
+                Value<double> difficulty = const Value.absent(),
+                Value<DateTime> lastReview = const Value.absent(),
+                Value<DateTime> due = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CardStatesCompanion(
+                cardId: cardId,
+                stability: stability,
+                difficulty: difficulty,
+                lastReview: lastReview,
+                due: due,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cardId,
+                required double stability,
+                required double difficulty,
+                required DateTime lastReview,
+                required DateTime due,
+                Value<int> rowid = const Value.absent(),
+              }) => CardStatesCompanion.insert(
+                cardId: cardId,
+                stability: stability,
+                difficulty: difficulty,
+                lastReview: lastReview,
+                due: due,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CardStatesTable, CardStateRow>(table),
+                  $$CardStatesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({cardId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (cardId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.cardId,
+                        referencedTable: $$CardStatesTableReferences
+                            ._cardIdTable(db),
+                        referencedColumn: $$CardStatesTableReferences
+                            ._cardIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CardStatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CardStatesTable,
+      CardStateRow,
+      $$CardStatesTableFilterComposer,
+      $$CardStatesTableOrderingComposer,
+      $$CardStatesTableAnnotationComposer,
+      $$CardStatesTableCreateCompanionBuilder,
+      $$CardStatesTableUpdateCompanionBuilder,
+      (CardStateRow, $$CardStatesTableReferences),
+      CardStateRow,
+      PrefetchHooks Function({bool cardId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2274,4 +3076,6 @@ class $AppDatabaseManager {
       $$CardsTableTableManager(_db, _db.cards);
   $$ReviewsTableTableManager get reviews =>
       $$ReviewsTableTableManager(_db, _db.reviews);
+  $$CardStatesTableTableManager get cardStates =>
+      $$CardStatesTableTableManager(_db, _db.cardStates);
 }
