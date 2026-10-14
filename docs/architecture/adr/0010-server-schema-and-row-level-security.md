@@ -1,6 +1,6 @@
 # ADR 0010: Sync to a per-user Supabase schema guarded by row-level security, with server-set revisions and pgTAP tests in `make test`
 
-> Status: accepted
+> Status: accepted; its "Tests" decision superseded by ADR-0014
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
