@@ -1,1 +1,47 @@
 # smartman
+
+A memorization app: decks of cards studied on a phone. This file is the project's entry point for anyone running or changing it.
+
+## Who it is for
+
+- People who memorize material by studying decks of cards on iOS or Android.
+- Contributors: start at `AGENTS.md`, then `docs/convention/README.md` and `docs/architecture/README.md`.
+
+## Layout
+
+- `app/` — the Flutter application (iOS and Android).
+- `supabase/` — the Supabase CLI project for the backend.
+- `docs/convention/` — the conventions every change follows.
+- `docs/architecture/` — the structure of the system and the decisions behind it.
+- `Makefile` — the entry points for the project's checks.
+- `.github/` — the CI workflow, Dependabot configuration, and issue and pull request templates.
+
+## Requirements
+
+- Flutter 3.47.7 (stable channel), pinned once in `app/pubspec.yaml` under `environment: flutter:`; CI reads it from there. The PM bumps it when a new stable Flutter release ships.
+- JDK 17 for the Android build; with Flutter, point it at the JDK with `flutter config --jdk-dir`.
+- Android SDK 36 for the Android build; Xcode for iOS.
+- Supabase CLI 2.120.0 for the backend.
+
+## Run the app
+
+```sh
+cd app
+flutter run
+```
+
+## Run the checks
+
+- `make lint` — checks Markdown Contents lists and runs `flutter analyze` over the app's Dart files.
+- `make format` — fails when a Dart file in the app is not formatted; `dart format` on the file fixes it.
+- `make test` — runs the app's tests.
+- `make build` — builds a debug Android APK.
+- `make ci` — runs all four in that order. CI runs the same target.
+
+## Run the backend locally
+
+```sh
+supabase start
+```
+
+This needs Docker. It runs the local stack from `supabase/config.toml`.
