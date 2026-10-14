@@ -96,11 +96,13 @@ abstract class RustLibApi extends BaseApi {
     required MemoryStateParts state,
     required Answer answer,
     required PlatformInt64 at,
+    double? fuzzFactor,
   });
 
   Future<Scheduled> crateApiEngineReviewNewCard({
     required Answer answer,
     required PlatformInt64 at,
+    double? fuzzFactor,
   });
 }
 
@@ -209,6 +211,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required MemoryStateParts state,
     required Answer answer,
     required PlatformInt64 at,
+    double? fuzzFactor,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -217,6 +220,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_box_autoadd_memory_state_parts(state, serializer);
           sse_encode_answer(answer, serializer);
           sse_encode_i_64(at, serializer);
+          sse_encode_opt_box_autoadd_f_64(fuzzFactor, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -229,7 +233,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_engine_error,
         ),
         constMeta: kCrateApiEngineReviewCardConstMeta,
-        argValues: [state, answer, at],
+        argValues: [state, answer, at, fuzzFactor],
         apiImpl: this,
       ),
     );
@@ -237,13 +241,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiEngineReviewCardConstMeta => const TaskConstMeta(
     debugName: "review_card",
-    argNames: ["state", "answer", "at"],
+    argNames: ["state", "answer", "at", "fuzzFactor"],
   );
 
   @override
   Future<Scheduled> crateApiEngineReviewNewCard({
     required Answer answer,
     required PlatformInt64 at,
+    double? fuzzFactor,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -251,6 +256,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_answer(answer, serializer);
           sse_encode_i_64(at, serializer);
+          sse_encode_opt_box_autoadd_f_64(fuzzFactor, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -263,7 +269,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_engine_error,
         ),
         constMeta: kCrateApiEngineReviewNewCardConstMeta,
-        argValues: [answer, at],
+        argValues: [answer, at, fuzzFactor],
         apiImpl: this,
       ),
     );
@@ -272,13 +278,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiEngineReviewNewCardConstMeta =>
       const TaskConstMeta(
         debugName: "review_new_card",
-        argNames: ["answer", "at"],
+        argNames: ["answer", "at", "fuzzFactor"],
       );
 
   @protected
   Answer dco_decode_answer(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return Answer.values[raw as int];
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
   }
 
   @protected
@@ -348,6 +360,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
   MemoryStateParts? dco_decode_opt_box_autoadd_memory_state_parts(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_memory_state_parts(raw);
@@ -400,6 +418,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return Answer.values[inner];
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
   }
 
   @protected
@@ -484,6 +508,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   MemoryStateParts? sse_decode_opt_box_autoadd_memory_state_parts(
     SseDeserializer deserializer,
   ) {
@@ -540,6 +575,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_answer(Answer self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
   }
 
   @protected
@@ -614,6 +655,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_64(self.stability, serializer);
     sse_encode_f_64(self.difficulty, serializer);
     sse_encode_i_64(self.lastReview, serializer);
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
   }
 
   @protected

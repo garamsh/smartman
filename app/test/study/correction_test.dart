@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart' show OrderingTerm, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,14 +17,20 @@ int _seconds(DateTime time) => time.millisecondsSinceEpoch ~/ 1000;
 
 /// The engine's own answer for a card in [before] (null for a new card)
 /// reviewed with each of [history] in turn, asked through the bridge
-/// directly, one `reviewCard` per review.
+/// directly, one `reviewCard` per review. Each review is fuzzed by
+/// [fuzzFactor], the factor [FirstDraw] draws.
 Future<Scheduled> _engine(
   CardState? before,
-  List<(Answer, DateTime)> history,
-) async {
+  List<(Answer, DateTime)> history, {
+  double fuzzFactor = 0,
+}) async {
   final (firstAnswer, firstAt) = history.first;
   var scheduled = before == null
-      ? await reviewNewCard(answer: firstAnswer, at: _seconds(firstAt))
+      ? await reviewNewCard(
+          answer: firstAnswer,
+          at: _seconds(firstAt),
+          fuzzFactor: fuzzFactor,
+        )
       : await reviewCard(
           state: MemoryStateParts(
             stability: before.stability,
@@ -31,12 +39,14 @@ Future<Scheduled> _engine(
           ),
           answer: firstAnswer,
           at: _seconds(firstAt),
+          fuzzFactor: fuzzFactor,
         );
   for (final (answer, at) in history.skip(1)) {
     scheduled = await reviewCard(
       state: scheduled.state,
       answer: answer,
       at: _seconds(at),
+      fuzzFactor: fuzzFactor,
     );
   }
   return scheduled;
@@ -81,15 +91,25 @@ void main() {
       });
     }
     final due = added.first;
-    await repository.record(due, [
-      Review(
-        id: repository.newReviewId(),
-        cardId: due,
-        answer: Answer.know,
-        reviewedAt: firstSeen,
-        duration: const Duration(seconds: 2),
+    await repository.record(
+      due,
+      [
+        Review(
+          id: repository.newReviewId(),
+          cardId: due,
+          answer: Answer.know,
+          reviewedAt: firstSeen,
+          duration: const Duration(seconds: 2),
+          fuzzFactor: FuzzFactor.draw(FirstDraw()),
+        ),
+      ],
+      await scheduler.review(
+        null,
+        Answer.know,
+        firstSeen,
+        fuzz: FuzzFactor.draw(FirstDraw()),
       ),
-    ], await scheduler.review(null, Answer.know, firstSeen));
+    );
     final before = (await repository.statesOf([due]))[due]!;
     expect(before.due.isAfter(now), isFalse, reason: 'the card must be due');
 
@@ -182,6 +202,100 @@ void main() {
       (await repository.statesOf([added[1]]))[added[1]],
       await _engine(null, [(Answer.dontKnow, times[1])]),
     );
+    expect(failures, isEmpty);
+  });
+
+  test('toggling an answer twice gives back the state it was first scheduled with, its review keeping the fuzz factor drawn when it was given', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final lastSeen = DateTime.utc(2026, 9, 14, 9);
+    var now = DateTime.utc(2026, 10, 14, 9);
+    var ids = 0;
+    final cards = DeckRepository(
+      db,
+      clock: () => lastSeen,
+      newId: () => 'id${ids++}',
+    );
+    final repository = StudyRepository(db, newId: () => 'review${ids++}');
+    final deck = await cards.createDeck('French');
+    final card = switch (await cards.addCard(
+      deck.id,
+      front: [TextContent('chat')],
+      back: [TextContent('cat')],
+    )) {
+      CardSaved(:final card) => card.id,
+      DuplicateFront() => fail('the deck held no duplicate'),
+    };
+    // A card learnt well enough that a "Know" schedules it weeks out, where
+    // the fuzz range spans several days.
+    final before = CardState(
+      stability: 30,
+      difficulty: 5,
+      lastReview: lastSeen,
+      due: now,
+    );
+    await repository.record(card, [
+      Review(
+        id: repository.newReviewId(),
+        cardId: card,
+        answer: Answer.know,
+        reviewedAt: lastSeen,
+        duration: const Duration(seconds: 2),
+        fuzzFactor: FuzzFactor.draw(FirstDraw()),
+      ),
+    ], before);
+    expect((await repository.statesOf([card]))[card], before);
+
+    final failures = <Object>[];
+    final session = StudySession(
+      decks: DeckSelection(deck.id),
+      cards: cards,
+      repository: repository,
+      scheduler: scheduler,
+      clock: () => now,
+      random: Random(1),
+      onFailure: failures.add,
+    );
+    addTearDown(session.dispose);
+    await untilLoaded(session);
+
+    now = now.add(const Duration(minutes: 1));
+    session.answer(Answer.know);
+    await session.settled;
+    final answered = (await repository.statesOf([card]))[card];
+    final stored = await (db.select(
+      db.reviews,
+    )..where((review) => review.reviewedAt.equals(now))).getSingle();
+    final factor = stored.fuzzFactor!;
+    final fuzzed = await _engine(before, [
+      (Answer.know, now),
+    ], fuzzFactor: factor);
+    _expectStored(answered, fuzzed);
+    // The factor took effect: unfuzzed, the card falls due on another day.
+    final unfuzzed = await reviewCard(
+      state: MemoryStateParts(
+        stability: before.stability,
+        difficulty: before.difficulty,
+        lastReview: _seconds(before.lastReview),
+      ),
+      answer: Answer.know,
+      at: _seconds(now),
+      fuzzFactor: null,
+    );
+    expect(unfuzzed.due, isNot(fuzzed.due));
+
+    session.toggle(0);
+    await session.settled;
+    // Control: one toggle changes the stored state.
+    expect((await repository.statesOf([card]))[card], isNot(answered));
+
+    session.toggle(0);
+    await session.settled;
+    expect((await repository.statesOf([card]))[card], answered);
+    final rewritten = await (db.select(
+      db.reviews,
+    )..where((review) => review.id.equals(stored.id))).getSingle();
+    expect(rewritten.fuzzFactor, factor);
     expect(failures, isEmpty);
   });
 }

@@ -1140,5 +1140,2555 @@
         }
       ]
     }
+  ],
+  "fuzzed_sequences": [
+    {
+      "name": "first-again",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        }
+      ]
+    },
+    {
+      "name": "first-again",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        }
+      ]
+    },
+    {
+      "name": "first-hard",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 2,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 1.2931,
+          "difficulty": 5.112170705601056,
+          "interval_days": 1,
+          "due": 1767312000
+        }
+      ]
+    },
+    {
+      "name": "first-hard",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 2,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 1.2931,
+          "difficulty": 5.112170705601056,
+          "interval_days": 1,
+          "due": 1767312000
+        }
+      ]
+    },
+    {
+      "name": "first-good",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        }
+      ]
+    },
+    {
+      "name": "first-good",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        }
+      ]
+    },
+    {
+      "name": "first-easy",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 4,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 8.2956,
+          "difficulty": 1.0,
+          "interval_days": 7,
+          "due": 1767830400
+        }
+      ]
+    },
+    {
+      "name": "first-easy",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 4,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 8.2956,
+          "difficulty": 1.0,
+          "interval_days": 11,
+          "due": 1768176000
+        }
+      ]
+    },
+    {
+      "name": "good-on-due",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 10,
+          "due": 1768262400
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 3,
+          "at": 1768262400,
+          "retrievability": 0.9061991460939601,
+          "stability": 43.931669184041375,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 48,
+          "due": 1772409600
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 3,
+          "at": 1772409600,
+          "retrievability": 0.8938008213825323,
+          "stability": 163.29629414722837,
+          "difficulty": 2.0974554287524403,
+          "interval_days": 169,
+          "due": 1787011200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 3,
+          "at": 1787011200,
+          "retrievability": 0.8976240117872814,
+          "stability": 506.7132262421074,
+          "difficulty": 2.0905863426205262,
+          "interval_days": 494,
+          "due": 1829692800
+        },
+        {
+          "fuzz_factor": 0.49543508709194095,
+          "rating": 3,
+          "at": 1829692800,
+          "retrievability": 0.9017361549549465,
+          "stability": 1352.9394059359283,
+          "difficulty": 2.083724125574744,
+          "interval_days": 1353,
+          "due": 1946592000
+        },
+        {
+          "fuzz_factor": 0.4494910647887381,
+          "rating": 3,
+          "at": 1946592000,
+          "retrievability": 0.8999969231134868,
+          "stability": 3308.195014356319,
+          "difficulty": 2.0768687707460076,
+          "interval_days": 3292,
+          "due": 2231020800
+        },
+        {
+          "fuzz_factor": 0.651592972722763,
+          "rating": 3,
+          "at": 2231020800,
+          "retrievability": 0.9003367933843871,
+          "stability": 7416.088212010272,
+          "difficulty": 2.0700202712721,
+          "interval_days": 7530,
+          "due": 2881612800
+        },
+        {
+          "fuzz_factor": 0.7887233511355132,
+          "rating": 3,
+          "at": 2881612800,
+          "retrievability": 0.8989493464814811,
+          "stability": 15588.987445839284,
+          "difficulty": 2.0631786202976663,
+          "interval_days": 16041,
+          "due": 4267555200
+        },
+        {
+          "fuzz_factor": 0.0938595867742349,
+          "rating": 3,
+          "at": 4267555200,
+          "retrievability": 0.8980242939498067,
+          "stability": 30925.234088901772,
+          "difficulty": 2.056343810974207,
+          "interval_days": 29668,
+          "due": 6830870400
+        }
+      ]
+    },
+    {
+      "name": "good-on-due",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 14,
+          "due": 1768608000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 3,
+          "at": 1768608000,
+          "retrievability": 0.8823496486514505,
+          "stability": 52.713755872340755,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 58,
+          "due": 1773619200
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 3,
+          "at": 1773619200,
+          "retrievability": 0.8933010941891875,
+          "stability": 192.33854591107163,
+          "difficulty": 2.0974554287524403,
+          "interval_days": 181,
+          "due": 1789257600
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 3,
+          "at": 1789257600,
+          "retrievability": 0.9041196835005402,
+          "stability": 560.0117044914023,
+          "difficulty": 2.0905863426205262,
+          "interval_days": 535,
+          "due": 1835481600
+        },
+        {
+          "fuzz_factor": 0.8354988781294496,
+          "rating": 3,
+          "at": 1835481600,
+          "retrievability": 0.9031081805466522,
+          "stability": 1466.449918336821,
+          "difficulty": 2.083724125574744,
+          "interval_days": 1517,
+          "due": 1966550400
+        },
+        {
+          "fuzz_factor": 0.7359699890685233,
+          "rating": 3,
+          "at": 1966550400,
+          "retrievability": 0.8976548314804942,
+          "stability": 3608.4896667319354,
+          "difficulty": 2.0768687707460076,
+          "interval_days": 3695,
+          "due": 2285798400
+        },
+        {
+          "fuzz_factor": 0.6697304014402209,
+          "rating": 3,
+          "at": 2285798400,
+          "retrievability": 0.8983641316274454,
+          "stability": 8115.874440879771,
+          "difficulty": 2.0700202712721,
+          "interval_days": 8255,
+          "due": 2999030400
+        },
+        {
+          "fuzz_factor": 0.3081364575891442,
+          "rating": 3,
+          "at": 2999030400,
+          "retrievability": 0.898828026685244,
+          "stability": 16937.62542250874,
+          "difficulty": 2.0631786202976663,
+          "interval_days": 16613,
+          "due": 4434393600
+        },
+        {
+          "fuzz_factor": 0.6059441656784624,
+          "rating": 3,
+          "at": 4434393600,
+          "retrievability": 0.901323984821846,
+          "stability": 32818.97029714384,
+          "difficulty": 2.056343810974207,
+          "interval_days": 33168,
+          "due": 7300108800
+        }
+      ]
+    },
+    {
+      "name": "again-on-due",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767312000,
+          "retrievability": 0.7661957302284143,
+          "stability": 0.10088578982099844,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767398400,
+          "retrievability": 0.6936817601938027,
+          "stability": 0.05503453011833104,
+          "difficulty": 9.592868765339693,
+          "interval_days": 1,
+          "due": 1767484800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767484800,
+          "retrievability": 0.6360298619300166,
+          "stability": 0.033369187408475304,
+          "difficulty": 9.85140710095639,
+          "interval_days": 1,
+          "due": 1767571200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767571200,
+          "retrievability": 0.5907280913280574,
+          "stability": 0.021934476251248988,
+          "difficulty": 9.936386893812918,
+          "interval_days": 1,
+          "due": 1767657600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767657600,
+          "retrievability": 0.554688607615003,
+          "stability": 0.015355708866801014,
+          "difficulty": 9.964319173862265,
+          "interval_days": 1,
+          "due": 1767744000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767744000,
+          "retrievability": 0.5255466231425656,
+          "stability": 0.01130411521790723,
+          "difficulty": 9.973500324374982,
+          "interval_days": 1,
+          "due": 1767830400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767830400,
+          "retrievability": 0.5016150647712347,
+          "stability": 0.00866865701231436,
+          "difficulty": 9.976518106116687,
+          "interval_days": 1,
+          "due": 1767916800
+        }
+      ]
+    },
+    {
+      "name": "again-on-due",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767312000,
+          "retrievability": 0.7661957302284143,
+          "stability": 0.10088578982099844,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767398400,
+          "retrievability": 0.6936817601938027,
+          "stability": 0.05503453011833104,
+          "difficulty": 9.592868765339693,
+          "interval_days": 1,
+          "due": 1767484800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767484800,
+          "retrievability": 0.6360298619300166,
+          "stability": 0.033369187408475304,
+          "difficulty": 9.85140710095639,
+          "interval_days": 1,
+          "due": 1767571200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767571200,
+          "retrievability": 0.5907280913280574,
+          "stability": 0.021934476251248988,
+          "difficulty": 9.936386893812918,
+          "interval_days": 1,
+          "due": 1767657600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767657600,
+          "retrievability": 0.554688607615003,
+          "stability": 0.015355708866801014,
+          "difficulty": 9.964319173862265,
+          "interval_days": 1,
+          "due": 1767744000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767744000,
+          "retrievability": 0.5255466231425656,
+          "stability": 0.01130411521790723,
+          "difficulty": 9.973500324374982,
+          "interval_days": 1,
+          "due": 1767830400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767830400,
+          "retrievability": 0.5016150647712347,
+          "stability": 0.00866865701231436,
+          "difficulty": 9.976518106116687,
+          "interval_days": 1,
+          "due": 1767916800
+        }
+      ]
+    },
+    {
+      "name": "hard-on-due",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 2,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 1.2931,
+          "difficulty": 5.112170705601056,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 2,
+          "at": 1767312000,
+          "retrievability": 0.9166697187203525,
+          "stability": 3.2494117658571677,
+          "difficulty": 6.7404595108297,
+          "interval_days": 2,
+          "due": 1767484800
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 2,
+          "at": 1767484800,
+          "retrievability": 0.9297850712910951,
+          "stability": 5.806148601183973,
+          "difficulty": 7.821393497998797,
+          "interval_days": 8,
+          "due": 1768176000
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 2,
+          "at": 1768176000,
+          "retrievability": 0.876515082332626,
+          "stability": 11.367198297247473,
+          "difficulty": 8.538967850205447,
+          "interval_days": 13,
+          "due": 1769299200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 2,
+          "at": 1769299200,
+          "retrievability": 0.89051701251963,
+          "stability": 18.011809788806524,
+          "difficulty": 9.015327144165033,
+          "interval_days": 17,
+          "due": 1770768000
+        },
+        {
+          "fuzz_factor": 0.49543508709194095,
+          "rating": 2,
+          "at": 1770768000,
+          "retrievability": 0.9039224845127944,
+          "stability": 24.875656353970736,
+          "difficulty": 9.331556641838505,
+          "interval_days": 25,
+          "due": 1772928000
+        },
+        {
+          "fuzz_factor": 0.4494910647887381,
+          "rating": 2,
+          "at": 1772928000,
+          "retrievability": 0.8996570784173539,
+          "stability": 32.77623627777021,
+          "difficulty": 9.541484518688746,
+          "interval_days": 33,
+          "due": 1775779200
+        },
+        {
+          "fuzz_factor": 0.651592972722763,
+          "rating": 2,
+          "at": 1775779200,
+          "retrievability": 0.8995318876688538,
+          "stability": 41.47886397585375,
+          "difficulty": 9.680844425980998,
+          "interval_days": 43,
+          "due": 1779494400
+        }
+      ]
+    },
+    {
+      "name": "hard-on-due",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 2,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 1.2931,
+          "difficulty": 5.112170705601056,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 2,
+          "at": 1767312000,
+          "retrievability": 0.9166697187203525,
+          "stability": 3.2494117658571677,
+          "difficulty": 6.7404595108297,
+          "interval_days": 5,
+          "due": 1767744000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 2,
+          "at": 1767744000,
+          "retrievability": 0.867781500397729,
+          "stability": 8.185807370554326,
+          "difficulty": 7.821393497998797,
+          "interval_days": 11,
+          "due": 1768694400
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 2,
+          "at": 1768694400,
+          "retrievability": 0.8784508142905891,
+          "stability": 15.468231617879129,
+          "difficulty": 8.538967850205447,
+          "interval_days": 13,
+          "due": 1769817600
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 2,
+          "at": 1769817600,
+          "retrievability": 0.9114925011313454,
+          "stability": 22.353614436525618,
+          "difficulty": 9.015327144165033,
+          "interval_days": 20,
+          "due": 1771545600
+        },
+        {
+          "fuzz_factor": 0.8354988781294496,
+          "rating": 2,
+          "at": 1771545600,
+          "retrievability": 0.9074596519575744,
+          "stability": 30.257175415623344,
+          "difficulty": 9.331556641838505,
+          "interval_days": 33,
+          "due": 1774396800
+        },
+        {
+          "fuzz_factor": 0.7359699890685233,
+          "rating": 2,
+          "at": 1774396800,
+          "retrievability": 0.8939284609819131,
+          "stability": 40.11222260409524,
+          "difficulty": 9.541484518688746,
+          "interval_days": 43,
+          "due": 1778112000
+        },
+        {
+          "fuzz_factor": 0.6697304014402209,
+          "rating": 2,
+          "at": 1778112000,
+          "retrievability": 0.895153213842393,
+          "stability": 50.878072666849505,
+          "difficulty": 9.680844425980998,
+          "interval_days": 53,
+          "due": 1782691200
+        }
+      ]
+    },
+    {
+      "name": "easy-on-due-to-maximum-interval",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 4,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 8.2956,
+          "difficulty": 1.0,
+          "interval_days": 7,
+          "due": 1767830400
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 4,
+          "at": 1767830400,
+          "retrievability": 0.9112367728465863,
+          "stability": 60.28892780734585,
+          "difficulty": 1.0,
+          "interval_days": 64,
+          "due": 1773360000
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 4,
+          "at": 1773360000,
+          "retrievability": 0.895843880283502,
+          "stability": 380.8983207229997,
+          "difficulty": 1.0,
+          "interval_days": 393,
+          "due": 1807315200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 4,
+          "at": 1807315200,
+          "retrievability": 0.8978368516076317,
+          "stability": 1841.1671217549504,
+          "difficulty": 1.0,
+          "interval_days": 1795,
+          "due": 1962403200
+        },
+        {
+          "fuzz_factor": 0.49543508709194095,
+          "rating": 4,
+          "at": 1962403200,
+          "retrievability": 0.9017351327151004,
+          "stability": 7054.752032703268,
+          "difficulty": 1.0,
+          "interval_days": 7052,
+          "due": 2571696000
+        },
+        {
+          "fuzz_factor": 0.4494910647887381,
+          "rating": 4,
+          "at": 2571696000,
+          "retrievability": 0.9000268031317159,
+          "stability": 23314.617057672593,
+          "difficulty": 1.0,
+          "interval_days": 23197,
+          "due": 4575916800
+        },
+        {
+          "fuzz_factor": 0.651592972722763,
+          "rating": 4,
+          "at": 4575916800,
+          "retrievability": 0.9003470834548758,
+          "stability": 67200.41483582796,
+          "difficulty": 1.0,
+          "interval_days": 35864,
+          "due": 7674566400
+        },
+        {
+          "fuzz_factor": 0.7887233511355132,
+          "rating": 4,
+          "at": 7674566400,
+          "retrievability": 0.9371712421171081,
+          "stability": 133073.68241512775,
+          "difficulty": 1.0,
+          "interval_days": 36115,
+          "due": 10794902400
+        },
+        {
+          "fuzz_factor": 0.0938595867742349,
+          "rating": 4,
+          "at": 10794902400,
+          "retrievability": 0.9642767511789252,
+          "stability": 198548.23213912675,
+          "difficulty": 1.0,
+          "interval_days": 34845,
+          "due": 13805510400
+        },
+        {
+          "fuzz_factor": 0.02834747652200631,
+          "rating": 4,
+          "at": 13805510400,
+          "retrievability": 0.9758173141894637,
+          "stability": 260129.20246210956,
+          "difficulty": 1.0,
+          "interval_days": 34725,
+          "due": 16805750400
+        },
+        {
+          "fuzz_factor": 0.8357651039198697,
+          "rating": 4,
+          "at": 16805750400,
+          "retrievability": 0.9812143602190634,
+          "stability": 319916.58074011415,
+          "difficulty": 1.0,
+          "interval_days": 36201,
+          "due": 19933516800
+        },
+        {
+          "fuzz_factor": 0.43276706790505337,
+          "rating": 4,
+          "at": 19933516800,
+          "retrievability": 0.9839089018922964,
+          "stability": 380699.47816135973,
+          "difficulty": 1.0,
+          "interval_days": 35464,
+          "due": 22997606400
+        },
+        {
+          "fuzz_factor": 0.762280082457942,
+          "rating": 4,
+          "at": 22997606400,
+          "retrievability": 0.9866145981224889,
+          "stability": 439086.7502363691,
+          "difficulty": 1.0,
+          "interval_days": 36066,
+          "due": 26113708800
+        },
+        {
+          "fuzz_factor": 0.0021060533511106927,
+          "rating": 4,
+          "at": 26113708800,
+          "retrievability": 0.9881287851429579,
+          "stability": 497372.70896025817,
+          "difficulty": 1.0,
+          "interval_days": 34677,
+          "due": 29109801600
+        },
+        {
+          "fuzz_factor": 0.4453871940548014,
+          "rating": 4,
+          "at": 29109801600,
+          "retrievability": 0.9898567832108349,
+          "stability": 552587.9101811729,
+          "difficulty": 1.0,
+          "interval_days": 35487,
+          "due": 32175878400
+        },
+        {
+          "fuzz_factor": 0.7215400323407826,
+          "rating": 4,
+          "at": 32175878400,
+          "retrievability": 0.9906294797258592,
+          "stability": 608257.176032129,
+          "difficulty": 1.0,
+          "interval_days": 35992,
+          "due": 35285587200
+        }
+      ]
+    },
+    {
+      "name": "easy-on-due-to-maximum-interval",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 4,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 8.2956,
+          "difficulty": 1.0,
+          "interval_days": 11,
+          "due": 1768176000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 4,
+          "at": 1768176000,
+          "retrievability": 0.8794744200440656,
+          "stability": 79.80449515797316,
+          "difficulty": 1.0,
+          "interval_days": 86,
+          "due": 1775606400
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 4,
+          "at": 1775606400,
+          "retrievability": 0.8947815941230156,
+          "stability": 489.13013280948104,
+          "difficulty": 1.0,
+          "interval_days": 466,
+          "due": 1815868800
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 4,
+          "at": 1815868800,
+          "retrievability": 0.9032934116248842,
+          "stability": 2187.995798886015,
+          "difficulty": 1.0,
+          "interval_days": 2096,
+          "due": 1996963200
+        },
+        {
+          "fuzz_factor": 0.8354988781294496,
+          "rating": 4,
+          "at": 1996963200,
+          "retrievability": 0.9029238207549127,
+          "stability": 8132.406204713347,
+          "difficulty": 1.0,
+          "interval_days": 8407,
+          "due": 2723328000
+        },
+        {
+          "fuzz_factor": 0.7359699890685233,
+          "rating": 4,
+          "at": 2723328000,
+          "retrievability": 0.8977023842980555,
+          "stability": 26880.534024774264,
+          "difficulty": 1.0,
+          "interval_days": 27517,
+          "due": 5100796800
+        },
+        {
+          "fuzz_factor": 0.6697304014402209,
+          "rating": 4,
+          "at": 5100796800,
+          "retrievability": 0.8983842299316119,
+          "stability": 77306.12873316639,
+          "difficulty": 1.0,
+          "interval_days": 35897,
+          "due": 8202297600
+        },
+        {
+          "fuzz_factor": 0.3081364575891442,
+          "rating": 4,
+          "at": 8202297600,
+          "retrievability": 0.9437919767655613,
+          "stability": 143360.46292956694,
+          "difficulty": 1.0,
+          "interval_days": 35236,
+          "due": 11246688000
+        },
+        {
+          "fuzz_factor": 0.6059441656784624,
+          "rating": 4,
+          "at": 11246688000,
+          "retrievability": 0.9672590321528123,
+          "stability": 207134.67451460214,
+          "difficulty": 1.0,
+          "interval_days": 35781,
+          "due": 14338166400
+        },
+        {
+          "fuzz_factor": 0.6068017336408379,
+          "rating": 4,
+          "at": 14338166400,
+          "retrievability": 0.9761646749050842,
+          "stability": 270002.2027776267,
+          "difficulty": 1.0,
+          "interval_days": 35782,
+          "due": 17429731200
+        },
+        {
+          "fuzz_factor": 0.5812040171120031,
+          "rating": 4,
+          "at": 17429731200,
+          "retrievability": 0.9813411934570041,
+          "stability": 331255.3367329581,
+          "difficulty": 1.0,
+          "interval_days": 35735,
+          "due": 20517235200
+        },
+        {
+          "fuzz_factor": 0.15838287025480557,
+          "rating": 4,
+          "at": 20517235200,
+          "retrievability": 0.9846177356013982,
+          "stability": 391055.08155818743,
+          "difficulty": 1.0,
+          "interval_days": 34963,
+          "due": 23538038400
+        },
+        {
+          "fuzz_factor": 0.43066964029126864,
+          "rating": 4,
+          "at": 23538038400,
+          "retrievability": 0.9871278168427366,
+          "stability": 448461.96067593386,
+          "difficulty": 1.0,
+          "interval_days": 35460,
+          "due": 26601782400
+        },
+        {
+          "fuzz_factor": 0.39353182020537136,
+          "rating": 4,
+          "at": 26601782400,
+          "retrievability": 0.988553654685863,
+          "stability": 505650.4663133583,
+          "difficulty": 1.0,
+          "interval_days": 35392,
+          "due": 29659651200
+        },
+        {
+          "fuzz_factor": 0.7230120812374659,
+          "rating": 4,
+          "at": 29659651200,
+          "retrievability": 0.9898185988760898,
+          "stability": 561842.0540314458,
+          "difficulty": 1.0,
+          "interval_days": 35995,
+          "due": 32769619200
+        },
+        {
+          "fuzz_factor": 0.9948195629497427,
+          "rating": 4,
+          "at": 32769619200,
+          "retrievability": 0.9906511208851181,
+          "stability": 618156.3668905479,
+          "difficulty": 1.0,
+          "interval_days": 36492,
+          "due": 35922528000
+        }
+      ]
+    },
+    {
+      "name": "know-dont-know-alternating",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 0.6075801062519337,
+          "difficulty": 7.394502741279718,
+          "interval_days": 1,
+          "due": 1767484800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767484800,
+          "retrievability": 0.8623103828079355,
+          "stability": 2.4004040500172708,
+          "difficulty": 7.382336607835277,
+          "interval_days": 2,
+          "due": 1767657600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767657600,
+          "retrievability": 0.9120406222319877,
+          "stability": 0.5757341176392132,
+          "difficulty": 9.12482021240336,
+          "interval_days": 1,
+          "due": 1767744000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767744000,
+          "retrievability": 0.8578569590243271,
+          "stability": 1.497748393351208,
+          "difficulty": 9.110923761487795,
+          "interval_days": 1,
+          "due": 1767830400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767830400,
+          "retrievability": 0.9252938753128669,
+          "stability": 0.3986121200832253,
+          "difficulty": 9.692995055416297,
+          "interval_days": 1,
+          "due": 1767916800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767916800,
+          "retrievability": 0.8258213129245642,
+          "stability": 0.9858643380939536,
+          "difficulty": 9.678530429657718,
+          "interval_days": 1,
+          "due": 1768003200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1768003200,
+          "retrievability": 0.8990189509880088,
+          "stability": 0.30126516844678347,
+          "difficulty": 9.879563507518409,
+          "interval_days": 1,
+          "due": 1768089600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1768089600,
+          "retrievability": 0.7999040195092919,
+          "stability": 0.7641002176941096,
+          "difficulty": 9.864912313307729,
+          "interval_days": 1,
+          "due": 1768176000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1768176000,
+          "retrievability": 0.8804772952830688,
+          "stability": 0.2526287866436481,
+          "difficulty": 9.940825965277357,
+          "interval_days": 1,
+          "due": 1768262400
+        }
+      ]
+    },
+    {
+      "name": "know-dont-know-alternating",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 0.6075801062519337,
+          "difficulty": 7.394502741279718,
+          "interval_days": 1,
+          "due": 1767484800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767484800,
+          "retrievability": 0.8623103828079355,
+          "stability": 2.4004040500172708,
+          "difficulty": 7.382336607835277,
+          "interval_days": 2,
+          "due": 1767657600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767657600,
+          "retrievability": 0.9120406222319877,
+          "stability": 0.5757341176392132,
+          "difficulty": 9.12482021240336,
+          "interval_days": 1,
+          "due": 1767744000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767744000,
+          "retrievability": 0.8578569590243271,
+          "stability": 1.497748393351208,
+          "difficulty": 9.110923761487795,
+          "interval_days": 1,
+          "due": 1767830400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767830400,
+          "retrievability": 0.9252938753128669,
+          "stability": 0.3986121200832253,
+          "difficulty": 9.692995055416297,
+          "interval_days": 1,
+          "due": 1767916800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767916800,
+          "retrievability": 0.8258213129245642,
+          "stability": 0.9858643380939536,
+          "difficulty": 9.678530429657718,
+          "interval_days": 1,
+          "due": 1768003200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1768003200,
+          "retrievability": 0.8990189509880088,
+          "stability": 0.30126516844678347,
+          "difficulty": 9.879563507518409,
+          "interval_days": 1,
+          "due": 1768089600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1768089600,
+          "retrievability": 0.7999040195092919,
+          "stability": 0.7641002176941096,
+          "difficulty": 9.864912313307729,
+          "interval_days": 1,
+          "due": 1768176000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1768176000,
+          "retrievability": 0.8804772952830688,
+          "stability": 0.2526287866436481,
+          "difficulty": 9.940825965277357,
+          "interval_days": 1,
+          "due": 1768262400
+        }
+      ]
+    },
+    {
+      "name": "lapse-and-recover",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 10,
+          "due": 1768262400
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 3,
+          "at": 1768262400,
+          "retrievability": 0.9061991460939601,
+          "stability": 43.931669184041375,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 48,
+          "due": 1772409600
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 3,
+          "at": 1772409600,
+          "retrievability": 0.8938008213825323,
+          "stability": 163.29629414722837,
+          "difficulty": 2.0974554287524403,
+          "interval_days": 169,
+          "due": 1787011200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 1,
+          "at": 1787011200,
+          "retrievability": 0.8976240117872814,
+          "stability": 4.738557761736451,
+          "difficulty": 7.387715706030851,
+          "interval_days": 5,
+          "due": 1787443200
+        },
+        {
+          "fuzz_factor": 0.49543508709194095,
+          "rating": 3,
+          "at": 1787443200,
+          "retrievability": 0.896268113803041,
+          "stability": 12.13172041456344,
+          "difficulty": 7.375556359621658,
+          "interval_days": 12,
+          "due": 1788480000
+        },
+        {
+          "fuzz_factor": 0.4494910647887381,
+          "rating": 3,
+          "at": 1788480000,
+          "retrievability": 0.9007482491461489,
+          "stability": 27.640876765826203,
+          "difficulty": 7.363409172558875,
+          "interval_days": 28,
+          "due": 1790899200
+        },
+        {
+          "fuzz_factor": 0.651592972722763,
+          "rating": 3,
+          "at": 1790899200,
+          "retrievability": 0.8991106976859449,
+          "stability": 59.08093712563405,
+          "difficulty": 7.351274132683154,
+          "interval_days": 61,
+          "due": 1796169600
+        },
+        {
+          "fuzz_factor": 0.7887233511355132,
+          "rating": 3,
+          "at": 1796169600,
+          "retrievability": 0.8977889193045755,
+          "stability": 119.30215517937992,
+          "difficulty": 7.339151227847309,
+          "interval_days": 124,
+          "due": 1806883200
+        }
+      ]
+    },
+    {
+      "name": "lapse-and-recover",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 14,
+          "due": 1768608000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 3,
+          "at": 1768608000,
+          "retrievability": 0.8823496486514505,
+          "stability": 52.713755872340755,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 58,
+          "due": 1773619200
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 3,
+          "at": 1773619200,
+          "retrievability": 0.8933010941891875,
+          "stability": 192.33854591107163,
+          "difficulty": 2.0974554287524403,
+          "interval_days": 181,
+          "due": 1789257600
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 1,
+          "at": 1789257600,
+          "retrievability": 0.9041196835005402,
+          "stability": 4.965651511374187,
+          "difficulty": 7.387715706030851,
+          "interval_days": 4,
+          "due": 1789603200
+        },
+        {
+          "fuzz_factor": 0.8354988781294496,
+          "rating": 3,
+          "at": 1789603200,
+          "retrievability": 0.9141578744009413,
+          "stability": 11.281481160979743,
+          "difficulty": 7.375556359621658,
+          "interval_days": 13,
+          "due": 1790726400
+        },
+        {
+          "fuzz_factor": 0.7359699890685233,
+          "rating": 3,
+          "at": 1790726400,
+          "retrievability": 0.8899668153057497,
+          "stability": 27.535625605803602,
+          "difficulty": 7.363409172558875,
+          "interval_days": 30,
+          "due": 1793318400
+        },
+        {
+          "fuzz_factor": 0.6697304014402209,
+          "rating": 3,
+          "at": 1793318400,
+          "retrievability": 0.8940037651278876,
+          "stability": 60.530212900604106,
+          "difficulty": 7.351274132683154,
+          "interval_days": 63,
+          "due": 1798761600
+        },
+        {
+          "fuzz_factor": 0.3081364575891442,
+          "rating": 3,
+          "at": 1798761600,
+          "retrievability": 0.8972290190080112,
+          "stability": 122.33064924859609,
+          "difficulty": 7.339151227847309,
+          "interval_days": 119,
+          "due": 1809043200
+        }
+      ]
+    },
+    {
+      "name": "hard-easy-mix",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 2,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 1.2931,
+          "difficulty": 5.112170705601056,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 4,
+          "at": 1767312000,
+          "retrievability": 0.9166697187203525,
+          "stability": 7.385511550172746,
+          "difficulty": 3.4641142975548855,
+          "interval_days": 6,
+          "due": 1767830400
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 2,
+          "at": 1767830400,
+          "retrievability": 0.9136287346354266,
+          "stability": 18.487207202853877,
+          "difficulty": 5.646402867740037,
+          "interval_days": 21,
+          "due": 1769644800
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 4,
+          "at": 1769644800,
+          "retrievability": 0.8910080281355345,
+          "stability": 85.68266268397886,
+          "difficulty": 4.17686195306196,
+          "interval_days": 90,
+          "due": 1777420800
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 3,
+          "at": 1777420800,
+          "retrievability": 0.8965872645808292,
+          "stability": 241.07435161118107,
+          "difficulty": 4.167913460405736,
+          "interval_days": 234,
+          "due": 1797638400
+        },
+        {
+          "fuzz_factor": 0.49543508709194095,
+          "rating": 2,
+          "at": 1797638400,
+          "retrievability": 0.9020331281849079,
+          "stability": 450.54510834174977,
+          "difficulty": 6.113617549081422,
+          "interval_days": 451,
+          "due": 1836604800
+        }
+      ]
+    },
+    {
+      "name": "hard-easy-mix",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 2,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 1.2931,
+          "difficulty": 5.112170705601056,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 4,
+          "at": 1767312000,
+          "retrievability": 0.9166697187203525,
+          "stability": 7.385511550172746,
+          "difficulty": 3.4641142975548855,
+          "interval_days": 10,
+          "due": 1768176000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 2,
+          "at": 1768176000,
+          "retrievability": 0.8778670186921885,
+          "stability": 23.311993763417796,
+          "difficulty": 5.646402867740037,
+          "interval_days": 27,
+          "due": 1770508800
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 4,
+          "at": 1770508800,
+          "retrievability": 0.8895965029148731,
+          "stability": 105.93593209251135,
+          "difficulty": 4.17686195306196,
+          "interval_days": 100,
+          "due": 1779148800
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 3,
+          "at": 1779148800,
+          "retrievability": 0.9039124369286168,
+          "stability": 277.74106217984075,
+          "difficulty": 4.167913460405736,
+          "interval_days": 265,
+          "due": 1802044800
+        },
+        {
+          "fuzz_factor": 0.8354988781294496,
+          "rating": 2,
+          "at": 1802044800,
+          "retrievability": 0.9031935874177658,
+          "stability": 510.5448889105515,
+          "difficulty": 6.113617549081422,
+          "interval_days": 531,
+          "due": 1847923200
+        }
+      ]
+    },
+    {
+      "name": "same-day-relearning-from-new",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767226200,
+          "retrievability": 1.0,
+          "stability": 0.08335671711031604,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767312600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767226800,
+          "retrievability": 1.0,
+          "stability": 0.10314065007785231,
+          "difficulty": 8.792726533684817,
+          "interval_days": 1,
+          "due": 1767313200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767313200,
+          "retrievability": 0.6958266544079361,
+          "stability": 0.6952546986897922,
+          "difficulty": 8.77916217644797,
+          "interval_days": 1,
+          "due": 1767399600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767399600,
+          "retrievability": 0.8731552678384231,
+          "stability": 1.8285437796241013,
+          "difficulty": 8.76561138356836,
+          "interval_days": 2,
+          "due": 1767572400
+        }
+      ]
+    },
+    {
+      "name": "same-day-relearning-from-new",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767226200,
+          "retrievability": 1.0,
+          "stability": 0.08335671711031604,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767312600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767226800,
+          "retrievability": 1.0,
+          "stability": 0.10314065007785231,
+          "difficulty": 8.792726533684817,
+          "interval_days": 1,
+          "due": 1767313200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767313200,
+          "retrievability": 0.6958266544079361,
+          "stability": 0.6952546986897922,
+          "difficulty": 8.77916217644797,
+          "interval_days": 1,
+          "due": 1767399600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767399600,
+          "retrievability": 0.8731552678384231,
+          "stability": 1.8285437796241013,
+          "difficulty": 8.76561138356836,
+          "interval_days": 2,
+          "due": 1767572400
+        }
+      ]
+    },
+    {
+      "name": "same-day-again-to-minimum-stability",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225660,
+          "retrievability": 1.0,
+          "stability": 0.08335671711031604,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767312060
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225720,
+          "retrievability": 1.0,
+          "stability": 0.03485140985964798,
+          "difficulty": 9.592868765339693,
+          "interval_days": 1,
+          "due": 1767312120
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225780,
+          "retrievability": 1.0,
+          "stability": 0.01543191751473265,
+          "difficulty": 9.85140710095639,
+          "interval_days": 1,
+          "due": 1767312180
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225840,
+          "retrievability": 1.0,
+          "stability": 0.007209406358391926,
+          "difficulty": 9.936386893812918,
+          "interval_days": 1,
+          "due": 1767312240
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225900,
+          "retrievability": 1.0,
+          "stability": 0.003541011675383867,
+          "difficulty": 9.964319173862265,
+          "interval_days": 1,
+          "due": 1767312300
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225960,
+          "retrievability": 1.0,
+          "stability": 0.00182252048908479,
+          "difficulty": 9.973500324374982,
+          "interval_days": 1,
+          "due": 1767312360
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767226020,
+          "retrievability": 1.0,
+          "stability": 0.001,
+          "difficulty": 9.976518106116687,
+          "interval_days": 1,
+          "due": 1767312420
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767226080,
+          "retrievability": 1.0,
+          "stability": 0.001,
+          "difficulty": 9.977510030454273,
+          "interval_days": 1,
+          "due": 1767312480
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767312480,
+          "retrievability": 0.3456694429039765,
+          "stability": 0.015363289946928071,
+          "difficulty": 9.962760889720656,
+          "interval_days": 1,
+          "due": 1767398880
+        }
+      ]
+    },
+    {
+      "name": "same-day-again-to-minimum-stability",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225660,
+          "retrievability": 1.0,
+          "stability": 0.08335671711031604,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767312060
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225720,
+          "retrievability": 1.0,
+          "stability": 0.03485140985964798,
+          "difficulty": 9.592868765339693,
+          "interval_days": 1,
+          "due": 1767312120
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225780,
+          "retrievability": 1.0,
+          "stability": 0.01543191751473265,
+          "difficulty": 9.85140710095639,
+          "interval_days": 1,
+          "due": 1767312180
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225840,
+          "retrievability": 1.0,
+          "stability": 0.007209406358391926,
+          "difficulty": 9.936386893812918,
+          "interval_days": 1,
+          "due": 1767312240
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225900,
+          "retrievability": 1.0,
+          "stability": 0.003541011675383867,
+          "difficulty": 9.964319173862265,
+          "interval_days": 1,
+          "due": 1767312300
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225960,
+          "retrievability": 1.0,
+          "stability": 0.00182252048908479,
+          "difficulty": 9.973500324374982,
+          "interval_days": 1,
+          "due": 1767312360
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767226020,
+          "retrievability": 1.0,
+          "stability": 0.001,
+          "difficulty": 9.976518106116687,
+          "interval_days": 1,
+          "due": 1767312420
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767226080,
+          "retrievability": 1.0,
+          "stability": 0.001,
+          "difficulty": 9.977510030454273,
+          "interval_days": 1,
+          "due": 1767312480
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767312480,
+          "retrievability": 0.3456694429039765,
+          "stability": 0.015363289946928071,
+          "difficulty": 9.962760889720656,
+          "interval_days": 1,
+          "due": 1767398880
+        }
+      ]
+    },
+    {
+      "name": "same-day-after-review",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 10,
+          "due": 1768262400
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 3,
+          "at": 1767402000,
+          "retrievability": 1.0,
+          "stability": 10.964332335820698,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 13,
+          "due": 1768525200
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 1,
+          "at": 1767405600,
+          "retrievability": 1.0,
+          "stability": 3.3252859975809317,
+          "difficulty": 7.389975788014609,
+          "interval_days": 4,
+          "due": 1767751200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 3,
+          "at": 1767488400,
+          "retrievability": 1.0,
+          "stability": 3.3252859975809317,
+          "difficulty": 7.377814181523433,
+          "interval_days": 3,
+          "due": 1767747600
+        },
+        {
+          "fuzz_factor": 0.49543508709194095,
+          "rating": 3,
+          "at": 1767747600,
+          "retrievability": 0.9069151057009769,
+          "stability": 8.256233935096086,
+          "difficulty": 7.365664736638748,
+          "interval_days": 8,
+          "due": 1768438800
+        }
+      ]
+    },
+    {
+      "name": "same-day-after-review",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 14,
+          "due": 1768608000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 3,
+          "at": 1767402000,
+          "retrievability": 1.0,
+          "stability": 10.964332335820698,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 14,
+          "due": 1768611600
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 1,
+          "at": 1767405600,
+          "retrievability": 1.0,
+          "stability": 3.3252859975809317,
+          "difficulty": 7.389975788014609,
+          "interval_days": 2,
+          "due": 1767578400
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 3,
+          "at": 1767488400,
+          "retrievability": 1.0,
+          "stability": 3.3252859975809317,
+          "difficulty": 7.377814181523433,
+          "interval_days": 2,
+          "due": 1767661200
+        },
+        {
+          "fuzz_factor": 0.8354988781294496,
+          "rating": 3,
+          "at": 1767661200,
+          "retrievability": 0.9310223156210161,
+          "stability": 6.94394878335507,
+          "difficulty": 7.365664736638748,
+          "interval_days": 9,
+          "due": 1768438800
+        }
+      ]
+    },
+    {
+      "name": "overdue",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 3,
+          "at": 1769817600,
+          "retrievability": 0.6675263338730357,
+          "stability": 37.42063838925624,
+          "difficulty": 2.111214235785395,
+          "interval_days": 34,
+          "due": 1772755200
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 3,
+          "at": 1787097600,
+          "retrievability": 0.7540268211821664,
+          "stability": 293.26155866628574,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 306,
+          "due": 1813536000
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 1,
+          "at": 1850169600,
+          "retrievability": 0.8265257712221431,
+          "stability": 6.520975993593408,
+          "difficulty": 7.389975788014609,
+          "interval_days": 9,
+          "due": 1850947200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 3,
+          "at": 1850947200,
+          "retrievability": 0.8763848480912769,
+          "stability": 18.102643964777737,
+          "difficulty": 7.377814181523433,
+          "interval_days": 17,
+          "due": 1852416000
+        }
+      ]
+    },
+    {
+      "name": "overdue",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 3,
+          "at": 1769817600,
+          "retrievability": 0.6675263338730357,
+          "stability": 37.42063838925624,
+          "difficulty": 2.111214235785395,
+          "interval_days": 42,
+          "due": 1773446400
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 3,
+          "at": 1787097600,
+          "retrievability": 0.7540268211821664,
+          "stability": 293.26155866628574,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 309,
+          "due": 1813795200
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 1,
+          "at": 1850169600,
+          "retrievability": 0.8265257712221431,
+          "stability": 6.520975993593408,
+          "difficulty": 7.389975788014609,
+          "interval_days": 5,
+          "due": 1850601600
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 3,
+          "at": 1850601600,
+          "retrievability": 0.9171893622212736,
+          "stability": 14.152933432727131,
+          "difficulty": 7.377814181523433,
+          "interval_days": 12,
+          "due": 1851638400
+        }
+      ]
+    },
+    {
+      "name": "lapse-long-overdue-with-low-stability",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 2082585600,
+          "retrievability": 0.22291573653275867,
+          "stability": 0.20176633585888237,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 2082672000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 2082672000,
+          "retrievability": 0.7613838550512164,
+          "stability": 0.9877862106709332,
+          "difficulty": 8.792726533684817,
+          "interval_days": 1,
+          "due": 2082758400
+        }
+      ]
+    },
+    {
+      "name": "lapse-long-overdue-with-low-stability",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 2082585600,
+          "retrievability": 0.22291573653275867,
+          "stability": 0.20176633585888237,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 2082672000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 2082672000,
+          "retrievability": 0.7613838550512164,
+          "stability": 0.9877862106709332,
+          "difficulty": 8.792726533684817,
+          "interval_days": 1,
+          "due": 2082758400
+        }
+      ]
+    },
+    {
+      "name": "lapse-long-overdue-after-good",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1801785600,
+          "retrievability": 0.4525497146213213,
+          "stability": 1.2903439218164554,
+          "difficulty": 7.394502741279718,
+          "interval_days": 1,
+          "due": 1801872000
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 3,
+          "at": 1801872000,
+          "retrievability": 0.9165395977111697,
+          "stability": 3.2819925174061755,
+          "difficulty": 7.382336607835277,
+          "interval_days": 2,
+          "due": 1802044800
+        }
+      ]
+    },
+    {
+      "name": "lapse-long-overdue-after-good",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1801785600,
+          "retrievability": 0.4525497146213213,
+          "stability": 1.2903439218164554,
+          "difficulty": 7.394502741279718,
+          "interval_days": 1,
+          "due": 1801872000
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 3,
+          "at": 1801872000,
+          "retrievability": 0.9165395977111697,
+          "stability": 3.2819925174061755,
+          "difficulty": 7.382336607835277,
+          "interval_days": 5,
+          "due": 1802304000
+        }
+      ]
+    },
+    {
+      "name": "early",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.13436424411240122,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 10,
+          "due": 1768262400
+        },
+        {
+          "fuzz_factor": 0.8474337369372327,
+          "rating": 3,
+          "at": 1767484800,
+          "retrievability": 0.9868813674877492,
+          "stability": 15.428298339937388,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 17,
+          "due": 1768953600
+        },
+        {
+          "fuzz_factor": 0.763774618976614,
+          "rating": 3,
+          "at": 1767614400,
+          "retrievability": 0.9905454954479449,
+          "stability": 19.701919697133317,
+          "difficulty": 2.0974554287524403,
+          "interval_days": 22,
+          "due": 1769515200
+        },
+        {
+          "fuzz_factor": 0.2550690257394217,
+          "rating": 3,
+          "at": 1769515200,
+          "retrievability": 0.8922429492750129,
+          "stability": 81.86912118336872,
+          "difficulty": 2.0905863426205262,
+          "interval_days": 79,
+          "due": 1776340800
+        }
+      ]
+    },
+    {
+      "name": "early",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 2.3065,
+          "difficulty": 2.118103970459016,
+          "interval_days": 2,
+          "due": 1767398400
+        },
+        {
+          "fuzz_factor": 0.9560342718892494,
+          "rating": 3,
+          "at": 1767398400,
+          "retrievability": 0.9094932559773545,
+          "stability": 10.964332335820698,
+          "difficulty": 2.111214235785395,
+          "interval_days": 14,
+          "due": 1768608000
+        },
+        {
+          "fuzz_factor": 0.9478274870593494,
+          "rating": 3,
+          "at": 1767484800,
+          "retrievability": 0.9868813674877492,
+          "stability": 15.428298339937388,
+          "difficulty": 2.1043313908464483,
+          "interval_days": 18,
+          "due": 1769040000
+        },
+        {
+          "fuzz_factor": 0.05655136772680869,
+          "rating": 3,
+          "at": 1767614400,
+          "retrievability": 0.9905454954479449,
+          "stability": 19.701919697133317,
+          "difficulty": 2.0974554287524403,
+          "interval_days": 17,
+          "due": 1769083200
+        },
+        {
+          "fuzz_factor": 0.08487199515892163,
+          "rating": 3,
+          "at": 1769083200,
+          "retrievability": 0.9098098469856536,
+          "stability": 71.36716016813374,
+          "difficulty": 2.0905863426205262,
+          "interval_days": 66,
+          "due": 1774785600
+        }
+      ]
+    },
+    {
+      "name": "two-button-session",
+      "seed": 1,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225900,
+          "retrievability": 1.0,
+          "stability": 0.08335671711031604,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767312300
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767226200,
+          "retrievability": 1.0,
+          "stability": 0.10314065007785231,
+          "difficulty": 8.792726533684817,
+          "interval_days": 1,
+          "due": 1767312600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767312600,
+          "retrievability": 0.6958266544079361,
+          "stability": 0.6952546986897922,
+          "difficulty": 8.77916217644797,
+          "interval_days": 1,
+          "due": 1767399000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767399000,
+          "retrievability": 0.8731552678384231,
+          "stability": 1.8285437796241013,
+          "difficulty": 8.76561138356836,
+          "interval_days": 2,
+          "due": 1767571800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767571800,
+          "retrievability": 0.8937251269068762,
+          "stability": 0.48630766250977847,
+          "difficulty": 9.579493224918348,
+          "interval_days": 1,
+          "due": 1767658200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767572400,
+          "retrievability": 1.0,
+          "stability": 0.5357960593635018,
+          "difficulty": 9.565142100990267,
+          "interval_days": 1,
+          "due": 1767658800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767658800,
+          "retrievability": 0.8518077978338204,
+          "stability": 1.2302577751060593,
+          "difficulty": 9.550805328186113,
+          "interval_days": 1,
+          "due": 1767745200
+        }
+      ]
+    },
+    {
+      "name": "two-button-session",
+      "seed": 2,
+      "reviews": [
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225600,
+          "retrievability": null,
+          "stability": 0.212,
+          "difficulty": 6.4133,
+          "interval_days": 1,
+          "due": 1767312000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767225900,
+          "retrievability": 1.0,
+          "stability": 0.08335671711031604,
+          "difficulty": 8.806304468856837,
+          "interval_days": 1,
+          "due": 1767312300
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767226200,
+          "retrievability": 1.0,
+          "stability": 0.10314065007785231,
+          "difficulty": 8.792726533684817,
+          "interval_days": 1,
+          "due": 1767312600
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767312600,
+          "retrievability": 0.6958266544079361,
+          "stability": 0.6952546986897922,
+          "difficulty": 8.77916217644797,
+          "interval_days": 1,
+          "due": 1767399000
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767399000,
+          "retrievability": 0.8731552678384231,
+          "stability": 1.8285437796241013,
+          "difficulty": 8.76561138356836,
+          "interval_days": 2,
+          "due": 1767571800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 1,
+          "at": 1767571800,
+          "retrievability": 0.8937251269068762,
+          "stability": 0.48630766250977847,
+          "difficulty": 9.579493224918348,
+          "interval_days": 1,
+          "due": 1767658200
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767572400,
+          "retrievability": 1.0,
+          "stability": 0.5357960593635018,
+          "difficulty": 9.565142100990267,
+          "interval_days": 1,
+          "due": 1767658800
+        },
+        {
+          "fuzz_factor": null,
+          "rating": 3,
+          "at": 1767658800,
+          "retrievability": 0.8518077978338204,
+          "stability": 1.2302577751060593,
+          "difficulty": 9.550805328186113,
+          "interval_days": 1,
+          "due": 1767745200
+        }
+      ]
+    }
   ]
 }

@@ -25,6 +25,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Answer dco_decode_answer(dynamic raw);
 
   @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
   MemoryStateParts dco_decode_box_autoadd_memory_state_parts(dynamic raw);
 
   @protected
@@ -46,6 +49,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MemoryStateParts dco_decode_memory_state_parts(dynamic raw);
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
   MemoryStateParts? dco_decode_opt_box_autoadd_memory_state_parts(dynamic raw);
 
   @protected
@@ -65,6 +71,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Answer sse_decode_answer(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
   MemoryStateParts sse_decode_box_autoadd_memory_state_parts(
@@ -92,6 +101,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MemoryStateParts sse_decode_memory_state_parts(SseDeserializer deserializer);
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
   MemoryStateParts? sse_decode_opt_box_autoadd_memory_state_parts(
     SseDeserializer deserializer,
   );
@@ -116,6 +128,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_answer(Answer self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_memory_state_parts(
@@ -146,6 +161,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     MemoryStateParts self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_memory_state_parts(
