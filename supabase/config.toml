@@ -386,6 +386,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Refuses a request without a valid JWT before the function runs; the function then refuses
+# the anon key and anonymous sign-ins itself.
+[functions.extract-cards]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

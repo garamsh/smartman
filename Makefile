@@ -28,6 +28,7 @@ lint:
 	./check-secrets.sh
 	./check-ios-client-id.sh
 	./check-generated.sh
+	./deno.sh lint
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
 	echo "analyzed $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -40,6 +41,7 @@ lint:
 	done
 
 format:
+	./deno.sh format
 	cd app && $(DART_FILES); \
 	dart format --output=none --set-exit-if-changed $$files && \
 	echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -58,6 +60,7 @@ test:
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
 	./supabase/test-db.sh
+	./deno.sh test
 
 build:
 	cd app && flutter build apk --debug $(APP_CONFIG) && \
