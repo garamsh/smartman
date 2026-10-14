@@ -97,7 +97,8 @@ final class _Answered {
 ///
 /// Every answer advances the session at once. The engine call and the write
 /// that follow run afterwards, one at a time in answer order, and a
-/// [StudyFailure] they raise goes to [onFailure].
+/// [StudyFailure] they raise goes to [onFailure]. Any other error is reported
+/// to [FlutterError.reportError], and the writes after it still run.
 class StudySession extends ChangeNotifier {
   StudySession({
     required DeckId deckId,
@@ -267,6 +268,17 @@ class StudySession extends ChangeNotifier {
         _states[review.cardId] = after;
       } on StudyFailure catch (failure) {
         _onFailure(failure);
+      } catch (error, stackTrace) {
+        // Reported as uncaught rather than rethrown: an errored future would
+        // skip every write queued behind it.
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'study',
+            context: ErrorDescription('while recording an answer'),
+          ),
+        );
       }
     });
   }

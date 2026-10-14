@@ -49,7 +49,7 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 - The domain's expected failures are the sealed `StudyFailure`:
   - `SchedulingFailure` wraps an `EngineError`, thrown by `Scheduler`;
   - `AnswerNotSaved` is a failed write, and `StudyStorageFailure` a failed read, thrown by `StudyRepository`.
-- A failure of a write reaches one handler, which the study screen registers with the session: a localized snack bar on the app's messenger, shown even if the screen has closed. A failure reading the queue is shown in place of the session. Any other error propagates.
+- A failure of a write reaches one handler, which the study screen registers with the session: a localized snack bar on the app's messenger, shown even if the screen has closed. Any other error a write raises goes to `FlutterError.reportError`, and the writes queued after it still run. A failure reading the queue is shown in place of the session; any other error there propagates.
 
 ### Build and generated code
 
