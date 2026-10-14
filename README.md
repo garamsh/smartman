@@ -18,7 +18,7 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 
 ## Requirements
 
-- Flutter 3.47.7 (stable channel).
+- Flutter 3.47.7 (stable channel), pinned once in `app/pubspec.yaml` under `environment: flutter:`; CI reads it from there. The PM bumps it when a new stable Flutter release ships.
 - JDK 17 for the Android build; with Flutter, point it at the JDK with `flutter config --jdk-dir`.
 - Android SDK 36 for the Android build; Xcode for iOS.
 - Supabase CLI 2.120.0 for the backend.
