@@ -146,6 +146,29 @@ void main() {
     await unmountApp(tester);
   });
 
+  testWidgets(
+    "the deck list's header counts today's cards across every deck, and Study all studies them in one session",
+    (tester) async {
+      await pumpApp(tester);
+      await createDeckAndOpen(tester, 'French');
+      await addCard(tester, 'Chat', 'cat');
+      await addCard(tester, 'Chien', 'dog');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await createDeckAndOpen(tester, 'German');
+      await addCard(tester, 'Hund', 'dog');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 cards for today'), findsOneWidget);
+      await tester.tap(find.text('Study all'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 / 3'), findsOneWidget);
+      await unmountApp(tester);
+    },
+  );
+
   testWidgets('the deck list opens the account screen, signed out', (
     tester,
   ) async {
