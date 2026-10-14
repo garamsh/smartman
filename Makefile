@@ -25,6 +25,8 @@ BRIDGE_LIB := rust_lib_smartman
 
 lint:
 	./check-contents-list.sh
+	./check-secrets.sh
+	./check-ios-client-id.sh
 	./check-generated.sh
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
