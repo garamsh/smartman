@@ -19,6 +19,8 @@ import 'package:smartman/study/src/study_repository.dart';
 import 'package:smartman/study/src/study_screen.dart';
 import 'package:smartman/study/src/study_style.dart';
 
+import 'fixtures.dart';
+
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
   @override
@@ -157,6 +159,7 @@ Future<_Study> _open(
         studyRepositoryProvider.overrideWithValue(studyRepository),
         schedulerProvider.overrideWithValue(_InstantScheduler()),
         studyClockProvider.overrideWithValue(() => study.now),
+        studyRandomProvider.overrideWithValue((_) => FirstDraw()),
       ],
       child: MaterialApp(
         navigatorKey: navigator,
@@ -176,7 +179,9 @@ Future<_Study> _open(
   );
   unawaited(
     navigator.currentState!.push(
-      MaterialPageRoute<void>(builder: (_) => StudyScreen(deck: deck)),
+      MaterialPageRoute<void>(
+        builder: (_) => StudyScreen(decks: DeckSelection(deck.id)),
+      ),
     ),
   );
   await tester.pumpAndSettle();

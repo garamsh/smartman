@@ -95,11 +95,12 @@ void main() {
 
     final failures = <Object>[];
     final session = StudySession(
-      deckId: deck.id,
+      decks: DeckSelection(deck.id),
       cards: cards,
       repository: repository,
       scheduler: scheduler,
       clock: () => now,
+      random: FirstDraw(),
       onFailure: failures.add,
     );
     addTearDown(session.dispose);

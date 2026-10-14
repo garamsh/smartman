@@ -122,6 +122,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get study => 'Study';
 
   @override
+  String get clearSelection => 'Clear selection';
+
+  @override
+  String decksSelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String studySelected(int count) {
+    return 'Study ($count)';
+  }
+
+  @override
+  String todayCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards for today',
+      one: '1 card for today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get studyAll => 'Study all';
+
+  @override
   String get know => 'Know';
 
   @override

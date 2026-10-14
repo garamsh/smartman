@@ -120,6 +120,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get study => '학습';
 
   @override
+  String get clearSelection => '선택 해제';
+
+  @override
+  String decksSelected(int count) {
+    return '$count개 선택됨';
+  }
+
+  @override
+  String studySelected(int count) {
+    return '학습 ($count)';
+  }
+
+  @override
+  String todayCards(int count) {
+    return '오늘 할 카드 $count장';
+  }
+
+  @override
+  String get studyAll => '모두 학습';
+
+  @override
   String get know => '안다';
 
   @override

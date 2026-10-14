@@ -12,6 +12,8 @@ import 'package:smartman/study/src/scheduler.dart';
 import 'package:smartman/study/src/session.dart';
 import 'package:smartman/study/src/study_repository.dart';
 
+import 'fixtures.dart';
+
 /// Schedules every review one day out, except the first, for which it
 /// throws an error that is not a `StudyFailure`.
 class _FirstCallBreaks implements Scheduler {
@@ -79,11 +81,12 @@ void main() {
 
     final failures = <Object>[];
     final session = StudySession(
-      deckId: deck.id,
+      decks: DeckSelection(deck.id),
       cards: cards,
       repository: repository,
       scheduler: scheduler,
       clock: () => DateTime.utc(2026, 10, 14, 9),
+      random: FirstDraw(),
       onFailure: failures.add,
     );
     addTearDown(session.dispose);

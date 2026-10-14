@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/study/src/model.dart';
+import 'package:smartman/study/src/queue.dart';
 import 'package:smartman/study/src/session.dart';
 
 /// A text card named [name] created at [createdAt]; its front reads
@@ -37,4 +39,17 @@ Future<void> untilLoaded(StudySession session) {
   session.addListener(check);
   check();
   return loaded.future.whenComplete(() => session.removeListener(check));
+}
+
+/// Draws 0 every time, so a session keeps its queue in the order selected and
+/// puts a card back after [reshowGapMin] other cards.
+class FirstDraw implements Random {
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  bool nextBool() => false;
 }
