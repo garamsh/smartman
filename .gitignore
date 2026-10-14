@@ -1,0 +1,43 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Common build outputs and dependencies (extend per stack during bootstrap)
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+target/
+
+# Dart / Flutter (from github/gitignore Dart.gitignore; pubspec.lock kept — this is an application)
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+doc/api/
+*.dart.js
+*.info.json
+
+# Rust (from github/gitignore Rust.gitignore)
+debug
+**/*.rs.bk
+*.pdb
+**/mutants.out*/
+rustc-ice-*.txt
+
+# Supabase CLI local state (project link, versions)
+supabase/.temp/
