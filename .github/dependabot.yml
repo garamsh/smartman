@@ -8,3 +8,11 @@ updates:
     directory: "/app"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/engine"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "rust-toolchain"
+    directory: "/engine"
+    schedule:
+      interval: "weekly"

@@ -21,5 +21,7 @@ Current architecture of the system and the decisions behind it. This file is the
 ## Index
 
 - `structure.md` — the structural rules of the app: the domain as unit, what may reference what, and the composition site.
+- `engine.md` — the scheduling engine: FSRS-6 in the pure Rust crate `engine/`, its public surface, and its reference values.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
+- `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz.
 - `adr/0000-template.md` — the template every ADR is written from.
