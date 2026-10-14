@@ -4,7 +4,7 @@ The structural rules of the app: what the unit is, what may reference what, and 
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)) and `account` ([`account.md`](account.md)). The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)) and `photo_import` ([`ai-extraction.md`](ai-extraction.md)). The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 
