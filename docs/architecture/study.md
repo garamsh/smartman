@@ -14,20 +14,32 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 
 - A deck's "Study" button opens `StudyScreen`. `deck` reaches it through `studyScreenProvider`, which the composition site overrides ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
 - The queue is built when the session opens: the cards due at or before now, earliest due first, then up to `newCardLimit` (20) cards never reviewed, oldest first. `newCardLimit` and `reshowGap` are constants in `app/lib/study/src/queue.dart`.
-- The screen shows the current card's front and two buttons, "Know" and "Don't know". A tap shows the next card in the same frame.
-- The card just answered moves to the previous-card panel above, showing its front, back and answer.
 - A "Don't know" puts the card back so that `reshowGap` (3) other cards come before it, or as many as remain. Each re-show is a review passed to the engine.
-- Tapping the panel corrects a "Know" to "Don't know": only the previous card, only once, and the card is put back as a "Don't know" would be. The correction is recomputed from the card's state before that answer, at that answer's time.
-- The session ends when the queue is empty or the user goes back, and shows a summary: cards studied (distinct cards answered), the number of each answer, and the time from the first card to the end.
-  - After the queue empties, the panel stays, and correcting it reopens the session with that card.
-  - After going back, nothing can be corrected.
-- Every string comes from the shared ARB set. The answer buttons are labelled by their text, and the panel carries a semantic label naming its front, back and answer, with a tap hint while it can be corrected.
+- The screen has a top bar (the close button, a progress bar and the count of cards answered out of the session's cards), the current card, and above it every card answered so far ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)). It shows no deck name, no answer button and no hint text, and never builds the next card.
+- The current card:
+  - sits full width less 20 on each side, its centre at 57% of the screen height while it fits;
+  - holds the question on its left half and the answer on its right, hidden until a tap and hidden again by the next; when a half would be narrower than 140 at the current text scale, the answer sits under the question;
+  - renders each side's content blocks through one block renderer, `ContentView`, with `UnsupportedContent` as a labelled placeholder;
+  - grows with its content from 200 to 55% of the screen height, then scrolls inside.
+- Dragging the current card moves and tilts it; past 40 a chip and a tint name the answer. Released past 100, or flung faster than 700 per second, it answers "Know" to the right and "Don't know" to the left, with a light haptic; otherwise it springs back.
+- The previous cards are every answer of the session, re-shows included, newest nearest, in one scroll view that opens at the newest. Each shows two lines of each side, a dot for its answer and "수정됨" once the answer differs from the first given; it is smaller, greyer and blurrier a step per card of depth, and opaque. A long-press opens the whole card in a sheet.
+- Tapping a previous card toggles its answer between "Know" and "Don't know", any number of times:
+  - to "Don't know", a card's last answer puts the card back by `reshowGap` unless it is waiting or on screen;
+  - to "Know", a card's last answer removes the card's re-show while it waits behind the card on screen;
+  - any other toggle leaves the queue unchanged.
+- On an answer the card flies off, the answered card rises into the stack and the next card emerges from below. Under the platform's reduce-motion setting, these become a 150 ms cross-fade.
+- The session ends when the queue is empty or the user closes it, by the close button or by going back. The summary takes the current card's place: cards studied (distinct cards answered), the number of answers standing as each choice, and the time from the first card to the end.
+  - After the queue empties, the stack stays, and a toggle that puts a card back reopens the session with it.
+  - After closing, the stack is gone and nothing can be toggled.
+- Every string comes from the shared ARB set. The current card carries a label naming its front, and its back while shown, a tap action that shows or hides the answer, and the custom actions "안다" and "모른다". Each previous card's label names its front, back and answer, with a hint that a tap changes it.
+- The screen's sizes, colours and timings are constants in `app/lib/study/src/study_style.dart`; text styles come from the app theme.
 
 ### Storage
 
 - The `reviews` and `card_states` tables in `app/lib/shared/database.dart` belong to this domain. `card_states` holds each reviewed card's stability, difficulty, last review and due time; a new card has no row. Schema v2 added it ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
-- Every answer writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time and duration on screen) and the card's `card_states` row, in one transaction. A correction replaces both.
-- The engine call and the write run after the screen has advanced, chained in answer order.
+- Every answer writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time and duration on screen).
+- Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer. It then rewrites those `reviews` rows, keeping their ids and times, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)).
+- The engine calls and the write run after the screen has changed, chained in the order given.
 - `StudyRepository` receives its id generator, and the session its clock (`studyClockProvider`), so tests fix both.
 
 ### The bridge to the engine
@@ -60,8 +72,9 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 ### Tests
 
 - `app/test/study/engine_bridge_test.dart` calls the engine through the bridge. It checks one step of `engine/tests/fixtures/reference.json`, and the arrival of a refused review as an `EngineError`.
-- `app/test/study/correction_test.dart` runs a session over an in-memory database and the real engine, and checks a correction against the bridge's own answer for the pre-answer state.
-- `app/test/study/study_screen_test.dart` drives the screen with a scheduler that answers at once, or a repository whose writes never finish; `app/test/study/queue_test.dart` covers the queue policy.
+- `app/test/study/correction_test.dart` runs a session over an in-memory database and the real engine, and checks the state stored after each toggle against a chain of the bridge's `review_card` calls over the corrected history, from the state before the session.
+- `app/test/study/toggle_test.dart` covers the queue effects of a toggle; `app/test/study/queue_test.dart` covers the queue policy.
+- `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish.
 - `flutter test` loads the library from `app/rust/target/release/`, so `make test` builds the crate there first.
 
 ### Versions
@@ -73,7 +86,8 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 
 - [ADR 0004](adr/0004-flutter-rust-bridge.md) records the bridge crate's place, the native-assets backend, the location of the bindings, and each departure from flutter_rust_bridge's documented layout.
 - [ADR 0005](adr/0005-study-queue-and-card-state.md) records the queue policy, the re-show gap, why the state is stored as parts in `card_states`, and how `deck` opens the session.
-- Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the session flow as decided by the PM.
+- [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the swipe screen, the toggleable stack, and why a toggle replays the card's session answers in Dart rather than through the bridge's `replay`.
+- Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, and issue #18 the current screen, as decided by the PM.
 
 ## Open questions
 

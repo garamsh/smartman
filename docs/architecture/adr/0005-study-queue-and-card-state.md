@@ -1,6 +1,6 @@
 # ADR 0005: Queue a session from due then new cards, re-show a "Don't know" after three cards, and store each card's state parts in `card_states`
 
-> Status: accepted
+> Status: accepted; its previous-card correction superseded by ADR-0007
 > Date: 2026-10-14
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
