@@ -1,26 +1,41 @@
+import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 
 import 'account/fake_account_service.dart';
+import 'sync/fake_sync_server.dart';
+
+/// An extraction client the test never calls.
+final class _NoExtraction implements ExtractionClient {
+  @override
+  Future<List<CandidateCard>?> extract(
+    JpegPhoto photo, {
+    required Future<void> cancel,
+  }) => throw UnimplementedError('not called');
+}
 
 void main() {
   late Scheduler scheduler;
+  late QueryExecutor executor;
   setUpAll(() async => scheduler = await Scheduler.load());
 
   /// Composes the app over an in-memory database and theme storage holding
-  /// [themeMode] when given.
-  Future<void> pumpApp(WidgetTester tester, {String? themeMode}) async {
+  /// [themeMode] when given, extracting cards through [extraction].
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    String? themeMode,
+    ExtractionClient? extraction,
+  }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
     final themeStorage = (await tester.runAsync(
@@ -30,12 +45,15 @@ void main() {
         ),
       ),
     ))!;
+    executor = NativeDatabase.memory();
     await tester.pumpWidget(
       composeApp(
-        NativeDatabase.memory(),
+        executor,
         scheduler,
         FakeAccountService(),
+        FakeSyncServer(const UserId('00000000-0000-4000-8000-00000000000a')),
         themeStorage,
+        extraction,
       ),
     );
     await tester.pumpAndSettle();
@@ -73,6 +91,19 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('photo import is offered only with an extraction client', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    expect(find.text('New deck'), findsOneWidget);
+    expect(find.text('Create from photo'), findsNothing);
+    await unmountApp(tester);
+
+    await pumpApp(tester, extraction: _NoExtraction());
+    expect(find.text('Create from photo'), findsOneWidget);
+    await unmountApp(tester);
+  });
 
   testWidgets('opens on an empty deck list', (tester) async {
     await pumpApp(tester);
@@ -135,14 +166,8 @@ void main() {
   testWidgets('a storage failure is shown to the user', (tester) async {
     await pumpApp(tester);
     await createDeckAndOpen(tester, 'French');
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(Scaffold).last),
-    );
-    final repository = container.read(deckRepositoryProvider);
-    await tester.runAsync(() async {
-      final deck = (await repository.watchDecks().first).single;
-      await repository.deleteDeck(deck.id);
-    });
+    // The database now refuses every write.
+    await tester.runAsync(() => executor.runCustom('PRAGMA query_only = ON'));
 
     await addCard(tester, 'Chat', 'cat');
 

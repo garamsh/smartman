@@ -4,15 +4,18 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'account/account.dart';
 import 'deck/deck.dart';
+import 'photo_import/photo_import.dart';
 import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
 import 'shared/theme.dart';
 import 'study/study.dart';
+import 'sync/sync.dart';
 
 /// The composition site: the one place that constructs the application.
 Future<void> main() async {
@@ -28,20 +31,33 @@ Future<void> main() async {
     composeApp(
       driftDatabase(name: 'smartman'),
       scheduler,
-      account,
+      account.service,
+      connectSyncServer(account),
       themeStorage,
+      switch (account.client) {
+        final client? => HttpExtractionClient(
+          http.Client(),
+          functionUrl: extractCardsUrl(client.rest.url),
+          accessToken: () async => client.auth.currentSession?.accessToken,
+        ),
+        null => null,
+      },
     ),
   );
 }
 
 /// Constructs the application over the database [executor] opens, scheduling
-/// with the loaded [scheduler], signing in through [account], and keeping the
-/// theme choice in [themeStorage].
+/// with the loaded [scheduler], signing in through [account], syncing with
+/// [server], keeping the theme choice in [themeStorage], and extracting
+/// cards from photos through [extraction], whose absence hides photo import.
+/// Sync starts at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
   AccountService account,
+  SyncServer server,
   SharedPreferencesWithCache themeStorage,
+  ExtractionClient? extraction,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
@@ -51,9 +67,32 @@ Widget composeApp(
     newId: uuid.v4,
   );
   final studyRepository = StudyRepository(database, newId: uuid.v4);
+  final syncStore = SyncStore(database, scheduler, clock: DateTime.now);
+  final sync = SyncController(
+    account: account,
+    synchronizer: Synchronizer(syncStore, server),
+    store: syncStore,
+    edits: database.tableUpdates(
+      TableUpdateQuery.onAllTables([
+        database.decks,
+        database.cards,
+        database.reviews,
+        database.cardStates,
+      ]),
+    ),
+  )..start();
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      photoImportProvider.overrideWithValue(
+        extraction == null
+            ? null
+            : (deck) => PhotoImportScreen(
+                deck: deck,
+                client: extraction,
+                photos: const DevicePhotoSource(),
+              ),
+      ),
       studyRepositoryProvider.overrideWithValue(studyRepository),
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),
@@ -68,6 +107,9 @@ Widget composeApp(
       ),
       accountServiceProvider.overrideWithValue(account),
       accountScreenProvider.overrideWithValue(AccountScreen.new),
+      accountDataProvider.overrideWithValue(sync),
+      syncControllerProvider.overrideWithValue(sync),
+      syncStatusProvider.overrideWithValue(SyncStatusView.new),
       themeStorageProvider.overrideWithValue(themeStorage),
     ],
     child: const SmartmanApp(),

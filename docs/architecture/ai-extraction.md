@@ -89,6 +89,10 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
   - `JpegPhoto`, and the failures: `PhotoImportFailure` and its cases.
 - It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it.
 - The screen receives its client and photo source; it constructs neither.
+- The composition site, `app/lib/main.dart`, builds the client from the Supabase client `connectAccount` returns ([`account.md`](account.md)), without importing `supabase_flutter`:
+  - the URL is `extractCardsUrl` of the client's public PostgREST URL, which swaps its `/rest/v1` suffix for `/functions/v1/extract-cards`, as the Supabase client builds both from the project URL;
+  - the token is read from the client's current session at each request.
+- A build with no Supabase client gets no extraction client, and `photoImportProvider` stays null, which hides both photo buttons.
 
 #### Flow
 
@@ -133,7 +137,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 | `PhotoUnreadable` | the photo cannot be decoded | retake |
 | `CameraDenied`, `CameraUnavailable` | the camera is refused or missing | shown in place of the preview; the album still works |
 
-- A `DeckFailure` while reading the deck or saving is shown in a snack bar, as the deck screens show one.
+- A `DeckFailure` while reading the deck or saving is shown in a snack bar, as the deck screens show one; `DeckDeleted` says the deck was deleted meanwhile.
 
 #### Permissions
 
@@ -143,7 +147,8 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 #### App tests
 
 - `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client (`app/test/photo_import/fakes.dart`) over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, reduce motion, nothing written before adding, and the accessibility guidelines in both themes.
-- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, each status, malformed answers, offline, no session, and abort.
+- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
+- `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.
 - `app/test/photo_import/photo_test.dart` checks the downscaling: aspect ratio, long side, size limit and orientation.
 - `app/test/photo_import/permissions_test.dart` reads `Info.plist`, both `InfoPlist.strings`, the Xcode project and the Android manifest.
 - No test or CI job calls the deployed function.

@@ -141,4 +141,33 @@ void main() {
     expect(await result, isNull);
     expect(aborted.isCompleted, isTrue);
   });
+
+  test('the function URL is the PostgREST URL with its suffix swapped', () {
+    // The Supabase client appends '/rest/v1' to the project URL as given.
+    for (final (project, expected) in [
+      (
+        'https://abc.supabase.co',
+        'https://abc.supabase.co/functions/v1/extract-cards',
+      ),
+      (
+        'https://abc.supabase.co/',
+        'https://abc.supabase.co//functions/v1/extract-cards',
+      ),
+      (
+        'https://gateway.example/prefix',
+        'https://gateway.example/prefix/functions/v1/extract-cards',
+      ),
+    ]) {
+      expect(
+        extractCardsUrl('$project/rest/v1'),
+        Uri.parse(expected),
+        reason: project,
+      );
+    }
+    // Control: a URL that is not a PostgREST URL is refused, not guessed.
+    expect(
+      () => extractCardsUrl('https://abc.supabase.co/auth/v1'),
+      throwsArgumentError,
+    );
+  });
 }

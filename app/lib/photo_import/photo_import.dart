@@ -3,7 +3,7 @@
 library;
 
 export 'src/extraction_client.dart'
-    show CandidateCard, ExtractionClient, HttpExtractionClient;
+    show CandidateCard, ExtractionClient, extractCardsUrl, HttpExtractionClient;
 export 'src/failure.dart'
     show
         CameraDenied,

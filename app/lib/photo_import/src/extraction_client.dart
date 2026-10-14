@@ -99,3 +99,16 @@ List<CandidateCard> _parseCards(String body) {
   }
   throw const ServiceFailed('the success body holds no card list');
 }
+
+/// The URL of `extract-cards` for the project whose PostgREST URL is
+/// [restUrl]. The Supabase client builds both as `<project url>/rest/v1` and
+/// `<project url>/functions/v1`, so the suffix is swapped. Throws
+/// [ArgumentError] for a URL without that suffix.
+Uri extractCardsUrl(String restUrl) {
+  const rest = '/rest/v1';
+  if (!restUrl.endsWith(rest)) {
+    throw ArgumentError.value(restUrl, 'restUrl', 'does not end in $rest');
+  }
+  final project = restUrl.substring(0, restUrl.length - rest.length);
+  return Uri.parse('$project/functions/v1/extract-cards');
+}
