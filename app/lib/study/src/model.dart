@@ -87,3 +87,17 @@ final class Review {
     fuzzFactor: fuzzFactor,
   );
 }
+
+/// The stored rating of [answer], as the `reviews` table constrains it.
+String ratingOf(Answer answer) => switch (answer) {
+  Answer.know => 'good',
+  Answer.dontKnow => 'again',
+};
+
+/// The answer a stored [rating] records. The `reviews` table's check admits
+/// no other rating, so any other value is a broken invariant.
+Answer answerOf(String rating) => switch (rating) {
+  'good' => Answer.know,
+  'again' => Answer.dontKnow,
+  _ => throw StateError('reviews holds the unknown rating $rating'),
+};

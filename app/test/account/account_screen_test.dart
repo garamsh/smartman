@@ -8,13 +8,17 @@ import 'package:smartman/account/account.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
 
+import 'fake_account_data.dart';
 import 'fake_account_service.dart';
+
+const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 void main() {
   Future<void> pumpScreen(
     WidgetTester tester,
     AccountService service, {
     Locale locale = const Locale('en'),
+    AccountData? data,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
@@ -29,6 +33,8 @@ void main() {
       ProviderScope(
         overrides: [
           accountServiceProvider.overrideWithValue(service),
+          accountDataProvider.overrideWithValue(data ?? FakeAccountData()),
+          syncStatusProvider.overrideWithValue(() => const Text('sync status')),
           themeStorageProvider.overrideWithValue(storage),
         ],
         child: Consumer(
@@ -45,6 +51,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  /// Taps [text] and lets a dialog open over the sign-out progress
+  /// indicator, which never settles.
+  Future<void> tapAndOpen(WidgetTester tester, String text) async {
+    await tester.tap(find.text(text));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
   }
 
   Future<void> tapAndSettle(WidgetTester tester, String text) async {
@@ -79,7 +93,9 @@ void main() {
   testWidgets('a restored session opens signed in', (tester) async {
     await pumpScreen(
       tester,
-      FakeAccountService(const SignedIn(email: 'grace@example.com')),
+      FakeAccountService(
+        const SignedIn(userId: _ada, email: 'grace@example.com'),
+      ),
     );
 
     expect(find.text('Signed in as grace@example.com'), findsOneWidget);
@@ -88,13 +104,107 @@ void main() {
   testWidgets('signing out returns to the signed-out state', (tester) async {
     await pumpScreen(
       tester,
-      FakeAccountService(const SignedIn(email: 'ada@example.com')),
+      FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      ),
     );
 
     await tapAndSettle(tester, 'Sign out');
 
     expect(find.text('Sign in with Google'), findsOneWidget);
     expect(find.text('Signed in as ada@example.com'), findsNothing);
+  });
+
+  testWidgets('signing out pushes, then clears the device\'s data', (
+    tester,
+  ) async {
+    final data = FakeAccountData();
+    await pumpScreen(
+      tester,
+      FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      ),
+      data: data,
+    );
+
+    await tapAndSettle(tester, 'Sign out');
+
+    expect([data.pushes, data.clears], [1, 1]);
+    expect(find.text("Some changes aren't synced"), findsNothing);
+    expect(find.text('Sign in with Google'), findsOneWidget);
+  });
+
+  testWidgets(
+    'unsynced changes warn before signing out, in Korean, and cancelling keeps the account and its data',
+    (tester) async {
+      final data = FakeAccountData()..pushSucceeds = false;
+      final service = FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      );
+      await pumpScreen(tester, service, data: data, locale: const Locale('ko'));
+
+      await tapAndOpen(tester, '로그아웃');
+
+      expect(find.text('동기화되지 않은 변경이 있어요'), findsOneWidget);
+      await tapAndSettle(tester, '취소');
+      expect(service.state, isA<SignedIn>());
+      expect(data.clears, 0);
+      expect(find.text('ada@example.com 계정으로 로그인했습니다'), findsOneWidget);
+    },
+  );
+
+  testWidgets('signing out anyway signs out and clears the device\'s data', (
+    tester,
+  ) async {
+    final data = FakeAccountData()..pushSucceeds = false;
+    final service = FakeAccountService(
+      const SignedIn(userId: _ada, email: 'ada@example.com'),
+    );
+    await pumpScreen(tester, service, data: data);
+
+    await tapAndOpen(tester, 'Sign out');
+    await tapAndSettle(tester, 'Sign out anyway');
+
+    expect(service.state, isA<SignedOut>());
+    expect(data.clears, 1);
+  });
+
+  testWidgets('data that cannot be cleared is reported after signing out', (
+    tester,
+  ) async {
+    final data = FakeAccountData()
+      ..clearFailure = const AccountDataNotCleared(FormatException('disk'));
+    await pumpScreen(
+      tester,
+      FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      ),
+      data: data,
+    );
+
+    await tapAndSettle(tester, 'Sign out');
+
+    expect(
+      find.text(
+        "Couldn't remove this device's data. It's removed when another account signs in.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Sign in with Google'), findsOneWidget);
+  });
+
+  testWidgets('the sync status shows only while signed in', (tester) async {
+    await pumpScreen(
+      tester,
+      FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      ),
+    );
+    expect(find.text('sync status'), findsOneWidget);
+
+    await tapAndSettle(tester, 'Sign out');
+
+    expect(find.text('sync status'), findsNothing);
   });
 
   testWidgets('a cancelled sign-in shows nothing and stays signed out', (
@@ -140,8 +250,9 @@ void main() {
     (tester) async {
       await pumpScreen(
         tester,
-        FakeAccountService(const SignedIn(email: 'ada@example.com'))
-          ..failure = const AccountOffline(FormatException('offline')),
+        FakeAccountService(
+          const SignedIn(userId: _ada, email: 'ada@example.com'),
+        )..failure = const AccountOffline(FormatException('offline')),
       );
 
       await tapAndSettle(tester, 'Sign out');

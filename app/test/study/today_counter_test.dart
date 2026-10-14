@@ -21,6 +21,10 @@ import 'fixtures.dart';
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
   @override
+  Future<CardState?> fold(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
   Future<CardState> review(
     CardState? state,
     Answer answer,
@@ -44,8 +48,12 @@ class _UnreadableStates implements StudyRepository {
       throw const StudyStorageFailure(FormatException('unreadable'));
 
   @override
-  Future<void> record(CardId card, List<Review> reviews, CardState state) =>
-      throw UnimplementedError();
+  Future<void> record(
+    CardId card,
+    List<Review> reviews,
+    CardState state, {
+    required DateTime at,
+  }) => throw UnimplementedError();
 }
 
 final _now = DateTime.utc(2026, 10, 14, 9);
@@ -90,16 +98,21 @@ class _Decks {
     };
     if (due == null) return;
     final state = dueAt(due);
-    await study.record(card.id, [
-      Review(
-        id: study.newReviewId(),
-        cardId: card.id,
-        answer: Answer.know,
-        reviewedAt: state.lastReview,
-        duration: Duration.zero,
-        fuzzFactor: FuzzFactor.draw(FirstDraw()),
-      ),
-    ], state);
+    await study.record(
+      card.id,
+      [
+        Review(
+          id: study.newReviewId(),
+          cardId: card.id,
+          answer: Answer.know,
+          reviewedAt: state.lastReview,
+          duration: Duration.zero,
+          fuzzFactor: FuzzFactor.draw(FirstDraw()),
+        ),
+      ],
+      state,
+      at: DateTime.utc(2026, 9, 1),
+    );
   }
 }
 

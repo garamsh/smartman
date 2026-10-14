@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import 'account_data.dart';
 import 'account_service.dart';
 import 'account_state.dart';
 import 'failure.dart';
@@ -50,11 +51,12 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   email == null ? l10n.signedIn : l10n.signedInAs(email),
                   textAlign: TextAlign.center,
                 ),
+                ref.watch(syncStatusProvider)(),
                 if (_busy)
                   CircularProgressIndicator(semanticsLabel: l10n.signingOut)
                 else
                   OutlinedButton(
-                    onPressed: () => _run((service) => service.signOut()),
+                    onPressed: _signOut,
                     child: Text(l10n.signOut),
                   ),
               ],
@@ -69,6 +71,61 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         ),
       ),
     );
+  }
+
+  /// Pushes unsynced changes, and asks before signing out when some did not
+  /// arrive; then signs out and clears the device's data.
+  Future<void> _signOut() async {
+    final data = ref.read(accountDataProvider);
+    final service = ref.read(accountServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    setState(() => _busy = true);
+    try {
+      if (!await data.push()) {
+        if (!mounted || !await _confirmUnsynced()) return;
+      }
+      try {
+        await service.signOut();
+      } on AccountFailure catch (failure) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(describeAccountFailure(l10n, failure))),
+        );
+      }
+      // A failed sign-out still ends the session on the device.
+      if (service.state is! SignedIn) {
+        try {
+          await data.clear();
+        } on AccountDataNotCleared {
+          messenger.showSnackBar(SnackBar(content: Text(l10n.dataNotCleared)));
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Whether the user signs out although some changes are not synced.
+  Future<bool> _confirmUnsynced() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.unsyncedChangesTitle),
+        content: Text(l10n.unsyncedChangesBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.signOutAnyway),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   /// Runs [action] on the account service; an [AccountFailure] it raises is

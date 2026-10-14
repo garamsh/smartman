@@ -624,6 +624,60 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이 카드의 학습 기록도 함께 삭제됩니다.'**
   String get deleteCardBody;
+
+  /// Title of the sign-out warning shown when some changes could not reach the server.
+  ///
+  /// In ko, this message translates to:
+  /// **'동기화되지 않은 변경이 있어요'**
+  String get unsyncedChangesTitle;
+
+  /// Body of the sign-out warning: unsynced changes are lost when signing out.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그아웃하면 이 기기에서 지워지고 다른 기기에서는 볼 수 없어요.'**
+  String get unsyncedChangesBody;
+
+  /// Sign-out warning action that signs out despite unsynced changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'그래도 로그아웃'**
+  String get signOutAnyway;
+
+  /// Shown when sign-out could not clear the device's data.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.'**
+  String get dataNotCleared;
+
+  /// Account screen sync status while a sync runs.
+  ///
+  /// In ko, this message translates to:
+  /// **'동기화 중'**
+  String get syncSyncing;
+
+  /// Account screen sync status after a sync finished.
+  ///
+  /// In ko, this message translates to:
+  /// **'동기화됨'**
+  String get syncSynced;
+
+  /// Account screen sync status when the server could not be reached; sync retries by itself.
+  ///
+  /// In ko, this message translates to:
+  /// **'오프라인 · 연결되면 동기화해요'**
+  String get syncOffline;
+
+  /// Account screen sync status when a sync failed.
+  ///
+  /// In ko, this message translates to:
+  /// **'동기화하지 못했어요'**
+  String get syncFailed;
+
+  /// Button that runs sync again after a failure.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 시도'**
+  String get syncRetry;
 }
 
 class _AppLocalizationsDelegate

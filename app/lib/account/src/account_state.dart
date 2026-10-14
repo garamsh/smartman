@@ -1,5 +1,8 @@
 import 'failure.dart';
 
+/// The id Supabase Auth gives an account, which owns its rows on the server.
+extension type const UserId(String value) {}
+
 /// Whether the user is signed in, as the account domain knows it.
 sealed class AccountState {
   const AccountState();
@@ -12,8 +15,9 @@ final class SignedOut extends AccountState {
 
 /// An account is signed in. [email] is null for an account without one.
 final class SignedIn extends AccountState {
-  const SignedIn({required this.email});
+  const SignedIn({required this.userId, required this.email});
 
+  final UserId userId;
   final String? email;
 }
 

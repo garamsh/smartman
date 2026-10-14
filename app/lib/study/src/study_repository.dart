@@ -1,8 +1,9 @@
+import 'package:drift/drift.dart';
+
 import '../../deck/deck.dart';
 import '../../shared/database.dart';
 import 'failure.dart';
 import 'model.dart';
-import 'rust/api/engine.dart';
 
 /// Reads and writes the study domain's tables: card states and reviews.
 ///
@@ -23,7 +24,9 @@ class StudyRepository {
     try {
       final query = _db.select(_db.cardStates)
         ..where(
-          (row) => row.cardId.isIn([for (final card in cards) card.value]),
+          (row) =>
+              row.cardId.isIn([for (final card in cards) card.value]) &
+              row.deletedAt.isNull(),
         );
       return {
         for (final row in await query.get()) CardId(row.cardId): _toState(row),
@@ -34,13 +37,15 @@ class StudyRepository {
   }
 
   /// Stores [reviews] of [card] and the card's [state] after the last of
-  /// them, in one transaction. A review already stored under the same id is
-  /// replaced, which is how a toggled answer is rewritten.
+  /// them, in one transaction, each row edited [at] and left for sync to
+  /// push. A review already stored under the same id is replaced, which is how
+  /// a toggled answer is rewritten.
   Future<void> record(
     CardId card,
     List<Review> reviews,
-    CardState state,
-  ) async {
+    CardState state, {
+    required DateTime at,
+  }) async {
     try {
       await _db.transaction(() async {
         for (final review in reviews) {
@@ -50,10 +55,12 @@ class StudyRepository {
                 ReviewRow(
                   id: review.id.value,
                   cardId: review.cardId.value,
-                  rating: _rating(review.answer),
+                  rating: ratingOf(review.answer),
                   reviewedAt: review.reviewedAt,
                   durationMs: review.duration.inMilliseconds,
                   fuzzFactor: review.fuzzFactor.value,
+                  updatedAt: at,
+                  dirty: true,
                 ),
               );
         }
@@ -66,6 +73,8 @@ class StudyRepository {
                 difficulty: state.difficulty,
                 lastReview: state.lastReview,
                 due: state.due,
+                updatedAt: at,
+                dirty: true,
               ),
             );
       });
@@ -81,9 +90,3 @@ class StudyRepository {
     due: row.due,
   );
 }
-
-/// The stored rating of [answer], as the `reviews` table constrains it.
-String _rating(Answer answer) => switch (answer) {
-  Answer.know => 'good',
-  Answer.dontKnow => 'again',
-};

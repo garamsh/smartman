@@ -374,9 +374,291 @@ i1.GeneratedColumn<double> _column_17(String aliasedName) =>
       type: i1.DriftSqlType.double,
       $customConstraints: 'NULL CHECK (fuzz_factor >= 0 AND fuzz_factor < 1)',
     );
+
+final class Schema4 extends i0.VersionedSchema {
+  Schema4({required super.database}) : super(version: 4);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    decks,
+    cards,
+    reviews,
+    cardStates,
+    syncState,
+    cardsDeckIdCardKey,
+  ];
+  late final Shape5 decks = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'decks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_18,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 cards = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'cards',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_8,
+        _column_2,
+        _column_3,
+        _column_18,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 reviews = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'reviews',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_17,
+        _column_3,
+        _column_18,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 cardStates = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'card_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(card_id)'],
+      columns: [
+        _column_9,
+        _column_13,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_3,
+        _column_18,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 syncState = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'sync_state',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index cardsDeckIdCardKey = i1.Index(
+    'cards_deck_id_card_key',
+    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key)',
+  );
+}
+
+class Shape5 extends i0.VersionedTable {
+  Shape5({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get name =>
+      columnsByName['name']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<int> _column_18(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'deleted_at',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_19(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'dirty',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 1 CHECK (dirty IN (0, 1))',
+      defaultValue: const i1.CustomExpression('1'),
+    );
+
+class Shape6 extends i0.VersionedTable {
+  Shape6({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deckId =>
+      columnsByName['deck_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get front =>
+      columnsByName['front']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get back =>
+      columnsByName['back']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get cardKey =>
+      columnsByName['card_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get source =>
+      columnsByName['source']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+class Shape7 extends i0.VersionedTable {
+  Shape7({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get cardId =>
+      columnsByName['card_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get rating =>
+      columnsByName['rating']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get reviewedAt =>
+      columnsByName['reviewed_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get durationMs =>
+      columnsByName['duration_ms']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<double> get fuzzFactor =>
+      columnsByName['fuzz_factor']! as i1.GeneratedColumn<double>;
+  i1.GeneratedColumn<int> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+class Shape8 extends i0.VersionedTable {
+  Shape8({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get cardId =>
+      columnsByName['card_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<double> get stability =>
+      columnsByName['stability']! as i1.GeneratedColumn<double>;
+  i1.GeneratedColumn<double> get difficulty =>
+      columnsByName['difficulty']! as i1.GeneratedColumn<double>;
+  i1.GeneratedColumn<int> get lastReview =>
+      columnsByName['last_review']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get due =>
+      columnsByName['due']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+class Shape9 extends i0.VersionedTable {
+  Shape9({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<int> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get owner =>
+      columnsByName['owner']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get decksRevision =>
+      columnsByName['decks_revision']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get cardsRevision =>
+      columnsByName['cards_revision']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get reviewsRevision =>
+      columnsByName['reviews_revision']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get cardStatesRevision =>
+      columnsByName['card_states_revision']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<int> _column_20(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'id',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL CHECK (id = 0)',
+    );
+i1.GeneratedColumn<String> _column_21(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'owner',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_22(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'decks_revision',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_23(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'cards_revision',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_24(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'reviews_revision',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_25(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'card_states_revision',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -390,6 +672,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from2To3(migrator, schema);
         return 3;
+      case 3:
+        final schema = Schema4(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from3To4(migrator, schema);
+        return 4;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -399,6 +686,11 @@ i0.MigrationStepWithVersion migrationSteps({
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
+  step: migrationSteps(
+    from1To2: from1To2,
+    from2To3: from2To3,
+    from3To4: from3To4,
+  ),
 );

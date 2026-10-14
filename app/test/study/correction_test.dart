@@ -109,6 +109,7 @@ void main() {
         firstSeen,
         fuzz: FuzzFactor.draw(FirstDraw()),
       ),
+      at: DateTime.utc(2026, 9, 1),
     );
     final before = (await repository.statesOf([due]))[due]!;
     expect(before.due.isAfter(now), isFalse, reason: 'the card must be due');
@@ -234,16 +235,21 @@ void main() {
       lastReview: lastSeen,
       due: now,
     );
-    await repository.record(card, [
-      Review(
-        id: repository.newReviewId(),
-        cardId: card,
-        answer: Answer.know,
-        reviewedAt: lastSeen,
-        duration: const Duration(seconds: 2),
-        fuzzFactor: FuzzFactor.draw(FirstDraw()),
-      ),
-    ], before);
+    await repository.record(
+      card,
+      [
+        Review(
+          id: repository.newReviewId(),
+          cardId: card,
+          answer: Answer.know,
+          reviewedAt: lastSeen,
+          duration: const Duration(seconds: 2),
+          fuzzFactor: FuzzFactor.draw(FirstDraw()),
+        ),
+      ],
+      before,
+      at: DateTime.utc(2026, 9, 1),
+    );
     expect((await repository.statesOf([card]))[card], before);
 
     final failures = <Object>[];

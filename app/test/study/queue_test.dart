@@ -59,16 +59,21 @@ class _Decks {
     };
     if (due == null) return;
     final state = dueAt(due);
-    await study.record(card.id, [
-      Review(
-        id: study.newReviewId(),
-        cardId: card.id,
-        answer: Answer.know,
-        reviewedAt: state.lastReview,
-        duration: Duration.zero,
-        fuzzFactor: FuzzFactor.draw(FirstDraw()),
-      ),
-    ], state);
+    await study.record(
+      card.id,
+      [
+        Review(
+          id: study.newReviewId(),
+          cardId: card.id,
+          answer: Answer.know,
+          reviewedAt: state.lastReview,
+          duration: Duration.zero,
+          fuzzFactor: FuzzFactor.draw(FirstDraw()),
+        ),
+      ],
+      state,
+      at: DateTime.utc(2026, 9, 1),
+    );
   }
 
   /// The fronts of the cards a session over [decks] would study now.

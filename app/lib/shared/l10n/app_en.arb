@@ -86,5 +86,14 @@
   "noMatches": "No card matches. Try other words.",
   "saveAndNext": "Save and next card",
   "deleteCardTitle": "Delete this card?",
-  "deleteCardBody": "Its study history is deleted with it."
+  "deleteCardBody": "Its study history is deleted with it.",
+  "unsyncedChangesTitle": "Some changes aren't synced",
+  "unsyncedChangesBody": "Signing out removes them from this device, and your other devices won't have them.",
+  "signOutAnyway": "Sign out anyway",
+  "dataNotCleared": "Couldn't remove this device's data. It's removed when another account signs in.",
+  "syncSyncing": "Syncing",
+  "syncSynced": "Synced",
+  "syncOffline": "Offline · syncs when connected",
+  "syncFailed": "Couldn't sync",
+  "syncRetry": "Try again"
 }

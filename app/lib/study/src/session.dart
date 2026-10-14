@@ -316,7 +316,7 @@ class StudySession extends ChangeNotifier {
             fuzz: review.fuzzFactor,
           );
         }
-        await _repository.record(card, history, after);
+        await _repository.record(card, history, after, at: _clock());
       } on StudyFailure catch (failure) {
         _onFailure(failure);
       } catch (error, stackTrace) {

@@ -1,3 +1,4 @@
+import '../../shared/database.dart';
 import 'failure.dart';
 import 'model.dart';
 import 'rust/api/engine.dart';
@@ -23,15 +24,36 @@ class Scheduler {
     Answer answer,
     DateTime at, {
     required FuzzFactor fuzz,
-  }) async {
+  }) => _review(state, answer, at, fuzz.value);
+
+  /// The state a new card reaches after its stored [reviews], taken in
+  /// `reviewed_at` order, each scheduled with its own fuzz factor and a null
+  /// factor as none; null when there are no reviews.
+  Future<CardState?> fold(List<ReviewRow> reviews) async {
+    final ordered = [...reviews]
+      ..sort((a, b) => a.reviewedAt.compareTo(b.reviewedAt));
+    CardState? state;
+    for (final review in ordered) {
+      state = await _review(
+        state,
+        answerOf(review.rating),
+        review.reviewedAt,
+        review.fuzzFactor,
+      );
+    }
+    return state;
+  }
+
+  Future<CardState> _review(
+    CardState? state,
+    Answer answer,
+    DateTime at,
+    double? fuzz,
+  ) async {
     final seconds = _toSeconds(at);
     try {
       final scheduled = state == null
-          ? await reviewNewCard(
-              answer: answer,
-              at: seconds,
-              fuzzFactor: fuzz.value,
-            )
+          ? await reviewNewCard(answer: answer, at: seconds, fuzzFactor: fuzz)
           : await reviewCard(
               state: MemoryStateParts(
                 stability: state.stability,
@@ -40,7 +62,7 @@ class Scheduler {
               ),
               answer: answer,
               at: seconds,
-              fuzzFactor: fuzz.value,
+              fuzzFactor: fuzz,
             );
       return CardState(
         stability: scheduled.state.stability,

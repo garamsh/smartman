@@ -2,10 +2,17 @@
 /// session that sign-in starts.
 library;
 
+export 'src/account_data.dart'
+    show
+        AccountData,
+        AccountDataNotCleared,
+        accountDataProvider,
+        syncStatusProvider;
 export 'src/account_screen.dart' show AccountScreen;
-export 'src/account_service.dart' show AccountService, connectAccount;
+export 'src/account_service.dart'
+    show AccountConnection, AccountService, connectAccount;
 export 'src/account_state.dart'
-    show AccountState, AccountUnavailable, SignedIn, SignedOut;
+    show AccountState, AccountUnavailable, SignedIn, SignedOut, UserId;
 export 'src/config.dart' show accountDefines;
 export 'src/failure.dart'
     show AccountFailure, AccountMisconfigured, AccountOffline, AccountRejected;
