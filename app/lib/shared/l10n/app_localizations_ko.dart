@@ -115,4 +115,59 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get delete => '삭제';
+
+  @override
+  String get study => '학습';
+
+  @override
+  String get know => '알아요';
+
+  @override
+  String get dontKnow => '몰라요';
+
+  @override
+  String get previousCard => '이전 카드';
+
+  @override
+  String get correctToDontKnow => '탭하면 \'몰라요\'로 고칩니다';
+
+  @override
+  String previousCardSemantics(String front, String back, String answer) {
+    return '이전 카드. 앞면: $front. 뒷면: $back. 답: $answer';
+  }
+
+  @override
+  String get sessionSummaryTitle => '학습 끝';
+
+  @override
+  String get nothingToStudy => '지금 학습할 카드가 없습니다.';
+
+  @override
+  String cardsStudied(int count) {
+    return '학습한 카드: $count장';
+  }
+
+  @override
+  String knowCount(int count) {
+    return '알아요: $count번';
+  }
+
+  @override
+  String dontKnowCount(int count) {
+    return '몰라요: $count번';
+  }
+
+  @override
+  String timeSpent(int minutes, int seconds) {
+    return '걸린 시간: $minutes분 $seconds초';
+  }
+
+  @override
+  String get done => '완료';
+
+  @override
+  String get answerNotSaved => '답을 기기에 저장하지 못했습니다. 이 카드의 일정은 바뀌지 않았습니다.';
+
+  @override
+  String get schedulingFailure => '이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.';
 }

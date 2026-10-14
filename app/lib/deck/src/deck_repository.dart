@@ -91,6 +91,14 @@ class DeckRepository {
     );
   }
 
+  /// The deck's cards, oldest first.
+  Future<List<Card>> listCards(DeckId deckId) => _guard(() async {
+    final query = _db.select(_db.cards)
+      ..where((card) => card.deckId.equals(deckId.value))
+      ..orderBy([(card) => OrderingTerm.asc(card.createdAt)]);
+    return (await query.get()).map(_toCard).toList();
+  });
+
   /// Adds a manual card. A card in the same deck with an equal key blocks the
   /// save unless [allowDuplicate] is set.
   Future<SaveCardResult> addCard(

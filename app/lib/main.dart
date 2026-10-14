@@ -7,22 +7,34 @@ import 'package:uuid/uuid.dart';
 import 'deck/deck.dart';
 import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
+import 'study/study.dart';
 
 /// The composition site: the one place that constructs the application.
-void main() {
-  runApp(composeApp(driftDatabase(name: 'smartman')));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final scheduler = await Scheduler.load();
+  runApp(composeApp(driftDatabase(name: 'smartman'), scheduler));
 }
 
-/// Constructs the application over the database [executor] opens.
-Widget composeApp(QueryExecutor executor) {
+/// Constructs the application over the database [executor] opens, scheduling
+/// with the loaded [scheduler].
+Widget composeApp(QueryExecutor executor, Scheduler scheduler) {
   final database = AppDatabase(executor);
+  const uuid = Uuid();
   final deckRepository = DeckRepository(
     database,
     clock: DateTime.now,
-    newId: const Uuid().v4,
+    newId: uuid.v4,
   );
+  final studyRepository = StudyRepository(database, newId: uuid.v4);
   return ProviderScope(
-    overrides: [deckRepositoryProvider.overrideWithValue(deckRepository)],
+    overrides: [
+      deckRepositoryProvider.overrideWithValue(deckRepository),
+      studyRepositoryProvider.overrideWithValue(studyRepository),
+      schedulerProvider.overrideWithValue(scheduler),
+      studyClockProvider.overrideWithValue(DateTime.now),
+      studyScreenProvider.overrideWithValue((deck) => StudyScreen(deck: deck)),
+    ],
     child: const SmartmanApp(),
   );
 }

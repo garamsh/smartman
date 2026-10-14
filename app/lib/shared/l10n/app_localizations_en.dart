@@ -117,4 +117,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get delete => 'Delete';
+
+  @override
+  String get study => 'Study';
+
+  @override
+  String get know => 'Know';
+
+  @override
+  String get dontKnow => 'Don\'t know';
+
+  @override
+  String get previousCard => 'Previous card';
+
+  @override
+  String get correctToDontKnow => 'Tap to change to Don\'t know';
+
+  @override
+  String previousCardSemantics(String front, String back, String answer) {
+    return 'Previous card. Front: $front. Back: $back. Answer: $answer';
+  }
+
+  @override
+  String get sessionSummaryTitle => 'Session complete';
+
+  @override
+  String get nothingToStudy => 'Nothing to study right now.';
+
+  @override
+  String cardsStudied(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards studied',
+      one: '1 card studied',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String knowCount(int count) {
+    return 'Know: $count';
+  }
+
+  @override
+  String dontKnowCount(int count) {
+    return 'Don\'t know: $count';
+  }
+
+  @override
+  String timeSpent(int minutes, int seconds) {
+    return 'Time spent: $minutes min $seconds s';
+  }
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get answerNotSaved =>
+      'Couldn\'t save your answer on this device. This card\'s schedule did not change.';
+
+  @override
+  String get schedulingFailure =>
+      'Couldn\'t work out this card\'s next review. Its schedule did not change.';
 }

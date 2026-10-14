@@ -30,5 +30,20 @@
   "cancel": "Cancel",
   "save": "Save",
   "rename": "Rename",
-  "delete": "Delete"
+  "delete": "Delete",
+  "study": "Study",
+  "know": "Know",
+  "dontKnow": "Don't know",
+  "previousCard": "Previous card",
+  "correctToDontKnow": "Tap to change to Don't know",
+  "previousCardSemantics": "Previous card. Front: {front}. Back: {back}. Answer: {answer}",
+  "sessionSummaryTitle": "Session complete",
+  "nothingToStudy": "Nothing to study right now.",
+  "cardsStudied": "{count, plural, =1{1 card studied} other{{count} cards studied}}",
+  "knowCount": "Know: {count}",
+  "dontKnowCount": "Don't know: {count}",
+  "timeSpent": "Time spent: {minutes} min {seconds} s",
+  "done": "Done",
+  "answerNotSaved": "Couldn't save your answer on this device. This card's schedule did not change.",
+  "schedulingFailure": "Couldn't work out this card's next review. Its schedule did not change."
 }
