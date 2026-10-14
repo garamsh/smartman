@@ -8,6 +8,9 @@ updates:
     directory: "/app"
     schedule:
       interval: "weekly"
+    ignore:
+      # Coupled to the bridge crate and the codegen; the PM moves all three in one PR (docs/architecture/study.md).
+      - dependency-name: "flutter_rust_bridge*"
   - package-ecosystem: "cargo"
     directory: "/engine"
     schedule:
@@ -20,6 +23,12 @@ updates:
     directory: "/app/rust"
     schedule:
       interval: "weekly"
+    ignore:
+      # Coupled to the pub packages and the codegen; the PM moves all three in one PR (docs/architecture/study.md).
+      - dependency-name: "flutter_rust_bridge*"
+      # Breaks backtrace on iOS: https://github.com/rust-lang/libc/issues/5601
+      - dependency-name: "libc"
+        versions: ["= 0.2.190"]
   - package-ecosystem: "rust-toolchain"
     directory: "/app/rust"
     schedule:
