@@ -14,6 +14,11 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ko</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>smartman</string>
 	<key>CFBundlePackageType</key>
@@ -38,6 +43,12 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera takes a photo of a vocabulary page to make cards from it.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Photo import takes photos only and records no sound.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>A photo you choose from your library is used to make cards from it.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
