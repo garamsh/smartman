@@ -85,7 +85,10 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 ### Versions
 
-- flutter_rust_bridge's release is pinned in `app/rust/Cargo.toml`, in `app/pubspec.yaml` for the runtime and hook packages, and, through `app/rust/Cargo.lock`, for the codegen. Dependabot proposes the cargo and pub bumps separately; one lands only with the other and with the regenerated code, or `make ci` fails.
+- flutter_rust_bridge's release is pinned in `app/rust/Cargo.toml`, in `app/pubspec.yaml` for the runtime and hook packages, and, through `app/rust/Cargo.lock`, for the codegen. A bump of one alone fails `make ci`, so `.github/dependabot.yml` ignores `flutter_rust_bridge*` in the `/app` pub entry and the `/app/rust` cargo entry.
+- The mover of flutter_rust_bridge is the PM: one PR bumps all three pins, regenerates the bindings, and commits what the codegen writes.
+- `libc` is held at 0.2.189 in `app/rust/Cargo.lock`: with 0.2.190, `backtrace` fails to compile for iOS. `.github/dependabot.yml` ignores `libc` `= 0.2.190` in the `/app/rust` cargo entry. Upstream tracks the break in [rust-lang/libc#5601](https://github.com/rust-lang/libc/issues/5601). As of 2026-10-15 that issue is open, 0.2.190 is the latest 0.2 release, and the dyld fix ([rust-lang/libc#5606](https://github.com/rust-lang/libc/pull/5606)) is not merged.
+- The ignore is dropped when a fixed `libc` release ships, after the macOS CI job passes on a PR that moves `app/rust/Cargo.lock` to it. A later release that still breaks the job is added to the ignore.
 - Dependabot also proposes the bumps of `app/rust/rust-toolchain.toml`, which stays on the release of `engine/rust-toolchain.toml`.
 
 ## Rationale
