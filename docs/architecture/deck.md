@@ -13,7 +13,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - `CardKey`, and `describeContent`, the one line of text a card side shows;
   - `DeckRepository` and its save results;
   - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, and `describeFailure`, the message a user reads for one;
-  - `deckRepositoryProvider`, `studyScreenProvider` and `DeckListScreen`.
+  - `deckRepositoryProvider`, `studyScreenProvider`, `accountScreenProvider` and `DeckListScreen`.
 - The `study` domain reads a deck's cards through `DeckRepository.listCards`, oldest first.
 
 ### Model
@@ -59,6 +59,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - State and injection use Riverpod. `deckRepositoryProvider` has no implementation of its own; the composition site, `app/lib/main.dart`, overrides it with the repository it constructs.
 - The card list's "Study" button opens the screen `studyScreenProvider` builds. It has no implementation of its own either: the composition site overrides it with the `study` domain's screen, so this domain does not depend on `study` ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
+- The deck list's account button opens the screen `accountScreenProvider` builds. The composition site overrides it with the `account` domain's screen, as it does `studyScreenProvider` ([`account.md`](account.md)).
 - The repository receives its clock and id generator, so tests fix both.
 
 ## Rationale
