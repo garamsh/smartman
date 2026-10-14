@@ -167,6 +167,32 @@ void main() {
       expect((await cardsOf(deck.id)).map((card) => card.id), [kept.id]);
     });
 
+    test(
+      'counts each deck\'s cards, and leaves out a deck with none',
+      () async {
+        final french = await repository.createDeck('French');
+        final spanish = await repository.createDeck('Spanish');
+        final empty = await repository.createDeck('Empty');
+        for (final front in ['a', 'b', 'c']) {
+          await repository.addCard(
+            french.id,
+            front: _text(front),
+            back: _text('1'),
+          );
+        }
+        await repository.addCard(
+          spanish.id,
+          front: _text('a'),
+          back: _text('1'),
+        );
+
+        final counts = await repository.watchCardCounts().first;
+
+        expect(counts, {french.id: 3, spanish.id: 1});
+        expect(counts.containsKey(empty.id), isFalse);
+      },
+    );
+
     test('renaming a deck changes its name', () async {
       final deck = await repository.createDeck('Frnech');
 

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// The sizes, colours and timings of the study screen, in one place.
+import '../../shared/theme.dart';
+
+/// The sizes and timings of the study screen, in one place; its colours are
+/// the app theme's [AppColors].
 abstract final class StudyStyle {
   /// Space between a card and the screen's left and right edges.
   static const cardMargin = 20.0;
-  static const cardRadius = 24.0;
+  static const cardRadius = AppRadius.card;
   static const cardPadding = 16.0;
 
   /// Space between two content blocks, and inside a block's placeholder.
@@ -73,19 +76,24 @@ abstract final class StudyStyle {
   static const emergeOffset = 40.0;
   static const emergeScale = 0.92;
 
-  static const cardColor = Colors.white;
-  static const depthColor = Color(0xFFDADCE0);
-  static const knowColor = Color(0xFF2E7D32);
-  static const dontKnowColor = Color(0xFFC62828);
-  static const onAnswerColor = Colors.white;
-
   /// The tint over a dragged card at full drag.
   static const tintOpacity = 0.12;
 
-  static const currentShadow = [
-    BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 8)),
+  /// The current card's shadow, in the theme's [AppColors.shadow].
+  static List<BoxShadow> currentShadow(AppColors colors) => [
+    BoxShadow(
+      color: colors.shadow.withValues(alpha: 0.2),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
   ];
-  static const previousShadow = [
-    BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+
+  /// A previous card's shadow, in the theme's [AppColors.shadow].
+  static List<BoxShadow> previousShadow(AppColors colors) => [
+    BoxShadow(
+      color: colors.shadow.withValues(alpha: 0.12),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
+    ),
   ];
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
 import 'current_card.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -64,7 +65,6 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     // The current card's centre, measured from the top of the screen, is
     // placed relative to the body below the top bar.
     final screenHeight = MediaQuery.sizeOf(context).height;
@@ -79,7 +79,6 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
             if (!didPop) _session.leave();
           },
           child: Scaffold(
-            backgroundColor: colors.surfaceContainer,
             body: SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -254,7 +253,7 @@ class _TopBar extends StatelessWidget {
     final theme = Theme.of(context);
     final progress = this.progress;
     return Material(
-      color: theme.colorScheme.surfaceContainer,
+      color: AppColors.of(context).ground,
       child: SizedBox(
         height: StudyStyle.topBarHeight,
         child: Row(
@@ -309,12 +308,13 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final colors = AppColors.of(context);
     final time = summary.timeSpent;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: StudyStyle.cardColor,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
-        boxShadow: StudyStyle.currentShadow,
+        boxShadow: StudyStyle.currentShadow(colors),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(

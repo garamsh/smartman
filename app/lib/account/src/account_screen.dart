@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
 import 'account_service.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'providers.dart';
 
-/// Shows whether the user is signed in, and signs them in or out.
+/// Shows whether the user is signed in, and signs them in or out; and the
+/// theme the app is drawn in.
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
 
@@ -25,6 +27,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final state = ref.watch(accountStateProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTitle)),
+      bottomNavigationBar: const SafeArea(child: _ThemeSection()),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -84,5 +87,46 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+}
+
+/// The "화면" section: following the system, light or dark, applied at once.
+class _ThemeSection extends ConsumerWidget {
+  const _ThemeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 12,
+        children: [
+          Text(
+            l10n.displaySection,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          SegmentedButton<ThemeMode>(
+            segments: [
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text(l10n.themeSystem),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text(l10n.themeLight),
+              ),
+              ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
+            ],
+            selected: {ref.watch(themeModeProvider)},
+            showSelectedIcon: false,
+            onSelectionChanged: (choice) =>
+                ref.read(themeModeProvider.notifier).choose(choice.single),
+          ),
+        ],
+      ),
+    );
   }
 }

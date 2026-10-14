@@ -5,6 +5,7 @@ import 'package:flutter/material.dart' hide Card;
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
 import 'content_view.dart';
 import 'rust/api/engine.dart';
 import 'session.dart';
@@ -192,6 +193,7 @@ class _PreviousCardView extends StatelessWidget {
       Answer.dontKnow => l10n.dontKnow,
     };
     final radius = BorderRadius.circular(StudyStyle.cardRadius);
+    final colors = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: StudyStyle.cardMargin),
       child: Semantics(
@@ -211,13 +213,9 @@ class _PreviousCardView extends StatelessWidget {
         child: AnimatedContainer(
           duration: _settle(context),
           decoration: BoxDecoration(
-            color: Color.lerp(
-              StudyStyle.cardColor,
-              StudyStyle.depthColor,
-              steps,
-            ),
+            color: Color.lerp(colors.surface, colors.depth, steps),
             borderRadius: radius,
-            boxShadow: StudyStyle.previousShadow,
+            boxShadow: StudyStyle.previousShadow(colors),
           ),
           child: Material(
             type: MaterialType.transparency,
@@ -320,8 +318,8 @@ class _AnswerDot extends StatelessWidget {
     height: StudyStyle.dotSize,
     decoration: BoxDecoration(
       color: switch (answer) {
-        Answer.know => StudyStyle.knowColor,
-        Answer.dontKnow => StudyStyle.dontKnowColor,
+        Answer.know => AppColors.of(context).knowDot,
+        Answer.dontKnow => AppColors.of(context).dontKnow,
       },
       shape: BoxShape.circle,
     ),

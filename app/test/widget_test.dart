@@ -2,10 +2,14 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 
 import 'account/fake_account_service.dart';
@@ -14,12 +18,32 @@ void main() {
   late Scheduler scheduler;
   setUpAll(() async => scheduler = await Scheduler.load());
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  /// Composes the app over an in-memory database and theme storage holding
+  /// [themeMode] when given.
+  Future<void> pumpApp(WidgetTester tester, {String? themeMode}) async {
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
+    final themeStorage = (await tester.runAsync(
+      () => SharedPreferencesWithCache.create(
+        cacheOptions: const SharedPreferencesWithCacheOptions(
+          allowList: themeStorageKeys,
+        ),
+      ),
+    ))!;
     await tester.pumpWidget(
-      composeApp(NativeDatabase.memory(), scheduler, FakeAccountService()),
+      composeApp(
+        NativeDatabase.memory(),
+        scheduler,
+        FakeAccountService(),
+        themeStorage,
+      ),
     );
     await tester.pumpAndSettle();
   }
+
+  /// The brightness the deck list is drawn in.
+  Brightness brightness(WidgetTester tester) =>
+      Theme.of(tester.element(find.text('Decks'))).brightness;
 
   // Unmounting the scope cancels drift's stream queries, whose cleanup timer
   // must fire before the test body ends.
@@ -32,7 +56,7 @@ void main() {
       tester.enterText(find.widgetWithText(TextField, label), text);
 
   Future<void> createDeckAndOpen(WidgetTester tester, String name) async {
-    await tester.tap(find.byTooltip('New deck'));
+    await tester.tap(find.text('New deck'));
     await tester.pumpAndSettle();
     await enterText(tester, 'Name', name);
     await tester.tap(find.text('Save'));
@@ -42,11 +66,11 @@ void main() {
   }
 
   Future<void> addCard(WidgetTester tester, String front, String back) async {
-    await tester.tap(find.byTooltip('New card'));
+    await tester.tap(find.text('Add card'));
     await tester.pumpAndSettle();
-    await enterText(tester, 'Front', front);
-    await enterText(tester, 'Back', back);
-    await tester.tap(find.byTooltip('Save card'));
+    await enterText(tester, 'Question', front);
+    await enterText(tester, 'Answer', back);
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
   }
 
@@ -54,7 +78,10 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text('Decks'), findsOneWidget);
-    expect(find.text('No decks yet'), findsOneWidget);
+    expect(
+      find.text('No decks yet. Create a new deck to start.'),
+      findsOneWidget,
+    );
     await unmountApp(tester);
   });
 
@@ -67,7 +94,7 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text('덱'), findsOneWidget);
-    expect(find.text('아직 덱이 없습니다'), findsOneWidget);
+    expect(find.text('아직 덱이 없습니다. 새 덱을 만들어 시작하세요.'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -80,10 +107,8 @@ void main() {
       await addCard(tester, 'Chat', 'cat');
       await addCard(tester, 'Chat', 'chat (talk)');
 
-      expect(find.text('Duplicate front'), findsOneWidget);
+      expect(find.text('This deck already has this card'), findsOneWidget);
       expect(find.text('Open existing card'), findsOneWidget);
-      expect(find.text('cat'), findsNothing);
-
       await tester.tap(find.text('Add anyway'));
       await tester.pumpAndSettle();
 
@@ -103,7 +128,7 @@ void main() {
 
     expect(find.text('Enter some text'), findsOneWidget);
     expect(find.text('Edit card'), findsNothing);
-    expect(find.text('New card'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -137,7 +162,7 @@ void main() {
     await createDeckAndOpen(tester, 'French');
     await addCard(tester, 'Chat', 'cat');
 
-    await tester.tap(find.byTooltip('Study'));
+    await tester.tap(find.text('Study · 1'));
     await tester.pumpAndSettle();
 
     expect(find.text('Chat'), findsOneWidget);
@@ -182,20 +207,99 @@ void main() {
     await unmountApp(tester);
   });
 
-  testWidgets('tap targets on every screen carry labels', (tester) async {
+  testWidgets('the theme follows the system until a choice overrides it', (
+    tester,
+  ) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await pumpApp(tester);
-    await createDeckAndOpen(tester, 'French');
-    await addCard(tester, 'Chat', 'cat');
+    expect(brightness(tester), Brightness.dark);
 
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    await tester.tap(find.text('Chat'));
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
     await tester.pumpAndSettle();
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    expect(brightness(tester), Brightness.light);
+
+    await tester.tap(find.byTooltip('Account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
+    expect(brightness(tester), Brightness.dark);
+
+    await tester.tap(find.byTooltip('Account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Light'));
+    await tester.pumpAndSettle();
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    expect(brightness(tester), Brightness.light);
     await unmountApp(tester);
   });
+
+  testWidgets('a stored choice applies from the first frame', (tester) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await pumpApp(tester, themeMode: 'dark');
+
+    expect(brightness(tester), Brightness.dark);
+    await unmountApp(tester);
+  });
+
+  for (final mode in ['light', 'dark']) {
+    testWidgets(
+      'in the $mode theme every deck screen and the account screen meet the tap target and contrast guidelines',
+      (tester) async {
+        Future<void> meetsGuidelines() async {
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+        }
+
+        await pumpApp(tester, themeMode: mode);
+        expect(brightness(tester).name, mode);
+        await meetsGuidelines();
+        await createDeckAndOpen(tester, 'French');
+        await meetsGuidelines();
+        await addCard(tester, 'Chat', 'cat');
+        await meetsGuidelines();
+
+        await tester.tap(find.text('Add card'));
+        await tester.pumpAndSettle();
+        await enterText(tester, 'Question', 'Chien');
+        await meetsGuidelines();
+        await enterText(tester, 'Question', 'chat');
+        await enterText(tester, 'Answer', 'chat (talk)');
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+        expect(find.text('This deck already has this card'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Chat'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.text('French'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.tap(find.byTooltip('Clear selection'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Account'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await unmountApp(tester);
+      },
+    );
+  }
 }

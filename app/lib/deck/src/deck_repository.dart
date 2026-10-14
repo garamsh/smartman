@@ -81,6 +81,25 @@ class DeckRepository {
     return row.read(count) ?? 0;
   });
 
+  /// How many cards each deck holds, re-emitted on each change. A deck with
+  /// no card is absent.
+  Stream<Map<DeckId, int>> watchCardCounts() {
+    final count = _db.cards.id.count();
+    final query = _db.selectOnly(_db.cards)
+      ..addColumns([_db.cards.deckId, count])
+      ..groupBy([_db.cards.deckId]);
+    return _guardStream(
+      query.watch().map(
+        (rows) => {
+          for (final row in rows)
+            // deck_id is NOT NULL, so every grouped row carries one.
+            if (row.read(_db.cards.deckId) case final deck?)
+              DeckId(deck): row.read(count) ?? 0,
+        },
+      ),
+    );
+  }
+
   /// The deck's cards, oldest first, re-emitted on each change.
   Stream<List<Card>> watchCards(DeckId deckId) {
     final query = _db.select(_db.cards)

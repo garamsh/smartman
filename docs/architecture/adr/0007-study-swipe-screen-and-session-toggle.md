@@ -1,6 +1,6 @@
 # ADR 0007: Answer by swiping a split card, keep every session answer in a toggleable stack, and reschedule a toggle by replaying the card's session answers
 
-> Status: accepted
+> Status: accepted; its study screen colour constants superseded by ADR-0011
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
