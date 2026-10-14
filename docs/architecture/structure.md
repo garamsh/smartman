@@ -4,7 +4,7 @@ The structural rules of the app: what the unit is, what may reference what, and 
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`; the first is `deck` ([`deck.md`](deck.md)). The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)) and `study` ([`study.md`](study.md)). The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 
@@ -28,7 +28,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - **The drift database is shared code.** `app/lib/shared/database.dart` holds every domain's tables. A domain maps rows into its own types and does not export row classes.
 - **Every schema change goes through a migration.** The change raises `schemaVersion`. In `app/`, `dart run drift_dev make-migrations` then exports the new schema to `drift_schemas/` and its helpers to `test/drift/`, and the migration test there must pass.
 - **User-facing strings come from one ARB set.** It lives in `app/lib/shared/l10n/`, with Korean as the template and default locale. No widget hardcodes a string the user reads.
-- **Generated Dart is committed and regenerated from its source.** This covers `database.g.dart` (via `dart run build_runner build`), the `gen-l10n` output (via `flutter gen-l10n`), and the drift schema dumps and helpers. `make lint` runs `check-generated.sh`, which reruns every generator and fails when a committed file differs from what it writes.
+- **Generated code is committed and regenerated from its source.** This covers `database.g.dart` (via `dart run build_runner build`), the `gen-l10n` output (via `flutter gen-l10n`), the drift schema dumps and helpers, and flutter_rust_bridge's Rust and Dart output (via `flutter_rust_bridge_codegen generate`, [ADR 0004](adr/0004-flutter-rust-bridge.md)). `make lint` runs `check-generated.sh`, which reruns every generator and fails when a committed file differs from what it writes.
 
 ### Composition
 
@@ -40,6 +40,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 
 - [ADR 0001](adr/0001-domain-structure.md) records why the app is partitioned by domain and which sibling-dependency relation it takes.
 - [ADR 0002](adr/0002-domain-public-surface-and-shared-database.md) records how a domain declares its public surface and why the database sits below the domains.
+- [ADR 0004](adr/0004-flutter-rust-bridge.md) records why the generated engine bindings sit inside the `study` domain.
 
 ## Open questions
 

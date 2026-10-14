@@ -10,6 +10,7 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 ## Layout
 
 - `app/` — the Flutter application (iOS and Android).
+- `app/rust/` — the flutter_rust_bridge crate through which the app calls the engine.
 - `engine/` — the Rust crate that schedules reviews with FSRS.
 - `supabase/` — the Supabase CLI project for the backend.
 - `docs/convention/` — the conventions every change follows.
@@ -23,7 +24,9 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - JDK 17 for the Android build; with Flutter, point it at the JDK with `flutter config --jdk-dir`.
 - Android SDK 36 for the Android build; Xcode for iOS.
 - Supabase CLI 2.120.0 for the backend.
-- Rust 1.99.0 with clippy and rustfmt for the engine, pinned in `engine/rust-toolchain.toml`; rustup installs it on first use. Dependabot proposes the bump when a new stable Rust release ships.
+- Rust 1.99.0 with clippy and rustfmt for the engine and the bridge crate, pinned in `engine/rust-toolchain.toml` and `app/rust/rust-toolchain.toml`; rustup installs it, and the Android and iOS targets the bridge crate lists, on first use. Dependabot proposes the bump when a new stable Rust release ships.
+- flutter_rust_bridge_codegen at the release of the `flutter_rust_bridge` crate in `app/rust/Cargo.lock`, 2.13.0: `cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked`. `make lint` fails when another release is installed.
+- The Android NDK release Flutter names (`flutter.ndkVersion` in `app/android/app/build.gradle.kts`), for the bridge crate's Android build.
 - jq, which `make lint` uses to list the engine's cargo targets.
 - uv, only to regenerate the engine's reference values; it fetches the Python and the py-fsrs version the generator pins.
 
@@ -36,10 +39,10 @@ flutter run
 
 ## Run the checks
 
-- `make lint` — checks Markdown Contents lists, checks that the app's committed generated code matches its generators, runs `flutter analyze` over the app's Dart files, and runs clippy over the engine with warnings denied.
-- `make format` — fails when a Dart file in the app or a Rust file in the engine is not formatted; `dart format` or `cargo fmt` fixes it.
-- `make test` — runs the app's tests and the engine's tests.
-- `make build` — builds a debug Android APK, and the engine crate with its rustdoc, warnings denied.
+- `make lint` — checks Markdown Contents lists, checks that the app's committed generated code (flutter_rust_bridge's included) matches its generators, runs `flutter analyze` over the app's Dart files, and runs clippy over the engine and the bridge crate with warnings denied.
+- `make format` — fails when a Dart file in the app or a Rust file in the engine or the bridge crate is not formatted; `dart format` or `cargo fmt` fixes it.
+- `make test` — builds the bridge crate for this host, then runs the app's tests and the engine's tests.
+- `make build` — builds a debug Android APK holding the bridge library, on macOS also the iOS simulator app without code signing, and the engine crate with its rustdoc, warnings denied. It reports which builds it ran.
 - `make ci` — runs all four in that order. CI runs the same target.
 
 ## Run the backend locally

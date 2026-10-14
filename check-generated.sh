@@ -6,7 +6,7 @@
 # the index keeps the check true on an uncommitted edit as well as on a clean checkout.
 set -euf
 
-scope="git ls-files --cached --others --exclude-standard -- 'lib/*.g.dart' 'lib/shared/l10n/app_localizations*.dart' 'drift_schemas' 'test/drift/*/generated/*'"
+scope="git ls-files --cached --others --exclude-standard -- 'lib/*.g.dart' 'lib/shared/l10n/app_localizations*.dart' 'drift_schemas' 'test/drift/*/generated/*' 'lib/study/src/rust' 'rust/src/frb_generated.rs'"
 
 cd "$(dirname "$0")/app"
 
@@ -22,6 +22,13 @@ if [ -z "$before" ]; then
 	exit 1
 fi
 
+# The codegen must be the release of the flutter_rust_bridge crate in rust/Cargo.lock.
+frb_version=$(sed -n '/^name = "flutter_rust_bridge"$/{n;s/^version = "\(.*\)"$/\1/p;}' rust/Cargo.lock)
+if [ "$(flutter_rust_bridge_codegen --version)" != "flutter_rust_bridge_codegen $frb_version" ]; then
+	echo "flutter_rust_bridge_codegen $frb_version is required, as rust/Cargo.lock pins; found: $(flutter_rust_bridge_codegen --version)" >&2
+	exit 1
+fi
+flutter_rust_bridge_codegen generate
 dart run build_runner build
 flutter gen-l10n
 # Exits non-zero when the dump for the current schema version differs from the schema.

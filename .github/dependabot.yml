@@ -16,3 +16,11 @@ updates:
     directory: "/engine"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/app/rust"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "rust-toolchain"
+    directory: "/app/rust"
+    schedule:
+      interval: "weekly"
