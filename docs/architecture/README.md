@@ -25,6 +25,7 @@ Current architecture of the system and the decisions behind it. This file is the
 - `engine.md` — the scheduling engine: FSRS-6 in the pure Rust crate `engine/`, its public surface, and its reference values.
 - `account.md` — the `account` domain: Google sign-in through Supabase Auth, the session, and the configuration it reads from `app/config/`.
 - `study.md` — the `study` domain: the study session, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
+- `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, and the pgTAP tests `make test` runs.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
 - `adr/0002-domain-public-surface-and-shared-database.md` — declare a domain's surface in one library file, and keep the drift database below the domains.
 - `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz.
@@ -32,4 +33,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0005-study-queue-and-card-state.md` — queue a session from due then new cards, re-show a "Don't know" after three cards, and store each card's state parts in `card_states`.
 - `adr/0006-account-native-google-sign-in.md` — sign in with native Google Sign-In through Supabase Auth in an `account` domain, configured per environment from `app/config/`, with flavors deferred to M7.
 - `adr/0007-study-swipe-screen-and-session-toggle.md` — answer by swiping a split card, keep every session answer in a toggleable stack, and reschedule a toggle by replaying the card's session answers; supersedes ADR 0005's screen and correction rules.
+- `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence, composite foreign keys between a user's rows, and pgTAP tests in `make test`.
 - `adr/0000-template.md` — the template every ADR is written from.
