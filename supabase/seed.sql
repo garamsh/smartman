@@ -1,0 +1,1 @@
+-- Intentionally empty: the local stack starts with no rows, and the tests insert their own.
