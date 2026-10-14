@@ -8,6 +8,7 @@ String describeFailure(AppLocalizations l10n, DeckFailure failure) =>
     switch (failure) {
       StorageFailure() => l10n.storageFailure,
       UnreadableCard() => l10n.unreadableCard,
+      DeckDeleted() => l10n.deckDeleted,
     };
 
 /// Runs [action]; a [DeckFailure] it raises is shown to the user in a snack

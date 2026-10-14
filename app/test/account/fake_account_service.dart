@@ -11,6 +11,7 @@ class FakeAccountService implements AccountService {
   AccountState _state;
   final _changes = StreamController<AccountState>.broadcast();
 
+  UserId userId = const UserId('00000000-0000-4000-8000-00000000000a');
   String email = 'ada@example.com';
   AccountFailure? failure;
   bool cancelSignIn = false;
@@ -30,7 +31,7 @@ class FakeAccountService implements AccountService {
   Future<void> signIn() async {
     if (failure case final failure?) throw failure;
     if (cancelSignIn) return;
-    _set(SignedIn(email: email));
+    _set(SignedIn(userId: userId, email: email));
   }
 
   @override

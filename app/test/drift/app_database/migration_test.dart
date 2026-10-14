@@ -8,6 +8,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -159,6 +160,90 @@ void main() {
     );
   });
 
+  test('every row survives the upgrade from 3 to 4 live and unsynced, with reviews and states dated by their times, and no owner', () async {
+    // Schema helpers hold a date as drift stores it, seconds since the epoch,
+    // and a flag as 1 or 0.
+    final created = DateTime.utc(2026, 10, 1).millisecondsSinceEpoch ~/ 1000;
+    final reviewed = created + 3600;
+    await verifier.testWithDataIntegrity(
+      oldVersion: 3,
+      newVersion: 4,
+      createOld: v3.DatabaseAtV3.new,
+      createNew: v4.DatabaseAtV4.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          v3.DecksData(
+            id: 'deck',
+            name: 'French',
+            createdAt: created,
+            updatedAt: created,
+          ),
+        );
+        batch.insert(
+          old.cards,
+          v3.CardsData(
+            id: 'card',
+            deckId: 'deck',
+            front: '[]',
+            back: '[]',
+            cardKey: 'chat',
+            source: 'manual',
+            createdAt: created,
+            updatedAt: created,
+          ),
+        );
+        batch.insert(
+          old.reviews,
+          v3.ReviewsData(
+            id: 'review',
+            cardId: 'card',
+            rating: 'good',
+            reviewedAt: reviewed,
+            durationMs: 1200,
+            fuzzFactor: 0.25,
+          ),
+        );
+        batch.insert(
+          old.cardStates,
+          v3.CardStatesData(
+            cardId: 'card',
+            stability: 2.3065,
+            difficulty: 2.118,
+            lastReview: reviewed,
+            due: reviewed + 2 * 86400,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final deck = await db.select(db.decks).getSingle();
+        expect([deck.name, deck.deletedAt, deck.dirty], ['French', null, 1]);
+        final card = await db.select(db.cards).getSingle();
+        expect([card.cardKey, card.deletedAt, card.dirty], ['chat', null, 1]);
+        final review = await db.select(db.reviews).getSingle();
+        expect(
+          [
+            review.id,
+            review.rating,
+            review.fuzzFactor,
+            review.deletedAt,
+            review.dirty,
+          ],
+          ['review', 'good', 0.25, null, 1],
+        );
+        expect(review.updatedAt, reviewed);
+        final state = await db.select(db.cardStates).getSingle();
+        expect(
+          [state.cardId, state.stability, state.deletedAt, state.dirty],
+          ['card', 2.3065, null, 1],
+        );
+        expect(state.updatedAt, reviewed);
+        expect(await db.select(db.syncState).get(), isEmpty);
+      },
+    );
+  });
+
   test('a review row refuses a fuzz factor outside 0 to 1', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -195,6 +280,7 @@ void main() {
           reviewedAt: at,
           durationMs: 1200,
           fuzzFactor: Value(factor),
+          updatedAt: at,
         );
 
     for (final factor in [-0.1, 1.0]) {

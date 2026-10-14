@@ -87,6 +87,15 @@
   "saveAndNext": "Save and next card",
   "deleteCardTitle": "Delete this card?",
   "deleteCardBody": "Its study history is deleted with it.",
+  "unsyncedChangesTitle": "Some changes aren't synced",
+  "unsyncedChangesBody": "Signing out removes them from this device, and your other devices won't have them.",
+  "signOutAnyway": "Sign out anyway",
+  "dataNotCleared": "Couldn't remove this device's data. It's removed when another account signs in.",
+  "syncSyncing": "Syncing",
+  "syncSynced": "Synced",
+  "syncOffline": "Offline · syncs when connected",
+  "syncFailed": "Couldn't sync",
+  "syncRetry": "Try again",
   "photoCaptureHint": "Fit one page of a vocabulary book or textbook inside the frame",
   "photoTarget": "Add to · {name}",
   "photoAlbum": "Choose from album",
@@ -113,5 +122,6 @@
   "modelFailed": "Couldn't read the cards. Please try again in a moment",
   "signInRequired": "You need to sign in. Sign in again from the account screen.",
   "serviceFailed": "Can't make cards from photos right now. Please try again in a moment.",
-  "photoUnreadable": "Couldn't read this photo. Choose another one."
+  "photoUnreadable": "Couldn't read this photo. Choose another one.",
+  "deckDeleted": "This deck was deleted. Choose another deck."
 }

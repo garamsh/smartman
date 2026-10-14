@@ -30,15 +30,24 @@ abstract interface class AccountService {
   Future<void> signOut();
 }
 
+/// What [connectAccount] connects: the account service, and the Supabase
+/// client it signs in through, whose session the sync domain reaches the
+/// server's tables with. The client is null when the configuration cannot
+/// sign anyone in.
+typedef AccountConnection = ({AccountService service, SupabaseClient? client});
+
 /// Connects to Supabase and Google with the configuration [defines] holds,
 /// restoring the session a previous run stored. With a missing or malformed
-/// configuration, the service it returns is [AccountUnavailable].
-Future<AccountService> connectAccount(Map<String, String> defines) async {
+/// configuration, the service is [AccountUnavailable] and there is no client.
+Future<AccountConnection> connectAccount(Map<String, String> defines) async {
   final AccountConfig config;
   try {
     config = AccountConfig.parse(defines);
   } on InvalidAccountConfig catch (error) {
-    return UnavailableAccountService(AccountMisconfigured(error));
+    return (
+      service: UnavailableAccountService(AccountMisconfigured(error)),
+      client: null,
+    );
   }
   final supabase = await Supabase.initialize(
     url: config.supabaseUrl.toString(),
@@ -46,7 +55,7 @@ Future<AccountService> connectAccount(Map<String, String> defines) async {
     // The browser OAuth flow is not used, so no deep link carries a session.
     authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
   );
-  return GoogleAccountService.start(
+  final service = await GoogleAccountService.start(
     supabase.client.auth,
     GoogleSignIn.instance,
     // Android takes only the server client ID; iOS also needs its own.
@@ -55,6 +64,7 @@ Future<AccountService> connectAccount(Map<String, String> defines) async {
         : null,
     serverClientId: config.googleWebClientId.value,
   );
+  return (service: service, client: supabase.client);
 }
 
 /// Signs in with Google's native picker and exchanges the ID token it returns
@@ -152,7 +162,10 @@ final class GoogleAccountService implements AccountService {
 
   static AccountState _stateOf(Session? session) => switch (session) {
     null => const SignedOut(),
-    Session(:final user) => SignedIn(email: user.email),
+    Session(:final user) => SignedIn(
+      userId: UserId(user.id),
+      email: user.email,
+    ),
   };
 }
 

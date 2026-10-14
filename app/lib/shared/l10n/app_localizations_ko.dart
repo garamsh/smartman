@@ -330,6 +330,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteCardBody => '이 카드의 학습 기록도 함께 삭제됩니다.';
 
   @override
+  String get unsyncedChangesTitle => '동기화되지 않은 변경이 있어요';
+
+  @override
+  String get unsyncedChangesBody => '로그아웃하면 이 기기에서 지워지고 다른 기기에서는 볼 수 없어요.';
+
+  @override
+  String get signOutAnyway => '그래도 로그아웃';
+
+  @override
+  String get dataNotCleared => '이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.';
+
+  @override
+  String get syncSyncing => '동기화 중';
+
+  @override
+  String get syncSynced => '동기화됨';
+
+  @override
+  String get syncOffline => '오프라인 · 연결되면 동기화해요';
+
+  @override
+  String get syncFailed => '동기화하지 못했어요';
+
+  @override
+  String get syncRetry => '다시 시도';
+
+  @override
   String get photoCaptureHint => '단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요';
 
   @override
@@ -419,4 +446,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get photoUnreadable => '이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.';
+
+  @override
+  String get deckDeleted => '이 덱은 삭제됐어요. 다른 덱을 골라 주세요.';
 }

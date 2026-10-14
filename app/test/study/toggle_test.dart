@@ -14,6 +14,10 @@ import 'fixtures.dart';
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
   @override
+  Future<CardState?> fold(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
   Future<CardState> review(
     CardState? state,
     Answer answer,

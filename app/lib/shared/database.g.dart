@@ -48,8 +48,39 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, createdAt, updatedAt];
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    dirty,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -91,6 +122,18 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
     return context;
   }
 
@@ -116,6 +159,14 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
     );
   }
 
@@ -130,11 +181,15 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   final String name;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool dirty;
   const DeckRow({
     required this.id,
     required this.name,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
+    required this.dirty,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -143,6 +198,10 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     map['name'] = Variable<String>(name);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['dirty'] = Variable<bool>(dirty);
     return map;
   }
 
@@ -152,6 +211,10 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       name: Value(name),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      dirty: Value(dirty),
     );
   }
 
@@ -165,6 +228,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       name: serializer.fromJson<String>(json['name']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
     );
   }
   @override
@@ -175,6 +240,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       'name': serializer.toJson<String>(name),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'dirty': serializer.toJson<bool>(dirty),
     };
   }
 
@@ -183,11 +250,15 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     String? name,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? dirty,
   }) => DeckRow(
     id: id ?? this.id,
     name: name ?? this.name,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    dirty: dirty ?? this.dirty,
   );
   DeckRow copyWithCompanion(DecksCompanion data) {
     return DeckRow(
@@ -195,6 +266,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       name: data.name.present ? data.name.value : this.name,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
   }
 
@@ -204,13 +277,16 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, createdAt, updatedAt);
+  int get hashCode =>
+      Object.hash(id, name, createdAt, updatedAt, deletedAt, dirty);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -218,7 +294,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           other.id == this.id &&
           other.name == this.name &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.dirty == this.dirty);
 }
 
 class DecksCompanion extends UpdateCompanion<DeckRow> {
@@ -226,12 +304,16 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   final Value<String> name;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> dirty;
   final Value<int> rowid;
   const DecksCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DecksCompanion.insert({
@@ -239,6 +321,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     required String name,
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -249,6 +333,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     Expression<String>? name,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -256,6 +342,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       if (name != null) 'name': name,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -265,6 +353,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     Value<String>? name,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? dirty,
     Value<int>? rowid,
   }) {
     return DecksCompanion(
@@ -272,6 +362,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       name: name ?? this.name,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -291,6 +383,12 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -304,6 +402,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
           ..write('name: $name, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -397,6 +497,30 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -407,6 +531,8 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     source,
     createdAt,
     updatedAt,
+    deletedAt,
+    dirty,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -481,6 +607,18 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
     return context;
   }
 
@@ -522,6 +660,14 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
     );
   }
 
@@ -540,6 +686,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
   final String source;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool dirty;
   const CardRow({
     required this.id,
     required this.deckId,
@@ -549,6 +697,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     required this.source,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
+    required this.dirty,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -561,6 +711,10 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     map['source'] = Variable<String>(source);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['dirty'] = Variable<bool>(dirty);
     return map;
   }
 
@@ -574,6 +728,10 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       source: Value(source),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      dirty: Value(dirty),
     );
   }
 
@@ -591,6 +749,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       source: serializer.fromJson<String>(json['source']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
     );
   }
   @override
@@ -605,6 +765,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       'source': serializer.toJson<String>(source),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'dirty': serializer.toJson<bool>(dirty),
     };
   }
 
@@ -617,6 +779,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     String? source,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? dirty,
   }) => CardRow(
     id: id ?? this.id,
     deckId: deckId ?? this.deckId,
@@ -626,6 +790,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     source: source ?? this.source,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    dirty: dirty ?? this.dirty,
   );
   CardRow copyWithCompanion(CardsCompanion data) {
     return CardRow(
@@ -637,6 +803,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       source: data.source.present ? data.source.value : this.source,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
   }
 
@@ -650,7 +818,9 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           ..write('cardKey: $cardKey, ')
           ..write('source: $source, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty')
           ..write(')'))
         .toString();
   }
@@ -665,6 +835,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     source,
     createdAt,
     updatedAt,
+    deletedAt,
+    dirty,
   );
   @override
   bool operator ==(Object other) =>
@@ -677,7 +849,9 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           other.cardKey == this.cardKey &&
           other.source == this.source &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.dirty == this.dirty);
 }
 
 class CardsCompanion extends UpdateCompanion<CardRow> {
@@ -689,6 +863,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
   final Value<String> source;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> dirty;
   final Value<int> rowid;
   const CardsCompanion({
     this.id = const Value.absent(),
@@ -699,6 +875,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     this.source = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CardsCompanion.insert({
@@ -710,6 +888,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     required String source,
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        deckId = Value(deckId),
@@ -728,6 +908,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Expression<String>? source,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -739,6 +921,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       if (source != null) 'source': source,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -752,6 +936,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Value<String>? source,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? dirty,
     Value<int>? rowid,
   }) {
     return CardsCompanion(
@@ -763,6 +949,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       source: source ?? this.source,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -794,6 +982,12 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -811,6 +1005,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
           ..write('source: $source, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -887,6 +1083,41 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -895,6 +1126,9 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     reviewedAt,
     durationMs,
     fuzzFactor,
+    updatedAt,
+    deletedAt,
+    dirty,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -951,6 +1185,26 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         fuzzFactor.isAcceptableOrUnknown(data['fuzz_factor']!, _fuzzFactorMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
     return context;
   }
 
@@ -984,6 +1238,18 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         DriftSqlType.double,
         data['${effectivePrefix}fuzz_factor'],
       ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
     );
   }
 
@@ -1003,6 +1269,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
   /// The fuzz factor the review was scheduled with; null for a review written
   /// before schema v3, which was scheduled without fuzz.
   final double? fuzzFactor;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool dirty;
   const ReviewRow({
     required this.id,
     required this.cardId,
@@ -1010,6 +1279,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     required this.reviewedAt,
     required this.durationMs,
     this.fuzzFactor,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.dirty,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1022,6 +1294,11 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     if (!nullToAbsent || fuzzFactor != null) {
       map['fuzz_factor'] = Variable<double>(fuzzFactor);
     }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['dirty'] = Variable<bool>(dirty);
     return map;
   }
 
@@ -1035,6 +1312,11 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       fuzzFactor: fuzzFactor == null && nullToAbsent
           ? const Value.absent()
           : Value(fuzzFactor),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      dirty: Value(dirty),
     );
   }
 
@@ -1050,6 +1332,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       reviewedAt: serializer.fromJson<DateTime>(json['reviewedAt']),
       durationMs: serializer.fromJson<int>(json['durationMs']),
       fuzzFactor: serializer.fromJson<double?>(json['fuzzFactor']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
     );
   }
   @override
@@ -1062,6 +1347,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       'reviewedAt': serializer.toJson<DateTime>(reviewedAt),
       'durationMs': serializer.toJson<int>(durationMs),
       'fuzzFactor': serializer.toJson<double?>(fuzzFactor),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'dirty': serializer.toJson<bool>(dirty),
     };
   }
 
@@ -1072,6 +1360,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     DateTime? reviewedAt,
     int? durationMs,
     Value<double?> fuzzFactor = const Value.absent(),
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? dirty,
   }) => ReviewRow(
     id: id ?? this.id,
     cardId: cardId ?? this.cardId,
@@ -1079,6 +1370,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     reviewedAt: reviewedAt ?? this.reviewedAt,
     durationMs: durationMs ?? this.durationMs,
     fuzzFactor: fuzzFactor.present ? fuzzFactor.value : this.fuzzFactor,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    dirty: dirty ?? this.dirty,
   );
   ReviewRow copyWithCompanion(ReviewsCompanion data) {
     return ReviewRow(
@@ -1094,6 +1388,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       fuzzFactor: data.fuzzFactor.present
           ? data.fuzzFactor.value
           : this.fuzzFactor,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
   }
 
@@ -1105,14 +1402,26 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ..write('rating: $rating, ')
           ..write('reviewedAt: $reviewedAt, ')
           ..write('durationMs: $durationMs, ')
-          ..write('fuzzFactor: $fuzzFactor')
+          ..write('fuzzFactor: $fuzzFactor, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, cardId, rating, reviewedAt, durationMs, fuzzFactor);
+  int get hashCode => Object.hash(
+    id,
+    cardId,
+    rating,
+    reviewedAt,
+    durationMs,
+    fuzzFactor,
+    updatedAt,
+    deletedAt,
+    dirty,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1122,7 +1431,10 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           other.rating == this.rating &&
           other.reviewedAt == this.reviewedAt &&
           other.durationMs == this.durationMs &&
-          other.fuzzFactor == this.fuzzFactor);
+          other.fuzzFactor == this.fuzzFactor &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.dirty == this.dirty);
 }
 
 class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
@@ -1132,6 +1444,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
   final Value<DateTime> reviewedAt;
   final Value<int> durationMs;
   final Value<double?> fuzzFactor;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> dirty;
   final Value<int> rowid;
   const ReviewsCompanion({
     this.id = const Value.absent(),
@@ -1140,6 +1455,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     this.reviewedAt = const Value.absent(),
     this.durationMs = const Value.absent(),
     this.fuzzFactor = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ReviewsCompanion.insert({
@@ -1149,12 +1467,16 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     required DateTime reviewedAt,
     required int durationMs,
     this.fuzzFactor = const Value.absent(),
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        cardId = Value(cardId),
        rating = Value(rating),
        reviewedAt = Value(reviewedAt),
-       durationMs = Value(durationMs);
+       durationMs = Value(durationMs),
+       updatedAt = Value(updatedAt);
   static Insertable<ReviewRow> custom({
     Expression<String>? id,
     Expression<String>? cardId,
@@ -1162,6 +1484,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Expression<DateTime>? reviewedAt,
     Expression<int>? durationMs,
     Expression<double>? fuzzFactor,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1171,6 +1496,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       if (reviewedAt != null) 'reviewed_at': reviewedAt,
       if (durationMs != null) 'duration_ms': durationMs,
       if (fuzzFactor != null) 'fuzz_factor': fuzzFactor,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1182,6 +1510,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Value<DateTime>? reviewedAt,
     Value<int>? durationMs,
     Value<double?>? fuzzFactor,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? dirty,
     Value<int>? rowid,
   }) {
     return ReviewsCompanion(
@@ -1191,6 +1522,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       reviewedAt: reviewedAt ?? this.reviewedAt,
       durationMs: durationMs ?? this.durationMs,
       fuzzFactor: fuzzFactor ?? this.fuzzFactor,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1216,6 +1550,15 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     if (fuzzFactor.present) {
       map['fuzz_factor'] = Variable<double>(fuzzFactor.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1231,6 +1574,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
           ..write('reviewedAt: $reviewedAt, ')
           ..write('durationMs: $durationMs, ')
           ..write('fuzzFactor: $fuzzFactor, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1297,6 +1643,41 @@ class $CardStatesTable extends CardStates
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cardId,
@@ -1304,6 +1685,9 @@ class $CardStatesTable extends CardStates
     difficulty,
     lastReview,
     due,
+    updatedAt,
+    deletedAt,
+    dirty,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1357,6 +1741,26 @@ class $CardStatesTable extends CardStates
     } else if (isInserting) {
       context.missing(_dueMeta);
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
     return context;
   }
 
@@ -1386,6 +1790,18 @@ class $CardStatesTable extends CardStates
         DriftSqlType.dateTime,
         data['${effectivePrefix}due'],
       )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
     );
   }
 
@@ -1401,12 +1817,18 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
   final double difficulty;
   final DateTime lastReview;
   final DateTime due;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool dirty;
   const CardStateRow({
     required this.cardId,
     required this.stability,
     required this.difficulty,
     required this.lastReview,
     required this.due,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.dirty,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1416,6 +1838,11 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     map['difficulty'] = Variable<double>(difficulty);
     map['last_review'] = Variable<DateTime>(lastReview);
     map['due'] = Variable<DateTime>(due);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['dirty'] = Variable<bool>(dirty);
     return map;
   }
 
@@ -1426,6 +1853,11 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
       difficulty: Value(difficulty),
       lastReview: Value(lastReview),
       due: Value(due),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      dirty: Value(dirty),
     );
   }
 
@@ -1440,6 +1872,9 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
       difficulty: serializer.fromJson<double>(json['difficulty']),
       lastReview: serializer.fromJson<DateTime>(json['lastReview']),
       due: serializer.fromJson<DateTime>(json['due']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
     );
   }
   @override
@@ -1451,6 +1886,9 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
       'difficulty': serializer.toJson<double>(difficulty),
       'lastReview': serializer.toJson<DateTime>(lastReview),
       'due': serializer.toJson<DateTime>(due),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'dirty': serializer.toJson<bool>(dirty),
     };
   }
 
@@ -1460,12 +1898,18 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     double? difficulty,
     DateTime? lastReview,
     DateTime? due,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? dirty,
   }) => CardStateRow(
     cardId: cardId ?? this.cardId,
     stability: stability ?? this.stability,
     difficulty: difficulty ?? this.difficulty,
     lastReview: lastReview ?? this.lastReview,
     due: due ?? this.due,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    dirty: dirty ?? this.dirty,
   );
   CardStateRow copyWithCompanion(CardStatesCompanion data) {
     return CardStateRow(
@@ -1478,6 +1922,9 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
           ? data.lastReview.value
           : this.lastReview,
       due: data.due.present ? data.due.value : this.due,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
   }
 
@@ -1488,14 +1935,25 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
           ..write('stability: $stability, ')
           ..write('difficulty: $difficulty, ')
           ..write('lastReview: $lastReview, ')
-          ..write('due: $due')
+          ..write('due: $due, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(cardId, stability, difficulty, lastReview, due);
+  int get hashCode => Object.hash(
+    cardId,
+    stability,
+    difficulty,
+    lastReview,
+    due,
+    updatedAt,
+    deletedAt,
+    dirty,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1504,7 +1962,10 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
           other.stability == this.stability &&
           other.difficulty == this.difficulty &&
           other.lastReview == this.lastReview &&
-          other.due == this.due);
+          other.due == this.due &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.dirty == this.dirty);
 }
 
 class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
@@ -1513,6 +1974,9 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
   final Value<double> difficulty;
   final Value<DateTime> lastReview;
   final Value<DateTime> due;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> dirty;
   final Value<int> rowid;
   const CardStatesCompanion({
     this.cardId = const Value.absent(),
@@ -1520,6 +1984,9 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     this.difficulty = const Value.absent(),
     this.lastReview = const Value.absent(),
     this.due = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CardStatesCompanion.insert({
@@ -1528,18 +1995,25 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     required double difficulty,
     required DateTime lastReview,
     required DateTime due,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cardId = Value(cardId),
        stability = Value(stability),
        difficulty = Value(difficulty),
        lastReview = Value(lastReview),
-       due = Value(due);
+       due = Value(due),
+       updatedAt = Value(updatedAt);
   static Insertable<CardStateRow> custom({
     Expression<String>? cardId,
     Expression<double>? stability,
     Expression<double>? difficulty,
     Expression<DateTime>? lastReview,
     Expression<DateTime>? due,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1548,6 +2022,9 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
       if (difficulty != null) 'difficulty': difficulty,
       if (lastReview != null) 'last_review': lastReview,
       if (due != null) 'due': due,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1558,6 +2035,9 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     Value<double>? difficulty,
     Value<DateTime>? lastReview,
     Value<DateTime>? due,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? dirty,
     Value<int>? rowid,
   }) {
     return CardStatesCompanion(
@@ -1566,6 +2046,9 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
       difficulty: difficulty ?? this.difficulty,
       lastReview: lastReview ?? this.lastReview,
       due: due ?? this.due,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1588,6 +2071,15 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     if (due.present) {
       map['due'] = Variable<DateTime>(due.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1602,7 +2094,431 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
           ..write('difficulty: $difficulty, ')
           ..write('lastReview: $lastReview, ')
           ..write('due: $due, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncStateTable extends SyncState
+    with TableInfo<$SyncStateTable, SyncStateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncStateTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    check: () => const CustomExpression('id = 0'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ownerMeta = const VerificationMeta('owner');
+  @override
+  late final GeneratedColumn<String> owner = GeneratedColumn<String>(
+    'owner',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _decksRevisionMeta = const VerificationMeta(
+    'decksRevision',
+  );
+  @override
+  late final GeneratedColumn<int> decksRevision = GeneratedColumn<int>(
+    'decks_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cardsRevisionMeta = const VerificationMeta(
+    'cardsRevision',
+  );
+  @override
+  late final GeneratedColumn<int> cardsRevision = GeneratedColumn<int>(
+    'cards_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reviewsRevisionMeta = const VerificationMeta(
+    'reviewsRevision',
+  );
+  @override
+  late final GeneratedColumn<int> reviewsRevision = GeneratedColumn<int>(
+    'reviews_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cardStatesRevisionMeta =
+      const VerificationMeta('cardStatesRevision');
+  @override
+  late final GeneratedColumn<int> cardStatesRevision = GeneratedColumn<int>(
+    'card_states_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    owner,
+    decksRevision,
+    cardsRevision,
+    reviewsRevision,
+    cardStatesRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_state';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncStateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('owner')) {
+      context.handle(
+        _ownerMeta,
+        owner.isAcceptableOrUnknown(data['owner']!, _ownerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerMeta);
+    }
+    if (data.containsKey('decks_revision')) {
+      context.handle(
+        _decksRevisionMeta,
+        decksRevision.isAcceptableOrUnknown(
+          data['decks_revision']!,
+          _decksRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_decksRevisionMeta);
+    }
+    if (data.containsKey('cards_revision')) {
+      context.handle(
+        _cardsRevisionMeta,
+        cardsRevision.isAcceptableOrUnknown(
+          data['cards_revision']!,
+          _cardsRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_cardsRevisionMeta);
+    }
+    if (data.containsKey('reviews_revision')) {
+      context.handle(
+        _reviewsRevisionMeta,
+        reviewsRevision.isAcceptableOrUnknown(
+          data['reviews_revision']!,
+          _reviewsRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_reviewsRevisionMeta);
+    }
+    if (data.containsKey('card_states_revision')) {
+      context.handle(
+        _cardStatesRevisionMeta,
+        cardStatesRevision.isAcceptableOrUnknown(
+          data['card_states_revision']!,
+          _cardStatesRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_cardStatesRevisionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SyncStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncStateRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      owner: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner'],
+      )!,
+      decksRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}decks_revision'],
+      )!,
+      cardsRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cards_revision'],
+      )!,
+      reviewsRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reviews_revision'],
+      )!,
+      cardStatesRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}card_states_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $SyncStateTable createAlias(String alias) {
+    return $SyncStateTable(attachedDatabase, alias);
+  }
+}
+
+class SyncStateRow extends DataClass implements Insertable<SyncStateRow> {
+  final int id;
+  final String owner;
+  final int decksRevision;
+  final int cardsRevision;
+  final int reviewsRevision;
+  final int cardStatesRevision;
+  const SyncStateRow({
+    required this.id,
+    required this.owner,
+    required this.decksRevision,
+    required this.cardsRevision,
+    required this.reviewsRevision,
+    required this.cardStatesRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['owner'] = Variable<String>(owner);
+    map['decks_revision'] = Variable<int>(decksRevision);
+    map['cards_revision'] = Variable<int>(cardsRevision);
+    map['reviews_revision'] = Variable<int>(reviewsRevision);
+    map['card_states_revision'] = Variable<int>(cardStatesRevision);
+    return map;
+  }
+
+  SyncStateCompanion toCompanion(bool nullToAbsent) {
+    return SyncStateCompanion(
+      id: Value(id),
+      owner: Value(owner),
+      decksRevision: Value(decksRevision),
+      cardsRevision: Value(cardsRevision),
+      reviewsRevision: Value(reviewsRevision),
+      cardStatesRevision: Value(cardStatesRevision),
+    );
+  }
+
+  factory SyncStateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncStateRow(
+      id: serializer.fromJson<int>(json['id']),
+      owner: serializer.fromJson<String>(json['owner']),
+      decksRevision: serializer.fromJson<int>(json['decksRevision']),
+      cardsRevision: serializer.fromJson<int>(json['cardsRevision']),
+      reviewsRevision: serializer.fromJson<int>(json['reviewsRevision']),
+      cardStatesRevision: serializer.fromJson<int>(json['cardStatesRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'owner': serializer.toJson<String>(owner),
+      'decksRevision': serializer.toJson<int>(decksRevision),
+      'cardsRevision': serializer.toJson<int>(cardsRevision),
+      'reviewsRevision': serializer.toJson<int>(reviewsRevision),
+      'cardStatesRevision': serializer.toJson<int>(cardStatesRevision),
+    };
+  }
+
+  SyncStateRow copyWith({
+    int? id,
+    String? owner,
+    int? decksRevision,
+    int? cardsRevision,
+    int? reviewsRevision,
+    int? cardStatesRevision,
+  }) => SyncStateRow(
+    id: id ?? this.id,
+    owner: owner ?? this.owner,
+    decksRevision: decksRevision ?? this.decksRevision,
+    cardsRevision: cardsRevision ?? this.cardsRevision,
+    reviewsRevision: reviewsRevision ?? this.reviewsRevision,
+    cardStatesRevision: cardStatesRevision ?? this.cardStatesRevision,
+  );
+  SyncStateRow copyWithCompanion(SyncStateCompanion data) {
+    return SyncStateRow(
+      id: data.id.present ? data.id.value : this.id,
+      owner: data.owner.present ? data.owner.value : this.owner,
+      decksRevision: data.decksRevision.present
+          ? data.decksRevision.value
+          : this.decksRevision,
+      cardsRevision: data.cardsRevision.present
+          ? data.cardsRevision.value
+          : this.cardsRevision,
+      reviewsRevision: data.reviewsRevision.present
+          ? data.reviewsRevision.value
+          : this.reviewsRevision,
+      cardStatesRevision: data.cardStatesRevision.present
+          ? data.cardStatesRevision.value
+          : this.cardStatesRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncStateRow(')
+          ..write('id: $id, ')
+          ..write('owner: $owner, ')
+          ..write('decksRevision: $decksRevision, ')
+          ..write('cardsRevision: $cardsRevision, ')
+          ..write('reviewsRevision: $reviewsRevision, ')
+          ..write('cardStatesRevision: $cardStatesRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    owner,
+    decksRevision,
+    cardsRevision,
+    reviewsRevision,
+    cardStatesRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncStateRow &&
+          other.id == this.id &&
+          other.owner == this.owner &&
+          other.decksRevision == this.decksRevision &&
+          other.cardsRevision == this.cardsRevision &&
+          other.reviewsRevision == this.reviewsRevision &&
+          other.cardStatesRevision == this.cardStatesRevision);
+}
+
+class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
+  final Value<int> id;
+  final Value<String> owner;
+  final Value<int> decksRevision;
+  final Value<int> cardsRevision;
+  final Value<int> reviewsRevision;
+  final Value<int> cardStatesRevision;
+  const SyncStateCompanion({
+    this.id = const Value.absent(),
+    this.owner = const Value.absent(),
+    this.decksRevision = const Value.absent(),
+    this.cardsRevision = const Value.absent(),
+    this.reviewsRevision = const Value.absent(),
+    this.cardStatesRevision = const Value.absent(),
+  });
+  SyncStateCompanion.insert({
+    this.id = const Value.absent(),
+    required String owner,
+    required int decksRevision,
+    required int cardsRevision,
+    required int reviewsRevision,
+    required int cardStatesRevision,
+  }) : owner = Value(owner),
+       decksRevision = Value(decksRevision),
+       cardsRevision = Value(cardsRevision),
+       reviewsRevision = Value(reviewsRevision),
+       cardStatesRevision = Value(cardStatesRevision);
+  static Insertable<SyncStateRow> custom({
+    Expression<int>? id,
+    Expression<String>? owner,
+    Expression<int>? decksRevision,
+    Expression<int>? cardsRevision,
+    Expression<int>? reviewsRevision,
+    Expression<int>? cardStatesRevision,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (owner != null) 'owner': owner,
+      if (decksRevision != null) 'decks_revision': decksRevision,
+      if (cardsRevision != null) 'cards_revision': cardsRevision,
+      if (reviewsRevision != null) 'reviews_revision': reviewsRevision,
+      if (cardStatesRevision != null)
+        'card_states_revision': cardStatesRevision,
+    });
+  }
+
+  SyncStateCompanion copyWith({
+    Value<int>? id,
+    Value<String>? owner,
+    Value<int>? decksRevision,
+    Value<int>? cardsRevision,
+    Value<int>? reviewsRevision,
+    Value<int>? cardStatesRevision,
+  }) {
+    return SyncStateCompanion(
+      id: id ?? this.id,
+      owner: owner ?? this.owner,
+      decksRevision: decksRevision ?? this.decksRevision,
+      cardsRevision: cardsRevision ?? this.cardsRevision,
+      reviewsRevision: reviewsRevision ?? this.reviewsRevision,
+      cardStatesRevision: cardStatesRevision ?? this.cardStatesRevision,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (owner.present) {
+      map['owner'] = Variable<String>(owner.value);
+    }
+    if (decksRevision.present) {
+      map['decks_revision'] = Variable<int>(decksRevision.value);
+    }
+    if (cardsRevision.present) {
+      map['cards_revision'] = Variable<int>(cardsRevision.value);
+    }
+    if (reviewsRevision.present) {
+      map['reviews_revision'] = Variable<int>(reviewsRevision.value);
+    }
+    if (cardStatesRevision.present) {
+      map['card_states_revision'] = Variable<int>(cardStatesRevision.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncStateCompanion(')
+          ..write('id: $id, ')
+          ..write('owner: $owner, ')
+          ..write('decksRevision: $decksRevision, ')
+          ..write('cardsRevision: $cardsRevision, ')
+          ..write('reviewsRevision: $reviewsRevision, ')
+          ..write('cardStatesRevision: $cardStatesRevision')
           ..write(')'))
         .toString();
   }
@@ -1615,6 +2531,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CardsTable cards = $CardsTable(this);
   late final $ReviewsTable reviews = $ReviewsTable(this);
   late final $CardStatesTable cardStates = $CardStatesTable(this);
+  late final $SyncStateTable syncState = $SyncStateTable(this);
   late final Index cardsDeckIdCardKey = Index(
     'cards_deck_id_card_key',
     'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key)',
@@ -1628,6 +2545,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cards,
     reviews,
     cardStates,
+    syncState,
     cardsDeckIdCardKey,
   ];
   @override
@@ -1661,6 +2579,8 @@ typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
   required String name,
   required DateTime createdAt,
   required DateTime updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 typedef $$DecksTableUpdateCompanionBuilder = DecksCompanion Function({
@@ -1668,6 +2588,8 @@ typedef $$DecksTableUpdateCompanionBuilder = DecksCompanion Function({
   Value<String> name,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 
@@ -1720,6 +2642,16 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1777,6 +2709,16 @@ class $$DecksTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DecksTableAnnotationComposer
@@ -1799,6 +2741,12 @@ class $$DecksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
 
   Expression<T> cardsRefs<T extends Object>(
     Expression<T> Function($$CardsTableAnnotationComposer a) f,
@@ -1858,12 +2806,16 @@ class $$DecksTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DecksCompanion(
                 id: id,
                 name: name,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1872,12 +2824,16 @@ class $$DecksTableTableManager
                 required String name,
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DecksCompanion.insert(
                 id: id,
                 name: name,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -1938,6 +2894,8 @@ typedef $$CardsTableCreateCompanionBuilder = CardsCompanion Function({
   required String source,
   required DateTime createdAt,
   required DateTime updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 typedef $$CardsTableUpdateCompanionBuilder = CardsCompanion Function({
@@ -1949,6 +2907,8 @@ typedef $$CardsTableUpdateCompanionBuilder = CardsCompanion Function({
   Value<String> source,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 
@@ -2051,6 +3011,16 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2172,6 +3142,16 @@ class $$CardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$DecksTableOrderingComposer get deckId {
     final $$DecksTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2225,6 +3205,12 @@ class $$CardsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
 
   $$DecksTableAnnotationComposer get deckId {
     final $$DecksTableAnnotationComposer composer = $composerBuilder(
@@ -2340,6 +3326,8 @@ class $$CardsTableTableManager
                 Value<String> source = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardsCompanion(
                 id: id,
@@ -2350,6 +3338,8 @@ class $$CardsTableTableManager
                 source: source,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2362,6 +3352,8 @@ class $$CardsTableTableManager
                 required String source,
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardsCompanion.insert(
                 id: id,
@@ -2372,6 +3364,8 @@ class $$CardsTableTableManager
                 source: source,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2493,6 +3487,9 @@ typedef $$ReviewsTableCreateCompanionBuilder = ReviewsCompanion Function({
   required DateTime reviewedAt,
   required int durationMs,
   Value<double?> fuzzFactor,
+  required DateTime updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 typedef $$ReviewsTableUpdateCompanionBuilder = ReviewsCompanion Function({
@@ -2502,6 +3499,9 @@ typedef $$ReviewsTableUpdateCompanionBuilder = ReviewsCompanion Function({
   Value<DateTime> reviewedAt,
   Value<int> durationMs,
   Value<double?> fuzzFactor,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 
@@ -2558,6 +3558,21 @@ class $$ReviewsTableFilterComposer
 
   ColumnFilters<double> get fuzzFactor => $composableBuilder(
     column: $table.fuzzFactor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2619,6 +3634,21 @@ class $$ReviewsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CardsTableOrderingComposer get cardId {
     final $$CardsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2672,6 +3702,15 @@ class $$ReviewsTableAnnotationComposer
     column: $table.fuzzFactor,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
 
   $$CardsTableAnnotationComposer get cardId {
     final $$CardsTableAnnotationComposer composer = $composerBuilder(
@@ -2731,6 +3770,9 @@ class $$ReviewsTableTableManager
                 Value<DateTime> reviewedAt = const Value.absent(),
                 Value<int> durationMs = const Value.absent(),
                 Value<double?> fuzzFactor = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion(
                 id: id,
@@ -2739,6 +3781,9 @@ class $$ReviewsTableTableManager
                 reviewedAt: reviewedAt,
                 durationMs: durationMs,
                 fuzzFactor: fuzzFactor,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2749,6 +3794,9 @@ class $$ReviewsTableTableManager
                 required DateTime reviewedAt,
                 required int durationMs,
                 Value<double?> fuzzFactor = const Value.absent(),
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion.insert(
                 id: id,
@@ -2757,6 +3805,9 @@ class $$ReviewsTableTableManager
                 reviewedAt: reviewedAt,
                 durationMs: durationMs,
                 fuzzFactor: fuzzFactor,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2831,6 +3882,9 @@ typedef $$CardStatesTableCreateCompanionBuilder = CardStatesCompanion Function({
   required double difficulty,
   required DateTime lastReview,
   required DateTime due,
+  required DateTime updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 typedef $$CardStatesTableUpdateCompanionBuilder = CardStatesCompanion Function({
@@ -2839,6 +3893,9 @@ typedef $$CardStatesTableUpdateCompanionBuilder = CardStatesCompanion Function({
   Value<double> difficulty,
   Value<DateTime> lastReview,
   Value<DateTime> due,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<bool> dirty,
   Value<int> rowid,
 });
 
@@ -2890,6 +3947,21 @@ class $$CardStatesTableFilterComposer
 
   ColumnFilters<DateTime> get due => $composableBuilder(
     column: $table.due,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2946,6 +4018,21 @@ class $$CardStatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CardsTableOrderingComposer get cardId {
     final $$CardsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2994,6 +4081,15 @@ class $$CardStatesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get due =>
       $composableBuilder(column: $table.due, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
 
   $$CardsTableAnnotationComposer get cardId {
     final $$CardsTableAnnotationComposer composer = $composerBuilder(
@@ -3052,6 +4148,9 @@ class $$CardStatesTableTableManager
                 Value<double> difficulty = const Value.absent(),
                 Value<DateTime> lastReview = const Value.absent(),
                 Value<DateTime> due = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardStatesCompanion(
                 cardId: cardId,
@@ -3059,6 +4158,9 @@ class $$CardStatesTableTableManager
                 difficulty: difficulty,
                 lastReview: lastReview,
                 due: due,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3068,6 +4170,9 @@ class $$CardStatesTableTableManager
                 required double difficulty,
                 required DateTime lastReview,
                 required DateTime due,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardStatesCompanion.insert(
                 cardId: cardId,
@@ -3075,6 +4180,9 @@ class $$CardStatesTableTableManager
                 difficulty: difficulty,
                 lastReview: lastReview,
                 due: due,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3142,6 +4250,234 @@ typedef $$CardStatesTableProcessedTableManager =
       CardStateRow,
       PrefetchHooks Function({bool cardId})
     >;
+typedef $$SyncStateTableCreateCompanionBuilder = SyncStateCompanion Function({
+  Value<int> id,
+  required String owner,
+  required int decksRevision,
+  required int cardsRevision,
+  required int reviewsRevision,
+  required int cardStatesRevision,
+});
+typedef $$SyncStateTableUpdateCompanionBuilder = SyncStateCompanion Function({
+  Value<int> id,
+  Value<String> owner,
+  Value<int> decksRevision,
+  Value<int> cardsRevision,
+  Value<int> reviewsRevision,
+  Value<int> cardStatesRevision,
+});
+
+class $$SyncStateTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncStateTable> {
+  $$SyncStateTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get owner => $composableBuilder(
+    column: $table.owner,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get decksRevision => $composableBuilder(
+    column: $table.decksRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardsRevision => $composableBuilder(
+    column: $table.cardsRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reviewsRevision => $composableBuilder(
+    column: $table.reviewsRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardStatesRevision => $composableBuilder(
+    column: $table.cardStatesRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncStateTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncStateTable> {
+  $$SyncStateTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get owner => $composableBuilder(
+    column: $table.owner,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get decksRevision => $composableBuilder(
+    column: $table.decksRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cardsRevision => $composableBuilder(
+    column: $table.cardsRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reviewsRevision => $composableBuilder(
+    column: $table.reviewsRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cardStatesRevision => $composableBuilder(
+    column: $table.cardStatesRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncStateTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncStateTable> {
+  $$SyncStateTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get owner =>
+      $composableBuilder(column: $table.owner, builder: (column) => column);
+
+  GeneratedColumn<int> get decksRevision => $composableBuilder(
+    column: $table.decksRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cardsRevision => $composableBuilder(
+    column: $table.cardsRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reviewsRevision => $composableBuilder(
+    column: $table.reviewsRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cardStatesRevision => $composableBuilder(
+    column: $table.cardStatesRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncStateTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncStateTable,
+          SyncStateRow,
+          $$SyncStateTableFilterComposer,
+          $$SyncStateTableOrderingComposer,
+          $$SyncStateTableAnnotationComposer,
+          $$SyncStateTableCreateCompanionBuilder,
+          $$SyncStateTableUpdateCompanionBuilder,
+          (
+            SyncStateRow,
+            BaseReferences<_$AppDatabase, $SyncStateTable, SyncStateRow>,
+          ),
+          SyncStateRow,
+          PrefetchHooks Function()
+        > {
+  $$SyncStateTableTableManager(_$AppDatabase db, $SyncStateTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncStateTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncStateTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncStateTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> owner = const Value.absent(),
+                Value<int> decksRevision = const Value.absent(),
+                Value<int> cardsRevision = const Value.absent(),
+                Value<int> reviewsRevision = const Value.absent(),
+                Value<int> cardStatesRevision = const Value.absent(),
+              }) => SyncStateCompanion(
+                id: id,
+                owner: owner,
+                decksRevision: decksRevision,
+                cardsRevision: cardsRevision,
+                reviewsRevision: reviewsRevision,
+                cardStatesRevision: cardStatesRevision,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String owner,
+                required int decksRevision,
+                required int cardsRevision,
+                required int reviewsRevision,
+                required int cardStatesRevision,
+              }) => SyncStateCompanion.insert(
+                id: id,
+                owner: owner,
+                decksRevision: decksRevision,
+                cardsRevision: cardsRevision,
+                reviewsRevision: reviewsRevision,
+                cardStatesRevision: cardStatesRevision,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyncStateTable, SyncStateRow>(table),
+                  BaseReferences<_$AppDatabase, $SyncStateTable, SyncStateRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncStateTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncStateTable,
+      SyncStateRow,
+      $$SyncStateTableFilterComposer,
+      $$SyncStateTableOrderingComposer,
+      $$SyncStateTableAnnotationComposer,
+      $$SyncStateTableCreateCompanionBuilder,
+      $$SyncStateTableUpdateCompanionBuilder,
+      (
+        SyncStateRow,
+        BaseReferences<_$AppDatabase, $SyncStateTable, SyncStateRow>,
+      ),
+      SyncStateRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3154,4 +4490,6 @@ class $AppDatabaseManager {
       $$ReviewsTableTableManager(_db, _db.reviews);
   $$CardStatesTableTableManager get cardStates =>
       $$CardStatesTableTableManager(_db, _db.cardStates);
+  $$SyncStateTableTableManager get syncState =>
+      $$SyncStateTableTableManager(_db, _db.syncState);
 }

@@ -4,7 +4,8 @@ The structural rules of the app: what the unit is, what may reference what, and 
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)) and `photo_import` ([`ai-extraction.md`](ai-extraction.md)). The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)) and `photo_import` ([`ai-extraction.md`](ai-extraction.md)).
+- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. `photo_import` depends on `deck` through its surface, and `deck` reaches `photo_import` only through a provider the composition site overrides. The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 
@@ -42,7 +43,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - [ADR 0001](adr/0001-domain-structure.md) records why the app is partitioned by domain and which sibling-dependency relation it takes.
 - [ADR 0002](adr/0002-domain-public-surface-and-shared-database.md) records how a domain declares its public surface and why the database sits below the domains.
 - [ADR 0004](adr/0004-flutter-rust-bridge.md) records why the generated engine bindings sit inside the `study` domain.
-- [ADR 0006](adr/0006-account-native-google-sign-in.md) records why only the `account` domain imports the Supabase and Google packages.
+- [ADR 0006](adr/0006-account-native-google-sign-in.md) records why only the `account` domain imports the Google packages, and [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) why `sync` imports `supabase_flutter` beside it.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme sits in shared code and how the composition site applies it.
 
 ## Open questions

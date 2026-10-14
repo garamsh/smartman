@@ -60,6 +60,7 @@ test:
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
 	./supabase/test-db.sh
+	./supabase/test-sync.sh
 	./deno.sh test
 
 build:

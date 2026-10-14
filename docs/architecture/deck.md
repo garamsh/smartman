@@ -14,7 +14,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - `DeckRepository` and its save results;
   - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, and `mergeBack`;
   - `showNameDialog`, the deck name dialog, which photo import uses to name a new deck;
-  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, and `describeFailure`, the message a user reads for one;
+  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, and `describeFailure`, the message a user reads for one;
   - `TodayCount`, with `TodayPending`, `TodayCounted` and `TodayUnavailable`, and `TodayBuilder`;
   - `deckRepositoryProvider`, `studyScreenProvider`, `todayProvider`, `accountScreenProvider`, `photoImportProvider` and `DeckListScreen`.
 - The `study` domain reads a deck's cards through `DeckRepository.listCards`, oldest first.
@@ -28,12 +28,14 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Storage
 
-- The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` and `card_states` tables there belong to the `study` domain ([`study.md`](study.md)); deleting a card deletes its rows in both through cascading foreign keys.
+- The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` and `card_states` tables there belong to the `study` domain ([`study.md`](study.md)).
+- Every write sets the row's `updated_at` and leaves it unsynced (`dirty`), for sync to push ([`sync.md`](sync.md)).
 - A card side is stored as a JSON array of blocks, each with a `type` discriminator and a `payload`. A new block type adds a discriminator value; stored rows need no migration.
 - A stored block of an unknown type is read as `UnsupportedContent` and written back unchanged, so a card a later version wrote is shown, not lost.
-- Deleting a deck deletes its cards through a cascading foreign key. The UI asks for confirmation first and states how many cards go with it.
-- Deleting a card deletes its study history. The editor asks for confirmation first.
-- Every write is local. Nothing in the domain touches the network.
+- Deleting a deck sets `deleted_at` on it and on each of its cards, a tombstone sync pushes. The UI asks for confirmation first and states how many cards go with it.
+- Deleting a card sets its `deleted_at`. Its reviews and state stay in the database, out of every screen. The editor asks for confirmation first.
+- Every read leaves tombstoned decks and cards out: the lists, the counts, `listCards`, and the duplicate check.
+- Every write is local. Nothing in the domain touches the network or imports `sync`.
 
 ### Card key and duplicates
 
@@ -46,7 +48,8 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Import
 
 - `DeckRepository.importCards` saves a list of `ImportedCard`s into an existing deck, or into a new deck it creates, in one transaction: a failure writes nothing, the new deck included.
-- Each card is plain text on both sides and is written with `source = import`.
+- Each card is plain text on both sides and is written with `source = import`, unsynced like every write.
+- An import into a deck deleted meanwhile, on this device or through sync, is refused with `DeckDeleted` and writes nothing.
 - A card whose key collides with a card in the deck, or with one written earlier in the same import, does what its `DuplicateChoice` says, as the PM decided for issue #30:
   - **skip** (건너뛰기) writes nothing;
   - **merge back** (뒷면 합치기) appends the card's back to the existing card's back as a new text block, keeping its id, front and reviews; when a line of that back already equals it under the card key normalization, nothing changes;
@@ -59,8 +62,9 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - a colliding key is the save result `DuplicateFront`;
   - a block of an unknown type is `UnsupportedContent`;
   - a database exception is `StorageFailure`;
-  - stored content that cannot be decoded is `UnreadableCard`.
-- `StorageFailure` and `UnreadableCard` are `DeckFailure`s the repository throws, or emits on a watched stream.
+  - stored content that cannot be decoded is `UnreadableCard`;
+  - a write into a deck that was deleted is `DeckDeleted`.
+- `StorageFailure`, `UnreadableCard` and `DeckDeleted` are `DeckFailure`s the repository throws, or emits on a watched stream.
 - The screens show a `DeckFailure` to the user as a localized message, in a snack bar for an action or in place of a list. Any other error propagates.
 
 ### Interface
@@ -114,6 +118,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why the entry point takes a `DeckSelection`.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md): why the counts reach this domain through one builder provider rather than a function or a widget per place.
 - Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM. Issue #19 records the selection mode and the header card, issue #22 the current screens, and issue #30 the import save and its duplicate options.
+- [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md): why a delete is a tombstone and every write leaves its row unsynced.
 
 ## Open questions
 

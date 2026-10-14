@@ -17,7 +17,8 @@ export 'src/content.dart'
 export 'src/deck_list_screen.dart' show DeckListScreen;
 export 'src/deck_repository.dart'
     show CardSaved, DeckRepository, DuplicateFront, SaveCardResult;
-export 'src/failure.dart' show DeckFailure, StorageFailure, UnreadableCard;
+export 'src/failure.dart'
+    show DeckDeleted, DeckFailure, StorageFailure, UnreadableCard;
 export 'src/failure_message.dart' show describeFailure;
 export 'src/name_dialog.dart' show showNameDialog;
 export 'src/model.dart'

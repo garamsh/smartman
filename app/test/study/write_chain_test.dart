@@ -17,6 +17,10 @@ import 'fixtures.dart';
 /// Schedules every review one day out, except the first, for which it
 /// throws an error that is not a `StudyFailure`.
 class _FirstCallBreaks implements Scheduler {
+  @override
+  Future<CardState?> fold(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
   final unexpected = StateError('engine state lost');
   var _calls = 0;
 

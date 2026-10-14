@@ -25,6 +25,10 @@ import 'fixtures.dart';
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
   @override
+  Future<CardState?> fold(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
   Future<CardState> review(
     CardState? state,
     Answer answer,
@@ -50,7 +54,12 @@ class _StalledRepository implements StudyRepository {
   Future<Map<CardId, CardState>> statesOf(List<CardId> cards) async => {};
 
   @override
-  Future<void> record(CardId card, List<Review> reviews, CardState state) {
+  Future<void> record(
+    CardId card,
+    List<Review> reviews,
+    CardState state, {
+    required DateTime at,
+  }) {
     records.add(card);
     return Completer<void>().future;
   }
@@ -140,16 +149,21 @@ Future<_Study> _open(
         back: back,
       );
       if (saved case CardSaved(:final card) when states.containsKey(name)) {
-        await seeding.record(card.id, [
-          Review(
-            id: seeding.newReviewId(),
-            cardId: card.id,
-            answer: Answer.know,
-            reviewedAt: states[name]!.lastReview,
-            duration: Duration.zero,
-            fuzzFactor: FuzzFactor.draw(FirstDraw()),
-          ),
-        ], states[name]!);
+        await seeding.record(
+          card.id,
+          [
+            Review(
+              id: seeding.newReviewId(),
+              cardId: card.id,
+              answer: Answer.know,
+              reviewedAt: states[name]!.lastReview,
+              duration: Duration.zero,
+              fuzzFactor: FuzzFactor.draw(FirstDraw()),
+            ),
+          ],
+          states[name]!,
+          at: DateTime.utc(2026, 9, 1),
+        );
       }
     }
     return deck;

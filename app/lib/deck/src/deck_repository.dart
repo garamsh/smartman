@@ -42,6 +42,7 @@ class DeckRepository {
   /// Every deck, ordered by name, re-emitted on each change.
   Stream<List<Deck>> watchDecks() {
     final query = _db.select(_db.decks)
+      ..where((deck) => deck.deletedAt.isNull())
       ..orderBy([(deck) => OrderingTerm.asc(deck.name)]);
     return _guardStream(
       query.watch().map((rows) => rows.map(_toDeck).toList()),
@@ -55,29 +56,46 @@ class DeckRepository {
       name: name,
       createdAt: now,
       updatedAt: now,
+      dirty: true,
     );
     await _db.into(_db.decks).insert(row);
     return _toDeck(row);
   });
 
   Future<void> renameDeck(DeckId id, String name) => _guard(() async {
-    await (_db.update(_db.decks)..where((deck) => deck.id.equals(id.value)))
-        .write(DecksCompanion(name: Value(name), updatedAt: Value(_clock())));
+    await (_db.update(
+      _db.decks,
+    )..where((deck) => deck.id.equals(id.value))).write(
+      DecksCompanion(
+        name: Value(name),
+        updatedAt: Value(_clock()),
+        dirty: const Value(true),
+      ),
+    );
   });
 
-  /// Deletes the deck and, through the foreign key, every card in it.
-  Future<void> deleteDeck(DeckId id) => _guard(() async {
-    await (_db.delete(
-      _db.decks,
-    )..where((deck) => deck.id.equals(id.value))).go();
-  });
+  /// Deletes the deck and every card in it, as tombstones sync pushes.
+  Future<void> deleteDeck(DeckId id) => _guard(
+    () => _db.transaction(() async {
+      final now = _clock();
+      await (_db.update(
+        _db.decks,
+      )..where((deck) => deck.id.equals(id.value))).write(_deckTombstone(now));
+      await (_db.update(_db.cards)..where(
+            (card) => card.deckId.equals(id.value) & card.deletedAt.isNull(),
+          ))
+          .write(_cardTombstone(now));
+    }),
+  );
 
   /// The number of cards in the deck.
   Future<int> countCards(DeckId deckId) => _guard(() async {
     final count = _db.cards.id.count();
     final query = _db.selectOnly(_db.cards)
       ..addColumns([count])
-      ..where(_db.cards.deckId.equals(deckId.value));
+      ..where(
+        _db.cards.deckId.equals(deckId.value) & _db.cards.deletedAt.isNull(),
+      );
     final row = await query.getSingle();
     return row.read(count) ?? 0;
   });
@@ -88,6 +106,7 @@ class DeckRepository {
     final count = _db.cards.id.count();
     final query = _db.selectOnly(_db.cards)
       ..addColumns([_db.cards.deckId, count])
+      ..where(_db.cards.deletedAt.isNull())
       ..groupBy([_db.cards.deckId]);
     return _guardStream(
       query.watch().map(
@@ -104,7 +123,9 @@ class DeckRepository {
   /// The deck's cards, oldest first, re-emitted on each change.
   Stream<List<Card>> watchCards(DeckId deckId) {
     final query = _db.select(_db.cards)
-      ..where((card) => card.deckId.equals(deckId.value))
+      ..where(
+        (card) => card.deckId.equals(deckId.value) & card.deletedAt.isNull(),
+      )
       ..orderBy([(card) => OrderingTerm.asc(card.createdAt)]);
     return _guardStream(
       query.watch().map((rows) => rows.map(_toCard).toList()),
@@ -114,7 +135,9 @@ class DeckRepository {
   /// The deck's cards, oldest first.
   Future<List<Card>> listCards(DeckId deckId) => _guard(() async {
     final query = _db.select(_db.cards)
-      ..where((card) => card.deckId.equals(deckId.value))
+      ..where(
+        (card) => card.deckId.equals(deckId.value) & card.deletedAt.isNull(),
+      )
       ..orderBy([(card) => OrderingTerm.asc(card.createdAt)]);
     return (await query.get()).map(_toCard).toList();
   });
@@ -146,6 +169,7 @@ class DeckRepository {
           source: CardSource.manual.name,
           createdAt: now,
           updatedAt: now,
+          dirty: true,
         );
         await _db.into(_db.cards).insert(row);
         return CardSaved(_toCard(row));
@@ -179,6 +203,7 @@ class DeckRepository {
             back: Value(encodeContent(back)),
             cardKey: Value(key.value),
             updatedAt: Value(now),
+            dirty: const Value(true),
           ),
         );
         return CardSaved(
@@ -197,10 +222,10 @@ class DeckRepository {
     );
   }
 
+  /// Deletes the card as a tombstone sync pushes.
   Future<void> deleteCard(CardId id) => _guard(() async {
-    await (_db.delete(
-      _db.cards,
-    )..where((card) => card.id.equals(id.value))).go();
+    await (_db.update(_db.cards)..where((card) => card.id.equals(id.value)))
+        .write(_cardTombstone(_clock()));
   });
 
   /// Saves [cards] as import cards into [target] in one transaction, creating
@@ -237,6 +262,7 @@ class DeckRepository {
                     source: CardSource.import.name,
                     createdAt: now,
                     updatedAt: now,
+                    dirty: true,
                   ),
                 );
             added++;
@@ -248,6 +274,7 @@ class DeckRepository {
                 CardsCompanion(
                   back: Value(encodeContent(back)),
                   updatedAt: Value(_clock()),
+                  dirty: const Value(true),
                 ),
               );
               merged++;
@@ -260,10 +287,27 @@ class DeckRepository {
     }),
   );
 
-  Future<Deck> _getDeck(DeckId id) async => _toDeck(
-    await (_db.select(
-      _db.decks,
-    )..where((deck) => deck.id.equals(id.value))).getSingle(),
+  /// The deck, unless it was deleted; then [DeckDeleted].
+  Future<Deck> _getDeck(DeckId id) async {
+    final row =
+        await (_db.select(_db.decks)..where(
+              (deck) => deck.id.equals(id.value) & deck.deletedAt.isNull(),
+            ))
+            .getSingleOrNull();
+    if (row == null) throw DeckDeleted(id);
+    return _toDeck(row);
+  }
+
+  static DecksCompanion _deckTombstone(DateTime at) => DecksCompanion(
+    deletedAt: Value(at),
+    updatedAt: Value(at),
+    dirty: const Value(true),
+  );
+
+  static CardsCompanion _cardTombstone(DateTime at) => CardsCompanion(
+    deletedAt: Value(at),
+    updatedAt: Value(at),
+    dirty: const Value(true),
   );
 
   /// One lookup on the `(deck_id, card_key)` index.
@@ -273,6 +317,7 @@ class DeckRepository {
         (card) =>
             card.deckId.equals(deckId.value) &
             card.cardKey.equals(key.value) &
+            card.deletedAt.isNull() &
             (except == null
                 ? const Constant(true)
                 : card.id.equals(except.value).not()),

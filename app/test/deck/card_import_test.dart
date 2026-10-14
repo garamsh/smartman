@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
@@ -168,4 +169,46 @@ void main() {
       expect(card.back, [const TextContent('cat'), const TextContent('talk')]);
     },
   );
+
+  test(
+    'inserted and merged cards are left unsynced for sync to push',
+    () async {
+      final deck = await french();
+      await db
+          .update(db.cards)
+          .write(const CardsCompanion(dirty: Value(false)));
+      // Setup: every card starts synced.
+      expect((await db.select(db.cards).get()).map((row) => row.dirty), [
+        false,
+      ]);
+
+      await repository.importCards(ImportIntoDeck(deck.id), [
+        _card('chat', 'talk', DuplicateChoice.mergeBack),
+        _card('chien', 'dog'),
+      ]);
+
+      final rows = await db.select(db.cards).get();
+      expect(rows.map((row) => (row.cardKey, row.dirty)), [
+        ('chat', true),
+        ('chien', true),
+      ]);
+    },
+  );
+
+  test('an import into a deleted deck is refused and writes nothing', () async {
+    final deck = await french();
+    final spanish = await repository.createDeck('Spanish');
+    await repository.deleteDeck(deck.id);
+
+    await expectLater(
+      repository.importCards(ImportIntoDeck(deck.id), [_card('chien', 'dog')]),
+      throwsA(isA<DeckDeleted>()),
+    );
+    // Control: the same import into a deck that stands is saved.
+    final control = await repository.importCards(ImportIntoDeck(spanish.id), [
+      _card('chien', 'dog'),
+    ]);
+    expect(control.added, 1);
+    expect(await repository.watchCardCounts().first, {spanish.id: 1});
+  });
 }
