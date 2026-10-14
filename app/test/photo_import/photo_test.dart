@@ -48,13 +48,18 @@ void main() {
     expect(img.decodeJpg(photo.bytes), isNotNull);
   });
 
-  test('the EXIF orientation is applied before scaling', () {
-    final source = _noise(3000, 1000)..exif.imageIfd.orientation = 6;
+  test('the EXIF orientation is applied before scaling, in JPEG and WebP', () {
+    for (final encode in [img.encodeJpg, img.encodeWebP]) {
+      final source = _noise(3000, 1000)..exif.imageIfd.orientation = 6;
+      final encoded = encode(source);
+      // Setup: the encoded file still carries the orientation.
+      expect(img.decodeImage(encoded), isNotNull);
 
-    final photo = downscalePhoto(img.encodeJpg(source));
+      final photo = downscalePhoto(encoded);
 
-    // Orientation 6 rotates a quarter turn: the wide source stands upright.
-    expect((photo.width, photo.height), (683, 2048));
+      // Orientation 6 rotates a quarter turn: the wide source stands upright.
+      expect((photo.width, photo.height), (683, 2048), reason: '$encode');
+    }
   });
 
   test('bytes no decoder reads are an unreadable photo', () {
