@@ -791,7 +791,7 @@ void main() {
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
-      'in the ${mode.name} theme the current card, the stack, the drag feedback and the summary meet the contrast and tap target guidelines',
+      'in the ${mode.name} theme the current card, the stack and the summary meet the contrast and tap target guidelines',
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c'], themeMode: mode);
         expect(
@@ -806,19 +806,6 @@ void main() {
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-
-        for (final dx in [80.0, -80.0]) {
-          final drag = await tester.startGesture(
-            tester.getCenter(_currentCard),
-          );
-          await drag.moveBy(Offset(dx, 0));
-          await tester.pump();
-          expect(find.text(dx > 0 ? 'Know' : "Don't know"), findsOneWidget);
-          await expectLater(tester, meetsGuideline(textContrastGuideline));
-          await drag.moveBy(Offset(-dx, 0));
-          await drag.up();
-          await tester.pumpAndSettle();
-        }
 
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();

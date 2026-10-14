@@ -94,4 +94,48 @@ void main() {
         if (path != 'lib/shared/theme.dart' && colour.hasMatch(source)) path,
     ], isEmpty);
   });
+
+  /// The WCAG 2.1 contrast ratio of two opaque colours.
+  double contrast(Color a, Color b) {
+    final (lighter, darker) = a.computeLuminance() > b.computeLuminance()
+        ? (a, b)
+        : (b, a);
+    return (lighter.computeLuminance() + 0.05) /
+        (darker.computeLuminance() + 0.05);
+  }
+
+  for (final (name, colors) in [
+    ('light', AppColors.light),
+    ('dark', AppColors.dark),
+  ]) {
+    test('$name text tokens meet WCAG AA, and dots and tints 3:1', () {
+      // Text, at 4.5:1: the pairs the screens draw text in, including the
+      // answer chips over a dragged card, which no semantics node reaches.
+      for (final (text, ground) in [
+        (colors.ink, colors.surface),
+        (colors.ink, colors.ground),
+        (colors.muted, colors.surface),
+        (colors.muted, colors.ground),
+        (colors.muted, colors.depth),
+        (colors.onKnow, colors.know),
+        (colors.onDontKnowText, colors.dontKnowText),
+        (colors.dontKnowText, colors.surface),
+        (colors.surface, colors.ink),
+      ]) {
+        expect(
+          contrast(text, ground),
+          greaterThanOrEqualTo(4.5),
+          reason: '$text on $ground',
+        );
+      }
+      // Non-text, at 3:1: the answer dots on a previous card.
+      for (final dot in [colors.knowDot, colors.dontKnow]) {
+        expect(
+          contrast(dot, colors.surface),
+          greaterThanOrEqualTo(3),
+          reason: '$dot on ${colors.surface}',
+        );
+      }
+    });
+  }
 }
