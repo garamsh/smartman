@@ -66,6 +66,7 @@ class _Decks {
         answer: Answer.know,
         reviewedAt: state.lastReview,
         duration: Duration.zero,
+        fuzzFactor: FuzzFactor.draw(FirstDraw()),
       ),
     ], state);
   }

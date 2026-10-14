@@ -63,6 +63,42 @@ void main() {
     },
   );
 
+  test('reviewing with a fuzz factor returns the fuzzed reference step of the engine', () async {
+    final fixtures =
+        jsonDecode(File(_fixtures).readAsStringSync()) as Map<String, dynamic>;
+    final reviews =
+        ((fixtures['fuzzed_sequences'] as List<dynamic>).singleWhere((
+              sequence,
+            ) {
+              final fields = sequence as Map<String, dynamic>;
+              return fields['name'] == 'good-on-due' && fields['seed'] == 1;
+            }) as Map<String, dynamic>)['reviews']
+            as List<dynamic>;
+    final previous = reviews[3] as Map<String, dynamic>;
+    final step = reviews[4] as Map<String, dynamic>;
+    expect(step['rating'], 3);
+    final factor = step['fuzz_factor'] as double;
+
+    final state = MemoryStateParts(
+      stability: previous['stability'] as double,
+      difficulty: previous['difficulty'] as double,
+      lastReview: previous['at'] as int,
+    );
+    final at = step['at'] as int;
+
+    final fuzzed = await reviewCard(
+      state: state,
+      answer: Answer.know,
+      at: at,
+      fuzzFactor: factor,
+    );
+    expect(fuzzed.due, step['due']);
+    expect(fuzzed.state.stability, _closeTo(step['stability'] as double));
+    // Control: without the factor, the same review falls due on another day.
+    final plain = await reviewCard(state: state, answer: Answer.know, at: at);
+    expect(plain.due, isNot(step['due']));
+  });
+
   test(
     'a review dated before the last one arrives as a typed engine error',
     () async {

@@ -118,8 +118,8 @@ final class _Answered {
 
 /// One study session over one or more decks.
 ///
-/// Every random choice, the queue's order and each re-show gap, is drawn from
-/// the one [Random] the session receives.
+/// Every random choice, the queue's order, each re-show gap and each answer's
+/// fuzz factor, is drawn from the one [Random] the session receives.
 ///
 /// Every answer and every toggle changes the session at once. The engine calls
 /// and the write that follow run afterwards, one at a time in the order given,
@@ -210,6 +210,7 @@ class StudySession extends ChangeNotifier {
           answer: answer,
           reviewedAt: now,
           duration: now.difference(_shownAt),
+          fuzzFactor: FuzzFactor.draw(_random),
         ),
       ),
     );
@@ -221,7 +222,8 @@ class StudySession extends ChangeNotifier {
   }
 
   /// Toggles the answer at [position] between "Know" and "Don't know", and
-  /// reschedules its card by replaying the card's answers in this session.
+  /// reschedules its card by replaying the card's answers in this session,
+  /// each with the fuzz factor drawn when it was given.
   ///
   /// A toggle to "Don't know" of a card's last answer puts the card back as
   /// an answer would, unless it is already waiting; after the queue has
@@ -304,12 +306,14 @@ class StudySession extends ChangeNotifier {
           before,
           history.first.answer,
           history.first.reviewedAt,
+          fuzz: history.first.fuzzFactor,
         );
         for (final review in history.skip(1)) {
           after = await _scheduler.review(
             after,
             review.answer,
             review.reviewedAt,
+            fuzz: review.fuzzFactor,
           );
         }
         await _repository.record(card, history, after);

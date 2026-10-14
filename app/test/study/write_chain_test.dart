@@ -21,7 +21,12 @@ class _FirstCallBreaks implements Scheduler {
   var _calls = 0;
 
   @override
-  Future<CardState> review(CardState? state, Answer answer, DateTime at) async {
+  Future<CardState> review(
+    CardState? state,
+    Answer answer,
+    DateTime at, {
+    required FuzzFactor fuzz,
+  }) async {
     if (_calls++ == 0) throw unexpected;
     return CardState(
       stability: 1,

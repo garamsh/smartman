@@ -28,7 +28,7 @@ Current architecture of the system and the decisions behind it. This file is the
 - `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, and the pgTAP tests `make test` runs.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
 - `adr/0002-domain-public-surface-and-shared-database.md` — declare a domain's surface in one library file, and keep the drift database below the domains.
-- `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz.
+- `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz; its no-fuzz decision superseded by ADR 0012.
 - `adr/0004-flutter-rust-bridge.md` — bridge the engine through a flutter_rust_bridge crate in `app/rust/` built with native assets, with its bindings in the `study` domain.
 - `adr/0005-study-queue-and-card-state.md` — queue a session from due then new cards, re-show a "Don't know" after three cards, and store each card's state parts in `card_states`.
 - `adr/0006-account-native-google-sign-in.md` — sign in with native Google Sign-In through Supabase Auth in an `account` domain, configured per environment from `app/config/`, with flavors deferred to M7.
@@ -36,4 +36,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0008-google-sign-in-nonce.md` — send Google sign-in a nonce drawn once per run, its SHA-256 hex to Google and the raw value to Supabase, superseding ADR 0006's "No nonce is sent".
 - `adr/0009-multi-deck-session-and-random-queue-order.md` — study a non-empty selection of decks in one session, with a header count and a "study all" action, and draw the queue's order and the re-show gap from one seeded random source; supersedes ADR 0005's queue order, re-show gap and single-deck entry point.
 - `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence drawn under a per-user lock, composite foreign keys between a user's rows, and pgTAP tests in `make test`.
+- `adr/0012-fuzz-review-intervals.md` — fuzz review intervals as py-fsrs 6.3.2 does, with a factor in `[0, 1)` the app draws from the session's random source and stores on each review; supersedes ADR 0003's "The engine does not fuzz".
 - `adr/0000-template.md` — the template every ADR is written from.

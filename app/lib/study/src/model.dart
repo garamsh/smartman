@@ -1,8 +1,18 @@
+import 'dart:math';
+
 import '../../deck/deck.dart';
 import 'rust/api/engine.dart';
 
 /// Identifies a stored review.
 extension type const ReviewId(String value) {}
+
+/// The draw, from 0 inclusive to 1 exclusive, that picks where in its fuzz
+/// range a review's interval falls. A review keeps its factor, so scheduling
+/// it again gives the same due time.
+extension type const FuzzFactor._(double value) {
+  /// The next draw of [random].
+  FuzzFactor.draw(Random random) : this._(random.nextDouble());
+}
 
 /// A reviewed card's scheduling state: the engine's memory state and when the
 /// card is next due.
@@ -52,6 +62,7 @@ final class Review {
     required this.answer,
     required this.reviewedAt,
     required this.duration,
+    required this.fuzzFactor,
   });
 
   final ReviewId id;
@@ -62,13 +73,17 @@ final class Review {
   /// How long the card was on screen before the answer.
   final Duration duration;
 
-  /// This review with its answer changed to [answer], keeping its id, time
-  /// and duration.
+  /// The fuzz factor the review is scheduled with.
+  final FuzzFactor fuzzFactor;
+
+  /// This review with its answer changed to [answer], keeping its id, time,
+  /// duration and fuzz factor.
   Review withAnswer(Answer answer) => Review(
     id: id,
     cardId: cardId,
     answer: answer,
     reviewedAt: reviewedAt,
     duration: duration,
+    fuzzFactor: fuzzFactor,
   );
 }

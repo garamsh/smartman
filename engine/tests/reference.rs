@@ -1,7 +1,7 @@
 //! The engine against reference values from py-fsrs, written by `fixtures/generate.py`.
 
 use serde::Deserialize;
-use smartman_engine::{MemoryState, Rating, Review, Timestamp, replay, review};
+use smartman_engine::{FuzzFactor, MemoryState, Rating, Review, Timestamp, replay, review};
 
 /// Relative tolerance for stability, difficulty, and retrievability.
 ///
@@ -17,17 +17,23 @@ const FIXTURES: &str = include_str!("fixtures/reference.json");
 #[derive(Deserialize)]
 struct Fixtures {
     generator: String,
+    /// Run without fuzzing.
     sequences: Vec<Sequence>,
+    /// The same steps run with fuzzing, under fixed seeds.
+    fuzzed_sequences: Vec<Sequence>,
 }
 
 #[derive(Deserialize)]
 struct Sequence {
     name: String,
+    seed: Option<u64>,
     reviews: Vec<Expected>,
 }
 
 #[derive(Deserialize)]
 struct Expected {
+    /// The factor py-fsrs drew for this review; absent when it fuzzed nothing.
+    fuzz_factor: Option<f64>,
     rating: u8,
     at: i64,
     retrievability: Option<f64>,
@@ -59,15 +65,19 @@ fn fixtures() -> Fixtures {
     fixtures
 }
 
-#[test]
-fn every_fixture_review_matches_py_fsrs() {
-    let fixtures = fixtures();
+/// Checks every review of `sequences` against py-fsrs, passing each its recorded fuzz
+/// factor, and returns how many it checked.
+fn check(sequences: &[Sequence]) -> usize {
     let mut checked = 0;
-    for sequence in &fixtures.sequences {
+    for sequence in sequences {
+        let name = match sequence.seed {
+            Some(seed) => format!("{} seed {seed}", sequence.name),
+            None => sequence.name.clone(),
+        };
         let mut state: Option<MemoryState> = None;
         for (index, expected) in sequence.reviews.iter().enumerate() {
             let at = Timestamp(expected.at);
-            let what = format!("{} review {index}", sequence.name);
+            let what = format!("{name} review {index}");
 
             match (&state, expected.retrievability) {
                 (None, None) => {}
@@ -81,7 +91,10 @@ fn every_fixture_review_matches_py_fsrs() {
                 _ => panic!("{what}: retrievability is present on one side only"),
             }
 
-            let (next, due) = review(state.as_ref(), rating(expected.rating), at)
+            let fuzz = expected
+                .fuzz_factor
+                .map(|value| FuzzFactor::new(value).expect("fixture factor is in [0, 1)"));
+            let (next, due) = review(state.as_ref(), rating(expected.rating), at, fuzz)
                 .expect("fixture reviews are in order");
             assert_close(
                 &format!("{what} stability"),
@@ -112,11 +125,44 @@ fn every_fixture_review_matches_py_fsrs() {
                 at: Timestamp(step.at),
             })
             .collect();
-        assert_eq!(replay(&history), Ok(state), "{} replay", sequence.name);
+        assert_eq!(replay(&history), Ok(state), "{name} replay");
     }
+    checked
+}
+
+#[test]
+fn every_fixture_review_matches_py_fsrs() {
+    let fixtures = fixtures();
+    assert!(
+        fixtures
+            .sequences
+            .iter()
+            .flat_map(|sequence| &sequence.reviews)
+            .all(|review| review.fuzz_factor.is_none()),
+        "an unfuzzed review carries a fuzz factor"
+    );
+    let checked = check(&fixtures.sequences);
     println!(
         "checked {checked} reviews in {} sequences from {}",
         fixtures.sequences.len(),
+        fixtures.generator
+    );
+}
+
+#[test]
+fn every_fuzzed_fixture_review_matches_py_fsrs() {
+    let fixtures = fixtures();
+    let fuzzed = fixtures
+        .fuzzed_sequences
+        .iter()
+        .flat_map(|sequence| &sequence.reviews)
+        .filter(|review| review.fuzz_factor.is_some())
+        .count();
+    assert!(fuzzed > 0, "no fuzzed fixture review carries a fuzz factor");
+    let checked = check(&fixtures.fuzzed_sequences);
+    println!(
+        "checked {checked} reviews, {fuzzed} with a fuzz factor, in {} fuzzed sequences from {}",
+        fixtures.fuzzed_sequences.len(),
         fixtures.generator
     );
 }

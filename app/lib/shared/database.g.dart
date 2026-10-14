@@ -875,6 +875,18 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _fuzzFactorMeta = const VerificationMeta(
+    'fuzzFactor',
+  );
+  @override
+  late final GeneratedColumn<double> fuzzFactor = GeneratedColumn<double>(
+    'fuzz_factor',
+    aliasedName,
+    true,
+    check: () => const CustomExpression('fuzz_factor >= 0 AND fuzz_factor < 1'),
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -882,6 +894,7 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     rating,
     reviewedAt,
     durationMs,
+    fuzzFactor,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -932,6 +945,12 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     } else if (isInserting) {
       context.missing(_durationMsMeta);
     }
+    if (data.containsKey('fuzz_factor')) {
+      context.handle(
+        _fuzzFactorMeta,
+        fuzzFactor.isAcceptableOrUnknown(data['fuzz_factor']!, _fuzzFactorMeta),
+      );
+    }
     return context;
   }
 
@@ -961,6 +980,10 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         DriftSqlType.int,
         data['${effectivePrefix}duration_ms'],
       )!,
+      fuzzFactor: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fuzz_factor'],
+      ),
     );
   }
 
@@ -976,12 +999,17 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
   final String rating;
   final DateTime reviewedAt;
   final int durationMs;
+
+  /// The fuzz factor the review was scheduled with; null for a review written
+  /// before schema v3, which was scheduled without fuzz.
+  final double? fuzzFactor;
   const ReviewRow({
     required this.id,
     required this.cardId,
     required this.rating,
     required this.reviewedAt,
     required this.durationMs,
+    this.fuzzFactor,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -991,6 +1019,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     map['rating'] = Variable<String>(rating);
     map['reviewed_at'] = Variable<DateTime>(reviewedAt);
     map['duration_ms'] = Variable<int>(durationMs);
+    if (!nullToAbsent || fuzzFactor != null) {
+      map['fuzz_factor'] = Variable<double>(fuzzFactor);
+    }
     return map;
   }
 
@@ -1001,6 +1032,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       rating: Value(rating),
       reviewedAt: Value(reviewedAt),
       durationMs: Value(durationMs),
+      fuzzFactor: fuzzFactor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fuzzFactor),
     );
   }
 
@@ -1015,6 +1049,7 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       rating: serializer.fromJson<String>(json['rating']),
       reviewedAt: serializer.fromJson<DateTime>(json['reviewedAt']),
       durationMs: serializer.fromJson<int>(json['durationMs']),
+      fuzzFactor: serializer.fromJson<double?>(json['fuzzFactor']),
     );
   }
   @override
@@ -1026,6 +1061,7 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       'rating': serializer.toJson<String>(rating),
       'reviewedAt': serializer.toJson<DateTime>(reviewedAt),
       'durationMs': serializer.toJson<int>(durationMs),
+      'fuzzFactor': serializer.toJson<double?>(fuzzFactor),
     };
   }
 
@@ -1035,12 +1071,14 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     String? rating,
     DateTime? reviewedAt,
     int? durationMs,
+    Value<double?> fuzzFactor = const Value.absent(),
   }) => ReviewRow(
     id: id ?? this.id,
     cardId: cardId ?? this.cardId,
     rating: rating ?? this.rating,
     reviewedAt: reviewedAt ?? this.reviewedAt,
     durationMs: durationMs ?? this.durationMs,
+    fuzzFactor: fuzzFactor.present ? fuzzFactor.value : this.fuzzFactor,
   );
   ReviewRow copyWithCompanion(ReviewsCompanion data) {
     return ReviewRow(
@@ -1053,6 +1091,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       durationMs: data.durationMs.present
           ? data.durationMs.value
           : this.durationMs,
+      fuzzFactor: data.fuzzFactor.present
+          ? data.fuzzFactor.value
+          : this.fuzzFactor,
     );
   }
 
@@ -1063,13 +1104,15 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ..write('cardId: $cardId, ')
           ..write('rating: $rating, ')
           ..write('reviewedAt: $reviewedAt, ')
-          ..write('durationMs: $durationMs')
+          ..write('durationMs: $durationMs, ')
+          ..write('fuzzFactor: $fuzzFactor')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, cardId, rating, reviewedAt, durationMs);
+  int get hashCode =>
+      Object.hash(id, cardId, rating, reviewedAt, durationMs, fuzzFactor);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1078,7 +1121,8 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           other.cardId == this.cardId &&
           other.rating == this.rating &&
           other.reviewedAt == this.reviewedAt &&
-          other.durationMs == this.durationMs);
+          other.durationMs == this.durationMs &&
+          other.fuzzFactor == this.fuzzFactor);
 }
 
 class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
@@ -1087,6 +1131,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
   final Value<String> rating;
   final Value<DateTime> reviewedAt;
   final Value<int> durationMs;
+  final Value<double?> fuzzFactor;
   final Value<int> rowid;
   const ReviewsCompanion({
     this.id = const Value.absent(),
@@ -1094,6 +1139,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     this.rating = const Value.absent(),
     this.reviewedAt = const Value.absent(),
     this.durationMs = const Value.absent(),
+    this.fuzzFactor = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ReviewsCompanion.insert({
@@ -1102,6 +1148,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     required String rating,
     required DateTime reviewedAt,
     required int durationMs,
+    this.fuzzFactor = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        cardId = Value(cardId),
@@ -1114,6 +1161,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Expression<String>? rating,
     Expression<DateTime>? reviewedAt,
     Expression<int>? durationMs,
+    Expression<double>? fuzzFactor,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1122,6 +1170,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       if (rating != null) 'rating': rating,
       if (reviewedAt != null) 'reviewed_at': reviewedAt,
       if (durationMs != null) 'duration_ms': durationMs,
+      if (fuzzFactor != null) 'fuzz_factor': fuzzFactor,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1132,6 +1181,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Value<String>? rating,
     Value<DateTime>? reviewedAt,
     Value<int>? durationMs,
+    Value<double?>? fuzzFactor,
     Value<int>? rowid,
   }) {
     return ReviewsCompanion(
@@ -1140,6 +1190,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       rating: rating ?? this.rating,
       reviewedAt: reviewedAt ?? this.reviewedAt,
       durationMs: durationMs ?? this.durationMs,
+      fuzzFactor: fuzzFactor ?? this.fuzzFactor,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1162,6 +1213,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     if (durationMs.present) {
       map['duration_ms'] = Variable<int>(durationMs.value);
     }
+    if (fuzzFactor.present) {
+      map['fuzz_factor'] = Variable<double>(fuzzFactor.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1176,6 +1230,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
           ..write('rating: $rating, ')
           ..write('reviewedAt: $reviewedAt, ')
           ..write('durationMs: $durationMs, ')
+          ..write('fuzzFactor: $fuzzFactor, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2437,6 +2492,7 @@ typedef $$ReviewsTableCreateCompanionBuilder = ReviewsCompanion Function({
   required String rating,
   required DateTime reviewedAt,
   required int durationMs,
+  Value<double?> fuzzFactor,
   Value<int> rowid,
 });
 typedef $$ReviewsTableUpdateCompanionBuilder = ReviewsCompanion Function({
@@ -2445,6 +2501,7 @@ typedef $$ReviewsTableUpdateCompanionBuilder = ReviewsCompanion Function({
   Value<String> rating,
   Value<DateTime> reviewedAt,
   Value<int> durationMs,
+  Value<double?> fuzzFactor,
   Value<int> rowid,
 });
 
@@ -2496,6 +2553,11 @@ class $$ReviewsTableFilterComposer
 
   ColumnFilters<int> get durationMs => $composableBuilder(
     column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fuzzFactor => $composableBuilder(
+    column: $table.fuzzFactor,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2552,6 +2614,11 @@ class $$ReviewsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get fuzzFactor => $composableBuilder(
+    column: $table.fuzzFactor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CardsTableOrderingComposer get cardId {
     final $$CardsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2598,6 +2665,11 @@ class $$ReviewsTableAnnotationComposer
 
   GeneratedColumn<int> get durationMs => $composableBuilder(
     column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get fuzzFactor => $composableBuilder(
+    column: $table.fuzzFactor,
     builder: (column) => column,
   );
 
@@ -2658,6 +2730,7 @@ class $$ReviewsTableTableManager
                 Value<String> rating = const Value.absent(),
                 Value<DateTime> reviewedAt = const Value.absent(),
                 Value<int> durationMs = const Value.absent(),
+                Value<double?> fuzzFactor = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion(
                 id: id,
@@ -2665,6 +2738,7 @@ class $$ReviewsTableTableManager
                 rating: rating,
                 reviewedAt: reviewedAt,
                 durationMs: durationMs,
+                fuzzFactor: fuzzFactor,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2674,6 +2748,7 @@ class $$ReviewsTableTableManager
                 required String rating,
                 required DateTime reviewedAt,
                 required int durationMs,
+                Value<double?> fuzzFactor = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion.insert(
                 id: id,
@@ -2681,6 +2756,7 @@ class $$ReviewsTableTableManager
                 rating: rating,
                 reviewedAt: reviewedAt,
                 durationMs: durationMs,
+                fuzzFactor: fuzzFactor,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

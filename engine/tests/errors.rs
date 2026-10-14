@@ -1,11 +1,13 @@
 //! Invalid input is refused with a typed error; each refusal is paired with a control.
 
-use smartman_engine::{Error, MemoryState, Quantity, Rating, Review, Timestamp, replay, review};
+use smartman_engine::{
+    Error, FuzzFactor, MemoryState, Quantity, Rating, Review, Timestamp, replay, review,
+};
 
 const DAY: i64 = 86_400;
 
 fn reviewed_at(at: i64) -> MemoryState {
-    review(None, Rating::Good, Timestamp(at))
+    review(None, Rating::Good, Timestamp(at), None)
         .expect("a new card accepts any time")
         .0
 }
@@ -14,14 +16,14 @@ fn reviewed_at(at: i64) -> MemoryState {
 fn a_review_before_the_last_review_is_refused() {
     let state = reviewed_at(10 * DAY);
     assert_eq!(
-        review(Some(&state), Rating::Good, Timestamp(10 * DAY - 1)),
+        review(Some(&state), Rating::Good, Timestamp(10 * DAY - 1), None),
         Err(Error::ReviewBeforeLastReview {
             last_review: Timestamp(10 * DAY),
             review: Timestamp(10 * DAY - 1),
         })
     );
     // Control: a review at the same instant has zero elapsed time and is accepted.
-    assert!(review(Some(&state), Rating::Good, Timestamp(10 * DAY)).is_ok());
+    assert!(review(Some(&state), Rating::Good, Timestamp(10 * DAY), None).is_ok());
 }
 
 #[test]
@@ -117,6 +119,32 @@ fn out_of_range_parts_are_refused() {
 }
 
 #[test]
+fn a_fuzz_factor_outside_zero_to_one_is_refused() {
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(
+            FuzzFactor::new(value),
+            Err(Error::NonFinite(Quantity::FuzzFactor))
+        );
+    }
+    for value in [-0.001, 1.0, 1.5] {
+        assert_eq!(
+            FuzzFactor::new(value),
+            Err(Error::OutOfRange {
+                quantity: Quantity::FuzzFactor,
+                value
+            })
+        );
+    }
+    // Control: 0 and the largest value below 1 are in range.
+    let largest = 1.0 - f64::EPSILON / 2.0;
+    assert_eq!(FuzzFactor::new(0.0).map(|factor| factor.value()), Ok(0.0));
+    assert_eq!(
+        FuzzFactor::new(largest).map(|factor| factor.value()),
+        Ok(largest)
+    );
+}
+
+#[test]
 fn a_replayed_state_round_trips_through_its_parts() {
     let history: Vec<Review> = [(0, Rating::Again), (1, Rating::Good), (4, Rating::Easy)]
         .into_iter()
@@ -134,7 +162,7 @@ fn a_replayed_state_round_trips_through_its_parts() {
     // A rebuilt state schedules the next review as the replayed one does.
     let next = Timestamp(30 * DAY);
     assert_eq!(
-        review(rebuilt.as_ref().ok(), Rating::Good, next),
-        review(Some(&state), Rating::Good, next)
+        review(rebuilt.as_ref().ok(), Rating::Good, next, None),
+        review(Some(&state), Rating::Good, next, None)
     );
 }

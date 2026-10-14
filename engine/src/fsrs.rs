@@ -119,3 +119,86 @@ pub(crate) fn interval_days(stability: f64) -> u32 {
         rounded as u32
     }
 }
+
+/// Intervals shorter than this many days are not fuzzed.
+const FUZZ_MIN_DAYS: f64 = 2.5;
+
+/// `(start, end, factor)`: each day of the interval between `start` and `end` widens the
+/// fuzz range by `factor` days on either side.
+const FUZZ_RANGES: [(f64, f64, f64); 3] = [
+    (2.5, 7.0, 0.15),
+    (7.0, 20.0, 0.1),
+    (20.0, f64::INFINITY, 0.05),
+];
+
+/// `interval` days fuzzed as py-fsrs does: a whole number of days in a range around it, picked
+/// by `factor` in `[0, 1)`; an interval under 2.5 days is returned unchanged.
+pub(crate) fn fuzzed_interval_days(interval: u32, factor: f64) -> u32 {
+    let days = f64::from(interval);
+    if days < FUZZ_MIN_DAYS {
+        return interval;
+    }
+    // Summed from 1 in order, as the reference does, so the rounding below sees the same value.
+    let delta = FUZZ_RANGES.iter().fold(1.0, |delta, (start, end, step)| {
+        delta + step * (days.min(*end) - start).max(0.0)
+    });
+    let maximum = f64::from(MAXIMUM_INTERVAL_DAYS);
+    let max_days = (days + delta).round_ties_even().min(maximum);
+    let min_days = (days - delta).round_ties_even().max(2.0).min(max_days);
+    // The pick can round to one past `max_days`, as the reference's can.
+    let fuzzed = (factor * (max_days - min_days + 1.0) + min_days).round_ties_even();
+    fuzzed.min(maximum) as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The largest factor below 1.
+    const FACTOR_MAX: f64 = 1.0 - f64::EPSILON / 2.0;
+
+    #[test]
+    fn intervals_under_two_and_a_half_days_are_never_fuzzed() {
+        for days in [1, 2] {
+            for factor in [0.0, 0.5, FACTOR_MAX] {
+                assert_eq!(
+                    fuzzed_interval_days(days, factor),
+                    days,
+                    "{days} at {factor}"
+                );
+            }
+        }
+        // Control: three days, the shortest interval fuzzed, moves at both factor ends.
+        assert_eq!(fuzzed_interval_days(3, 0.0), 2);
+        assert_eq!(fuzzed_interval_days(3, FACTOR_MAX), 5);
+    }
+
+    /// Each row is `(interval, at factor 0, at the largest factor below 1)`, as py-fsrs
+    /// 6.3.2's `Scheduler._get_fuzzed_interval` returns them with `random` returning each.
+    const BOUNDS: [(u32, u32, u32); 6] = [
+        (3, 2, 5),
+        (8, 6, 11),
+        (20, 17, 24),
+        (100, 93, 108),
+        (36_000, 34_198, 36_500),
+        (36_500, 34_673, 36_500),
+    ];
+
+    #[test]
+    fn the_least_and_greatest_factor_give_the_ends_of_the_fuzz_range() {
+        for (days, least, greatest) in BOUNDS {
+            assert_eq!(fuzzed_interval_days(days, 0.0), least, "{days} at 0");
+            assert_eq!(
+                fuzzed_interval_days(days, FACTOR_MAX),
+                greatest,
+                "{days} at max"
+            );
+            // Control: a factor between them lands inside the range, not on either end.
+            let middle = fuzzed_interval_days(days, 0.5);
+            assert!(
+                least < middle && middle < greatest,
+                "{days} at 0.5: {middle}"
+            );
+        }
+    }
+}

@@ -53,6 +53,7 @@ class StudyRepository {
                   rating: _rating(review.answer),
                   reviewedAt: review.reviewedAt,
                   durationMs: review.duration.inMilliseconds,
+                  fuzzFactor: review.fuzzFactor.value,
                 ),
               );
         }
