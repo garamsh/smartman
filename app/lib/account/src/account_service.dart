@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -43,23 +46,43 @@ Future<AccountService> connectAccount(Map<String, String> defines) async {
     // The browser OAuth flow is not used, so no deep link carries a session.
     authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
   );
-  await GoogleSignIn.instance.initialize(
+  return GoogleAccountService.start(
+    supabase.client.auth,
+    GoogleSignIn.instance,
     // Android takes only the server client ID; iOS also needs its own.
     clientId: defaultTargetPlatform == TargetPlatform.iOS
         ? config.googleIosClientId.value
         : null,
     serverClientId: config.googleWebClientId.value,
   );
-  return GoogleAccountService(supabase.client.auth, GoogleSignIn.instance);
 }
 
 /// Signs in with Google's native picker and exchanges the ID token it returns
 /// for a Supabase session.
 final class GoogleAccountService implements AccountService {
-  GoogleAccountService(this._auth, this._google);
+  GoogleAccountService._(this._auth, this._google, this._nonce);
+
+  /// Initializes [google] with a new nonce and returns the service that signs
+  /// in through it. Called once per run, since [google] takes one
+  /// initialization; every sign-in in that run carries the same nonce.
+  static Future<GoogleAccountService> start(
+    GoTrueClient auth,
+    GoogleSignIn google, {
+    required String? clientId,
+    required String serverClientId,
+  }) async {
+    final nonce = Nonce.generate();
+    await google.initialize(
+      clientId: clientId,
+      serverClientId: serverClientId,
+      nonce: nonce.hashed,
+    );
+    return GoogleAccountService._(auth, google, nonce);
+  }
 
   final GoTrueClient _auth;
   final GoogleSignIn _google;
+  final Nonce _nonce;
 
   static const _scopes = ['email', 'profile'];
 
@@ -108,6 +131,7 @@ final class GoogleAccountService implements AccountService {
         provider: OAuthProvider.google,
         idToken: idToken,
         accessToken: authorization.accessToken,
+        nonce: _nonce.raw,
       );
     } on Exception catch (error) {
       throw classifyAuthError(error);
@@ -149,6 +173,25 @@ final class UnavailableAccountService implements AccountService {
 
   @override
   Future<void> signOut() async {}
+}
+
+/// The nonce that binds a Google ID token to this app's sign-in: Google puts
+/// [hashed] in the token, and Supabase checks it against the [raw] value.
+final class Nonce {
+  Nonce._(this.raw) : hashed = sha256.convert(utf8.encode(raw)).toString();
+
+  /// A nonce of 32 bytes from a cryptographically secure source.
+  factory Nonce.generate() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return Nonce._(base64UrlEncode(bytes));
+  }
+
+  /// The value sent to Supabase.
+  final String raw;
+
+  /// The SHA-256 of [raw] as lowercase hex, the value sent to Google.
+  final String hashed;
 }
 
 /// Google returned an account without an ID token.

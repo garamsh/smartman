@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
@@ -32,35 +33,42 @@ void main() {
   late FakeGoogleSignIn google;
   late List<http.Request> requests;
 
-  setUpAll(() async {
+  setUpAll(() {
     google = FakeGoogleSignIn();
     GoogleSignInPlatform.instance = google;
-    await GoogleSignIn.instance.initialize();
   });
 
   setUp(() {
     google
       ..result = FakeGoogleSignIn.signedIn()
       ..error = null
-      ..signOuts = 0;
+      ..signOuts = 0
+      ..nonce = null;
     requests = [];
   });
 
+  Future<GoogleAccountService> start(GoTrueClient auth) =>
+      GoogleAccountService.start(
+        auth,
+        GoogleSignIn.instance,
+        clientId: null,
+        serverClientId: 'web-client-id',
+      );
+
   /// A service over a Supabase Auth client whose server answers with
   /// [respond].
-  GoogleAccountService serviceAnswering(
+  Future<GoogleAccountService> serviceAnswering(
     Future<http.Response> Function(http.Request) respond,
-  ) {
-    final auth = GoTrueClient(
+  ) => start(
+    GoTrueClient(
       url: _url,
       autoRefreshToken: false,
       httpClient: MockClient((request) {
         requests.add(request);
         return respond(request);
       }),
-    );
-    return GoogleAccountService(auth, GoogleSignIn.instance);
-  }
+    ),
+  );
 
   Future<http.Response> grant(http.Request request) async =>
       http.Response(jsonEncode(_session()), 200);
@@ -75,7 +83,7 @@ void main() {
   }
 
   test('sign-in exchanges the Google ID token for a session', () async {
-    final service = serviceAnswering(grant);
+    final service = await serviceAnswering(grant);
     expect(service.state, isA<SignedOut>());
 
     await service.signIn();
@@ -97,11 +105,36 @@ void main() {
     );
   });
 
+  test(
+    'sign-in sends Supabase the raw nonce whose SHA-256 hex Google got',
+    () async {
+      final service = await serviceAnswering(grant);
+
+      await service.signIn();
+
+      final raw = (jsonDecode(requests.single.body) as Map)['nonce'];
+      expect(raw, isA<String>().having((r) => r.length, 'length', 44));
+      expect(
+        google.nonce,
+        sha256.convert(utf8.encode(raw as String)).toString(),
+      );
+    },
+  );
+
+  test('each start draws a new nonce', () async {
+    await serviceAnswering(grant);
+    final first = google.nonce;
+    await serviceAnswering(grant);
+
+    expect(first, isNotNull);
+    expect(google.nonce, isNot(first));
+  });
+
   test('a stored session is restored as signed in', () async {
     final auth = GoTrueClient(url: _url, autoRefreshToken: false);
     await auth.recoverSession(jsonEncode(_session(email: 'grace@example.com')));
 
-    final service = GoogleAccountService(auth, GoogleSignIn.instance);
+    final service = await start(auth);
 
     expect(
       service.state,
@@ -115,7 +148,7 @@ void main() {
       google.error = const GoogleSignInException(
         code: GoogleSignInExceptionCode.canceled,
       );
-      final service = serviceAnswering(grant);
+      final service = await serviceAnswering(grant);
 
       expect(await failureOf(service.signIn), isNull);
       expect(requests, isEmpty);
@@ -129,7 +162,7 @@ void main() {
     );
 
     expect(
-      await failureOf(serviceAnswering(grant).signIn),
+      await failureOf((await serviceAnswering(grant)).signIn),
       isA<AccountMisconfigured>(),
     );
   });
@@ -140,21 +173,21 @@ void main() {
     );
 
     expect(
-      await failureOf(serviceAnswering(grant).signIn),
+      await failureOf((await serviceAnswering(grant)).signIn),
       isA<AccountRejected>(),
     );
   });
 
   test('an account without an ID token is a rejection', () async {
     google.result = FakeGoogleSignIn.signedIn(idToken: null);
-    final service = serviceAnswering(grant);
+    final service = await serviceAnswering(grant);
 
     expect(await failureOf(service.signIn), isA<AccountRejected>());
     expect(requests, isEmpty);
   });
 
   test('Supabase out of reach is offline', () async {
-    final service = serviceAnswering(
+    final service = await serviceAnswering(
       (_) async => throw http.ClientException('no route to host'),
     );
 
@@ -163,7 +196,7 @@ void main() {
   });
 
   test('Supabase refusing the ID token is a rejection', () async {
-    final service = serviceAnswering(
+    final service = await serviceAnswering(
       (_) async => http.Response(
         jsonEncode({
           'code': 400,
@@ -181,7 +214,7 @@ void main() {
   test(
     'Supabase with the Google provider disabled is a misconfiguration',
     () async {
-      final service = serviceAnswering(
+      final service = await serviceAnswering(
         (_) async => http.Response(
           jsonEncode({
             'code': 400,
@@ -197,7 +230,7 @@ void main() {
   );
 
   test('sign-out ends the session and the Google sign-in', () async {
-    final service = serviceAnswering(
+    final service = await serviceAnswering(
       (request) async => request.url.path.endsWith('/logout')
           ? http.Response('', 204)
           : grant(request),
@@ -218,7 +251,7 @@ void main() {
 
   test('sign-out offline signs the device out and reports offline', () async {
     var online = true;
-    final service = serviceAnswering((request) async {
+    final service = await serviceAnswering((request) async {
       if (!online) throw http.ClientException('no route to host');
       return grant(request);
     });

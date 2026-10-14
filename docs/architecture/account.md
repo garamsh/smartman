@@ -19,7 +19,8 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 ### Sign-in and session
 
 - Sign-in is optional: no screen waits for it, and deck and study work without it.
-- Sign-in opens the platform's Google account picker (`GoogleSignIn.authenticate`), then passes the Google ID token and an access token for `email` and `profile` to Supabase's `signInWithIdToken`. No nonce is sent.
+- Sign-in opens the platform's Google account picker (`GoogleSignIn.authenticate`), then passes the Google ID token and an access token for `email` and `profile` to Supabase's `signInWithIdToken`.
+- Each run draws one random nonce when it initializes Google Sign-In: Google receives its SHA-256 as hex and puts it in the ID token, and `signInWithIdToken` receives the raw value, which Supabase checks against the token. Every sign-in in a run carries the same nonce, since Google Sign-In is initialized once per run ([ADR 0008](adr/0008-google-sign-in-nonce.md)).
 - `supabase_flutter` stores the session on the device and restores it at start; the screen then opens signed in.
 - Sign-out ends the Supabase session on the device first, then tells the server, then signs out of Google so the next sign-in shows the picker again.
 - The state is `SignedOut`, `SignedIn` with the account's email, or `AccountUnavailable` when the build's configuration cannot sign anyone in.
@@ -51,13 +52,14 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 ### Tests
 
 - `app/test/account/account_screen_test.dart` drives the screen with a substitute `AccountService` (`app/test/account/fake_account_service.dart`): both states, a cancelled sign-in, each failure, and sign-out.
-- `app/test/account/account_service_test.dart` runs the real service over a substitute Google Sign-In platform and a Supabase Auth client whose HTTP client is substituted.
+- `app/test/account/account_service_test.dart` runs the real service over a substitute Google Sign-In platform and a Supabase Auth client whose HTTP client is substituted. It checks that the raw nonce sent to Supabase hashes to the one Google was given, and that each start draws a new one.
 - `app/test/account/config_test.dart` covers the configuration's parsing and checks that `app/config/dev.json` parses.
 
 ## Rationale
 
 - [ADR 0006](adr/0006-account-native-google-sign-in.md) records the native flow, the sources it follows, the configuration approach, the duplicated URL scheme, and why flavors wait for M7.
-- Issue #15 records the decisions made by the PM.
+- [ADR 0008](adr/0008-google-sign-in-nonce.md) records which platform sources show the nonce reaching the ID token, and why it is drawn per run rather than per sign-in.
+- Issue #15 records the decisions made by the PM, and issue #20 the nonce.
 
 ## Open questions
 
