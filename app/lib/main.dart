@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +41,13 @@ Widget composeApp(
       studyRepositoryProvider.overrideWithValue(studyRepository),
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),
-      studyScreenProvider.overrideWithValue((deck) => StudyScreen(deck: deck)),
+      studyRandomProvider.overrideWithValue(
+        (start) => Random(start.microsecondsSinceEpoch),
+      ),
+      studyScreenProvider.overrideWithValue(
+        (decks) => StudyScreen(decks: decks),
+      ),
+      todayCardProvider.overrideWithValue((decks) => TodayCard(decks: decks)),
       accountServiceProvider.overrideWithValue(account),
       accountScreenProvider.overrideWithValue(AccountScreen.new),
     ],

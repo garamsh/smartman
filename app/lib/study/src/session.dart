@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../deck/deck.dart';
@@ -23,7 +25,7 @@ sealed class SessionLoadFailed extends SessionState {
   const SessionLoadFailed();
 }
 
-/// The deck's cards could not be read.
+/// The decks' cards could not be read.
 final class CardsUnreadable extends SessionLoadFailed {
   const CardsUnreadable(this.failure);
 
@@ -114,7 +116,10 @@ final class _Answered {
   final Answer first;
 }
 
-/// One study session over a deck.
+/// One study session over one or more decks.
+///
+/// Every random choice, the queue's order and each re-show gap, is drawn from
+/// the one [Random] the session receives.
 ///
 /// Every answer and every toggle changes the session at once. The engine calls
 /// and the write that follow run afterwards, one at a time in the order given,
@@ -122,17 +127,19 @@ final class _Answered {
 /// reported to [FlutterError.reportError], and the writes after it still run.
 class StudySession extends ChangeNotifier {
   StudySession({
-    required DeckId deckId,
+    required DeckSelection decks,
     required DeckRepository cards,
     required this._repository,
     required this._scheduler,
     required this._clock,
+    required this._random,
     required this._onFailure,
   }) {
-    _load(deckId, cards);
+    _load(decks, cards);
   }
 
   final StudyRepository _repository;
+  final Random _random;
   final Scheduler _scheduler;
   final DateTime Function() _clock;
   final void Function(StudyFailure failure) _onFailure;
@@ -206,7 +213,7 @@ class StudySession extends ChangeNotifier {
         ),
       ),
     );
-    if (answer == Answer.dontKnow) reinsert(_queue, card);
+    if (answer == Answer.dontKnow) reinsert(_queue, card, _random);
     _shownAt = now;
     if (_queue.isEmpty) _endedAt = now;
     notifyListeners();
@@ -239,7 +246,7 @@ class StudySession extends ChangeNotifier {
         _endedAt = null;
         _shownAt = _clock();
       }
-      reinsert(_queue, card);
+      reinsert(_queue, card, _random);
     } else if (isLast && answer == Answer.know && waiting > 0) {
       _queue.removeAt(waiting);
     }
@@ -255,15 +262,12 @@ class StudySession extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _load(DeckId deckId, DeckRepository cards) async {
+  Future<void> _load(DeckSelection decks, DeckRepository cards) async {
     try {
-      final deckCards = await cards.listCards(deckId);
-      final states = await _repository.statesOf([
-        for (final card in deckCards) card.id,
-      ]);
+      final (read, states) = await readCards(decks, cards, _repository);
       final now = _clock();
       _before.addAll(states);
-      _queue.addAll(buildQueue(deckCards, states, now));
+      _queue.addAll(orderQueue(selectQueue(read, states, now), _random));
       _total = _queue.length;
       _startedAt = now;
       _shownAt = now;

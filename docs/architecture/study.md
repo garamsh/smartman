@@ -1,20 +1,24 @@
 # Study
 
-The `study` domain: studying a deck, scheduling its cards for review, and the bridge through which it calls the Rust engine.
+The `study` domain: studying one or more decks, scheduling their cards for review, and the bridge through which it calls the Rust engine.
 
 ## Current decisions
 
 ### Surface and location
 
 - The domain lives in `app/lib/study/`; its public surface is `app/lib/study/study.dart`, with internals under `app/lib/study/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
-- The surface exports what the composition site constructs and overrides: `StudyScreen`, `StudyRepository`, `Scheduler`, and the providers `studyRepositoryProvider`, `schedulerProvider` and `studyClockProvider`.
-- The domain reads a deck's cards only through `deck`'s surface (`DeckRepository.listCards`, [`deck.md`](deck.md)).
+- The surface exports what the composition site constructs and overrides: `StudyScreen`, `TodayCard`, `StudyRepository`, `Scheduler`, and the providers `studyRepositoryProvider`, `schedulerProvider`, `studyClockProvider` and `studyRandomProvider`.
+- The domain reads the decks' cards only through `deck`'s surface (`DeckRepository.listCards`, [`deck.md`](deck.md)).
 
 ### Session
 
-- A deck's "Study" button opens `StudyScreen`. `deck` reaches it through `studyScreenProvider`, which the composition site overrides ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
-- The queue is built when the session opens: the cards due at or before now, earliest due first, then up to `newCardLimit` (20) cards never reviewed, oldest first. `newCardLimit` and `reshowGap` are constants in `app/lib/study/src/queue.dart`.
-- A "Don't know" puts the card back so that `reshowGap` (3) other cards come before it, or as many as remain. Each re-show is a review passed to the engine.
+- A session studies a `DeckSelection`: one deck from its card list, the selected decks from the deck list's selection mode, or every deck from the header card. `deck` reaches `StudyScreen` through `studyScreenProvider` and `TodayCard` through `todayCardProvider`, both overridden by the composition site ([ADR 0005](adr/0005-study-queue-and-card-state.md), [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
+- The queue is built when the session opens, from the cards of every selected deck: every card due at or before now, and up to `newCardLimit` (20) cards never reviewed across the decks, oldest first by creation time.
+- The queue's order is random: the due and new cards are shuffled together, so each new card lands at a random place among the due ones ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
+- A "Don't know" puts the card back after a gap drawn from `reshowGapMin` (3) to `reshowGapMax` (5) other cards, or after as many as remain. Each re-show is a review passed to the engine.
+- `newCardLimit`, `reshowGapMin` and `reshowGapMax` are constants in `app/lib/study/src/queue.dart`.
+- Every random choice of a session comes from one `Random`, which `studyRandomProvider` makes from the session's start time. The composition site seeds it from that time; tests inject their own.
+- `TodayCard`, the deck list's header, shows "오늘 할 카드 n장", the length of the queue a session over its decks would build now, and "모두 학습", which opens that session. It reads the count when it is built, when its decks change, and when its route comes back on top; a failed read is shown in place of the count.
 - The screen has a top bar (the close button, a progress bar and the count of cards answered out of the session's cards), the current card, and above it every card answered so far ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)). It shows no deck name, no answer button and no hint text, and never builds the next card.
 - The current card:
   - sits full width less 20 on each side, its centre at 57% of the screen height while it fits;
@@ -24,7 +28,7 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 - Dragging the current card moves and tilts it; past 40 a chip and a tint name the answer. Released past 100, or flung faster than 700 per second, it answers "Know" to the right and "Don't know" to the left, with a light haptic; otherwise it springs back.
 - The previous cards are every answer of the session, re-shows included, newest nearest, in one scroll view that opens at the newest and builds only the cards near it. Each shows two lines of each side, a dot for its answer and "수정됨" once the answer differs from the first given; it is smaller, greyer and blurrier a step per card of depth up to a cap, unblurred past it, and opaque. A long-press opens the whole card in a sheet.
 - Tapping a previous card toggles its answer between "Know" and "Don't know", any number of times:
-  - to "Don't know", a card's last answer puts the card back by `reshowGap` unless it is waiting or on screen;
+  - to "Don't know", a card's last answer puts the card back as a "Don't know" does, unless it is waiting or on screen;
   - to "Know", a card's last answer removes the card's re-show while it waits behind the card on screen;
   - any other toggle leaves the queue unchanged.
 - On an answer the card flies off, the answered card rises into the stack and the next card emerges from below. Under the platform's reduce-motion setting, these become a 150 ms cross-fade.
@@ -40,7 +44,7 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 - Every answer writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time and duration on screen).
 - Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer. It then rewrites those `reviews` rows, keeping their ids and times, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)).
 - The engine calls and the write run after the screen has changed, chained in the order given.
-- `StudyRepository` receives its id generator, and the session its clock (`studyClockProvider`), so tests fix both.
+- `StudyRepository` receives its id generator, and the session its clock (`studyClockProvider`) and random source (`studyRandomProvider`), so tests fix all three.
 
 ### The bridge to the engine
 
@@ -73,7 +77,8 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 
 - `app/test/study/engine_bridge_test.dart` calls the engine through the bridge. It checks one step of `engine/tests/fixtures/reference.json`, and the arrival of a refused review as an `EngineError`.
 - `app/test/study/correction_test.dart` runs a session over an in-memory database and the real engine, and checks the state stored after each toggle against a chain of the bridge's `review_card` calls over the corrected history, from the state before the session.
-- `app/test/study/toggle_test.dart` covers the queue effects of a toggle; `app/test/study/queue_test.dart` covers the queue policy.
+- `app/test/study/toggle_test.dart` covers the queue effects of a toggle; `app/test/study/queue_test.dart` covers the queue's membership over several decks, its order under seeded sources, and the re-show gap.
+- `app/test/study/today_card_test.dart` checks that the header's count is the length of the queue "모두 학습" opens, and when the count is read again.
 - `app/test/study/previous_cards_test.dart` checks that a stack of 300 answers builds only the cards near the view.
 - `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish.
 - `flutter test` loads the library from `app/rust/target/release/`, so `make test` builds the crate there first.
@@ -87,9 +92,10 @@ The `study` domain: studying a deck, scheduling its cards for review, and the br
 
 - [ADR 0004](adr/0004-flutter-rust-bridge.md) records the bridge crate's place, the native-assets backend, the location of the bindings, and each departure from flutter_rust_bridge's documented layout.
 - [ADR 0005](adr/0005-study-queue-and-card-state.md) records the queue policy, the re-show gap, why the state is stored as parts in `card_states`, and how `deck` opens the session.
+- [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md) records the session over several decks, the header card, the random order and gap, and why they supersede ADR 0005's.
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the swipe screen, the toggleable stack, and why a toggle replays the card's session answers in Dart rather than through the bridge's `replay`.
-- Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, and issue #18 the current screen, as decided by the PM.
+- Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, issue #18 the current screen, and issue #19 the session over several decks, as decided by the PM.
 
 ## Open questions
 
-- None.
+- Whether the header count should follow writes as they land rather than being read when the deck list returns on top. A write still running at that moment is missed until the next read (ADR 0009).

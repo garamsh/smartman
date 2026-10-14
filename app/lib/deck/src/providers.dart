@@ -12,11 +12,21 @@ final deckRepositoryProvider = Provider<DeckRepository>(
   ),
 );
 
-/// Builds the screen that studies a deck. The composition site overrides it,
-/// since the domain that studies decks depends on this one.
-final studyScreenProvider = Provider<Widget Function(Deck deck)>(
+/// Builds the screen that studies the selected decks in one session. The
+/// composition site overrides it, since the domain that studies decks depends
+/// on this one.
+final studyScreenProvider = Provider<Widget Function(DeckSelection decks)>(
   (ref) => throw UnimplementedError(
     'studyScreenProvider is overridden at the composition site',
+  ),
+);
+
+/// Builds the deck list's header card: how many cards a session over every
+/// deck in the selection would study today, and the action that starts it.
+/// The composition site overrides it, as it does [studyScreenProvider].
+final todayCardProvider = Provider<Widget Function(DeckSelection decks)>(
+  (ref) => throw UnimplementedError(
+    'todayCardProvider is overridden at the composition site',
   ),
 );
 

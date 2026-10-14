@@ -46,11 +46,12 @@ Future<StudySession> _open(List<String> names) async {
     );
   }
   final session = StudySession(
-    deckId: deck.id,
+    decks: DeckSelection(deck.id),
     cards: cards,
     repository: StudyRepository(db, newId: () => 'review${ids++}'),
     scheduler: _InstantScheduler(),
     clock: () => DateTime.utc(2026, 10, 14, 9),
+    random: FirstDraw(),
     onFailure: (failure) => fail('unexpected $failure'),
   );
   addTearDown(session.dispose);

@@ -8,12 +8,12 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - The domain lives in `app/lib/deck/`; its public surface is `app/lib/deck/deck.dart`, with internals under `app/lib/deck/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - The surface exports:
-  - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`;
+  - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`, and `DeckSelection`, a set of decks that cannot be empty;
   - content: `Content`, `TextContent`, `UnsupportedContent`;
   - `CardKey`, and `describeContent`, the one line of text a card side shows;
   - `DeckRepository` and its save results;
   - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, and `describeFailure`, the message a user reads for one;
-  - `deckRepositoryProvider`, `studyScreenProvider`, `accountScreenProvider` and `DeckListScreen`.
+  - `deckRepositoryProvider`, `studyScreenProvider`, `todayCardProvider`, `accountScreenProvider` and `DeckListScreen`.
 - The `study` domain reads a deck's cards through `DeckRepository.listCards`, oldest first.
 
 ### Model
@@ -55,10 +55,21 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - Every tap target carries a semantic label: its text, or a tooltip for an icon button. A widget test checks each screen against Flutter's `labeledTapTargetGuideline`.
 - An empty deck name or card side is refused with a message on its field.
 
+### Deck list and selection
+
+- The deck list opens with a header card, above the decks, built for a selection of every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
+- A tap opens a deck; a long-press enters selection mode with that deck selected.
+- In selection mode:
+  - a tap, or a long-press, adds or removes a deck;
+  - the app bar shows how many decks are selected, a clear action that leaves the mode, and "학습 (n)", which opens one study session over the selected decks;
+  - a deck deleted while selected leaves the selection, and "학습 (n)" is disabled while the selection is empty;
+  - each deck's tile exposes whether it is selected to screen readers.
+
 ### State and composition
 
 - State and injection use Riverpod. `deckRepositoryProvider` has no implementation of its own; the composition site, `app/lib/main.dart`, overrides it with the repository it constructs.
-- The card list's "Study" button opens the screen `studyScreenProvider` builds. It has no implementation of its own either: the composition site overrides it with the `study` domain's screen, so this domain does not depend on `study` ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
+- `studyScreenProvider` builds the screen that studies a `DeckSelection` in one session. The card list's "Study" button opens it for its own deck, and selection mode for the selected decks. It has no implementation of its own either: the composition site overrides it with the `study` domain's screen, so this domain does not depend on `study` ([ADR 0005](adr/0005-study-queue-and-card-state.md), [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
+- `todayCardProvider` builds the deck list's header card for a `DeckSelection`. The composition site overrides it with the `study` domain's `TodayCard`, which counts the cards and starts the session ([`study.md`](study.md)).
 - The deck list's account button opens the screen `accountScreenProvider` builds. The composition site overrides it with the `account` domain's screen, as it does `studyScreenProvider` ([`account.md`](account.md)).
 - The repository receives its clock and id generator, so tests fix both.
 
@@ -66,7 +77,8 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - [ADR 0002](adr/0002-domain-public-surface-and-shared-database.md): why the surface is one library file and why the tables live in a shared database below the domains.
 - [ADR 0005](adr/0005-study-queue-and-card-state.md): why the study entry point is a provider the composition site overrides.
-- Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM.
+- [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why the entry point takes a `DeckSelection`, and why the header card is a `study` widget behind a provider.
+- Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM. Issue #19 records the selection mode and the header card.
 
 ## Open questions
 

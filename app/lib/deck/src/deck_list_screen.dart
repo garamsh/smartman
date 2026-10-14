@@ -8,35 +8,64 @@ import 'model.dart';
 import 'name_dialog.dart';
 import 'providers.dart';
 
-/// Lists decks and creates, renames, and deletes them.
-class DeckListScreen extends ConsumerWidget {
+/// Lists decks and creates, renames, and deletes them. A long-press enters a
+/// selection mode that studies several decks in one session.
+class DeckListScreen extends ConsumerStatefulWidget {
   const DeckListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeckListScreen> createState() => _DeckListScreenState();
+}
+
+class _DeckListScreenState extends ConsumerState<DeckListScreen> {
+  /// The decks selected, or null outside selection mode.
+  Set<DeckId>? _selected;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final decks = ref.watch(decksProvider);
+    // A deck deleted while selected drops out of the selection.
+    final selected = switch ((_selected, decks)) {
+      (final selected?, AsyncData(:final value)) => {
+        for (final deck in value)
+          if (selected.contains(deck.id)) deck.id,
+      },
+      (final selected, _) => selected,
+    };
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.decksTitle),
-        actions: [
-          IconButton(
-            tooltip: l10n.account,
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ref.read(accountScreenProvider)(),
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: selected == null
+          ? AppBar(
+              title: Text(l10n.decksTitle),
+              actions: [
+                IconButton(
+                  tooltip: l10n.account,
+                  icon: const Icon(Icons.account_circle_outlined),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ref.read(accountScreenProvider)(),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : _selectionBar(l10n, selected),
       body: switch (decks) {
         AsyncData(:final value) when value.isEmpty => Center(
           child: Text(l10n.noDecks),
         ),
         AsyncData(:final value) => ListView(
-          children: [for (final deck in value) _DeckTile(deck: deck)],
+          children: [
+            ref.watch(todayCardProvider)(
+              DeckSelection(value.first.id, value.skip(1).map((d) => d.id)),
+            ),
+            for (final deck in value)
+              _DeckTile(
+                deck: deck,
+                selected: selected?.contains(deck.id),
+                onSelect: () => _toggle(deck.id),
+              ),
+          ],
         ),
         AsyncError(:final error, :final stackTrace) => Center(
           child: Text(describeProviderError(l10n, error, stackTrace)),
@@ -45,19 +74,49 @@ class DeckListScreen extends ConsumerWidget {
       },
       floatingActionButton: FloatingActionButton(
         tooltip: l10n.newDeck,
-        onPressed: () => _create(context, ref),
+        onPressed: _create,
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Future<void> _create(BuildContext context, WidgetRef ref) async {
+  AppBar _selectionBar(AppLocalizations l10n, Set<DeckId> selected) {
+    final study = DeckSelection.of(selected);
+    return AppBar(
+      leading: IconButton(
+        tooltip: l10n.clearSelection,
+        icon: const Icon(Icons.close),
+        onPressed: () => setState(() => _selected = null),
+      ),
+      title: Text(l10n.decksSelected(selected.length)),
+      actions: [
+        TextButton(
+          onPressed: study == null
+              ? null
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ref.read(studyScreenProvider)(study),
+                  ),
+                ),
+          child: Text(l10n.studySelected(selected.length)),
+        ),
+      ],
+    );
+  }
+
+  /// Enters selection mode with [deck], or adds or removes it once there.
+  void _toggle(DeckId deck) => setState(() {
+    final selected = _selected ??= {};
+    if (!selected.remove(deck)) selected.add(deck);
+  });
+
+  Future<void> _create() async {
     final repository = ref.read(deckRepositoryProvider);
     final name = await showNameDialog(
       context,
       title: AppLocalizations.of(context).newDeck,
     );
-    if (name == null || !context.mounted) return;
+    if (name == null || !mounted) return;
     await reportingFailure(context, () => repository.createDeck(name));
   }
 }
@@ -65,18 +124,41 @@ class DeckListScreen extends ConsumerWidget {
 enum _DeckAction { rename, delete }
 
 class _DeckTile extends ConsumerWidget {
-  const _DeckTile({required this.deck});
+  const _DeckTile({
+    required this.deck,
+    required this.selected,
+    required this.onSelect,
+  });
 
   final Deck deck;
+
+  /// Whether the deck is selected, or null outside selection mode.
+  final bool? selected;
+
+  /// Enters selection mode with this deck, or toggles it once there.
+  final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final selected = this.selected;
+    if (selected != null) {
+      return ListTile(
+        selected: selected,
+        leading: Icon(
+          selected ? Icons.check_circle : Icons.radio_button_unchecked,
+        ),
+        title: Text(deck.name),
+        onTap: onSelect,
+        onLongPress: onSelect,
+      );
+    }
     return ListTile(
       title: Text(deck.name),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
       ),
+      onLongPress: onSelect,
       trailing: PopupMenuButton<_DeckAction>(
         tooltip: l10n.deckActions,
         onSelected: (action) => switch (action) {
