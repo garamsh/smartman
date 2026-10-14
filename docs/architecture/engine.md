@@ -4,7 +4,7 @@ The scheduling engine: how a card's memory state and next due time are computed 
 
 ## Current decisions
 
-- **Location.** `engine/`, the library crate `smartman_engine`, separate from the Flutter app; the bridge that lets the app call it is M2b and does not exist yet.
+- **Location.** `engine/`, the library crate `smartman_engine`, separate from the Flutter app. The app calls it through the bridge crate in `app/rust/` ([`study.md`](study.md), [ADR 0004](adr/0004-flutter-rust-bridge.md)), which depends on it by path.
 - **Algorithm.** FSRS-6 as py-fsrs v6.3.2 implements it, with its default parameters, desired retention 0.9 and a maximum interval of 36500 days ([ADR 0003](adr/0003-fsrs-engine.md)). The formulas are in `engine/src/fsrs.rs`; no FSRS crate is a dependency.
 - **Pure functions.** The engine reads no clock, does no I/O and stores nothing. The caller passes the time of every review and keeps the history.
   - `review` takes a card's state (none for a new card), a rating and the time, and returns the new state and the due time.
@@ -24,5 +24,4 @@ The scheduling engine: how a card's memory state and next due time are computed 
 
 ## Open questions
 
-- How the app reaches the engine — the `flutter_rust_bridge` surface and where the history is stored — is M2b's and M3's to settle.
 - Whether desired retention or the parameters become per-user settings waits on parameter optimization from a user's review logs, which issue #5 leaves to a later milestone.
