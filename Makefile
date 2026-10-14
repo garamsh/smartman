@@ -42,6 +42,7 @@ test:
 build:
 	cd app && flutter build apk --debug
 	cd engine && cargo build --locked && \
-	echo "built the library crate smartman_engine from engine/Cargo.toml"
+	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
+	echo "built the library crate smartman_engine and its rustdoc from engine/Cargo.toml"
 
 ci: lint format test build
