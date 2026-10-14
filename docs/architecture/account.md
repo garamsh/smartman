@@ -48,6 +48,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 ### Interface
 
 - Every string comes from the shared ARB set. The buttons are labelled by their text, and the progress indicator shown while signing in or out carries a semantic label.
+- The screen's "화면" section picks the app theme: 시스템, 라이트 or 다크, in a segmented control. The choice belongs to the shared theme ([`design.md`](design.md)); this screen only shows it.
 
 ### Tests
 

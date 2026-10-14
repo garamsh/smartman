@@ -1,6 +1,6 @@
 # ADR 0009: Study a non-empty selection of decks in one session, and draw the queue's order and re-show gap from one seeded random source
 
-> Status: accepted
+> Status: accepted; its header provider, `todayCardProvider`, superseded by ADR-0011
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

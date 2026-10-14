@@ -11,6 +11,7 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 
 - `app/` — the Flutter application (iOS and Android).
 - `app/config/` — the app's configuration per environment, passed with `--dart-define-from-file`; only `dev.json` exists. Its values are public; a Supabase secret or service-role key never goes there.
+- `app/assets/fonts/` — the app's font, IBM Plex Sans KR (Regular, Medium, SemiBold, Bold), bundled under the SIL Open Font License 1.1 in `app/assets/fonts/OFL.txt`; the app downloads no font at run time. The files are those of `ofl/ibmplexsanskr/` in google/fonts at commit `2aa273e00174c62d5de0a8c4365299e26d0ecff2`. No bot proposes their update; the PM decides when to fetch a newer commit.
 - `app/rust/` — the flutter_rust_bridge crate through which the app calls the engine.
 - `engine/` — the Rust crate that schedules reviews with FSRS.
 - `supabase/` — the Supabase CLI project for the backend.

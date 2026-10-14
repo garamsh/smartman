@@ -25,6 +25,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - **A domain declares its public surface in one library file named for it**, `app/lib/<domain>/<domain>.dart`, which exports with `show` the names a caller may use ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - **Everything else a domain holds lives under `app/lib/<domain>/src/`.** An import of another domain's `src/` path is a defect, from a sibling or from the composition site. A domain's own tests may import its `src/` files.
 - **The import rules are checked by a test.** `app/test/architecture_test.dart` fails on two kinds of import under `app/lib/`: one from `shared/` into a domain, and one into a domain's `src/` from outside that domain.
+- **The app theme is shared code.** `app/lib/shared/theme.dart` holds every colour token, the light and dark themes and the user's choice between them; no other file under `app/lib/` writes a colour ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [`design.md`](design.md)).
 - **The drift database is shared code.** `app/lib/shared/database.dart` holds every domain's tables. A domain maps rows into its own types and does not export row classes.
 - **Every schema change goes through a migration.** The change raises `schemaVersion`. In `app/`, `dart run drift_dev make-migrations` then exports the new schema to `drift_schemas/` and its helpers to `test/drift/`, and the migration test there must pass.
 - **User-facing strings come from one ARB set.** It lives in `app/lib/shared/l10n/`, with Korean as the template and default locale. No widget hardcodes a string the user reads.
@@ -34,7 +35,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 
 - **The application has one composition site.** It is the one place that constructs concrete implementations, and it decides which implementation each declared abstraction receives.
 - **Every other unit receives what it depends on and constructs none of it**, whatever the shape makes the unit — a domain, a layer, or an adapter.
-- **The composition site stays thin.** It constructs and passes; it decides nothing else.
+- **The composition site stays thin.** It constructs and passes; it decides nothing else. It opens the theme storage, and passes the themes and the stored choice to `MaterialApp`.
 
 ## Rationale
 
@@ -42,6 +43,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - [ADR 0002](adr/0002-domain-public-surface-and-shared-database.md) records how a domain declares its public surface and why the database sits below the domains.
 - [ADR 0004](adr/0004-flutter-rust-bridge.md) records why the generated engine bindings sit inside the `study` domain.
 - [ADR 0006](adr/0006-account-native-google-sign-in.md) records why only the `account` domain imports the Supabase and Google packages.
+- [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme sits in shared code and how the composition site applies it.
 
 ## Open questions
 
