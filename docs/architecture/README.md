@@ -21,5 +21,7 @@ Current architecture of the system and the decisions behind it. This file is the
 ## Index
 
 - `structure.md` — the structural rules of the app: the domain as unit, what may reference what, and the composition site.
+- `deck.md` — the `deck` domain: decks, cards, content blocks, the card key, and the duplicate rule.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
+- `adr/0002-domain-public-surface-and-shared-database.md` — declare a domain's surface in one library file, and keep the drift database below the domains.
 - `adr/0000-template.md` — the template every ADR is written from.
