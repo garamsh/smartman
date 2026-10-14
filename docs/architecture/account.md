@@ -8,12 +8,13 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 
 - The domain lives in `app/lib/account/`; its public surface is `app/lib/account/account.dart`, with internals under `app/lib/account/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - The surface exports:
-  - `connectAccount` and `accountDefines`, with which the composition site builds the service;
+  - `connectAccount`, which returns an `AccountConnection`: the service, and the `SupabaseClient` it signs in through, null when the configuration cannot sign anyone in; and `accountDefines`;
   - `AccountService`, and `accountServiceProvider`, which the composition site overrides;
-  - the state: `AccountState`, `SignedOut`, `SignedIn`, `AccountUnavailable`;
+  - the state: `AccountState`, `SignedOut`, `SignedIn` with the account's `UserId`, `AccountUnavailable`;
+  - `AccountData`, `AccountDataNotCleared` and `accountDataProvider`, the device's data that sign-out pushes and clears, and `syncStatusProvider`, the sync status the screen shows; the composition site overrides both with the `sync` domain's, so this domain does not depend on it ([`sync.md`](sync.md));
   - the failures: `AccountFailure`, `AccountOffline`, `AccountMisconfigured`, `AccountRejected`;
   - `AccountScreen`.
-- It is the only domain that imports `supabase_flutter` or `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)).
+- It is the only domain that imports `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)). `sync` also imports `supabase_flutter`, for PostgREST with the client `connectAccount` returns ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md)).
 - `deck`'s list screen opens `AccountScreen` through `accountScreenProvider`, which the composition site overrides, so `deck` does not depend on this domain ([`deck.md`](deck.md)).
 
 ### Sign-in and session
@@ -22,7 +23,8 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - Sign-in opens the platform's Google account picker (`GoogleSignIn.authenticate`), then passes the Google ID token and an access token for `email` and `profile` to Supabase's `signInWithIdToken`.
 - Each run draws one random nonce when it initializes Google Sign-In: Google receives its SHA-256 as hex and puts it in the ID token, and `signInWithIdToken` receives the raw value, which Supabase checks against the token. Every sign-in in a run carries the same nonce, since Google Sign-In is initialized once per run ([ADR 0008](adr/0008-google-sign-in-nonce.md)).
 - `supabase_flutter` stores the session on the device and restores it at start; the screen then opens signed in.
-- Sign-out ends the Supabase session on the device first, then tells the server, then signs out of Google so the next sign-in shows the picker again.
+- Sign-out first asks `AccountData` to push every unsynced change. When some did not arrive, a dialog, "동기화되지 않은 변경이 있어요", offers "취소", which keeps the account signed in, and "그래도 로그아웃".
+- It then ends the Supabase session on the device, tells the server, and signs out of Google so the next sign-in shows the picker again. Once the device is signed out, even after a failure telling the server, `AccountData` clears the device's data; a failure there is shown in a snack bar.
 - The state is `SignedOut`, `SignedIn` with the account's email, or `AccountUnavailable` when the build's configuration cannot sign anyone in.
 
 ### Configuration
@@ -54,7 +56,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 
 ### Tests
 
-- `app/test/account/account_screen_test.dart` drives the screen with a substitute `AccountService` (`app/test/account/fake_account_service.dart`): both states, a cancelled sign-in, each failure, and sign-out.
+- `app/test/account/account_screen_test.dart` drives the screen with a substitute `AccountService` (`app/test/account/fake_account_service.dart`) and `AccountData` (`app/test/account/fake_account_data.dart`): both states, a cancelled sign-in, each failure, sign-out with and without unsynced changes, a failed clear, and the sync status shown only while signed in.
 - `app/test/account/account_service_test.dart` runs the real service over a substitute Google Sign-In platform and a Supabase Auth client whose HTTP client is substituted. It checks that the raw nonce sent to Supabase hashes to the one Google was given, and that each start draws a new one.
 - `app/test/account/config_test.dart` covers the configuration's parsing and checks that `app/config/dev.json` parses.
 
@@ -62,6 +64,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 
 - [ADR 0006](adr/0006-account-native-google-sign-in.md) records the native flow, the sources it follows, the configuration approach, the duplicated URL scheme, and why flavors wait for M7.
 - [ADR 0008](adr/0008-google-sign-in-nonce.md) records which platform sources show the nonce reaching the ID token, and why it is drawn per run rather than per sign-in.
+- [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records why sign-out pushes and clears the device's data, and why the client reaches `sync`.
 - Issue #15 records the decisions made by the PM, and issue #20 the nonce.
 
 ## Open questions

@@ -1,21 +1,22 @@
+import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 
 import 'account/fake_account_service.dart';
+import 'sync/fake_sync_server.dart';
 
 void main() {
   late Scheduler scheduler;
+  late QueryExecutor executor;
   setUpAll(() async => scheduler = await Scheduler.load());
 
   /// Composes the app over an in-memory database and theme storage holding
@@ -30,11 +31,13 @@ void main() {
         ),
       ),
     ))!;
+    executor = NativeDatabase.memory();
     await tester.pumpWidget(
       composeApp(
-        NativeDatabase.memory(),
+        executor,
         scheduler,
         FakeAccountService(),
+        FakeSyncServer(const UserId('00000000-0000-4000-8000-00000000000a')),
         themeStorage,
       ),
     );
@@ -135,14 +138,8 @@ void main() {
   testWidgets('a storage failure is shown to the user', (tester) async {
     await pumpApp(tester);
     await createDeckAndOpen(tester, 'French');
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(Scaffold).last),
-    );
-    final repository = container.read(deckRepositoryProvider);
-    await tester.runAsync(() async {
-      final deck = (await repository.watchDecks().first).single;
-      await repository.deleteDeck(deck.id);
-    });
+    // The database now refuses every write.
+    await tester.runAsync(() => executor.runCustom('PRAGMA query_only = ON'));
 
     await addCard(tester, 'Chat', 'cat');
 

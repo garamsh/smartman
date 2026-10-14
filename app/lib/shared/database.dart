@@ -11,6 +11,8 @@ class Decks extends Table {
   TextColumn get name => text()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -31,6 +33,8 @@ class Cards extends Table {
       text().check(const CustomExpression("source IN ('manual', 'import')"))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -52,6 +56,9 @@ class Reviews extends Table {
   RealColumn get fuzzFactor => real().nullable().check(
     const CustomExpression('fuzz_factor >= 0 AND fuzz_factor < 1'),
   )();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -67,18 +74,37 @@ class CardStates extends Table {
   RealColumn get difficulty => real()();
   DateTimeColumn get lastReview => dateTime()();
   DateTimeColumn get due => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column<Object>> get primaryKey => {cardId};
 }
 
+/// Which account the local database belongs to, and how far each synced table
+/// has been pulled: the highest server revision seen. At most one row; none
+/// while no account owns the database.
+@DataClassName('SyncStateRow')
+class SyncState extends Table {
+  IntColumn get id => integer().check(const CustomExpression('id = 0'))();
+  TextColumn get owner => text()();
+  IntColumn get decksRevision => integer()();
+  IntColumn get cardsRevision => integer()();
+  IntColumn get reviewsRevision => integer()();
+  IntColumn get cardStatesRevision => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// The app's local SQLite database, shared by every domain below which it sits.
-@DriftDatabase(tables: [Decks, Cards, Reviews, CardStates])
+@DriftDatabase(tables: [Decks, Cards, Reviews, CardStates, SyncState])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -88,6 +114,43 @@ class AppDatabase extends _$AppDatabase {
       },
       from2To3: (m, schema) async {
         await m.addColumn(schema.reviews, schema.reviews.fuzzFactor);
+      },
+      // Every row from before v4 is unsynced, so the new dirty flags start set.
+      from3To4: (m, schema) async {
+        for (final (table, deletedAt, dirty) in [
+          (schema.decks, schema.decks.deletedAt, schema.decks.dirty),
+          (schema.cards, schema.cards.deletedAt, schema.cards.dirty),
+        ]) {
+          await m.addColumn(table, deletedAt);
+          await m.addColumn(table, dirty);
+        }
+        await m.alterTable(
+          TableMigration(
+            schema.reviews,
+            columnTransformer: {
+              schema.reviews.updatedAt: schema.reviews.reviewedAt,
+            },
+            newColumns: [
+              schema.reviews.updatedAt,
+              schema.reviews.deletedAt,
+              schema.reviews.dirty,
+            ],
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            schema.cardStates,
+            columnTransformer: {
+              schema.cardStates.updatedAt: schema.cardStates.lastReview,
+            },
+            newColumns: [
+              schema.cardStates.updatedAt,
+              schema.cardStates.deletedAt,
+              schema.cardStates.dirty,
+            ],
+          ),
+        );
+        await m.createTable(schema.syncState);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

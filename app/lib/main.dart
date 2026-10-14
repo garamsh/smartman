@@ -13,6 +13,7 @@ import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
 import 'shared/theme.dart';
 import 'study/study.dart';
+import 'sync/sync.dart';
 
 /// The composition site: the one place that constructs the application.
 Future<void> main() async {
@@ -28,19 +29,22 @@ Future<void> main() async {
     composeApp(
       driftDatabase(name: 'smartman'),
       scheduler,
-      account,
+      account.service,
+      connectSyncServer(account),
       themeStorage,
     ),
   );
 }
 
 /// Constructs the application over the database [executor] opens, scheduling
-/// with the loaded [scheduler], signing in through [account], and keeping the
-/// theme choice in [themeStorage].
+/// with the loaded [scheduler], signing in through [account], syncing with
+/// [server], and keeping the theme choice in [themeStorage]. Sync starts at
+/// once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
   AccountService account,
+  SyncServer server,
   SharedPreferencesWithCache themeStorage,
 ) {
   final database = AppDatabase(executor);
@@ -51,6 +55,20 @@ Widget composeApp(
     newId: uuid.v4,
   );
   final studyRepository = StudyRepository(database, newId: uuid.v4);
+  final syncStore = SyncStore(database, scheduler, clock: DateTime.now);
+  final sync = SyncController(
+    account: account,
+    synchronizer: Synchronizer(syncStore, server),
+    store: syncStore,
+    edits: database.tableUpdates(
+      TableUpdateQuery.onAllTables([
+        database.decks,
+        database.cards,
+        database.reviews,
+        database.cardStates,
+      ]),
+    ),
+  )..start();
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -68,6 +86,9 @@ Widget composeApp(
       ),
       accountServiceProvider.overrideWithValue(account),
       accountScreenProvider.overrideWithValue(AccountScreen.new),
+      accountDataProvider.overrideWithValue(sync),
+      syncControllerProvider.overrideWithValue(sync),
+      syncStatusProvider.overrideWithValue(SyncStatusView.new),
       themeStorageProvider.overrideWithValue(themeStorage),
     ],
     child: const SmartmanApp(),

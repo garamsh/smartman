@@ -358,4 +358,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteCardBody => 'Its study history is deleted with it.';
+
+  @override
+  String get unsyncedChangesTitle => 'Some changes aren\'t synced';
+
+  @override
+  String get unsyncedChangesBody =>
+      'Signing out removes them from this device, and your other devices won\'t have them.';
+
+  @override
+  String get signOutAnyway => 'Sign out anyway';
+
+  @override
+  String get dataNotCleared =>
+      'Couldn\'t remove this device\'s data. It\'s removed when another account signs in.';
+
+  @override
+  String get syncSyncing => 'Syncing';
+
+  @override
+  String get syncSynced => 'Synced';
+
+  @override
+  String get syncOffline => 'Offline · syncs when connected';
+
+  @override
+  String get syncFailed => 'Couldn\'t sync';
+
+  @override
+  String get syncRetry => 'Try again';
 }

@@ -101,7 +101,13 @@ void main() {
     );
     expect(
       service.state,
-      isA<SignedIn>().having((s) => s.email, 'email', 'ada@example.com'),
+      isA<SignedIn>()
+          .having((s) => s.email, 'email', 'ada@example.com')
+          .having(
+            (s) => s.userId,
+            'userId',
+            const UserId('00000000-0000-4000-8000-000000000001'),
+          ),
     );
   });
 
@@ -263,8 +269,9 @@ void main() {
   });
 
   test('a build without configuration is unavailable, not a crash', () async {
-    final service = await connectAccount(const {});
+    final (:service, :client) = await connectAccount(const {});
 
+    expect(client, isNull);
     expect(
       service.state,
       isA<AccountUnavailable>().having(

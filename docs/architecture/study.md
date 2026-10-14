@@ -8,6 +8,7 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 - The domain lives in `app/lib/study/`; its public surface is `app/lib/study/study.dart`, with internals under `app/lib/study/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - The surface exports what the composition site constructs and overrides: `StudyScreen`, `TodayCounter`, `StudyRepository`, `Scheduler`, and the providers `studyRepositoryProvider`, `schedulerProvider`, `studyClockProvider` and `studyRandomProvider`.
+- `Scheduler.fold` is the fold `sync` recomputes a card's state with: the card's stored reviews in `reviewed_at` order, through the engine from a new card, each with its stored fuzz factor and a null factor as none ([`sync.md`](sync.md)). The domain does not import `sync`.
 - The domain reads the decks' cards only through `deck`'s surface (`DeckRepository.listCards`, [`deck.md`](deck.md)).
 
 ### Session
@@ -42,7 +43,8 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 - The `reviews` and `card_states` tables in `app/lib/shared/database.dart` belong to this domain. `card_states` holds each reviewed card's stability, difficulty, last review and due time; a new card has no row. Schema v2 added it ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
 - Every answer writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time, duration on screen and fuzz factor, which the answer draws from the session's `Random`). Schema v3 added `fuzz_factor`, checked to `[0, 1)`; a row written before it holds null, as its review was not fuzzed ([ADR 0012](adr/0012-fuzz-review-intervals.md)).
-- Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer with that answer's fuzz factor. It then rewrites those `reviews` rows, keeping their ids, times and factors, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)).
+- Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer with that answer's fuzz factor. It then rewrites those `reviews` rows, keeping their ids, times and factors, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)). Each row it writes takes the write's time as `updated_at` and is left unsynced; sync pushes it, the server keeping a review's rating by the later `updated_at` ([`sync.md`](sync.md)).
+- Schema v4 added `updated_at`, `deleted_at` and `dirty` to both tables. Reads leave out a card state with `deleted_at` set.
 - The engine calls and the write run after the screen has changed, chained in the order given.
 - `StudyRepository` receives its id generator, and the session its clock (`studyClockProvider`) and random source (`studyRandomProvider`), so tests fix all three.
 
@@ -100,8 +102,8 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the screen's colours moved onto the app theme, and why `TodayCounter` shows its count through a builder `deck` supplies.
 - [ADR 0012](adr/0012-fuzz-review-intervals.md) records where each answer's fuzz factor comes from and why it is stored on its review.
 - Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, issue #18 the current screen, and issue #19 the session over several decks, as decided by the PM.
+- [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records why sync recomputes a card's state through `Scheduler.fold` rather than merging states.
 
 ## Open questions
 
-- The server's `reviews` table ([server.md](server.md)) has no `fuzz_factor` yet; issue #24 adds it with sync.
 - Whether the header count should follow writes as they land rather than being read when the deck list returns on top. A write still running at that moment is missed until the next read (ADR 0009).
