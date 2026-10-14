@@ -15,6 +15,7 @@ RUST_TARGETS := cargo metadata --no-deps --format-version 1 | jq -r '.packages[]
 
 lint:
 	./check-contents-list.sh
+	./check-generated.sh
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
 	echo "analyzed $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
