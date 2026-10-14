@@ -15,6 +15,8 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - `app/rust/` — the flutter_rust_bridge crate through which the app calls the engine.
 - `engine/` — the Rust crate that schedules reviews with FSRS.
 - `supabase/` — the Supabase CLI project for the backend: its configuration, migrations in `supabase/migrations/`, and pgTAP tests in `supabase/tests/`.
+- `supabase/functions/extract-cards/` — the Edge Function that turns a photo of a vocabulary page into candidate cards, with its Deno tests.
+- `tools/eval/` — the eval that measures candidate models for that function, its generated sample set, and the generator.
 - `docs/convention/` — the conventions every change follows.
 - `docs/architecture/` — the structure of the system and the decisions behind it.
 - `Makefile` — the entry points for the project's checks.
@@ -26,12 +28,13 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - JDK 17 for the Android build; with Flutter, point it at the JDK with `flutter config --jdk-dir`.
 - Android SDK 36 for the Android build; Xcode for iOS.
 - Supabase CLI 2.120.0 for the backend; CI's ubuntu job installs the same release, set in `.github/workflows/ci.yml`. The PM bumps both when a new release ships.
+- Deno 2.9.7 for the Edge Function and the eval; CI installs the same release, set in `.github/workflows/ci.yml`. The PM bumps both when a new release ships. Without it, `make lint`, `make format` and `make test` skip the Deno steps and say so.
 - Docker for the local backend and its tests; on macOS, `brew install colima docker`, then `colima start`. Without it, `make test` skips the database tests and says so.
 - Rust 1.99.0 with clippy and rustfmt for the engine and the bridge crate, pinned in `engine/rust-toolchain.toml` and `app/rust/rust-toolchain.toml`; rustup installs it, and the Android and iOS targets the bridge crate lists, on first use. Dependabot proposes the bump when a new stable Rust release ships.
 - flutter_rust_bridge_codegen at the release of the `flutter_rust_bridge` crate in `app/rust/Cargo.lock`, 2.13.0: `cargo install flutter_rust_bridge_codegen --version 2.13.0 --locked`. `make lint` fails when another release is installed.
 - The Android NDK release Flutter names (`flutter.ndkVersion` in `app/android/app/build.gradle.kts`), for the bridge crate's Android build.
 - jq, which `make lint` uses to list the engine's cargo targets, to read service-role keys' JWT payloads, and to read `app/config/dev.json`.
-- uv, only to regenerate the engine's reference values; it fetches the Python and the py-fsrs version the generator pins.
+- uv, only to regenerate the engine's reference values and the eval's samples; it fetches the Python and the packages each generator pins.
 
 ## Run the app
 
@@ -44,9 +47,9 @@ Without the file the app still runs, with Google sign-in unavailable.
 
 ## Run the checks
 
-- `make lint` — checks Markdown Contents lists, fails on a Supabase secret or service-role key in any file, checks that the iOS URL scheme matches the iOS client ID in `app/config/dev.json`, checks that the app's committed generated code (flutter_rust_bridge's included) matches its generators, runs `flutter analyze` over the app's Dart files, and runs clippy over the engine and the bridge crate with warnings denied.
-- `make format` — fails when a Dart file in the app or a Rust file in the engine or the bridge crate is not formatted; `dart format` or `cargo fmt` fixes it.
-- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, and the database tests in `supabase/tests/` against the local stack (`supabase/test-db.sh`). It resets the local database first, and stops the stack afterwards if it started it. Without Docker it skips the database tests and prints why.
+- `make lint` — checks Markdown Contents lists, fails on a Supabase secret or service-role key in any file, checks that the iOS URL scheme matches the iOS client ID in `app/config/dev.json`, checks that the app's committed generated code (flutter_rust_bridge's included) matches its generators, lints and type-checks the TypeScript under `supabase/functions/` and `tools/eval/` with deno (`deno.sh`), runs `flutter analyze` over the app's Dart files, and runs clippy over the engine and the bridge crate with warnings denied.
+- `make format` — fails when a TypeScript file under `supabase/functions/` or `tools/eval/`, a Dart file in the app, or a Rust file in the engine or the bridge crate is not formatted; `deno fmt`, `dart format` or `cargo fmt` fixes it.
+- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, and the database tests in `supabase/tests/` against the local stack (`supabase/test-db.sh`). It resets the local database first, and stops the stack afterwards if it started it. Without Docker it skips the database tests and prints why. Last, it runs the Deno tests of the Edge Function and the eval, with no network: OpenRouter and Supabase are faked.
 - `make build` — builds, given `app/config/dev.json`, a debug Android APK holding the bridge library, on macOS also the iOS simulator app without code signing, and the engine crate with its rustdoc, warnings denied. It reports which builds it ran.
 - `make ci` — runs all four in that order. CI runs the same target.
 
@@ -65,3 +68,16 @@ supabase stop
 - `supabase stop` stops the stack.
 
 The schema is described in `docs/architecture/server.md`. Only the PM applies a migration to the remote project, with `supabase db push`, after its pull request merges.
+
+## Run the eval
+
+The eval needs the OpenRouter key in `supabase/functions/.env`, as `OPENROUTER_API_KEY=...`; git ignores that file, and only the owner creates it. Its spend is capped at $10 across all runs, recorded in `tools/eval/spend.json`.
+
+```sh
+deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval --allow-net=openrouter.ai \
+  --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env tools/eval/run.ts --dry-run
+```
+
+- `--dry-run` resolves the candidates in `tools/eval/candidates.json` to model IDs, prints the estimated cost, and calls no model. Without it the run starts when the estimate fits the remaining budget, writes `docs/eval/extract-cards.md`, and appends its spend to `tools/eval/spend.json`; commit both.
+- `uv run --locked --script tools/eval/generate.py` regenerates the samples in `tools/eval/samples/`.
+- The method is described in `docs/architecture/ai-extraction.md`.

@@ -26,7 +26,8 @@ Current architecture of the system and the decisions behind it. This file is the
 - `account.md` — the `account` domain: Google sign-in through Supabase Auth, the session, and the configuration it reads from `app/config/`.
 - `design.md` — the app's design language: the principles every screen follows, where each is applied today, and the shared light and dark theme.
 - `study.md` — the `study` domain: the study session over one or more decks, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
-- `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, and the pgTAP tests `make test` runs.
+- `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, the extraction count, and the pgTAP tests `make test` runs.
+- `ai-extraction.md` — the `extract-cards` Edge Function: its contract, limits and privacy, how its model is switched, and the eval that chooses the model.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
 - `adr/0002-domain-public-surface-and-shared-database.md` — declare a domain's surface in one library file, and keep the drift database below the domains.
 - `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz; its no-fuzz decision superseded by ADR 0012.
@@ -39,4 +40,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence drawn under a per-user lock, composite foreign keys between a user's rows, and pgTAP tests in `make test`.
 - `adr/0011-shared-app-theme-bundled-font-and-today-builder.md` — draw every screen from one shared light and dark theme with a bundled IBM Plex Sans KR, chosen per device, and show study's counts in deck screens through one builder provider; supersedes ADR 0009's header provider and ADR 0007's study colour constants.
 - `adr/0012-fuzz-review-intervals.md` — fuzz review intervals as py-fsrs 6.3.2 does, with a factor in `[0, 1)` the app draws from the session's random source and stores on each review; supersedes ADR 0003's "The engine does not fuzz".
+- `adr/0013-extract-cards-function-and-eval.md` — extract cards in a dependency-free Deno Edge Function with an optional retry model, limit it per user through one locked SQL function, and choose its model with a budget-capped eval in `tools/eval/`.
 - `adr/0000-template.md` — the template every ADR is written from.
