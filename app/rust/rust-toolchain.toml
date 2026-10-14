@@ -1,0 +1,17 @@
+[toolchain]
+# Same release as engine/rust-toolchain.toml; native_toolchain_rust requires an exact version.
+channel = "1.99.0"
+components = ["clippy", "rustfmt"]
+profile = "minimal"
+targets = [
+  "aarch64-apple-darwin",
+  "aarch64-apple-ios",
+  "aarch64-apple-ios-sim",
+  "aarch64-linux-android",
+  "aarch64-unknown-linux-gnu",
+  "armv7-linux-androideabi",
+  "x86_64-apple-darwin",
+  "x86_64-apple-ios",
+  "x86_64-linux-android",
+  "x86_64-unknown-linux-gnu",
+]
