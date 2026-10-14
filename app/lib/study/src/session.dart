@@ -37,35 +37,57 @@ final class StatesUnreadable extends SessionLoadFailed {
   final StudyFailure failure;
 }
 
-/// [current] is on screen, below the card answered just before it.
+/// [current] is on screen, below every card answered so far in [previous].
 final class SessionStudying extends SessionState {
-  const SessionStudying(this.current, this.previous);
+  const SessionStudying(this.current, this.previous, this.progress);
 
   final Card current;
-  final PreviousCard? previous;
+
+  /// Oldest first.
+  final List<PreviousCard> previous;
+  final SessionProgress progress;
 }
 
-/// The session is over. [previous] is the last card answered while it can
-/// still be corrected, which reopens the session.
+/// The session is over. [previous] holds the answers that can still be
+/// toggled, oldest first; it is empty once the user has left.
 final class SessionFinished extends SessionState {
-  const SessionFinished(this.summary, this.previous);
+  const SessionFinished(this.summary, this.previous, this.progress);
 
   final SessionSummary summary;
-  final PreviousCard? previous;
+  final List<PreviousCard> previous;
+  final SessionProgress progress;
 }
 
-/// The card answered just before the one on screen.
+/// An answer given in this session, shown above the current card.
 final class PreviousCard {
-  const PreviousCard(this.card, this.answer);
+  const PreviousCard({
+    required this.position,
+    required this.card,
+    required this.answer,
+    required this.changed,
+  });
 
+  /// Where the answer stands among the session's answers, first at 0; what
+  /// [StudySession.toggle] takes.
+  final int position;
   final Card card;
   final Answer answer;
 
-  /// Only a "Know" can be corrected, to "Don't know".
-  bool get correctable => answer == Answer.know;
+  /// Whether [answer] differs from the answer first given.
+  final bool changed;
 }
 
-/// The counts a finished session shows.
+/// How many of the session's cards have been answered at least once.
+final class SessionProgress {
+  const SessionProgress(this.answered, this.total);
+
+  final int answered;
+
+  /// The cards in the queue when the session opened.
+  final int total;
+}
+
+/// The counts a finished session shows, from the current answers.
 final class SessionSummary {
   const SessionSummary({
     required this.cardsStudied,
@@ -77,28 +99,27 @@ final class SessionSummary {
   /// Distinct cards answered at least once.
   final int cardsStudied;
 
-  /// Answers given with each button; a re-shown card counts each time.
+  /// Answers standing as each choice; a re-shown card counts each time.
   final int knowCount;
   final int dontKnowCount;
   final Duration timeSpent;
 }
 
-/// An answer given in this session, and the card's state before it once its
-/// write has read it.
+/// An answer given in this session; [review] holds its current answer.
 final class _Answered {
-  _Answered(this.review, this.card);
+  _Answered(this.card, this.review) : first = review.answer;
 
-  final Review review;
   final Card card;
-  ({CardState? state})? before;
+  Review review;
+  final Answer first;
 }
 
 /// One study session over a deck.
 ///
-/// Every answer advances the session at once. The engine call and the write
-/// that follow run afterwards, one at a time in answer order, and a
-/// [StudyFailure] they raise goes to [onFailure]. Any other error is reported
-/// to [FlutterError.reportError], and the writes after it still run.
+/// Every answer and every toggle changes the session at once. The engine calls
+/// and the write that follow run afterwards, one at a time in the order given,
+/// and a [StudyFailure] they raise goes to [onFailure]. Any other error is
+/// reported to [FlutterError.reportError], and the writes after it still run.
 class StudySession extends ChangeNotifier {
   StudySession({
     required DeckId deckId,
@@ -119,40 +140,53 @@ class StudySession extends ChangeNotifier {
   SessionLoadFailed? _loadFailure;
   bool _loaded = false;
   final _queue = <Card>[];
-  final _states = <CardId, CardState>{};
-  final _studied = <CardId>{};
-  var _knowCount = 0;
-  var _dontKnowCount = 0;
+  var _total = 0;
+
+  /// Each card's stored state when the session opened; a new card is absent.
+  final _before = <CardId, CardState>{};
+  final _answers = <_Answered>[];
   late DateTime _startedAt;
   late DateTime _shownAt;
   DateTime? _endedAt;
   bool _left = false;
   bool _disposed = false;
-  _Answered? _previous;
   Future<void> _writes = Future.value();
 
   SessionState get state {
     if (_loadFailure case final failure?) return failure;
     if (!_loaded) return const SessionLoading();
-    final previous = switch (_previous) {
-      final answered? => PreviousCard(answered.card, answered.review.answer),
-      null => null,
-    };
+    final previous = [
+      for (final (position, answered) in _answers.indexed)
+        PreviousCard(
+          position: position,
+          card: answered.card,
+          answer: answered.review.answer,
+          changed: answered.review.answer != answered.first,
+        ),
+    ];
+    final progress = SessionProgress(
+      {for (final answered in _answers) answered.card.id}.length,
+      _total,
+    );
     if (_endedAt case final endedAt?) {
       return SessionFinished(
         SessionSummary(
-          cardsStudied: _studied.length,
-          knowCount: _knowCount,
-          dontKnowCount: _dontKnowCount,
+          cardsStudied: progress.answered,
+          knowCount: previous.where((p) => p.answer == Answer.know).length,
+          dontKnowCount: previous
+              .where((p) => p.answer == Answer.dontKnow)
+              .length,
           timeSpent: endedAt.difference(_startedAt),
         ),
-        _left ? null : previous,
+        _left ? const [] : previous,
+        progress,
       );
     }
-    return SessionStudying(_queue.first, previous);
+    return SessionStudying(_queue.first, previous, progress);
   }
 
-  /// Completes when every answer given so far has been written or reported.
+  /// Completes when every answer and toggle given so far has been written or
+  /// reported.
   Future<void> get settled => _writes;
 
   /// Answers the card on screen and shows the next.
@@ -160,60 +194,60 @@ class StudySession extends ChangeNotifier {
     if (state is! SessionStudying) return;
     final now = _clock();
     final card = _queue.removeAt(0);
-    final answered = _Answered(
-      Review(
-        id: _repository.newReviewId(),
-        cardId: card.id,
-        answer: answer,
-        reviewedAt: now,
-        duration: now.difference(_shownAt),
+    _answers.add(
+      _Answered(
+        card,
+        Review(
+          id: _repository.newReviewId(),
+          cardId: card.id,
+          answer: answer,
+          reviewedAt: now,
+          duration: now.difference(_shownAt),
+        ),
       ),
-      card,
     );
-    _studied.add(card.id);
-    switch (answer) {
-      case Answer.know:
-        _knowCount++;
-      case Answer.dontKnow:
-        _dontKnowCount++;
-        reinsert(_queue, card);
-    }
-    _previous = answered;
+    if (answer == Answer.dontKnow) reinsert(_queue, card);
     _shownAt = now;
     if (_queue.isEmpty) _endedAt = now;
     notifyListeners();
-    _write(answered);
+    _write(card.id);
   }
 
-  /// Changes the previous card's "Know" to "Don't know", rescheduling it from
-  /// its state before that answer and showing it again later.
-  void correctPrevious() {
-    final previous = _previous;
-    if (_left || previous == null || previous.review.answer != Answer.know) {
-      return;
+  /// Toggles the answer at [position] between "Know" and "Don't know", and
+  /// reschedules its card by replaying the card's answers in this session.
+  ///
+  /// A toggle to "Don't know" of a card's last answer puts the card back as
+  /// an answer would, unless it is already waiting; after the queue has
+  /// emptied this reopens the session. A toggle to "Know" of a card's last
+  /// answer removes the card's re-show if it is waiting behind the card on
+  /// screen.
+  void toggle(int position) {
+    if (_left || !_loaded) return;
+    final answered = _answers[position];
+    final card = answered.card;
+    final answer = switch (answered.review.answer) {
+      Answer.know => Answer.dontKnow,
+      Answer.dontKnow => Answer.know,
+    };
+    answered.review = answered.review.withAnswer(answer);
+    final isLast = !_answers
+        .skip(position + 1)
+        .any((later) => later.card.id == card.id);
+    final waiting = _queue.indexWhere((queued) => queued.id == card.id);
+    if (isLast && answer == Answer.dontKnow && waiting == -1) {
+      if (_queue.isEmpty) {
+        _endedAt = null;
+        _shownAt = _clock();
+      }
+      reinsert(_queue, card);
+    } else if (isLast && answer == Answer.know && waiting > 0) {
+      _queue.removeAt(waiting);
     }
-    final original = previous.review;
-    final corrected = Review(
-      id: original.id,
-      cardId: original.cardId,
-      answer: Answer.dontKnow,
-      reviewedAt: original.reviewedAt,
-      duration: original.duration,
-    );
-    final answered = _Answered(corrected, previous.card);
-    _knowCount--;
-    _dontKnowCount++;
-    if (_queue.isEmpty) {
-      _endedAt = null;
-      _shownAt = _clock();
-    }
-    reinsert(_queue, previous.card);
-    _previous = answered;
     notifyListeners();
-    _write(answered, corrects: previous);
+    _write(card.id);
   }
 
-  /// Ends the session early; the summary shows and nothing can be corrected.
+  /// Ends the session early; the summary shows and nothing can be toggled.
   void leave() {
     if (state is! SessionStudying) return;
     _endedAt = _clock();
@@ -228,8 +262,9 @@ class StudySession extends ChangeNotifier {
         for (final card in deckCards) card.id,
       ]);
       final now = _clock();
-      _states.addAll(states);
+      _before.addAll(states);
       _queue.addAll(buildQueue(deckCards, states, now));
+      _total = _queue.length;
       _startedAt = now;
       _shownAt = now;
       if (_queue.isEmpty) _endedAt = now;
@@ -250,22 +285,30 @@ class StudySession extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Queues the engine call and write for [answered], behind every earlier
-  /// one. A correction passes the answer it [corrects], whose pre-answer state
-  /// that earlier write has read by the time this one runs.
-  void _write(_Answered answered, {_Answered? corrects}) {
+  /// Queues the rescheduling of [card], behind every earlier write: its
+  /// answers in this session, as they stand now, replayed from its state when
+  /// the session opened, then written with that state.
+  void _write(CardId card) {
+    final history = [
+      for (final answered in _answers)
+        if (answered.card.id == card) answered.review,
+    ];
+    final before = _before[card];
     _writes = _writes.then((_) async {
-      final review = answered.review;
-      final before = corrects?.before ?? (state: _states[review.cardId]);
-      answered.before = before;
       try {
-        final after = await _scheduler.review(
-          before.state,
-          review.answer,
-          review.reviewedAt,
+        var after = await _scheduler.review(
+          before,
+          history.first.answer,
+          history.first.reviewedAt,
         );
-        await _repository.record(review, after);
-        _states[review.cardId] = after;
+        for (final review in history.skip(1)) {
+          after = await _scheduler.review(
+            after,
+            review.answer,
+            review.reviewedAt,
+          );
+        }
+        await _repository.record(card, history, after);
       } on StudyFailure catch (failure) {
         _onFailure(failure);
       } catch (error, stackTrace) {

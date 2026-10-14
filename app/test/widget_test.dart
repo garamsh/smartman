@@ -141,8 +141,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chat'), findsOneWidget);
-    expect(find.text('Know'), findsOneWidget);
-    expect(find.text("Don't know"), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    expect(find.text('0 / 1'), findsOneWidget);
     await unmountApp(tester);
   });
 

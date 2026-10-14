@@ -61,4 +61,14 @@ final class Review {
 
   /// How long the card was on screen before the answer.
   final Duration duration;
+
+  /// This review with its answer changed to [answer], keeping its id, time
+  /// and duration.
+  Review withAnswer(Answer answer) => Review(
+    id: id,
+    cardId: cardId,
+    answer: answer,
+    reviewedAt: reviewedAt,
+    duration: duration,
+  );
 }

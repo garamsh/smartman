@@ -31,4 +31,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0004-flutter-rust-bridge.md` — bridge the engine through a flutter_rust_bridge crate in `app/rust/` built with native assets, with its bindings in the `study` domain.
 - `adr/0005-study-queue-and-card-state.md` — queue a session from due then new cards, re-show a "Don't know" after three cards, and store each card's state parts in `card_states`.
 - `adr/0006-account-native-google-sign-in.md` — sign in with native Google Sign-In through Supabase Auth in an `account` domain, configured per environment from `app/config/`, with flavors deferred to M7.
+- `adr/0007-study-swipe-screen-and-session-toggle.md` — answer by swiping a split card, keep every session answer in a toggleable stack, and reschedule a toggle by replaying the card's session answers; supersedes ADR 0005's screen and correction rules.
 - `adr/0000-template.md` — the template every ADR is written from.
