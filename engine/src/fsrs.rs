@@ -161,7 +161,11 @@ mod tests {
     fn intervals_under_two_and_a_half_days_are_never_fuzzed() {
         for days in [1, 2] {
             for factor in [0.0, 0.5, FACTOR_MAX] {
-                assert_eq!(fuzzed_interval_days(days, factor), days, "{days} at {factor}");
+                assert_eq!(
+                    fuzzed_interval_days(days, factor),
+                    days,
+                    "{days} at {factor}"
+                );
             }
         }
         // Control: three days, the shortest interval fuzzed, moves at both factor ends.
@@ -184,10 +188,17 @@ mod tests {
     fn the_least_and_greatest_factor_give_the_ends_of_the_fuzz_range() {
         for (days, least, greatest) in BOUNDS {
             assert_eq!(fuzzed_interval_days(days, 0.0), least, "{days} at 0");
-            assert_eq!(fuzzed_interval_days(days, FACTOR_MAX), greatest, "{days} at max");
+            assert_eq!(
+                fuzzed_interval_days(days, FACTOR_MAX),
+                greatest,
+                "{days} at max"
+            );
             // Control: a factor between them lands inside the range, not on either end.
             let middle = fuzzed_interval_days(days, 0.5);
-            assert!(least < middle && middle < greatest, "{days} at 0.5: {middle}");
+            assert!(
+                least < middle && middle < greatest,
+                "{days} at 0.5: {middle}"
+            );
         }
     }
 }

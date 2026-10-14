@@ -29,7 +29,10 @@ fn a_first_good_due_in_two_days_is_not_fuzzed() {
 fn a_fuzz_factor_leaves_the_state_unchanged() {
     let fuzzed = review(None, Rating::Easy, Timestamp(0), Some(factor(0.0)));
     let plain = review(None, Rating::Easy, Timestamp(0), None);
-    assert_eq!(fuzzed.map(|(state, _)| state), plain.map(|(state, _)| state));
+    assert_eq!(
+        fuzzed.map(|(state, _)| state),
+        plain.map(|(state, _)| state)
+    );
     // Control: the due times differ, so the factor took effect.
     assert_ne!(fuzzed.map(|(_, due)| due), plain.map(|(_, due)| due));
 }
