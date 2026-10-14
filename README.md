@@ -39,7 +39,7 @@ flutter run
 - `make lint` — checks Markdown Contents lists, runs `flutter analyze` over the app's Dart files, and runs clippy over the engine with warnings denied.
 - `make format` — fails when a Dart file in the app or a Rust file in the engine is not formatted; `dart format` or `cargo fmt` fixes it.
 - `make test` — runs the app's tests and the engine's tests.
-- `make build` — builds a debug Android APK and the engine crate.
+- `make build` — builds a debug Android APK, and the engine crate with its rustdoc, warnings denied.
 - `make ci` — runs all four in that order. CI runs the same target.
 
 ## Run the backend locally
