@@ -180,4 +180,44 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schedulingFailure =>
       'Couldn\'t work out this card\'s next review. Its schedule did not change.';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get accountTitle => 'Account';
+
+  @override
+  String get signedOutBody => 'Everything works without an account.';
+
+  @override
+  String get signInWithGoogle => 'Sign in with Google';
+
+  @override
+  String get signingIn => 'Signing in';
+
+  @override
+  String signedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
+  String get signedIn => 'Signed in';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String get signingOut => 'Signing out';
+
+  @override
+  String get accountOffline =>
+      'Couldn\'t reach the server. Check your internet connection.';
+
+  @override
+  String get accountMisconfigured =>
+      'Sign-in isn\'t set up correctly in this app, so you can\'t sign in.';
+
+  @override
+  String get accountRejected => 'Google sign-in was refused. Please try again.';
 }

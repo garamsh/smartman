@@ -15,6 +15,9 @@ RUST_CRATES := engine app/rust
 # Every target cargo compiles for the crate's Cargo.toml, as "<kind> <name>".
 RUST_TARGETS := cargo metadata --no-deps --format-version 1 | jq -r '.packages[].targets[] | "\(.kind[0]) \(.name)"'
 
+# The configuration every build and test run is given, relative to app/ (ADR 0006).
+APP_CONFIG := --dart-define-from-file=config/dev.json
+
 # What make build produces, relative to app/, and the bridge crate library each must hold.
 APK := build/app/outputs/flutter-apk/app-debug.apk
 IOS_APP := build/ios/iphonesimulator/Runner.app
@@ -48,19 +51,19 @@ format:
 test:
 	cd app/rust && cargo build --locked --release && \
 	echo "built the bridge library into app/rust/target/release/, where flutter_rust_bridge loads it under flutter test"
-	cd app && flutter test --reporter expanded && \
+	cd app && flutter test --reporter expanded $(APP_CONFIG) && \
 	echo "ran the tests flutter test selects by default: app/test/**/*_test.dart"
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
 
 build:
-	cd app && flutter build apk --debug && \
+	cd app && flutter build apk --debug $(APP_CONFIG) && \
 	libs=$$(unzip -Z1 $(APK) 'lib/*/lib$(BRIDGE_LIB).so'); \
 	if [ -z "$$libs" ]; then echo "app/$(APK) holds no lib$(BRIDGE_LIB).so" >&2; exit 1; fi; \
 	echo "built the debug APK app/$(APK), holding the bridge library for $$(echo "$$libs" | wc -l | tr -d ' ') ABIs:"; \
 	echo "$$libs"
 	if [ "$$(uname -s)" = Darwin ]; then \
-		cd app && flutter build ios --simulator --debug --no-codesign && \
+		cd app && flutter build ios --simulator --debug --no-codesign $(APP_CONFIG) && \
 		test -f $(IOS_APP)/Frameworks/$(BRIDGE_LIB).framework/$(BRIDGE_LIB) && \
 		echo "built the unsigned iOS simulator app app/$(IOS_APP), holding $(BRIDGE_LIB).framework"; \
 	else \

@@ -170,4 +170,42 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get schedulingFailure => '이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.';
+
+  @override
+  String get account => '계정';
+
+  @override
+  String get accountTitle => '계정';
+
+  @override
+  String get signedOutBody => '로그인하지 않아도 모든 기능을 쓸 수 있습니다.';
+
+  @override
+  String get signInWithGoogle => 'Google로 로그인';
+
+  @override
+  String get signingIn => '로그인 중';
+
+  @override
+  String signedInAs(String email) {
+    return '$email 계정으로 로그인했습니다';
+  }
+
+  @override
+  String get signedIn => '로그인했습니다';
+
+  @override
+  String get signOut => '로그아웃';
+
+  @override
+  String get signingOut => '로그아웃 중';
+
+  @override
+  String get accountOffline => '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.';
+
+  @override
+  String get accountMisconfigured => '이 앱의 로그인 설정에 문제가 있어 로그인할 수 없습니다.';
+
+  @override
+  String get accountRejected => 'Google 로그인이 거부되었습니다. 다시 시도해 주세요.';
 }

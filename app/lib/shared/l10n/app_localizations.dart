@@ -373,6 +373,78 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.'**
   String get schedulingFailure;
+
+  /// Label of the home screen button that opens the account screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정'**
+  String get account;
+
+  /// Title of the account screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정'**
+  String get accountTitle;
+
+  /// Account screen text while signed out: no feature needs an account.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인하지 않아도 모든 기능을 쓸 수 있습니다.'**
+  String get signedOutBody;
+
+  /// Button that opens Google's account picker to sign in.
+  ///
+  /// In ko, this message translates to:
+  /// **'Google로 로그인'**
+  String get signInWithGoogle;
+
+  /// Accessible label of the progress indicator while signing in.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인 중'**
+  String get signingIn;
+
+  /// Account screen text while signed in, naming the account's email.
+  ///
+  /// In ko, this message translates to:
+  /// **'{email} 계정으로 로그인했습니다'**
+  String signedInAs(String email);
+
+  /// Account screen text while signed in to an account without an email.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인했습니다'**
+  String get signedIn;
+
+  /// Button that signs out.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그아웃'**
+  String get signOut;
+
+  /// Accessible label of the progress indicator while signing out.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그아웃 중'**
+  String get signingOut;
+
+  /// Shown when signing in or out could not reach the server.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'**
+  String get accountOffline;
+
+  /// Shown when the app's sign-in configuration is missing or rejected by Google or Supabase.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 앱의 로그인 설정에 문제가 있어 로그인할 수 없습니다.'**
+  String get accountMisconfigured;
+
+  /// Shown when Google or Supabase refused the sign-in.
+  ///
+  /// In ko, this message translates to:
+  /// **'Google 로그인이 거부되었습니다. 다시 시도해 주세요.'**
+  String get accountRejected;
 }
 
 class _AppLocalizationsDelegate

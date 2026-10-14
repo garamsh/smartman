@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import 'account/account.dart';
 import 'deck/deck.dart';
 import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
@@ -13,12 +14,17 @@ import 'study/study.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final scheduler = await Scheduler.load();
-  runApp(composeApp(driftDatabase(name: 'smartman'), scheduler));
+  final account = await connectAccount(accountDefines());
+  runApp(composeApp(driftDatabase(name: 'smartman'), scheduler, account));
 }
 
 /// Constructs the application over the database [executor] opens, scheduling
-/// with the loaded [scheduler].
-Widget composeApp(QueryExecutor executor, Scheduler scheduler) {
+/// with the loaded [scheduler] and signing in through [account].
+Widget composeApp(
+  QueryExecutor executor,
+  Scheduler scheduler,
+  AccountService account,
+) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
   final deckRepository = DeckRepository(
@@ -34,6 +40,8 @@ Widget composeApp(QueryExecutor executor, Scheduler scheduler) {
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),
       studyScreenProvider.overrideWithValue((deck) => StudyScreen(deck: deck)),
+      accountServiceProvider.overrideWithValue(account),
+      accountScreenProvider.overrideWithValue(AccountScreen.new),
     ],
     child: const SmartmanApp(),
   );
