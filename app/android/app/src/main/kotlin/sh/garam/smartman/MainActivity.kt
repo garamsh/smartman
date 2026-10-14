@@ -1,4 +1,4 @@
-package com.garamsh.smartman
+package sh.garam.smartman
 
 import io.flutter.embedding.android.FlutterActivity
 
