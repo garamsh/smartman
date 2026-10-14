@@ -99,5 +99,5 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 ## Open questions
 
-- Whether the server's reviews carry `fuzz_factor` waits on the server schema (issue #23), which had not merged when ADR 0012 was written.
+- The server's `reviews` table ([server.md](server.md)) has no `fuzz_factor` yet; issue #24 adds it with sync.
 - Whether the header count should follow writes as they land rather than being read when the deck list returns on top. A write still running at that moment is missed until the next read (ADR 0009).
