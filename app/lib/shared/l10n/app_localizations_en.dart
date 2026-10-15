@@ -797,4 +797,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String appVersion(String version) {
     return 'Version $version';
   }
+
+  @override
+  String get todayDone => 'You\'ve done today\'s cards';
 }

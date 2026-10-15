@@ -521,5 +521,7 @@
   "@appVersion": {
     "description": "Account screen footer: the app's version.",
     "placeholders": {"version": {"type": "String"}}
-  }
+  },
+  "todayDone": "오늘 할 카드를 다 했어요",
+  "@todayDone": {"description": "Today card when no card is due or new now; the study button is hidden."}
 }

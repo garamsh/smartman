@@ -301,7 +301,8 @@ class _EmptyHome extends StatelessWidget {
 
 /// Today's cards over every deck on the brand's navy card: the count, its
 /// split into due and new with the minutes it takes, and the action that
-/// studies them, with the symbol faint in the corner.
+/// studies them, with the symbol faint in the corner; with none, that today's
+/// cards are done.
 class _TodayCard extends StatelessWidget {
   const _TodayCard({required this.count, required this.onStudy});
 
@@ -313,6 +314,10 @@ class _TodayCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final quiet = AppType.secondary.copyWith(color: colors.onHero);
+    final done = switch (count) {
+      TodayCounted(total: 0) => true,
+      _ => false,
+    };
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.hero,
@@ -342,12 +347,23 @@ class _TodayCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.todayTitle,
-                    style: AppType.section.copyWith(color: colors.onHero),
-                  ),
-                  const SizedBox(height: AppSpace.s4),
+                  if (!done) ...[
+                    Text(
+                      l10n.todayTitle,
+                      style: AppType.section.copyWith(color: colors.onHero),
+                    ),
+                    const SizedBox(height: AppSpace.s4),
+                  ],
                   ...switch (count) {
+                    TodayCounted(total: 0) => [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          l10n.todayDone,
+                          style: AppType.title.copyWith(color: colors.onHero),
+                        ),
+                      ),
+                    ],
                     TodayCounted(
                       :final review,
                       :final fresh,
@@ -390,13 +406,17 @@ class _TodayCard extends StatelessWidget {
                       const SizedBox(height: AppSpace.s40 + AppSpace.s28),
                     ],
                   },
-                  const SizedBox(height: AppSpace.s20),
-                  AppButton(
-                    label: l10n.studyAll,
-                    icon: LucideIcons.play,
-                    variant: AppButtonVariant.onHero,
-                    onPressed: onStudy,
-                  ),
+                  // With nothing to study the card says so, and offers no
+                  // session.
+                  if (!done) ...[
+                    const SizedBox(height: AppSpace.s20),
+                    AppButton(
+                      label: l10n.studyAll,
+                      icon: LucideIcons.play,
+                      variant: AppButtonVariant.onHero,
+                      onPressed: onStudy,
+                    ),
+                  ],
                 ],
               ),
             ),

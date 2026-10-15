@@ -1338,6 +1338,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'버전 {version}'**
   String appVersion(String version);
+
+  /// Today card when no card is due or new now; the study button is hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드를 다 했어요'**
+  String get todayDone;
 }
 
 class _AppLocalizationsDelegate

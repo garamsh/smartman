@@ -232,13 +232,26 @@ class _CardFace extends StatelessWidget {
                 constraints.maxWidth / 2 - StudyStyle.cardPadding * 2;
             final stacked =
                 halfWidth < textScaler.scale(StudyStyle.minHalfWidth);
-            final question = ContentView(card.front, style: AppType.question);
+            // The width each half's text is laid out in: a half less its
+            // padding, side by side less the divider.
+            final textWidth = stacked
+                ? constraints.maxWidth - StudyStyle.cardPadding * 2
+                : (constraints.maxWidth - 1) / 2 - StudyStyle.cardPadding * 2;
+            final question = ContentView(
+              card.front,
+              style: AppType.question,
+              fit: (minFontSize: AppType.questionFloor, width: textWidth),
+            );
             final answer = Visibility(
               visible: revealed,
               maintainSize: true,
               maintainAnimation: true,
               maintainState: true,
-              child: ContentView(card.back, style: AppType.answer),
+              child: ContentView(
+                card.back,
+                style: AppType.answer,
+                fit: (minFontSize: AppType.answerFloor, width: textWidth),
+              ),
             );
             return ConstrainedBox(
               constraints: BoxConstraints(

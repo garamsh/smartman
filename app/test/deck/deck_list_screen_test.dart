@@ -219,6 +219,30 @@ void main() {
     },
   );
 
+  testWidgets(
+    'with nothing to study the today card says it is done and offers no session',
+    (tester) async {
+      var list = await _open(
+        tester,
+        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 0, fresh: 0)},
+      );
+
+      expect(find.text("You've done today's cards"), findsOneWidget);
+      expect(find.text('Study all'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('for today')), findsNothing);
+      await list.close();
+
+      // Control: one card to study shows the count and the button.
+      list = await _open(
+        tester,
+        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 1, fresh: 0)},
+      );
+      expect(find.text("You've done today's cards"), findsNothing);
+      expect(find.text('Study all'), findsOneWidget);
+      await list.close();
+    },
+  );
+
   testWidgets('a header count that cannot be read says why', (tester) async {
     final list = await _open(
       tester,

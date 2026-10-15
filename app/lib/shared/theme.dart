@@ -230,6 +230,12 @@ abstract final class AppType {
     fontWeight: FontWeight.w600,
   );
 
+  /// The smallest a card's question, answer and previous-card text shrink to
+  /// so their widest word fits its half.
+  static const questionFloor = 18.0;
+  static const answerFloor = 15.0;
+  static const compactFloor = 12.0;
+
   /// The scale as Material's text theme, so Material widgets draw in it.
   static const textTheme = TextTheme(
     displayLarge: display,
