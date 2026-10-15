@@ -99,9 +99,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
         primary: photoImport == null
             ? null
             : FilledButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => photoImport(null)),
-                ),
+                onPressed: () => _importPhoto(photoImport),
                 child: Text(l10n.createFromPhoto),
               ),
       ),
@@ -131,6 +129,18 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
       builder: (_) => ref.read(studyScreenProvider)(decks),
     ),
   );
+
+  /// Opens photo import for a new deck, then the deck it saved into.
+  Future<void> _importPhoto(Widget Function(DeckId? deck) photoImport) async {
+    final navigator = Navigator.of(context);
+    final deck = await navigator.push(
+      MaterialPageRoute<Deck>(builder: (_) => photoImport(null)),
+    );
+    if (deck == null || !mounted) return;
+    await navigator.push(
+      MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
+    );
+  }
 
   /// Enters selection mode with [deck], or adds or removes it once there.
   void _toggle(DeckId deck) => setState(() {

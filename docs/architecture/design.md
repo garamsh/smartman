@@ -20,6 +20,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Deck list: a long-press selects decks; the rows expose their selected state, and selection mode has visible controls.
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
    - Study: the next card is on screen before the answer's write finishes.
+   - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
    - Account: a theme choice applies at once and is stored after.
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation dialog. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account.
    - Study: any answer of the session is corrected by a tap, with no dialog.
@@ -45,7 +46,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 
 ### Checks
 
-- Each changed screen is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart` and `app/test/study/study_screen_test.dart`.
+- Each changed screen is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/study/study_screen_test.dart` and `app/test/photo_import/photo_import_screen_test.dart`.
 
 ## Rationale
 

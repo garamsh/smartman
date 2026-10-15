@@ -125,6 +125,34 @@ void main() {
     await screens.close();
   });
 
+  testWidgets(
+    'a photo import into another deck replaces this list with that deck, and one into this deck returns here',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, photoImport: true);
+      final other = (await tester.runAsync(
+        () => screens.repository.createDeck('Spanish'),
+      ))!;
+      await screens.push((deck) => CardListScreen(deck: deck));
+
+      Future<void> saveInto(Deck deck) async {
+        await screens.tap(find.text('Add from photo'));
+        screens.navigator.currentState!.pop(deck);
+        await tester.pumpAndSettle();
+      }
+
+      await saveInto(screens.deck);
+      expect(find.text('French'), findsOneWidget);
+
+      await saveInto(other);
+      expect(find.text('Spanish'), findsOneWidget);
+      expect(find.text('French'), findsNothing);
+      screens.navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(CardListScreen), findsNothing);
+      await screens.close();
+    },
+  );
+
   testWidgets('the deck menu renames the deck', (tester) async {
     final screens = await DeckScreens.open(tester);
     await screens.push((deck) => CardListScreen(deck: deck));

@@ -25,3 +25,14 @@ final class UnreadableCard extends DeckFailure {
   @override
   String toString() => 'UnreadableCard(${cardId.value}): $cause';
 }
+
+/// The deck was deleted, on this device or through sync, before a write into
+/// it.
+final class DeckDeleted extends DeckFailure {
+  const DeckDeleted(this.deckId);
+
+  final DeckId deckId;
+
+  @override
+  String toString() => 'DeckDeleted(${deckId.value})';
+}

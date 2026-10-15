@@ -1,0 +1,6 @@
+/* Shown when photo import first opens the camera. */
+"NSCameraUsageDescription" = "단어장이나 책 한 페이지를 찍어 카드로 만들 때 카메라를 사용해요.";
+/* Shown if the photo library is asked for; the picker itself needs no permission. */
+"NSPhotoLibraryUsageDescription" = "앨범에서 고른 사진으로 카드를 만들 때 사진 보관함을 사용해요.";
+/* Required by the camera package; photo import records no sound. */
+"NSMicrophoneUsageDescription" = "사진만 찍고 소리는 녹음하지 않아요.";

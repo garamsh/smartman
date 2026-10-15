@@ -35,8 +35,8 @@ final class Deck {
   final DateTime updatedAt;
 }
 
-/// Where a card came from. Only [manual] is created now; [import] is
-/// reserved for photo import.
+/// Where a card came from: the editor writes [manual], photo import
+/// [import].
 enum CardSource { manual, import }
 
 /// A card inside a deck.
