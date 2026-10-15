@@ -35,6 +35,22 @@ function isForeign(event: KeyboardEvent): boolean {
   );
 }
 
+/** What a key press asks of the study screen, or null when it asks nothing it can do now. */
+function shortcut(
+  event: KeyboardEvent,
+  studying: boolean,
+  answered: boolean,
+): "help" | "leave" | "reveal" | "know" | "dontKnow" | "toggleLast" | null {
+  if (event.key === "?") return "help";
+  if (event.key === "Escape") return studying ? "leave" : null;
+  if (event.key === " ") return studying ? "reveal" : null;
+  // Letters by their physical key, so they work whatever the keyboard's input language.
+  if (event.key === "ArrowRight" || event.code === "KeyK") return studying ? "know" : null;
+  if (event.key === "ArrowLeft" || event.code === "KeyJ") return studying ? "dontKnow" : null;
+  if (event.code === "KeyZ") return answered ? "toggleLast" : null;
+  return null;
+}
+
 /**
  * The study screen: the current card split into question and answer, the progress bar, and the
  * stack of answers given, any of which a click toggles. Every action shows at once; its write
@@ -86,30 +102,27 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
         }
         return;
       }
-      const studying = view.kind === "studying";
-      const act = (action: () => void) => {
-        event.preventDefault();
-        action();
-      };
-      if (event.key === "?")
-        act(() => {
+      const action = shortcut(event, view.kind === "studying", view.previous.length > 0);
+      if (!action) return;
+      event.preventDefault();
+      switch (action) {
+        case "help":
           setHelpOpen(true);
-        });
-      else if (event.key === "Escape" && studying) act(leave);
-      else if (event.key === " " && studying)
-        act(() => {
+          break;
+        case "leave":
+          leave();
+          break;
+        case "reveal":
           setRevealed((shown) => !shown);
-        });
-      // Letters by their physical key, so they work whatever the keyboard's input language.
-      else if ((event.key === "ArrowRight" || event.code === "KeyK") && studying)
-        act(() => {
-          answer("know");
-        });
-      else if ((event.key === "ArrowLeft" || event.code === "KeyJ") && studying)
-        act(() => {
-          answer("dontKnow");
-        });
-      else if (event.code === "KeyZ" && view.previous.length > 0) act(toggleLast);
+          break;
+        case "know":
+        case "dontKnow":
+          answer(action);
+          break;
+        case "toggleLast":
+          toggleLast();
+          break;
+      }
     };
   });
   useEffect(() => {
