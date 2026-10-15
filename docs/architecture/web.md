@@ -54,7 +54,7 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 - `make format`: Prettier, over the files git tracks or would track.
 - `make test`: the Vitest suite (`web/src/**/__tests__/`), then, where Docker and buildx answer, the image built and run, its health and non-root uid asserted, and the Playwright specs in `web/e2e/` run against it.
 - `make build`: `next build`, then the image where Docker and buildx answer.
-- CI installs Node.js from `web/.nvmrc` with `actions/setup-node` on both jobs. Only the ubuntu job has Docker, so it alone runs the image and the e2e specs.
+- CI runs `web.sh` on the Node.js that `.github/workflows/ci.yml` installs for the WebAssembly tests, on both jobs; `web.sh` fails there when it differs from `web/.nvmrc`. Only the ubuntu job has Docker, so it alone runs the image and the e2e specs.
 
 ### Tests
 
