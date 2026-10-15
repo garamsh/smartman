@@ -153,7 +153,7 @@ class _PreviousCardView extends StatelessWidget {
       Answer.know => l10n.know,
       Answer.dontKnow => l10n.dontKnow,
     };
-    final radius = BorderRadius.circular(StudyStyle.cardRadius);
+    final radius = BorderRadius.circular(StudyStyle.previousRadius);
     final colors = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: StudyStyle.cardMargin),
@@ -176,6 +176,7 @@ class _PreviousCardView extends StatelessWidget {
           decoration: BoxDecoration(
             color: Color.lerp(colors.surface, colors.depth, steps),
             borderRadius: radius,
+            border: Border.all(color: colors.hairline),
             boxShadow: StudyStyle.previousShadow(colors),
           ),
           child: Material(

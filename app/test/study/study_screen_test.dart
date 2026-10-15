@@ -63,6 +63,9 @@ class _StalledRepository implements StudyRepository {
     records.add(card);
     return Completer<void>().future;
   }
+
+  @override
+  Future<Duration?> medianReviewDuration() async => null;
 }
 
 /// A phone in portrait: 390 by 844 logical pixels.
@@ -209,6 +212,20 @@ Future<_Study> _open(
   return study;
 }
 
+/// The count on the summary's tile labelled [label].
+String? _tile(WidgetTester tester, String label) {
+  final tile = find.ancestor(
+    of: find.text(label).last,
+    matching: find.byType(MergeSemantics),
+  );
+  return tester
+      .widgetList<Text>(
+        find.descendant(of: tile.first, matching: find.byType(Text)),
+      )
+      .first
+      .data;
+}
+
 /// The previous card whose front reads [front].
 Finder _previous(String front) => find.byWidgetPredicate(
   (widget) =>
@@ -271,13 +288,23 @@ void main() {
       expect(card.center.dy, closeTo(_phone.height * 0.57, 1));
       expect(find.byType(VerticalDivider), findsOneWidget);
       // Every text on screen: the card's sides, of which the back is hidden,
-      // and the count. No deck name, button, hint or next card.
+      // the count, and the swipe hints under the card. No deck name, button
+      // or next card.
       expect(
         {
           for (final element in find.byType(Text).evaluate())
             (element.widget as Text).data,
         },
-        {'a front', 'a back', '0 / 2'},
+        {'a front', 'a back', '0/2', "Don't know", 'Know'},
+      );
+      // The hints sit under the card, "Don't know" left and "Know" right.
+      expect(
+        tester.getRect(find.text("Don't know")).top,
+        greaterThan(card.bottom),
+      );
+      expect(
+        tester.getCenter(find.text("Don't know")).dx,
+        lessThan(tester.getCenter(find.text('Know')).dx),
       );
       expect(_answerShown(tester), isFalse);
       expect(find.byType(ButtonStyleButton), findsNothing);
@@ -314,7 +341,7 @@ void main() {
         _label(tester, _previous('b front')),
         endsWith("Answer: Don't know"),
       );
-      expect(find.text('2 / 3'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
     },
   );
 
@@ -336,7 +363,13 @@ void main() {
         }
         // The card follows the finger and shows the answer it would give.
         expect(_dragOffset(tester, _currentCard), closeTo(dx, 0.01));
-        expect(find.text(dx > 0 ? 'Know' : "Don't know"), findsOneWidget);
+        expect(
+          find.descendant(
+            of: _currentCard,
+            matching: find.text(dx > 0 ? 'Know' : "Don't know"),
+          ),
+          findsOneWidget,
+        );
         await tester.pump(const Duration(milliseconds: 300));
         await gesture.up();
         await tester.pumpAndSettle();
@@ -368,7 +401,8 @@ void main() {
     'long content grows the card to its cap and then scrolls inside each half',
     (tester) async {
       final long = [TextContent(_sentence * 12)];
-      final medium = [TextContent(_sentence)];
+      // A few lines at the question's size, short of the cap.
+      final medium = [const TextContent('This line wraps across a few lines.')];
       await _open(
         tester,
         ['long', 'medium'],
@@ -978,19 +1012,28 @@ void main() {
       expect(study.current, 'a front');
       await study.know(elapsed: const Duration(seconds: 45));
 
-      expect(find.text('Session complete'), findsOneWidget);
-      expect(find.text('2 cards studied'), findsOneWidget);
-      expect(find.text('Know: 2'), findsOneWidget);
-      expect(find.text("Don't know: 1"), findsOneWidget);
-      expect(find.text('Time spent: 1 min 5 s'), findsOneWidget);
-      expect(find.text('2 / 2'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.text("You've finished today's cards"), findsOneWidget);
+      // Every answer was scheduled a day out.
+      expect(
+        find.text(
+          "Your next review is tomorrow. We'll show these again just before you forget.",
+        ),
+        findsOneWidget,
+      );
+      expect(_tile(tester, 'Studied'), '2');
+      expect(_tile(tester, 'Know'), '2');
+      expect(_tile(tester, "Don't know"), '1');
+      expect(find.text('Time spent'), findsOneWidget);
+      expect(find.text('1 min 5 s'), findsOneWidget);
+      expect(find.text('2/2'), findsOneWidget);
 
       // The stack stays, and toggling its last answer studies the card again.
       await tester.tap(
         find.byWidget(tester.widgetList(_previous('a front')).last),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Session complete'), findsNothing);
+      expect(find.text("You've finished today's cards"), findsNothing);
       expect(study.current, 'a front');
     },
   );
@@ -1009,9 +1052,10 @@ void main() {
       () => study.db.select(study.db.cardStates).get(),
     );
     expect(stored, hasLength(1));
-    expect(find.text('Session complete'), findsOneWidget);
+    expect(find.text("You've finished today's cards"), findsOneWidget);
     expect(find.text('Nothing to study right now.'), findsOneWidget);
-    expect(find.text('0 cards studied'), findsOneWidget);
+    expect(_tile(tester, 'Studied'), '0');
+    expect(find.textContaining('Your next review'), findsNothing);
     expect(study.current, isNull);
   });
 
@@ -1072,7 +1116,7 @@ void main() {
 
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
-        expect(find.text('Session complete'), findsOneWidget);
+        expect(find.text("You've finished today's cards"), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -1098,12 +1142,12 @@ void main() {
         await leave(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text('Session complete'), findsOneWidget);
-        expect(find.text('1 card studied'), findsOneWidget);
+        expect(find.text("You've finished today's cards"), findsOneWidget);
+        expect(_tile(tester, 'Studied'), '1');
         expect(_previous('a front'), findsNothing);
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 
-        await tester.tap(find.text('Done'));
+        await tester.tap(find.text('Back to decks'));
         await tester.pumpAndSettle();
         expect(find.byType(StudyScreen), findsNothing);
       },

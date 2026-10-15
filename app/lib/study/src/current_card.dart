@@ -216,7 +216,6 @@ class _CardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.titleLarge;
     final textScaler = MediaQuery.textScalerOf(context);
     final colors = AppColors.of(context);
     return DecoratedBox(
@@ -233,13 +232,13 @@ class _CardFace extends StatelessWidget {
                 constraints.maxWidth / 2 - StudyStyle.cardPadding * 2;
             final stacked =
                 halfWidth < textScaler.scale(StudyStyle.minHalfWidth);
-            final question = ContentView(card.front, style: style);
+            final question = ContentView(card.front, style: AppType.question);
             final answer = Visibility(
               visible: revealed,
               maintainSize: true,
               maintainAnimation: true,
               maintainState: true,
-              child: ContentView(card.back, style: style),
+              child: ContentView(card.back, style: AppType.answer),
             );
             return ConstrainedBox(
               constraints: BoxConstraints(
@@ -252,7 +251,12 @@ class _CardFace extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(child: _Half(question)),
-                          const Divider(height: 1),
+                          const Divider(
+                            height: 1,
+                            thickness: 1,
+                            indent: StudyStyle.dividerInset,
+                            endIndent: StudyStyle.dividerInset,
+                          ),
                           Expanded(child: _Half(answer)),
                         ],
                       ),
@@ -262,7 +266,12 @@ class _CardFace extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(child: _Half(question)),
-                          const VerticalDivider(width: 1),
+                          const VerticalDivider(
+                            width: 1,
+                            thickness: 1,
+                            indent: StudyStyle.dividerInset,
+                            endIndent: StudyStyle.dividerInset,
+                          ),
                           Expanded(child: _Half(answer)),
                         ],
                       ),
