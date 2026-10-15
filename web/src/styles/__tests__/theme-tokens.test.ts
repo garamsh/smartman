@@ -44,3 +44,33 @@ describe("the web theme's colour tokens", () => {
     expect(cssColors(darkCss)).toEqual(dartColors("dark"));
   });
 });
+
+/** The radii of `AppRadius` in theme.dart, by token name, in logical pixels. */
+function dartRadii(): Map<string, number> {
+  const body = /abstract final class AppRadius \{([^}]*)\}/.exec(themeDart)?.[1];
+  if (body === undefined) throw new Error("theme.dart has no AppRadius");
+  return new Map(
+    [...body.matchAll(/static const (\w+) = ([\d.]+);/g)].map(([, name, value]) => [
+      String(name),
+      Number(value),
+    ]),
+  );
+}
+
+describe("the web theme's radius tokens", () => {
+  it("are the radii of app/lib/shared/theme.dart's AppRadius", () => {
+    const radii = new Map(
+      [...lightCss.matchAll(/--radius-([\w-]+):\s*([\d.]+)px;/g)].map(([, name, value]) => [
+        String(name),
+        Number(value),
+      ]),
+    );
+    // Control: both sides read their tokens, the card's radius among them.
+    expect(dartRadii().get("card")).toBe(24);
+    expect([...radii.keys()].sort()).toEqual(["card", "row"]);
+
+    for (const [name, value] of radii) {
+      expect({ name, value }).toEqual({ name, value: dartRadii().get(name) });
+    }
+  });
+});
