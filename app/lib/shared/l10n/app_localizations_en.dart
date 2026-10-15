@@ -345,6 +345,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get backlogPaused =>
+      'New cards wait until you catch up on your reviews.';
+
+  @override
   String studyCount(int count) {
     return 'Study · $count';
   }

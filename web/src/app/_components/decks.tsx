@@ -16,7 +16,12 @@ export async function Decks() {
   });
   return (
     <>
-      <TodayHeader decks={decks.map((deck) => deck.id)} review={all.review} fresh={all.fresh} />
+      <TodayHeader
+        decks={decks.map((deck) => deck.id)}
+        review={all.review}
+        fresh={all.fresh}
+        backlog={all.backlog}
+      />
       <DeckList rows={rows} />
     </>
   );

@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -57,6 +57,35 @@ describe("the deck page", () => {
       "/study?decks=d-fr",
     );
     expect(rows()).toEqual(["Chat | Chat back", "chien | chien back", "oiseau | oiseau back"]);
+  });
+
+  it("says new cards wait while more than three days of reviews are due, and not otherwise", async () => {
+    const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
+    // Control: one card due every four days and one every day are not a backlog.
+    await open("d-fr");
+    expect(screen.getByText("카드 3장 · 오늘 복습 1 · 새 카드 1")).toBeInTheDocument();
+    expect(screen.queryByText(paused)).not.toBeInTheDocument();
+    cleanup();
+
+    // Four more due after 30 days: five due against a load of about 1.4 a day.
+    const overdue = ["un", "deux", "trois", "quatre"];
+    postgrest.seed("cards", ...overdue.map((front) => cardRow(`c-${front}`, "d-fr", front)));
+    postgrest.seed(
+      "card_states",
+      ...overdue.map((front) =>
+        stateRow(`c-${front}`, {
+          stability: 30,
+          difficulty: 5,
+          lastReview: start - 31 * day,
+          due: start - day,
+        }),
+      ),
+    );
+    await open("d-fr");
+
+    expect(screen.getByText("카드 7장 · 오늘 복습 5 · 새 카드 0")).toBeInTheDocument();
+    expect(screen.getByText(paused)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "학습 · 5장" })).toBeInTheDocument();
   });
 
   it("keeps the cards whose front or back holds the search, ignoring case", async () => {

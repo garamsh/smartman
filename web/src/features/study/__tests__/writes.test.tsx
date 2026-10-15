@@ -88,7 +88,13 @@ describe("a study session's writes", () => {
       due: start - day,
     };
     render(
-      <StudyScreen plan={{ startedAt: start, cards: [card], before: { [card.id]: before } }} />,
+      <StudyScreen
+        plan={{
+          startedAt: start,
+          queue: { cards: [card], backlog: false },
+          before: { [card.id]: before },
+        }}
+      />,
     );
 
     vi.setSystemTime(start + 4000);
@@ -120,7 +126,11 @@ describe("a study session's writes", () => {
   });
 
   it("schedules a new card's first answer from no state", async () => {
-    render(<StudyScreen plan={{ startedAt: start, cards: [card], before: {} }} />);
+    render(
+      <StudyScreen
+        plan={{ startedAt: start, queue: { cards: [card], backlog: false }, before: {} }}
+      />,
+    );
 
     vi.setSystemTime(start + 4000);
     await userEvent.setup().keyboard("j");
@@ -146,7 +156,13 @@ describe("a study session's writes", () => {
       due: start - day,
     };
     render(
-      <StudyScreen plan={{ startedAt: start, cards: [card], before: { [card.id]: before } }} />,
+      <StudyScreen
+        plan={{
+          startedAt: start,
+          queue: { cards: [card], backlog: false },
+          before: { [card.id]: before },
+        }}
+      />,
     );
     const user = userEvent.setup();
     const stateEditedAt = (at: number) => async () => {

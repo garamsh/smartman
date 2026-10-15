@@ -120,6 +120,11 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                     TodayUnavailable(:final message) => message,
                     TodayPending() => l10n.cardCount(value.length),
                   }, style: AppType.secondary.copyWith(color: colors.muted)),
+                  if (count case TodayCounted(backlog: true))
+                    Text(
+                      l10n.backlogPaused,
+                      style: AppType.secondary.copyWith(color: colors.muted),
+                    ),
                   AppButton(
                     label: l10n.studyCount(switch (count) {
                       TodayCounted(:final total) => total,

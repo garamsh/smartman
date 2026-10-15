@@ -601,6 +601,12 @@ abstract class AppLocalizations {
   /// **'카드 {cards}장 · 오늘 복습 {review} · 새 카드 {fresh}'**
   String deckSummary(int cards, int review, int fresh);
 
+  /// Sentence under the today count while so many reviews are due that a session takes no new card.
+  ///
+  /// In ko, this message translates to:
+  /// **'밀린 복습을 마칠 때까지 새 카드는 쉬어요.'**
+  String get backlogPaused;
+
   /// Card list button that studies the deck, with how many cards the session would study.
   ///
   /// In ko, this message translates to:
