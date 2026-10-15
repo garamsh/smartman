@@ -105,7 +105,7 @@ void main() {
       firstRun.evaluate().isEmpty ? find.text('New deck') : firstRun,
     );
     await tester.pumpAndSettle();
-    await enterText(tester, 'Name', name);
+    await enterText(tester, 'Deck name', name);
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
     await tester.tap(find.text(name));
@@ -379,7 +379,7 @@ void main() {
         expect(find.text('Create a deck'), findsOneWidget);
         expect(find.text('You can change the name later.'), findsOneWidget);
         await meetsGuidelines();
-        await enterText(tester, 'Name', 'French');
+        await enterText(tester, 'Deck name', 'French');
         await tester.tap(find.text('Create'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('French'));

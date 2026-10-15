@@ -41,7 +41,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get deckName => '이름';
+  String get deckName => '덱 이름';
 
   @override
   String get deckNameRequired => '이름을 입력하세요';

@@ -42,7 +42,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get deckName => 'Name';
+  String get deckName => 'Deck name';
 
   @override
   String get deckNameRequired => 'Enter a name';

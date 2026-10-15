@@ -61,7 +61,10 @@ void main() {
     ).read(syncControllerProvider);
 
     await tapAndSettle(tester, 'Create by hand');
-    await tester.enterText(find.widgetWithText(AppTextField, 'Name'), 'French');
+    await tester.enterText(
+      find.widgetWithText(AppTextField, 'Deck name'),
+      'French',
+    );
     await tapAndSettle(tester, 'Create');
     await tapAndSettle(tester, 'French');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {

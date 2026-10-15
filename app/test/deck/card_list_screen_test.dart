@@ -162,7 +162,7 @@ void main() {
 
     await screens.tap(find.byTooltip('Deck actions'));
     await screens.tap(find.text('Rename'));
-    await screens.enter('Name', 'Français');
+    await screens.enter('Deck name', 'Français');
     await screens.tap(find.text('Save'));
 
     expect(find.text('Français'), findsOneWidget);
@@ -182,20 +182,20 @@ void main() {
       await screens.tap(find.text('Rename'));
       EditableText field() => tester.widget<EditableText>(
         find.descendant(
-          of: find.widgetWithText(AppTextField, 'Name'),
+          of: find.widgetWithText(AppTextField, 'Deck name'),
           matching: find.byType(EditableText),
         ),
       );
       expect(field().focusNode.hasFocus, isTrue);
       expect(field().controller.text, 'French');
 
-      await screens.enter('Name', '  ');
+      await screens.enter('Deck name', '  ');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
       expect(find.text('Enter a name'), findsOneWidget);
       expect(find.byType(BottomSheet), findsOneWidget);
 
-      await screens.enter('Name', 'Français');
+      await screens.enter('Deck name', 'Français');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
       expect(find.byType(BottomSheet), findsNothing);

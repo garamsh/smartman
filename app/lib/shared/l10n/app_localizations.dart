@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// Label of the deck name field.
   ///
   /// In ko, this message translates to:
-  /// **'이름'**
+  /// **'덱 이름'**
   String get deckName;
 
   /// Error shown when a deck name is empty.

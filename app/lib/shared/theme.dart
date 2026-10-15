@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The family of the bundled Pretendard, declared in `pubspec.yaml`.
@@ -655,6 +656,11 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     textTheme: textTheme,
     scaffoldBackgroundColor: colors.ground,
     extensions: [colors],
+    // Stroke icons in place of Material's back and close glyphs.
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (_) => const Icon(LucideIcons.chevronLeft),
+      closeButtonIconBuilder: (_) => const Icon(LucideIcons.x),
+    ),
     appBarTheme: AppBarTheme(
       backgroundColor: colors.ground,
       foregroundColor: colors.ink,

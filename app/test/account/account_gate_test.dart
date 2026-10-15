@@ -144,7 +144,10 @@ void main() {
   /// Creates the deck "French" from the deck list.
   Future<void> createDeck(WidgetTester tester) async {
     await tapAndSettle(tester, find.text('Create by hand'));
-    await tester.enterText(find.widgetWithText(AppTextField, 'Name'), 'French');
+    await tester.enterText(
+      find.widgetWithText(AppTextField, 'Deck name'),
+      'French',
+    );
     await tapAndSettle(tester, find.text('Create'));
   }
 
@@ -305,7 +308,7 @@ void main() {
         await pumpApp(tester, account);
         await tapAndSettle(tester, find.text('Create by hand'));
         await tester.enterText(
-          find.widgetWithText(AppTextField, 'Name'),
+          find.widgetWithText(AppTextField, 'Deck name'),
           'French',
         );
         await tapAndSettle(tester, find.text('Create'));

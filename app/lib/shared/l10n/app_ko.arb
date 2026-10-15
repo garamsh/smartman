@@ -20,7 +20,7 @@
     "description": "Body of the deck deletion confirmation, naming how many cards go with the deck.",
     "placeholders": {"count": {"type": "int"}}
   },
-  "deckName": "이름",
+  "deckName": "덱 이름",
   "@deckName": {"description": "Label of the deck name field."},
   "deckNameRequired": "이름을 입력하세요",
   "@deckNameRequired": {"description": "Error shown when a deck name is empty."},
