@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
-# Runs the two-device sync test, app/test/sync/two_devices_test.dart, against a local stack of its
-# own, or says why it did not. The stack follows ADR 0014's pattern for the database tests: its own
+# Runs the tests that need Auth and PostgREST, the two-device sync test
+# app/test/sync/two_devices_test.dart and the sharing server test app/test/sharing/sharing_server_test.dart,
+# against a local stack of its own, or says why it did not. The stack follows ADR 0014's pattern for the database tests: its own
 # project id and reserved ports, stopped with its data however the run ends. It runs Postgres, Auth,
 # PostgREST and the API gateway, which the test signs in and syncs through.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-test_file=test/sync/two_devices_test.dart
+test_files="test/sync/two_devices_test.dart test/sharing/sharing_server_test.dart"
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "skipped the two-device sync test in app/$test_file: it needs Docker, and this host has no docker command"
+  echo "skipped the stack tests in app/ ($test_files): they need Docker, and this host has no docker command"
   exit 0
 fi
 if ! docker info >/dev/null 2>&1; then
-  echo "skipped the two-device sync test in app/$test_file: it needs Docker, and docker info reached no daemon on this host"
+  echo "skipped the stack tests in app/ ($test_files): they need Docker, and docker info reached no daemon on this host"
   exit 0
 fi
 
@@ -84,7 +85,7 @@ if [ -z "$url" ] || [ -z "$key" ]; then
 fi
 
 output=$(cd app && SMARTMAN_SYNC_TEST_URL="$url" SMARTMAN_SYNC_TEST_KEY="$key" \
-  flutter test --reporter expanded --dart-define-from-file=config/dev.json "$test_file") ||
+  flutter test --concurrency=1 --reporter expanded --dart-define-from-file=config/dev.json $test_files) ||
   { echo "$output"; exit 1; }
 echo "$output"
 
@@ -92,7 +93,7 @@ echo "$output"
 summary=$(echo "$output" | tail -n 1)
 passed=$(echo "$summary" | sed -n 's/^[0-9:]* +\([0-9]*\): All tests passed!$/\1/p')
 if [ -z "$passed" ] || [ "$passed" -eq 0 ]; then
-  echo "the two-device sync test skipped or ran no test: $summary" >&2
+  echo "the stack tests skipped or ran no test: $summary" >&2
   exit 1
 fi
-echo "ran $passed two-device sync tests against the stack $SUPABASE_PROJECT_ID, selected by: every test in app/$test_file"
+echo "ran $passed stack tests against the stack $SUPABASE_PROJECT_ID, selected by: every test in app/ $test_files"

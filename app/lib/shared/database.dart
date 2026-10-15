@@ -4,11 +4,19 @@ import 'database.steps.dart';
 
 part 'database.g.dart';
 
-/// Decks, each a named collection of cards.
+/// Decks, each a named collection of cards, with whether it is published.
 @DataClassName('DeckRow')
 class Decks extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
+  TextColumn get visibility => text()
+      .withDefault(const Constant('private'))
+      .check(const CustomExpression("visibility IN ('private', 'public')"))();
+
+  /// When the deck was last published; null while it never was, or once it
+  /// was made private again.
+  DateTimeColumn get publishedAt => dateTime().nullable()();
+  TextColumn get description => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -29,8 +37,12 @@ class Cards extends Table {
   TextColumn get front => text()();
   TextColumn get back => text()();
   TextColumn get cardKey => text()();
-  TextColumn get source =>
-      text().check(const CustomExpression("source IN ('manual', 'import')"))();
+  TextColumn get source => text().check(
+    const CustomExpression("source IN ('manual', 'import', 'shared')"),
+  )();
+
+  /// The public deck a copied card came from; null for any other card.
+  TextColumn get originDeckId => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -104,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -151,6 +163,16 @@ class AppDatabase extends _$AppDatabase {
           ),
         );
         await m.createTable(schema.syncState);
+      },
+      // The cards table is rebuilt, since SQLite cannot change its source check
+      // in place; foreign keys are off during migrations, so no review cascades.
+      from4To5: (m, schema) async {
+        await m.addColumn(schema.decks, schema.decks.visibility);
+        await m.addColumn(schema.decks, schema.decks.publishedAt);
+        await m.addColumn(schema.decks, schema.decks.description);
+        await m.alterTable(
+          TableMigration(schema.cards, newColumns: [schema.cards.originDeckId]),
+        );
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

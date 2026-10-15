@@ -16,11 +16,15 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
+import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
 import '../photo_import/fakes.dart';
+import '../sharing/fakes.dart';
+import '../sharing/sharing_service_test.dart' show publicCard, publicDeck;
 import '../sync/fake_sync_server.dart';
 
 /// Screenshots of every screen and sheet in both themes, for review. They are
@@ -133,6 +137,8 @@ void main() {
           server,
           storage,
           null,
+          null,
+          FakeReachability(),
         ),
       );
       await tester.pumpAndSettle();
@@ -317,6 +323,129 @@ void main() {
       client.fail(const ModelFailed());
       await tester.pumpAndSettle();
       await shot(tester, '24-photo-failure');
+
+      await unmount(tester);
+    });
+
+    testWidgets('sharing in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: DateTime.now,
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        final deck = await repository.createDeck('영단어 기본');
+        await repository.addCard(
+          deck.id,
+          front: [const TextContent('lucid')],
+          back: [const TextContent('명쾌한')],
+        );
+      });
+      final spanish = publicDeck(
+        'spanish',
+        name: '스페인어 동물',
+        ownerName: '보라',
+        description: '자주 쓰는 동물 이름',
+        cards: 3,
+        copies: 12,
+      );
+      final server = FakeSharingServer(
+        decks: [
+          spanish,
+          publicDeck(
+            'jlpt',
+            name: 'JLPT N3 한자',
+            ownerName: '민준',
+            owner: '00000000-0000-4000-8000-00000000000c',
+            cards: 240,
+            copies: 3,
+            publishedAt: DateTime.utc(2026, 10, 14),
+          ),
+        ],
+        cards: {
+          spanish.id: [
+            publicCard('perro', '개'),
+            publicCard('gato', '고양이'),
+            publicCard('pez', '물고기'),
+          ],
+        },
+      );
+      final sharing = SharingService(
+        server: server,
+        decks: repository,
+        reachability: FakeReachability(),
+        clock: DateTime.now,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckSharingProvider.overrideWithValue(sharing),
+            studyScreenProvider.overrideWithValue((decks) => const Scaffold()),
+            todayProvider.overrideWithValue(
+              (decks, builder) => Builder(
+                builder: (context) =>
+                    builder(context, const TodayCounted(review: 0, fresh: 1)),
+              ),
+            ),
+            accountScreenProvider.overrideWithValue(Scaffold.new),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const DeckListScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tap(tester, find.text('영단어 기본'));
+      await tap(tester, find.byTooltip(ko.deckActions));
+      await shot(tester, '25-deck-menu-publish');
+      await tap(tester, find.text(ko.publish));
+      await shot(tester, '26-publish-sheet');
+      await tester.enterText(
+        find.widgetWithText(AppTextField, ko.displayName),
+        '아다',
+      );
+      await tap(tester, find.text(ko.publishAgreement));
+      await tap(tester, find.text(ko.publishConfirm));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await shot(tester, '27-card-list-public');
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+      await shot(tester, '28-deck-list-public');
+
+      await tap(tester, find.byTooltip(ko.browse));
+      await shot(tester, '29-browse');
+      await tap(tester, find.text('스페인어 동물'));
+      await shot(tester, '30-public-deck');
+      await tap(tester, find.text(ko.importToMyDecks));
+      await tap(tester, find.text(ko.importIntoExistingDeck));
+      await shot(tester, '31-import-sheet');
+      // Above a tall sheet, where the barrier's centre is not.
+      await tester.tapAt(const Offset(20, 100));
+      await tester.pumpAndSettle();
+      await tap(tester, find.byTooltip(ko.deckActions));
+      await tap(tester, find.text(ko.reportDeck));
+      await shot(tester, '32-report-sheet');
+      // Above a tall sheet, where the barrier's centre is not.
+      await tester.tapAt(const Offset(20, 100));
+      await tester.pumpAndSettle();
+      await tap(tester, find.byTooltip(ko.deckActions));
+      await tap(tester, find.text(ko.blockUser));
+      await shot(tester, '33-block-confirm');
+      // Above a tall sheet, where the barrier's centre is not.
+      await tester.tapAt(const Offset(20, 100));
+      await tester.pumpAndSettle();
 
       await unmount(tester);
     });
