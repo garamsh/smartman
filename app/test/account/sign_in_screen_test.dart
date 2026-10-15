@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/account.dart';
+import 'package:smartman/account/src/google_button.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
@@ -15,12 +16,15 @@ void main() {
     WidgetTester tester,
     AccountService service, {
     Locale locale = const Locale('en'),
+    ThemeMode themeMode = ThemeMode.light,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [accountServiceProvider.overrideWithValue(service)],
         child: MaterialApp(
           theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -114,8 +118,8 @@ void main() {
         locale: const Locale('ko'),
       );
 
-      final apple = find.widgetWithText(FilledButton, 'Apple로 로그인 (준비 중)');
-      expect(tester.widget<FilledButton>(apple).onPressed, isNull);
+      final apple = find.widgetWithText(TextButton, 'Apple로 로그인 (준비 중)');
+      expect(tester.widget<TextButton>(apple).onPressed, isNull);
       expect(
         tester.getSemantics(apple),
         matchesSemantics(
@@ -127,11 +131,85 @@ void main() {
       );
       expect(
         tester
-            .widget<OutlinedButton>(
-              find.widgetWithText(OutlinedButton, 'Google로 로그인'),
+            .widget<GoogleSignInButton>(
+              find.widgetWithText(GoogleSignInButton, 'Google로 로그인'),
             )
             .onPressed,
         isNotNull,
+      );
+      // Subordinate to Google's button: shorter, and a text button.
+      expect(
+        tester.getSize(apple).height,
+        lessThan(tester.getSize(find.byType(GoogleSignInButton)).height),
+      );
+    },
+  );
+
+  for (final (mode, style) in [
+    (ThemeMode.light, GoogleButtonStyle.light),
+    (ThemeMode.dark, GoogleButtonStyle.dark),
+  ]) {
+    testWidgets(
+      "in the ${mode.name} theme the Google button is Google's ${mode.name} button, with the G mark and the label, and the screen meets the tap target and contrast guidelines",
+      (tester) async {
+        final service = FakeAccountService();
+        await pumpScreen(tester, service, themeMode: mode);
+
+        final button = find.byType(GoogleSignInButton);
+        final mark = find.descendant(
+          of: button,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Image &&
+                widget.image == AssetImage(style.mark) &&
+                widget.width == GoogleButtonStyle.markSize,
+          ),
+        );
+        expect(mark, findsOneWidget);
+        expect(
+          find.descendant(
+            of: button,
+            matching: find.text('Sign in with Google'),
+          ),
+          findsOneWidget,
+        );
+        // The mark sits before the label.
+        expect(
+          tester.getRect(mark).right,
+          lessThan(tester.getRect(find.text('Sign in with Google')).left),
+        );
+        final surface = tester.widget<Material>(
+          find.descendant(of: button, matching: find.byType(Material)).first,
+        );
+        expect(surface.color, style.fill);
+        expect(
+          (surface.shape! as RoundedRectangleBorder).side.color,
+          style.stroke,
+        );
+        expect(tester.getSemantics(button).flagsCollection.isButton, isTrue);
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(service.state, isA<SignedIn>());
+      },
+    );
+  }
+
+  testWidgets(
+    'the wordmark sits in the upper third and the buttons at the bottom',
+    (tester) async {
+      await pumpScreen(tester, FakeAccountService());
+      final screen = tester.getSize(find.byType(Scaffold));
+
+      final wordmark = tester.getCenter(find.text('smartman'));
+      expect(wordmark.dy, greaterThan(screen.height / 6));
+      expect(wordmark.dy, lessThan(screen.height / 2));
+      expect(
+        tester.getRect(find.byType(GoogleSignInButton)).top,
+        greaterThan(screen.height * 2 / 3),
       );
     },
   );

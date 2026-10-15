@@ -172,7 +172,7 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text('덱'), findsOneWidget);
-    expect(find.text('아직 덱이 없습니다. 새 덱을 만들어 시작하세요.'), findsOneWidget);
+    expect(find.text('아직 덱이 없어요. 새 덱을 만들어 시작해 보세요.'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -275,7 +275,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AccountScreen), findsOneWidget);
-    expect(find.text('Signed in as ada@example.com'), findsOneWidget);
+    expect(find.text('ada@example.com'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -380,7 +380,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('This deck already has this card'), findsOneWidget);
         await meetsGuidelines();
-        await tester.tap(find.text('Cancel'));
+        await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();

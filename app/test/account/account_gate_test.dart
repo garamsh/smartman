@@ -14,6 +14,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/account/src/account_service.dart';
+import 'package:smartman/account/src/google_button.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
@@ -123,6 +124,10 @@ void main() {
 
   /// The buttons on screen that respond to a tap.
   List<String> enabledButtons(WidgetTester tester) => [
+    for (final button in tester.widgetList<GoogleSignInButton>(
+      find.byType(GoogleSignInButton),
+    ))
+      button.label,
     for (final button in tester.widgetList<ButtonStyleButton>(
       find.byWidgetPredicate((w) => w is ButtonStyleButton),
     ))
@@ -335,7 +340,7 @@ void main() {
         ),
       );
 
-      expect(find.text('이 앱의 로그인 설정에 문제가 있어 로그인할 수 없습니다.'), findsOneWidget);
+      expect(find.text('이 앱의 로그인 설정에 문제가 있어 로그인할 수 없어요.'), findsOneWidget);
       expect(enabledButtons(tester), isEmpty);
       expect(find.text('Google로 로그인'), findsNothing);
       expect(find.byType(DeckListScreen), findsNothing);
