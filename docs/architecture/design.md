@@ -33,7 +33,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: any answer of the session is corrected by a tap, with no confirmation.
    - Card editor: a duplicate front opens a sheet that offers to add anyway or open the existing card, and is dismissed to do neither; nothing is overwritten.
    - Card list, card editor, account and preview: deleting a deck, deleting a card, signing out with unsynced changes, deleting the account, and blocking a user are confirmed through `showAppConfirm`, which states the consequence in one sentence above a cancel and, last, a red final button.
-6. **One visual language.** Theme tokens only; the split card, question left and answer right, each half's content centred vertically, wherever a card appears; rounded surfaces on the ground colour; 44 pt minimum targets.
+6. **One visual language.** Theme tokens only; the split card, question left and answer right, each half's content centred across and down and shrunk toward a floor until its widest word fits, so a word never breaks inside itself while the floor fits, wherever a card appears; rounded surfaces on the ground colour; 44 pt minimum targets.
    - Study, card editor, duplicate sheet and photo review: the same split card, each half centred.
    - Deck list and card list: rows on rounded surfaces over the ground.
    - Every screen and sheet: the tokens below and the components that use them.
@@ -118,6 +118,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - **`AppSectionLabel`** — a label over a group of rows, read as a heading: "내 덱 n", "이미 있는 카드 n개", "화면", "계정", the import sheet's duplicate options, and the answer in the whole-card sheet.
 - **`AppChip`** — a fully rounded label, or a button when it has an action: the brand-tint "오늘 n" chip, the "공개" chip, the camera's deck chip, and the duplicate option chip.
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
+- **`CardText`** — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15, a previous card's 16 to 12) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card, the previous cards and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
 
 Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `LinearProgressIndicator` — are themed in `app/lib/shared/theme.dart`.
 

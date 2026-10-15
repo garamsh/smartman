@@ -7,7 +7,7 @@ import type { Content } from "@/lib/card-content";
 export function CardSide({ blocks, size }: { blocks: Content[]; size: "question" | "answer" }) {
   return (
     <div
-      className={`flex w-full flex-col gap-2 break-words whitespace-pre-wrap ${
+      className={`flex w-full flex-col gap-2 text-center break-words whitespace-pre-wrap ${
         size === "question" ? "text-question" : "text-answer"
       }`}
     >

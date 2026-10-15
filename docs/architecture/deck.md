@@ -80,6 +80,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - The deck list's top bar holds the horizontal lockup, 30 high and read as the app's name, as its heading; at its right, with sharing, a "둘러보기" icon button that opens the browse screen, then the account button, the account's initial in a 32 px circle ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
 - Below it, the today card for a selection of every deck, on the brand's navy (the raised surface in the dark theme) with the symbol faint in its corner: "오늘 할 카드", the count large with "장", "복습 x · 새 카드 y · 약 m분", in a backlog "밀린 복습을 마칠 때까지 새 카드는 쉬어요." ([`study.md`](study.md)), and a white "모두 학습" with a play icon, which opens one study session over every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)). The minutes are the count times the time one card takes, which `study` reads from the user's latest reviews ([`study.md`](study.md)), rounded up.
+- With no card to study now, the today card reads "오늘 할 카드를 다 했어요" in place of the count and has no study button.
 - "내 덱 n" labels the decks, with the hint "길게 눌러 여러 덱 선택".
 - Each deck is a row on a rounded surface: the name's first letter on a 44 px tile in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one; its name and "카드 n장"; a "공개" chip when it is public; a brand-tint "오늘 n" chip when a session over it would study n > 0 cards now; and a chevron. A count that cannot be read shows an icon whose tooltip says why.
 - The bottom bar holds "새 덱", and "사진으로 만들기" when photo import exists. A photo import that saved opens the deck it saved into.
@@ -103,7 +104,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Card editor
 
 - The editor has a close button, the title "카드 추가" or "카드 편집", and the deck name on the right; when editing, also a delete button.
-- A live preview shows the card as the study screen shows it with its answer revealed, question left and answer right, each centred vertically in its half, above the multi-line fields "문제" and "답".
+- A live preview shows the card as the study screen shows it with its answer revealed, question left and answer right, each centred in its half and shrunk until its widest word fits, as the study card does, above the multi-line fields "문제" and "답".
 - Adding offers "저장", which saves and closes, and "저장하고 다음 카드", which saves and leaves the editor open and empty with the focus on "문제". Editing offers "저장" alone.
 
 ### State and composition

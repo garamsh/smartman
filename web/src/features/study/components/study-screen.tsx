@@ -238,11 +238,11 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             aria-label="현재 카드"
             className="grid min-h-52 grid-cols-1 rounded-card bg-surface shadow-raised sm:grid-cols-[1fr_auto_1fr]"
           >
-            <div aria-label="문제" role="group" className="flex items-center p-6">
+            <div aria-label="문제" role="group" className="flex items-center justify-center p-6">
               <CardSide blocks={view.current.front} size="question" />
             </div>
             <span aria-hidden className="mx-7 h-px bg-hairline sm:mx-0 sm:my-7 sm:h-auto sm:w-px" />
-            <div aria-label="답" role="group" className="flex items-center p-6">
+            <div aria-label="답" role="group" className="flex items-center justify-center p-6">
               {revealed ? (
                 <CardSide blocks={view.current.back} size="answer" />
               ) : (

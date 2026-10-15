@@ -31,11 +31,11 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
   - sits full width less 20 on each side, last in the scroll view and painted over the stack, its centre at 57% of the screen height while it fits above the hint row when the view is at its end;
   - is rounded 24 with a two-layer soft shadow, and its halves are divided by a line that stops 28 short of the card's edges;
   - holds the question on its left half and the answer on its right, hidden until a tap and hidden again by the next; when a half would be narrower than 140 at the current text scale, the answer sits under the question, in two halves of the same height divided at the middle;
-  - centres each half's content vertically while it fits;
+  - centres each half's content across and down while it fits, and shrinks the text, the question from 30 to 18 and the answer from 20 to 15, until its widest word fits the half, so a word breaks inside itself only past that floor (`CardText`, [`design.md`](design.md));
   - renders each side's content blocks through one block renderer, `ContentView`, the question at 30/800 and the answer at 20/600, with `UnsupportedContent` as a labelled placeholder;
   - grows with its content from 200 to 55% of the screen height, then each half scrolls inside, from the top.
 - A horizontal drag of the current card moves and tilts it; past 40 a chip and a tint name the answer. Released past 100, or flung faster than 700 per second, it answers "Know" to the right and "Don't know" to the left, with a light haptic; otherwise it springs back. A vertical drag scrolls the view.
-- The previous cards are every answer of the session, re-shows included, newest nearest the current card, built only near the view. Each is rounded 20 with a one-pixel line around it, and shows two lines of each side, centred vertically in its half, an 8 px dot for its answer and "수정됨" once the answer differs from the first given; it is smaller, closer to the ground's colour and blurrier a step per card of depth up to a cap, unblurred past it, and opaque. A long-press opens the whole card in a sheet.
+- The previous cards are every answer of the session, re-shows included, newest nearest the current card, built only near the view. Each is rounded 20 with a one-pixel line around it, and shows two lines of each side, centred in its half and shrunk from 16 to 12 until its widest word fits, an 8 px dot for its answer and "수정됨" once the answer differs from the first given; it is smaller, closer to the ground's colour and blurrier a step per card of depth up to a cap, unblurred past it, and opaque. A long-press opens the whole card in a sheet.
 - The scroll view ([ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md)):
   - opens at its end, and stays there as cards are added while it is there; fewer cards than fill it sit at its bottom;
   - dragged down, reveals earlier cards, the current card moving down with them;
@@ -97,7 +97,7 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - `app/test/study/today_counter_test.dart` checks that the due and new counts add up to the length of the queue a session over the decks opens, in a backlog too, when the count is read again, and the pace: 10 s a card below 20 reviews, and the median of the latest 200 over older reviews that would move it.
 - `engine/examples/backlog.rs` is the simulation that chose the backlog's order, run and threshold ([`engine.md`](engine.md)).
 - `app/test/study/previous_cards_test.dart` checks that a stack of 300 answers above the current card builds only the cards near the view.
-- `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish, and checks it against the tap target and contrast guidelines in the light and the dark theme.
+- `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish, and checks it against the tap target and contrast guidelines in the light and the dark theme. With Pretendard loaded, it checks that "meticulous", "incomprehensibility" and "once in a blue moon" shrink until their widest word fits, break only between words while the floor fits, and sit centred in their half.
 - `flutter test` loads the library from `app/rust/target/release/`, so `make test` builds the crate there first.
 
 ### Versions
