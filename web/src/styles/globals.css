@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* The tokens of app/lib/shared/theme.dart (docs/architecture/design.md), light first. */
+@theme {
+  --color-ground: #eef1f5;
+  --color-surface: #ffffff;
+  --color-ink: #16191f;
+  --color-muted: #5a6170;
+  --color-hairline: #dde1e7;
+  --color-know: #1b7f45;
+  --color-on-know: #ffffff;
+  --color-know-dot: #1e9e4a;
+  --color-dont-know: #e0352b;
+  --color-dont-know-text: #b71c1c;
+  --color-on-dont-know-text: #ffffff;
+  --color-depth: #dadce0;
+  --color-shadow: #000000;
+
+  --radius-card: 24px;
+  --radius-row: 16px;
+}
+
+@theme inline {
+  --font-sans: var(--font-plex-sans-kr), ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ground: #0f1115;
+    --color-surface: #1a1d23;
+    --color-ink: #eceef2;
+    --color-muted: #a3a9b4;
+    --color-hairline: #2e333b;
+    --color-know: #4cc27a;
+    --color-on-know: #0f1115;
+    --color-know-dot: #5bd08a;
+    --color-dont-know: #ff6b60;
+    --color-dont-know-text: #ff8a80;
+    --color-on-dont-know-text: #0f1115;
+    --color-depth: #0f1115;
+    --color-shadow: #000000;
+  }
+}
+
+:root {
+  color-scheme: light dark;
+}
