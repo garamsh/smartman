@@ -15,7 +15,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
   - the failures: `AccountFailure`, `AccountOffline`, `AccountMisconfigured`, `AccountRejected`;
   - `AccountGate`, the app's home, and `signedInHomeProvider`, the app it opens, which the composition site overrides with the deck list, so this domain does not depend on `deck` ([ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md));
   - `AccountScreen`.
-- It is the only domain that imports `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)). `sync` also imports `supabase_flutter`, for PostgREST with the client `connectAccount` returns ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md)).
+- It is the only domain that imports `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)). `sync` and `sharing` also import `supabase_flutter`, for PostgREST with the client `connectAccount` returns ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
 - `deck`'s list screen opens `AccountScreen` through `accountScreenProvider`, which the composition site overrides, so `deck` does not depend on this domain ([`deck.md`](deck.md)).
 
 ### Gate

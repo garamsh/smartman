@@ -4,8 +4,8 @@ The structural rules of the app and the web app: what the unit is, what may refe
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)) and `photo_import` ([`ai-extraction.md`](ai-extraction.md)).
-- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync` and `deck`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. `photo_import` depends on `deck` through its surface, and `deck` reaches `photo_import` only through a provider the composition site overrides. The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)), `photo_import` ([`ai-extraction.md`](ai-extraction.md)) and `sharing` ([`sharing.md`](sharing.md)).
+- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync` and `deck`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. `photo_import` depends on `deck` through its surface, and `deck` reaches `photo_import` only through a provider the composition site overrides. `sharing` depends on `deck` and `account` through their surfaces, and `deck` reaches `sharing` only through `deckSharingProvider`, which the composition site overrides ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)). The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 
@@ -56,6 +56,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme sits in shared code and how the composition site applies it.
 - [ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md) records why the app's home is the account gate, reached through a provider `account` exposes.
 - [ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md) records why the web app is a project of its own and how it reaches the app's fonts.
+- [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why sharing is a domain of its own, reached from `deck` through one provider, and why it imports `supabase_flutter`.
 
 ## Open questions
 

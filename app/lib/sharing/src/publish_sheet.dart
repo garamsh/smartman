@@ -144,7 +144,8 @@ class _PublishSheetState extends State<_PublishSheet> {
                         }),
                         OutlinedButton(
                           onPressed: () => setState(() {
-                            _name = widget.sharing.displayName();
+                            // Shown by the builder, which subscribes a frame later.
+                            _name = widget.sharing.displayName()..ignore();
                           }),
                           child: Text(l10n.retry),
                         ),

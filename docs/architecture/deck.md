@@ -8,28 +8,30 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - The domain lives in `app/lib/deck/`; its public surface is `app/lib/deck/deck.dart`, with internals under `app/lib/deck/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - The surface exports:
-  - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`, and `DeckSelection`, a set of decks that cannot be empty;
-  - content: `Content`, `TextContent`, `UnsupportedContent`;
-  - `CardKey`, and `describeContent`, the one line of text a card side shows;
+  - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`, `DeckVisibility` with `PrivateDeck` and `PublicDeck`, and `DeckSelection`, a set of decks that cannot be empty;
+  - content: `Content`, `TextContent`, `UnsupportedContent`, and `decodeContent`, which reads the stored encoding;
+  - `CardKey`, `describeContent`, the one line of text a card side shows, and `CardSplitRow`, a card as a split row;
   - `DeckRepository` and its save results;
-  - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, and `mergeBack`;
+  - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, `mergeBack`, and `ImportSource` with `FromPhoto` and `FromPublicDeck`;
   - `showNameDialog`, the deck name dialog, which photo import uses to name a new deck;
   - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, and `describeFailure`, the message a user reads for one;
   - `TodayCount`, with `TodayPending`, `TodayCounted` and `TodayUnavailable`, and `TodayBuilder`;
+  - `DeckSharing` and `deckSharingProvider`;
   - `deckRepositoryProvider`, `studyScreenProvider`, `todayProvider`, `accountScreenProvider`, `photoImportProvider` and `DeckListScreen`.
 - The `study` domain reads a deck's cards through `DeckRepository.listCards`, oldest first.
 
 ### Model
 
-- A deck has an id, a name, and creation and update times.
+- A deck has an id, a name, creation and update times, a visibility, and an optional description. The visibility is `PrivateDeck`, the default, or `PublicDeck` with its publish time ([`sharing.md`](sharing.md)).
 - A card belongs to one deck and has a front, a back, a card key, a source, and creation and update times. Ids are UUID v4 strings.
-- `source` is `manual` or `import`. The editor writes `manual`; photo import writes `import`.
+- `source` is `manual`, `import` or `shared`. The editor writes `manual`, photo import `import`, and a copy of another user's public deck `shared`, with the copied deck's id as `originDeckId`, null on every other card.
 - Front and back are each an ordered list of content blocks. A block is `text`, or `UnsupportedContent` for a stored type this version does not know.
 
 ### Storage
 
 - The tables `decks` and `cards` are this domain's, held in the shared database `app/lib/shared/database.dart`. The `reviews` and `card_states` tables there belong to the `study` domain ([`study.md`](study.md)).
 - Every write sets the row's `updated_at` and leaves it unsynced (`dirty`), for sync to push ([`sync.md`](sync.md)).
+- `decks` holds `visibility` (`private` or `public`), `published_at` and `description`; `cards` holds `origin_deck_id`. `setVisibility` writes the first three; a private deck keeps its description for the next publish. A deleted deck refuses it with `DeckDeleted`.
 - A card side is stored as a JSON array of blocks, each with a `type` discriminator and a `payload`. A new block type adds a discriminator value; stored rows need no migration.
 - A stored block of an unknown type is read as `UnsupportedContent` and written back unchanged, so a card a later version wrote is shown, not lost.
 - Deleting a deck sets `deleted_at` on it and on each of its cards, a tombstone sync pushes. The UI asks for confirmation first and states how many cards go with it.
@@ -48,7 +50,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Import
 
 - `DeckRepository.importCards` saves a list of `ImportedCard`s into an existing deck, or into a new deck it creates, in one transaction: a failure writes nothing, the new deck included.
-- Each card is plain text on both sides and is written with `source = import`, unsynced like every write.
+- Each card is plain text on both sides and is written unsynced like every write, with the source its `ImportSource` gives: `import` from a photo, or `shared` and the origin deck from a public deck ([`sharing.md`](sharing.md)).
 - An import into a deck deleted meanwhile, on this device or through sync, is refused with `DeckDeleted` and writes nothing.
 - A card whose key collides with a card in the deck, or with one written earlier in the same import, does what its `DuplicateChoice` says, as the PM decided for issue #30:
   - **skip** (건너뛰기) writes nothing;
@@ -79,7 +81,8 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The deck list has a large title, "덱", with the account button at its top right.
 - Below it, a header card for a selection of every deck: "오늘 할 카드 n장", "복습 x · 새 카드 y", and "모두 학습", which opens one study session over every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
 - "내 덱 n" labels the decks, with the hint "길게 눌러 여러 덱 선택".
-- Each deck is a row on a rounded surface: its name, "카드 n장", a green "오늘 n" chip when a session over it would study n > 0 cards now, and a chevron. A count that cannot be read shows an icon whose tooltip says why.
+- Each deck is a row on a rounded surface: its name, "카드 n장", a "공개됨" chip when it is public, a green "오늘 n" chip when a session over it would study n > 0 cards now, and a chevron. A count that cannot be read shows an icon whose tooltip says why.
+- With sharing, a "둘러보기" icon button left of the account button opens the browse screen.
 - The bottom bar holds "새 덱", and "사진으로 만들기" when photo import exists. A photo import that saved opens the deck it saved into.
 - A tap opens a deck; a long-press enters selection mode with that deck selected.
 - In selection mode:
@@ -90,7 +93,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Card list
 
-- The card list has a back button and a deck menu that renames or deletes the deck; deleting returns to the deck list.
+- The card list has a back button and a deck menu that renames or deletes the deck; deleting returns to the deck list. With sharing, the menu also offers "공개하기" or "비공개로 전환", disabled with a one-line reason while offline, and a public deck shows a "공개됨" chip beside its name.
 - Below the large deck name, "카드 n장 · 오늘 복습 x · 새 카드 y", and a full-width green "학습 · n장", where n is the size of the session it opens, disabled at 0.
 - A search field keeps the cards whose front or back text holds the search, ignoring case.
 - Each card is a row of two columns, front and back, split by a thin divider; a tap opens it in the editor.
@@ -108,6 +111,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - `studyScreenProvider` builds the screen that studies a `DeckSelection` in one session. The card list's "Study" button opens it for its own deck, and selection mode for the selected decks. It has no implementation of its own either: the composition site overrides it with the `study` domain's screen, so this domain does not depend on `study` ([ADR 0005](adr/0005-study-queue-and-card-state.md), [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
 - `todayProvider` builds a widget that counts what a session over a `DeckSelection` would study now and shows the count, a `TodayCount`, through a builder this domain supplies. The header card, each row's chip and the card list's line and study button are such builders. The composition site overrides it with the `study` domain's `TodayCounter`, which reads the count and describes a failure ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [`study.md`](study.md)).
 - `photoImportProvider` builds the photo import screen, for a deck or for a new one; the screen pops with the `Deck` it saved into. Null hides both photo buttons. The composition site overrides it with the `photo_import` domain's `PhotoImportScreen` ([`ai-extraction.md`](ai-extraction.md)), so this domain does not depend on that one.
+- `deckSharingProvider` holds the `DeckSharing` the screens use to browse, publish and unpublish, and to know whether the device is online; null hides those entries. The composition site overrides it with the `sharing` domain's `SharingService` ([`sharing.md`](sharing.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)), so this domain does not depend on that one.
 - The deck list's account button opens the screen `accountScreenProvider` builds. The composition site overrides it with the `account` domain's screen, as it does `studyScreenProvider` ([`account.md`](account.md)).
 - The repository receives its clock and id generator, so tests fix both. It also streams each deck's card count, which the deck list shows.
 
@@ -117,6 +121,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - [ADR 0005](adr/0005-study-queue-and-card-state.md): why the study entry point is a provider the composition site overrides.
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why the entry point takes a `DeckSelection`.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md): why the counts reach this domain through one builder provider rather than a function or a widget per place.
+- [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md): why sharing reaches this domain's screens through one provider, and why a copy is an import.
 - Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM. Issue #19 records the selection mode and the header card, issue #22 the current screens, and issue #30 the import save and its duplicate options.
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md): why a delete is a tombstone and every write leaves its row unsynced.
 

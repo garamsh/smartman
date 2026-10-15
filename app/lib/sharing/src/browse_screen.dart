@@ -52,7 +52,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 
   void _load() => setState(() {
-    _decks = widget.sharing.listDecks(_search, _sort);
+    // The builder shows a failure, but subscribes only at the next frame.
+    _decks = widget.sharing.listDecks(_search, _sort)..ignore();
   });
 
   void _onSearch(String search) {

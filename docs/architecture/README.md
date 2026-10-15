@@ -27,7 +27,8 @@ Current architecture of the system and the decisions behind it. This file is the
 - `design.md` — the app's design language: the principles every screen follows, where each is applied today, and the shared light and dark theme.
 - `study.md` — the `study` domain: the study session over one or more decks, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
 - `sync.md` — the `sync` domain: the local sync columns and cursor, a run's pull and push, the conflict rules, when sync runs, sign-out, and the status the account screen shows.
-- `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, the extraction count, and the pgTAP tests `make test` runs.
+- `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, public decks with their profiles, reports and blocks, the extraction count, and the pgTAP tests `make test` runs.
+- `sharing.md` — the `sharing` domain: publishing a deck, and browsing, previewing, copying, reporting and blocking other users' public decks.
 - `ai-extraction.md` — the `extract-cards` Edge Function: its contract, limits and privacy, how its model is switched, the eval that chooses the model, and the app's `photo_import` domain that calls it.
 - `web.md` — the web app in `web/`: its Next.js stack, the rules that keep it portable between Vercel and a container, its image, Google sign-in through Supabase Auth's cookie session, its theme, and its checks.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
@@ -48,4 +49,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0017-require-sign-in-through-an-account-gate.md` — require sign-in through an `AccountGate` at the app's root that opens the app from the session the device holds, without waiting on the network, and closes every screen over it when the session ends; supersedes ADR 0006's optional sign-in.
 - `adr/0018-engine-as-webassembly.md` — build the engine as WebAssembly in `engine-wasm/` with the wasm-bindgen CLI, taking the app's two answers and returning engine errors as typed values.
 - `adr/0019-web-app-stack-portability-and-sign-in.md` — build the web app on Next.js in `web/`, with no Vercel-only feature, a standalone build in a non-root image built from the repository root, configuration frozen at build from two public variables, and Google sign-in through `@supabase/ssr`'s cookie session behind a proxy that sends a signed-out visitor to `/login`.
+- `adr/0020-public-decks-in-a-sharing-domain.md` — share decks through a `sharing` domain reached from `deck` through one provider, publishing on the server before the device, copying through the deck import, with public read policies, a column grant on `decks`, and pulls filtered by owner.
 - `adr/0000-template.md` — the template every ADR is written from.

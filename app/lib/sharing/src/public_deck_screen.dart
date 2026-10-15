@@ -126,7 +126,9 @@ class _PublicDeckScreenState extends State<PublicDeckScreen> {
                     }, textAlign: TextAlign.center),
                     OutlinedButton(
                       onPressed: () => setState(() {
-                        _cards = widget.sharing.preview(widget.deck.id);
+                        // Shown by the builder, which subscribes a frame later.
+                        _cards = widget.sharing.preview(widget.deck.id)
+                          ..ignore();
                       }),
                       child: Text(l10n.retry),
                     ),
