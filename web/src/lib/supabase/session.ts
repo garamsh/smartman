@@ -16,3 +16,16 @@ export async function readSession(client: SupabaseClient): Promise<Session> {
   const email = data.claims.email;
   return { kind: "signed-in", email: typeof email === "string" ? email : "" };
 }
+
+/**
+ * The id of the user [client]'s session belongs to, verified with Supabase Auth: `rejected`
+ * without a session Supabase accepts, `unreachable` when Supabase cannot be reached.
+ */
+export async function readUserId(
+  client: SupabaseClient,
+): Promise<{ userId: string } | { failure: "rejected" | "unreachable" }> {
+  const { data, error } = await client.auth.getClaims();
+  if (error && isAuthRetryableFetchError(error)) return { failure: "unreachable" };
+  const userId = data?.claims.sub;
+  return userId ? { userId } : { failure: "rejected" };
+}

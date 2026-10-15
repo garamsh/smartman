@@ -67,6 +67,7 @@ test:
 	./supabase/test-sync.sh
 	./deno.sh test
 	./web.sh test
+	./supabase/test-web.sh
 
 build:
 	cd app && flutter build apk --debug $(APP_CONFIG) && \

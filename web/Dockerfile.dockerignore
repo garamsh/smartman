@@ -1,7 +1,9 @@
-# The context is the repository root; admit only the web project and the fonts it bundles.
+# The context is the repository root; admit only the web project, the fonts it bundles and the
+# engine it serves.
 *
 !web/
 !app/assets/fonts/
+!engine-wasm/pkg/
 web/node_modules/
 web/.next/
 web/.env*

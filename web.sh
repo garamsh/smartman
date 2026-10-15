@@ -115,7 +115,7 @@ test)
 	fi
 	echo "the image $image answers $url/api/health and runs as uid $uid"
 	(cd web && npx playwright install chromium >/dev/null && E2E_BASE_URL="$url" npx playwright test)
-	echo "ran the e2e specs Playwright selects in web/e2e/ against the image"
+	echo "ran the e2e specs Playwright selects in web/e2e/ against the image; web/e2e/study.spec.ts skips there and runs in supabase/test-web.sh"
 	;;
 build)
 	(cd web && npx next build)

@@ -41,10 +41,11 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 
 ### The web app
 
-- **`web/` is a project of its own** ([ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md), [`web.md`](web.md)). Nothing under `web/` imports code from `app/`. It reads two of the app's files: the fonts in `app/assets/fonts/`, through the link `web/src/styles/fonts`, and `app/lib/shared/theme.dart`, whose tokens a test compares with `web/src/styles/globals.css`.
-- **A feature is the unit**, under `web/src/features/<name>/`, as a domain is under `app/lib/`, and is earned the same way. The first is `auth`.
+- **`web/` is a project of its own** ([ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md), [`web.md`](web.md)). Nothing under `web/` imports code from `app/`. It reads two of the app's files: the fonts in `app/assets/fonts/`, through the link `web/src/styles/fonts`, and `app/lib/shared/theme.dart`, whose tokens a test compares with `web/src/styles/globals.css`. It imports the engine's generated module in `engine-wasm/pkg/` through the link `web/src/features/study/engine-wasm` ([ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
+- **A feature is the unit**, under `web/src/features/<name>/`, as a domain is under `app/lib/`, and is earned the same way. The features are `auth`, `decks` and `study`.
+- **A feature may depend on a sibling only through its entry points, and the graph stays acyclic**, as between domains. `study` depends on `decks` for the types of decks and cards; `decks` imports no feature. A route composes the two: it reads with both and hands `study`'s counts to `decks`' components as values, as the app's composition site hands `deck` its counts through a provider.
 - **A feature is reached only through its two entry points**, stack-nextjs §13's spelling of a domain's public surface: `index.ts`, what a Server Component reads, and `actions.ts`, its Server Actions. A feature's own files import each other directly.
-- **Shared code sits below every feature**: `web/src/lib/` and `web/src/env.ts` import no feature and no route.
+- **Shared code sits below every feature**: `web/src/lib/` and `web/src/env.ts` import no feature and no route. What two features both need lives there: the card content blocks (`web/src/lib/card-content.ts`) and the reading of PostgREST's rows and failures (`web/src/lib/supabase/`).
 - **The import rules are checked by ESLint.** `web/eslint.config.mjs` fails on an import of `@/features/<name>/` other than its `index` or `actions`, and on an import of `@/features/` or `@/app/` from `web/src/lib/` or `web/src/env.ts`.
 - **The web app has no single composition site.** Next.js calls each route, Route Handler, Server Action and the proxy as an entry point of its own, per request. Each constructs the Supabase client it needs through `web/src/lib/supabase/`, the one place that constructs one.
 
