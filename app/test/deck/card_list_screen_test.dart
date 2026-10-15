@@ -57,6 +57,37 @@ void main() {
     },
   );
 
+  testWidgets(
+    'in a backlog the header says new cards wait, and not otherwise',
+    (tester) async {
+      const paused = 'New cards wait until you catch up on your reviews.';
+      var screens = await DeckScreens.open(
+        tester,
+        cards: cards,
+        today: const TodayCounted.backlog(review: 3),
+      );
+      await screens.push((deck) => CardListScreen(deck: deck));
+
+      expect(find.text('3 to review'), findsOneWidget);
+      expect(find.text('0 new'), findsOneWidget);
+      expect(find.text(paused), findsOneWidget);
+      await screens.close();
+
+      // Control: the same count with new cards taken has no such sentence.
+      screens = await DeckScreens.open(
+        tester,
+        cards: cards,
+        today: const TodayCounted(review: 3, fresh: 0),
+      );
+      await screens.push((deck) => CardListScreen(deck: deck));
+
+      expect(find.text('3 to review'), findsOneWidget);
+      expect(find.text('0 new'), findsOneWidget);
+      expect(find.text(paused), findsNothing);
+      await screens.close();
+    },
+  );
+
   testWidgets('with nothing to study today, Study is disabled', (tester) async {
     final screens = await DeckScreens.open(tester, cards: cards);
     await screens.push((deck) => CardListScreen(deck: deck));

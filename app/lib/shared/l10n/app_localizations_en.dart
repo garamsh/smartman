@@ -299,6 +299,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addFromPhoto => 'Add from photo';
 
   @override
+  String get backlogPaused =>
+      'New cards wait until you catch up on your reviews.';
+
+  @override
   String studyCount(int count) {
     return 'Study · $count';
   }

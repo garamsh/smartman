@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -58,6 +58,33 @@ describe("the deck list", () => {
     expect(screen.getByRole("heading", { name: "내 덱 2" })).toBeInTheDocument();
     expect(rowNames()).toEqual(["French, 카드 3장, 오늘 2", "Spanish, 카드 1장"]);
     expect(row("French")).toHaveAttribute("href", "/decks/d-fr");
+  });
+
+  it("says in the header that new cards wait while more than three days of reviews are due", async () => {
+    const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("fr-new", "d-fr", "chat"), cardRow("fr-due", "d-fr", "chien"));
+    postgrest.seed("card_states", stateRow("fr-due", due));
+    // Control: one card due every three days is not a backlog.
+    await render(Decks, {});
+    expect(screen.getByText("복습 1 · 새 카드 1")).toBeInTheDocument();
+    expect(screen.queryByText(paused)).not.toBeInTheDocument();
+    cleanup();
+
+    // Two more due after 30 days: three due against a load of about 0.4 a day.
+    const overdue = {
+      stability: 30,
+      difficulty: 5,
+      lastReview: start - 31 * day,
+      due: start - day,
+    };
+    postgrest.seed("cards", cardRow("fr-a", "d-fr", "un"), cardRow("fr-b", "d-fr", "deux"));
+    postgrest.seed("card_states", stateRow("fr-a", overdue), stateRow("fr-b", overdue));
+    await render(Decks, {});
+
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 3장" })).toBeInTheDocument();
+    expect(screen.getByText("복습 3 · 새 카드 0")).toBeInTheDocument();
+    expect(screen.getByText(paused)).toBeInTheDocument();
   });
 
   it("leaves out tombstoned decks and cards, and the cards of a tombstoned deck", async () => {

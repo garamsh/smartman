@@ -39,7 +39,14 @@ final class TodayCounted extends TodayCount {
     required this.review,
     required this.fresh,
     this.perCard = defaultPerCard,
-  });
+  }) : backlog = false;
+
+  /// So many reviews are due that new cards pause until they are done.
+  const TodayCounted.backlog({
+    required this.review,
+    this.perCard = defaultPerCard,
+  }) : fresh = 0,
+       backlog = true;
 
   final int review;
   final int fresh;
@@ -47,6 +54,9 @@ final class TodayCounted extends TodayCount {
 
   /// The time one card is taken to need while the user's own pace is unknown.
   static const defaultPerCard = Duration(seconds: 10);
+
+  /// Whether new cards pause for a backlog of reviews.
+  final bool backlog;
 
   /// The size of the session: every due card and every new one.
   int get total => review + fresh;

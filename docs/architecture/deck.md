@@ -79,7 +79,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Deck list and selection
 
 - The deck list's top bar holds the horizontal lockup, 30 high and read as the app's name, as its heading; at its right, with sharing, a "둘러보기" icon button that opens the browse screen, then the account button, the account's initial in a 32 px circle ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
-- Below it, the today card for a selection of every deck, on the brand's navy (the raised surface in the dark theme) with the symbol faint in its corner: "오늘 할 카드", the count large with "장", "복습 x · 새 카드 y · 약 m분", and a white "모두 학습" with a play icon, which opens one study session over every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)). The minutes are the count times the time one card takes, which `study` reads from the user's latest reviews ([`study.md`](study.md)), rounded up.
+- Below it, the today card for a selection of every deck, on the brand's navy (the raised surface in the dark theme) with the symbol faint in its corner: "오늘 할 카드", the count large with "장", "복습 x · 새 카드 y · 약 m분", in a backlog "밀린 복습을 마칠 때까지 새 카드는 쉬어요." ([`study.md`](study.md)), and a white "모두 학습" with a play icon, which opens one study session over every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)). The minutes are the count times the time one card takes, which `study` reads from the user's latest reviews ([`study.md`](study.md)), rounded up.
 - "내 덱 n" labels the decks, with the hint "길게 눌러 여러 덱 선택".
 - Each deck is a row on a rounded surface: the name's first letter on a 44 px tile in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one; its name and "카드 n장"; a "공개" chip when it is public; a brand-tint "오늘 n" chip when a session over it would study n > 0 cards now; and a chevron. A count that cannot be read shows an icon whose tooltip says why.
 - The bottom bar holds "새 덱", and "사진으로 만들기" when photo import exists. A photo import that saved opens the deck it saved into.
@@ -95,7 +95,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Card list
 
 - The card list has a back button and a deck menu that renames or deletes the deck; deleting returns to the deck list. With sharing, the menu also offers "공개하기" or "비공개로 전환", disabled with a one-line reason while offline, and a public deck shows a "공개" chip beside its name.
-- Below the deck name, at 26/800, three white pills, "카드 n", "복습 x" and "새 카드 y", and the primary "학습하기 · n장" with a play icon, where n is the size of the session it opens, disabled at 0.
+- Below the deck name, at 26/800, three white pills, "카드 n", "복습 x" and "새 카드 y", in a backlog the same sentence as the today card, and the primary "학습하기 · n장" with a play icon, where n is the size of the session it opens, disabled at 0.
 - A 48 px search field keeps the cards whose front or back text holds the search, ignoring case.
 - The cards are one white rounded group, a row each with one-pixel separators: front and back in two columns split by a thin divider, the back in the quieter ink; a tap opens it in the editor.
 - The bottom bar holds "카드 추가", and "사진으로 추가" when photo import exists, both secondary. A photo import that saved into another deck replaces this list with that deck's; one into this deck returns here.

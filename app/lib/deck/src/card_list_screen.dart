@@ -137,6 +137,11 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                         ),
                     ],
                   ),
+                  if (count case TodayCounted(backlog: true))
+                    Text(
+                      l10n.backlogPaused,
+                      style: AppType.secondary.copyWith(color: colors.muted),
+                    ),
                   AppButton(
                     label: l10n.studyCount(switch (count) {
                       TodayCounted(:final total) => total,

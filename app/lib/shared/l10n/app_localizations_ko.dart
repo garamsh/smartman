@@ -280,6 +280,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addFromPhoto => '사진으로 추가';
 
   @override
+  String get backlogPaused => '밀린 복습을 마칠 때까지 새 카드는 쉬어요.';
+
+  @override
   String studyCount(int count) {
     return '학습하기 · $count장';
   }

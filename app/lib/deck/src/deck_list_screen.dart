@@ -351,6 +351,7 @@ class _TodayCard extends StatelessWidget {
                       :final fresh,
                       :final total,
                       :final minutes,
+                      :final backlog,
                     ) =>
                       [
                         Semantics(
@@ -376,6 +377,7 @@ class _TodayCard extends StatelessWidget {
                           l10n.todayBreakdown(review, fresh, minutes),
                           style: quiet,
                         ),
+                        if (backlog) Text(l10n.backlogPaused, style: quiet),
                       ],
                     TodayUnavailable(:final message) => [
                       Text(message, style: quiet),

@@ -192,6 +192,33 @@ void main() {
     },
   );
 
+  testWidgets(
+    'in a backlog the header says new cards wait, and not otherwise',
+    (tester) async {
+      const paused = 'New cards wait until you catch up on your reviews.';
+      var list = await _open(
+        tester,
+        today: {'Alpha+Beta+Gamma': const TodayCounted.backlog(review: 40)},
+      );
+
+      expect(find.bySemanticsLabel('40 cards for today'), findsOneWidget);
+      // 40 cards at 10 s each, about 7 minutes.
+      expect(find.text('40 to review · 0 new · about 7 min'), findsOneWidget);
+      expect(find.text(paused), findsOneWidget);
+      await list.close();
+
+      // Control: the same header with new cards taken has no such sentence.
+      list = await _open(
+        tester,
+        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 40, fresh: 0)},
+      );
+
+      expect(find.text('40 to review · 0 new · about 7 min'), findsOneWidget);
+      expect(find.text(paused), findsNothing);
+      await list.close();
+    },
+  );
+
   testWidgets('a header count that cannot be read says why', (tester) async {
     final list = await _open(
       tester,

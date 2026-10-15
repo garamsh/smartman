@@ -41,6 +41,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences, in the voice below.
    - Deck list and card list: an empty list says how to start, and a search with no match says to try other words.
+   - Deck list and card list: in a backlog, one sentence says new cards wait until the reviews are caught up ([`study.md`](study.md)).
    - Every screen: a storage failure says what failed and to try again.
    - Browse: offline, it says the public decks appear once connected; the deck menu says why publishing is disabled.
 

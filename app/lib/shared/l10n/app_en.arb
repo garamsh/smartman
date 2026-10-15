@@ -75,6 +75,7 @@
   "todayChip": "Today {count}",
   "createFromPhoto": "Create from photo",
   "addFromPhoto": "Add from photo",
+  "backlogPaused": "New cards wait until you catch up on your reviews.",
   "studyCount": "Study · {count}",
   "searchCards": "Search",
   "noMatches": "No card matches. Try other words.",

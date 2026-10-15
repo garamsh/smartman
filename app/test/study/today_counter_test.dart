@@ -89,7 +89,14 @@ class _Decks {
     await add(b, 'b new');
   }
 
-  Future<void> add(DeckId deck, String front, {DateTime? due}) async {
+  /// Adds a card to [deck], with a stored state due at [due] after an
+  /// interval of [days] days when [due] is given.
+  Future<void> add(
+    DeckId deck,
+    String front, {
+    DateTime? due,
+    int days = 3,
+  }) async {
     final saved = await cards.addCard(
       deck,
       front: [TextContent(front)],
@@ -100,7 +107,16 @@ class _Decks {
       DuplicateFront() => fail('the deck held no duplicate'),
     };
     if (due == null) return;
-    await review(card.id, dueAt(due), [Duration.zero]);
+    await review(
+      card.id,
+      CardState(
+        stability: days.toDouble(),
+        difficulty: 5,
+        lastReview: due.subtract(Duration(days: days)),
+        due: due,
+      ),
+      [Duration.zero],
+    );
   }
 
   /// Records one review of [card] per entry of [durations], a minute apart
@@ -160,8 +176,15 @@ Future<GlobalKey<NavigatorState>> _pump(
             builder: (context, count) => Column(
               children: [
                 Text(switch (count) {
-                  TodayCounted(:final review, :final fresh, :final perCard) =>
+                  TodayCounted(
+                    :final review,
+                    :final fresh,
+                    :final perCard,
+                    backlog: false,
+                  ) =>
                     '$review due, $fresh new, ${perCard.inSeconds} s a card',
+                  TodayCounted(:final review, backlog: true) =>
+                    '$review due, new cards paused',
                   TodayUnavailable(:final message) => message,
                   TodayPending() => 'pending',
                 }),
@@ -285,6 +308,42 @@ void main() {
 
     expect(find.text('2 due, 3 new, 10 s a card'), findsOneWidget);
   });
+
+  testWidgets(
+    'with more than three days of reviews due, the count and the session it opens take no new card',
+    (tester) async {
+      final decks = await _seed(tester);
+      final navigator = await _pump(tester, decks);
+      // Control: three cards due every three days are one review a day, and
+      // two due are not a backlog.
+      expect(find.text('2 due, 3 new, 10 s a card'), findsOneWidget);
+
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => const Scaffold()),
+      );
+      await tester.pumpAndSettle();
+      // Six more due after 30 days: eight due against a load of 1.2 a day.
+      await tester.runAsync(() async {
+        for (var index = 0; index < 6; index++) {
+          await decks.add(
+            decks.b,
+            'b overdue $index',
+            due: _now.subtract(const Duration(days: 1)),
+            days: 30,
+          );
+        }
+      });
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('8 due, new cards paused'), findsOneWidget);
+
+      await tester.tap(find.text('Study all'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0/8'), findsOneWidget);
+    },
+  );
 
   testWidgets('a count that cannot be read says why', (tester) async {
     final decks = await _seed(tester);

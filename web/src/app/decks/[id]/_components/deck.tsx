@@ -40,6 +40,9 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
             </li>
           ))}
         </ul>
+        {today.backlog && (
+          <p className="text-secondary text-muted">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
+        )}
       </div>
       <StudyLink
         decks={[deck.id]}

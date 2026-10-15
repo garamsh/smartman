@@ -553,6 +553,12 @@ abstract class AppLocalizations {
   /// **'사진으로 추가'**
   String get addFromPhoto;
 
+  /// Sentence under the today count while so many reviews are due that a session takes no new card.
+  ///
+  /// In ko, this message translates to:
+  /// **'밀린 복습을 마칠 때까지 새 카드는 쉬어요.'**
+  String get backlogPaused;
+
   /// Deck screen button that studies the deck, with how many cards the session would study.
   ///
   /// In ko, this message translates to:
