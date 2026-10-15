@@ -4,7 +4,8 @@ import 'package:smartman/account/account.dart';
 
 /// Stands in for the account service at the auth boundary. [signIn] signs in
 /// as [email], or throws [failure] when one is set; [cancelSignIn] makes it
-/// return as a cancelled picker does.
+/// return as a cancelled picker does, and [pendingSignIn] holds it until it
+/// completes.
 class FakeAccountService implements AccountService {
   FakeAccountService([this._state = const SignedOut()]);
 
@@ -15,6 +16,7 @@ class FakeAccountService implements AccountService {
   String email = 'ada@example.com';
   AccountFailure? failure;
   bool cancelSignIn = false;
+  Completer<void>? pendingSignIn;
 
   @override
   AccountState get state => _state;
@@ -29,6 +31,7 @@ class FakeAccountService implements AccountService {
 
   @override
   Future<void> signIn() async {
+    await pendingSignIn?.future;
     if (failure case final failure?) throw failure;
     if (cancelSignIn) return;
     _set(SignedIn(userId: userId, email: email));

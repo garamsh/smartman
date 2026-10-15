@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -11,9 +12,12 @@ import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
+import 'package:smartman/sync/sync.dart';
 
 import 'account/fake_account_service.dart';
 import 'sync/fake_sync_server.dart';
+
+const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
@@ -30,10 +34,12 @@ void main() {
   setUpAll(() async => scheduler = await Scheduler.load());
 
   /// Composes the app over an in-memory database and theme storage holding
-  /// [themeMode] when given, extracting cards through [extraction].
+  /// [themeMode] when given, signed in through [account] when given and as a
+  /// restored session otherwise, extracting cards through [extraction].
   Future<void> pumpApp(
     WidgetTester tester, {
     String? themeMode,
+    AccountService? account,
     ExtractionClient? extraction,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
@@ -50,8 +56,11 @@ void main() {
       composeApp(
         executor,
         scheduler,
-        FakeAccountService(),
-        FakeSyncServer(const UserId('00000000-0000-4000-8000-00000000000a')),
+        account ??
+            FakeAccountService(
+              const SignedIn(userId: _ada, email: 'ada@example.com'),
+            ),
+        FakeSyncServer(_ada),
         themeStorage,
         extraction,
       ),
@@ -64,8 +73,12 @@ void main() {
       Theme.of(tester.element(find.text('Decks'))).brightness;
 
   // Unmounting the scope cancels drift's stream queries, whose cleanup timer
-  // must fire before the test body ends.
+  // must fire before the test body ends; disposing sync cancels the run a
+  // write scheduled.
   Future<void> unmountApp(WidgetTester tester) async {
+    ProviderScope.containerOf(
+      tester.element(find.byType(AccountGate, skipOffstage: false)),
+    ).read(syncControllerProvider).dispose();
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   }
@@ -219,7 +232,7 @@ void main() {
     },
   );
 
-  testWidgets('the deck list opens the account screen, signed out', (
+  testWidgets('the deck list opens the account screen, signed in', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -228,7 +241,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AccountScreen), findsOneWidget);
-    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Signed in as ada@example.com'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -275,7 +288,7 @@ void main() {
 
   for (final mode in ['light', 'dark']) {
     testWidgets(
-      'in the $mode theme every deck screen and the account screen meet the tap target and contrast guidelines',
+      'in the $mode theme the sign-in screen, every deck screen and the account screen meet the tap target and contrast guidelines',
       (tester) async {
         Future<void> meetsGuidelines() async {
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -283,7 +296,14 @@ void main() {
           await expectLater(tester, meetsGuideline(textContrastGuideline));
         }
 
-        await pumpApp(tester, themeMode: mode);
+        await pumpApp(tester, themeMode: mode, account: FakeAccountService());
+        expect(
+          Theme.of(tester.element(find.text('Sign in with Google'))).brightness,
+          Brightness.values.byName(mode),
+        );
+        await meetsGuidelines();
+        await tester.tap(find.text('Sign in with Google'));
+        await tester.pumpAndSettle();
         expect(brightness(tester).name, mode);
         await meetsGuidelines();
         await createDeckAndOpen(tester, 'French');

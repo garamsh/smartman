@@ -43,7 +43,7 @@ cd app
 flutter run --dart-define-from-file=config/dev.json
 ```
 
-Without the file the app still runs, with Google sign-in unavailable.
+The app opens on the sign-in screen until a Google account signs in; a session stored by an earlier run opens it straight away, offline too. Without the file, the sign-in screen says sign-in is not set up, and nothing else runs.
 
 ## Run the checks
 

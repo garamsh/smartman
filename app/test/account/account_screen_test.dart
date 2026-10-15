@@ -66,30 +66,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('signed out, it offers Google sign-in, in Korean', (
-    tester,
-  ) async {
-    await pumpScreen(tester, FakeAccountService(), locale: const Locale('ko'));
-
-    expect(find.text('Google로 로그인'), findsOneWidget);
-    expect(find.text('로그인하지 않아도 모든 기능을 쓸 수 있습니다.'), findsOneWidget);
-    expect(find.text('로그아웃'), findsNothing);
-  });
-
-  testWidgets('signing in shows the account email and a sign-out action', (
-    tester,
-  ) async {
-    final service = FakeAccountService();
-    await pumpScreen(tester, service);
-    expect(service.state, isA<SignedOut>());
-
-    await tapAndSettle(tester, 'Sign in with Google');
-
-    expect(find.text('Signed in as ada@example.com'), findsOneWidget);
-    expect(find.text('Sign out'), findsOneWidget);
-    expect(find.text('Sign in with Google'), findsNothing);
-  });
-
   testWidgets('a restored session opens signed in', (tester) async {
     await pumpScreen(
       tester,
@@ -111,7 +87,6 @@ void main() {
 
     await tapAndSettle(tester, 'Sign out');
 
-    expect(find.text('Sign in with Google'), findsOneWidget);
     expect(find.text('Signed in as ada@example.com'), findsNothing);
   });
 
@@ -131,7 +106,7 @@ void main() {
 
     expect([data.pushes, data.clears], [1, 1]);
     expect(find.text("Some changes aren't synced"), findsNothing);
-    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Signed in as ada@example.com'), findsNothing);
   });
 
   testWidgets(
@@ -190,7 +165,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Signed in as ada@example.com'), findsNothing);
   });
 
   testWidgets('the sync status shows only while signed in', (tester) async {
@@ -206,44 +181,6 @@ void main() {
 
     expect(find.text('sync status'), findsNothing);
   });
-
-  testWidgets('a cancelled sign-in shows nothing and stays signed out', (
-    tester,
-  ) async {
-    final service = FakeAccountService()..cancelSignIn = true;
-    await pumpScreen(tester, service);
-
-    await tapAndSettle(tester, 'Sign in with Google');
-
-    expect(find.byType(SnackBar), findsNothing);
-    expect(find.text('Sign in with Google'), findsOneWidget);
-    // The control: the same tap with a failure does show a snack bar.
-    service.failure = const AccountRejected(FormatException('refused'));
-    await tapAndSettle(tester, 'Sign in with Google');
-    expect(find.byType(SnackBar), findsOneWidget);
-  });
-
-  final failures = <String, AccountFailure>{
-    "Couldn't reach the server. Check your internet connection.":
-        const AccountOffline(FormatException('offline')),
-    "Sign-in isn't set up correctly in this app, so you can't sign in.":
-        const AccountMisconfigured(FormatException('bad client')),
-    'Google sign-in was refused. Please try again.': const AccountRejected(
-      FormatException('refused'),
-    ),
-  };
-  for (final MapEntry(key: message, value: failure) in failures.entries) {
-    testWidgets('${failure.runtimeType} on sign-in is shown as "$message"', (
-      tester,
-    ) async {
-      await pumpScreen(tester, FakeAccountService()..failure = failure);
-
-      await tapAndSettle(tester, 'Sign in with Google');
-
-      expect(find.text(message), findsOneWidget);
-      expect(find.text('Sign in with Google'), findsOneWidget);
-    });
-  }
 
   testWidgets(
     'an offline sign-out signs out and reports the server out of reach',
@@ -261,36 +198,18 @@ void main() {
         find.text("Couldn't reach the server. Check your internet connection."),
         findsOneWidget,
       );
-      expect(find.text('Sign in with Google'), findsOneWidget);
+      expect(find.text('Signed in as ada@example.com'), findsNothing);
     },
   );
 
-  testWidgets('a build without configuration says so and offers no sign-in', (
-    tester,
-  ) async {
+  testWidgets('tap targets carry labels', (tester) async {
     await pumpScreen(
       tester,
       FakeAccountService(
-        const AccountUnavailable(
-          AccountMisconfigured(FormatException('SUPABASE_URL is missing')),
-        ),
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
       ),
     );
 
-    expect(
-      find.text(
-        "Sign-in isn't set up correctly in this app, so you can't sign in.",
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Sign in with Google'), findsNothing);
-  });
-
-  testWidgets('tap targets carry labels in both states', (tester) async {
-    await pumpScreen(tester, FakeAccountService());
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-
-    await tapAndSettle(tester, 'Sign in with Google');
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
   });
 
@@ -301,7 +220,9 @@ void main() {
       addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
       await pumpScreen(
         tester,
-        FakeAccountService(),
+        FakeAccountService(
+          const SignedIn(userId: _ada, email: 'ada@example.com'),
+        ),
         locale: const Locale('ko'),
       );
       Brightness brightness() =>
