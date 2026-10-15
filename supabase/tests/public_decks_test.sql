@@ -124,8 +124,8 @@ select results_eq(
   'record_deck_import accepts a public deck and refuses a private or hidden one');
 select results_eq(
   $$select id, import_count from public.list_public_decks(sort => 'copied')$$,
-  $$values ('public-a', 2), ('public-c', 0)$$,
-  'the copies counted, and the most copied deck lists first');
+  $$values ('public-a', 1), ('public-c', 0)$$,
+  'B''s two copies counted once, and the most copied deck lists first');
 
 reset role;
 set local role authenticated;

@@ -29,7 +29,9 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - A trigger hides a deck once three distinct users reported it, under an advisory lock on the deck seeded with 2, so concurrent reports are counted one after another. The project's owner unhides it in the dashboard.
 - `public.user_blocks` holds a user's blocks; users select, insert and delete their own.
 - `list_public_decks(search, sort, page_size, page_offset)` runs as the caller and lists visible public decks not of a user the caller blocked, whose name or description holds the search ignoring case, newest first or most copied first, with the owner's display name and live card count.
-- `record_deck_import(deck_id)` runs as its owner: it returns false for a deck that is not visibly public, and otherwise true, adding one to `import_count` unless the caller owns the deck.
+- `record_deck_import(deck_id)` runs as its owner: it returns false for a deck that is not visibly public, and otherwise true. A caller's first copy of a deck it does not own inserts a row in `public.deck_imports` and adds one to `import_count`; a later copy by that caller, or a copy by the owner, changes neither (issue #67).
+- `public.deck_imports` holds one row per deck and user who copied it, keyed by the two, so concurrent copies by one user insert one row and add one between them. Clients hold no privilege on it, and row-level security is on with no policy. Removing a row, with its deck or its account, leaves `import_count` as it is.
+- Copies made before `deck_imports` existed were not recorded per user, so their counts stay as they were and later copies add to them. Migration `20261016090000_deck_imports.sql` is additive: it creates the table and replaces the function with the same signature, changing no row.
 - A deck is visibly public when it is public, not hidden and not deleted.
 
 ### Sync columns
@@ -63,7 +65,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 ### Account deletion
 
 - The `delete-account` Edge Function deletes the caller's user from `auth.users` through Supabase Auth's admin API, with the service-role key, which stays in the function ([`account.md`](account.md), [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). The deletion is hard, so the cascade runs.
-- Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` by its reporter and by its deck, and `user_blocks` by either side. Another user's copy of a deleted user's deck stays theirs.
+- Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. Another user's copy of a deleted user's deck stays theirs.
 - A new table holding a user id references `auth.users` with `on delete cascade`.
 - Only the PM deploys the function, after the pull request that adds or changes it merges.
 
@@ -82,7 +84,8 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `integrity_test.sql` — references to another user's deck or card are refused;
   - `extraction_usage_test.sql` — users read only their own usage rows and write none, and `consume_extraction` lets a user through until the daily limit, under that user's lock alone;
   - `fuzz_factor_test.sql` — a review's fuzz factor is checked to `[0, 1)` and inserted by its client, which cannot update it, with an update of the rating as control;
-  - `public_decks_test.sql` — another user reads a public deck, its live cards and its owner's name, and no private or hidden deck; non-owners' writes are refused, with the owner's as control; the listing searches, sorts and leaves out blocked users' decks; copies are counted;
+  - `public_decks_test.sql` — another user reads a public deck, its live cards and its owner's name, and no private or hidden deck; non-owners' writes are refused, with the owner's as control; the listing searches, sorts and leaves out blocked users' decks; copies are counted once per user, and never the owner's;
+  - `deck_imports_test.sql` — a second copy by the same user adds nothing while another user's adds one, the owner's adds nothing, a count kept from before is added to, and clients reach no row;
   - `deck_reports_test.sql` — reports are insert-only by their reporter, once per deck, and the third distinct reporter hides the deck;
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
@@ -100,7 +103,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records how sync pushes reviews within the column grant, and the two-device test's stack.
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
-- Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, and issue #26 account deletion.
+- Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
 
