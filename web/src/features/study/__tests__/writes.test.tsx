@@ -11,7 +11,7 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 
 import { StudyScreen } from "../components/study-screen";
-import { schedule } from "../engine";
+import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
 import type { CardState } from "../queue";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
@@ -26,16 +26,37 @@ const card: Card = {
   createdAt: start - day,
 };
 
-/** The engine's state for [card] after [answer] at [at] with [fuzzFactor], from [before]. */
+/**
+ * The state the engine's module gives [card] after [answer] at [at] with [fuzzFactor], from
+ * [before], called directly rather than through the app's engine wrapper.
+ */
 async function expected(
   before: CardState | null,
   answer: "know" | "dontKnow",
   at: number,
   fuzzFactor: number,
 ) {
-  const scheduled = await schedule(before, [{ answer, reviewedAt: at, fuzzFactor }]);
-  if (!("state" in scheduled)) throw new Error(`the engine refused: ${JSON.stringify(scheduled)}`);
-  return scheduled.state;
+  await init();
+  const seconds = BigInt(Math.trunc(at / 1000));
+  const outcome = before
+    ? reviewCard(
+        {
+          stability: before.stability,
+          difficulty: before.difficulty,
+          lastReview: BigInt(before.lastReview / 1000),
+        },
+        answer,
+        seconds,
+        fuzzFactor,
+      )
+    : reviewNewCard(answer, seconds, fuzzFactor);
+  if (!("ok" in outcome)) throw new Error(`the engine refused: ${outcome.error.kind}`);
+  return {
+    stability: outcome.ok.state.stability,
+    difficulty: outcome.ok.state.difficulty,
+    lastReview: Number(outcome.ok.state.lastReview) * 1000,
+    due: Number(outcome.ok.due) * 1000,
+  };
 }
 
 /** The stored fuzz factor of the session's only review. */
@@ -59,8 +80,13 @@ describe("a study session's writes", () => {
   });
 
   it("writes one review per answer and the card state the engine computes", async () => {
-    // A long interval, so the answer's fuzz factor moves the due day.
-    const before = { stability: 20, difficulty: 5, lastReview: start - 20 * day, due: start - day };
+    // A long interval, so each fuzz factor gives its own due day.
+    const before = {
+      stability: 1000,
+      difficulty: 5,
+      lastReview: start - 1000 * day,
+      due: start - day,
+    };
     render(
       <StudyScreen plan={{ startedAt: start, cards: [card], before: { [card.id]: before } }} />,
     );
@@ -112,8 +138,13 @@ describe("a study session's writes", () => {
   });
 
   it("rewrites a toggled answer by replaying it with its stored fuzz factor", async () => {
-    // A long interval, so the fuzz factor moves the due day.
-    const before = { stability: 20, difficulty: 5, lastReview: start - 20 * day, due: start - day };
+    // A long interval, so each fuzz factor gives its own due day.
+    const before = {
+      stability: 1000,
+      difficulty: 5,
+      lastReview: start - 1000 * day,
+      due: start - day,
+    };
     render(
       <StudyScreen plan={{ startedAt: start, cards: [card], before: { [card.id]: before } }} />,
     );
