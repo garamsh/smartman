@@ -78,6 +78,25 @@ describe("the deck list", () => {
     expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
   });
 
+  it("leaves out another user's public deck, which row-level security lets it read", async () => {
+    const other = "00000000-0000-4000-8000-000000000002";
+    postgrest.seed("decks", deckRow("d-fr", "French"), {
+      ...deckRow("d-pub", "Public"),
+      user_id: other,
+      visibility: "public",
+    });
+    postgrest.seed("cards", cardRow("fr", "d-fr", "chat"), {
+      ...cardRow("pub", "d-pub", "maison"),
+      user_id: other,
+    });
+
+    await render(Decks, {});
+
+    // Control: the user's own deck is read and counted.
+    expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+  });
+
   it("reads every page of a library larger than one PostgREST answer", async () => {
     postgrest.seed("decks", deckRow("d-big", "Big"));
     postgrest.seed(

@@ -4,6 +4,7 @@ import { requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
 import { selectAll } from "@/lib/supabase/select-all";
 import { field, parseTime } from "@/lib/supabase/row";
 import { createClient } from "@/lib/supabase/server";
+import { readUserId } from "@/lib/supabase/session";
 
 import { parseContent } from "@/lib/card-content";
 import type { Card, CardId, Deck, DeckId, Library } from "./library";
@@ -13,18 +14,23 @@ export type LibraryFailure = ServerFailure | "unreadable";
 
 /**
  * The signed-in user's decks and cards, read from the server under row-level security,
- * leaving out every tombstoned row and every card of a tombstoned deck. With [decks], only
- * the cards of those decks are read.
+ * leaving out every tombstoned row and every card of a tombstoned deck. Row-level security
+ * also lets a user read other users' public decks, so the reads filter on the user's own.
+ * With [decks], only the cards of those decks are read.
  */
 export async function readLibrary(
   decks?: readonly DeckId[],
 ): Promise<{ library: Library } | { failure: LibraryFailure }> {
   const supabase = await createClient();
+  const session = await readUserId(supabase);
+  if ("failure" in session) return session;
+  const { userId } = session;
   const [deckRows, cardRows] = await Promise.all([
     selectAll((from, to) =>
       supabase
         .from("decks")
         .select("id, name")
+        .eq("user_id", userId)
         .is("deleted_at", null)
         .order("id")
         .range(from, to)
@@ -34,6 +40,7 @@ export async function readLibrary(
       const query = supabase
         .from("cards")
         .select("id, deck_id, front, back, created_at")
+        .eq("user_id", userId)
         .is("deleted_at", null);
       return (decks ? query.in("deck_id", decks) : query)
         .order("id")

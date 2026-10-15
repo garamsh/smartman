@@ -1,11 +1,10 @@
 "use server";
 
-import { isAuthRetryableFetchError } from "@supabase/supabase-js";
-
 import type { CardId } from "@/features/decks";
 import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
 import { field } from "@/lib/supabase/row";
 import { createClient } from "@/lib/supabase/server";
+import { readUserId } from "@/lib/supabase/session";
 
 import {
   type RecordedAnswer,
@@ -27,10 +26,9 @@ export async function recordAnswer(input: RecordedAnswer): Promise<WriteResult> 
   if (!answer) return refuse("failed", "the answer is malformed");
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  if (error && isAuthRetryableFetchError(error)) return refuse("unreachable", error.message);
-  const userId = data?.claims.sub;
-  if (!userId) return refuse("rejected", "no session");
+  const session = await readUserId(supabase);
+  if ("failure" in session) return refuse(session.failure, "no verified session");
+  const { userId } = session;
 
   const { review, state } = answer;
   const editedAt = iso(answer.editedAt);

@@ -5,11 +5,13 @@ import { requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
 import { field, parseTime } from "@/lib/supabase/row";
 import { selectAll } from "@/lib/supabase/select-all";
 import { createClient } from "@/lib/supabase/server";
+import { readUserId } from "@/lib/supabase/session";
 
 import type { CardState, CardStates } from "./queue";
 
 /**
- * The stored state of every card the signed-in user has reviewed, leaving out tombstoned
+ * The stored state of every card the signed-in user has reviewed, filtered on the user as
+ * the deck reads are, leaving out tombstoned
  * states, and the time they were read, which the queue rules count due cards at; or a server
  * failure, or `unreadable` for a row this version cannot read.
  */
@@ -17,10 +19,13 @@ export async function readCardStates(): Promise<
   { states: CardStates; readAt: number } | { failure: ServerFailure | "unreadable" }
 > {
   const supabase = await createClient();
+  const session = await readUserId(supabase);
+  if ("failure" in session) return session;
   const read = await selectAll((from, to) =>
     supabase
       .from("card_states")
       .select("card_id, stability, difficulty, last_review, due")
+      .eq("user_id", session.userId)
       .is("deleted_at", null)
       .order("card_id")
       .range(from, to)

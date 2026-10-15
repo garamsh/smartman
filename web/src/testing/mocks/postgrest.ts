@@ -60,8 +60,10 @@ function matching(rows: Row[], params: URLSearchParams): Row[] {
 type Held = { release: () => void; released: Promise<void> };
 
 /**
- * PostgREST over the four sync tables, in memory, for [testUser]'s session alone: what a
- * test seeds is what the app reads, and what the app writes lands in [rows]. It applies the
+ * PostgREST over the four sync tables, in memory, for [testUser]'s session: what a test
+ * seeds is what the app reads, and what the app writes lands in [rows]. A row a test seeds
+ * for another user stands in for one row-level security lets every user read, as another
+ * user's public deck and its cards; the request's filters decide whether it is returned. It applies the
  * filters the app sends, the paging of `offset` and `limit`, the server's revision on every
  * write, an upsert's `resolution`, and the reviews' column grant.
  */
@@ -73,7 +75,7 @@ export class FakePostgrest {
   private held: Partial<Record<Table, Held>> = {};
   private failing: Partial<Record<Table, number>> = {};
 
-  /** Stores [rows] in [table] as the phone's sync would have, owned by [testUser]. */
+  /** Stores [rows] in [table] as the phone's sync would have, owned by [testUser] unless a row names its `user_id`. */
   seed(table: Table, ...rows: Row[]) {
     for (const row of rows) this.rows[table].push(this.stamp({ user_id: testUser.id, ...row }));
   }
