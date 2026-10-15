@@ -5,7 +5,7 @@ The structural rules of the app: what the unit is, what may reference what, and 
 ## Current decisions
 
 The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)) and `sync` ([`sync.md`](sync.md)).
-- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. The composition site is `app/lib/main.dart`.
+- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync` and `deck`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 
@@ -36,7 +36,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 
 - **The application has one composition site.** It is the one place that constructs concrete implementations, and it decides which implementation each declared abstraction receives.
 - **Every other unit receives what it depends on and constructs none of it**, whatever the shape makes the unit — a domain, a layer, or an adapter.
-- **The composition site stays thin.** It constructs and passes; it decides nothing else. It opens the theme storage, and passes the themes and the stored choice to `MaterialApp`.
+- **The composition site stays thin.** It constructs and passes; it decides nothing else. It opens the theme storage, and passes the themes and the stored choice to `MaterialApp`, whose home is `account`'s `AccountGate`; the gate decides between the sign-in screen and the app ([ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md)).
 
 ## Rationale
 
@@ -45,6 +45,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - [ADR 0004](adr/0004-flutter-rust-bridge.md) records why the generated engine bindings sit inside the `study` domain.
 - [ADR 0006](adr/0006-account-native-google-sign-in.md) records why only the `account` domain imports the Google packages, and [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) why `sync` imports `supabase_flutter` beside it.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme sits in shared code and how the composition site applies it.
+- [ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md) records why the app's home is the account gate, reached through a provider `account` exposes.
 
 ## Open questions
 

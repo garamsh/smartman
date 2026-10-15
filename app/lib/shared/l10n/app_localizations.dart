@@ -457,17 +457,23 @@ abstract class AppLocalizations {
   /// **'계정'**
   String get accountTitle;
 
-  /// Account screen text while signed out: no feature needs an account.
+  /// Sign-in screen line under the app name, saying what the app does.
   ///
   /// In ko, this message translates to:
-  /// **'로그인하지 않아도 모든 기능을 쓸 수 있습니다.'**
-  String get signedOutBody;
+  /// **'밀어서 답하고, 잊을 때쯤 다시 보여 주는 암기 카드.'**
+  String get welcomeBody;
 
   /// Button that opens Google's account picker to sign in.
   ///
   /// In ko, this message translates to:
   /// **'Google로 로그인'**
   String get signInWithGoogle;
+
+  /// Disabled sign-in screen button holding the place of Apple sign-in, which is not available yet.
+  ///
+  /// In ko, this message translates to:
+  /// **'Apple로 로그인 (준비 중)'**
+  String get signInWithAppleSoon;
 
   /// Accessible label of the progress indicator while signing in.
   ///

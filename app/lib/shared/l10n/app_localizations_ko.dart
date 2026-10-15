@@ -232,10 +232,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountTitle => '계정';
 
   @override
-  String get signedOutBody => '로그인하지 않아도 모든 기능을 쓸 수 있습니다.';
+  String get welcomeBody => '밀어서 답하고, 잊을 때쯤 다시 보여 주는 암기 카드.';
 
   @override
   String get signInWithGoogle => 'Google로 로그인';
+
+  @override
+  String get signInWithAppleSoon => 'Apple로 로그인 (준비 중)';
 
   @override
   String get signingIn => '로그인 중';
