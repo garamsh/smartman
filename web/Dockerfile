@@ -4,12 +4,12 @@
 # because the fonts it bundles are the app's, in app/assets/fonts; web/Dockerfile.dockerignore
 # admits only web/ and those fonts. Both NEXT_PUBLIC_ values are public and frozen at build.
 
-FROM node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315 AS deps
+FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0 AS deps
 WORKDIR /repo/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 
-FROM node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315 AS build
+FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0 AS build
 WORKDIR /repo/web
 COPY app/assets/fonts /repo/app/assets/fonts
 COPY web/ ./
@@ -19,7 +19,7 @@ ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-FROM node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315 AS runtime
+FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 COPY --from=build --chown=node:node /repo/web/.next/standalone ./
