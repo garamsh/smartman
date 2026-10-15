@@ -16,12 +16,13 @@ test.describe("signed out", () => {
     // The request is stopped here: the real Google consent screen is not part of the test.
     await page.route(/\/auth\/v1\/authorize\?/, (route) => route.abort());
     await page.goto("/login");
+    const origin = new URL(page.url()).origin;
 
     await page.getByRole("button", { name: "Google로 로그인", exact: true }).click();
 
     const url = new URL((await authorize).url());
     expect(url.searchParams.get("provider")).toBe("google");
-    expect(url.searchParams.get("redirect_to")).toBe(new URL("/auth/callback", page.url()).href);
+    expect(url.searchParams.get("redirect_to")).toBe(`${origin}/auth/callback`);
   });
 
   test("the theme follows the system's dark mode", async ({ page }) => {
