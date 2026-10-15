@@ -1,15 +1,15 @@
 import type { Card, CardId } from "@/features/decks";
 
 import type { Answer, AnswerWrite, SessionReview } from "./answer-write";
-import { type CardStates, orderQueue, reinsert } from "./queue";
+import { type CardStates, orderQueue, reinsert, type SelectedQueue } from "./queue";
 import { type Random, seededRandom } from "./random";
 
 /**
  * What a study page opens with, built on the server: the cards the queue rules selected, in
- * the order read, each one's stored state, and the start time, which also seeds the session's
- * random source. Times are milliseconds since the epoch.
+ * the order selected, whether they are a backlog, each one's stored state, and the start time,
+ * which also seeds the session's random source. Times are milliseconds since the epoch.
  */
-export type SessionPlan = { startedAt: number; cards: Card[]; before: CardStates };
+export type SessionPlan = { startedAt: number; queue: SelectedQueue<Card>; before: CardStates };
 
 /** An answer given in this session, shown in the stack above the current card. */
 export type PreviousAnswer = {
@@ -63,7 +63,7 @@ export class StudySession {
     private readonly newId: () => string,
   ) {
     this.random = seededRandom(plan.startedAt);
-    this.queue = orderQueue(plan.cards, this.random);
+    this.queue = orderQueue(plan.queue, this.random);
     this.total = this.queue.length;
     this.shownAt = plan.startedAt;
     if (this.queue.length === 0) this.endedAt = plan.startedAt;

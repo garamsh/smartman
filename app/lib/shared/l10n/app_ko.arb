@@ -226,6 +226,10 @@
     "description": "Line under a deck name: its cards, and how many due reviews and new cards a session would study now.",
     "placeholders": {"cards": {"type": "int"}, "review": {"type": "int"}, "fresh": {"type": "int"}}
   },
+  "backlogPaused": "밀린 복습을 마칠 때까지 새 카드는 쉬어요.",
+  "@backlogPaused": {
+    "description": "Sentence under the today count while so many reviews are due that a session takes no new card."
+  },
   "studyCount": "학습 · {count}장",
   "@studyCount": {
     "description": "Card list button that studies the deck, with how many cards the session would study.",

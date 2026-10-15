@@ -83,6 +83,7 @@
   "createFromPhoto": "Create from photo",
   "addFromPhoto": "Add from photo",
   "deckSummary": "{cards, plural, =1{1 card} other{{cards} cards}} · {review} to review today · {fresh} new",
+  "backlogPaused": "New cards wait until you catch up on your reviews.",
   "studyCount": "Study · {count}",
   "searchCards": "Search",
   "noMatches": "No card matches. Try other words.",

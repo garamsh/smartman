@@ -34,10 +34,19 @@ final class TodayPending extends TodayCount {
 
 /// [review] cards are due and [fresh] cards are new.
 final class TodayCounted extends TodayCount {
-  const TodayCounted({required this.review, required this.fresh});
+  const TodayCounted({required this.review, required this.fresh})
+    : backlog = false;
+
+  /// So many reviews are due that new cards pause until they are done.
+  const TodayCounted.backlog({required this.review})
+    : fresh = 0,
+      backlog = true;
 
   final int review;
   final int fresh;
+
+  /// Whether new cards pause for a backlog of reviews.
+  final bool backlog;
 
   /// The size of the session: every due card and every new one.
   int get total => review + fresh;

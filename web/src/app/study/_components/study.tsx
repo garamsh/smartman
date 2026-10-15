@@ -21,13 +21,13 @@ export async function Study({
   if ("failure" in states) return <Failure failure={states.failure} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
-  const cards = selectQueue(read.library.cards, states.states, states.readAt);
+  const queue = selectQueue(read.library.cards, states.states, states.readAt);
   const before: CardStates = {};
-  for (const card of cards) {
+  for (const card of queue.cards) {
     const state = states.states[card.id];
     if (state) before[card.id] = state;
   }
-  return <StudyScreen plan={{ startedAt: states.readAt, cards, before }} />;
+  return <StudyScreen plan={{ startedAt: states.readAt, queue, before }} />;
 }
 
 function Failure({ failure }: { failure: LibraryFailure }) {

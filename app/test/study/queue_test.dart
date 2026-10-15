@@ -84,10 +84,19 @@ class _Decks {
       study,
     );
     return [
-      for (final card in selectQueue(read, states, _now)) plainText(card.front),
+      for (final card in selectQueue(read, states, _now).cards)
+        plainText(card.front),
     ];
   }
 }
+
+/// A state due at [due] after an interval of [days] days.
+CardState _dueAfter(DateTime due, {required int days}) => CardState(
+  stability: days.toDouble(),
+  difficulty: 5,
+  lastReview: due.subtract(Duration(days: days)),
+  due: due,
+);
 
 String Function() _counter(String prefix) {
   var next = 0;
@@ -173,9 +182,10 @@ void main() {
           createdAt: _now.subtract(Duration(days: 10 - index)),
         ),
     ];
+    // Due daily, so ten due cards are one day of reviews: no backlog.
     final selected = selectQueue(
       [...due, ...fresh],
-      {for (final card in due) card.id: dueAt(_now)},
+      {for (final card in due) card.id: _dueAfter(_now, days: 1)},
       _now,
     );
 
@@ -183,14 +193,15 @@ void main() {
       final first = _names(orderQueue(selected, Random(1)));
 
       expect(_names(orderQueue(selected, Random(1))), first);
-      expect(first, unorderedEquals(_names(selected)));
+      expect(first, unorderedEquals(_names(selected.cards)));
       final second = _names(orderQueue(selected, Random(2)));
-      expect(second, unorderedEquals(_names(selected)));
+      expect(second, unorderedEquals(_names(selected.cards)));
       expect(second, isNot(first));
     });
 
     test('new cards are placed among the due cards, not after them, under every seed', () {
-      expect(_names(selected), [..._names(due), ..._names(fresh)]);
+      expect(selected.backlog, isFalse);
+      expect(_names(selected.cards), [..._names(due), ..._names(fresh)]);
       for (var seed = 0; seed < 100; seed++) {
         final ordered = _names(orderQueue(selected, Random(seed)));
         final firstNew = ordered.indexWhere((name) => name.startsWith('new'));
@@ -222,6 +233,141 @@ void main() {
         }
       }
       expect(gaps, {3, 4, 5});
+    });
+  });
+
+  group('backlog', () {
+    /// [count] reviewed cards, each after an interval of four days, so their
+    /// daily load is a quarter of [count]; the first [due] of them are due.
+    (List<Card>, Map<CardId, CardState>) reviewed(
+      int count, {
+      required int due,
+    }) {
+      final cards = [
+        for (var index = 0; index < count; index++)
+          textCard('review$index', createdAt: _now),
+      ];
+      return (
+        cards,
+        {
+          for (final (index, card) in cards.indexed)
+            card.id: _dueAfter(
+              index < due ? _now : _now.add(const Duration(days: 1)),
+              days: 4,
+            ),
+        },
+      );
+    }
+
+    final fresh = [
+      for (var index = 0; index < 2; index++)
+        textCard('new$index', createdAt: _now),
+    ];
+
+    test('new cards pause once more than three days of reviews are due, and are taken at three', () {
+      expect(backlogDays, 3);
+      // Twelve cards due every four days are three reviews a day.
+      final (atThreshold, atStates) = reviewed(12, due: 9);
+      final (over, overStates) = reviewed(12, due: 10);
+
+      expect(dailyLoad(atStates.values), 3);
+      final current = selectQueue([...atThreshold, ...fresh], atStates, _now);
+      final paused = selectQueue([...over, ...fresh], overStates, _now);
+
+      expect(current.backlog, isFalse);
+      expect(
+        _names(current.cards),
+        unorderedEquals([
+          ..._names(atThreshold.take(9).toList()),
+          'new0',
+          'new1',
+        ]),
+      );
+      expect(paused.backlog, isTrue);
+      expect(
+        _names(paused.cards),
+        unorderedEquals(_names(over.take(10).toList())),
+      );
+    });
+
+    // Thirty cards due at distinct times, each after a 30-day interval:
+    // thirty due against a daily load of one is a backlog.
+    final overdue = [
+      for (var index = 0; index < 30; index++)
+        textCard('overdue$index', createdAt: _now),
+    ];
+    final overdueStates = {
+      for (final (index, card) in overdue.indexed)
+        card.id: _dueAfter(_now.subtract(Duration(hours: index)), days: 30),
+    };
+    // Read latest due first, so only sorting puts the earliest first.
+    final latestFirst = overdue;
+    final earliestFirst = _names(overdue.reversed.toList());
+
+    test('in backlog the due cards come earliest due first, equal due times in the order read', () {
+      final tied = textCard('tied', createdAt: _now);
+      final states = {
+        ...overdueStates,
+        tied.id: overdueStates[overdue.last.id]!,
+      };
+      final selected = selectQueue(
+        [...latestFirst, tied, ...fresh],
+        states,
+        _now,
+      );
+
+      expect(selected.backlog, isTrue);
+      expect(_names(selected.cards), [
+        earliestFirst.first,
+        'tied',
+        ...earliestFirst.skip(1),
+      ]);
+      // An all-zero source keeps that order.
+      expect(_names(orderQueue(selected, FirstDraw())), _names(selected.cards));
+    });
+
+    test('in backlog each run of ten keeps its place in the order and is shuffled within', () {
+      expect(backlogBucketSize, 10);
+      final selected = selectQueue(latestFirst, overdueStates, _now);
+      final runs = [
+        for (var start = 0; start < 30; start += 10)
+          earliestFirst.sublist(start, start + 10).toSet(),
+      ];
+      final orders = <String>{};
+      for (var seed = 0; seed < 50; seed++) {
+        final ordered = _names(orderQueue(selected, Random(seed)));
+        for (final (index, run) in runs.indexed) {
+          expect(
+            ordered.sublist(index * 10, index * 10 + 10).toSet(),
+            run,
+            reason: 'seed $seed: $ordered',
+          );
+        }
+        orders.add(ordered.join(','));
+      }
+      // Control: the runs are shuffled, not kept in the order selected.
+      expect(orders.length, 50);
+    });
+
+    test('an up-to-date collection is shuffled as a whole, not in runs', () {
+      // Thirty cards due daily: thirty due against a load of thirty.
+      final states = {
+        for (final card in overdue) card.id: _dueAfter(_now, days: 1),
+      };
+      final selected = selectQueue([...overdue, ...fresh], states, _now);
+
+      expect(selected.backlog, isFalse);
+      expect(selected.cards, hasLength(32));
+      final firsts = <String>{
+        for (var seed = 0; seed < 200; seed++)
+          _names(orderQueue(selected, Random(seed))).first,
+      };
+      // Cards from past the first run of ten, new ones included, come first.
+      expect(
+        firsts.difference(_names(selected.cards.take(10).toList()).toSet()),
+        isNotEmpty,
+      );
+      expect(firsts, containsAll(['new0', 'new1']));
     });
   });
 }

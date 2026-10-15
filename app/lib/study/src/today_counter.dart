@@ -20,7 +20,8 @@ import 'providers.dart';
 import 'queue.dart';
 
 /// Counts the due and new cards a session over [decks] would study now, by
-/// the rules that build its queue, and shows the count through [builder].
+/// the rules that build its queue, and whether new cards pause for a backlog,
+/// and shows the count through [builder].
 ///
 /// The count is read again when [decks] changes and whenever the route that
 /// shows it comes back on top.
@@ -45,8 +46,11 @@ class _TodayCounterState extends ConsumerState<TodayCounter> {
       ref.read(studyRepositoryProvider),
     );
     final queue = selectQueue(cards, states, ref.read(studyClockProvider)());
-    final fresh = queue.where((card) => !states.containsKey(card.id)).length;
-    return TodayCounted(review: queue.length - fresh, fresh: fresh);
+    if (queue.backlog) return TodayCounted.backlog(review: queue.cards.length);
+    final fresh = queue.cards
+        .where((card) => !states.containsKey(card.id))
+        .length;
+    return TodayCounted(review: queue.cards.length - fresh, fresh: fresh);
   }
 
   @override

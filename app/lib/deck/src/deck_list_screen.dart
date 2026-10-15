@@ -232,13 +232,24 @@ class _TodayHeader extends StatelessWidget {
         spacing: AppSpace.s4,
         children: [
           ...switch (count) {
-            TodayCounted(:final review, :final fresh, :final total) => [
-              Text(l10n.todayCards(total), style: AppType.title),
-              Text(
-                l10n.todayBreakdown(review, fresh),
-                style: AppType.secondary.copyWith(color: colors.muted),
-              ),
-            ],
+            TodayCounted(
+              :final review,
+              :final fresh,
+              :final total,
+              :final backlog,
+            ) =>
+              [
+                Text(l10n.todayCards(total), style: AppType.title),
+                Text(
+                  l10n.todayBreakdown(review, fresh),
+                  style: AppType.secondary.copyWith(color: colors.muted),
+                ),
+                if (backlog)
+                  Text(
+                    l10n.backlogPaused,
+                    style: AppType.secondary.copyWith(color: colors.muted),
+                  ),
+              ],
             TodayUnavailable(:final message) => [
               Text(message, style: AppType.body),
             ],
