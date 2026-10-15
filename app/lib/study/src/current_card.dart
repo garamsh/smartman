@@ -206,7 +206,8 @@ class _DragFeedback extends StatelessWidget {
 }
 
 /// The card itself: the question and the answer side by side, or the answer
-/// under the question when the halves would be too narrow.
+/// under the question when the halves would be too narrow. Either way the two
+/// halves are the same size.
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.card, required this.revealed});
 
@@ -246,14 +247,13 @@ class _CardFace extends StatelessWidget {
                 maxHeight: constraints.maxHeight,
               ),
               child: stacked
-                  ? SingleChildScrollView(
-                      padding: const EdgeInsets.all(StudyStyle.cardPadding),
+                  ? IntrinsicHeight(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          question,
-                          const Divider(height: StudyStyle.cardPadding * 2),
-                          answer,
+                          Expanded(child: _Half(question)),
+                          const Divider(height: 1),
+                          Expanded(child: _Half(answer)),
                         ],
                       ),
                     )
@@ -275,15 +275,18 @@ class _CardFace extends StatelessWidget {
   }
 }
 
-/// One side-by-side half, scrolling once the card has reached its cap.
+/// One half, its content centred vertically while it fits and scrolling from
+/// the top once the card has reached its cap.
 class _Half extends StatelessWidget {
   const _Half(this.child);
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.all(StudyStyle.cardPadding),
-    child: SizedBox(width: double.infinity, child: child),
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.all(StudyStyle.cardPadding),
+      child: SizedBox(width: double.infinity, child: child),
+    ),
   );
 }

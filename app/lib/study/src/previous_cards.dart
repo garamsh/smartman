@@ -253,12 +253,12 @@ class _CompactHalf extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(
       StudyStyle.cardPadding + StudyStyle.dotSize,
-      StudyStyle.cardPadding * 1.5,
+      StudyStyle.cardPadding,
       StudyStyle.cardPadding,
       StudyStyle.cardPadding,
     ),
     child: Align(
-      alignment: Alignment.topLeft,
+      alignment: Alignment.centerLeft,
       child: ContentView(
         blocks,
         style: style,

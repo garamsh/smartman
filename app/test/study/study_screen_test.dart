@@ -237,6 +237,12 @@ final _answerVisibility = find.descendant(
 bool _answerShown(WidgetTester tester) =>
     tester.widget<Visibility>(_answerVisibility).visible;
 
+/// The vertical centre of the half of a split card that holds [text].
+double _halfCenter(WidgetTester tester, Finder text) => tester
+    .getRect(find.ancestor(of: text, matching: find.byType(Expanded)).first)
+    .center
+    .dy;
+
 /// The session's one scroll view: the stack and the current card.
 final _sessionScroll = find.ancestor(
   of: find.byType(PreviousCards),
@@ -384,6 +390,16 @@ void main() {
         final position = (half as StatefulElement).state as ScrollableState;
         expect(position.position.maxScrollExtent, greaterThan(0));
       }
+      // Long text starts at the top of its half, below the padding.
+      final text = find.descendant(
+        of: _currentCard,
+        matching: find.text(_sentence * 12),
+      );
+      expect(
+        tester.getRect(text.first).top,
+        closeTo(tester.getRect(halves.first).top + StudyStyle.cardPadding, 1),
+      );
+
       await tester.timedDrag(
         _currentCard,
         const Offset(200, 0),
@@ -401,21 +417,38 @@ void main() {
     ('a narrow screen', const Size(320, 700), 1.0),
     ('a large text scale', _phone, 1.5),
   ]) {
-    testWidgets('on $name the answer sits under the question', (tester) async {
-      await _open(tester, ['a'], size: size, textScale: textScale);
+    testWidgets(
+      'on $name the answer sits under the question, each in its centred half',
+      (tester) async {
+        await _open(tester, ['a'], size: size, textScale: textScale);
 
-      expect(
-        find.descendant(of: _currentCard, matching: find.byType(Divider)),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
+        final divider = find.descendant(
           of: _currentCard,
-          matching: find.byType(VerticalDivider),
-        ),
-        findsNothing,
-      );
-    });
+          matching: find.byType(Divider),
+        );
+        expect(divider, findsOneWidget);
+        expect(
+          tester.getCenter(divider).dy,
+          closeTo(tester.getCenter(_currentCard).dy, 1),
+        );
+        final question = find.text('a front');
+        expect(
+          tester.getCenter(question).dy,
+          closeTo(_halfCenter(tester, question), 1),
+        );
+        expect(
+          tester.getCenter(question).dy,
+          lessThan(tester.getCenter(divider).dy),
+        );
+        expect(
+          find.descendant(
+            of: _currentCard,
+            matching: find.byType(VerticalDivider),
+          ),
+          findsNothing,
+        );
+      },
+    );
   }
 
   testWidgets(
@@ -456,6 +489,39 @@ void main() {
         findsOneWidget,
       );
       expect(study.current, 'b front', reason: 'a long-press toggles nothing');
+    },
+  );
+
+  testWidgets(
+    'short text sits vertically centred in each half of the current card and of a previous card',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b']);
+      await study.know();
+      await tester.tap(_currentCard);
+      await tester.pumpAndSettle();
+
+      for (final side in ['b front', 'b back']) {
+        final text = find.descendant(
+          of: _currentCard,
+          matching: find.text(side),
+        );
+        expect(
+          tester.getCenter(text).dy,
+          closeTo(_halfCenter(tester, text), 1),
+          reason: side,
+        );
+      }
+      for (final side in ['a front', 'a back']) {
+        final text = find.descendant(
+          of: find.byType(PreviousCards),
+          matching: find.text(side),
+        );
+        expect(
+          tester.getCenter(text).dy,
+          closeTo(_halfCenter(tester, text), 1),
+          reason: side,
+        );
+      }
     },
   );
 
