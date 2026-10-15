@@ -230,6 +230,21 @@ String? _tile(WidgetTester tester, String label) {
       .data;
 }
 
+/// Lets the session's writes run until the summary names the next review,
+/// which it does once the engine has scheduled every answer, then settles the
+/// frame that shows it.
+Future<void> _untilNextReview(WidgetTester tester) async {
+  final line = find.textContaining('Your next review');
+  for (var tries = 0; tries < 100 && line.evaluate().isEmpty; tries++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
+  }
+  expect(line, findsOneWidget);
+  await tester.pumpAndSettle();
+}
+
 /// The previous card whose front reads [front].
 Finder _previous(String front) => find.byWidgetPredicate(
   (widget) =>
@@ -1144,7 +1159,7 @@ void main() {
       expect(study.current, 'a front');
       await study.know(elapsed: const Duration(seconds: 45));
 
-      await tester.pumpAndSettle();
+      await _untilNextReview(tester);
       expect(find.text("You've finished today's cards"), findsOneWidget);
       // Every answer was scheduled a day out.
       expect(
@@ -1249,6 +1264,8 @@ void main() {
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
         expect(find.text("You've finished today's cards"), findsOneWidget);
+        // The summary is checked as it ends up, with its next review shown.
+        await _untilNextReview(tester);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
