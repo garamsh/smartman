@@ -19,6 +19,8 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - `supabase/` — the Supabase CLI project for the backend: its configuration, migrations in `supabase/migrations/`, and pgTAP tests in `supabase/tests/`.
 - `supabase/functions/extract-cards/` — the Edge Function that turns a photo of a vocabulary page into candidate cards, with its Deno tests.
 - `tools/eval/` — the eval that measures candidate models for that function, its generated sample set, and the generator.
+- `supabase/functions/delete-account/` — the Edge Function that deletes the caller's account and every row it owns, with its Deno tests.
+- `supabase/functions/_shared/` — the code both Edge Functions use: reading the caller from Supabase Auth.
 - `docs/convention/` — the conventions every change follows.
 - `docs/architecture/` — the structure of the system and the decisions behind it.
 - `Makefile` — the entry points for the project's checks.
