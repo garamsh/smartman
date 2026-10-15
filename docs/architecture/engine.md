@@ -46,3 +46,4 @@ The scheduling engine: how a card's memory state and next due time are computed 
 ## Open questions
 
 - Whether desired retention or the parameters become per-user settings waits on parameter optimization from a user's review logs, which issue #5 leaves to a later milestone.
+- Whether to move from FSRS-6 to FSRS-7: [`docs/research/fsrs-7.md`](../research/fsrs-7.md) assesses it (issue #54) and recommends waiting for a released FSRS-7, an owner decision on sub-day due times, and a rollout path for card states across app versions.
