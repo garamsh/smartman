@@ -32,7 +32,7 @@ class SyncStatusView extends ConsumerWidget {
           color: colors.muted,
         ),
         Synced() => _StatusLine(
-          icon: Icon(LucideIcons.cloudCheck, size: 18, color: colors.know),
+          icon: Icon(LucideIcons.check, size: 18, color: colors.know),
           text: l10n.syncSynced,
           color: colors.muted,
         ),

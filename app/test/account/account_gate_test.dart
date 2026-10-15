@@ -104,6 +104,8 @@ void main() {
         _NoExtraction(),
         null,
         FakeReachability(),
+        const LegalLinks(),
+        '1.0.0',
       ),
     );
     await tester.pumpAndSettle();
@@ -141,7 +143,7 @@ void main() {
 
   /// Creates the deck "French" from the deck list.
   Future<void> createDeck(WidgetTester tester) async {
-    await tapAndSettle(tester, find.text('New deck'));
+    await tapAndSettle(tester, find.text('Create by hand'));
     await tester.enterText(find.widgetWithText(AppTextField, 'Name'), 'French');
     await tapAndSettle(tester, find.text('Create'));
   }
@@ -167,10 +169,11 @@ void main() {
       await pumpApp(tester, FakeAccountService());
 
       expect(find.byType(SignInScreen), findsOneWidget);
-      expect(find.text('smartman'), findsOneWidget);
-      expect(find.text('밀어서 답하고, 잊을 때쯤 다시 보여 주는 암기 카드.'), findsOneWidget);
-      expect(find.text('Apple로 로그인 (준비 중)'), findsOneWidget);
-      expect(enabledButtons(tester), ['Google로 로그인']);
+      expect(find.bySemanticsLabel('smartman'), findsOneWidget);
+      expect(find.text('밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드'), findsOneWidget);
+      expect(find.text('Apple로 계속하기 · 준비 중'), findsOneWidget);
+      // Besides Google's button, only the links to the terms answer a tap.
+      expect(enabledButtons(tester), ['Google로 계속하기', '이용약관', '개인정보 처리방침']);
       expect(find.byType(DeckListScreen), findsNothing);
       expect(find.byTooltip('계정'), findsNothing);
       await unmountApp(tester);
@@ -181,7 +184,7 @@ void main() {
     final account = FakeAccountService();
     await pumpApp(tester, account);
 
-    await tapAndSettle(tester, find.text('Sign in with Google'));
+    await tapAndSettle(tester, find.text('Continue with Google'));
 
     expect(account.state, isA<SignedIn>());
     expect(find.byType(DeckListScreen), findsOneWidget);
@@ -195,13 +198,13 @@ void main() {
       final account = FakeAccountService()..cancelSignIn = true;
       await pumpApp(tester, account);
 
-      await tapAndSettle(tester, find.text('Sign in with Google'));
+      await tapAndSettle(tester, find.text('Continue with Google'));
 
       expect(find.byType(SignInScreen), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       // The control: the same tap with a failure does show a snack bar.
       account.failure = const AccountOffline(FormatException('offline'));
-      await tapAndSettle(tester, find.text('Sign in with Google'));
+      await tapAndSettle(tester, find.text('Continue with Google'));
       expect(
         find.text("Couldn't reach the server. Check your internet connection."),
         findsOneWidget,
@@ -300,7 +303,7 @@ void main() {
           const SignedIn(userId: _ada, email: 'ada@example.com'),
         );
         await pumpApp(tester, account);
-        await tapAndSettle(tester, find.text('New deck'));
+        await tapAndSettle(tester, find.text('Create by hand'));
         await tester.enterText(
           find.widgetWithText(AppTextField, 'Name'),
           'French',
@@ -330,7 +333,11 @@ void main() {
 
         expect(navigator.canPop(), isFalse);
         expect(find.byType(SignInScreen), findsOneWidget);
-        expect(enabledButtons(tester), ['Sign in with Google']);
+        expect(enabledButtons(tester), [
+          'Continue with Google',
+          'Terms of Service',
+          'Privacy Policy',
+        ]);
         expect(find.byType(DeckListScreen), findsNothing);
         expect(find.byType(StudyScreen), findsNothing);
         expect(find.byType(AccountScreen), findsNothing);
@@ -413,8 +420,8 @@ void main() {
       );
 
       expect(find.text('이 앱의 로그인 설정에 문제가 있어 로그인할 수 없어요.'), findsOneWidget);
-      expect(enabledButtons(tester), isEmpty);
-      expect(find.text('Google로 로그인'), findsNothing);
+      expect(enabledButtons(tester), ['이용약관', '개인정보 처리방침']);
+      expect(find.text('Google로 계속하기'), findsNothing);
       expect(find.byType(DeckListScreen), findsNothing);
       await unmountApp(tester);
     },

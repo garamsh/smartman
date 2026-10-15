@@ -8,10 +8,12 @@ import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'google_button.dart';
+import 'legal.dart';
 import 'providers.dart';
 
-/// The app's welcome while no account is signed in: its name, what it does,
-/// and Google sign-in; or, when this build cannot sign anyone in, why.
+/// The app's welcome while no account is signed in: its stacked logo on the
+/// ground's panel, what it does, Google sign-in, and the terms the user
+/// agrees to; or, when this build cannot sign anyone in, why.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -27,71 +29,105 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final state = ref.watch(accountStateProvider);
+    final brightness = Theme.of(context).brightness;
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.gutter,
-            AppSpace.s24,
-            AppSpace.gutter,
-            AppSpace.s16,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // One part above the wordmark and two below centre it on the
-              // upper third.
-              const Spacer(),
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.appTitle,
-                  textAlign: TextAlign.center,
-                  style: AppType.display,
+      backgroundColor: colors.surface,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.ground,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(AppRadius.panel),
                 ),
               ),
-              const SizedBox(height: AppSpace.s12),
-              Text(
-                l10n.welcomeBody,
-                textAlign: TextAlign.center,
-                style: AppType.body.copyWith(color: colors.muted),
-              ),
-              const Spacer(flex: 2),
-              ...switch (state) {
-                AccountUnavailable(:final failure) => [
-                  Text(
-                    describeAccountFailure(l10n, failure),
-                    textAlign: TextAlign.center,
-                    style: AppType.body,
-                  ),
-                ],
-                _ when _busy => [
-                  SizedBox(
-                    height: AppSize.cta + AppSpace.s8 + AppSize.tapTarget,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        semanticsLabel: l10n.signingIn,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpace.gutter),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Semantics(
+                        header: true,
+                        image: true,
+                        label: l10n.appTitle,
+                        child: Image.asset(
+                          AppBrand.stacked(brightness),
+                          width: AppSize.stackedLockupWidth,
+                          excludeFromSemantics: true,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpace.s24),
+                      Text(
+                        l10n.welcomeBody,
+                        textAlign: TextAlign.center,
+                        style: AppType.body.copyWith(color: colors.ink2),
+                      ),
+                    ],
                   ),
-                ],
-                _ => [
-                  GoogleSignInButton(
-                    label: l10n.signInWithGoogle,
-                    onPressed: _signIn,
-                  ),
-                  const SizedBox(height: AppSpace.s8),
-                  // Apple sign-in (M4b) fills this slot.
-                  AppButton(
-                    label: l10n.signInWithAppleSoon,
-                    variant: AppButtonVariant.text,
-                    onPressed: null,
-                  ),
-                ],
-              },
-            ],
+                ),
+              ),
+            ),
           ),
-        ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.gutter,
+                AppSpace.s32,
+                AppSpace.gutter,
+                AppSpace.s16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...switch (state) {
+                    AccountUnavailable(:final failure) => [
+                      Text(
+                        describeAccountFailure(l10n, failure),
+                        textAlign: TextAlign.center,
+                        style: AppType.body,
+                      ),
+                    ],
+                    _ when _busy => [
+                      SizedBox(
+                        height: AppSize.cta + AppSpace.s8 + AppSize.tapTarget,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            semanticsLabel: l10n.signingIn,
+                          ),
+                        ),
+                      ),
+                    ],
+                    _ => [
+                      GoogleSignInButton(
+                        label: l10n.signInWithGoogle,
+                        onPressed: _signIn,
+                      ),
+                      const SizedBox(height: AppSpace.s8),
+                      // Apple sign-in (M4b) fills this slot.
+                      AppButton(
+                        label: l10n.signInWithAppleSoon,
+                        variant: AppButtonVariant.text,
+                        onPressed: null,
+                      ),
+                    ],
+                  },
+                  const SizedBox(height: AppSpace.s16),
+                  Text(
+                    l10n.consentNotice(l10n.termsOfService, l10n.privacyPolicy),
+                    textAlign: TextAlign.center,
+                    style: AppType.caption.copyWith(color: colors.muted),
+                  ),
+                  const LegalLinksRow(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

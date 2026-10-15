@@ -153,6 +153,8 @@ void main() {
           null,
           null,
           FakeReachability(),
+          const LegalLinks(),
+          '1.0.0',
         ),
       );
       await tester.pumpAndSettle();
@@ -253,7 +255,7 @@ void main() {
       await dismissSheet(tester);
       await tap(tester, find.byTooltip(ko.close));
       await shot(tester, '15-study-summary');
-      await tap(tester, find.text(ko.done));
+      await tap(tester, find.text(ko.backToDecks));
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 
@@ -419,6 +421,9 @@ void main() {
               ),
             ),
             accountScreenProvider.overrideWithValue(Scaffold.new),
+            accountAvatarProvider.overrideWithValue(
+              () => const SizedBox.square(dimension: 32),
+            ),
           ],
           child: MaterialApp(
             theme: lightTheme,

@@ -11,6 +11,14 @@ final accountServiceProvider = Provider<AccountService>(
   ),
 );
 
+/// The app's version, as the platform reports it. The composition site
+/// overrides it with the version it reads before the first frame.
+final appVersionProvider = Provider<String>(
+  (ref) => throw UnimplementedError(
+    'appVersionProvider is overridden at the composition site',
+  ),
+);
+
 /// The account state, kept current.
 final accountStateProvider =
     NotifierProvider<AccountStateNotifier, AccountState>(

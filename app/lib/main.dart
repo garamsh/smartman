@@ -5,6 +5,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,6 +24,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final scheduler = await Scheduler.load();
   final account = await connectAccount(accountDefines());
+  final legal = LegalLinks.parse(accountDefines());
+  final package = await PackageInfo.fromPlatform();
   final themeStorage = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
       allowList: themeStorageKeys,
@@ -48,6 +51,8 @@ Future<void> main() async {
         null => null,
       },
       DeviceReachability(),
+      legal,
+      package.version,
     ),
   );
 }
@@ -57,8 +62,9 @@ Future<void> main() async {
 /// [server], keeping the theme choice in [themeStorage], and extracting
 /// cards from photos through [extraction], whose absence hides photo import,
 /// and sharing decks through [sharing] while [reachability] says the device
-/// is online; without [sharing] the app offers no sharing. Sync starts at
-/// once.
+/// is online; without [sharing] the app offers no sharing. The sign-in and
+/// account screens link to [legal] and name the app's [version]. Sync starts
+/// at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
@@ -68,6 +74,8 @@ Widget composeApp(
   ExtractionClient? extraction,
   SharingServer? sharing,
   Reachability reachability,
+  LegalLinks legal,
+  String version,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
@@ -126,7 +134,12 @@ Widget composeApp(
         (decks, builder) => TodayCounter(decks: decks, builder: builder),
       ),
       accountServiceProvider.overrideWithValue(account),
+      legalLinksProvider.overrideWithValue(legal),
+      appVersionProvider.overrideWithValue(version),
       accountScreenProvider.overrideWithValue(AccountScreen.new),
+      accountAvatarProvider.overrideWithValue(
+        () => const AccountAvatar(size: AppSize.smallAvatar),
+      ),
       signedInHomeProvider.overrideWithValue(DeckListScreen.new),
       accountDataProvider.overrideWithValue(sync),
       syncControllerProvider.overrideWithValue(sync),

@@ -36,6 +36,8 @@ void main() {
       ProviderScope(
         overrides: [
           accountServiceProvider.overrideWithValue(service),
+          legalLinksProvider.overrideWithValue(const LegalLinks()),
+          appVersionProvider.overrideWithValue('1.0.0'),
           accountDataProvider.overrideWithValue(data ?? FakeAccountData()),
           syncStatusProvider.overrideWithValue(() => const Text('sync status')),
           themeStorageProvider.overrideWithValue(storage),
@@ -476,6 +478,36 @@ void main() {
       await tapAndSettle(tester, '시스템');
       expect(control().selected, {ThemeMode.system});
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    "the profile card shows the email's initial, and the foot the version and the legal links",
+    (tester) async {
+      await pumpScreen(
+        tester,
+        FakeAccountService(
+          const SignedIn(userId: _ada, email: 'grace@example.com'),
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(AccountAvatar),
+          matching: find.text('G'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('grace@example.com'), findsOneWidget);
+      await tester.ensureVisible(find.text('Version 1.0.0'));
+      await tester.pumpAndSettle();
+      expect(find.text('Terms of Service'), findsOneWidget);
+      expect(find.text('Privacy Policy'), findsOneWidget);
+      // The foot sits below the account's rows.
+      expect(
+        tester.getTopLeft(find.text('Version 1.0.0')).dy,
+        greaterThan(tester.getBottomLeft(find.text('Delete account')).dy),
+      );
     },
   );
 }
