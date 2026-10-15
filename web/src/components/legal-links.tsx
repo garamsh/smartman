@@ -17,7 +17,7 @@ export function LegalLinks() {
         <a
           key={path}
           href={url ?? path}
-          className="flex min-h-11 items-center px-2 text-caption font-semibold text-ink-2 underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="flex min-h-tap-target items-center px-2 text-caption font-semibold text-ink-2 underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           {title}
         </a>

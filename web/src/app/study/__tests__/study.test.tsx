@@ -135,6 +135,41 @@ describe("the study page", () => {
       expect(postgrest.rows.reviews).toHaveLength(1);
     });
 
+    it("names the next review in the summary once every answer is saved", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      const user = userEvent.setup();
+      await user.keyboard("k");
+      await waitFor(() => {
+        expect(postgrest.rows.card_states).toHaveLength(1);
+      });
+      const release = postgrest.hold("reviews");
+
+      await user.keyboard("k");
+
+      // Control: the summary is up while the second write waits, without the next review.
+      expect(screen.getByRole("heading", { name: "오늘 할 카드를 마쳤어요" })).toBeInTheDocument();
+      expect(screen.queryByText(/^다음 복습은/)).not.toBeInTheDocument();
+      act(release);
+      await waitFor(() => {
+        expect(postgrest.rows.card_states).toHaveLength(2);
+      });
+      // The earliest stored due day, counted in calendar days from today in this time zone.
+      const midnight = (time: number) => {
+        const date = new Date(time);
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      };
+      const due = Math.min(...postgrest.rows.card_states.map((row) => Date.parse(String(row.due))));
+      const days = Math.round((midnight(due) - midnight(start)) / day);
+      // A new card answered 안다 is next due days later, as the engine schedules it.
+      expect(days).toBeGreaterThan(1);
+      expect(
+        await screen.findByText(
+          `다음 복습은 ${String(days)}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.`,
+        ),
+      ).toBeInTheDocument();
+    });
+
     it("says a write failed, keeps its answer, and sends it again on 다시 시도", async () => {
       seedDeck(postgrest, "d1", ["un", "deux", "trois"]);
       await open("d1");

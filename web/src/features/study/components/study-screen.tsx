@@ -15,7 +15,7 @@ import { SessionSummary } from "./session-summary";
 import { ShortcutHelp } from "./shortcut-help";
 
 const button =
-  "flex min-h-13 items-center justify-center gap-2 rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+  "flex min-h-button items-center justify-center gap-2 rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
 
 const quiet = `${button} border border-outline bg-surface text-ink`;
 
@@ -159,7 +159,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
 
   const studying = view.kind === "studying";
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-study flex-col gap-4 px-5 py-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-study flex-col gap-4 px-gutter py-6">
       <header className="flex items-center gap-4">
         {studying ? (
           <button
@@ -168,7 +168,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             aria-label="끝내기"
             aria-keyshortcuts="Escape"
             title="끝내기 (Esc)"
-            className="flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <X aria-hidden className="size-6" strokeWidth={2} />
           </button>
@@ -176,7 +176,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           <Link
             href="/"
             aria-label="덱으로"
-            className="flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <X aria-hidden className="size-6" strokeWidth={2} />
           </Link>
@@ -189,7 +189,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             aria-valuemax={view.total}
             aria-valuenow={view.answered}
             aria-valuetext={`${String(view.total)}장 중 ${String(view.answered)}장 답함`}
-            className="h-2 flex-1 overflow-hidden rounded-full bg-hairline"
+            className="h-progress flex-1 overflow-hidden rounded-full bg-hairline"
           >
             <div
               className="h-full rounded-full bg-ink transition-[width]"
@@ -287,7 +287,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           </div>
         </>
       ) : (
-        <SessionSummary summary={view.summary} total={view.total} />
+        <SessionSummary summary={view.summary} total={view.total} nextReview={status.nextReview} />
       )}
 
       {view.previous.length > 0 && (

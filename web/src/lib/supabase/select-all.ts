@@ -8,22 +8,37 @@ import { classifyFailure, type ServerFailure } from "./failure";
  */
 export const pageSize = 1000;
 
-type Page = PromiseLike<{ data: unknown[] | null; error: PostgrestError | null; status: number }>;
+type Page = PromiseLike<{
+  data: unknown[] | null;
+  error: PostgrestError | null;
+  status: number;
+  count: number | null;
+}>;
 
 /**
  * Every row a query selects, read [pageSize] rows at a time. [page] runs the query over the
  * rows from index `from` to `to`, both included, in an order that does not change between
- * pages.
+ * pages, and with `counted` also counts every row the query selects. The first page is
+ * counted and the pages after it are read together, so a read waits on two requests at most,
+ * however many pages it holds.
  */
 export async function selectAll(
-  page: (from: number, to: number) => Page,
+  page: (from: number, to: number, counted: boolean) => Page,
 ): Promise<{ rows: unknown[] } | { failure: ServerFailure }> {
-  const rows: unknown[] = [];
-  for (;;) {
-    const { data, error, status } = await page(rows.length, rows.length + pageSize - 1);
+  const first = await page(0, pageSize - 1, true);
+  if (first.error) return { failure: classifyFailure(first.error, first.status) };
+  if (!first.data) return { failure: "failed" };
+  if (first.data.length < pageSize) return { rows: first.data };
+  if (first.count === null) return { failure: "failed" };
+
+  const starts: number[] = [];
+  for (let from = pageSize; from < first.count; from += pageSize) starts.push(from);
+  const rest = await Promise.all(starts.map((from) => page(from, from + pageSize - 1, false)));
+  const rows = [...first.data];
+  for (const { data, error, status } of rest) {
     if (error) return { failure: classifyFailure(error, status) };
     if (!data) return { failure: "failed" };
     rows.push(...data);
-    if (data.length < pageSize) return { rows };
   }
+  return { rows };
 }

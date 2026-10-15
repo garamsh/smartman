@@ -13,7 +13,7 @@ export function SignOutForm() {
       <button
         type="submit"
         disabled={pending}
-        className="flex min-h-13 items-center gap-3 rounded-row bg-surface px-4 py-3 text-left text-body font-bold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+        className="flex min-h-button items-center gap-3 rounded-row bg-surface px-4 py-3 text-left text-body-strong text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
       >
         <LogOut aria-hidden className="size-5" strokeWidth={2} />
         로그아웃

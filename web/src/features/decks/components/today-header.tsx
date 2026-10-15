@@ -4,19 +4,22 @@ import Link from "next/link";
 
 /**
  * The home page's today card, on the brand's navy: what a session over every deck would study
- * now, split into due and new, whether new cards pause for a [backlog] of reviews, and its
- * button, with the symbol faint in the corner; with none, that today's cards are done.
+ * now, split into due and new, about how many [minutes] it takes, whether new cards pause for a
+ * [backlog] of reviews, and its button, with the symbol faint in the corner; with none, that
+ * today's cards are done.
  */
 export function TodayHeader({
   decks,
   review,
   fresh,
   backlog,
+  minutes,
 }: {
   decks: readonly string[];
   review: number;
   fresh: number;
   backlog: boolean;
+  minutes: number;
 }) {
   const total = review + fresh;
   return (
@@ -24,7 +27,7 @@ export function TodayHeader({
       aria-labelledby="today-title"
       className="relative flex flex-col gap-5 overflow-hidden rounded-card bg-hero p-6 text-on-hero shadow-card"
     >
-      <span aria-hidden className="absolute -top-4 -right-4 size-30 opacity-12">
+      <span aria-hidden className="absolute -top-4 -right-4 size-hero-symbol opacity-12">
         {/* The white symbol in both themes, on the navy card. */}
         <Image
           src="/brand/smartman-symbol-dark.svg"
@@ -47,15 +50,15 @@ export function TodayHeader({
               <span className="text-figure">{total}</span> <span className="text-headline">장</span>
             </h2>
             <p className="text-secondary">
-              복습 {review} · 새 카드 {fresh}
+              복습 {review} · 새 카드 {fresh} · 약 {minutes}분
             </p>
             {backlog && <p className="text-secondary">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>}
           </div>
           <Link
             href={`/study?decks=${decks.map(encodeURIComponent).join(",")}`}
-            className="flex min-h-13 items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero"
+            className="flex min-h-button items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero"
           >
-            <Play aria-hidden className="size-4.5" strokeWidth={2} />
+            <Play aria-hidden className="size-small-icon" strokeWidth={2} />
             모두 학습
           </Link>
         </>

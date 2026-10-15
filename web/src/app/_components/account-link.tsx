@@ -11,7 +11,7 @@ export async function AccountLink() {
     <Link
       href="/account"
       aria-label="계정"
-      className="flex size-11 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="flex size-tap-target items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <AccountAvatar email={session.kind === "signed-in" ? session.email : null} size="small" />
     </Link>

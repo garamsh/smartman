@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 
-import { supabaseUrl, testAccessToken } from "./mocks/handlers";
+import {
+  otherAccessToken,
+  otherUser,
+  supabaseUrl,
+  testAccessToken,
+  testUser,
+} from "./mocks/handlers";
 
 type Cookie = { name: string; value: string };
 
@@ -26,13 +32,15 @@ function jarClient() {
 }
 
 /**
- * The cookies a browser holds after [testUser] signed in, written by @supabase/ssr itself
- * so the tests read the format the app reads.
+ * The cookies a browser holds after [user] signed in, [testUser] unless it is [otherUser],
+ * written by @supabase/ssr itself so the tests read the format the app reads.
  */
-export async function signedInCookies(): Promise<Cookie[]> {
+export async function signedInCookies(
+  user: typeof testUser | typeof otherUser = testUser,
+): Promise<Cookie[]> {
   const { client, cookies } = jarClient();
   const { error } = await client.auth.setSession({
-    access_token: testAccessToken,
+    access_token: user === otherUser ? otherAccessToken : testAccessToken,
     refresh_token: "refresh-token",
   });
   if (error) throw error;

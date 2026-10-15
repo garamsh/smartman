@@ -21,10 +21,10 @@ export async function readCardStates(): Promise<
   const supabase = await createClient();
   const session = await readUserId(supabase);
   if ("failure" in session) return session;
-  const read = await selectAll((from, to) =>
+  const read = await selectAll((from, to, counted) =>
     supabase
       .from("card_states")
-      .select("card_id, stability, difficulty, last_review, due")
+      .select("card_id, stability, difficulty, last_review, due", counted ? { count: "exact" } : {})
       .eq("user_id", session.userId)
       .is("deleted_at", null)
       .order("card_id")
