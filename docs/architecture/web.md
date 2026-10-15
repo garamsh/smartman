@@ -1,6 +1,6 @@
 # Web
 
-The web app in `web/`: its stack, the rules that keep it portable between Vercel and a container, its image, Google sign-in, its theme, and its checks.
+The web app in `web/`: its stack, the rules that keep it portable between Vercel and a container, its image, Google sign-in, studying decks, its theme, and its checks.
 
 ## Current decisions
 
@@ -11,7 +11,7 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
   - typescript-eslint 8.71.2 accepts TypeScript below 6.1;
   - eslint-config-next 16.4.1 brings React, import and jsx-a11y lint plugins that accept ESLint 9 at most;
   - `@types/node` follows `web/.nvmrc`, which the PM moves with the Dockerfile's base image.
-- Its features live under `web/src/features/` ([`structure.md`](structure.md)). The first is `auth`.
+- Its features live under `web/src/features/` ([`structure.md`](structure.md)): `auth`, `decks` and `study`.
 - Every user-facing string is Korean, written where it is rendered; the root layout declares `lang="ko"`.
 
 ### Portability
@@ -24,7 +24,7 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 
 ### Image
 
-- `web/Dockerfile` is built from the repository root: `docker build -f web/Dockerfile .`, with both variables as `--build-arg`. `web/Dockerfile.dockerignore` admits only `web/` and `app/assets/fonts/`.
+- `web/Dockerfile` is built from the repository root: `docker build -f web/Dockerfile .`, with both variables as `--build-arg`. `web/Dockerfile.dockerignore` admits only `web/`, `app/assets/fonts/` and `engine-wasm/pkg/` ([ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
 - Three stages install the locked packages, build, and copy the standalone server and static files into the runtime stage. Each starts from the same index digest of `node:24.22.0-trixie-slim`, and the frontend is pinned by digest in the `# syntax=` line.
 - The runtime stage runs `node server.js` on port 3000 as the base image's `node` user, uid 1000.
 - Dependabot's `docker` entry for `/web` proposes the base image's move. `make lint` fails while a `FROM` names another Node.js release than `web/.nvmrc`, so the PR that moves the image also moves the file.
@@ -33,12 +33,28 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 ### Sign-in
 
 - The session is Supabase Auth's, in the cookies `@supabase/ssr` writes. `web/src/lib/supabase/` holds the server client, over the request's cookies, the browser client, and `readSession`, which verifies a session with `getClaims` and returns `signed-in` with the email, `signed-out`, or `unreachable`.
+- The server client waits for the request (`connection()`) before it starts: Supabase Auth's client reads the clock as it starts, which a prerender, a link's prefetch included, refuses.
 - `web/src/proxy.ts` runs on every path but `/api`, `_next/static`, `_next/image` and `favicon.ico`. It refreshes the session cookies and sends a `signed-out` visitor to `/login` from every path but `/login` and `/auth/callback`. An `unreachable` Supabase lets the request through, so an outage signs no one out.
 - `/login` offers "Google로 로그인". The button calls the browser client's `signInWithOAuth` for Google, with `redirectTo` the page's origin plus `/auth/callback`; a failure to start is shown beneath it.
 - `/auth/callback` is a Route Handler. It exchanges the code for the session cookie and opens `/`, or opens `/login?error=cancelled` when no code arrives and `/login?error=failed` when the exchange fails; `/login` shows the matching sentence.
-- `/` reads the session on the server and shows the signed-in email and "로그아웃", or that the server cannot be reached.
+- `/` reads the session on the server and shows, below the decks, the signed-in email and "로그아웃", or that the server cannot be reached.
 - Sign-out is the Server Action `signOut`, through the `auth` feature's `actions.ts`. It revokes this browser's session alone (`scope: "local"`), so the phone stays signed in, and opens `/login`. When Supabase cannot be reached it returns the sentence the form shows.
 - Each origin the app is served from must be in Supabase Auth's allowed redirect URLs as `<origin>/auth/callback`. Only the owner changes that list.
+
+### Decks and study
+
+- The web app is online-first: it reads and writes the server tables of [`server.md`](server.md) with the user's session, under row-level security, and keeps no local database. Nothing creates or edits decks or cards on the web.
+- Reads run on the server, in each page's Server Component, through `decks`' `readLibrary` (decks and cards) and `study`'s `readCardStates`. Each reads its tables in pages of 1000 rows, PostgREST's `max_rows` in `supabase/config.toml`, leaves out every row with `deleted_at` set and every card of such a deck, and parses each row at the boundary. A failure reaches the page as a value, `unreachable`, `rejected`, `failed` or `unreadable`, which it shows as one sentence in place of the list; the codes map as the phone's do ([`sync.md`](sync.md)).
+- The screens follow the principles and tokens of [`design.md`](design.md):
+  - `/`: "덱", the header card "오늘 할 카드 n장" with "복습 x · 새 카드 y" and "모두 학습", then "내 덱 n" and a row per deck, by name, with "카드 n장", a green "오늘 n" chip when n > 0, and a link to the deck named by all three;
+  - `/decks/[id]`: the name, "카드 n장 · 오늘 복습 x · 새 카드 y", "학습 · n장", disabled at 0, and the cards, oldest first, as rows of front and back, with a search that keeps the cards whose front or back holds it, ignoring case. A deck that does not exist, or is deleted, is not found;
+  - `/study?decks=…`: a session over the comma-separated decks, leaving out those that do not exist.
+- `web/src/features/study/queue.ts` holds the queue rules of [`study.md`](study.md), in one module: the due cards and up to 20 new ones, oldest first, shuffled; a "모른다" shown again after 3 to 5 other cards; and the counts the deck screens show, from the same selection. The study page selects the queue on the server, at the time it read the states, and the browser orders it from a random source seeded with that time, so the server's render and the browser's agree. Every random choice of a session, its order, each re-show gap and each answer's fuzz factor, comes from that one source.
+- The study screen ports the phone's session ([`study.md`](study.md)): the split card, question left and answer right, hidden until shown; the progress bar of cards answered out of the queue; every answer of the session above the card, newest nearest, each a button that toggles it between "안다" and "모른다" with the phone's queue effects; and the summary when the queue empties or the user ends the session. Swipe is not offered.
+- Keyboard: Space shows the answer, → or K is "안다", ← or J is "모른다", Z toggles the last answer, Esc ends the session, and ? lists these in a dialog. Letters are read by their physical key, so they work in any input language. Each has a visible button carrying it in `aria-keyshortcuts`.
+- The engine runs in the browser ([ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)). `web/src/features/study/engine-wasm` links to `engine-wasm/pkg/`, which `next.config.ts` admits in `turbopackAdditionalRoots`; the generated glue fetches its `.wasm`, which the build serves as a static file. The screen starts fetching it when it opens.
+- Writes never hold the screen: an answer or a toggle changes it at once, and its write joins a queue that sends one write at a time, in order. A write replays the card's answers of this session, with their fuzz factors, from its state when the session opened, as the phone does, and the Server Action `recordAnswer` stores the result with the session it verifies ([`sync.md`](sync.md)).
+- A write that fails stops the queue: it and every write behind it wait, so a toggle never reaches the server before its answer. The screen says what failed in one sentence with "다시 시도", which sends them again; the answers stay in the stack. While a write waits, leaving the page asks first.
 
 ### Theme
 
@@ -52,9 +68,9 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 - `web.sh`, at the repository root, implements the `web/` part of `make lint`, `format`, `test` and `build`. Where `node` is missing it prints that it skipped; where the host's Node.js differs from `web/.nvmrc` it fails. It installs the locked packages when they are missing or older than the lock file.
 - `make lint`: ESLint with typescript-eslint's type-checked strict rules, `tsc --noEmit`, the portability check and the Node.js release check.
 - `make format`: Prettier, over the files git tracks or would track.
-- `make test`: the Vitest suite (`web/src/**/__tests__/`), then, where Docker and buildx answer, the image built and run, its health and non-root uid asserted, and the Playwright specs in `web/e2e/` run against it.
+- `make test`: the Vitest suite (`web/src/**/__tests__/`), then, where Docker and buildx answer, the image built and run, its health and non-root uid asserted, and the Playwright specs in `web/e2e/` run against it; `web/e2e/study.spec.ts` skips there. Then `supabase/test-web.sh` runs that spec against a throwaway local stack (below).
 - `make build`: `next build`, then the image where Docker and buildx answer.
-- CI runs `web.sh` on the Node.js that `.github/workflows/ci.yml` installs for the WebAssembly tests, on both jobs; `web.sh` fails there when it differs from `web/.nvmrc`. Only the ubuntu job has Docker, so it alone runs the image and the e2e specs.
+- CI runs `web.sh` on the Node.js that `.github/workflows/ci.yml` installs for the WebAssembly tests, on both jobs; `web.sh` fails there when it differs from `web/.nvmrc`. Only the ubuntu job has Docker, so it alone runs the image and the e2e specs, `supabase/test-web.sh`'s included.
 
 ### Tests
 
@@ -62,11 +78,19 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 - `web/src/app/__tests__/home.test.tsx` renders the home page's account section over a session cookie and shows the server-side read: the email, the unreachable state, and the redirect without a session.
 - `web/src/app/auth/callback/__tests__/route.test.ts`, `web/src/features/auth/__tests__/` and `web/src/app/login/__tests__/` cover the code exchange, sign-out and the sentences shown.
 - `web/e2e/sign-in.spec.ts` runs against the image: `/` lands on `/login`, the sign-in request leaves for Supabase with this origin's callback, the theme follows dark mode, and `/api/health` answers.
+- PostgREST is substituted in the Vitest suite by `web/src/testing/mocks/postgrest.ts`, which holds the four tables in memory and applies the filters, paging, upsert resolutions and review column grant the app relies on:
+  - `web/src/app/__tests__/decks.test.tsx` — the deck list and its chips from server rows, tombstones left out, and a library larger than one page;
+  - `web/src/app/decks/[id]/__tests__/deck.test.tsx` — the deck page, its search, and a deleted deck not found;
+  - `web/src/app/study/__tests__/study.test.tsx` — the queue's order and re-show gap under the seeded source, its membership, each keyboard shortcut and its visible control, the next card shown before its write is answered, and a failed write retried;
+  - `web/src/features/study/__tests__/writes.test.tsx` — an answer writes one review and the state the engine module gives, and a toggle replays with the stored factor;
+  - `web/src/features/study/__tests__/engine.test.ts` — the engine as the browser loads it: one step of `engine/tests/fixtures/reference.json`, fuzz included, and a refused review arriving as its typed `EngineError`.
+- `web/e2e/study.spec.ts` signs up a user with a password on a local stack, where password sign-in is enabled in `supabase/config.toml`, seeds a deck and a card as the phone's sync would, studies the card in the browser, and reads the review and the state back from the server. `supabase/test-web.sh` starts that stack as `supabase/test-sync.sh` does ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)), builds the app with the stack's URL and key, serves it with its standalone server as the image does, runs the spec, fails when it ran no test, and stops the server and the stack on every exit. Without Docker or `node` it prints the skip and why.
 
 ## Rationale
 
 - [ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md) records the stack, the portability rules, why the image is built from the repository root, why the font is linked rather than copied, why sign-in starts in the browser, and why sign-out is local.
-- Issue #44 records the decisions made by the PM.
+- [ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md) records why the engine runs in the browser, why answers are written through one Server Action one at a time, and why the image admits `engine-wasm/pkg/`.
+- Issue #44 records the decisions made by the PM; issue #45 those for studying on the web.
 
 ## Open questions
 

@@ -1,6 +1,6 @@
 # Sync
 
-The `sync` domain: keeping the local database and the signed-in account's rows on the server in step, in the background.
+The `sync` domain: keeping the local database and the signed-in account's rows on the server in step, in the background, and the web app as a second writer of those rows.
 
 ## Current decisions
 
@@ -63,6 +63,14 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the account screen shows while signed in, one line read out as it changes: "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
 - `SupabaseSyncServer` maps PostgREST's error codes: `42501`, `PGRST301`, `PGRST302`, 401 and 403 to `SyncRejected`; `PGRST000` to `PGRST002` and 500, 502, 503 and 504 to `SyncOffline`; any other to `SyncFailed`.
 
+### The web app as a writer
+
+- The web app keeps no local database: it writes the server's `reviews` and `card_states` directly, with the user's session, the same rows a phone's push sends, so the phone merges them by the rules above ([`web.md`](web.md), [ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
+- An answer inserts its review, ignoring one already stored under its id, with `good` for "안다" and `again` for "모른다", its time, its duration on screen, a fuzz factor drawn for it, and `user_id`. A toggle changes that review's `rating` and `updated_at` only where the server's edit is older, as a push does.
+- Either then upserts the card's `card_states` row with the state the engine computes, replaying the card's answers of the web session, each with its factor, from the state the session opened with.
+- Every row takes the time of the edit as `updated_at`, and `deleted_at` stays null; the server sets `revision`. The web app deletes nothing.
+- A phone pulls these rows like any other: the review is added to or changes the rating of its card's history, so the card's state is recomputed by the fold, and a pulled state replaces a synced one.
+
 ### Tests
 
 - `app/test/sync/merge_test.dart` — each conflict rule, with a control.
@@ -70,14 +78,14 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - `app/test/sync/sync_controller_test.dart` — when runs start, retry, `push` and `clear`.
 - `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes.
 - `app/test/sync/sync_status_test.dart` — each status on the account screen, the retry, and the tap target and contrast guidelines in both themes.
-- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason.
+- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason.
 
 ## Rationale
 
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records the protocol, the conflict policy, ownership, when sync runs, and why `sync` imports `supabase_flutter`.
 - [ADR 0010](adr/0010-server-schema-and-row-level-security.md) records the server schema sync runs against.
-- Issue #24 records the decisions made by the PM.
+- Issue #24 records the decisions made by the PM; issue #45 those for the web app as a writer.
 
 ## Open questions
 
-- A study session writes a card's state from the state it opened with. A review of that card pulled during the session is left out of that write; the card's state is right again once another review of it, or another device's state recomputed with both, is pulled. Whether the session should reread the state before writing is open.
+- A study session writes a card's state from the state it opened with, on the phone and on the web. A review of that card pulled or written elsewhere during the session is left out of that write; the card's state is right again once another review of it, or another device's state recomputed with both, is pulled. Whether the session should reread the state before writing is open.
