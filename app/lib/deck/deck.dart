@@ -37,6 +37,7 @@ export 'src/model.dart'
         PublicDeck;
 export 'src/providers.dart'
     show
+        accountAvatarProvider,
         accountScreenProvider,
         DeckSharing,
         deckRepositoryProvider,
