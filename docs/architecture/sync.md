@@ -1,6 +1,6 @@
 # Sync
 
-The `sync` domain: keeping the local database and the signed-in account's rows on the server in step, in the background.
+The `sync` domain: keeping the local database and the signed-in account's rows on the server in step, in the background, and the web app as a second writer of those rows.
 
 ## Current decisions
 
@@ -15,19 +15,20 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - `SyncStatusView`.
 - The domain reads and writes the shared database directly. It uses `account`'s surface for the session (`AccountService`, `SignedIn`'s `UserId`, and the `SupabaseClient` of `AccountConnection`) and `study`'s for the fold (`Scheduler.fold`).
 - `deck` and `study` do not import `sync`. `account` reaches it through `accountDataProvider` and `syncStatusProvider`, which the composition site overrides with the `SyncController` and `SyncStatusView` ([`account.md`](account.md)).
-- With `account`, it is one of the two domains that import `supabase_flutter`, for PostgREST only ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md)).
+- With `account` and `sharing`, it is one of the domains that import `supabase_flutter`, for PostgREST only ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
 
 ### Local schema
 
 - Schema v4 gives `decks`, `cards`, `reviews` and `card_states` the columns `updated_at`, `deleted_at` (a tombstone) and `dirty` (not yet pushed). `dirty` defaults to set, so every local insert is unsynced; the v3 to v4 migration leaves every existing row unsynced, and dates a review's `updated_at` by its `reviewed_at` and a card state's by its `last_review`.
 - `sync_state` holds at most one row: the owning account's id, and per table the pull cursor, the highest server `revision` applied. No row means no account owns the database.
+- Schema v5 adds `visibility`, `published_at` and `description` to `decks` and `origin_deck_id` to `cards`, and lets `source` be `shared`. The v4 to v5 migration leaves every deck private and rebuilds `cards` for its check, keeping every row ([`sharing.md`](sharing.md)).
 - Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
 
 ### A run
 
 - A run, for the signed-in account:
   1. claims the database: with no owner, its rows become the account's; with another owner, every synced row, the owner and the cursors are deleted first, so another account's rows are never pushed;
-  2. pulls `decks`, `cards`, `reviews`, then `card_states`, each in pages of 500 rows above its cursor, lowest revision first, applying each page and moving the cursor in one drift transaction;
+  2. pulls the account's own `decks`, `cards`, `reviews`, then `card_states`, each in pages of 500 rows above its cursor, lowest revision first, applying each page and moving the cursor in one drift transaction; a pull filters on `user_id`, since the session may also read other users' public decks and cards ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md));
   3. recomputes the state of every card a pulled review was added to or changed the rating of;
   4. pushes the unsynced rows of each table in the same order, 500 per request, then clears `dirty` on each row still as it was pushed; a row edited during the push stays unsynced.
 - Pull comes before push, so a local row that loses its merge is never sent.
@@ -36,7 +37,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 ### Conflicts
 
-- Decks and cards: a tombstone wins over a live row, whichever was written later; otherwise the later `updated_at` wins. On a tie an unsynced local edit wins, since the server has not seen it; otherwise the server's.
+- Decks and cards: a tombstone wins over a live row, whichever was written later; otherwise the later `updated_at` wins. A deck's visibility, publish time and description are columns of its row and follow the same rule, so a publish on one device reaches the others. On a tie an unsynced local edit wins, since the server has not seen it; otherwise the server's.
 - Reviews: a union by id. A review on both sides keeps the rating of its later edit, with the same tie rule. On the server, a push inserts new reviews and changes an existing one's `rating` and `updated_at` only where the server's edit is older.
 - Card states are never merged. A pulled state replaces a synced local one and gives way to an unsynced one. After a pull brings a review for a card, the card's state is recomputed by folding all its non-deleted reviews in `reviewed_at` order through the engine from a new card, each with its stored fuzz factor, and written unsynced where it differs.
 - A row where the local copy is kept is marked unsynced, so the next push repairs the server's copy, which another device may have overwritten.
@@ -63,6 +64,14 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the account screen shows while signed in, one line read out as it changes: "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
 - `SupabaseSyncServer` maps PostgREST's error codes: `42501`, `PGRST301`, `PGRST302`, 401 and 403 to `SyncRejected`; `PGRST000` to `PGRST002` and 500, 502, 503 and 504 to `SyncOffline`; any other to `SyncFailed`.
 
+### The web app as a writer
+
+- The web app keeps no local database: it writes the server's `reviews` and `card_states` directly, with the user's session, the same rows a phone's push sends, so the phone merges them by the rules above ([`web.md`](web.md), [ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
+- An answer inserts its review, ignoring one already stored under its id, with `good` for "안다" and `again` for "모른다", its time, its duration on screen, a fuzz factor drawn for it, and `user_id`. A toggle changes that review's `rating` and `updated_at` only where the server's edit is older, as a push does.
+- Either then upserts the card's `card_states` row with the state the engine computes, replaying the card's answers of the web session, each with its factor, from the state the session opened with.
+- Every row takes the time of the edit as `updated_at`, and `deleted_at` stays null; the server sets `revision`. The web app deletes nothing.
+- A phone pulls these rows like any other: the review is added to or changes the rating of its card's history, so the card's state is recomputed by the fold, and a pulled state replaces a synced one.
+
 ### Tests
 
 - `app/test/sync/merge_test.dart` — each conflict rule, with a control.
@@ -70,14 +79,16 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - `app/test/sync/sync_controller_test.dart` — when runs start, retry, `push` and `clear`.
 - `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes.
 - `app/test/sync/sync_status_test.dart` — each status on the account screen, the retry, and the tap target and contrast guidelines in both themes.
-- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47).
+- `app/test/sharing/sharing_server_test.dart`, run by the same script, checks that a run never pulls another account's public deck, and that a publish reaches the owner's other device.
+- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47).
 
 ## Rationale
 
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records the protocol, the conflict policy, ownership, when sync runs, and why `sync` imports `supabase_flutter`.
 - [ADR 0010](adr/0010-server-schema-and-row-level-security.md) records the server schema sync runs against.
-- Issue #24 records the decisions made by the PM.
+- [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why pulls filter by owner and how deck visibility syncs.
+- Issue #24 records the decisions made by the PM, issue #29 the synced deck and card columns of schema v5, and issue #45 those for the web app as a writer.
 
 ## Open questions
 
-- A study session writes a card's state from the state it opened with. A review of that card pulled during the session is left out of that write; the card's state is right again once another review of it, or another device's state recomputed with both, is pulled. Whether the session should reread the state before writing is open.
+- A study session writes a card's state from the state it opened with, on the phone and on the web. A review of that card pulled or written elsewhere during the session is left out of that write; the card's state is right again once another review of it, or another device's state recomputed with both, is pulled. Whether the session should reread the state before writing is open.

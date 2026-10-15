@@ -1,19 +1,28 @@
 import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
+import 'package:smartman/deck/deck.dart' show DeckListScreen;
+import 'package:smartman/account/src/legal.dart' show ComingSoonScreen;
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
+import 'package:smartman/sync/sync.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'account/fake_account_service.dart';
+import 'sharing/fakes.dart';
 import 'sync/fake_sync_server.dart';
+
+const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// An extraction client the test never calls.
 final class _NoExtraction implements ExtractionClient {
@@ -30,18 +39,22 @@ void main() {
   setUpAll(() async => scheduler = await Scheduler.load());
 
   /// Composes the app over an in-memory database and theme storage holding
-  /// [themeMode] when given, extracting cards through [extraction].
+  /// [themeMode] when given, signed in through [account] when given and as a
+  /// restored session otherwise, extracting cards through [extraction], and
+  /// sharing decks through [sharing].
   Future<void> pumpApp(
     WidgetTester tester, {
     String? themeMode,
+    AccountService? account,
     ExtractionClient? extraction,
+    SharingServer? sharing,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: themeStorageKeys,
+          allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
         ),
       ),
     ))!;
@@ -50,10 +63,17 @@ void main() {
       composeApp(
         executor,
         scheduler,
-        FakeAccountService(),
-        FakeSyncServer(const UserId('00000000-0000-4000-8000-00000000000a')),
+        account ??
+            FakeAccountService(
+              const SignedIn(userId: _ada, email: 'ada@example.com'),
+            ),
+        FakeSyncServer(_ada),
         themeStorage,
         extraction,
+        sharing,
+        FakeReachability(),
+        const LegalLinks(),
+        '1.0.0',
       ),
     );
     await tester.pumpAndSettle();
@@ -61,23 +81,32 @@ void main() {
 
   /// The brightness the deck list is drawn in.
   Brightness brightness(WidgetTester tester) =>
-      Theme.of(tester.element(find.text('Decks'))).brightness;
+      Theme.of(tester.element(find.byType(DeckListScreen))).brightness;
 
   // Unmounting the scope cancels drift's stream queries, whose cleanup timer
-  // must fire before the test body ends.
+  // must fire before the test body ends; disposing sync cancels the run a
+  // write scheduled.
   Future<void> unmountApp(WidgetTester tester) async {
+    ProviderScope.containerOf(
+      tester.element(find.byType(AccountGate, skipOffstage: false)),
+    ).read(syncControllerProvider).dispose();
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   }
 
   Future<void> enterText(WidgetTester tester, String label, String text) =>
-      tester.enterText(find.widgetWithText(TextField, label), text);
+      tester.enterText(find.widgetWithText(AppTextField, label), text);
 
   Future<void> createDeckAndOpen(WidgetTester tester, String name) async {
-    await tester.tap(find.text('New deck'));
+    // The first deck is made from the first-run home, later ones from the
+    // bottom bar.
+    final firstRun = find.text('Create by hand');
+    await tester.tap(
+      firstRun.evaluate().isEmpty ? find.text('New deck') : firstRun,
+    );
     await tester.pumpAndSettle();
-    await enterText(tester, 'Name', name);
-    await tester.tap(find.text('Save'));
+    await enterText(tester, 'Deck name', name);
+    await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
     await tester.tap(find.text(name));
     await tester.pumpAndSettle();
@@ -96,7 +125,7 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    expect(find.text('New deck'), findsOneWidget);
+    expect(find.text('Create by hand'), findsOneWidget);
     expect(find.text('Create from photo'), findsNothing);
     await unmountApp(tester);
 
@@ -105,16 +134,67 @@ void main() {
     await unmountApp(tester);
   });
 
-  testWidgets('opens on an empty deck list', (tester) async {
+  testWidgets('sharing is offered only with a sharing server', (tester) async {
     await pumpApp(tester);
+    expect(find.byTooltip('Account'), findsOneWidget);
+    expect(find.byTooltip('Browse'), findsNothing);
+    await createDeckAndOpen(tester, 'French');
+    await tester.tap(find.byTooltip('Deck actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Publish'), findsNothing);
+    await unmountApp(tester);
 
-    expect(find.text('Decks'), findsOneWidget);
+    await pumpApp(tester, sharing: FakeSharingServer());
+    await tester.tap(find.byTooltip('Browse'));
+    await tester.pumpAndSettle();
     expect(
-      find.text('No decks yet. Create a new deck to start.'),
+      find.text('No public decks yet. Publish one of yours to be the first.'),
       findsOneWidget,
     );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await createDeckAndOpen(tester, 'French');
+    await tester.tap(find.byTooltip('Deck actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Publish'), findsOneWidget);
     await unmountApp(tester);
   });
+
+  testWidgets(
+    'opens on the first-run home, which offers only the ways to start this build has',
+    (tester) async {
+      await pumpApp(tester);
+
+      expect(find.bySemanticsLabel('smartman'), findsOneWidget);
+      expect(find.text('Shall we make your first deck?'), findsOneWidget);
+      expect(
+        find.text(
+          "Take a photo of a vocabulary page and we'll make the cards for you. You can also type them in.",
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Create by hand'), findsOneWidget);
+      expect(find.text('Browse public decks'), findsNothing);
+      // The bottom bar waits for the first deck.
+      expect(find.text('New deck'), findsNothing);
+      await unmountApp(tester);
+
+      await pumpApp(
+        tester,
+        extraction: _NoExtraction(),
+        sharing: FakeSharingServer(),
+      );
+      expect(find.text('Create from photo'), findsOneWidget);
+      await tester.tap(find.text('Browse public decks'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('No public decks yet. Publish one of yours to be the first.'),
+        findsOneWidget,
+      );
+      await unmountApp(tester);
+    },
+  );
 
   testWidgets('shows Korean when the device locale is not supported', (
     tester,
@@ -124,8 +204,8 @@ void main() {
 
     await pumpApp(tester);
 
-    expect(find.text('덱'), findsOneWidget);
-    expect(find.text('아직 덱이 없습니다. 새 덱을 만들어 시작하세요.'), findsOneWidget);
+    expect(find.text('첫 덱을 만들어 볼까요?'), findsOneWidget);
+    expect(find.text('직접 만들기'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -192,7 +272,7 @@ void main() {
 
     expect(find.text('Chat'), findsOneWidget);
     expect(find.byTooltip('Close'), findsOneWidget);
-    expect(find.text('0 / 1'), findsOneWidget);
+    expect(find.text('0/1'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -210,16 +290,16 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      expect(find.text('3 cards for today'), findsOneWidget);
+      expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
       await tester.tap(find.text('Study all'));
       await tester.pumpAndSettle();
 
-      expect(find.text('0 / 3'), findsOneWidget);
+      expect(find.text('0/3'), findsOneWidget);
       await unmountApp(tester);
     },
   );
 
-  testWidgets('the deck list opens the account screen, signed out', (
+  testWidgets('the deck list opens the account screen, signed in', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -228,7 +308,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AccountScreen), findsOneWidget);
-    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('ada@example.com'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -275,7 +355,7 @@ void main() {
 
   for (final mode in ['light', 'dark']) {
     testWidgets(
-      'in the $mode theme every deck screen and the account screen meet the tap target and contrast guidelines',
+      'in the $mode theme the sign-in screen, every deck screen and the account screen meet the tap target and contrast guidelines',
       (tester) async {
         Future<void> meetsGuidelines() async {
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -283,13 +363,47 @@ void main() {
           await expectLater(tester, meetsGuideline(textContrastGuideline));
         }
 
-        await pumpApp(tester, themeMode: mode);
+        await pumpApp(tester, themeMode: mode, account: FakeAccountService());
+        expect(
+          Theme.of(tester.element(find.text('Continue with Google')))
+              .brightness,
+          Brightness.values.byName(mode),
+        );
+        await meetsGuidelines();
+        await tester.tap(find.text('Continue with Google'));
+        await tester.pumpAndSettle();
         expect(brightness(tester).name, mode);
         await meetsGuidelines();
-        await createDeckAndOpen(tester, 'French');
+        await tester.tap(find.text('Create by hand'));
+        await tester.pumpAndSettle();
+        expect(find.text('Create a deck'), findsOneWidget);
+        expect(find.text('You can change the name later.'), findsOneWidget);
+        await meetsGuidelines();
+        await enterText(tester, 'Deck name', 'French');
+        await tester.tap(find.text('Create'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('French'));
+        await tester.pumpAndSettle();
         await meetsGuidelines();
         await addCard(tester, 'Chat', 'cat');
         await meetsGuidelines();
+
+        await tester.tap(find.byTooltip('Deck actions'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rename'));
+        await tester.pumpAndSettle();
+        expect(find.text('Rename deck'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Deck actions'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Delete deck'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete "French"?'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text('Add card'));
         await tester.pumpAndSettle();
@@ -301,7 +415,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('This deck already has this card'), findsOneWidget);
         await meetsGuidelines();
-        await tester.tap(find.text('Cancel'));
+        await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
@@ -309,10 +423,18 @@ void main() {
         await tester.tap(find.text('Chat'));
         await tester.pumpAndSettle();
         await meetsGuidelines();
+        await tester.tap(find.byTooltip('Delete card'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete this card?'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
         await tester.pageBack();
         await tester.pumpAndSettle();
+        // The home with its today card and a deck row.
+        await meetsGuidelines();
 
         await tester.longPress(find.text('French'));
         await tester.pumpAndSettle();
@@ -322,6 +444,13 @@ void main() {
 
         await tester.tap(find.byTooltip('Account'));
         await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.ensureVisible(find.text('Terms of Service'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.tap(find.text('Terms of Service'));
+        await tester.pumpAndSettle();
+        expect(find.byType(ComingSoonScreen), findsOneWidget);
         await meetsGuidelines();
         await unmountApp(tester);
       },

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_list_screen.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'deck_screens.dart';
 
@@ -43,13 +44,46 @@ void main() {
       await screens.push((deck) => CardListScreen(deck: deck));
 
       expect(find.text('French'), findsOneWidget);
-      expect(find.text('3 cards · 1 to review today · 2 new'), findsOneWidget);
+      expect(find.text('3 cards'), findsOneWidget);
+      expect(find.text('1 to review'), findsOneWidget);
+      expect(find.text('2 new'), findsOneWidget);
 
       await screens.tap(find.text('Study · 3'));
 
       expect(screens.sessions, [
         {screens.deck.id},
       ]);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'in a backlog the header says new cards wait, and not otherwise',
+    (tester) async {
+      const paused = 'New cards wait until you catch up on your reviews.';
+      var screens = await DeckScreens.open(
+        tester,
+        cards: cards,
+        today: const TodayCounted.backlog(review: 3),
+      );
+      await screens.push((deck) => CardListScreen(deck: deck));
+
+      expect(find.text('3 to review'), findsOneWidget);
+      expect(find.text('0 new'), findsOneWidget);
+      expect(find.text(paused), findsOneWidget);
+      await screens.close();
+
+      // Control: the same count with new cards taken has no such sentence.
+      screens = await DeckScreens.open(
+        tester,
+        cards: cards,
+        today: const TodayCounted(review: 3, fresh: 0),
+      );
+      await screens.push((deck) => CardListScreen(deck: deck));
+
+      expect(find.text('3 to review'), findsOneWidget);
+      expect(find.text('0 new'), findsOneWidget);
+      expect(find.text(paused), findsNothing);
       await screens.close();
     },
   );
@@ -159,7 +193,7 @@ void main() {
 
     await screens.tap(find.byTooltip('Deck actions'));
     await screens.tap(find.text('Rename'));
-    await screens.enter('Name', 'Français');
+    await screens.enter('Deck name', 'Français');
     await screens.tap(find.text('Save'));
 
     expect(find.text('Français'), findsOneWidget);
@@ -169,6 +203,40 @@ void main() {
     expect(decks!.single.name, 'Français');
     await screens.close();
   });
+
+  testWidgets(
+    'the rename sheet opens focused on the current name, refuses an empty one, and saves on Enter',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      await screens.push((deck) => CardListScreen(deck: deck));
+      await screens.tap(find.byTooltip('Deck actions'));
+      await screens.tap(find.text('Rename'));
+      EditableText field() => tester.widget<EditableText>(
+        find.descendant(
+          of: find.widgetWithText(AppTextField, 'Deck name'),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(field().focusNode.hasFocus, isTrue);
+      expect(field().controller.text, 'French');
+
+      await screens.enter('Deck name', '  ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a name'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsOneWidget);
+
+      await screens.enter('Deck name', 'Français');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      final decks = await tester.runAsync(
+        () => screens.repository.watchDecks().first,
+      );
+      expect(decks!.single.name, 'Français');
+      await screens.close();
+    },
+  );
 
   testWidgets(
     'the deck menu deletes the deck after confirming, and closes it',

@@ -1,0 +1,6 @@
+# The crate is built and tested only as WebAssembly; wasm-bindgen-test-runner runs the tests in Node.
+[build]
+target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"

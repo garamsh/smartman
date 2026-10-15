@@ -32,15 +32,37 @@ final class TodayPending extends TodayCount {
   const TodayPending();
 }
 
-/// [review] cards are due and [fresh] cards are new.
+/// [review] cards are due and [fresh] cards are new, and the user takes
+/// [perCard] over one card.
 final class TodayCounted extends TodayCount {
-  const TodayCounted({required this.review, required this.fresh});
+  const TodayCounted({
+    required this.review,
+    required this.fresh,
+    this.perCard = defaultPerCard,
+  }) : backlog = false;
+
+  /// So many reviews are due that new cards pause until they are done.
+  const TodayCounted.backlog({
+    required this.review,
+    this.perCard = defaultPerCard,
+  }) : fresh = 0,
+       backlog = true;
 
   final int review;
   final int fresh;
+  final Duration perCard;
+
+  /// The time one card is taken to need while the user's own pace is unknown.
+  static const defaultPerCard = Duration(seconds: 10);
+
+  /// Whether new cards pause for a backlog of reviews.
+  final bool backlog;
 
   /// The size of the session: every due card and every new one.
   int get total => review + fresh;
+
+  /// The whole minutes the session takes at [perCard], rounded up.
+  int get minutes => (total * perCard.inMilliseconds / 60000).ceil();
 }
 
 /// The count could not be read; [message] says why, for the user.
@@ -78,6 +100,48 @@ final accountScreenProvider = Provider<Widget Function()>(
   (ref) => throw UnimplementedError(
     'accountScreenProvider is overridden at the composition site',
   ),
+);
+
+/// Builds the signed-in account's avatar, at the size of the home screen's
+/// top bar. The composition site overrides it, as it does
+/// [accountScreenProvider].
+final accountAvatarProvider = Provider<Widget Function()>(
+  (ref) => throw UnimplementedError(
+    'accountAvatarProvider is overridden at the composition site',
+  ),
+);
+
+/// What the deck screens offer of sharing decks with other users: browsing
+/// public decks, and publishing one of the user's own.
+abstract interface class DeckSharing {
+  /// Whether the device is online now, kept current. Publishing needs the
+  /// network, so the deck menu disables it while offline.
+  Stream<bool> watchOnline();
+
+  /// The screen that browses other users' public decks.
+  Widget browseScreen();
+
+  /// Asks for what publishing [deck] needs and publishes it, reporting a
+  /// failure to the user itself.
+  Future<void> publish(BuildContext context, Deck deck);
+
+  /// Makes [deck] private again, reporting a failure to the user itself.
+  Future<void> unpublish(BuildContext context, Deck deck);
+}
+
+/// Sharing, or null while the app has none, which hides its entries. The
+/// composition site overrides it, so this domain does not depend on the one
+/// that shares decks.
+final deckSharingProvider = Provider<DeckSharing?>((ref) => null);
+
+/// Whether the device is online, as sharing reports it; offline without it.
+final onlineProvider = StreamProvider.autoDispose<bool>(
+  (ref) => ref.watch(deckSharingProvider)?.watchOnline() ?? Stream.value(false),
+);
+
+/// One deck, kept current; null once it is deleted.
+final deckProvider = StreamProvider.autoDispose.family<Deck?, DeckId>(
+  (ref, id) => ref.watch(deckRepositoryProvider).watchDeck(id),
 );
 
 /// How many cards each deck holds, kept current; a deck with none is absent.

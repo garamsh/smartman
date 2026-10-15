@@ -1,0 +1,36 @@
+import { redirect } from "next/navigation";
+
+import { AccountAvatar, getSession, SignOutForm } from "@/features/auth";
+
+/** Who is signed in, read from the session on the server, and the account's actions. */
+export async function Profile() {
+  const session = await getSession();
+  switch (session.kind) {
+    case "signed-in":
+      return (
+        <>
+          <section
+            aria-label="프로필"
+            className="flex items-center gap-4 rounded-card bg-surface p-5"
+          >
+            <AccountAvatar email={session.email} size="large" />
+            <p className="min-w-0 text-body font-bold break-all">{session.email}</p>
+          </section>
+          <section aria-labelledby="account-section" className="flex flex-col gap-3">
+            <h2 id="account-section" className="text-section text-ink-2">
+              계정
+            </h2>
+            <SignOutForm />
+          </section>
+        </>
+      );
+    case "unreachable":
+      return (
+        <p role="alert" className="text-dont-know-text">
+          서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.
+        </p>
+      );
+    case "signed-out":
+      redirect("/login");
+  }
+}

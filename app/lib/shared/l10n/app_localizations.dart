@@ -104,18 +104,6 @@ abstract class AppLocalizations {
   /// **'smartman'**
   String get appTitle;
 
-  /// Title of the deck list screen.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱'**
-  String get decksTitle;
-
-  /// Shown when there is no deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'아직 덱이 없습니다. 새 덱을 만들어 시작하세요.'**
-  String get noDecks;
-
   /// Button and dialog title for creating a deck.
   ///
   /// In ko, this message translates to:
@@ -149,13 +137,13 @@ abstract class AppLocalizations {
   /// Body of the deck deletion confirmation, naming how many cards go with the deck.
   ///
   /// In ko, this message translates to:
-  /// **'{count, plural, =0{이 덱에는 카드가 없습니다.} other{카드 {count}장도 함께 삭제됩니다.}}'**
+  /// **'{count, plural, =0{이 덱에는 카드가 없어요.} other{카드 {count}장도 함께 삭제돼요.}}'**
   String deleteDeckBody(int count);
 
   /// Label of the deck name field.
   ///
   /// In ko, this message translates to:
-  /// **'이름'**
+  /// **'덱 이름'**
   String get deckName;
 
   /// Error shown when a deck name is empty.
@@ -167,7 +155,7 @@ abstract class AppLocalizations {
   /// Shown when a deck has no card.
   ///
   /// In ko, this message translates to:
-  /// **'아직 카드가 없습니다. 카드를 추가해 시작하세요.'**
+  /// **'아직 카드가 없어요. 카드를 추가해 시작해 보세요.'**
   String get noCards;
 
   /// Bottom-bar button and editor title for adding a card.
@@ -245,13 +233,13 @@ abstract class AppLocalizations {
   /// Shown when the local database fails.
   ///
   /// In ko, this message translates to:
-  /// **'기기 저장소를 읽거나 쓰지 못했습니다. 다시 시도해 주세요.'**
+  /// **'기기 저장소를 읽거나 쓰지 못했어요. 다시 시도해 주세요.'**
   String get storageFailure;
 
   /// Shown when a stored card cannot be read.
   ///
   /// In ko, this message translates to:
-  /// **'이 덱에 읽을 수 없는 카드가 있습니다.'**
+  /// **'이 덱에 읽을 수 없는 카드가 있어요.'**
   String get unreadableCard;
 
   /// Dismisses a dialog without acting.
@@ -265,6 +253,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'저장'**
   String get save;
+
+  /// Primary button of the sheet that names a new deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'만들기'**
+  String get create;
 
   /// Deck menu item for renaming.
   ///
@@ -329,7 +323,7 @@ abstract class AppLocalizations {
   /// Study screen top bar: cards answered so far out of the cards in the session.
   ///
   /// In ko, this message translates to:
-  /// **'{answered} / {total}'**
+  /// **'{answered}/{total}'**
   String studyProgress(int answered, int total);
 
   /// Accessibility label of the study progress: cards answered out of the cards in the session.
@@ -394,55 +388,25 @@ abstract class AppLocalizations {
   /// Heading of the end-of-session summary.
   ///
   /// In ko, this message translates to:
-  /// **'학습 끝'**
+  /// **'오늘 할 카드를 마쳤어요'**
   String get sessionSummaryTitle;
 
   /// Shown in the summary when the deck had nothing due and no new card.
   ///
   /// In ko, this message translates to:
-  /// **'지금 학습할 카드가 없습니다.'**
+  /// **'지금 학습할 카드가 없어요.'**
   String get nothingToStudy;
-
-  /// Summary line: distinct cards answered in the session.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습한 카드: {count}장'**
-  String cardsStudied(int count);
-
-  /// Summary line: how many answers stand as Know.
-  ///
-  /// In ko, this message translates to:
-  /// **'안다: {count}번'**
-  String knowCount(int count);
-
-  /// Summary line: how many answers stand as Don't know.
-  ///
-  /// In ko, this message translates to:
-  /// **'모른다: {count}번'**
-  String dontKnowCount(int count);
-
-  /// Summary line: time from the first card to the end of the session.
-  ///
-  /// In ko, this message translates to:
-  /// **'걸린 시간: {minutes}분 {seconds}초'**
-  String timeSpent(int minutes, int seconds);
-
-  /// Closes the session summary.
-  ///
-  /// In ko, this message translates to:
-  /// **'완료'**
-  String get done;
 
   /// Shown when an answer could not be written to the local database.
   ///
   /// In ko, this message translates to:
-  /// **'답을 기기에 저장하지 못했습니다. 이 카드의 일정은 바뀌지 않았습니다.'**
+  /// **'답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.'**
   String get answerNotSaved;
 
   /// Shown when the scheduling engine refused a review.
   ///
   /// In ko, this message translates to:
-  /// **'이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.'**
+  /// **'이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.'**
   String get schedulingFailure;
 
   /// Label of the home screen button that opens the account screen.
@@ -457,17 +421,23 @@ abstract class AppLocalizations {
   /// **'계정'**
   String get accountTitle;
 
-  /// Account screen text while signed out: no feature needs an account.
+  /// Sign-in screen line under the logo, saying what the app does, in two lines.
   ///
   /// In ko, this message translates to:
-  /// **'로그인하지 않아도 모든 기능을 쓸 수 있습니다.'**
-  String get signedOutBody;
+  /// **'밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드'**
+  String get welcomeBody;
 
   /// Button that opens Google's account picker to sign in.
   ///
   /// In ko, this message translates to:
-  /// **'Google로 로그인'**
+  /// **'Google로 계속하기'**
   String get signInWithGoogle;
+
+  /// Disabled sign-in screen button holding the place of Apple sign-in, which is not available yet.
+  ///
+  /// In ko, this message translates to:
+  /// **'Apple로 계속하기 · 준비 중'**
+  String get signInWithAppleSoon;
 
   /// Accessible label of the progress indicator while signing in.
   ///
@@ -475,16 +445,10 @@ abstract class AppLocalizations {
   /// **'로그인 중'**
   String get signingIn;
 
-  /// Account screen text while signed in, naming the account's email.
-  ///
-  /// In ko, this message translates to:
-  /// **'{email} 계정으로 로그인했습니다'**
-  String signedInAs(String email);
-
   /// Account screen text while signed in to an account without an email.
   ///
   /// In ko, this message translates to:
-  /// **'로그인했습니다'**
+  /// **'로그인했어요'**
   String get signedIn;
 
   /// Button that signs out.
@@ -502,20 +466,26 @@ abstract class AppLocalizations {
   /// Shown when signing in or out could not reach the server.
   ///
   /// In ko, this message translates to:
-  /// **'서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'**
+  /// **'서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.'**
   String get accountOffline;
 
   /// Shown when the app's sign-in configuration is missing or rejected by Google or Supabase.
   ///
   /// In ko, this message translates to:
-  /// **'이 앱의 로그인 설정에 문제가 있어 로그인할 수 없습니다.'**
+  /// **'이 앱의 로그인 설정에 문제가 있어 로그인할 수 없어요.'**
   String get accountMisconfigured;
 
   /// Shown when Google or Supabase refused the sign-in.
   ///
   /// In ko, this message translates to:
-  /// **'Google 로그인이 거부되었습니다. 다시 시도해 주세요.'**
+  /// **'Google 로그인이 거부됐어요. 다시 시도해 주세요.'**
   String get accountRejected;
+
+  /// Heading of the account screen section that holds sign-out.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정'**
+  String get accountSection;
 
   /// Heading of the account screen section that chooses the theme.
   ///
@@ -541,11 +511,11 @@ abstract class AppLocalizations {
   /// **'다크'**
   String get themeDark;
 
-  /// Line under the today count: how many of the cards are due reviews and how many are new.
+  /// Today card line under the count: due reviews, new cards, and the minutes the session takes at the user's pace.
   ///
   /// In ko, this message translates to:
-  /// **'복습 {review} · 새 카드 {fresh}'**
-  String todayBreakdown(int review, int fresh);
+  /// **'복습 {review} · 새 카드 {fresh} · 약 {minutes}분'**
+  String todayBreakdown(int review, int fresh, int minutes);
 
   /// Label above the deck rows, with how many decks there are.
   ///
@@ -583,16 +553,16 @@ abstract class AppLocalizations {
   /// **'사진으로 추가'**
   String get addFromPhoto;
 
-  /// Line under a deck name: its cards, and how many due reviews and new cards a session would study now.
+  /// Sentence under the today count while so many reviews are due that a session takes no new card.
   ///
   /// In ko, this message translates to:
-  /// **'카드 {cards}장 · 오늘 복습 {review} · 새 카드 {fresh}'**
-  String deckSummary(int cards, int review, int fresh);
+  /// **'밀린 복습을 마칠 때까지 새 카드는 쉬어요.'**
+  String get backlogPaused;
 
-  /// Card list button that studies the deck, with how many cards the session would study.
+  /// Deck screen button that studies the deck, with how many cards the session would study.
   ///
   /// In ko, this message translates to:
-  /// **'학습 · {count}장'**
+  /// **'학습하기 · {count}장'**
   String studyCount(int count);
 
   /// Hint of the card list search field.
@@ -604,7 +574,7 @@ abstract class AppLocalizations {
   /// Shown when no card matches the card list search.
   ///
   /// In ko, this message translates to:
-  /// **'찾는 카드가 없습니다. 다른 말로 검색해 보세요.'**
+  /// **'찾는 카드가 없어요. 다른 단어로 검색해 보세요.'**
   String get noMatches;
 
   /// Editor button that saves the card and opens an empty editor for the next one.
@@ -622,7 +592,7 @@ abstract class AppLocalizations {
   /// Body of the card deletion confirmation: the card review history goes with it.
   ///
   /// In ko, this message translates to:
-  /// **'이 카드의 학습 기록도 함께 삭제됩니다.'**
+  /// **'이 카드의 학습 기록도 함께 삭제돼요.'**
   String get deleteCardBody;
 
   /// Title of the sign-out warning shown when some changes could not reach the server.
@@ -648,6 +618,42 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.'**
   String get dataNotCleared;
+
+  /// Account screen row that deletes the account.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정 삭제'**
+  String get deleteAccount;
+
+  /// Line under the delete-account row: what deletion removes, and that it cannot be undone.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.'**
+  String get deleteAccountNote;
+
+  /// Title of the account deletion confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정을 삭제할까요?'**
+  String get deleteAccountTitle;
+
+  /// Body of the account deletion confirmation: what is removed, and what stays.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.'**
+  String get deleteAccountBody;
+
+  /// Accessible label of the progress indicator while deleting the account.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정 삭제 중'**
+  String get deletingAccount;
+
+  /// Shown when the server refused to delete the account.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정을 삭제하지 못했어요. 다시 시도해 주세요.'**
+  String get deleteAccountRejected;
 
   /// Account screen sync status while a sync runs.
   ///
@@ -690,6 +696,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'추가할 덱 · {name}'**
   String photoTarget(String name);
+
+  /// Title of the sheet on the camera view that chooses the deck the cards go into.
+  ///
+  /// In ko, this message translates to:
+  /// **'추가할 덱'**
+  String get photoTargetTitle;
 
   /// Tooltip of the camera view's album button.
   ///
@@ -744,6 +756,36 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요 · {deck}'**
   String reviewHint(String deck);
+
+  /// Label of the selector of how much each photo card's answer says, on the capture and review screens.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드에 담을 내용'**
+  String get detailLevelLabel;
+
+  /// Detail level: the meaning alone.
+  ///
+  /// In ko, this message translates to:
+  /// **'간단'**
+  String get detailLevelSimple;
+
+  /// Detail level, the default: the part of speech the page prints, then the meaning.
+  ///
+  /// In ko, this message translates to:
+  /// **'기본'**
+  String get detailLevelBasic;
+
+  /// Detail level: the basic answer, then each example the page prints on its own line.
+  ///
+  /// In ko, this message translates to:
+  /// **'자세히'**
+  String get detailLevelDetailed;
+
+  /// Mark on a candidate whose answer the user edited, which a detail level switch leaves as typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 고침'**
+  String get candidateEdited;
 
   /// Heading of the candidates whose card key matches a card in the deck.
   ///
@@ -808,7 +850,7 @@ abstract class AppLocalizations {
   /// Photo import failure: the model found no card on the page.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요'**
+  /// **'카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요.'**
   String get noCardsFound;
 
   /// Photo import failure: the daily extraction limit was reached.
@@ -820,7 +862,7 @@ abstract class AppLocalizations {
   /// Photo import failure: the model failed.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요'**
+  /// **'카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.'**
   String get modelFailed;
 
   /// Photo import failure: no session, or one the server refused.
@@ -846,6 +888,462 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이 덱은 삭제됐어요. 다른 덱을 골라 주세요.'**
   String get deckDeleted;
+
+  /// Opens other users' public decks; also the title of that screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'둘러보기'**
+  String get browse;
+
+  /// Deck menu item that publishes the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개하기'**
+  String get publish;
+
+  /// Deck menu item that makes a public deck private.
+  ///
+  /// In ko, this message translates to:
+  /// **'비공개로 전환'**
+  String get unpublish;
+
+  /// Why publishing is disabled: the device is offline.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되면 바꿀 수 있어요'**
+  String get publishNeedsNetwork;
+
+  /// Chip beside a deck the user has published.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개'**
+  String get publicChip;
+
+  /// Hint of the search field on the browse screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 이름이나 설명으로 검색'**
+  String get searchPublicDecks;
+
+  /// Browse sort: most recently published first.
+  ///
+  /// In ko, this message translates to:
+  /// **'최신순'**
+  String get sortNewest;
+
+  /// Browse sort: most copied first.
+  ///
+  /// In ko, this message translates to:
+  /// **'가져오기 많은 순'**
+  String get sortMostCopied;
+
+  /// A public deck's owner display name, card count and copy count.
+  ///
+  /// In ko, this message translates to:
+  /// **'{owner} · 카드 {cards}장 · 가져오기 {copies}회'**
+  String publicDeckLine(String owner, int cards, int copies);
+
+  /// Browse screen with no public deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 공개된 덱이 없어요. 내 덱을 공개해 처음으로 나눠 보세요.'**
+  String get noPublicDecks;
+
+  /// Browse search with no match.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾는 덱이 없어요. 다른 단어로 검색해 보세요.'**
+  String get noPublicMatches;
+
+  /// Browse screen while offline.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되지 않았어요. 연결되면 공개 덱을 볼 수 있어요.'**
+  String get browseOffline;
+
+  /// Label of a progress indicator.
+  ///
+  /// In ko, this message translates to:
+  /// **'불러오는 중'**
+  String get loading;
+
+  /// Sharing failure: the server could not be reached.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.'**
+  String get sharingOffline;
+
+  /// Sharing failure: the server refused the session or the request.
+  ///
+  /// In ko, this message translates to:
+  /// **'요청이 거절됐어요. 계정 화면에서 다시 로그인한 뒤 시도해 주세요.'**
+  String get sharingRejected;
+
+  /// Sharing failure: the server answered unexpectedly.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.'**
+  String get sharingFailed;
+
+  /// Copying a deck its owner made private, deleted, or that was hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 덱은 더 이상 공개되어 있지 않아요.'**
+  String get deckNoLongerPublic;
+
+  /// Primary button of a public deck, and title of the sheet it opens.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 덱으로 가져오기'**
+  String get importToMyDecks;
+
+  /// Below a public deck's preview when it holds more cards than shown.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {total}장 중 처음 {shown}장'**
+  String previewFirstCards(int shown, int total);
+
+  /// Menu item and dialog button that report a public deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고하기'**
+  String get reportDeck;
+
+  /// Menu item that blocks a public deck's owner.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사용자 차단'**
+  String get blockUser;
+
+  /// Title of the report dialog.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고 이유'**
+  String get reportTitle;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'부적절한 내용'**
+  String get reportInappropriate;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'스팸'**
+  String get reportSpam;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'저작권 침해'**
+  String get reportCopyright;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'기타'**
+  String get reportOther;
+
+  /// After a report was filed.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고했어요. 검토할게요.'**
+  String get reported;
+
+  /// After a second report of the same deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 신고한 덱이에요.'**
+  String get alreadyReported;
+
+  /// Title of the block confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name} 님을 차단할까요?'**
+  String blockTitle(String name);
+
+  /// Body of the block confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사용자의 덱이 둘러보기에 더 이상 나오지 않아요.'**
+  String get blockBody;
+
+  /// Confirms blocking a user.
+  ///
+  /// In ko, this message translates to:
+  /// **'차단'**
+  String get block;
+
+  /// After a user was blocked.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name} 님을 차단했어요.'**
+  String blocked(String name);
+
+  /// Import option: copy into a new deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 덱으로'**
+  String get importAsNewDeck;
+
+  /// Import option: copy into one of the user's decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'기존 덱에 추가'**
+  String get importIntoExistingDeck;
+
+  /// What importing as a new deck does.
+  ///
+  /// In ko, this message translates to:
+  /// **'\"{name}\" 덱을 새로 만들어 모든 카드를 가져와요.'**
+  String importNewDeckHint(String name);
+
+  /// Label of the deck chooser when importing into a deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱'**
+  String get importTargetDeck;
+
+  /// Heading of the duplicate options when importing into a deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 있는 카드는'**
+  String get importDuplicates;
+
+  /// Button that copies a public deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'가져오기'**
+  String get importConfirm;
+
+  /// After copying a public deck: how many cards were added or merged, and into which deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count, plural, =0{\"{deck}\"에 새로 가져온 카드가 없어요} other{\"{deck}\"에 카드 {count}장을 가져왔어요}}'**
+  String copiedCards(String deck, int count);
+
+  /// Title of the publish sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'\"{name}\" 공개하기'**
+  String publishTitle(String name);
+
+  /// Label of the display name field.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 이름'**
+  String get displayName;
+
+  /// Help below the display name field.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개한 덱에 이 이름이 표시돼요. 이메일은 표시되지 않아요.'**
+  String get displayNameHelp;
+
+  /// Error for a display name of the wrong length.
+  ///
+  /// In ko, this message translates to:
+  /// **'2~20자로 입력하세요'**
+  String get displayNameLength;
+
+  /// Label of the description field when publishing.
+  ///
+  /// In ko, this message translates to:
+  /// **'설명 (선택)'**
+  String get deckDescription;
+
+  /// Error for a description that is too long.
+  ///
+  /// In ko, this message translates to:
+  /// **'{max}자 이내로 입력하세요'**
+  String deckDescriptionTooLong(int max);
+
+  /// Agreement checkbox the publish button requires.
+  ///
+  /// In ko, this message translates to:
+  /// **'부적절하거나 저작권을 침해하는 내용은 공개하지 않을게요'**
+  String get publishAgreement;
+
+  /// Button that publishes a deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개'**
+  String get publishConfirm;
+
+  /// After a deck was published.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱을 공개했어요'**
+  String get published;
+
+  /// After a deck was made private.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱을 비공개로 전환했어요'**
+  String get unpublished;
+
+  /// Today card's heading on the home screen, above the count.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드'**
+  String get todayTitle;
+
+  /// Unit after the large count on the today card: cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'장'**
+  String get todayCountUnit;
+
+  /// Home screen heading before the user has any deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 덱을 만들어 볼까요?'**
+  String get emptyHomeTitle;
+
+  /// Home screen line under the first-deck heading.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.'**
+  String get emptyHomeBody;
+
+  /// Empty home screen button that opens the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 만들기'**
+  String get createManually;
+
+  /// Empty home screen button that opens the public decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 덱 둘러보기'**
+  String get browsePublicDecks;
+
+  /// Title of the sheet that names a new deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 덱 만들기'**
+  String get newDeckTitle;
+
+  /// Line under the new-deck sheet's title.
+  ///
+  /// In ko, this message translates to:
+  /// **'이름은 나중에도 바꿀 수 있어요.'**
+  String get newDeckBody;
+
+  /// Deck screen pill: how many cards the deck holds.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}'**
+  String statCards(int count);
+
+  /// Deck screen pill: how many cards are due now.
+  ///
+  /// In ko, this message translates to:
+  /// **'복습 {count}'**
+  String statReview(int count);
+
+  /// Deck screen pill: how many new cards a session would study now.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 카드 {count}'**
+  String statNew(int count);
+
+  /// Hint under the study card, beside a left chevron: swiping left answers Don't know.
+  ///
+  /// In ko, this message translates to:
+  /// **'모른다'**
+  String get swipeDontKnowHint;
+
+  /// Hint under the study card, beside a right chevron: swiping right answers Know.
+  ///
+  /// In ko, this message translates to:
+  /// **'안다'**
+  String get swipeKnowHint;
+
+  /// Summary line when the first answered card is due again later today.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.'**
+  String get nextReviewToday;
+
+  /// Summary line when the first answered card is due again tomorrow.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.'**
+  String get nextReviewTomorrow;
+
+  /// Summary line when the first answered card is due again in two or more days.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 {days}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.'**
+  String nextReviewInDays(int days);
+
+  /// Summary tile label under the number of distinct cards answered.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습한 카드'**
+  String get summaryStudied;
+
+  /// Summary row label: time from the first card to the end of the session.
+  ///
+  /// In ko, this message translates to:
+  /// **'걸린 시간'**
+  String get timeSpentLabel;
+
+  /// Summary row value: the time spent.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분 {seconds}초'**
+  String timeSpentValue(int minutes, int seconds);
+
+  /// Summary button that closes the session.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱으로 돌아가기'**
+  String get backToDecks;
+
+  /// Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속하면 {terms}과 {privacy}에 동의하는 것으로 봐요.'**
+  String consentNotice(String terms, String privacy);
+
+  /// Link to the terms of service.
+  ///
+  /// In ko, this message translates to:
+  /// **'이용약관'**
+  String get termsOfService;
+
+  /// Link to the privacy policy.
+  ///
+  /// In ko, this message translates to:
+  /// **'개인정보 처리방침'**
+  String get privacyPolicy;
+
+  /// Body of the page a link opens before its document exists.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 준비 중이에요. 곧 열어 드릴게요.'**
+  String get comingSoonBody;
+
+  /// Shown when the terms or privacy link could not be opened.
+  ///
+  /// In ko, this message translates to:
+  /// **'링크를 열지 못했어요. 다시 시도해 주세요.'**
+  String get linkNotOpened;
+
+  /// Account screen footer: the app's version.
+  ///
+  /// In ko, this message translates to:
+  /// **'버전 {version}'**
+  String appVersion(String version);
+
+  /// Today card when no card is due or new now; the study button is hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드를 다 했어요'**
+  String get todayDone;
 }
 
 class _AppLocalizationsDelegate

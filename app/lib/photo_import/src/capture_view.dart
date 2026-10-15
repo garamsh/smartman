@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart' hide Card;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_chip.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_sheet.dart';
+import 'detail_level.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'photo.dart';
 import 'photo_source.dart';
 
 /// A full-screen dark camera view with a page-frame guide, the deck the cards
-/// go into, the album button and the shutter.
+/// go into, how much each card says, the album button and the shutter.
 class CaptureView extends StatefulWidget {
   const CaptureView({
     super.key,
@@ -17,6 +22,8 @@ class CaptureView extends StatefulWidget {
     required this.decks,
     required this.target,
     required this.onTarget,
+    required this.level,
+    required this.onLevel,
     required this.onPhoto,
     required this.onFailure,
   });
@@ -30,6 +37,9 @@ class CaptureView extends StatefulWidget {
   /// Chooses the deck the cards go into; null for a new deck.
   final ValueChanged<DeckId?> onTarget;
 
+  final DetailLevel level;
+  final ValueChanged<DetailLevel> onLevel;
+
   final ValueChanged<JpegPhoto> onPhoto;
   final ValueChanged<PhotoImportFailure> onFailure;
 
@@ -41,8 +51,12 @@ sealed class _Camera {
   const _Camera();
 }
 
+/// An open is in flight. [wanted] is false while the app is out of the
+/// foreground, so the session it brings is closed rather than shown.
 final class _Opening extends _Camera {
-  const _Opening();
+  const _Opening({this.wanted = true});
+
+  final bool wanted;
 }
 
 final class _Open extends _Camera {
@@ -55,6 +69,14 @@ final class _Closed extends _Camera {
   const _Closed(this.failure);
 
   final PhotoImportFailure failure;
+}
+
+/// Released while the app is out of the foreground; [closing] completes once
+/// the session is closed.
+final class _Released extends _Camera {
+  const _Released(this.closing);
+
+  final Future<void> closing;
 }
 
 class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
@@ -77,16 +99,16 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// The camera is released while the app is in the background, as `camera`
-  /// leaves that to the app.
+  /// The camera is released while the app is out of the foreground, as
+  /// `camera` leaves that to the app, and opened again when it returns. One
+  /// open runs at a time: a change during one is applied when it lands.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.inactive:
-        _close();
-        setState(() => _camera = const _Opening());
+        _release();
       case AppLifecycleState.resumed:
-        if (_camera is _Opening) _open();
+        _resume();
       case AppLifecycleState.detached ||
           AppLifecycleState.hidden ||
           AppLifecycleState.paused:
@@ -94,16 +116,49 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _open() async {
+  void _release() {
+    switch (_camera) {
+      case _Open(:final session):
+        setState(() => _camera = _Released(session.close()));
+      case _Opening():
+        setState(() => _camera = const _Opening(wanted: false));
+      case _Released() || _Closed():
+        break;
+    }
+  }
+
+  /// A failed open is tried again, so access allowed in Settings takes effect.
+  void _resume() {
+    switch (_camera) {
+      case _Released(:final closing):
+        setState(() => _camera = const _Opening());
+        _open(after: closing);
+      case _Closed():
+        setState(() => _camera = const _Opening());
+        _open();
+      case _Opening():
+        setState(() => _camera = const _Opening());
+      case _Open():
+        break;
+    }
+  }
+
+  /// Opens the camera once [after] completes; `camera` keeps one camera per
+  /// app, so a session still closing would otherwise close the new one.
+  Future<void> _open({Future<void>? after}) async {
+    await after;
+    final CameraSession session;
     try {
-      final session = await widget.photos.openCamera();
-      if (!mounted || _camera is! _Opening) {
-        await session.close();
-        return;
-      }
-      setState(() => _camera = _Open(session));
+      session = await widget.photos.openCamera();
     } on PhotoImportFailure catch (failure) {
       if (mounted) setState(() => _camera = _Closed(failure));
+      return;
+    }
+    if (_camera case _Opening(wanted: true) when mounted) {
+      setState(() => _camera = _Open(session));
+    } else {
+      final closing = session.close();
+      if (mounted) setState(() => _camera = _Released(closing));
     }
   }
 
@@ -132,7 +187,6 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
   Widget _build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final camera = _camera;
     return Scaffold(
       backgroundColor: colors.ground,
@@ -143,14 +197,14 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
             _Open(:final session) => ClipRect(
               child: FittedBox(fit: BoxFit.cover, child: session.preview),
             ),
-            _Opening() => const SizedBox.shrink(),
+            _Opening() || _Released() => const SizedBox.shrink(),
             _Closed(:final failure) => Center(
               child: Padding(
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.all(AppSpace.s32),
                 child: Text(
                   describePhotoImportFailure(l10n, failure),
                   textAlign: TextAlign.center,
-                  style: textTheme.bodyLarge?.copyWith(color: colors.ink),
+                  style: AppType.body.copyWith(color: colors.ink),
                 ),
               ),
             ),
@@ -164,7 +218,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border.all(color: colors.ink, width: 2),
-                      borderRadius: BorderRadius.circular(AppRadius.row),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
                   ),
                 ),
@@ -173,56 +227,84 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
           SafeArea(
             child: Column(
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: l10n.close,
-                      icon: const Icon(Icons.close),
-                      color: colors.ink,
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: ActionChip(
-                          avatar: Icon(Icons.expand_more, color: colors.ink),
-                          label: Text(
-                            l10n.photoTarget(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: l10n.close,
+                        icon: const Icon(LucideIcons.x),
+                        color: colors.ink,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: AppChip(
+                            label: l10n.photoTarget(
                               widget.target?.name ?? l10n.newDeck,
                             ),
+                            icon: LucideIcons.chevronDown,
+                            onPressed: _chooseTarget,
                           ),
-                          onPressed: _chooseTarget,
                         ),
                       ),
+                      // Balances the close button, so the chip is centred.
+                      const SizedBox(width: AppSpace.s40 + AppSpace.s8),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.gutter,
+                    AppSpace.s8,
+                    AppSpace.gutter,
+                    0,
+                  ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.row),
                     ),
-                    const SizedBox(width: 48),
-                  ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpace.s12),
+                      child: DetailLevelSelector(
+                        level: widget.level,
+                        onChanged: widget.onLevel,
+                      ),
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 if (camera is! _Closed)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.s32,
+                    ),
                     child: DecoratedBox(
-                      decoration: BoxDecoration(
+                      decoration: ShapeDecoration(
                         color: colors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.row),
+                        shape: const StadiumBorder(),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: AppSpace.s16,
+                          vertical: AppSpace.s8,
                         ),
                         child: Text(
                           l10n.photoCaptureHint,
                           textAlign: TextAlign.center,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colors.ink,
-                          ),
+                          style: AppType.secondary.copyWith(color: colors.ink),
                         ),
                       ),
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.s24,
+                    AppSpace.s16,
+                    AppSpace.s24,
+                    AppSpace.s24,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -231,7 +313,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                           child: IconButton.filledTonal(
                             iconSize: 28,
                             tooltip: l10n.photoAlbum,
-                            icon: const Icon(Icons.photo_library_outlined),
+                            icon: const Icon(LucideIcons.images),
                             onPressed: _busy
                                 ? null
                                 : () => _take(widget.photos.pickFromLibrary),
@@ -261,26 +343,31 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
 
   Future<void> _chooseTarget() async {
     final l10n = AppLocalizations.of(context);
-    final chosen = await showModalBottomSheet<_TargetChoice>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
+    final colors = AppColors.of(context);
+    Widget check(bool chosen) => chosen
+        ? Icon(LucideIcons.check, color: colors.know)
+        : const SizedBox.shrink();
+    final chosen = await showAppSheet<_TargetChoice>(
+      context,
+      builder: (context) => AppSheet(
+        title: l10n.photoTargetTitle,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final deck in widget.decks)
-              ListTile(
-                title: Text(deck.name),
+              AppListRow(
+                title: deck.name,
+                onSheet: true,
                 selected: deck.id == widget.target?.id,
-                trailing: deck.id == widget.target?.id
-                    ? const Icon(Icons.check)
-                    : null,
+                trailing: check(deck.id == widget.target?.id),
                 onTap: () => Navigator.of(context).pop(_TargetChoice(deck.id)),
               ),
-            ListTile(
-              leading: const Icon(Icons.add),
-              title: Text(l10n.newDeck),
+            AppListRow(
+              title: l10n.newDeck,
+              leading: const Icon(LucideIcons.plus),
+              onSheet: true,
               selected: widget.target == null,
-              trailing: widget.target == null ? const Icon(Icons.check) : null,
+              trailing: check(widget.target == null),
               onTap: () => Navigator.of(context).pop(const _TargetChoice(null)),
             ),
           ],

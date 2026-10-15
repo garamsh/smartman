@@ -96,6 +96,7 @@ final class SessionSummary {
     required this.knowCount,
     required this.dontKnowCount,
     required this.timeSpent,
+    required this.nextReview,
   });
 
   /// Distinct cards answered at least once.
@@ -105,6 +106,10 @@ final class SessionSummary {
   final int knowCount;
   final int dontKnowCount;
   final Duration timeSpent;
+
+  /// When the first of the cards answered is due again, once every answer
+  /// has been scheduled; null before then, and when no card was answered.
+  final DateTime? nextReview;
 }
 
 /// An answer given in this session; [review] holds its current answer.
@@ -151,6 +156,10 @@ class StudySession extends ChangeNotifier {
 
   /// Each card's stored state when the session opened; a new card is absent.
   final _before = <CardId, CardState>{};
+
+  /// Each answered card's state after its answers as they stand, once the
+  /// engine has scheduled them.
+  final _after = <CardId, CardState>{};
   final _answers = <_Answered>[];
   late DateTime _startedAt;
   late DateTime _shownAt;
@@ -184,6 +193,7 @@ class StudySession extends ChangeNotifier {
               .where((p) => p.answer == Answer.dontKnow)
               .length,
           timeSpent: endedAt.difference(_startedAt),
+          nextReview: _nextReview(),
         ),
         _left ? const [] : previous,
         progress,
@@ -191,6 +201,22 @@ class StudySession extends ChangeNotifier {
     }
     return SessionStudying(_queue.first, previous, progress);
   }
+
+  /// The earliest due time of the answered cards, once each one's current
+  /// answers are scheduled.
+  DateTime? _nextReview() {
+    final answered = {for (final answered in _answers) answered.card.id};
+    if (answered.isEmpty || _pending > 0) return null;
+    final dues = [
+      for (final card in answered)
+        if (_after[card] case final state?) state.due,
+    ];
+    if (dues.isEmpty) return null;
+    return dues.reduce((a, b) => a.isBefore(b) ? a : b);
+  }
+
+  /// How many writes are queued and not yet scheduled.
+  var _pending = 0;
 
   /// Completes when every answer and toggle given so far has been written or
   /// reported.
@@ -300,7 +326,16 @@ class StudySession extends ChangeNotifier {
         if (answered.card.id == card) answered.review,
     ];
     final before = _before[card];
+    _pending++;
     _writes = _writes.then((_) async {
+      var scheduled = false;
+      void markScheduled() {
+        if (scheduled) return;
+        scheduled = true;
+        _pending--;
+        if (!_disposed) notifyListeners();
+      }
+
       try {
         var after = await _scheduler.review(
           before,
@@ -316,6 +351,8 @@ class StudySession extends ChangeNotifier {
             fuzz: review.fuzzFactor,
           );
         }
+        _after[card] = after;
+        markScheduled();
         await _repository.record(card, history, after, at: _clock());
       } on StudyFailure catch (failure) {
         _onFailure(failure);
@@ -330,6 +367,8 @@ class StudySession extends ChangeNotifier {
             context: ErrorDescription('while recording an answer'),
           ),
         );
+      } finally {
+        markScheduled();
       }
     });
   }

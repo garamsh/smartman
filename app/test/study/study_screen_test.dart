@@ -63,6 +63,9 @@ class _StalledRepository implements StudyRepository {
     records.add(card);
     return Completer<void>().future;
   }
+
+  @override
+  Future<Duration?> medianReviewDuration() async => null;
 }
 
 /// A phone in portrait: 390 by 844 logical pixels.
@@ -209,6 +212,35 @@ Future<_Study> _open(
   return study;
 }
 
+/// The count on the summary's tile labelled [label].
+String? _tile(WidgetTester tester, String label) {
+  final tile = find.ancestor(
+    of: find.text(label).last,
+    matching: find.byType(MergeSemantics),
+  );
+  return tester
+      .widgetList<Text>(
+        find.descendant(of: tile.first, matching: find.byType(Text)),
+      )
+      .first
+      .data;
+}
+
+/// Lets the session's writes run until the summary names the next review,
+/// which it does once the engine has scheduled every answer, then settles the
+/// frame that shows it.
+Future<void> _untilNextReview(WidgetTester tester) async {
+  final line = find.textContaining('Your next review');
+  for (var tries = 0; tries < 100 && line.evaluate().isEmpty; tries++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
+  }
+  expect(line, findsOneWidget);
+  await tester.pumpAndSettle();
+}
+
 /// The previous card whose front reads [front].
 Finder _previous(String front) => find.byWidgetPredicate(
   (widget) =>
@@ -237,6 +269,21 @@ final _answerVisibility = find.descendant(
 bool _answerShown(WidgetTester tester) =>
     tester.widget<Visibility>(_answerVisibility).visible;
 
+/// The vertical centre of the half of a split card that holds [text].
+double _halfCenter(WidgetTester tester, Finder text) => tester
+    .getRect(find.ancestor(of: text, matching: find.byType(Expanded)).first)
+    .center
+    .dy;
+
+/// The session's one scroll view: the stack and the current card.
+final _sessionScroll = find.ancestor(
+  of: find.byType(PreviousCards),
+  matching: find.byType(Scrollable),
+);
+
+double _scrollOffset(WidgetTester tester) =>
+    tester.state<ScrollableState>(_sessionScroll).position.pixels;
+
 const _sentence =
     'This sentence is long enough to wrap across the width of half a card. ';
 
@@ -256,13 +303,23 @@ void main() {
       expect(card.center.dy, closeTo(_phone.height * 0.57, 1));
       expect(find.byType(VerticalDivider), findsOneWidget);
       // Every text on screen: the card's sides, of which the back is hidden,
-      // and the count. No deck name, button, hint or next card.
+      // the count, and the swipe hints under the card. No deck name, button
+      // or next card.
       expect(
         {
           for (final element in find.byType(Text).evaluate())
             (element.widget as Text).data,
         },
-        {'a front', 'a back', '0 / 2'},
+        {'a front', 'a back', '0/2', "Don't know", 'Know'},
+      );
+      // The hints sit under the card, "Don't know" left and "Know" right.
+      expect(
+        tester.getRect(find.text("Don't know")).top,
+        greaterThan(card.bottom),
+      );
+      expect(
+        tester.getCenter(find.text("Don't know")).dx,
+        lessThan(tester.getCenter(find.text('Know')).dx),
       );
       expect(_answerShown(tester), isFalse);
       expect(find.byType(ButtonStyleButton), findsNothing);
@@ -299,7 +356,7 @@ void main() {
         _label(tester, _previous('b front')),
         endsWith("Answer: Don't know"),
       );
-      expect(find.text('2 / 3'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
     },
   );
 
@@ -321,7 +378,13 @@ void main() {
         }
         // The card follows the finger and shows the answer it would give.
         expect(_dragOffset(tester, _currentCard), closeTo(dx, 0.01));
-        expect(find.text(dx > 0 ? 'Know' : "Don't know"), findsOneWidget);
+        expect(
+          find.descendant(
+            of: _currentCard,
+            matching: find.text(dx > 0 ? 'Know' : "Don't know"),
+          ),
+          findsOneWidget,
+        );
         await tester.pump(const Duration(milliseconds: 300));
         await gesture.up();
         await tester.pumpAndSettle();
@@ -353,7 +416,10 @@ void main() {
     'long content grows the card to its cap and then scrolls inside each half',
     (tester) async {
       final long = [TextContent(_sentence * 12)];
-      final medium = [TextContent(_sentence)];
+      // A few lines at the question's size, short of the cap.
+      final medium = [
+        const TextContent('This line wraps across a few lines here and there.'),
+      ];
       await _open(
         tester,
         ['long', 'medium'],
@@ -375,6 +441,15 @@ void main() {
         final position = (half as StatefulElement).state as ScrollableState;
         expect(position.position.maxScrollExtent, greaterThan(0));
       }
+      // Long text starts at the top of its half, below the padding.
+      final text = find.descendant(
+        of: _currentCard,
+        matching: find.text(_sentence * 12),
+      );
+      expect(
+        tester.getRect(text.first).top,
+        closeTo(tester.getRect(halves.first).top + StudyStyle.cardPadding, 1),
+      );
 
       await tester.timedDrag(
         _currentCard,
@@ -393,21 +468,38 @@ void main() {
     ('a narrow screen', const Size(320, 700), 1.0),
     ('a large text scale', _phone, 1.5),
   ]) {
-    testWidgets('on $name the answer sits under the question', (tester) async {
-      await _open(tester, ['a'], size: size, textScale: textScale);
+    testWidgets(
+      'on $name the answer sits under the question, each in its centred half',
+      (tester) async {
+        await _open(tester, ['a'], size: size, textScale: textScale);
 
-      expect(
-        find.descendant(of: _currentCard, matching: find.byType(Divider)),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
+        final divider = find.descendant(
           of: _currentCard,
-          matching: find.byType(VerticalDivider),
-        ),
-        findsNothing,
-      );
-    });
+          matching: find.byType(Divider),
+        );
+        expect(divider, findsOneWidget);
+        expect(
+          tester.getCenter(divider).dy,
+          closeTo(tester.getCenter(_currentCard).dy, 1),
+        );
+        final question = find.text('a front');
+        expect(
+          tester.getCenter(question).dy,
+          closeTo(_halfCenter(tester, question), 1),
+        );
+        expect(
+          tester.getCenter(question).dy,
+          lessThan(tester.getCenter(divider).dy),
+        );
+        expect(
+          find.descendant(
+            of: _currentCard,
+            matching: find.byType(VerticalDivider),
+          ),
+          findsNothing,
+        );
+      },
+    );
   }
 
   testWidgets(
@@ -451,6 +543,202 @@ void main() {
     },
   );
 
+  testWidgets(
+    'short text sits vertically centred in each half of the current card and of a previous card',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b']);
+      await study.know();
+      await tester.tap(_currentCard);
+      await tester.pumpAndSettle();
+
+      for (final side in ['b front', 'b back']) {
+        final text = find.descendant(
+          of: _currentCard,
+          matching: find.text(side),
+        );
+        expect(
+          tester.getCenter(text).dy,
+          closeTo(_halfCenter(tester, text), 1),
+          reason: side,
+        );
+      }
+      for (final side in ['a front', 'a back']) {
+        final text = find.descendant(
+          of: find.byType(PreviousCards),
+          matching: find.text(side),
+        );
+        expect(
+          tester.getCenter(text).dy,
+          closeTo(_halfCenter(tester, text), 1),
+          reason: side,
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'a vertical drag scrolls the stack and the current card together and answers nothing, and a horizontal swipe still answers',
+    (tester) async {
+      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
+      final study = await _open(tester, [...names, 'g', 'h']);
+      for (final _ in names) {
+        await study.know();
+      }
+      // After every answer the view is back at its end, the card at 57%.
+      final rest = tester.getCenter(_currentCard).dy;
+      expect(rest, closeTo(_phone.height * 0.57, 1));
+
+      // Past the touch slop the drag is a scroll; from there the card and
+      // the stack follow the finger.
+      final gesture = await tester.startGesture(tester.getCenter(_currentCard));
+      await gesture.moveBy(const Offset(0, kDragSlopDefault + 1));
+      await tester.pump();
+      final card = tester.getCenter(_currentCard).dy;
+      final newest = tester.getCenter(_previous('f front')).dy;
+      for (var moved = 0; moved < 10; moved++) {
+        await gesture.moveBy(const Offset(0, 15));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(tester.getCenter(_currentCard).dy, closeTo(card + 150, 1));
+      expect(
+        tester.getCenter(_previous('f front')).dy,
+        closeTo(newest + 150, 1),
+      );
+      expect(study.current, 'g front');
+      expect(_dragOffset(tester, _currentCard), 0);
+
+      await study.swipe(200);
+      expect(study.current, 'h front');
+    },
+  );
+
+  testWidgets(
+    'the view stays at its end through an answer, on the frame the next card appears',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c', 'd', 'e']);
+      for (final _ in ['a', 'b', 'c']) {
+        await study.know();
+      }
+
+      await tester.timedDrag(
+        _currentCard,
+        const Offset(200, 0),
+        const Duration(seconds: 1),
+      );
+      final next = find.descendant(
+        of: _currentCard,
+        matching: find.text('e front'),
+      );
+      for (var frame = 0; frame < 60 && next.evaluate().isEmpty; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      expect(next, findsOneWidget, reason: 'the next card is on screen');
+      final position = tester.state<ScrollableState>(_sessionScroll).position;
+      expect(position.maxScrollExtent, greaterThan(0));
+      expect(position.pixels, position.maxScrollExtent);
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'an answer given while scrolled back returns the view to its end',
+    (tester) async {
+      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
+      final study = await _open(tester, [...names, 'g', 'h']);
+      for (final _ in names) {
+        await study.know();
+      }
+      await tester.drag(_currentCard, const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final card = tester.getRect(_currentCard);
+      expect(card.bottom, greaterThan(_phone.height), reason: 'partly hidden');
+
+      // Swiped by its visible top.
+      await tester.timedDragFrom(
+        Offset(card.center.dx, card.top + 20),
+        const Offset(200, 0),
+        const Duration(seconds: 1),
+      );
+      await tester.pumpAndSettle();
+
+      expect(study.current, 'h front');
+      expect(
+        tester.getCenter(_currentCard).dy,
+        closeTo(_phone.height * 0.57, 1),
+      );
+    },
+  );
+
+  testWidgets(
+    'a toggle while scrolled back leaves the view where it is, and the current card unchanged',
+    (tester) async {
+      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
+      final study = await _open(tester, [...names, 'g', 'h']);
+      for (final _ in names) {
+        await study.know();
+      }
+      await tester.drag(_currentCard, const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final offset = _scrollOffset(tester);
+      final card = tester.getRect(_currentCard);
+
+      // To "Don't know", the card's last answer, which puts it back.
+      await tester.tap(_previous('e front'));
+      await tester.pumpAndSettle();
+
+      expect(
+        _label(tester, _previous('e front')),
+        endsWith("Answer: Don't know. Changed"),
+      );
+      expect(_scrollOffset(tester), offset);
+      expect(tester.getRect(_currentCard), card);
+      expect(study.current, 'g front');
+    },
+  );
+
+  testWidgets(
+    'a screen reader answering the card while it is scrolled out of view brings it into view first',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final names = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+      final study = await _open(tester, [...names, 'k', 'l']);
+      for (final _ in names) {
+        await study.know();
+      }
+      await tester.drag(_currentCard, const Offset(0, 520));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(_currentCard).top, greaterThan(_phone.height));
+
+      final node = tester.getSemantics(_currentCard);
+      node.owner!.performAction(
+        node.id,
+        SemanticsAction.customAction,
+        CustomSemanticsAction.getIdentifier(
+          const CustomSemanticsAction(label: 'Know'),
+        ),
+      );
+      await tester.pump();
+
+      // In view while it flies off.
+      expect(
+        tester.getRect(_currentCard).bottom,
+        lessThanOrEqualTo(_phone.height),
+      );
+      await tester.pumpAndSettle();
+      expect(study.current, 'l front');
+      expect(
+        tester.getCenter(_currentCard).dy,
+        closeTo(_phone.height * 0.57, 1),
+      );
+      semantics.dispose();
+    },
+  );
+
   testWidgets('a block this version cannot show renders as its placeholder', (
     tester,
   ) async {
@@ -484,7 +772,7 @@ void main() {
       }
 
       final stack = find.byType(PreviousCards);
-      final scrollable = find.descendant(
+      final scrollable = find.ancestor(
         of: stack,
         matching: find.byType(Scrollable),
       );
@@ -741,19 +1029,28 @@ void main() {
       expect(study.current, 'a front');
       await study.know(elapsed: const Duration(seconds: 45));
 
-      expect(find.text('Session complete'), findsOneWidget);
-      expect(find.text('2 cards studied'), findsOneWidget);
-      expect(find.text('Know: 2'), findsOneWidget);
-      expect(find.text("Don't know: 1"), findsOneWidget);
-      expect(find.text('Time spent: 1 min 5 s'), findsOneWidget);
-      expect(find.text('2 / 2'), findsOneWidget);
+      await _untilNextReview(tester);
+      expect(find.text("You've finished today's cards"), findsOneWidget);
+      // Every answer was scheduled a day out.
+      expect(
+        find.text(
+          "Your next review is tomorrow. We'll show these again just before you forget.",
+        ),
+        findsOneWidget,
+      );
+      expect(_tile(tester, 'Studied'), '2');
+      expect(_tile(tester, 'Know'), '2');
+      expect(_tile(tester, "Don't know"), '1');
+      expect(find.text('Time spent'), findsOneWidget);
+      expect(find.text('1 min 5 s'), findsOneWidget);
+      expect(find.text('2/2'), findsOneWidget);
 
       // The stack stays, and toggling its last answer studies the card again.
       await tester.tap(
         find.byWidget(tester.widgetList(_previous('a front')).last),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Session complete'), findsNothing);
+      expect(find.text("You've finished today's cards"), findsNothing);
       expect(study.current, 'a front');
     },
   );
@@ -772,9 +1069,10 @@ void main() {
       () => study.db.select(study.db.cardStates).get(),
     );
     expect(stored, hasLength(1));
-    expect(find.text('Session complete'), findsOneWidget);
+    expect(find.text("You've finished today's cards"), findsOneWidget);
     expect(find.text('Nothing to study right now.'), findsOneWidget);
-    expect(find.text('0 cards studied'), findsOneWidget);
+    expect(_tile(tester, 'Studied'), '0');
+    expect(find.textContaining('Your next review'), findsNothing);
     expect(study.current, isNull);
   });
 
@@ -823,10 +1121,23 @@ void main() {
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
 
+        await tester.longPress(_previous('a front'));
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsOneWidget);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsNothing);
+
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
-        expect(find.text('Session complete'), findsOneWidget);
+        expect(find.text("You've finished today's cards"), findsOneWidget);
+        // The summary is checked as it ends up, with its next review shown.
+        await _untilNextReview(tester);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       },
     );
@@ -850,12 +1161,12 @@ void main() {
         await leave(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text('Session complete'), findsOneWidget);
-        expect(find.text('1 card studied'), findsOneWidget);
+        expect(find.text("You've finished today's cards"), findsOneWidget);
+        expect(_tile(tester, 'Studied'), '1');
         expect(_previous('a front'), findsNothing);
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 
-        await tester.tap(find.text('Done'));
+        await tester.tap(find.text('Back to decks'));
         await tester.pumpAndSettle();
         expect(find.byType(StudyScreen), findsNothing);
       },

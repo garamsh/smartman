@@ -6,12 +6,13 @@ import '../../shared/theme.dart';
 /// the app theme's [AppColors].
 abstract final class StudyStyle {
   /// Space between a card and the screen's left and right edges.
-  static const cardMargin = 20.0;
+  static const cardMargin = AppSpace.gutter;
   static const cardRadius = AppRadius.card;
-  static const cardPadding = 16.0;
+  static const previousRadius = AppRadius.previous;
+  static const cardPadding = AppSpace.s16;
 
   /// Space between two content blocks, and inside a block's placeholder.
-  static const blockGap = 8.0;
+  static const blockGap = AppSpace.s8;
 
   /// The current card's height before its content grows it.
   static const currentMinHeight = 200.0;
@@ -23,8 +24,9 @@ abstract final class StudyStyle {
   /// screen height.
   static const currentCenterFraction = 0.57;
 
-  /// The least space kept below the current card.
-  static const currentBottomGap = 16.0;
+  /// The least space kept below the current card, which holds the hint row
+  /// under it.
+  static const currentBottomGap = AppSpace.s16 + hintGap + AppSize.smallIcon;
 
   /// A card half narrower than this, in logical pixels at text scale 1, puts
   /// the answer under the question.
@@ -36,7 +38,7 @@ abstract final class StudyStyle {
   static const previousOverlap = 30.0;
 
   /// Space between the nearest previous card and the current card.
-  static const previousGap = 12.0;
+  static const previousGap = AppSpace.s12;
   static const previousLines = 2;
 
   /// How much each step away from the current card shrinks a previous card,
@@ -48,9 +50,15 @@ abstract final class StudyStyle {
   static const depthSteps = 5;
   static const depthMaxBlur = 1.2;
 
-  static const dotSize = 7.0;
+  static const dotSize = AppSize.dot;
   static const topBarHeight = 56.0;
-  static const progressHeight = 4.0;
+  static const progressHeight = AppSize.progress;
+
+  /// How far the divider between a card's halves stops short of its edges.
+  static const dividerInset = AppSpace.s28;
+
+  /// Space between the current card and the hint row under it.
+  static const hintGap = AppSpace.s12;
 
   /// The drag after which the answer chip and tint appear.
   static const dragFeedbackDistance = 40.0;
@@ -80,18 +88,13 @@ abstract final class StudyStyle {
   static const tintOpacity = 0.12;
 
   /// The current card's shadow, in the theme's [AppColors.shadow].
-  static List<BoxShadow> currentShadow(AppColors colors) => [
-    BoxShadow(
-      color: colors.shadow.withValues(alpha: 0.2),
-      blurRadius: 24,
-      offset: const Offset(0, 8),
-    ),
-  ];
+  static List<BoxShadow> currentShadow(AppColors colors) =>
+      AppShadow.raised(colors);
 
   /// A previous card's shadow, in the theme's [AppColors.shadow].
   static List<BoxShadow> previousShadow(AppColors colors) => [
     BoxShadow(
-      color: colors.shadow.withValues(alpha: 0.12),
+      color: colors.shadow.withValues(alpha: 0.06),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),

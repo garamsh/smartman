@@ -13,43 +13,43 @@
   "cards": [
     {
       "front": "carry",
-      "back": "나르다"
+      "meaning": "나르다"
     },
     {
       "front": "festival",
-      "back": "축제"
+      "meaning": "축제"
     },
     {
       "front": "slowly",
-      "back": "천천히"
+      "meaning": "천천히"
     },
     {
       "front": "hungry",
-      "back": "배고픈"
+      "meaning": "배고픈"
     },
     {
       "front": "library",
-      "back": "도서관"
+      "meaning": "도서관"
     },
     {
       "front": "often",
-      "back": "자주"
+      "meaning": "자주"
     },
     {
       "front": "already",
-      "back": "이미"
+      "meaning": "이미"
     },
     {
       "front": "careful",
-      "back": "조심스러운"
+      "meaning": "조심스러운"
     },
     {
       "front": "mountain",
-      "back": "산"
+      "meaning": "산"
     },
     {
       "front": "empty",
-      "back": "빈"
+      "meaning": "빈"
     }
   ]
 }

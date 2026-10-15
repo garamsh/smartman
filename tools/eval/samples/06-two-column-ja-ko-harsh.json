@@ -14,59 +14,59 @@
   "cards": [
     {
       "front": "料理",
-      "back": "요리"
+      "meaning": "요리"
     },
     {
       "front": "易しい",
-      "back": "쉽다"
+      "meaning": "쉽다"
     },
     {
       "front": "暗い",
-      "back": "어둡다"
+      "meaning": "어둡다"
     },
     {
       "front": "楽しい",
-      "back": "즐겁다"
+      "meaning": "즐겁다"
     },
     {
       "front": "忘れる",
-      "back": "잊다"
+      "meaning": "잊다"
     },
     {
       "front": "新しい",
-      "back": "새롭다"
+      "meaning": "새롭다"
     },
     {
       "front": "椅子",
-      "back": "의자"
+      "meaning": "의자"
     },
     {
       "front": "音楽",
-      "back": "음악"
+      "meaning": "음악"
     },
     {
       "front": "家族",
-      "back": "가족"
+      "meaning": "가족"
     },
     {
       "front": "見る",
-      "back": "보다"
+      "meaning": "보다"
     },
     {
       "front": "古い",
-      "back": "낡다"
+      "meaning": "낡다"
     },
     {
       "front": "開ける",
-      "back": "열다"
+      "meaning": "열다"
     },
     {
       "front": "お茶",
-      "back": "차"
+      "meaning": "차"
     },
     {
       "front": "聞く",
-      "back": "듣다"
+      "meaning": "듣다"
     }
   ]
 }

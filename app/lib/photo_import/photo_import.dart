@@ -2,6 +2,7 @@
 /// reviews and saves into a deck.
 library;
 
+export 'src/detail_level.dart' show DetailLevel, detailLevelStorageKeys;
 export 'src/extraction_client.dart'
     show CandidateCard, ExtractionClient, extractCardsUrl, HttpExtractionClient;
 export 'src/failure.dart'

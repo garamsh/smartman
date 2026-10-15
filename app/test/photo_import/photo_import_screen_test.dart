@@ -3,23 +3,33 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/shared/ui/app_chip.dart';
+import 'package:smartman/shared/ui/app_list_row.dart';
 
 import 'fakes.dart';
 
 /// Photo import over decks "French" (holding [french]) and "Spanish", with a
 /// substitute camera, library and extraction client.
 class _Import {
-  _Import._(this.tester, this.repository, this.french, this.spanish);
+  _Import._(
+    this.tester,
+    this.repository,
+    this.french,
+    this.spanish,
+    this.preferences,
+  );
 
   final WidgetTester tester;
   final DeckRepository repository;
   final Deck french;
   final Deck spanish;
+  final SharedPreferencesWithCache preferences;
   final photos = FakePhotoSource();
   final client = FakeExtractionClient();
 
@@ -33,6 +43,7 @@ class _Import {
     Map<String, String> french = const {},
     ThemeMode themeMode = ThemeMode.light,
     bool disableAnimations = false,
+    Map<String, Object> stored = const {},
     void Function(_Import import)? before,
   }) async {
     final db = AppDatabase(NativeDatabase.memory());
@@ -56,7 +67,14 @@ class _Import {
       }
       return (frenchDeck, spanishDeck);
     }))!;
-    final import = _Import._(tester, repository, frenchDeck, spanishDeck);
+    final preferences = await openPreferences(tester, stored);
+    final import = _Import._(
+      tester,
+      repository,
+      frenchDeck,
+      spanishDeck,
+      preferences,
+    );
     before?.call(import);
     final target = deck == null ? frenchDeck.id : deck(import);
     await tester.pumpWidget(
@@ -84,6 +102,7 @@ class _Import {
                         deck: target,
                         client: import.client,
                         photos: import.photos,
+                        preferences: import.preferences,
                       ),
                     ),
                   );
@@ -102,6 +121,20 @@ class _Import {
   }
 
   bool get hasPopped => !identical(popped, _notPopped);
+
+  /// Moves the app to [state], as the system does around a permission prompt.
+  Future<void> lifecycle(AppLifecycleState state) async {
+    tester.binding.handleAppLifecycleStateChanged(state);
+    await tester.pump();
+  }
+
+  /// Lets the oldest held camera open finish; the session it brings is shown
+  /// a frame later.
+  Future<void> finishOpen() async {
+    photos.finishOpen();
+    await tester.pump();
+    await tester.pump();
+  }
 
   Future<void> tap(Finder finder) async {
     await tester.tap(finder);
@@ -124,16 +157,12 @@ class _Import {
   }
 
   /// The review row showing [text].
-  Finder row(String text) => find.ancestor(
-    of: find.text(text),
-    matching: find.byWidgetPredicate(
-      (widget) => widget is Container && widget.decoration != null,
-    ),
-  );
+  Finder row(String text) =>
+      find.ancestor(of: find.text(text), matching: find.byType(AppRowSurface));
 
   Future<void> choose(String rowText, String option) async {
     await tap(
-      find.descendant(of: row(rowText), matching: find.byType(ActionChip)),
+      find.descendant(of: row(rowText), matching: find.byType(AppChip)),
     );
     await tap(find.widgetWithText(MenuItemButton, option));
   }
@@ -225,7 +254,7 @@ void main() {
       expect(await import.deckNames(), ['French', 'Spanish']);
       await import.tap(find.text('Add 2 cards'));
       await tester.enterText(find.byType(TextField), 'Page 12');
-      await import.tap(find.text('Save'));
+      await import.tap(find.text('Create'));
 
       expect(await import.deckNames(), ['French', 'Page 12', 'Spanish']);
       final saved = import.popped! as Deck;
@@ -308,6 +337,87 @@ void main() {
       expect((import.photos.opened, import.photos.closed), (1, 1));
       await import.close();
     });
+
+    testWidgets(
+      'a prompt answered during an open leaves that one open and its session',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) => import.photos.holdOpens = true,
+        );
+        final photos = import.photos;
+        final preview = find.byKey(const Key('camera preview'));
+
+        // Control: an open with no lifecycle change shows its session.
+        expect(preview, findsNothing);
+        await import.finishOpen();
+        expect(preview, findsOneWidget);
+        expect((photos.openCalls, photos.opened, photos.closed), (1, 1, 0));
+
+        await import.lifecycle(AppLifecycleState.inactive);
+        await import.lifecycle(AppLifecycleState.resumed);
+        expect(photos.openCalls, 2);
+        expect(preview, findsNothing);
+
+        // The prompt makes the app inactive; answering it resumes the app.
+        await import.lifecycle(AppLifecycleState.inactive);
+        await import.lifecycle(AppLifecycleState.resumed);
+        await import.finishOpen();
+
+        expect(preview, findsOneWidget);
+        expect((photos.openCalls, photos.opened, photos.closed), (2, 2, 1));
+        await import.shoot();
+        expect(import.client.calls.single.photo, same(testPhoto));
+        await import.close();
+      },
+    );
+
+    testWidgets('a refused open is tried once more when the app returns', (
+      tester,
+    ) async {
+      final import = await _Import.open(
+        tester,
+        before: (import) => import.photos.holdOpens = true,
+      );
+      final photos = import.photos;
+
+      await import.lifecycle(AppLifecycleState.inactive);
+      photos.cameraFailure = const CameraDenied('denied');
+      await import.finishOpen();
+      expect(
+        find.text(
+          "The app isn't allowed to use the camera. Allow it in Settings, or choose a photo from your album.",
+        ),
+        findsOneWidget,
+      );
+      expect(photos.openCalls, 1);
+
+      // Access allowed in Settings, then back to the app.
+      photos.cameraFailure = null;
+      await import.lifecycle(AppLifecycleState.resumed);
+      expect(photos.openCalls, 2);
+      await import.finishOpen();
+
+      expect(find.byKey(const Key('camera preview')), findsOneWidget);
+      expect((photos.openCalls, photos.opened, photos.closed), (2, 1, 0));
+      await import.close();
+    });
+
+    testWidgets('leaving the screen during an open closes its late session', (
+      tester,
+    ) async {
+      final import = await _Import.open(
+        tester,
+        before: (import) => import.photos.holdOpens = true,
+      );
+
+      await import.tap(find.byTooltip('Close'));
+      expect(import.hasPopped, isTrue);
+      await import.finishOpen();
+
+      expect((import.photos.opened, import.photos.closed), (1, 1));
+      await import.close();
+    });
   });
 
   group('extracting', () {
@@ -343,7 +453,7 @@ void main() {
       expect(call.cancelled, isTrue);
       expect(find.byTooltip('Take photo'), findsOneWidget);
       // A late answer to the cancelled request is ignored.
-      call.answer.complete([const CandidateCard(front: 'a', back: 'b')]);
+      call.answer.complete([const CandidateCard(front: 'a', meaning: 'b')]);
       await tester.pumpAndSettle();
       expect(find.text('Found 1 card'), findsNothing);
       expect(find.byTooltip('Take photo'), findsOneWidget);
@@ -407,6 +517,30 @@ void main() {
         expect(find.text('dog'), findsOneWidget);
         expect(find.text('Retake'), findsOneWidget);
         expect(find.text('Add 2 cards'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a short side sits vertically centred beside a taller one in its row',
+      (tester) async {
+        final import = await _Import.open(tester);
+
+        await import.extract({'chien': 'dog\nhound\npuppy'});
+
+        final short = find.text('chien');
+        final side = find
+            .ancestor(of: short, matching: find.byType(Expanded))
+            .first;
+        expect(
+          tester.getRect(side).height,
+          greaterThan(tester.getRect(short).height * 2),
+          reason: 'the taller back stretches the row',
+        );
+        expect(
+          tester.getCenter(short).dy,
+          closeTo(tester.getCenter(side).dy, 1),
+        );
         await import.close();
       },
     );
@@ -567,6 +701,144 @@ void main() {
     });
   });
 
+  group('detail level', () {
+    const run = CandidateCard(
+      front: 'run',
+      meaning: '달리다',
+      partOfSpeech: '[동]',
+      examples: ['I run every morning.', 'run a shop'],
+    );
+    const river = CandidateCard(front: 'river', meaning: '강');
+
+    DetailLevel selected(WidgetTester tester) => tester
+        .widget<SegmentedButton<DetailLevel>>(
+          find.byType(SegmentedButton<DetailLevel>),
+        )
+        .selected
+        .single;
+
+    Future<void> extractCards(_Import import) async {
+      await import.shoot();
+      import.client.answerCards(const [run, river]);
+      await import.tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'with no choice stored, capture and review start at Basic, the part of speech before the meaning',
+      (tester) async {
+        final import = await _Import.open(tester);
+        expect(import.preferences.getString('photoDetailLevel'), isNull);
+
+        expect(find.text('What each card says'), findsOneWidget);
+        expect(selected(tester), DetailLevel.basic);
+        await extractCards(import);
+
+        expect(selected(tester), DetailLevel.basic);
+        expect(find.text('[동] 달리다'), findsOneWidget);
+        expect(find.text('강'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    for (final (level, label, back) in [
+      (DetailLevel.simple, 'Simple', '달리다'),
+      (DetailLevel.basic, 'Basic', '[동] 달리다'),
+      (
+        DetailLevel.detailed,
+        'Detailed',
+        '[동] 달리다\nI run every morning.\nrun a shop',
+      ),
+    ]) {
+      testWidgets(
+        '$label, chosen on the camera, composes each answer it shows and saves, and is remembered',
+        (tester) async {
+          final initial = level == DetailLevel.basic
+              ? DetailLevel.simple
+              : DetailLevel.basic;
+          final import = await _Import.open(
+            tester,
+            stored: {'photoDetailLevel': initial.name},
+          );
+          expect(selected(tester), initial, reason: 'the stored level');
+
+          await import.tap(find.text(label));
+          expect(selected(tester), level);
+          expect(import.preferences.getString('photoDetailLevel'), level.name);
+          await extractCards(import);
+
+          expect(selected(tester), level);
+          expect(find.text(back), findsOneWidget);
+          expect(find.text('강'), findsOneWidget, reason: 'no field to add');
+          await import.tap(find.text('Add 2 cards'));
+
+          expect(await import.cards(import.french), [
+            ('run', back.replaceAll('\n', ' / '), CardSource.import),
+            ('river', '강', CardSource.import),
+          ]);
+          await import.close();
+        },
+      );
+    }
+
+    testWidgets(
+      'switching on review recomposes every answer but one typed by hand, which is marked edited and saved as typed',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await extractCards(import);
+        expect(find.text('Edited'), findsNothing);
+
+        await import.tap(find.text('강'));
+        await tester.enterText(find.byType(TextField), 'a river');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        expect(find.text('Edited'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('Answer: a river, Edited'),
+          findsOneWidget,
+        );
+
+        await import.tap(find.text('Detailed'));
+
+        expect(
+          find.text('[동] 달리다\nI run every morning.\nrun a shop'),
+          findsOneWidget,
+        );
+        expect(find.text('a river'), findsOneWidget);
+        expect(find.text('Edited'), findsOneWidget);
+        expect(import.preferences.getString('photoDetailLevel'), 'detailed');
+
+        await import.tap(find.text('Simple'));
+        expect(find.text('달리다'), findsOneWidget);
+        expect(find.text('a river'), findsOneWidget);
+        await import.tap(find.text('Add 2 cards'));
+
+        expect(await import.cards(import.french), [
+          ('run', '달리다', CardSource.import),
+          ('river', 'a river', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'candidates combined on the photo merge their answers at the chosen level',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.shoot();
+        import.client.answerCards(const [
+          run,
+          CandidateCard(front: 'Run', meaning: '운영하다', partOfSpeech: '[동]'),
+        ]);
+        await tester.pumpAndSettle();
+
+        expect(find.text('[동] 달리다\n[동] 운영하다'), findsOneWidget);
+        await import.tap(find.text('Simple'));
+        expect(find.text('달리다\n운영하다'), findsOneWidget);
+        await import.close();
+      },
+    );
+  });
+
   group('failures', () {
     final cases = <(PhotoImportFailure, String, bool, bool)>[
       (
@@ -589,7 +861,7 @@ void main() {
       ),
       (
         const NoCardsFound(),
-        'No cards found. Try a brighter, straighter photo',
+        'No cards found. Try a brighter, straighter photo.',
         false,
         true,
       ),
@@ -601,7 +873,7 @@ void main() {
       ),
       (
         const ModelFailed(),
-        "Couldn't read the cards. Please try again in a moment",
+        "Couldn't read the cards. Please try again in a moment.",
         true,
         true,
       ),
@@ -673,7 +945,7 @@ void main() {
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'capture, extracting and review meet the guidelines in ${mode.name}',
+        'capture, the deck sheet, extracting, review and a failure meet the guidelines in ${mode.name}',
         (tester) async {
           final semantics = tester.ensureSemantics();
           final import = await _Import.open(
@@ -694,11 +966,22 @@ void main() {
           }
 
           await check();
+          await import.tap(find.text('Add to · French'));
+          expect(find.text('Add to'), findsOneWidget);
+          await check();
+          await import.tap(find.text('Spanish'));
+          expect(find.text('Add to · Spanish'), findsOneWidget);
           await import.shoot();
           await check();
           import.client.answer({'chat': 'talk', 'chien': 'dog'});
           await tester.pumpAndSettle();
-          expect(find.text('Skip'), findsOneWidget);
+          expect(find.text('Add 2 cards'), findsOneWidget);
+          await check();
+          await import.tap(find.text('Retake'));
+          await import.shoot();
+          import.client.fail(const ModelFailed());
+          await tester.pumpAndSettle();
+          expect(find.text('Try again'), findsOneWidget);
           await check();
           await import.close();
           semantics.dispose();

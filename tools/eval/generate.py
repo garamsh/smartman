@@ -11,8 +11,8 @@ Regenerate from the repository root with:
 Each sample is a page in one layout and language pair, set in the bundled OFL fonts under
 tools/eval/fonts/, then photographed synthetically: perspective, rotation, uneven lighting,
 blur, and JPEG noise. Every random choice comes from SEED and the sample's index, so a rerun
-with the locked dependencies writes the same files. The cards a page shows are written beside
-its image as the ground truth.
+with the locked dependencies writes the same files. The cards a page shows, with the parts of
+speech and examples it prints, are written beside its image as the ground truth.
 """
 
 import json
@@ -201,6 +201,16 @@ def photograph(page: Image.Image, rng: np.random.Generator, d: Distortion) -> Im
     return Image.fromarray(np.clip(noisy, 0, 255).astype(np.uint8))
 
 
+def truth_card(entry: dict, layout: str) -> dict:
+    """An entry's fields as its page prints them: only the dictionary layout prints a part of speech and examples."""
+    card = {"front": entry["front"], "meaning": entry["back"]}
+    if layout == "dictionary":
+        card["partOfSpeech"] = entry["pos"]
+        if "example" in entry:
+            card["examples"] = [entry["example"]]
+    return card
+
+
 def check_coverage(covered: dict[str, set[str]]) -> None:
     """Fails when a font lacks a character drawn in it, which it would draw as an empty box."""
     for face, chars in covered.items():
@@ -238,7 +248,7 @@ def main() -> None:
                     "hand": hand,
                     "distortion": style if style == "harsh" else "mild",
                     "fonts": sorted({page.front_face, page.back_face}),
-                    "cards": [{"front": e["front"], "back": e["back"]} for e in picked],
+                    "cards": [truth_card(e, layout) for e in picked],
                 }
                 (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                       encoding="utf-8")

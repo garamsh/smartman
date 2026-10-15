@@ -13,67 +13,67 @@
   "cards": [
     {
       "front": "garden",
-      "back": "정원"
+      "meaning": "정원"
     },
     {
       "front": "young",
-      "back": "젊은"
+      "meaning": "젊은"
     },
     {
       "front": "ticket",
-      "back": "표"
+      "meaning": "표"
     },
     {
       "front": "memory",
-      "back": "기억"
+      "meaning": "기억"
     },
     {
       "front": "reason",
-      "back": "이유"
+      "meaning": "이유"
     },
     {
       "front": "quickly",
-      "back": "빨리"
+      "meaning": "빨리"
     },
     {
       "front": "empty",
-      "back": "빈"
+      "meaning": "빈"
     },
     {
       "front": "friendship",
-      "back": "우정"
+      "meaning": "우정"
     },
     {
       "front": "repeat",
-      "back": "반복하다"
+      "meaning": "반복하다"
     },
     {
       "front": "gentle",
-      "back": "온화한"
+      "meaning": "온화한"
     },
     {
       "front": "cheap",
-      "back": "싼"
+      "meaning": "싼"
     },
     {
       "front": "habit",
-      "back": "습관"
+      "meaning": "습관"
     },
     {
       "front": "careful",
-      "back": "조심스러운"
+      "meaning": "조심스러운"
     },
     {
       "front": "prepare",
-      "back": "준비하다"
+      "meaning": "준비하다"
     },
     {
       "front": "direction",
-      "back": "방향"
+      "meaning": "방향"
     },
     {
       "front": "mirror",
-      "back": "거울"
+      "meaning": "거울"
     }
   ]
 }

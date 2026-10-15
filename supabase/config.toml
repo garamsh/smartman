@@ -391,6 +391,11 @@ deno_version = 2
 [functions.extract-cards]
 verify_jwt = true
 
+# Refuses a request without a valid JWT before the function runs; the function then refuses
+# the anon key and anonymous sign-ins itself, and deletes only the token's user.
+[functions.delete-account]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

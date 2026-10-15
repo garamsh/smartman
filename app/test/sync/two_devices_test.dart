@@ -8,9 +8,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/shared/database.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import 'device.dart';
 
@@ -67,6 +69,7 @@ void main() {
   late UserId account;
   late Device a;
   late Device b;
+  late String email;
   final clients = <SupabaseClient>[];
 
   setUpAll(() async {
@@ -77,7 +80,7 @@ void main() {
   /// Two devices signed in to one new account, each with its own client.
   setUp(() async {
     if (skip != null) return;
-    final email = 'sync-${DateTime.now().microsecondsSinceEpoch}@example.com';
+    email = 'sync-${DateTime.now().microsecondsSinceEpoch}@example.com';
     const password = 'two-devices-password';
     // Password sign-in needs no PKCE flow, and so no storage for its verifier.
     const options = AuthClientOptions(authFlowType: AuthFlowType.implicit);
@@ -200,6 +203,100 @@ void main() {
       expect(
         {for (final review in reviews) review.rating: review.fuzzFactor},
         {'good': 0.2, 'again': 0.7},
+        reason: device.name,
+      );
+      final state = (await device.stateOf(card.id))!;
+      expect(
+        [state.stability, state.difficulty, state.due.millisecondsSinceEpoch],
+        [union.stability, union.difficulty, union.due.millisecondsSinceEpoch],
+        reason: device.name,
+      );
+    }
+  }, skip: skip);
+
+  test('an answer and its toggle written as the web app writes them '
+      'converge with a phone\'s offline answer on both devices', () async {
+    final deck = await shared();
+    final card = await addCard(a, deck, 'chat');
+    await a.sync(account);
+    await b.sync(account);
+    // The web app's session: the same account, signed in on its own client.
+    final web = SupabaseClient(
+      url!,
+      key!,
+      authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
+    );
+    clients.add(web);
+    await web.auth.signInWithPassword(
+      email: email,
+      password: 'two-devices-password',
+    );
+    String time(DateTime at) => at.toUtc().toIso8601String();
+    final reviewId = const Uuid().v4();
+    final answeredAt = a.now.add(const Duration(days: 1));
+    final toggledAt = answeredAt.add(const Duration(minutes: 1));
+    const webFactor = 0.3;
+    ReviewRow review(String rating) => ReviewRow(
+      id: reviewId,
+      cardId: card.id.value,
+      rating: rating,
+      reviewedAt: answeredAt,
+      durationMs: 3000,
+      fuzzFactor: webFactor,
+      updatedAt: answeredAt,
+      dirty: false,
+    );
+    Future<void> writeState(String rating, DateTime editedAt) async {
+      final state = (await scheduler.fold([review(rating)]))!;
+      await web.from('card_states').upsert({
+        'user_id': account.value,
+        'card_id': card.id.value,
+        'stability': state.stability,
+        'difficulty': state.difficulty,
+        'last_review': time(state.lastReview),
+        'due': time(state.due),
+        'updated_at': time(editedAt),
+        'deleted_at': null,
+      }, onConflict: 'user_id,card_id');
+    }
+
+    // The rows web/src/features/study/record-answer.ts writes: an answer
+    // inserts its review and upserts the card's state; a toggle moves the
+    // rating where the server's edit is older, and upserts the state again.
+    await web.from('reviews').upsert({
+      'id': reviewId,
+      'user_id': account.value,
+      'card_id': card.id.value,
+      'rating': 'good',
+      'reviewed_at': time(answeredAt),
+      'duration_ms': 3000,
+      'fuzz_factor': webFactor,
+      'updated_at': time(answeredAt),
+    }, ignoreDuplicates: true);
+    await writeState('good', answeredAt);
+    await web
+        .from('reviews')
+        .update({'rating': 'again', 'updated_at': time(toggledAt)})
+        .eq('id', reviewId)
+        .lt('updated_at', time(toggledAt));
+    await writeState('again', toggledAt);
+    // Meanwhile B answers the card offline, a day after the web.
+    b.now = answeredAt.add(const Duration(days: 1));
+    await b.answer(card.id, 'good', fuzz: 0.7);
+    final offline = (await b.stateOf(card.id))!;
+
+    await a.sync(account);
+    await b.sync(account);
+    await a.sync(account);
+
+    final union = (await a.foldOf(card.id))!;
+    // Control: B's state before the sync left out the web's answer.
+    expect(offline.stability, isNot(union.stability));
+    for (final device in [a, b]) {
+      final reviews = await device.db.select(device.db.reviews).get();
+      expect(
+        {for (final review in reviews) review.rating: review.fuzzFactor},
+        {'again': webFactor, 'good': 0.7},
         reason: device.name,
       );
       final state = (await device.stateOf(card.id))!;

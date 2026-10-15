@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_section_label.dart';
+import '../../shared/ui/app_sheet.dart';
+import '../../shared/ui/mascot.dart';
+import 'account_avatar.dart';
 import 'account_data.dart';
 import 'account_service.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
+import 'legal.dart';
 import 'providers.dart';
 
-/// Shows whether the user is signed in, and signs them in or out; and the
-/// theme the app is drawn in.
+/// Shows the signed-in account, signs it out and deletes it; and the theme
+/// the app is drawn in.
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
 
@@ -19,8 +26,11 @@ class AccountScreen extends ConsumerStatefulWidget {
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
 }
 
+/// The account action under way, whose row shows progress.
+enum _Action { signingOut, deleting }
+
 class _AccountScreenState extends ConsumerState<AccountScreen> {
-  bool _busy = false;
+  _Action? _busy;
 
   @override
   Widget build(BuildContext context) {
@@ -28,47 +38,44 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final state = ref.watch(accountStateProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTitle)),
-      bottomNavigationBar: const SafeArea(child: _ThemeSection()),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 16,
-            children: switch (state) {
-              SignedOut() => [
-                Text(l10n.signedOutBody, textAlign: TextAlign.center),
-                if (_busy)
-                  CircularProgressIndicator(semanticsLabel: l10n.signingIn)
-                else
-                  FilledButton(
-                    onPressed: () => _run((service) => service.signIn()),
-                    child: Text(l10n.signInWithGoogle),
-                  ),
-              ],
-              SignedIn(:final email) => [
-                Text(
-                  email == null ? l10n.signedIn : l10n.signedInAs(email),
-                  textAlign: TextAlign.center,
-                ),
-                ref.watch(syncStatusProvider)(),
-                if (_busy)
-                  CircularProgressIndicator(semanticsLabel: l10n.signingOut)
-                else
-                  OutlinedButton(
-                    onPressed: _signOut,
-                    child: Text(l10n.signOut),
-                  ),
-              ],
-              AccountUnavailable(:final failure) => [
-                Text(
-                  describeAccountFailure(l10n, failure),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            },
-          ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.gutter,
+          AppSpace.s8,
+          AppSpace.gutter,
+          AppSpace.s24,
         ),
+        children: [
+          // The gate leaves this screen once no account is signed in.
+          if (state case SignedIn(:final email)) ...[
+            _ProfileCard(email: email),
+            const SizedBox(height: AppSpace.sectionGap),
+          ],
+          AppSectionLabel(l10n.displaySection),
+          const _ThemeRow(),
+          const SizedBox(height: AppSpace.sectionGap),
+          AppSectionLabel(l10n.accountSection),
+          AppListRow(
+            title: l10n.signOut,
+            leading: const Icon(LucideIcons.logOut),
+            trailing: _busy == _Action.signingOut
+                ? _Progress(l10n.signingOut)
+                : null,
+            onTap: _busy != null || state is! SignedIn ? null : _signOut,
+          ),
+          AppListRow(
+            title: l10n.deleteAccount,
+            subtitle: l10n.deleteAccountNote,
+            leading: const Icon(LucideIcons.trash2),
+            destructive: true,
+            trailing: _busy == _Action.deleting
+                ? _Progress(l10n.deletingAccount)
+                : null,
+            onTap: _busy != null || state is! SignedIn ? null : _deleteAccount,
+          ),
+          const SizedBox(height: AppSpace.s40),
+          const _Footer(),
+        ],
       ),
     );
   }
@@ -80,109 +87,185 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final service = ref.read(accountServiceProvider);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
-    setState(() => _busy = true);
+    setState(() => _busy = _Action.signingOut);
     try {
       if (!await data.push()) {
         if (!mounted || !await _confirmUnsynced()) return;
       }
+      await _endSession(service, data, messenger, l10n);
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  /// Asks before deleting the account; then deletes it, signs out and clears
+  /// the device's data, without pushing first.
+  Future<void> _deleteAccount() async {
+    final data = ref.read(accountDataProvider);
+    final service = ref.read(accountServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (!await showAppConfirm(
+      context,
+      title: l10n.deleteAccountTitle,
+      consequence: l10n.deleteAccountBody,
+      confirmLabel: l10n.delete,
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = _Action.deleting);
+    try {
       try {
-        await service.signOut();
+        await service.deleteAccount();
       } on AccountFailure catch (failure) {
         messenger.showSnackBar(
-          SnackBar(content: Text(describeAccountFailure(l10n, failure))),
+          SnackBar(content: Text(describeDeletionFailure(l10n, failure))),
         );
+        return;
       }
-      // A failed sign-out still ends the session on the device.
-      if (service.state is! SignedIn) {
-        try {
-          await data.clear();
-        } on AccountDataNotCleared {
-          messenger.showSnackBar(SnackBar(content: Text(l10n.dataNotCleared)));
-        }
-      }
+      await _endSession(service, data, messenger, l10n);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  /// Signs out, then clears the device's data. Signing out makes the gate
+  /// close this screen, so nothing here may depend on it staying mounted.
+  static Future<void> _endSession(
+    AccountService service,
+    AccountData data,
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+  ) async {
+    try {
+      await service.signOut();
+    } on AccountFailure catch (failure) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(describeAccountFailure(l10n, failure))),
+      );
+    }
+    // A failed sign-out still ends the session on the device.
+    if (service.state is! SignedIn) {
+      try {
+        await data.clear();
+      } on AccountDataNotCleared {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.dataNotCleared)));
+      }
     }
   }
 
   /// Whether the user signs out although some changes are not synced.
   Future<bool> _confirmUnsynced() async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.unsyncedChangesTitle),
-        content: Text(l10n.unsyncedChangesBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.signOutAnyway),
-          ),
-        ],
-      ),
+    return showAppConfirm(
+      context,
+      title: l10n.unsyncedChangesTitle,
+      consequence: l10n.unsyncedChangesBody,
+      confirmLabel: l10n.signOutAnyway,
     );
-    return confirmed ?? false;
-  }
-
-  /// Runs [action] on the account service; an [AccountFailure] it raises is
-  /// shown in a snack bar. Any other exception propagates.
-  Future<void> _run(Future<void> Function(AccountService) action) async {
-    final service = ref.read(accountServiceProvider);
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context);
-    setState(() => _busy = true);
-    try {
-      await action(service);
-    } on AccountFailure catch (failure) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(describeAccountFailure(l10n, failure))),
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
   }
 }
 
-/// The "화면" section: following the system, light or dark, applied at once.
-class _ThemeSection extends ConsumerWidget {
-  const _ThemeSection();
+/// The progress shown in the row of the action under way.
+class _Progress extends StatelessWidget {
+  const _Progress(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: AppSpace.s24,
+    child: CircularProgressIndicator(semanticsLabel: label),
+  );
+}
+
+/// The signed-in account on a card: an avatar with the email's initial, the
+/// email, and where sync stands.
+class _ProfileCard extends ConsumerWidget {
+  const _ProfileCard({required this.email});
+
+  final String? email;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 12,
-        children: [
-          Text(
-            l10n.displaySection,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          SegmentedButton<ThemeMode>(
-            segments: [
-              ButtonSegment(
-                value: ThemeMode.system,
-                label: Text(l10n.themeSystem),
+    final colors = AppColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s20),
+        child: Row(
+          spacing: AppSpace.s16,
+          children: [
+            const AccountAvatar(size: AppSize.avatar),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: AppSpace.s4,
+                children: [
+                  Text(email ?? l10n.signedIn, style: AppType.bodyStrong),
+                  ref.watch(syncStatusProvider)(),
+                ],
               ),
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: Text(l10n.themeLight),
-              ),
-              ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
-            ],
-            selected: {ref.watch(themeModeProvider)},
-            showSelectedIcon: false,
-            onSelectionChanged: (choice) =>
-                ref.read(themeModeProvider.notifier).choose(choice.single),
-          ),
-        ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The screen's foot: the mascot, faint, the app's version, and the links to
+/// the terms and the privacy policy.
+class _Footer extends ConsumerWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      spacing: AppSpace.s8,
+      children: [
+        const Opacity(opacity: 0.5, child: Mascot(size: AppSize.mascotSmall)),
+        Text(
+          l10n.appVersion(ref.watch(appVersionProvider)),
+          style: AppType.caption.copyWith(color: AppColors.of(context).muted),
+        ),
+        const LegalLinksRow(),
+      ],
+    );
+  }
+}
+
+/// The theme the app is drawn in, on a row: following the system, light or
+/// dark, applied at once.
+class _ThemeRow extends ConsumerWidget {
+  const _ThemeRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return AppRowSurface(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s12),
+        child: SegmentedButton<ThemeMode>(
+          segments: [
+            ButtonSegment(
+              value: ThemeMode.system,
+              label: Text(l10n.themeSystem),
+            ),
+            ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeLight)),
+            ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
+          ],
+          selected: {ref.watch(themeModeProvider)},
+          showSelectedIcon: false,
+          onSelectionChanged: (choice) =>
+              ref.read(themeModeProvider.notifier).choose(choice.single),
+        ),
       ),
     );
   }

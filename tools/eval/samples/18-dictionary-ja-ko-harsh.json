@@ -14,39 +14,48 @@
   "cards": [
     {
       "front": "映画",
-      "back": "영화"
+      "meaning": "영화",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "きれい",
-      "back": "예쁘다"
+      "meaning": "예쁘다",
+      "partOfSpeech": "[형]"
     },
     {
       "front": "海",
-      "back": "바다"
+      "meaning": "바다",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "明日",
-      "back": "내일"
+      "meaning": "내일",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "易しい",
-      "back": "쉽다"
+      "meaning": "쉽다",
+      "partOfSpeech": "[형]"
     },
     {
       "front": "走る",
-      "back": "달리다"
+      "meaning": "달리다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "歩く",
-      "back": "걷다"
+      "meaning": "걷다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "昨日",
-      "back": "어제"
+      "meaning": "어제",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "楽しい",
-      "back": "즐겁다"
+      "meaning": "즐겁다",
+      "partOfSpeech": "[형]"
     }
   ]
 }

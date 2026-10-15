@@ -13,75 +13,75 @@
   "cards": [
     {
       "front": "neighbor",
-      "back": "이웃"
+      "meaning": "이웃"
     },
     {
       "front": "carry",
-      "back": "나르다"
+      "meaning": "나르다"
     },
     {
       "front": "library",
-      "back": "도서관"
+      "meaning": "도서관"
     },
     {
       "front": "polite",
-      "back": "공손한"
+      "meaning": "공손한"
     },
     {
       "front": "always",
-      "back": "항상"
+      "meaning": "항상"
     },
     {
       "front": "quiet",
-      "back": "조용한"
+      "meaning": "조용한"
     },
     {
       "front": "window",
-      "back": "창문"
+      "meaning": "창문"
     },
     {
       "front": "direction",
-      "back": "방향"
+      "meaning": "방향"
     },
     {
       "front": "explain",
-      "back": "설명하다"
+      "meaning": "설명하다"
     },
     {
       "front": "young",
-      "back": "젊은"
+      "meaning": "젊은"
     },
     {
       "front": "promise",
-      "back": "약속하다"
+      "meaning": "약속하다"
     },
     {
       "front": "tired",
-      "back": "피곤한"
+      "meaning": "피곤한"
     },
     {
       "front": "mistake",
-      "back": "실수"
+      "meaning": "실수"
     },
     {
       "front": "pocket",
-      "back": "주머니"
+      "meaning": "주머니"
     },
     {
       "front": "strange",
-      "back": "이상한"
+      "meaning": "이상한"
     },
     {
       "front": "quickly",
-      "back": "빨리"
+      "meaning": "빨리"
     },
     {
       "front": "choice",
-      "back": "선택"
+      "meaning": "선택"
     },
     {
       "front": "never",
-      "back": "결코"
+      "meaning": "결코"
     }
   ]
 }

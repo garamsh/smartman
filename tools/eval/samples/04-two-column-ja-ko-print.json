@@ -14,55 +14,55 @@
   "cards": [
     {
       "front": "泣く",
-      "back": "울다"
+      "meaning": "울다"
     },
     {
       "front": "話す",
-      "back": "말하다"
+      "meaning": "말하다"
     },
     {
       "front": "習う",
-      "back": "배우다"
+      "meaning": "배우다"
     },
     {
       "front": "お茶",
-      "back": "차"
+      "meaning": "차"
     },
     {
       "front": "きれい",
-      "back": "예쁘다"
+      "meaning": "예쁘다"
     },
     {
       "front": "料理",
-      "back": "요리"
+      "meaning": "요리"
     },
     {
       "front": "長い",
-      "back": "길다"
+      "meaning": "길다"
     },
     {
       "front": "高い",
-      "back": "비싸다"
+      "meaning": "비싸다"
     },
     {
       "front": "寝る",
-      "back": "자다"
+      "meaning": "자다"
     },
     {
       "front": "閉める",
-      "back": "닫다"
+      "meaning": "닫다"
     },
     {
       "front": "売る",
-      "back": "팔다"
+      "meaning": "팔다"
     },
     {
       "front": "送る",
-      "back": "보내다"
+      "meaning": "보내다"
     },
     {
       "front": "始める",
-      "back": "시작하다"
+      "meaning": "시작하다"
     }
   ]
 }

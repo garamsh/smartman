@@ -42,15 +42,14 @@ class FakeSyncServer implements SyncServer {
 
   List<Pulled<R>> _pull<R>(
     Map<String, _Stored<R>> table,
+    UserId owner,
     int after,
     int limit,
     R Function(R) clean,
   ) {
     final rows =
         table.values
-            .where(
-              (stored) => stored.owner == account && stored.revision > after,
-            )
+            .where((stored) => stored.owner == owner && stored.revision > after)
             .toList()
           ..sort((a, b) => a.revision.compareTo(b.revision));
     return [
@@ -60,30 +59,71 @@ class FakeSyncServer implements SyncServer {
   }
 
   @override
-  Future<List<Pulled<DeckRow>>> pullDecks(int after, int limit) async {
+  Future<List<Pulled<DeckRow>>> pullDecks(
+    UserId owner,
+    int after,
+    int limit,
+  ) async {
     await _answer('pullDecks');
-    return _pull(decks, after, limit, (row) => row.copyWith(dirty: false));
+    _own(owner);
+    return _pull(
+      decks,
+      owner,
+      after,
+      limit,
+      (row) => row.copyWith(dirty: false),
+    );
   }
 
   @override
-  Future<List<Pulled<CardRow>>> pullCards(int after, int limit) async {
+  Future<List<Pulled<CardRow>>> pullCards(
+    UserId owner,
+    int after,
+    int limit,
+  ) async {
     await _answer('pullCards');
-    return _pull(cards, after, limit, (row) => row.copyWith(dirty: false));
+    _own(owner);
+    return _pull(
+      cards,
+      owner,
+      after,
+      limit,
+      (row) => row.copyWith(dirty: false),
+    );
   }
 
   @override
-  Future<List<Pulled<ReviewRow>>> pullReviews(int after, int limit) async {
+  Future<List<Pulled<ReviewRow>>> pullReviews(
+    UserId owner,
+    int after,
+    int limit,
+  ) async {
     await _answer('pullReviews');
-    return _pull(reviews, after, limit, (row) => row.copyWith(dirty: false));
+    _own(owner);
+    return _pull(
+      reviews,
+      owner,
+      after,
+      limit,
+      (row) => row.copyWith(dirty: false),
+    );
   }
 
   @override
   Future<List<Pulled<CardStateRow>>> pullCardStates(
+    UserId owner,
     int after,
     int limit,
   ) async {
     await _answer('pullCardStates');
-    return _pull(cardStates, after, limit, (row) => row.copyWith(dirty: false));
+    _own(owner);
+    return _pull(
+      cardStates,
+      owner,
+      after,
+      limit,
+      (row) => row.copyWith(dirty: false),
+    );
   }
 
   void _own(UserId owner) {

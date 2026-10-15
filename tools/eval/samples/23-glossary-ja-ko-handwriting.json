@@ -14,83 +14,83 @@
   "cards": [
     {
       "front": "借りる",
-      "back": "빌리다"
+      "meaning": "빌리다"
     },
     {
       "front": "窓",
-      "back": "창문"
+      "meaning": "창문"
     },
     {
       "front": "木",
-      "back": "나무"
+      "meaning": "나무"
     },
     {
       "front": "図書館",
-      "back": "도서관"
+      "meaning": "도서관"
     },
     {
       "front": "飲む",
-      "back": "마시다"
+      "meaning": "마시다"
     },
     {
       "front": "花",
-      "back": "꽃"
+      "meaning": "꽃"
     },
     {
       "front": "始める",
-      "back": "시작하다"
+      "meaning": "시작하다"
     },
     {
       "front": "水",
-      "back": "물"
+      "meaning": "물"
     },
     {
       "front": "椅子",
-      "back": "의자"
+      "meaning": "의자"
     },
     {
       "front": "読む",
-      "back": "읽다"
+      "meaning": "읽다"
     },
     {
       "front": "食べる",
-      "back": "먹다"
+      "meaning": "먹다"
     },
     {
       "front": "走る",
-      "back": "달리다"
+      "meaning": "달리다"
     },
     {
       "front": "短い",
-      "back": "짧다"
+      "meaning": "짧다"
     },
     {
       "front": "高い",
-      "back": "비싸다"
+      "meaning": "비싸다"
     },
     {
       "front": "聞く",
-      "back": "듣다"
+      "meaning": "듣다"
     },
     {
       "front": "学校",
-      "back": "학교"
+      "meaning": "학교"
     },
     {
       "front": "海",
-      "back": "바다"
+      "meaning": "바다"
     },
     {
       "front": "雪",
-      "back": "눈"
+      "meaning": "눈"
     },
     {
       "front": "起きる",
-      "back": "일어나다"
+      "meaning": "일어나다"
     },
     {
       "front": "寒い",
-      "back": "춥다"
+      "meaning": "춥다"
     }
   ]
 }

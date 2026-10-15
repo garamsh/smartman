@@ -13,35 +13,67 @@
   "cards": [
     {
       "front": "tired",
-      "back": "피곤한"
+      "meaning": "피곤한",
+      "partOfSpeech": "adj.",
+      "examples": [
+        "I feel tired today."
+      ]
     },
     {
       "front": "choose",
-      "back": "고르다"
+      "meaning": "고르다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "Choose one color."
+      ]
     },
     {
       "front": "repeat",
-      "back": "반복하다"
+      "meaning": "반복하다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "Repeat after me."
+      ]
     },
     {
       "front": "direction",
-      "back": "방향"
+      "meaning": "방향",
+      "partOfSpeech": "n.",
+      "examples": [
+        "We went in the wrong direction."
+      ]
     },
     {
       "front": "narrow",
-      "back": "좁은"
+      "meaning": "좁은",
+      "partOfSpeech": "adj.",
+      "examples": [
+        "The street is narrow."
+      ]
     },
     {
       "front": "reason",
-      "back": "이유"
+      "meaning": "이유",
+      "partOfSpeech": "n.",
+      "examples": [
+        "Tell me the reason."
+      ]
     },
     {
       "front": "already",
-      "back": "이미"
+      "meaning": "이미",
+      "partOfSpeech": "adv.",
+      "examples": [
+        "I have already eaten."
+      ]
     },
     {
       "front": "forget",
-      "back": "잊다"
+      "meaning": "잊다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "Don't forget your keys."
+      ]
     }
   ]
 }

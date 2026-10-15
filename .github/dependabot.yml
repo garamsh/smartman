@@ -33,3 +33,39 @@ updates:
     directory: "/app/rust"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/engine-wasm"
+    schedule:
+      interval: "weekly"
+    groups:
+      # Released together and pinned to each other; one moved alone does not resolve (docs/architecture/engine.md).
+      wasm-bindgen:
+        patterns:
+          - "wasm-bindgen*"
+          - "js-sys"
+  - package-ecosystem: "rust-toolchain"
+    directory: "/engine-wasm"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # typescript-eslint 8.71.2 accepts TypeScript below 6.1 (docs/architecture/web.md).
+      - dependency-name: "typescript"
+        versions: [">= 6.1"]
+      # eslint-plugin-react, -import and -jsx-a11y, which eslint-config-next 16.4.1 brings, accept ESLint 9 at most.
+      - dependency-name: "eslint"
+        versions: [">= 10"]
+      # Node's types follow the Node release in web/.nvmrc, which the PM moves (README).
+      - dependency-name: "@types/node"
+        versions: [">= 25"]
+  - package-ecosystem: "docker"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Coupled to web/.nvmrc and setup-node's node-version; the PM moves all three in one PR (docs/architecture/web.md). Same-tag digest refreshes still arrive (dependabot-core d98dcb40).
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]

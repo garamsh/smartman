@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><title>smartman</title><style>g{stroke:#1F2A44} @media (prefers-color-scheme: dark){g{stroke:#FFFFFF}}</style><g transform="translate(-9.73 -8.27) scale(0.4173)"><g fill="none"  stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M73 60 A55 55 0 1 0 127 60"/>
+    <path d="M52 44 L100 30 L148 44 L100 58 Z"/>
+    <path d="M73 50 L73 60 Q100 66 127 60 L127 50"/>
+    <circle cx="78" cy="108" r="16"/><circle cx="122" cy="108" r="16"/>
+    <path d="M94 107 Q100 101 106 107"/>
+  </g></g></svg>

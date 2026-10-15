@@ -14,55 +14,55 @@
   "cards": [
     {
       "front": "写真",
-      "back": "사진"
+      "meaning": "사진"
     },
     {
       "front": "習う",
-      "back": "배우다"
+      "meaning": "배우다"
     },
     {
       "front": "休む",
-      "back": "쉬다"
+      "meaning": "쉬다"
     },
     {
       "front": "食べる",
-      "back": "먹다"
+      "meaning": "먹다"
     },
     {
       "front": "仕事",
-      "back": "일"
+      "meaning": "일"
     },
     {
       "front": "明日",
-      "back": "내일"
+      "meaning": "내일"
     },
     {
       "front": "泣く",
-      "back": "울다"
+      "meaning": "울다"
     },
     {
       "front": "天気",
-      "back": "날씨"
+      "meaning": "날씨"
     },
     {
       "front": "笑う",
-      "back": "웃다"
+      "meaning": "웃다"
     },
     {
       "front": "易しい",
-      "back": "쉽다"
+      "meaning": "쉽다"
     },
     {
       "front": "起きる",
-      "back": "일어나다"
+      "meaning": "일어나다"
     },
     {
       "front": "忘れる",
-      "back": "잊다"
+      "meaning": "잊다"
     },
     {
       "front": "図書館",
-      "back": "도서관"
+      "meaning": "도서관"
     }
   ]
 }

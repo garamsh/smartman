@@ -13,55 +13,55 @@
   "cards": [
     {
       "front": "already",
-      "back": "이미"
+      "meaning": "이미"
     },
     {
       "front": "choose",
-      "back": "고르다"
+      "meaning": "고르다"
     },
     {
       "front": "bridge",
-      "back": "다리"
+      "meaning": "다리"
     },
     {
       "front": "remember",
-      "back": "기억하다"
+      "meaning": "기억하다"
     },
     {
       "front": "forest",
-      "back": "숲"
+      "meaning": "숲"
     },
     {
       "front": "careful",
-      "back": "조심스러운"
+      "meaning": "조심스러운"
     },
     {
       "front": "voice",
-      "back": "목소리"
+      "meaning": "목소리"
     },
     {
       "front": "forget",
-      "back": "잊다"
+      "meaning": "잊다"
     },
     {
       "front": "strange",
-      "back": "이상한"
+      "meaning": "이상한"
     },
     {
       "front": "repeat",
-      "back": "반복하다"
+      "meaning": "반복하다"
     },
     {
       "front": "young",
-      "back": "젊은"
+      "meaning": "젊은"
     },
     {
       "front": "answer",
-      "back": "대답"
+      "meaning": "대답"
     },
     {
       "front": "future",
-      "back": "미래"
+      "meaning": "미래"
     }
   ]
 }

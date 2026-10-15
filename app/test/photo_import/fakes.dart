@@ -1,9 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/photo_import/src/photo.dart';
+import 'package:smartman/shared/theme.dart';
 
 /// A small prepared photo.
 final testPhoto = downscalePhoto(img.encodePng(img.Image(width: 8, height: 6)));
@@ -19,15 +24,30 @@ final class FakePhotoSource implements PhotoSource {
   /// Thrown by [pickFromLibrary] instead of returning, when set.
   PhotoImportFailure? libraryFailure;
 
+  /// When set, each [openCamera] waits until [finishOpen] lets it finish.
+  bool holdOpens = false;
+  final _held = <Completer<void>>[];
+
+  /// Calls to [openCamera], including those that fail or are held.
+  int openCalls = 0;
   int opened = 0;
   int closed = 0;
 
   @override
   Future<CameraSession> openCamera() async {
+    openCalls++;
+    if (holdOpens) {
+      final held = Completer<void>();
+      _held.add(held);
+      await held.future;
+    }
     if (cameraFailure case final failure?) throw failure;
     opened++;
     return _FakeCamera(this);
   }
+
+  /// Lets the oldest held open finish; it fails if [cameraFailure] is set.
+  void finishOpen() => _held.removeAt(0).complete();
 
   @override
   Future<JpegPhoto?> pickFromLibrary() async {
@@ -78,13 +98,34 @@ final class FakeExtractionClient implements ExtractionClient {
     return call.answer.future;
   }
 
-  /// Answers the last call with cards, front → back.
-  void answer(Map<String, String> cards) => calls.last.answer.complete([
-    for (final MapEntry(key: front, value: back) in cards.entries)
-      CandidateCard(front: front, back: back),
+  /// Answers the last call with cards, front → meaning.
+  void answer(Map<String, String> cards) => answerCards([
+    for (final MapEntry(key: front, value: meaning) in cards.entries)
+      CandidateCard(front: front, meaning: meaning),
   ]);
+
+  /// Answers the last call with [cards].
+  void answerCards(List<CandidateCard> cards) =>
+      calls.last.answer.complete(cards);
 
   /// Answers the last call with [failure].
   void fail(PhotoImportFailure failure) =>
       calls.last.answer.completeError(failure);
+}
+
+/// Device storage over memory, opened as the composition site opens it,
+/// holding [values].
+Future<SharedPreferencesWithCache> openPreferences(
+  WidgetTester tester, [
+  Map<String, Object> values = const {},
+]) async {
+  SharedPreferencesAsyncPlatform.instance =
+      InMemorySharedPreferencesAsync.withData(values);
+  return (await tester.runAsync(
+    () => SharedPreferencesWithCache.create(
+      cacheOptions: const SharedPreferencesWithCacheOptions(
+        allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
+      ),
+    ),
+  ))!;
 }

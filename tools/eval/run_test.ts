@@ -5,10 +5,15 @@ import { MODELS_URL, newest, parseModels } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
 import { worstCallUsd } from "./budget.ts";
 
-const truth = [{ front: "apple", back: "사과" }, {
+const truth = [{ front: "apple", meaning: "사과", partOfSpeech: "n." }, {
   front: "river",
-  back: "강",
+  meaning: "강",
 }];
+/** The same cards as the model writes them, one inventing an example. */
+const modelCards = [
+  { ...truth[0], examples: ["She ate an apple."] },
+  { ...truth[1], partOfSpeech: null, examples: [] },
+];
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
 
 const model = (
@@ -93,7 +98,9 @@ function io(
       if (url === OPENROUTER_URL) {
         const body = JSON.parse(String(init?.body));
         w.chatCalls.push(body.model);
-        const cards = body.model === "vendor/dear" ? truth : truth.slice(0, 1);
+        const cards = body.model === "vendor/dear"
+          ? modelCards
+          : modelCards.slice(0, 1);
         return Promise.resolve(Response.json({
           choices: [{ message: { content: JSON.stringify({ cards }) } }],
           usage: {
@@ -200,7 +207,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v1",
+    note: "prompt v2",
   });
   assert.ok(
     w.printed.includes(
@@ -211,7 +218,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   const table = w.files.get(PATHS.report) ?? "";
   assert.match(
     table,
-    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
+    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 0\.0 \| 50\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
   );
   assert.match(
     table,
@@ -280,7 +287,7 @@ Deno.test("a run without OPENROUTER_API_KEY stops before any call", async () => 
   assert.equal(w.chatCalls.length, 0);
 });
 
-Deno.test("the committed sample set has at least 20 images in every layout and language pair", async () => {
+Deno.test("the committed sample set has at least 20 images in every layout and language pair, with the fields each prints", async () => {
   const dir = new URL("./samples/", import.meta.url);
   const names = (await Array.fromAsync(Deno.readDir(dir))).map((entry) =>
     entry.name
@@ -300,6 +307,30 @@ Deno.test("the committed sample set has at least 20 images in every layout and l
       `${sample.name} is a JPEG`,
     );
   }
+  const dictionary = samples.filter((s) => s.name.includes("dictionary"));
+  const others = samples.filter((s) => !s.name.includes("dictionary"));
+  assert.ok(
+    dictionary.every((s) => s.cards.every((c) => c.partOfSpeech !== undefined)),
+    "every dictionary entry has the part of speech its page prints",
+  );
+  assert.ok(
+    dictionary.some((s) =>
+      s.cards.some((c) => /^\[.\]$/.test(c.partOfSpeech ?? ""))
+    ),
+    "a dictionary page prints a bracket notation such as [동]",
+  );
+  assert.ok(
+    dictionary.some((s) => s.cards.some((c) => (c.examples ?? []).length > 0)),
+    "a dictionary page prints examples",
+  );
+  assert.ok(
+    others.every((s) =>
+      s.cards.every((c) =>
+        c.partOfSpeech === undefined && c.examples === undefined
+      )
+    ),
+    "the other layouts print neither, so their truth holds neither",
+  );
   for (
     const part of [
       "two-column",

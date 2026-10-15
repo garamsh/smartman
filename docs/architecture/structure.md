@@ -1,11 +1,11 @@
 # Structure
 
-The structural rules of the app: what the unit is, what may reference what, and when a new unit is earned.
+The structural rules of the app and the web app: what the unit is, what may reference what, and when a new unit is earned.
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)) and `photo_import` ([`ai-extraction.md`](ai-extraction.md)).
-- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. `photo_import` depends on `deck` through its surface, and `deck` reaches `photo_import` only through a provider the composition site overrides. The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)), `photo_import` ([`ai-extraction.md`](ai-extraction.md)) and `sharing` ([`sharing.md`](sharing.md)).
+- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync` and `deck`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. `photo_import` depends on `deck` through its surface, and `deck` reaches `photo_import` only through a provider the composition site overrides. `sharing` depends on `deck` and `account` through their surfaces, and `deck` reaches `sharing` only through `deckSharingProvider`, which the composition site overrides ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)). The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 
@@ -26,7 +26,9 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - **A domain declares its public surface in one library file named for it**, `app/lib/<domain>/<domain>.dart`, which exports with `show` the names a caller may use ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - **Everything else a domain holds lives under `app/lib/<domain>/src/`.** An import of another domain's `src/` path is a defect, from a sibling or from the composition site. A domain's own tests may import its `src/` files.
 - **The import rules are checked by a test.** `app/test/architecture_test.dart` fails on two kinds of import under `app/lib/`: one from `shared/` into a domain, and one into a domain's `src/` from outside that domain.
-- **The app theme is shared code.** `app/lib/shared/theme.dart` holds every colour token, the light and dark themes and the user's choice between them; no other file under `app/lib/` writes a colour ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [`design.md`](design.md)).
+- **The app theme is shared code.** `app/lib/shared/theme.dart` holds every colour token, the type, spacing, radius, height and shadow scales, the light and dark themes and the user's choice between them; no other file under `app/lib/` writes a colour ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md), [`design.md`](design.md)).
+- **The shared components are shared code.** `app/lib/shared/ui/` holds the buttons, fields, rows, chips, section labels, sheets and the mascot every screen builds from, one file per component. They import only Flutter, the theme and the shared strings, and a domain imports the file it uses ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md), [`design.md`](design.md)).
+- **The brand's files are assets, not code.** `app/assets/brand/` holds the marks the app draws, as PNGs at 1x to 3x, and, in `icon/` and `splash/`, the sources the launcher icons and the splash are generated from, which the app does not bundle; `web/public/` holds the web's icons and manifest, and `web/public/brand/` the marks as SVGs. Both are copies of the owner's files ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md), [`design.md`](design.md)).
 - **The drift database is shared code.** `app/lib/shared/database.dart` holds every domain's tables. A domain maps rows into its own types and does not export row classes.
 - **Every schema change goes through a migration.** The change raises `schemaVersion`. In `app/`, `dart run drift_dev make-migrations` then exports the new schema to `drift_schemas/` and its helpers to `test/drift/`, and the migration test there must pass.
 - **User-facing strings come from one ARB set.** It lives in `app/lib/shared/l10n/`, with Korean as the template and default locale. No widget hardcodes a string the user reads.
@@ -36,7 +38,17 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 
 - **The application has one composition site.** It is the one place that constructs concrete implementations, and it decides which implementation each declared abstraction receives.
 - **Every other unit receives what it depends on and constructs none of it**, whatever the shape makes the unit — a domain, a layer, or an adapter.
-- **The composition site stays thin.** It constructs and passes; it decides nothing else. It opens the theme storage, and passes the themes and the stored choice to `MaterialApp`.
+- **The composition site stays thin.** It constructs and passes; it decides nothing else. It opens the theme storage, and passes the themes and the stored choice to `MaterialApp`, whose home is `account`'s `AccountGate`; the gate decides between the sign-in screen and the app ([ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md)).
+
+### The web app
+
+- **`web/` is a project of its own** ([ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md), [`web.md`](web.md)). Nothing under `web/` imports code from `app/`. It reads two of the app's files: the fonts in `app/assets/fonts/`, through the link `web/src/styles/fonts`, and `app/lib/shared/theme.dart`, whose tokens a test compares with `web/src/styles/globals.css`. It imports the engine's generated module in `engine-wasm/pkg/` through the link `web/src/features/study/engine-wasm` ([ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
+- **A feature is the unit**, under `web/src/features/<name>/`, as a domain is under `app/lib/`, and is earned the same way. The features are `auth`, `decks` and `study`.
+- **A feature may depend on a sibling only through its entry points, and the graph stays acyclic**, as between domains. `study` depends on `decks` for the types of decks and cards; `decks` imports no feature. A route composes the two: it reads with both and hands `study`'s counts to `decks`' components as values, as the app's composition site hands `deck` its counts through a provider.
+- **A feature is reached only through its two entry points**, stack-nextjs §13's spelling of a domain's public surface: `index.ts`, what a Server Component reads, and `actions.ts`, its Server Actions. A feature's own files import each other directly.
+- **Shared code sits below every feature**: `web/src/lib/`, `web/src/components/` and `web/src/env.ts` import no feature and no route. What two features both need lives there: the card content blocks (`web/src/lib/card-content.ts`), the reading of PostgREST's rows and failures (`web/src/lib/supabase/`), and the shared UI, the brand's marks, the legal links and the page standing in for a legal document (`web/src/components/`).
+- **The import rules are checked by ESLint.** `web/eslint.config.mjs` fails on an import of `@/features/<name>/` other than its `index` or `actions`, and on an import of `@/features/` or `@/app/` from `web/src/lib/`, `web/src/components/` or `web/src/env.ts`.
+- **The web app has no single composition site.** Next.js calls each route, Route Handler, Server Action and the proxy as an entry point of its own, per request. Each constructs the Supabase client it needs through `web/src/lib/supabase/`, the one place that constructs one.
 
 ## Rationale
 
@@ -45,6 +57,10 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - [ADR 0004](adr/0004-flutter-rust-bridge.md) records why the generated engine bindings sit inside the `study` domain.
 - [ADR 0006](adr/0006-account-native-google-sign-in.md) records why only the `account` domain imports the Google packages, and [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) why `sync` imports `supabase_flutter` beside it.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme sits in shared code and how the composition site applies it.
+- [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md) records why the scales sit in the theme file and the components in a shared layer below the domains.
+- [ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md) records why the app's home is the account gate, reached through a provider `account` exposes.
+- [ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md) records why the web app is a project of its own and how it reaches the app's fonts.
+- [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why sharing is a domain of its own, reached from `deck` through one provider, and why it imports `supabase_flutter`.
 
 ## Open questions
 

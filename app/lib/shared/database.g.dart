@@ -26,6 +26,41 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _visibilityMeta = const VerificationMeta(
+    'visibility',
+  );
+  @override
+  late final GeneratedColumn<String> visibility = GeneratedColumn<String>(
+    'visibility',
+    aliasedName,
+    false,
+    check: () => const CustomExpression("visibility IN ('private', 'public')"),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('private'),
+  );
+  static const VerificationMeta _publishedAtMeta = const VerificationMeta(
+    'publishedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> publishedAt = GeneratedColumn<DateTime>(
+    'published_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -76,6 +111,9 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    visibility,
+    publishedAt,
+    description,
     createdAt,
     updatedAt,
     deletedAt,
@@ -105,6 +143,30 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('visibility')) {
+      context.handle(
+        _visibilityMeta,
+        visibility.isAcceptableOrUnknown(data['visibility']!, _visibilityMeta),
+      );
+    }
+    if (data.containsKey('published_at')) {
+      context.handle(
+        _publishedAtMeta,
+        publishedAt.isAcceptableOrUnknown(
+          data['published_at']!,
+          _publishedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -151,6 +213,18 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      visibility: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}visibility'],
+      )!,
+      publishedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}published_at'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -179,6 +253,12 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
 class DeckRow extends DataClass implements Insertable<DeckRow> {
   final String id;
   final String name;
+  final String visibility;
+
+  /// When the deck was last published; null while it never was, or once it
+  /// was made private again.
+  final DateTime? publishedAt;
+  final String? description;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -186,6 +266,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   const DeckRow({
     required this.id,
     required this.name,
+    required this.visibility,
+    this.publishedAt,
+    this.description,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -196,6 +279,13 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    map['visibility'] = Variable<String>(visibility);
+    if (!nullToAbsent || publishedAt != null) {
+      map['published_at'] = Variable<DateTime>(publishedAt);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -209,6 +299,13 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return DecksCompanion(
       id: Value(id),
       name: Value(name),
+      visibility: Value(visibility),
+      publishedAt: publishedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(publishedAt),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -226,6 +323,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return DeckRow(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      visibility: serializer.fromJson<String>(json['visibility']),
+      publishedAt: serializer.fromJson<DateTime?>(json['publishedAt']),
+      description: serializer.fromJson<String?>(json['description']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -238,6 +338,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'visibility': serializer.toJson<String>(visibility),
+      'publishedAt': serializer.toJson<DateTime?>(publishedAt),
+      'description': serializer.toJson<String?>(description),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -248,6 +351,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   DeckRow copyWith({
     String? id,
     String? name,
+    String? visibility,
+    Value<DateTime?> publishedAt = const Value.absent(),
+    Value<String?> description = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -255,6 +361,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   }) => DeckRow(
     id: id ?? this.id,
     name: name ?? this.name,
+    visibility: visibility ?? this.visibility,
+    publishedAt: publishedAt.present ? publishedAt.value : this.publishedAt,
+    description: description.present ? description.value : this.description,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -264,6 +373,15 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return DeckRow(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      visibility: data.visibility.present
+          ? data.visibility.value
+          : this.visibility,
+      publishedAt: data.publishedAt.present
+          ? data.publishedAt.value
+          : this.publishedAt,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -276,6 +394,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     return (StringBuffer('DeckRow(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('visibility: $visibility, ')
+          ..write('publishedAt: $publishedAt, ')
+          ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -285,14 +406,26 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, createdAt, updatedAt, deletedAt, dirty);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    visibility,
+    publishedAt,
+    description,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    dirty,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DeckRow &&
           other.id == this.id &&
           other.name == this.name &&
+          other.visibility == this.visibility &&
+          other.publishedAt == this.publishedAt &&
+          other.description == this.description &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -302,6 +435,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
 class DecksCompanion extends UpdateCompanion<DeckRow> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String> visibility;
+  final Value<DateTime?> publishedAt;
+  final Value<String?> description;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -310,6 +446,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   const DecksCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.visibility = const Value.absent(),
+    this.publishedAt = const Value.absent(),
+    this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -319,6 +458,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   DecksCompanion.insert({
     required String id,
     required String name,
+    this.visibility = const Value.absent(),
+    this.publishedAt = const Value.absent(),
+    this.description = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -331,6 +473,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   static Insertable<DeckRow> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? visibility,
+    Expression<DateTime>? publishedAt,
+    Expression<String>? description,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -340,6 +485,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (visibility != null) 'visibility': visibility,
+      if (publishedAt != null) 'published_at': publishedAt,
+      if (description != null) 'description': description,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -351,6 +499,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   DecksCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String>? visibility,
+    Value<DateTime?>? publishedAt,
+    Value<String?>? description,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -360,6 +511,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     return DecksCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      visibility: visibility ?? this.visibility,
+      publishedAt: publishedAt ?? this.publishedAt,
+      description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -376,6 +530,15 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (visibility.present) {
+      map['visibility'] = Variable<String>(visibility.value);
+    }
+    if (publishedAt.present) {
+      map['published_at'] = Variable<DateTime>(publishedAt.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -400,6 +563,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     return (StringBuffer('DecksCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('visibility: $visibility, ')
+          ..write('publishedAt: $publishedAt, ')
+          ..write('description: $description, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -471,9 +637,21 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     'source',
     aliasedName,
     false,
-    check: () => const CustomExpression("source IN ('manual', 'import')"),
+    check: () =>
+        const CustomExpression("source IN ('manual', 'import', 'shared')"),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _originDeckIdMeta = const VerificationMeta(
+    'originDeckId',
+  );
+  @override
+  late final GeneratedColumn<String> originDeckId = GeneratedColumn<String>(
+    'origin_deck_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -529,6 +707,7 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     back,
     cardKey,
     source,
+    originDeckId,
     createdAt,
     updatedAt,
     deletedAt,
@@ -591,6 +770,15 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     } else if (isInserting) {
       context.missing(_sourceMeta);
     }
+    if (data.containsKey('origin_deck_id')) {
+      context.handle(
+        _originDeckIdMeta,
+        originDeckId.isAcceptableOrUnknown(
+          data['origin_deck_id']!,
+          _originDeckIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -652,6 +840,10 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
         DriftSqlType.string,
         data['${effectivePrefix}source'],
       )!,
+      originDeckId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origin_deck_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -684,6 +876,9 @@ class CardRow extends DataClass implements Insertable<CardRow> {
   final String back;
   final String cardKey;
   final String source;
+
+  /// The public deck a copied card came from; null for any other card.
+  final String? originDeckId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -695,6 +890,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     required this.back,
     required this.cardKey,
     required this.source,
+    this.originDeckId,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -709,6 +905,9 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     map['back'] = Variable<String>(back);
     map['card_key'] = Variable<String>(cardKey);
     map['source'] = Variable<String>(source);
+    if (!nullToAbsent || originDeckId != null) {
+      map['origin_deck_id'] = Variable<String>(originDeckId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -726,6 +925,9 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       back: Value(back),
       cardKey: Value(cardKey),
       source: Value(source),
+      originDeckId: originDeckId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(originDeckId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -747,6 +949,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       back: serializer.fromJson<String>(json['back']),
       cardKey: serializer.fromJson<String>(json['cardKey']),
       source: serializer.fromJson<String>(json['source']),
+      originDeckId: serializer.fromJson<String?>(json['originDeckId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -763,6 +966,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       'back': serializer.toJson<String>(back),
       'cardKey': serializer.toJson<String>(cardKey),
       'source': serializer.toJson<String>(source),
+      'originDeckId': serializer.toJson<String?>(originDeckId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -777,6 +981,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     String? back,
     String? cardKey,
     String? source,
+    Value<String?> originDeckId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -788,6 +993,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     back: back ?? this.back,
     cardKey: cardKey ?? this.cardKey,
     source: source ?? this.source,
+    originDeckId: originDeckId.present ? originDeckId.value : this.originDeckId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -801,6 +1007,9 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       back: data.back.present ? data.back.value : this.back,
       cardKey: data.cardKey.present ? data.cardKey.value : this.cardKey,
       source: data.source.present ? data.source.value : this.source,
+      originDeckId: data.originDeckId.present
+          ? data.originDeckId.value
+          : this.originDeckId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -817,6 +1026,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           ..write('back: $back, ')
           ..write('cardKey: $cardKey, ')
           ..write('source: $source, ')
+          ..write('originDeckId: $originDeckId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -833,6 +1043,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     back,
     cardKey,
     source,
+    originDeckId,
     createdAt,
     updatedAt,
     deletedAt,
@@ -848,6 +1059,7 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           other.back == this.back &&
           other.cardKey == this.cardKey &&
           other.source == this.source &&
+          other.originDeckId == this.originDeckId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -861,6 +1073,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
   final Value<String> back;
   final Value<String> cardKey;
   final Value<String> source;
+  final Value<String?> originDeckId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -873,6 +1086,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     this.back = const Value.absent(),
     this.cardKey = const Value.absent(),
     this.source = const Value.absent(),
+    this.originDeckId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -886,6 +1100,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     required String back,
     required String cardKey,
     required String source,
+    this.originDeckId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -906,6 +1121,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Expression<String>? back,
     Expression<String>? cardKey,
     Expression<String>? source,
+    Expression<String>? originDeckId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -919,6 +1135,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       if (back != null) 'back': back,
       if (cardKey != null) 'card_key': cardKey,
       if (source != null) 'source': source,
+      if (originDeckId != null) 'origin_deck_id': originDeckId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -934,6 +1151,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Value<String>? back,
     Value<String>? cardKey,
     Value<String>? source,
+    Value<String?>? originDeckId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -947,6 +1165,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       back: back ?? this.back,
       cardKey: cardKey ?? this.cardKey,
       source: source ?? this.source,
+      originDeckId: originDeckId ?? this.originDeckId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -976,6 +1195,9 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     if (source.present) {
       map['source'] = Variable<String>(source.value);
     }
+    if (originDeckId.present) {
+      map['origin_deck_id'] = Variable<String>(originDeckId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1003,6 +1225,7 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
           ..write('back: $back, ')
           ..write('cardKey: $cardKey, ')
           ..write('source: $source, ')
+          ..write('originDeckId: $originDeckId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -2577,6 +2800,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
   required String id,
   required String name,
+  Value<String> visibility,
+  Value<DateTime?> publishedAt,
+  Value<String?> description,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> deletedAt,
@@ -2586,6 +2812,9 @@ typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
 typedef $$DecksTableUpdateCompanionBuilder = DecksCompanion Function({
   Value<String> id,
   Value<String> name,
+  Value<String> visibility,
+  Value<DateTime?> publishedAt,
+  Value<String?> description,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> deletedAt,
@@ -2632,6 +2861,21 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get publishedAt => $composableBuilder(
+    column: $table.publishedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2700,6 +2944,21 @@ class $$DecksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get publishedAt => $composableBuilder(
+    column: $table.publishedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2735,6 +2994,21 @@ class $$DecksTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get publishedAt => $composableBuilder(
+    column: $table.publishedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2804,6 +3078,9 @@ class $$DecksTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String> visibility = const Value.absent(),
+                Value<DateTime?> publishedAt = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -2812,6 +3089,9 @@ class $$DecksTableTableManager
               }) => DecksCompanion(
                 id: id,
                 name: name,
+                visibility: visibility,
+                publishedAt: publishedAt,
+                description: description,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -2822,6 +3102,9 @@ class $$DecksTableTableManager
               ({
                 required String id,
                 required String name,
+                Value<String> visibility = const Value.absent(),
+                Value<DateTime?> publishedAt = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -2830,6 +3113,9 @@ class $$DecksTableTableManager
               }) => DecksCompanion.insert(
                 id: id,
                 name: name,
+                visibility: visibility,
+                publishedAt: publishedAt,
+                description: description,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -2892,6 +3178,7 @@ typedef $$CardsTableCreateCompanionBuilder = CardsCompanion Function({
   required String back,
   required String cardKey,
   required String source,
+  Value<String?> originDeckId,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> deletedAt,
@@ -2905,6 +3192,7 @@ typedef $$CardsTableUpdateCompanionBuilder = CardsCompanion Function({
   Value<String> back,
   Value<String> cardKey,
   Value<String> source,
+  Value<String?> originDeckId,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> deletedAt,
@@ -3001,6 +3289,11 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
 
   ColumnFilters<String> get source => $composableBuilder(
     column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get originDeckId => $composableBuilder(
+    column: $table.originDeckId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3132,6 +3425,11 @@ class $$CardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get originDeckId => $composableBuilder(
+    column: $table.originDeckId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3199,6 +3497,11 @@ class $$CardsTableAnnotationComposer
 
   GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get originDeckId => $composableBuilder(
+    column: $table.originDeckId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3324,6 +3627,7 @@ class $$CardsTableTableManager
                 Value<String> back = const Value.absent(),
                 Value<String> cardKey = const Value.absent(),
                 Value<String> source = const Value.absent(),
+                Value<String?> originDeckId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3336,6 +3640,7 @@ class $$CardsTableTableManager
                 back: back,
                 cardKey: cardKey,
                 source: source,
+                originDeckId: originDeckId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -3350,6 +3655,7 @@ class $$CardsTableTableManager
                 required String back,
                 required String cardKey,
                 required String source,
+                Value<String?> originDeckId = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3362,6 +3668,7 @@ class $$CardsTableTableManager
                 back: back,
                 cardKey: cardKey,
                 source: source,
+                originDeckId: originDeckId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

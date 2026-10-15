@@ -6,12 +6,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/account/account.dart';
+import 'package:smartman/deck/deck.dart' show DeckListScreen;
 import 'package:smartman/main.dart';
+import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import '../account/fake_account_service.dart';
+import '../sharing/fakes.dart';
 import 'fake_sync_server.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
@@ -33,7 +37,7 @@ void main() {
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: themeStorageKeys,
+          allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
         ),
       ),
     ))!;
@@ -46,27 +50,38 @@ void main() {
         server,
         themeStorage,
         null,
+        null,
+        FakeReachability(),
+        const LegalLinks(),
+        '1.0.0',
       ),
     );
     await tester.pumpAndSettle();
-    final sync = ProviderScope.containerOf(tester.element(find.text('Decks')))
-        .read(syncControllerProvider);
+    final sync = ProviderScope.containerOf(
+      tester.element(find.byType(DeckListScreen)),
+    ).read(syncControllerProvider);
 
-    await tapAndSettle(tester, 'New deck');
-    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'French');
-    await tapAndSettle(tester, 'Save');
+    await tapAndSettle(tester, 'Create by hand');
+    await tester.enterText(
+      find.widgetWithText(AppTextField, 'Deck name'),
+      'French',
+    );
+    await tapAndSettle(tester, 'Create');
     await tapAndSettle(tester, 'French');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
-      await tester.enterText(find.widgetWithText(TextField, 'Question'), front);
-      await tester.enterText(find.widgetWithText(TextField, 'Answer'), back);
+      await tester.enterText(
+        find.widgetWithText(AppTextField, 'Question'),
+        front,
+      );
+      await tester.enterText(find.widgetWithText(AppTextField, 'Answer'), back);
       await tapAndSettle(tester, 'Save');
     }
     await tapAndSettle(tester, 'Study · 2');
     // The run that started with the app is still waiting on the server.
     expect(sync.status.value, isA<Syncing>());
     expect(server.requests, isEmpty);
-    expect(find.text('0 / 2'), findsOneWidget);
+    expect(find.text('0/2'), findsOneWidget);
     final first = find.text('Chat').evaluate().isEmpty ? 'Chien' : 'Chat';
 
     await tester.timedDrag(
@@ -76,7 +91,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget);
     expect(sync.status.value, isA<Syncing>());
 
     sync.dispose();

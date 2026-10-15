@@ -21,36 +21,36 @@ class Synchronizer {
   /// Syncs [account]'s rows. Throws a [SyncFailure] when the run stops.
   Future<void> run(UserId account) async {
     await _store.claim(account);
-    await _pull();
+    await _pull(account);
     await _push(account);
   }
 
-  Future<void> _pull() async {
+  Future<void> _pull(UserId account) async {
     for (var pass = 1; ; pass++) {
       final cursors = await _store.cursors();
       final reviewed = <String>{};
       final complete = [
         await _pullTable(
           cursors.decksRevision,
-          _server.pullDecks,
+          (after, limit) => _server.pullDecks(account, after, limit),
           _store.applyDecks,
           reviewed,
         ),
         await _pullTable(
           cursors.cardsRevision,
-          _server.pullCards,
+          (after, limit) => _server.pullCards(account, after, limit),
           _store.applyCards,
           reviewed,
         ),
         await _pullTable(
           cursors.reviewsRevision,
-          _server.pullReviews,
+          (after, limit) => _server.pullReviews(account, after, limit),
           _store.applyReviews,
           reviewed,
         ),
         await _pullTable(
           cursors.cardStatesRevision,
-          _server.pullCardStates,
+          (after, limit) => _server.pullCardStates(account, after, limit),
           _store.applyCardStates,
           reviewed,
         ),

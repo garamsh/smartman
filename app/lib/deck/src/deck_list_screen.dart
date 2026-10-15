@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_chip.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_section_label.dart';
+import '../../shared/ui/mascot.dart';
 import 'bottom_actions.dart';
 import 'card_list_screen.dart';
 import 'failure_message.dart';
 import 'model.dart';
-import 'name_dialog.dart';
+import 'name_sheet.dart';
 import 'providers.dart';
 
 /// Lists decks under today's count and creates them. A long-press enters a
@@ -29,6 +35,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     final decks = ref.watch(decksProvider);
     final counts = ref.watch(cardCountsProvider);
     final photoImport = ref.watch(photoImportProvider);
+    final sharing = ref.watch(deckSharingProvider);
     // A deck deleted while selected drops out of the selection.
     final selected = switch ((_selected, decks)) {
       (final selected?, AsyncData(:final value)) => {
@@ -37,16 +44,41 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
       },
       (final selected, _) => selected,
     };
+    final colors = AppColors.of(context);
+    final empty = switch (decks) {
+      AsyncData(:final value) => value.isEmpty,
+      _ => false,
+    };
     return Scaffold(
       appBar: selected == null
           ? AppBar(
+              titleSpacing: AppSpace.gutter,
+              title: Semantics(
+                header: true,
+                image: true,
+                label: l10n.appTitle,
+                child: Image.asset(
+                  AppBrand.lockup(Theme.of(context).brightness),
+                  height: AppSize.lockupHeight,
+                  excludeFromSemantics: true,
+                ),
+              ),
               actions: [
-                IconButton(
-                  tooltip: l10n.account,
-                  icon: const Icon(Icons.account_circle_outlined),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => ref.read(accountScreenProvider)(),
+                if (sharing != null)
+                  IconButton(
+                    tooltip: l10n.browse,
+                    icon: const Icon(LucideIcons.compass),
+                    onPressed: () => _browse(sharing),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpace.s12),
+                  child: IconButton(
+                    tooltip: l10n.account,
+                    icon: ref.watch(accountAvatarProvider)(),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ref.read(accountScreenProvider)(),
+                      ),
                     ),
                   ),
                 ),
@@ -55,70 +87,99 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
           : _selectionBar(l10n, selected),
       body: switch ((decks, counts)) {
         (AsyncData(value: final decks), AsyncData(value: final counts)) =>
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            children: [
-              _LargeTitle(l10n.decksTitle),
-              if (decks.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Text(l10n.noDecks, textAlign: TextAlign.center),
+          decks.isEmpty
+              ? _EmptyHome(
+                  onPhoto: photoImport == null
+                      ? null
+                      : () => _importPhoto(photoImport),
+                  onCreate: _create,
+                  onBrowse: sharing == null ? null : () => _browse(sharing),
                 )
-              else if (DeckSelection.of([for (final d in decks) d.id])
-                  case final all?) ...[
-                ref.watch(todayProvider)(
-                  all,
-                  (context, count) =>
-                      _TodayHeader(count: count, onStudy: () => _study(all)),
-                ),
-                _DecksLabel(count: decks.length, showHint: selected == null),
-                for (final deck in decks)
-                  _DeckRow(
-                    deck: deck,
-                    cardCount: counts[deck.id] ?? 0,
-                    selected: selected?.contains(deck.id),
-                    onSelect: () => _toggle(deck.id),
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.gutter,
+                    AppSpace.s8,
+                    AppSpace.gutter,
+                    AppSpace.s16,
                   ),
-              ],
-            ],
-          ),
+                  children: [
+                    if (DeckSelection.of([for (final d in decks) d.id])
+                        case final all?)
+                      ref.watch(todayProvider)(
+                        all,
+                        (context, count) => _TodayCard(
+                          count: count,
+                          onStudy: () => _study(all),
+                        ),
+                      ),
+                    const SizedBox(height: AppSpace.sectionGap),
+                    _DecksLabel(
+                      count: decks.length,
+                      showHint: selected == null,
+                    ),
+                    for (final deck in decks)
+                      _DeckRow(
+                        deck: deck,
+                        cardCount: counts[deck.id] ?? 0,
+                        selected: selected?.contains(deck.id),
+                        onSelect: () => _toggle(deck.id),
+                      ),
+                  ],
+                ),
         (AsyncError(:final error, :final stackTrace), _) ||
         (_, AsyncError(:final error, :final stackTrace)) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(describeProviderError(l10n, error, stackTrace)),
+            padding: const EdgeInsets.all(AppSpace.gutter),
+            child: Text(
+              describeProviderError(l10n, error, stackTrace),
+              style: AppType.body.copyWith(color: colors.ink),
+            ),
           ),
         ),
         _ => const Center(child: CircularProgressIndicator()),
       },
-      bottomNavigationBar: BottomActions(
-        secondary: OutlinedButton(
-          onPressed: _create,
-          child: Text(l10n.newDeck),
-        ),
-        primary: photoImport == null
-            ? null
-            : FilledButton(
-                onPressed: () => _importPhoto(photoImport),
-                child: Text(l10n.createFromPhoto),
+      bottomNavigationBar: empty
+          ? null
+          : BottomActions(
+              secondary: AppButton(
+                label: l10n.newDeck,
+                icon: LucideIcons.plus,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.cta,
+                onPressed: _create,
               ),
-      ),
+              primary: photoImport == null
+                  ? null
+                  : AppButton(
+                      label: l10n.createFromPhoto,
+                      icon: LucideIcons.camera,
+                      size: AppButtonSize.cta,
+                      onPressed: () => _importPhoto(photoImport),
+                    ),
+            ),
     );
   }
+
+  void _browse(DeckSharing sharing) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()));
 
   AppBar _selectionBar(AppLocalizations l10n, Set<DeckId> selected) {
     final study = DeckSelection.of(selected);
     return AppBar(
       leading: IconButton(
         tooltip: l10n.clearSelection,
-        icon: const Icon(Icons.close),
+        icon: const Icon(LucideIcons.x),
         onPressed: () => setState(() => _selected = null),
       ),
       title: Text(l10n.decksSelected(selected.length)),
       actions: [
-        TextButton(
-          onPressed: study == null ? null : () => _study(study),
-          child: Text(l10n.studySelected(selected.length)),
+        Padding(
+          padding: const EdgeInsets.only(right: AppSpace.s12),
+          child: AppButton(
+            label: l10n.studySelected(selected.length),
+            variant: AppButtonVariant.text,
+            onPressed: study == null ? null : () => _study(study),
+          ),
         ),
       ],
     );
@@ -150,39 +211,100 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
 
   Future<void> _create() async {
     final repository = ref.read(deckRepositoryProvider);
-    final name = await showNameDialog(
+    final l10n = AppLocalizations.of(context);
+    final name = await showNameSheet(
       context,
-      title: AppLocalizations.of(context).newDeck,
+      title: l10n.newDeckTitle,
+      body: l10n.newDeckBody,
+      action: l10n.create,
     );
     if (name == null || !mounted) return;
     await reportingFailure(context, () => repository.createDeck(name));
   }
 }
 
-/// A screen's large title, read as a heading.
-class _LargeTitle extends StatelessWidget {
-  const _LargeTitle(this.text);
+/// The first-run home: the mascot, what to do first, and the three ways to
+/// start a deck, each shown only when the app offers it.
+class _EmptyHome extends StatelessWidget {
+  const _EmptyHome({
+    required this.onPhoto,
+    required this.onCreate,
+    required this.onBrowse,
+  });
 
-  final String text;
+  final VoidCallback? onPhoto;
+  final VoidCallback onCreate;
+  final VoidCallback? onBrowse;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Semantics(
-      header: true,
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.headlineLarge
-            ?.copyWith(fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final onPhoto = this.onPhoto;
+    final onBrowse = this.onBrowse;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.gutter,
+        AppSpace.s40,
+        AppSpace.gutter,
+        AppSpace.s24,
       ),
-    ),
-  );
+      children: [
+        Center(
+          child: Mascot(size: AppSize.mascotLarge, fill: colors.surface),
+        ),
+        const SizedBox(height: AppSpace.s24),
+        Semantics(
+          header: true,
+          child: Text(
+            l10n.emptyHomeTitle,
+            textAlign: TextAlign.center,
+            style: AppType.title,
+          ),
+        ),
+        const SizedBox(height: AppSpace.s8),
+        Text(
+          l10n.emptyHomeBody,
+          textAlign: TextAlign.center,
+          style: AppType.secondary.copyWith(color: colors.muted),
+        ),
+        const SizedBox(height: AppSpace.s32),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSpace.s8,
+          children: [
+            if (onPhoto != null)
+              AppButton(
+                label: l10n.createFromPhoto,
+                icon: LucideIcons.camera,
+                size: AppButtonSize.cta,
+                onPressed: onPhoto,
+              ),
+            AppButton(
+              label: l10n.createManually,
+              variant: AppButtonVariant.secondary,
+              size: AppButtonSize.cta,
+              onPressed: onCreate,
+            ),
+            if (onBrowse != null)
+              AppButton(
+                label: l10n.browsePublicDecks,
+                variant: AppButtonVariant.text,
+                onPressed: onBrowse,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
-/// How many cards a session over every deck would study now, split into due
-/// and new, and the action that studies them.
-class _TodayHeader extends StatelessWidget {
-  const _TodayHeader({required this.count, required this.onStudy});
+/// Today's cards over every deck on the brand's navy card: the count, its
+/// split into due and new with the minutes it takes, and the action that
+/// studies them, with the symbol faint in the corner; with none, that today's
+/// cards are done.
+class _TodayCard extends StatelessWidget {
+  const _TodayCard({required this.count, required this.onStudy});
 
   final TodayCount count;
   final VoidCallback onStudy;
@@ -191,44 +313,115 @@ class _TodayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(20),
+    final quiet = AppType.secondary.copyWith(color: colors.onHero);
+    final done = switch (count) {
+      TodayCounted(total: 0) => true,
+      _ => false,
+    };
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: colors.hero,
         borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadow.card(colors),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 4,
-        children: [
-          ...switch (count) {
-            TodayCounted(:final review, :final fresh, :final total) => [
-              Text(
-                l10n.todayCards(total),
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -AppSpace.s16,
+              right: -AppSpace.s16,
+              child: ExcludeSemantics(
+                child: Opacity(
+                  opacity: 0.12,
+                  child: Image.asset(
+                    AppBrand.symbol(Brightness.dark),
+                    width: AppSize.heroSymbol,
+                    height: AppSize.heroSymbol,
+                  ),
                 ),
               ),
-              Text(
-                l10n.todayBreakdown(review, fresh),
-                style: textTheme.bodyMedium?.copyWith(color: colors.muted),
-              ),
-            ],
-            TodayUnavailable(:final message) => [Text(message)],
-            TodayPending() => [const SizedBox(height: 56)],
-          },
-          const SizedBox(height: 12),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.know,
-              foregroundColor: colors.onKnow,
             ),
-            onPressed: onStudy,
-            child: Text(l10n.studyAll),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(AppSpace.s24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!done) ...[
+                    Text(
+                      l10n.todayTitle,
+                      style: AppType.section.copyWith(color: colors.onHero),
+                    ),
+                    const SizedBox(height: AppSpace.s4),
+                  ],
+                  ...switch (count) {
+                    TodayCounted(total: 0) => [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          l10n.todayDone,
+                          style: AppType.title.copyWith(color: colors.onHero),
+                        ),
+                      ),
+                    ],
+                    TodayCounted(
+                      :final review,
+                      :final fresh,
+                      :final total,
+                      :final minutes,
+                      :final backlog,
+                    ) =>
+                      [
+                        Semantics(
+                          container: true,
+                          label: l10n.todayCards(total),
+                          excludeSemantics: true,
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(text: '$total', style: AppType.figure),
+                                const TextSpan(text: ' '),
+                                TextSpan(
+                                  text: l10n.todayCountUnit,
+                                  style: AppType.headline,
+                                ),
+                              ],
+                            ),
+                            style: TextStyle(color: colors.onHero),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpace.s4),
+                        Text(
+                          l10n.todayBreakdown(review, fresh, minutes),
+                          style: quiet,
+                        ),
+                        if (backlog) Text(l10n.backlogPaused, style: quiet),
+                      ],
+                    TodayUnavailable(:final message) => [
+                      Text(message, style: quiet),
+                    ],
+                    // The count's and the line's height, so the card does
+                    // not jump.
+                    TodayPending() => [
+                      const SizedBox(height: AppSpace.s40 + AppSpace.s28),
+                    ],
+                  },
+                  // With nothing to study the card says so, and offers no
+                  // session.
+                  if (!done) ...[
+                    const SizedBox(height: AppSpace.s20),
+                    AppButton(
+                      label: l10n.studyAll,
+                      icon: LucideIcons.play,
+                      variant: AppButtonVariant.onHero,
+                      onPressed: onStudy,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -244,28 +437,14 @@ class _DecksLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              l10n.myDecks(count),
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (showHint)
-            Text(
+    return AppSectionLabel(
+      l10n.myDecks(count),
+      trailing: showHint
+          ? Text(
               l10n.selectHint,
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.of(context).muted,
-              ),
-            ),
-        ],
-      ),
+              style: AppType.micro.copyWith(color: AppColors.of(context).muted),
+            )
+          : null,
     );
   }
 }
@@ -291,76 +470,79 @@ class _DeckRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final selected = this.selected;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: MergeSemantics(
-        child: Semantics(
-          selected: selected,
-          child: Material(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.row),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.row),
-              onTap: selected == null
-                  ? () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => CardListScreen(deck: deck),
-                      ),
-                    )
-                  : onSelect,
-              onLongPress: onSelect,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-                child: Row(
-                  spacing: 12,
-                  children: [
-                    if (selected != null)
-                      Icon(
-                        selected
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: selected ? colors.know : colors.muted,
-                      ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 2,
-                        children: [
-                          Text(
-                            deck.name,
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            l10n.cardCount(cardCount),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colors.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ref.watch(todayProvider)(
-                      DeckSelection(deck.id),
-                      (context, count) => _TodayChip(count: count),
-                    ),
-                    if (selected == null)
-                      Icon(Icons.chevron_right, color: colors.muted),
-                  ],
-                ),
+    return AppListRow(
+      title: deck.name,
+      subtitle: l10n.cardCount(cardCount),
+      selected: selected,
+      leading: selected == null
+          ? _DeckTile(deck: deck)
+          : SizedBox.square(
+              dimension: AppSize.deckTile,
+              child: Icon(
+                selected ? LucideIcons.circleCheck : LucideIcons.circle,
+                color: selected ? colors.ink : colors.muted,
               ),
             ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpace.s8,
+        children: [
+          if (deck.visibility is PublicDeck) AppChip(label: l10n.publicChip),
+          ref.watch(todayProvider)(
+            DeckSelection(deck.id),
+            (context, count) => _TodayChip(count: count),
           ),
-        ),
+          if (selected == null)
+            Icon(LucideIcons.chevronRight, color: colors.muted),
+        ],
+      ),
+      onTap: selected == null
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CardListScreen(deck: deck),
+              ),
+            )
+          : onSelect,
+      onLongPress: onSelect,
+    );
+  }
+}
+
+/// The deck name's first letter on a rounded tile, in one of the four tints,
+/// the same one for a deck every time.
+class _DeckTile extends StatelessWidget {
+  const _DeckTile({required this.deck});
+
+  final Deck deck;
+
+  @override
+  Widget build(BuildContext context) {
+    final tints = AppColors.of(context).deckTints;
+    final name = deck.name.trim();
+    return Container(
+      width: AppSize.deckTile,
+      height: AppSize.deckTile,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: tints[deckTintIndex(deck.id, tints.length)],
+        borderRadius: BorderRadius.circular(AppRadius.field),
+      ),
+      child: Text(
+        name.isEmpty ? '' : name.characters.first.toUpperCase(),
+        style: AppType.headline,
       ),
     );
   }
 }
 
-/// A green "오늘 n" when a session over the deck would study any card now.
+/// Which of [count] tints a deck's tile takes: the sum of its id's UTF-16
+/// code units, modulo [count]. The web app computes the same.
+int deckTintIndex(DeckId deck, int count) =>
+    deck.value.codeUnits.fold(0, (sum, unit) => sum + unit) % count;
+
+/// A brand-tint "오늘 n" when a session over the deck would study any card
+/// now.
 class _TodayChip extends StatelessWidget {
   const _TodayChip({required this.count});
 
@@ -370,22 +552,14 @@ class _TodayChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return switch (count) {
-      TodayCounted(:final total) when total > 0 => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: colors.know,
-          borderRadius: BorderRadius.circular(AppRadius.row),
-        ),
-        child: Text(
-          AppLocalizations.of(context).todayChip(total),
-          style: Theme.of(context).textTheme.labelMedium
-              ?.copyWith(color: colors.onKnow, fontWeight: FontWeight.w600),
-        ),
+      TodayCounted(:final total) when total > 0 => AppChip(
+        label: AppLocalizations.of(context).todayChip(total),
+        tone: AppChipTone.brand,
       ),
       TodayUnavailable(:final message) => Tooltip(
         message: message,
         child: Icon(
-          Icons.error_outline,
+          LucideIcons.circleAlert,
           color: colors.muted,
           semanticLabel: message,
         ),

@@ -9,6 +9,7 @@ import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
+import 'generated/schema_v5.dart' as v5;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -242,6 +243,115 @@ void main() {
         expect(await db.select(db.syncState).get(), isEmpty);
       },
     );
+  });
+
+  test('every row survives the upgrade from 4 to 5, decks private and cards without an origin', () async {
+    final created = DateTime.utc(2026, 10, 1).millisecondsSinceEpoch ~/ 1000;
+    await verifier.testWithDataIntegrity(
+      oldVersion: 4,
+      newVersion: 5,
+      createOld: v4.DatabaseAtV4.new,
+      createNew: v5.DatabaseAtV5.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          v4.DecksData(
+            id: 'deck',
+            name: 'French',
+            createdAt: created,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+        batch.insert(
+          old.cards,
+          v4.CardsData(
+            id: 'card',
+            deckId: 'deck',
+            front: '[]',
+            back: '[]',
+            cardKey: 'chat',
+            source: 'import',
+            createdAt: created,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+        batch.insert(
+          old.reviews,
+          v4.ReviewsData(
+            id: 'review',
+            cardId: 'card',
+            rating: 'good',
+            reviewedAt: created,
+            durationMs: 1200,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+        batch.insert(
+          old.cardStates,
+          v4.CardStatesData(
+            cardId: 'card',
+            stability: 2.3065,
+            difficulty: 2.118,
+            lastReview: created,
+            due: created + 86400,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final deck = await db.select(db.decks).getSingle();
+        expect(
+          [deck.name, deck.visibility, deck.publishedAt, deck.description],
+          ['French', 'private', null, null],
+        );
+        final card = await db.select(db.cards).getSingle();
+        expect(
+          [card.cardKey, card.source, card.originDeckId, card.dirty],
+          ['chat', 'import', null, 0],
+        );
+        expect(await db.select(db.reviews).get(), hasLength(1));
+        expect(await db.select(db.cardStates).get(), hasLength(1));
+      },
+    );
+  });
+
+  test('a card row takes the source shared with its origin, and refuses an unknown source', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final at = DateTime.utc(2026, 10, 1);
+    await db
+        .into(db.decks)
+        .insert(
+          DecksCompanion.insert(
+            id: 'deck',
+            name: 'French',
+            createdAt: at,
+            updatedAt: at,
+          ),
+        );
+    CardsCompanion card(String id, String source) => CardsCompanion.insert(
+      id: id,
+      deckId: 'deck',
+      front: '[]',
+      back: '[]',
+      cardKey: id,
+      source: source,
+      originDeckId: const Value('origin'),
+      createdAt: at,
+      updatedAt: at,
+    );
+    await db.into(db.cards).insert(card('copied', 'shared'));
+    await expectLater(
+      db.into(db.cards).insert(card('unknown', 'borrowed')),
+      throwsA(isA<SqliteException>()),
+    );
+    final stored = await db.select(db.cards).getSingle();
+    expect([stored.source, stored.originDeckId], ['shared', 'origin']);
   });
 
   test('a review row refuses a fuzz factor outside 0 to 1', () async {

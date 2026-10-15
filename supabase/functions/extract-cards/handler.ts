@@ -4,7 +4,8 @@ import type { Card } from "./cards.ts";
 import type { Config } from "./config.ts";
 import { type Attempt, extractCards } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
-import { authenticate, consumeExtraction, type UserId } from "./supabase.ts";
+import { authenticate, type UserId } from "../_shared/auth.ts";
+import { consumeExtraction } from "./supabase.ts";
 
 /** How a request ended; the error body carries the same code, for the app to show. */
 export type Outcome =

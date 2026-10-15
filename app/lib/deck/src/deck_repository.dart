@@ -54,6 +54,7 @@ class DeckRepository {
     final row = DeckRow(
       id: _newId(),
       name: name,
+      visibility: _visibilityName(const PrivateDeck()),
       createdAt: now,
       updatedAt: now,
       dirty: true,
@@ -73,6 +74,46 @@ class DeckRepository {
       ),
     );
   });
+
+  /// Publishes the deck as [visibility] says, with [description] when it is
+  /// public; a private deck keeps the description it had, for the next
+  /// publish. Refused with [DeckDeleted] once the deck is deleted.
+  Future<Deck> setVisibility(
+    DeckId id,
+    DeckVisibility visibility, {
+    String? description,
+  }) => _guard(
+    () => _db.transaction(() async {
+      await getDeck(id);
+      await (_db.update(
+        _db.decks,
+      )..where((deck) => deck.id.equals(id.value))).write(
+        DecksCompanion(
+          visibility: Value(_visibilityName(visibility)),
+          publishedAt: Value(switch (visibility) {
+            PublicDeck(:final publishedAt) => publishedAt,
+            PrivateDeck() => null,
+          }),
+          description: switch (visibility) {
+            PublicDeck() => Value(description),
+            PrivateDeck() => const Value.absent(),
+          },
+          updatedAt: Value(_clock()),
+          dirty: const Value(true),
+        ),
+      );
+      return getDeck(id);
+    }),
+  );
+
+  /// The deck, re-emitted on each change; null once it is deleted.
+  Stream<Deck?> watchDeck(DeckId id) {
+    final query = _db.select(_db.decks)
+      ..where((deck) => deck.id.equals(id.value) & deck.deletedAt.isNull());
+    return _guardStream(
+      query.watchSingleOrNull().map((row) => row == null ? null : _toDeck(row)),
+    );
+  }
 
   /// Deletes the deck and every card in it, as tombstones sync pushes.
   Future<void> deleteDeck(DeckId id) => _guard(
@@ -228,18 +269,19 @@ class DeckRepository {
         .write(_cardTombstone(_clock()));
   });
 
-  /// Saves [cards] as import cards into [target] in one transaction, creating
+  /// Saves [cards] from [source] into [target] in one transaction, creating
   /// the deck first when the target is a new one. A card whose key collides
   /// with a card already in the deck, or with one saved earlier in [cards],
   /// does what its [ImportedCard.onDuplicate] says; no card is overwritten or
   /// deleted.
   Future<CardsImported> importCards(
     ImportTarget target,
-    List<ImportedCard> cards,
-  ) => _guard(
+    List<ImportedCard> cards, {
+    ImportSource source = const FromPhoto(),
+  }) => _guard(
     () => _db.transaction(() async {
       final deck = switch (target) {
-        ImportIntoDeck(:final deck) => await _getDeck(deck),
+        ImportIntoDeck(:final deck) => await getDeck(deck),
         ImportIntoNewDeck(:final name) => await createDeck(name),
       };
       var added = 0;
@@ -259,7 +301,14 @@ class DeckRepository {
                     front: encodeContent([TextContent(card.front)]),
                     back: encodeContent([TextContent(card.back)]),
                     cardKey: key.value,
-                    source: CardSource.import.name,
+                    source: switch (source) {
+                      FromPhoto() => CardSource.import.name,
+                      FromPublicDeck() => CardSource.shared.name,
+                    },
+                    originDeckId: switch (source) {
+                      FromPhoto() => null,
+                      FromPublicDeck(:final origin) => origin.value,
+                    },
                     createdAt: now,
                     updatedAt: now,
                     dirty: true,
@@ -288,7 +337,7 @@ class DeckRepository {
   );
 
   /// The deck, unless it was deleted; then [DeckDeleted].
-  Future<Deck> _getDeck(DeckId id) async {
+  Future<Deck> getDeck(DeckId id) => _guard(() async {
     final row =
         await (_db.select(_db.decks)..where(
               (deck) => deck.id.equals(id.value) & deck.deletedAt.isNull(),
@@ -296,7 +345,13 @@ class DeckRepository {
             .getSingleOrNull();
     if (row == null) throw DeckDeleted(id);
     return _toDeck(row);
-  }
+  });
+
+  static String _visibilityName(DeckVisibility visibility) =>
+      switch (visibility) {
+        PrivateDeck() => 'private',
+        PublicDeck() => 'public',
+      };
 
   static DecksCompanion _deckTombstone(DateTime at) => DecksCompanion(
     deletedAt: Value(at),
@@ -332,6 +387,12 @@ class DeckRepository {
     name: row.name,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    // A public row always carries its publish time; the server checks it.
+    visibility: switch ((row.visibility, row.publishedAt)) {
+      ('public', final publishedAt?) => PublicDeck(publishedAt),
+      _ => const PrivateDeck(),
+    },
+    description: row.description,
   );
 
   Card _toCard(CardRow row) {
@@ -346,6 +407,10 @@ class DeckRepository {
         source: CardSource.values.byName(row.source),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        originDeckId: switch (row.originDeckId) {
+          final origin? => DeckId(origin),
+          null => null,
+        },
       );
     } on FormatException catch (cause) {
       throw UnreadableCard(id, cause);

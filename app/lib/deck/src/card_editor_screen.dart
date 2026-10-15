@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_sheet.dart';
+import '../../shared/ui/app_text_field.dart';
+import 'bottom_actions.dart';
 import 'card_list_screen.dart';
 import 'card_preview.dart';
 import 'content.dart';
@@ -90,9 +95,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   }
 
   Future<void> _resolveDuplicate(Card existing, _AfterSave after) async {
-    final choice = await showModalBottomSheet<_DuplicateChoice>(
-      context: context,
-      isScrollControlled: true,
+    final choice = await showAppSheet<_DuplicateChoice>(
+      context,
       builder: (_) => _DuplicateSheet(existing: existing, isNew: _isNew),
     );
     if (!mounted) return;
@@ -111,27 +115,14 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   }
 
   Future<void> _delete(Card card) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final l10n = AppLocalizations.of(context);
-        return AlertDialog(
-          title: Text(l10n.deleteCardTitle),
-          content: Text(l10n.deleteCardBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(l10n.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(l10n.delete),
-            ),
-          ],
-        );
-      },
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showAppConfirm(
+      context,
+      title: l10n.deleteCardTitle,
+      consequence: l10n.deleteCardBody,
+      confirmLabel: l10n.delete,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     final repository = ref.read(deckRepositoryProvider);
     await reportingFailure(context, () async {
       await repository.deleteCard(card.id);
@@ -145,13 +136,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final card = widget.card;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           tooltip: l10n.close,
-          icon: const Icon(Icons.close),
+          icon: const Icon(LucideIcons.x),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(_isNew ? l10n.newCard : l10n.editCard),
@@ -159,14 +149,14 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           if (card != null)
             IconButton(
               tooltip: l10n.deleteCard,
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(LucideIcons.trash2),
               onPressed: () => _delete(card),
             ),
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: AppSpace.gutter),
             child: Text(
               widget.deck.name,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: AppType.secondary.copyWith(
                 color: AppColors.of(context).muted,
               ),
             ),
@@ -174,7 +164,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpace.gutter),
         children: [
           CardPreview(
             front: describeContent(
@@ -186,68 +176,55 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               _replaceText(card?.back ?? const [], _back.text),
             ),
           ),
-          const SizedBox(height: 24),
-          TextField(
+          const SizedBox(height: AppSpace.s24),
+          AppTextField(
+            label: l10n.cardFront,
             controller: _front,
             focusNode: _frontFocus,
             autofocus: _isNew,
             minLines: 2,
             maxLines: null,
+            errorText: _requiredError(l10n, _front),
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: l10n.cardFront,
-              errorText: _requiredError(l10n, _front),
-            ),
           ),
-          const SizedBox(height: 16),
-          TextField(
+          const SizedBox(height: AppSpace.s16),
+          AppTextField(
+            label: l10n.cardBack,
             controller: _back,
             minLines: 2,
             maxLines: null,
+            errorText: _requiredError(l10n, _back),
             onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: l10n.cardBack,
-              errorText: _requiredError(l10n, _back),
-            ),
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            spacing: 12,
-            children: [
-              if (_isNew) ...[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _save(_AfterSave.close),
-                    child: Text(l10n.save),
-                  ),
-                ),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => _save(_AfterSave.next),
-                    child: Text(l10n.saveAndNext),
-                  ),
-                ),
-              ] else
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => _save(_AfterSave.close),
-                    child: Text(l10n.save),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: _isNew
+          ? BottomActions(
+              secondary: AppButton(
+                label: l10n.save,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.cta,
+                onPressed: () => _save(_AfterSave.close),
+              ),
+              primary: AppButton(
+                label: l10n.saveAndNext,
+                size: AppButtonSize.cta,
+                onPressed: () => _save(_AfterSave.next),
+              ),
+            )
+          : BottomActions(
+              secondary: AppButton(
+                label: l10n.save,
+                size: AppButtonSize.cta,
+                onPressed: () => _save(_AfterSave.close),
+              ),
+            ),
     );
   }
 }
 
-/// The sheet shown when a save collides with [existing]: save anyway, open the
-/// existing card, or cancel. Nothing is overwritten either way.
+/// The sheet shown when a save collides with [existing]: save anyway or open
+/// the existing card; dismissing it does neither. Nothing is overwritten.
 class _DuplicateSheet extends StatelessWidget {
   const _DuplicateSheet({required this.existing, required this.isNew});
 
@@ -257,45 +234,28 @@ class _DuplicateSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 12,
-          children: [
-            Text(l10n.duplicateTitle, style: theme.textTheme.titleLarge),
-            Text(
-              l10n.duplicateBody,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.of(context).muted,
-              ),
-            ),
-            const SizedBox(height: 4),
-            CardPreview(
-              front: describeContent(l10n, existing.front),
-              back: describeContent(l10n, existing.back),
-            ),
-            const SizedBox(height: 4),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(_DuplicateChoice.saveAnyway),
-              child: Text(isNew ? l10n.addAnyway : l10n.saveAnyway),
-            ),
-            OutlinedButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(_DuplicateChoice.openExisting),
-              child: Text(l10n.openExistingCard),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.cancel),
-            ),
-          ],
-        ),
+    return AppSheet(
+      title: l10n.duplicateTitle,
+      body: l10n.duplicateBody,
+      content: CardPreview(
+        front: describeContent(l10n, existing.front),
+        back: describeContent(l10n, existing.back),
       ),
+      actions: [
+        AppButton(
+          label: l10n.openExistingCard,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.cta,
+          onPressed: () =>
+              Navigator.of(context).pop(_DuplicateChoice.openExisting),
+        ),
+        AppButton(
+          label: isNew ? l10n.addAnyway : l10n.saveAnyway,
+          size: AppButtonSize.cta,
+          onPressed: () =>
+              Navigator.of(context).pop(_DuplicateChoice.saveAnyway),
+        ),
+      ],
     );
   }
 }

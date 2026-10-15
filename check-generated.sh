@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fails when committed generated code in app/ differs from what its generators write
+# Fails when committed generated code in app/ or engine-wasm/pkg/ differs from what its generators write
 # from the current sources. Each file in $scope is hashed, every generator is rerun
 # with the command its documentation gives, and the set is hashed again; a changed,
 # added or removed file is stale output. Hashing the working tree rather than diffing
@@ -11,12 +11,12 @@ scope="git ls-files --cached --others --exclude-standard -- 'lib/*.g.dart' 'lib/
 cd "$(dirname "$0")/app"
 
 snapshot() {
-	eval "$scope" | sort | while IFS= read -r file; do
+	eval "$1" | sort | while IFS= read -r file; do
 		[ -f "$file" ] && printf '%s %s\n' "$(git hash-object "$file")" "$file"
 	done
 }
 
-before=$(snapshot)
+before=$(snapshot "$scope")
 if [ -z "$before" ]; then
 	echo "no generated file was selected by: $scope" >&2
 	exit 1
@@ -39,14 +39,34 @@ for database in $(ls drift_schemas); do
 		"drift_schemas/$database/" "test/drift/$database/generated/"
 done
 
-after=$(snapshot)
-if [ "$before" != "$after" ]; then
-	echo "generated code is stale; regenerate it and commit the result:" >&2
-	echo "$before" > "${TMPDIR:-/tmp}/generated-before.$$"
-	echo "$after" > "${TMPDIR:-/tmp}/generated-after.$$"
-	diff "${TMPDIR:-/tmp}/generated-before.$$" "${TMPDIR:-/tmp}/generated-after.$$" >&2 || true
-	rm -f "${TMPDIR:-/tmp}/generated-before.$$" "${TMPDIR:-/tmp}/generated-after.$$"
+fail_if_stale() {
+	if [ "$1" != "$2" ]; then
+		echo "generated code is stale; regenerate it and commit the result:" >&2
+		echo "$1" > "${TMPDIR:-/tmp}/generated-before.$$"
+		echo "$2" > "${TMPDIR:-/tmp}/generated-after.$$"
+		diff "${TMPDIR:-/tmp}/generated-before.$$" "${TMPDIR:-/tmp}/generated-after.$$" >&2 || true
+		rm -f "${TMPDIR:-/tmp}/generated-before.$$" "${TMPDIR:-/tmp}/generated-after.$$"
+		exit 1
+	fi
+}
+
+after=$(snapshot "$scope")
+fail_if_stale "$before" "$after"
+echo "checked $(echo "$after" | wc -l | tr -d ' ') generated files in app/ against their generators, selected by: $scope"
+
+# The engine as WebAssembly for the web app (ADR 0018), which ../wasm-bindgen.sh generates.
+cd ..
+if ! command -v wasm-bindgen >/dev/null 2>&1; then
+	echo "skipped checking engine-wasm/pkg/: this host has no wasm-bindgen command"
+	exit 0
+fi
+wasm_scope="git ls-files --cached --others --exclude-standard -- 'engine-wasm/pkg'"
+before=$(snapshot "$wasm_scope")
+if [ -z "$before" ]; then
+	echo "no generated file was selected by: $wasm_scope" >&2
 	exit 1
 fi
-
-echo "checked $(echo "$after" | wc -l | tr -d ' ') generated files in app/ against their generators, selected by: $scope"
+./wasm-bindgen.sh generate
+after=$(snapshot "$wasm_scope")
+fail_if_stale "$before" "$after"
+echo "checked $(echo "$after" | wc -l | tr -d ' ') generated files in engine-wasm/pkg/ against wasm-bindgen, selected by: $wasm_scope"

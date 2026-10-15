@@ -21,6 +21,24 @@ final class ImportIntoNewDeck extends ImportTarget {
   final String name;
 }
 
+/// Where imported cards come from, which their stored source records.
+sealed class ImportSource {
+  const ImportSource();
+}
+
+/// Cards read off a photo, stored as [CardSource.import].
+final class FromPhoto extends ImportSource {
+  const FromPhoto();
+}
+
+/// Cards copied from another user's public deck [origin], stored as
+/// [CardSource.shared] with that origin.
+final class FromPublicDeck extends ImportSource {
+  const FromPublicDeck(this.origin);
+
+  final DeckId origin;
+}
+
 /// What an imported card does when a card in its deck already has its key.
 enum DuplicateChoice {
   /// Writes nothing.

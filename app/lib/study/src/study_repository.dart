@@ -83,6 +83,35 @@ class StudyRepository {
     }
   }
 
+  /// The median time the user took over their last [paceWindow] reviews, or
+  /// null while they have fewer than [paceMinimum].
+  Future<Duration?> medianReviewDuration() async {
+    try {
+      final query = _db.selectOnly(_db.reviews)
+        ..addColumns([_db.reviews.durationMs])
+        ..where(_db.reviews.deletedAt.isNull())
+        ..orderBy([OrderingTerm.desc(_db.reviews.reviewedAt)])
+        ..limit(paceWindow);
+      final durations = [
+        for (final row in await query.get()) row.read(_db.reviews.durationMs)!,
+      ]..sort();
+      if (durations.length < paceMinimum) return null;
+      final middle = durations.length ~/ 2;
+      final median = durations.length.isOdd
+          ? durations[middle]
+          : (durations[middle - 1] + durations[middle]) ~/ 2;
+      return Duration(milliseconds: median);
+    } on Exception catch (cause, stackTrace) {
+      Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
+    }
+  }
+
+  /// How many of the latest reviews the pace is the median of.
+  static const paceWindow = 200;
+
+  /// The fewest reviews a pace is read from.
+  static const paceMinimum = 20;
+
   CardState _toState(CardStateRow row) => CardState(
     stability: row.stability,
     difficulty: row.difficulty,

@@ -5,6 +5,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +14,7 @@ import 'deck/deck.dart';
 import 'photo_import/photo_import.dart';
 import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
+import 'sharing/sharing.dart';
 import 'shared/theme.dart';
 import 'study/study.dart';
 import 'sync/sync.dart';
@@ -22,9 +24,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final scheduler = await Scheduler.load();
   final account = await connectAccount(accountDefines());
-  final themeStorage = await SharedPreferencesWithCache.create(
+  final legal = LegalLinks.parse(accountDefines());
+  final package = await PackageInfo.fromPlatform();
+  final preferences = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
-      allowList: themeStorageKeys,
+      allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
     ),
   );
   runApp(
@@ -33,7 +37,7 @@ Future<void> main() async {
       scheduler,
       account.service,
       connectSyncServer(account),
-      themeStorage,
+      preferences,
       switch (account.client) {
         final client? => HttpExtractionClient(
           http.Client(),
@@ -42,22 +46,37 @@ Future<void> main() async {
         ),
         null => null,
       },
+      switch (account.client) {
+        final client? => SupabaseSharingServer(client),
+        null => null,
+      },
+      DeviceReachability(),
+      legal,
+      package.version,
     ),
   );
 }
 
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
-/// [server], keeping the theme choice in [themeStorage], and extracting
-/// cards from photos through [extraction], whose absence hides photo import.
-/// Sync starts at once.
+/// [server], keeping the theme choice and photo import's detail level in
+/// [preferences], and extracting cards from photos through [extraction],
+/// whose absence hides photo import,
+/// and sharing decks through [sharing] while [reachability] says the device
+/// is online; without [sharing] the app offers no sharing. The sign-in and
+/// account screens link to [legal] and name the app's [version]. Sync starts
+/// at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
   AccountService account,
   SyncServer server,
-  SharedPreferencesWithCache themeStorage,
+  SharedPreferencesWithCache preferences,
   ExtractionClient? extraction,
+  SharingServer? sharing,
+  Reachability reachability,
+  LegalLinks legal,
+  String version,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
@@ -84,6 +103,16 @@ Widget composeApp(
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      deckSharingProvider.overrideWithValue(
+        sharing == null
+            ? null
+            : SharingService(
+                server: sharing,
+                decks: deckRepository,
+                reachability: reachability,
+                clock: DateTime.now,
+              ),
+      ),
       photoImportProvider.overrideWithValue(
         extraction == null
             ? null
@@ -91,6 +120,7 @@ Widget composeApp(
                 deck: deck,
                 client: extraction,
                 photos: const DevicePhotoSource(),
+                preferences: preferences,
               ),
       ),
       studyRepositoryProvider.overrideWithValue(studyRepository),
@@ -106,17 +136,24 @@ Widget composeApp(
         (decks, builder) => TodayCounter(decks: decks, builder: builder),
       ),
       accountServiceProvider.overrideWithValue(account),
+      legalLinksProvider.overrideWithValue(legal),
+      appVersionProvider.overrideWithValue(version),
       accountScreenProvider.overrideWithValue(AccountScreen.new),
+      accountAvatarProvider.overrideWithValue(
+        () => const AccountAvatar(size: AppSize.smallAvatar),
+      ),
+      signedInHomeProvider.overrideWithValue(DeckListScreen.new),
       accountDataProvider.overrideWithValue(sync),
       syncControllerProvider.overrideWithValue(sync),
       syncStatusProvider.overrideWithValue(SyncStatusView.new),
-      themeStorageProvider.overrideWithValue(themeStorage),
+      themeStorageProvider.overrideWithValue(preferences),
     ],
     child: const SmartmanApp(),
   );
 }
 
-/// The application root, opening on the deck list in the theme the user chose.
+/// The application root, opening on the account gate in the theme the user
+/// chose.
 class SmartmanApp extends ConsumerWidget {
   const SmartmanApp({super.key});
 
@@ -129,7 +166,7 @@ class SmartmanApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const DeckListScreen(),
+      home: const AccountGate(),
     );
   }
 }

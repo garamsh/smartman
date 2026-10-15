@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_chip.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_sheet.dart';
+import '../../shared/ui/app_text_field.dart';
 import 'bottom_actions.dart';
 import 'card_editor_screen.dart';
 import 'content.dart';
 import 'failure_message.dart';
 import 'model.dart';
-import 'name_dialog.dart';
+import 'name_sheet.dart';
 import 'providers.dart';
 
 /// A deck's cards, searchable, under the action that studies them; opens a
@@ -22,7 +28,7 @@ class CardListScreen extends ConsumerStatefulWidget {
   ConsumerState<CardListScreen> createState() => _CardListScreenState();
 }
 
-enum _DeckAction { rename, delete }
+enum _DeckAction { rename, publish, unpublish, delete }
 
 class _CardListScreenState extends ConsumerState<CardListScreen> {
   late String _name = widget.deck.name;
@@ -32,17 +38,30 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final cards = ref.watch(cardsProvider(widget.deck.id));
     final photoImport = ref.watch(photoImportProvider);
+    final sharing = ref.watch(deckSharingProvider);
+    final online = switch (ref.watch(onlineProvider)) {
+      AsyncData(:final value) => value,
+      _ => false,
+    };
+    // The deck as stored now, so a publish made here or synced in shows.
+    final current = switch (ref.watch(deckProvider(widget.deck.id))) {
+      AsyncData(value: final deck?) => deck,
+      _ => widget.deck,
+    };
+    final public = current.visibility is PublicDeck;
     final deck = DeckSelection(widget.deck.id);
     return Scaffold(
       appBar: AppBar(
         actions: [
           PopupMenuButton<_DeckAction>(
             tooltip: l10n.deckActions,
+            icon: const Icon(LucideIcons.ellipsisVertical),
             onSelected: (action) => switch (action) {
               _DeckAction.rename => _rename(),
+              _DeckAction.publish => sharing?.publish(context, current),
+              _DeckAction.unpublish => sharing?.unpublish(context, current),
               _DeckAction.delete => _delete(),
             },
             itemBuilder: (_) => [
@@ -50,6 +69,17 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                 value: _DeckAction.rename,
                 child: Text(l10n.rename),
               ),
+              if (sharing != null)
+                PopupMenuItem(
+                  value: public ? _DeckAction.unpublish : _DeckAction.publish,
+                  enabled: online,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    enabled: online,
+                    title: Text(public ? l10n.unpublish : l10n.publish),
+                    subtitle: online ? null : Text(l10n.publishNeedsNetwork),
+                  ),
+                ),
               PopupMenuItem(
                 value: _DeckAction.delete,
                 child: Text(l10n.deleteDeck),
@@ -60,93 +90,127 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
       ),
       body: switch (cards) {
         AsyncData(:final value) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            0,
+            AppSpace.gutter,
+            AppSpace.s16,
+          ),
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                _name,
-                style: textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+            Wrap(
+              spacing: AppSpace.s12,
+              runSpacing: AppSpace.s4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(_name, style: AppType.deckTitle),
                 ),
-              ),
+                if (public) AppChip(label: l10n.publicChip),
+              ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpace.s16),
             ref.watch(todayProvider)(
               deck,
               (context, count) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 16,
+                spacing: AppSpace.s20,
                 children: [
-                  Text(
-                    switch (count) {
-                      TodayCounted(:final review, :final fresh) =>
-                        l10n.deckSummary(value.length, review, fresh),
-                      TodayUnavailable(:final message) => message,
-                      TodayPending() => l10n.cardCount(value.length),
-                    },
-                    style: textTheme.bodyMedium?.copyWith(color: colors.muted),
+                  Wrap(
+                    spacing: AppSpace.s8,
+                    runSpacing: AppSpace.s8,
+                    children: [
+                      _StatPill(l10n.statCards(value.length)),
+                      if (count case TodayCounted(
+                        :final review,
+                        :final fresh,
+                      )) ...[
+                        _StatPill(l10n.statReview(review)),
+                        _StatPill(l10n.statNew(fresh)),
+                      ],
+                      if (count case TodayUnavailable(:final message))
+                        Text(
+                          message,
+                          style: AppType.secondary.copyWith(
+                            color: colors.muted,
+                          ),
+                        ),
+                    ],
                   ),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.know,
-                      foregroundColor: colors.onKnow,
+                  if (count case TodayCounted(backlog: true))
+                    Text(
+                      l10n.backlogPaused,
+                      style: AppType.secondary.copyWith(color: colors.muted),
                     ),
+                  AppButton(
+                    label: l10n.studyCount(switch (count) {
+                      TodayCounted(:final total) => total,
+                      _ => 0,
+                    }),
+                    icon: LucideIcons.play,
+                    size: AppButtonSize.cta,
                     onPressed: switch (count) {
                       TodayCounted(:final total) when total > 0 => _study,
                       _ => null,
                     },
-                    child: Text(
-                      l10n.studyCount(switch (count) {
-                        TodayCounted(:final total) => total,
-                        _ => 0,
-                      }),
-                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpace.sectionGap),
             if (value.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 48),
-                child: Text(l10n.noCards, textAlign: TextAlign.center),
+                padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
+                child: Text(
+                  l10n.noCards,
+                  textAlign: TextAlign.center,
+                  style: AppType.body.copyWith(color: colors.muted),
+                ),
               )
             else ...[
-              TextField(
+              AppTextField(
+                hint: l10n.searchCards,
+                prefixIcon: const Icon(LucideIcons.search),
+                height: AppSize.search,
                 onChanged: (query) => setState(() => _query = query),
-                decoration: InputDecoration(
-                  hintText: l10n.searchCards,
-                  prefixIcon: const Icon(Icons.search),
-                ),
               ),
-              const SizedBox(height: 12),
-              ..._rows(l10n, value),
+              const SizedBox(height: AppSpace.s12),
+              _rows(l10n, value),
             ],
           ],
         ),
         AsyncError(:final error, :final stackTrace) => Center(
-          child: Text(describeProviderError(l10n, error, stackTrace)),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpace.gutter),
+            child: Text(describeProviderError(l10n, error, stackTrace)),
+          ),
         ),
         _ => const Center(child: CircularProgressIndicator()),
       },
       bottomNavigationBar: BottomActions(
-        secondary: OutlinedButton(
+        secondary: AppButton(
+          label: l10n.newCard,
+          icon: LucideIcons.plus,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.cta,
           onPressed: () => _open(null),
-          child: Text(l10n.newCard),
         ),
         primary: photoImport == null
             ? null
-            : FilledButton(
+            : AppButton(
+                label: l10n.addFromPhoto,
+                icon: LucideIcons.camera,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.cta,
                 onPressed: () => _importPhoto(photoImport),
-                child: Text(l10n.addFromPhoto),
               ),
       ),
     );
   }
 
-  /// A row for each card whose front or back holds the search, ignoring case.
-  List<Widget> _rows(AppLocalizations l10n, List<Card> cards) {
+  /// A row for each card whose front or back holds the search, ignoring case,
+  /// in one rounded group.
+  Widget _rows(AppLocalizations l10n, List<Card> cards) {
     final query = _query.trim().toLowerCase();
     final rows =
         [
@@ -162,21 +226,34 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
               row.back.toLowerCase().contains(query),
         );
     if (rows.isEmpty) {
-      return [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32),
-          child: Text(l10n.noMatches, textAlign: TextAlign.center),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
+        child: Text(
+          l10n.noMatches,
+          textAlign: TextAlign.center,
+          style: AppType.body.copyWith(color: AppColors.of(context).muted),
         ),
-      ];
+      );
     }
-    return [
-      for (final row in rows)
-        _CardRow(
-          front: row.front,
-          back: row.back,
-          onTap: () => _open(row.card),
-        ),
-    ];
+    final colors = AppColors.of(context);
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.row),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (final (i, row) in rows.indexed) ...[
+            if (i > 0) const Divider(height: 1, thickness: 1),
+            CardSplitRow(
+              front: row.front,
+              back: row.back,
+              grouped: true,
+              onTap: () => _open(row.card),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// Opens photo import for this deck. When it saved into another deck, that
@@ -215,9 +292,11 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
 
   Future<void> _rename() async {
     final repository = ref.read(deckRepositoryProvider);
-    final name = await showNameDialog(
+    final l10n = AppLocalizations.of(context);
+    final name = await showNameSheet(
       context,
-      title: AppLocalizations.of(context).renameDeck,
+      title: l10n.renameDeck,
+      action: l10n.save,
       initial: _name,
     );
     if (name == null || !mounted) return;
@@ -232,84 +311,89 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
     await reportingFailure(context, () async {
       final cardCount = await repository.countCards(widget.deck.id);
       if (!mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final l10n = AppLocalizations.of(context);
-          return AlertDialog(
-            title: Text(l10n.deleteDeckTitle(_name)),
-            content: Text(l10n.deleteDeckBody(cardCount)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(l10n.cancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(l10n.delete),
-              ),
-            ],
-          );
-        },
+      final l10n = AppLocalizations.of(context);
+      final confirmed = await showAppConfirm(
+        context,
+        title: l10n.deleteDeckTitle(_name),
+        consequence: l10n.deleteDeckBody(cardCount),
+        confirmLabel: l10n.delete,
       );
-      if (confirmed != true) return;
+      if (!confirmed) return;
       await repository.deleteDeck(widget.deck.id);
       if (mounted) Navigator.of(context).pop();
     });
   }
 }
 
-/// A card as two columns, front and back, split by a thin divider.
-class _CardRow extends StatelessWidget {
-  const _CardRow({
+/// A card as two columns, front and back, split by a thin divider; read-only
+/// without [onTap]. On its own it is a row on its rounded surface; [grouped]
+/// it is one row of a group that draws the surface.
+class CardSplitRow extends StatelessWidget {
+  const CardSplitRow({
+    super.key,
     required this.front,
     required this.back,
-    required this.onTap,
+    this.onTap,
+    this.grouped = false,
   });
 
   final String front;
   final String back;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.row),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.row),
-          onTap: onTap,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(front, style: textTheme.bodyLarge),
-                  ),
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      back,
-                      style: textTheme.bodyLarge?.copyWith(color: colors.muted),
-                    ),
-                  ),
-                ),
-              ],
+    final content = IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: Text(front, style: AppType.label),
             ),
           ),
-        ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: Text(
+                back,
+                style: AppType.secondary.copyWith(color: colors.ink2),
+              ),
+            ),
+          ),
+        ],
       ),
     );
+    final onTap = this.onTap;
+    if (!grouped) return AppRowSurface(onTap: onTap, child: content);
+    return onTap == null ? content : InkWell(onTap: onTap, child: content);
   }
+}
+
+/// One count of the deck screen, on a white pill.
+class _StatPill extends StatelessWidget {
+  const _StatPill(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: ShapeDecoration(
+      color: AppColors.of(context).surface,
+      shape: const StadiumBorder(),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s16,
+        vertical: AppSpace.s8,
+      ),
+      child: Text(text, style: AppType.section),
+    ),
+  );
 }
 
 /// One line of text for a card side; a block this version cannot show is

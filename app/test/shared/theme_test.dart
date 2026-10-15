@@ -68,10 +68,10 @@ void main() {
   test('the light and dark themes carry their own tokens and the font', () {
     expect(lightTheme.brightness, Brightness.light);
     expect(lightTheme.extension<AppColors>(), AppColors.light);
-    expect(lightTheme.scaffoldBackgroundColor, const Color(0xFFEEF1F5));
+    expect(lightTheme.scaffoldBackgroundColor, const Color(0xFFF4F6FA));
     expect(darkTheme.brightness, Brightness.dark);
     expect(darkTheme.extension<AppColors>(), AppColors.dark);
-    expect(darkTheme.scaffoldBackgroundColor, const Color(0xFF0F1115));
+    expect(darkTheme.scaffoldBackgroundColor, const Color(0xFF0E1424));
     expect(lightTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
     expect(darkTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
   });
@@ -95,6 +95,61 @@ void main() {
     ], isEmpty);
   });
 
+  test('a spacing or font-size literal is found, and a token is not', () {
+    expect(styleLiterals('EdgeInsets.all(16)'), ['EdgeInsets.all(16)']);
+    expect(styleLiterals('EdgeInsets.fromLTRB(4, 0, 4, 8)'), [
+      'EdgeInsets.fromLTRB(4, 0, 4, 8)',
+    ]);
+    expect(styleLiterals('Column(spacing: 12, children: [])'), ['spacing: 12']);
+    expect(styleLiterals('const SizedBox(height: 4)'), ['SizedBox(height: 4)']);
+    expect(styleLiterals('TextStyle(fontSize: 13)'), ['fontSize: 13']);
+    // Controls: tokens, zero, a sum of tokens, a sized child and a computed
+    // inset are not spacing literals.
+    expect(
+      styleLiterals('''
+        EdgeInsets.fromLTRB(AppSpace.gutter, 0, AppSpace.gutter, AppSpace.s16)
+        Row(spacing: AppSpace.s12)
+        SizedBox(height: AppSpace.s32 + AppSpace.s20)
+        SizedBox(width: 64, child: Text('x'))
+        EdgeInsets.only(top: max(0, viewport - total))
+      '''),
+      isEmpty,
+    );
+  });
+
+  test('no spacing or font-size literal is written outside the theme and its components', () {
+    final sources = _appSources();
+    // Control: the scan reads the screens, which build their insets.
+    expect(
+      sources['lib/deck/src/deck_list_screen.dart'],
+      contains('EdgeInsets'),
+    );
+
+    expect([
+      for (final MapEntry(key: path, value: source) in sources.entries)
+        if (path != 'lib/shared/theme.dart' &&
+            !path.startsWith('lib/shared/ui/'))
+          for (final literal in styleLiterals(source)) '$path: $literal',
+    ], isEmpty);
+  });
+
+  test('no screen opens a dialog, or a sheet other than the app sheet', () {
+    final modal = RegExp(r'\b(AlertDialog|showDialog|showModalBottomSheet)\b');
+    final sources = _appSources();
+    // Control: the app sheet opens the platform's sheet, so the expression
+    // finds what it is meant to.
+    expect(
+      modal.hasMatch(sources['lib/shared/ui/app_sheet.dart'] ?? ''),
+      isTrue,
+    );
+
+    expect([
+      for (final MapEntry(key: path, value: source) in sources.entries)
+        if (path != 'lib/shared/ui/app_sheet.dart' && modal.hasMatch(source))
+          path,
+    ], isEmpty);
+  });
+
   /// The WCAG 2.1 contrast ratio of two opaque colours.
   double contrast(Color a, Color b) {
     final (lighter, darker) = a.computeLuminance() > b.computeLuminance()
@@ -114,13 +169,24 @@ void main() {
       for (final (text, ground) in [
         (colors.ink, colors.surface),
         (colors.ink, colors.ground),
+        (colors.ink, colors.raised),
+        (colors.ink2, colors.surface),
+        (colors.ink2, colors.ground),
         (colors.muted, colors.surface),
         (colors.muted, colors.ground),
+        (colors.muted, colors.raised),
         (colors.muted, colors.depth),
+        (colors.onPrimary, colors.ink),
+        (colors.ink, colors.brandTint),
+        (colors.onHero, colors.hero),
+        (colors.brand, colors.onHero),
+        (colors.know, colors.surface),
+        (colors.know, colors.ground),
         (colors.onKnow, colors.know),
         (colors.onDontKnowText, colors.dontKnowText),
         (colors.dontKnowText, colors.surface),
-        (colors.surface, colors.ink),
+        (colors.dontKnowText, colors.ground),
+        for (final tint in colors.deckTints) (colors.ink, tint),
       ]) {
         expect(
           contrast(text, ground),
@@ -128,14 +194,68 @@ void main() {
           reason: '$text on $ground',
         );
       }
-      // Non-text, at 3:1: the answer dots on a previous card.
+      // Non-text, at 3:1: the answer dots on a previous card, which fades
+      // from the surface toward the ground.
       for (final dot in [colors.knowDot, colors.dontKnow]) {
-        expect(
-          contrast(dot, colors.surface),
-          greaterThanOrEqualTo(3),
-          reason: '$dot on ${colors.surface}',
-        );
+        for (final ground in [colors.surface, colors.depth]) {
+          expect(
+            contrast(dot, ground),
+            greaterThanOrEqualTo(3),
+            reason: '$dot on $ground',
+          );
+        }
       }
     });
   }
 }
+
+/// Every Dart source under `lib/` keyed by its path under `app/`, leaving out
+/// generated code.
+Map<String, String> _appSources() => {
+  for (final entity in Directory('lib').listSync(recursive: true))
+    if (entity is File &&
+        entity.path.endsWith('.dart') &&
+        !entity.path.endsWith('.g.dart') &&
+        !entity.path.startsWith('lib/study/src/rust/') &&
+        !entity.path.startsWith('lib/shared/l10n/'))
+      entity.path: entity.readAsStringSync(),
+};
+
+final _number = RegExp(r'(?<![\w.])(\d+(?:\.\d+)?)(?![\w.])');
+
+bool _hasNonZeroNumber(String text) =>
+    _number.allMatches(text).any((match) => double.parse(match[1]!) != 0);
+
+/// The text of [source] from the parenthesis at [open] to the one closing it.
+String _balanced(String source, int open) {
+  var depth = 0;
+  for (var i = open; i < source.length; i++) {
+    switch (source[i]) {
+      case '(':
+        depth++;
+      case ')':
+        if (--depth == 0) return source.substring(open, i + 1);
+    }
+  }
+  return source.substring(open);
+}
+
+/// The spacing and font-size literals in [source]: an `EdgeInsets` or a
+/// childless `SizedBox` built from a number, a `spacing:` given a number, and
+/// every `fontSize:`. Zero is no spacing value, so it is allowed.
+List<String> styleLiterals(String source) => [
+  for (final match in RegExp(
+    r'EdgeInsets(?:Directional)?\.\w+(?=\()',
+  ).allMatches(source))
+    if (_balanced(source, match.end) case final args
+        when _hasNonZeroNumber(args))
+      '${match[0]}$args',
+  for (final match in RegExp(r'\bSizedBox(?=\()').allMatches(source))
+    if (_balanced(source, match.end) case final args
+        when !args.contains('child:') && _hasNonZeroNumber(args))
+      'SizedBox$args',
+  for (final match in RegExp(r'spacing:\s*([^,)\n]+)').allMatches(source))
+    if (_hasNonZeroNumber(match[1]!)) match[0]!,
+  for (final match in RegExp(r'fontSize:\s*[^,)\n]+').allMatches(source))
+    match[0]!,
+];

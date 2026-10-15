@@ -14,39 +14,48 @@
   "cards": [
     {
       "front": "学校",
-      "back": "학교"
+      "meaning": "학교",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "空",
-      "back": "하늘"
+      "meaning": "하늘",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "明るい",
-      "back": "밝다"
+      "meaning": "밝다",
+      "partOfSpeech": "[형]"
     },
     {
       "front": "椅子",
-      "back": "의자"
+      "meaning": "의자",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "売る",
-      "back": "팔다"
+      "meaning": "팔다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "雨",
-      "back": "비"
+      "meaning": "비",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "教える",
-      "back": "가르치다"
+      "meaning": "가르치다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "料理",
-      "back": "요리"
+      "meaning": "요리",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "写真",
-      "back": "사진"
+      "meaning": "사진",
+      "partOfSpeech": "[명]"
     }
   ]
 }

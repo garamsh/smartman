@@ -13,6 +13,7 @@ DeckRow _deck(
 }) => DeckRow(
   id: 'deck',
   name: name,
+  visibility: 'private',
   createdAt: _t0,
   updatedAt: updatedAt,
   deletedAt: deletedAt,

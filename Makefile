@@ -10,8 +10,9 @@ DART_FILES = files=$$($(DART_SCOPE)); \
 RUST_SCOPE := git ls-files --cached --others --exclude-standard -- '*.rs'
 RUST_FILES = files=$$($(RUST_SCOPE)); \
 	if [ -z "$$files" ]; then echo "no Rust file was selected by: $(RUST_SCOPE)" >&2; exit 1; fi
-# The engine crate, and the bridge crate flutter_rust_bridge builds into the app.
-RUST_CRATES := engine app/rust
+# The engine crate, the bridge crate flutter_rust_bridge builds into the app, and the
+# engine as WebAssembly for the web app, which cargo builds for wasm32-unknown-unknown.
+RUST_CRATES := engine app/rust engine-wasm
 # Every target cargo compiles for the crate's Cargo.toml, as "<kind> <name>".
 RUST_TARGETS := cargo metadata --no-deps --format-version 1 | jq -r '.packages[].targets[] | "\(.kind[0]) \(.name)"'
 
@@ -29,6 +30,7 @@ lint:
 	./check-ios-client-id.sh
 	./check-generated.sh
 	./deno.sh lint
+	./web.sh lint
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
 	echo "analyzed $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -42,6 +44,7 @@ lint:
 
 format:
 	./deno.sh format
+	./web.sh format
 	cd app && $(DART_FILES); \
 	dart format --output=none --set-exit-if-changed $$files && \
 	echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -59,9 +62,12 @@ test:
 	echo "ran the tests flutter test selects by default: app/test/**/*_test.dart"
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
+	./wasm-bindgen.sh test
 	./supabase/test-db.sh
 	./supabase/test-sync.sh
 	./deno.sh test
+	./web.sh test
+	./supabase/test-web.sh
 
 build:
 	cd app && flutter build apk --debug $(APP_CONFIG) && \
@@ -79,5 +85,9 @@ build:
 	cd engine && cargo build --locked && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the library crate smartman_engine and its rustdoc from engine/Cargo.toml"
+	cd engine-wasm && cargo build --locked --release && \
+	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
+	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
+	./web.sh build
 
 ci: lint format test build

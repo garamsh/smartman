@@ -9,12 +9,11 @@
  * stops after the estimate and calls no model.
  */
 
-import type { Card } from "../../supabase/functions/extract-cards/cards.ts";
 import {
   extractCards,
   type Models,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v1.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v2.ts";
 import type {
   Image,
   LanguageHints,
@@ -30,6 +29,7 @@ import {
   worstCallUsd,
 } from "./budget.ts";
 import {
+  type Entry,
   type ImageResult,
   recommend,
   type Row,
@@ -57,7 +57,7 @@ export type Sample = {
   readonly name: string;
   readonly image: Image;
   readonly languages: LanguageHints;
-  readonly cards: readonly Card[];
+  readonly cards: readonly Entry[];
 };
 
 /** Everything the eval reads, writes, or calls, so a test can stand in for each. */
@@ -263,13 +263,13 @@ export async function loadSamples(
       throw new Error(`${name} is not a ground truth of {image, cards}`);
     }
     const cards = truth.cards.map((card: unknown) => {
-      if (
-        !isRecord(card) || typeof card.front !== "string" ||
-        typeof card.back !== "string"
-      ) {
-        throw new Error(`${name} holds a card without a text front and back`);
+      const entry = parseEntry(card);
+      if (entry === null) {
+        throw new Error(
+          `${name} holds a card that is not {front, meaning, partOfSpeech?, examples?} of text`,
+        );
       }
-      return { front: card.front, back: card.back };
+      return entry;
     });
     const bytes = await io.readBytes(`${PATHS.samples}/${truth.image}`);
     const type = truth.image.endsWith(".png")
@@ -285,6 +285,28 @@ export async function loadSamples(
     });
   }
   return samples;
+}
+
+function parseEntry(card: unknown): Entry | null {
+  if (
+    !isRecord(card) || typeof card.front !== "string" ||
+    typeof card.meaning !== "string"
+  ) return null;
+  const { partOfSpeech, examples } = card;
+  if (partOfSpeech !== undefined && typeof partOfSpeech !== "string") {
+    return null;
+  }
+  if (
+    examples !== undefined &&
+    !(Array.isArray(examples) && examples.length > 0 &&
+      examples.every((example) => typeof example === "string"))
+  ) return null;
+  return {
+    front: card.front,
+    meaning: card.meaning,
+    ...(partOfSpeech === undefined ? {} : { partOfSpeech }),
+    ...(examples === undefined ? {} : { examples }),
+  };
 }
 
 function languages(value: unknown): LanguageHints {
@@ -312,6 +334,7 @@ export function report(
 ): string {
   const pick = recommend(rows);
   const pct = (value: number) => (value * 100).toFixed(1);
+  const pctOrNone = (value: number | null) => value === null ? "—" : pct(value);
   const lines = [
     "# Extract-cards model eval",
     "",
@@ -319,7 +342,8 @@ export function report(
     "",
     `- Run on ${date} with prompt ${PROMPT_VERSION}, over ${sampleCount} images in \`tools/eval/samples/\`.`,
     "- The samples are synthetic: printed pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
-    "- Precision, recall and F1 are means of the per-image values, in percent; a card matches when both sides equal the ground truth after card key normalization.",
+    "- Precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning equal the ground truth after card key normalization.",
+    "- Over the matched cards of every image, in percent: part of speech and examples are the share equal to the page's after the same normalization; invented is the share of present parts of speech and example lists on an entry whose page prints none. A dash means the configuration returned no such field.",
     "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost.",
     "",
     "## Models",
@@ -330,12 +354,14 @@ export function report(
     "",
     "## Results",
     "",
-    "| Configuration | Precision | Recall | F1 | p50 latency | p90 latency | Cost per image | Total spend |",
-    "|---|---|---|---|---|---|---|---|",
+    "| Configuration | Precision | Recall | F1 | Part of speech | Examples | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
     ...rows.map((row) =>
       `| ${row.label} | ${pct(row.precision)} | ${pct(row.recall)} | ${
         pct(row.f1)
-      } | ${seconds(row.p50Ms)} | ` +
+      } | ${pctOrNone(row.partOfSpeechPrecision)} | ${
+        pctOrNone(row.examplesPrecision)
+      } | ${pctOrNone(row.inventedRate)} | ${seconds(row.p50Ms)} | ` +
       `${seconds(row.p90Ms)} | ${usd(row.costPerImageUsd)} | ${
         usd(row.spentUsd)
       } |`

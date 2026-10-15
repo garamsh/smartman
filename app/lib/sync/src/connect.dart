@@ -13,19 +13,29 @@ final class UnavailableSyncServer implements SyncServer {
   Never _refuse() => throw const SyncRejected(NoSyncServer());
 
   @override
-  Future<List<Pulled<DeckRow>>> pullDecks(int after, int limit) async =>
-      _refuse();
+  Future<List<Pulled<DeckRow>>> pullDecks(
+    UserId owner,
+    int after,
+    int limit,
+  ) async => _refuse();
 
   @override
-  Future<List<Pulled<CardRow>>> pullCards(int after, int limit) async =>
-      _refuse();
+  Future<List<Pulled<CardRow>>> pullCards(
+    UserId owner,
+    int after,
+    int limit,
+  ) async => _refuse();
 
   @override
-  Future<List<Pulled<ReviewRow>>> pullReviews(int after, int limit) async =>
-      _refuse();
+  Future<List<Pulled<ReviewRow>>> pullReviews(
+    UserId owner,
+    int after,
+    int limit,
+  ) async => _refuse();
 
   @override
   Future<List<Pulled<CardStateRow>>> pullCardStates(
+    UserId owner,
     int after,
     int limit,
   ) async => _refuse();
