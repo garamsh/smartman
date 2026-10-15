@@ -62,7 +62,7 @@ npm ci
 npm run dev
 ```
 
-- `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; both are public, and the dev project's are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `app/config/dev.json`. Git ignores `.env.local`.
+- `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; both are public, and the dev project's are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `app/config/dev.json`. `NEXT_PUBLIC_TERMS_URL` and `NEXT_PUBLIC_PRIVACY_URL` are optional, as `TERMS_URL` and `PRIVACY_URL` are in `app/config/dev.json`: empty, the legal links open a page saying the document is coming. Git ignores `.env.local`.
 - Google sign-in returns to `<origin>/auth/callback`, which must be among Supabase Auth's allowed redirect URLs; only the owner changes that list.
 
 The image, built from the repository root:
