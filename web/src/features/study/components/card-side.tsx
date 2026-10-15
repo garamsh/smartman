@@ -1,14 +1,21 @@
 import type { Content } from "@/lib/card-content";
 
-/** Every block of a card side: text as written, a block of an unknown type as a placeholder. */
-export function CardSide({ blocks }: { blocks: Content[] }) {
+/**
+ * Every block of a card side, in the question's or the answer's size: text as written, a block
+ * of an unknown type as a placeholder.
+ */
+export function CardSide({ blocks, size }: { blocks: Content[]; size: "question" | "answer" }) {
   return (
-    <div className="flex flex-col gap-2 text-lg break-words whitespace-pre-wrap">
+    <div
+      className={`flex w-full flex-col gap-2 break-words whitespace-pre-wrap ${
+        size === "question" ? "text-question" : "text-answer"
+      }`}
+    >
       {blocks.map((block, index) =>
         block.kind === "text" ? (
           <p key={index}>{block.text}</p>
         ) : (
-          <p key={index} className="text-muted italic">
+          <p key={index} className="text-body text-muted italic">
             [이 버전에서 표시할 수 없는 내용: {block.type}]
           </p>
         ),

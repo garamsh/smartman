@@ -112,7 +112,7 @@ describe("the study page", () => {
         "21",
       );
       expect([...shown].sort()).toEqual(["due", ...news.slice(0, 20)].sort());
-      expect(screen.getByRole("heading", { name: "학습 끝" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "오늘 할 카드를 마쳤어요" })).toBeInTheDocument();
     });
   });
 
@@ -209,8 +209,12 @@ describe("the study page", () => {
 
       await user.keyboard("{Escape}");
 
-      expect(screen.getByRole("heading", { name: "학습 끝" })).toBeInTheDocument();
-      expect(screen.getByText("학습한 카드: 1장")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "오늘 할 카드를 마쳤어요" })).toBeInTheDocument();
+      expect(
+        within(screen.getByRole("list", { name: "결과" }))
+          .getAllByRole("listitem")
+          .map((tile) => tile.textContent),
+      ).toEqual(["1학습한 카드", "1안다", "0모른다"]);
       expect(screen.queryByRole("region", { name: "이전 답" })).not.toBeInTheDocument();
     });
 

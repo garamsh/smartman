@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -16,21 +17,34 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   if (!deck) notFound();
   const { cards } = read.library;
   const today = countToday(cards, states.states, states.readAt);
+  const pills = [
+    `카드 ${String(cards.length)}`,
+    `복습 ${String(today.review)}`,
+    `새 카드 ${String(today.fresh)}`,
+  ];
   return (
     <>
-      <Link href="/" className="self-start font-semibold text-muted underline">
-        덱 목록
+      <Link
+        href="/"
+        aria-label="덱 목록"
+        className="-ml-3 flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        <ChevronLeft aria-hidden className="size-6" strokeWidth={2} />
       </Link>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold">{deck.name}</h1>
-        <p className="text-muted">
-          카드 {cards.length}장 · 오늘 복습 {today.review} · 새 카드 {today.fresh}
-        </p>
+      <div className="flex flex-col gap-4">
+        <h1 className="text-deck-title">{deck.name}</h1>
+        <ul aria-label="개수" className="flex flex-wrap gap-2">
+          {pills.map((pill) => (
+            <li key={pill} className="rounded-full bg-surface px-4 py-2 text-section">
+              {pill}
+            </li>
+          ))}
+        </ul>
       </div>
       <StudyLink
         decks={[deck.id]}
         cards={today.review + today.fresh}
-        label={`학습 · ${String(today.review + today.fresh)}장`}
+        label={`학습하기 · ${String(today.review + today.fresh)}장`}
       />
       <CardList cards={cards} />
     </>

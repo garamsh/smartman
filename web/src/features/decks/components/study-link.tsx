@@ -1,10 +1,11 @@
+import { Play } from "lucide-react";
 import Link from "next/link";
 
 const look =
-  "flex min-h-13 items-center justify-center rounded-row bg-know px-6 font-semibold text-on-know focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "flex min-h-14 items-center justify-center gap-2 rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 /**
- * The button that opens a study session over [decks], named [label]; disabled when the
+ * The primary button that opens a study session over [decks], named [label]; disabled when the
  * session would have no card to study.
  */
 export function StudyLink({
@@ -16,16 +17,22 @@ export function StudyLink({
   cards: number;
   label: string;
 }) {
+  const content = (
+    <>
+      <Play aria-hidden className="size-4.5" strokeWidth={2} />
+      {label}
+    </>
+  );
   if (cards === 0) {
     return (
       <button type="button" disabled className={`${look} opacity-50`}>
-        {label}
+        {content}
       </button>
     );
   }
   return (
     <Link href={`/study?decks=${decks.map(encodeURIComponent).join(",")}`} className={look}>
-      {label}
+      {content}
     </Link>
   );
 }

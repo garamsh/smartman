@@ -5,7 +5,7 @@ import { env } from "@/env";
 import { readSession } from "@/lib/supabase/session";
 
 /** The paths a signed-out visitor may open; `/api` is outside the matcher. */
-const publicPaths = new Set(["/login", "/auth/callback"]);
+const publicPaths = new Set(["/login", "/auth/callback", "/terms", "/privacy"]);
 
 /**
  * Refreshes the Supabase session on every matched request and sends a signed-out visitor

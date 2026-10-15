@@ -51,8 +51,12 @@ describe("the deck page", () => {
     await open("d-fr");
 
     expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
-    expect(screen.getByText("카드 3장 · 오늘 복습 1 · 새 카드 1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "학습 · 2장" })).toHaveAttribute(
+    expect(
+      within(screen.getByRole("list", { name: "개수" }))
+        .getAllByRole("listitem")
+        .map((pill) => pill.textContent),
+    ).toEqual(["카드 3", "복습 1", "새 카드 1"]);
+    expect(screen.getByRole("link", { name: "학습하기 · 2장" })).toHaveAttribute(
       "href",
       "/study?decks=d-fr",
     );
@@ -70,7 +74,7 @@ describe("the deck page", () => {
     await user.type(screen.getByRole("searchbox", { name: "검색" }), "zèbre");
     expect(rows()).toEqual([]);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "찾는 카드가 없습니다. 다른 말로 검색해 보세요.",
+      "찾는 카드가 없어요. 다른 말로 검색해 보세요.",
     );
   });
 

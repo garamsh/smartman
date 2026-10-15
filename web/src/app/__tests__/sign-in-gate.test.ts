@@ -11,7 +11,7 @@ import { supabaseUnreachable } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
 import { signedInCookies } from "@/testing/session";
 
-const publicRoutes = ["/login", "/auth/callback", "/api/health"];
+const publicRoutes = ["/login", "/auth/callback", "/terms", "/privacy", "/api/health"];
 
 /** Every URL the app routes: one per page.tsx or route.ts under src/app. */
 function appRoutes(): string[] {
@@ -70,7 +70,7 @@ describe("the sign-in gate", () => {
     }
   });
 
-  it("lets a signed-out visitor open /login, /auth/callback and /api/health", async () => {
+  it("lets a signed-out visitor open /login, /auth/callback, the legal pages and /api/health", async () => {
     for (const route of publicRoutes) {
       expect((await visit(route)).location, route).toBeNull();
     }
