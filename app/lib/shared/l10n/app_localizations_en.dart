@@ -248,10 +248,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTitle => 'Account';
 
   @override
-  String get signedOutBody => 'Everything works without an account.';
+  String get welcomeBody =>
+      'Flashcards you answer with a swipe, shown again just before you forget.';
 
   @override
   String get signInWithGoogle => 'Sign in with Google';
+
+  @override
+  String get signInWithAppleSoon => 'Sign in with Apple (coming soon)';
 
   @override
   String get signingIn => 'Signing in';

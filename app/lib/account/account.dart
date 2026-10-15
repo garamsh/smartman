@@ -8,6 +8,7 @@ export 'src/account_data.dart'
         AccountDataNotCleared,
         accountDataProvider,
         syncStatusProvider;
+export 'src/account_gate.dart' show AccountGate, signedInHomeProvider;
 export 'src/account_screen.dart' show AccountScreen;
 export 'src/account_service.dart'
     show AccountConnection, AccountService, connectAccount;

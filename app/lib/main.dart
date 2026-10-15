@@ -107,6 +107,7 @@ Widget composeApp(
       ),
       accountServiceProvider.overrideWithValue(account),
       accountScreenProvider.overrideWithValue(AccountScreen.new),
+      signedInHomeProvider.overrideWithValue(DeckListScreen.new),
       accountDataProvider.overrideWithValue(sync),
       syncControllerProvider.overrideWithValue(sync),
       syncStatusProvider.overrideWithValue(SyncStatusView.new),
@@ -116,7 +117,8 @@ Widget composeApp(
   );
 }
 
-/// The application root, opening on the deck list in the theme the user chose.
+/// The application root, opening on the account gate in the theme the user
+/// chose.
 class SmartmanApp extends ConsumerWidget {
   const SmartmanApp({super.key});
 
@@ -129,7 +131,7 @@ class SmartmanApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const DeckListScreen(),
+      home: const AccountGate(),
     );
   }
 }
