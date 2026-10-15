@@ -4,11 +4,35 @@ import { Mascot } from "@/components/brand";
 
 import type { SessionSummary as Summary } from "../session";
 
+/** A day, in milliseconds. */
+const day = 86_400_000;
+
+/** When [next] is, told by calendar day from now in the browser's time zone, as the phone does. */
+function nextReviewSentence(next: number): string {
+  const midnight = (time: number) => {
+    const date = new Date(time);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  };
+  // Rounded, since a day across a daylight-saving change is an hour longer or shorter.
+  const days = Math.round((midnight(next) - midnight(Date.now())) / day);
+  const when = days <= 0 ? "오늘이에요" : days === 1 ? "내일이에요" : `${String(days)}일 뒤예요`;
+  return `다음 복습은 ${when}. 잊을 때쯤 다시 보여 드릴게요.`;
+}
+
 /**
  * What a finished session shows in place of the current card: the mascot, the session's
- * counts, its time, and the way back.
+ * counts, when its first card is due again once [nextReview] is known, its time, and the way
+ * back.
  */
-export function SessionSummary({ summary, total }: { summary: Summary; total: number }) {
+export function SessionSummary({
+  summary,
+  total,
+  nextReview,
+}: {
+  summary: Summary;
+  total: number;
+  nextReview: number | null;
+}) {
   const seconds = Math.floor(summary.timeSpentMs / 1000);
   const tiles = [
     { label: "학습한 카드", count: summary.cardsStudied, tone: "text-ink" },
@@ -25,7 +49,13 @@ export function SessionSummary({ summary, total }: { summary: Summary; total: nu
         <h2 id="session-summary-title" className="text-title">
           오늘 할 카드를 마쳤어요
         </h2>
-        {total === 0 && <p className="text-secondary text-muted">지금 학습할 카드가 없어요.</p>}
+        {total === 0 ? (
+          <p className="text-secondary text-muted">지금 학습할 카드가 없어요.</p>
+        ) : (
+          nextReview !== null && (
+            <p className="text-secondary text-muted">{nextReviewSentence(nextReview)}</p>
+          )
+        )}
       </div>
       <div className="flex flex-col gap-2">
         <ul aria-label="결과" className="grid grid-cols-3 gap-2">

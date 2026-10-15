@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 
-import { supabaseUrl, testAccessToken, testUser } from "./handlers";
+import { bearerUser, supabaseUrl, testUser } from "./handlers";
 
 type Row = Record<string, unknown>;
 type Table = "decks" | "cards" | "reviews" | "card_states";
@@ -56,21 +56,33 @@ function matching(rows: Row[], params: URLSearchParams): Row[] {
   );
 }
 
+/** [rows] in the order `order=<column>.<asc|desc>` asks for, or as stored without one. */
+function ordered(rows: Row[], order: string | null): Row[] {
+  if (order === null) return rows;
+  const [column = "", direction] = order.split(".");
+  const sign = direction === "desc" ? -1 : 1;
+  const key = (row: Row) => String(row[column]);
+  return rows.toSorted((a, b) => sign * (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+}
+
 /** A request that waits until the test releases it. */
 type Held = { release: () => void; released: Promise<void> };
 
 /**
- * PostgREST over the four sync tables, in memory, for [testUser]'s session: what a test
+ * PostgREST over the four sync tables, in memory, for a session Supabase Auth knows: what a test
  * seeds is what the app reads, and what the app writes lands in [rows]. A row a test seeds
  * for another user stands in for one row-level security lets every user read, as another
  * user's public deck and its cards; the request's filters decide whether it is returned. It applies the
- * filters the app sends, the paging of `offset` and `limit`, the server's revision on every
- * write, an upsert's `resolution`, and the reviews' column grant.
+ * filters the app sends, its order by one column, the paging of `offset` and `limit` with the
+ * count `Prefer: count=exact` asks for, the server's revision on every write, an upsert's
+ * `resolution`, and the reviews' column grant.
  */
 export class FakePostgrest {
   readonly rows: Record<Table, Row[]> = { decks: [], cards: [], reviews: [], card_states: [] };
   /** Every request answered, as `<method> <table>`. */
   readonly requests: string[] = [];
+  /** The columns each read selected, as `<table>: <select>`. */
+  readonly selected: string[] = [];
   private revision = 0;
   private held: Partial<Record<Table, Held>> = {};
   private failing: Partial<Record<Table, number>> = {};
@@ -123,15 +135,24 @@ export class FakePostgrest {
       if (!isTable(table)) return HttpResponse.json({}, { status: 404 });
       const refused = await this.gate(table);
       if (refused) return refused;
-      if (request.headers.get("authorization") !== `Bearer ${testAccessToken}`) {
+      if (!bearerUser(request.headers.get("authorization"))) {
         return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
       }
       this.requests.push(`GET ${table}`);
       const url = new URL(request.url);
+      this.selected.push(`${table}: ${url.searchParams.get("select") ?? "*"}`);
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const limit = Number(url.searchParams.get("limit") ?? Infinity);
-      const rows = matching(this.rows[table], url.searchParams);
-      return HttpResponse.json(rows.slice(offset, offset + limit));
+      const rows = ordered(
+        matching(this.rows[table], url.searchParams),
+        url.searchParams.get("order"),
+      );
+      const page = rows.slice(offset, offset + limit);
+      if (!request.headers.get("prefer")?.includes("count=exact")) return HttpResponse.json(page);
+      const range = page.length > 0 ? `${String(offset)}-${String(offset + page.length - 1)}` : "*";
+      return HttpResponse.json(page, {
+        headers: { "content-range": `${range}/${String(rows.length)}` },
+      });
     }),
     http.post(`${supabaseUrl}/rest/v1/:table`, async ({ request, params }) => {
       const { table } = params;

@@ -15,12 +15,18 @@ const iso = (time: number) => new Date(time).toISOString();
 /** A text card side, as the phone stores it. */
 export const side = (text: string) => [{ type: "text", payload: { text } }];
 
-/** A deck row as the phone's sync pushes it. */
-export function deckRow(id: string, name: string, deleted = false) {
+/** A deck row as the phone's sync pushes it, private unless [visibility] says otherwise. */
+export function deckRow(
+  id: string,
+  name: string,
+  deleted = false,
+  visibility: "private" | "public" = "private",
+) {
   return {
     id,
     user_id: testUser.id,
     name,
+    visibility,
     created_at: iso(start - 30 * day),
     updated_at: iso(start - 30 * day),
     deleted_at: deleted ? iso(start - day) : null,
@@ -56,6 +62,21 @@ export function stateRow(
     last_review: iso(state.lastReview),
     due: iso(state.due),
     updated_at: iso(state.lastReview),
+    deleted_at: null,
+  };
+}
+
+/** A review of [cardId] as the phone's sync pushes it, given at [reviewedAt] after [durationMs]. */
+export function reviewRow(id: string, cardId: string, reviewedAt: number, durationMs: number) {
+  return {
+    id,
+    user_id: testUser.id,
+    card_id: cardId,
+    rating: "good",
+    reviewed_at: iso(reviewedAt),
+    duration_ms: durationMs,
+    fuzz_factor: null,
+    updated_at: iso(reviewedAt),
     deleted_at: null,
   };
 }

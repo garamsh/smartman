@@ -5,55 +5,77 @@ import { http, HttpResponse } from "msw";
 /** The Supabase project every test is configured with (vitest.config.ts). */
 export const supabaseUrl = "http://supabase.test";
 
-/** The one user Supabase Auth knows, and the access token it accepts for them. */
+/** The user Supabase Auth knows and every test signs in as, unless it says otherwise. */
 export const testUser = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "learner@example.com",
 };
 
+/** A second user Supabase Auth knows, for tests of what one user may see of another's. */
+export const otherUser = {
+  id: "00000000-0000-4000-8000-000000000002",
+  email: "other@example.com",
+};
+
+type User = typeof testUser;
+
 function base64url(value: object) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
-/** An HS256 access token for [testUser]; Supabase Auth, not the signature, decides it is valid. */
-export const testAccessToken = [
-  base64url({ alg: "HS256", typ: "JWT" }),
-  base64url({
-    sub: testUser.id,
-    email: testUser.email,
-    aud: "authenticated",
-    role: "authenticated",
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  }),
-  Buffer.from("signature").toString("base64url"),
-].join(".");
+/** An HS256 access token for [user]; Supabase Auth, not the signature, decides it is valid. */
+function accessToken(user: User): string {
+  return [
+    base64url({ alg: "HS256", typ: "JWT" }),
+    base64url({
+      sub: user.id,
+      email: user.email,
+      aud: "authenticated",
+      role: "authenticated",
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    }),
+    Buffer.from("signature").toString("base64url"),
+  ].join(".");
+}
 
-/** What Supabase Auth answers for a session of [testUser]. */
-const userBody = {
-  ...testUser,
+export const testAccessToken = accessToken(testUser);
+export const otherAccessToken = accessToken(otherUser);
+
+/** The user an `Authorization` header's token belongs to, or null for a token Auth refuses. */
+export function bearerUser(authorization: string | null): User | null {
+  if (authorization === `Bearer ${testAccessToken}`) return testUser;
+  if (authorization === `Bearer ${otherAccessToken}`) return otherUser;
+  return null;
+}
+
+/** What Supabase Auth answers for a session of [user]. */
+const userBody = (user: User) => ({
+  ...user,
   aud: "authenticated",
   role: "authenticated",
   app_metadata: { provider: "google" },
   user_metadata: {},
   created_at: "2026-10-15T00:00:00Z",
-};
+});
 
 /** The code `/auth/callback` receives when [testUser] signed in at Google. */
 export const testAuthCode = "auth-code";
 
 /**
- * Supabase Auth: the user endpoint knows [testAccessToken] and refuses any other token, the
+ * Supabase Auth: the user endpoint knows [testAccessToken] and [otherAccessToken] and refuses
+ * any other token, the
  * PKCE token endpoint exchanges [testAuthCode] alone, and logout succeeds.
  */
 export const handlers = [
   http.get(`${supabaseUrl}/auth/v1/user`, ({ request }) => {
-    if (request.headers.get("authorization") !== `Bearer ${testAccessToken}`) {
+    const user = bearerUser(request.headers.get("authorization"));
+    if (!user) {
       return HttpResponse.json(
         { code: 403, error_code: "bad_jwt", msg: "invalid JWT" },
         { status: 403 },
       );
     }
-    return HttpResponse.json(userBody);
+    return HttpResponse.json(userBody(user));
   }),
   http.post(`${supabaseUrl}/auth/v1/token`, async ({ request }) => {
     const body: unknown = await request.json();
@@ -70,7 +92,7 @@ export const handlers = [
       token_type: "bearer",
       expires_in: 3600,
       expires_at: Math.floor(Date.now() / 1000) + 3600,
-      user: userBody,
+      user: userBody(testUser),
     });
   }),
   http.post(`${supabaseUrl}/auth/v1/logout`, () => new HttpResponse(null, { status: 204 })),

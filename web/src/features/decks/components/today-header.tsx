@@ -4,19 +4,22 @@ import Link from "next/link";
 
 /**
  * The home page's today card, on the brand's navy: what a session over every deck would study
- * now, split into due and new, whether new cards pause for a [backlog] of reviews, and its
- * button, with the symbol faint in the corner; with none, that today's cards are done.
+ * now, split into due and new, about how many [minutes] it takes, whether new cards pause for a
+ * [backlog] of reviews, and its button, with the symbol faint in the corner; with none, that
+ * today's cards are done.
  */
 export function TodayHeader({
   decks,
   review,
   fresh,
   backlog,
+  minutes,
 }: {
   decks: readonly string[];
   review: number;
   fresh: number;
   backlog: boolean;
+  minutes: number;
 }) {
   const total = review + fresh;
   return (
@@ -47,7 +50,7 @@ export function TodayHeader({
               <span className="text-figure">{total}</span> <span className="text-headline">장</span>
             </h2>
             <p className="text-secondary">
-              복습 {review} · 새 카드 {fresh}
+              복습 {review} · 새 카드 {fresh} · 약 {minutes}분
             </p>
             {backlog && <p className="text-secondary">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>}
           </div>

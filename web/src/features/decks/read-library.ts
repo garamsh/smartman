@@ -7,39 +7,58 @@ import { createClient } from "@/lib/supabase/server";
 import { readUserId } from "@/lib/supabase/session";
 
 import { parseContent } from "@/lib/card-content";
-import type { Card, CardId, Deck, DeckId, Library } from "./library";
+import type { Card, CardEntry, CardId, Deck, DeckId, Library } from "./library";
 
 /** Why the library could not be read: a server failure, or a row this version cannot read. */
 export type LibraryFailure = ServerFailure | "unreadable";
 
 /**
- * The signed-in user's decks and cards, read from the server under row-level security,
- * leaving out every tombstoned row and every card of a tombstoned deck. Row-level security
- * also lets a user read other users' public decks, so the reads filter on the user's own.
- * With [decks], only the cards of those decks are read.
+ * The decks [decks] names, or every deck, of the signed-in user, with their cards and both
+ * sides of each; see [readDeckList] for what both reads leave out.
  */
-export async function readLibrary(
+export function readLibrary(
   decks?: readonly DeckId[],
 ): Promise<{ library: Library } | { failure: LibraryFailure }> {
+  return read("id, deck_id, front, back, created_at", parseCard, decks);
+}
+
+/**
+ * Every deck of the signed-in user, with its cards but not their content: what the deck list
+ * shows and counts. Both reads run under row-level security and leave out every tombstoned row
+ * and every card of a tombstoned deck. Row-level security also lets a user read other users'
+ * public decks, so they filter on the user's own.
+ */
+export function readDeckList(): Promise<
+  { library: Library<CardEntry> } | { failure: LibraryFailure }
+> {
+  return read("id, deck_id, created_at", parseCardEntry);
+}
+
+async function read<C extends CardEntry>(
+  cardColumns: string,
+  parse: (row: unknown) => C | null,
+  decks?: readonly DeckId[],
+): Promise<{ library: Library<C> } | { failure: LibraryFailure }> {
   const supabase = await createClient();
   const session = await readUserId(supabase);
   if ("failure" in session) return session;
   const { userId } = session;
   const [deckRows, cardRows] = await Promise.all([
-    selectAll((from, to) =>
-      supabase
+    selectAll((from, to, counted) => {
+      const query = supabase
         .from("decks")
-        .select("id, name")
+        .select("id, name, visibility", counted ? { count: "exact" } : {})
         .eq("user_id", userId)
-        .is("deleted_at", null)
+        .is("deleted_at", null);
+      return (decks ? query.in("id", decks) : query)
         .order("id")
         .range(from, to)
-        .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
-    ),
-    selectAll((from, to) => {
+        .abortSignal(AbortSignal.timeout(requestTimeoutMs));
+    }),
+    selectAll((from, to, counted) => {
       const query = supabase
         .from("cards")
-        .select("id, deck_id, front, back, created_at")
+        .select(cardColumns, counted ? { count: "exact" } : {})
         .eq("user_id", userId)
         .is("deleted_at", null);
       return (decks ? query.in("deck_id", decks) : query)
@@ -58,9 +77,9 @@ export async function readLibrary(
     liveDecks.push(deck);
   }
   const live = new Set(liveDecks.map((deck) => deck.id));
-  const cards: Card[] = [];
+  const cards: C[] = [];
   for (const row of cardRows.rows) {
-    const card = parseCard(row);
+    const card = parse(row);
     if (!card) return { failure: "unreadable" };
     if (live.has(card.deckId)) cards.push(card);
   }
@@ -77,17 +96,24 @@ function compare(a: string, b: string): number {
 function parseDeck(row: unknown): Deck | null {
   const id = field(row, "id");
   const name = field(row, "name");
+  const visibility = field(row, "visibility");
   if (typeof id !== "string" || typeof name !== "string") return null;
-  return { id: id as DeckId, name };
+  if (visibility !== "private" && visibility !== "public") return null;
+  return { id: id as DeckId, name, public: visibility === "public" };
 }
 
-function parseCard(row: unknown): Card | null {
+function parseCardEntry(row: unknown): CardEntry | null {
   const id = field(row, "id");
   const deckId = field(row, "deck_id");
   const createdAt = parseTime(field(row, "created_at"));
+  if (typeof id !== "string" || typeof deckId !== "string" || createdAt === null) return null;
+  return { id: id as CardId, deckId: deckId as DeckId, createdAt };
+}
+
+function parseCard(row: unknown): Card | null {
+  const entry = parseCardEntry(row);
   const front = parseContent(field(row, "front"));
   const back = parseContent(field(row, "back"));
-  if (typeof id !== "string" || typeof deckId !== "string") return null;
-  if (createdAt === null || !front || !back) return null;
-  return { id: id as CardId, deckId: deckId as DeckId, front, back, createdAt };
+  if (!entry || !front || !back) return null;
+  return { ...entry, front, back };
 }

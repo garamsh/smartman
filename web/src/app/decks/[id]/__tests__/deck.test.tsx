@@ -65,6 +65,19 @@ describe("the deck page", () => {
     expect(rows()).toEqual(["Chat | Chat back", "chien | chien back", "oiseau | oiseau back"]);
   });
 
+  it("marks a deck its owner published with 공개 beside its name", async () => {
+    // Control: the private deck carries no chip.
+    await open("d-fr");
+    expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
+    expect(screen.queryByText("공개")).not.toBeInTheDocument();
+    cleanup();
+
+    postgrest.seed("decks", deckRow("d-pub", "Shared", false, "public"));
+    await open("d-pub");
+    expect(screen.getByRole("heading", { name: "Shared" })).toBeInTheDocument();
+    expect(screen.getByText("공개")).toBeInTheDocument();
+  });
+
   it("says new cards wait while more than three days of reviews are due, and not otherwise", async () => {
     const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
     // Control: one card due every four days and one every day are not a backlog.

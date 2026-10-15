@@ -287,7 +287,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           </div>
         </>
       ) : (
-        <SessionSummary summary={view.summary} total={view.total} />
+        <SessionSummary summary={view.summary} total={view.total} nextReview={status.nextReview} />
       )}
 
       {view.previous.length > 0 && (

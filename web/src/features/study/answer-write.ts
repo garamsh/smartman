@@ -42,6 +42,9 @@ export type RecordedAnswer = {
 /** Whether a write reached the server; when not, the sentence the user reads. */
 export type WriteResult = { saved: true } | { saved: false; message: string };
 
+/** A write's result as the session sees it: once saved, the card's state the engine computed. */
+export type SaveResult = { saved: true; state: CardState } | { saved: false; message: string };
+
 /** Why a write did not reach the server, as the user is told. */
 export const writeFailureMessages = {
   unreachable: "답을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",

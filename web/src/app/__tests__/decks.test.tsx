@@ -2,8 +2,9 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
+import { otherUser, testUser } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
-import { cardRow, day, deckRow, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, start, stateRow } from "@/testing/library";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
@@ -50,7 +51,7 @@ describe("the deck list", () => {
     await render(Decks, {});
 
     expect(screen.getByRole("heading", { name: "오늘 할 카드 2장" })).toBeInTheDocument();
-    expect(screen.getByText("복습 1 · 새 카드 1")).toBeInTheDocument();
+    expect(screen.getByText("복습 1 · 새 카드 1 · 약 1분")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "모두 학습" })).toHaveAttribute(
       "href",
       "/study?decks=d-fr,d-es",
@@ -67,7 +68,7 @@ describe("the deck list", () => {
     postgrest.seed("card_states", stateRow("fr-due", due));
     // Control: one card due every three days is not a backlog.
     await render(Decks, {});
-    expect(screen.getByText("복습 1 · 새 카드 1")).toBeInTheDocument();
+    expect(screen.getByText("복습 1 · 새 카드 1 · 약 1분")).toBeInTheDocument();
     expect(screen.queryByText(paused)).not.toBeInTheDocument();
     cleanup();
 
@@ -83,7 +84,7 @@ describe("the deck list", () => {
     await render(Decks, {});
 
     expect(screen.getByRole("heading", { name: "오늘 할 카드 3장" })).toBeInTheDocument();
-    expect(screen.getByText("복습 3 · 새 카드 0")).toBeInTheDocument();
+    expect(screen.getByText("복습 3 · 새 카드 0 · 약 1분")).toBeInTheDocument();
     expect(screen.getByText(paused)).toBeInTheDocument();
   });
 
@@ -106,7 +107,7 @@ describe("the deck list", () => {
   });
 
   it("leaves out another user's public deck, which row-level security lets it read", async () => {
-    const other = "00000000-0000-4000-8000-000000000002";
+    const other = otherUser.id;
     postgrest.seed("decks", deckRow("d-fr", "French"), {
       ...deckRow("d-pub", "Public"),
       user_id: other,
@@ -124,6 +125,96 @@ describe("the deck list", () => {
     expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
   });
 
+  it("estimates the minutes at the median of the user's latest 200 reviews", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("fr-a", "d-fr", "un"), cardRow("fr-b", "d-fr", "deux"));
+    // Control: under 20 reviews the pace is 10 s a card, so two cards take about a minute.
+    postgrest.seed(
+      "reviews",
+      ...Array.from({ length: 19 }, (_, index) =>
+        reviewRow(`r-few-${String(index)}`, "fr-a", start - day, 90_000),
+      ),
+    );
+    await render(Decks, {});
+    expect(screen.getByText("복습 0 · 새 카드 2 · 약 1분")).toBeInTheDocument();
+    cleanup();
+
+    // 200 recent reviews at 90 s and 300 older ones at 1 s, stored between them: the median of
+    // all 500, or of the first 200 stored, would be 1 s.
+    postgrest.seed(
+      "reviews",
+      ...Array.from({ length: 300 }, (_, index) =>
+        reviewRow(`r-old-${String(index)}`, "fr-b", start - 9 * day, 1_000),
+      ),
+      ...Array.from({ length: 181 }, (_, index) =>
+        reviewRow(`r-new-${String(index)}`, "fr-a", start - day, 90_000),
+      ),
+    );
+    await render(Decks, {});
+    expect(screen.getByText("복습 0 · 새 카드 2 · 약 3분")).toBeInTheDocument();
+  });
+
+  it("marks a deck its owner published with 공개, and no other", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French", false, "public"), deckRow("d-es", "Spanish"));
+    postgrest.seed("cards", cardRow("fr", "d-fr", "chat"), cardRow("es", "d-es", "gato"));
+
+    await render(Decks, {});
+
+    expect(rowNames()).toEqual(["French, 카드 1장, 공개, 오늘 1", "Spanish, 카드 1장, 오늘 1"]);
+    expect(within(row("French")).getByText("공개")).toBeInTheDocument();
+    // Control: the private deck's row carries no chip.
+    expect(within(row("Spanish")).queryByText("공개")).not.toBeInTheDocument();
+  });
+
+  it("shows each request only its own user's decks, cards, states and pace", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"), {
+      ...deckRow("d-other", "Other"),
+      user_id: otherUser.id,
+    });
+    postgrest.seed("cards", cardRow("fr", "d-fr", "chat"), {
+      ...cardRow("other", "d-other", "maison"),
+      user_id: otherUser.id,
+    });
+    postgrest.seed("card_states", {
+      ...stateRow("other", {
+        stability: 3,
+        difficulty: 5,
+        lastReview: start - 4 * day,
+        due: start - day,
+      }),
+      user_id: otherUser.id,
+    });
+    postgrest.seed(
+      "reviews",
+      ...Array.from({ length: 40 }, (_, index) => ({
+        ...reviewRow(`r-other-${String(index)}`, "other", start - day, 600_000),
+        user_id: otherUser.id,
+      })),
+    );
+
+    await render(Decks, {});
+    expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
+    expect(screen.getByText("복습 0 · 새 카드 1 · 약 1분")).toBeInTheDocument();
+    cleanup();
+
+    // The other user's next request reads theirs, and nothing of the first user's.
+    setRequestCookies(await signedInCookies(otherUser));
+    await render(Decks, {});
+    expect(rowNames()).toEqual(["Other, 카드 1장, 오늘 1"]);
+    expect(screen.getByText("복습 1 · 새 카드 0 · 약 10분")).toBeInTheDocument();
+  });
+
+  it("carries no account content: neither the email nor 로그아웃", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+
+    await render(Decks, {});
+
+    // Control: the deck list itself rendered.
+    expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
+    expect(screen.queryByText(testUser.email, { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "로그아웃" })).not.toBeInTheDocument();
+  });
+
   it("reads every page of a library larger than one PostgREST answer", async () => {
     postgrest.seed("decks", deckRow("d-big", "Big"));
     postgrest.seed(
@@ -138,6 +229,35 @@ describe("the deck list", () => {
     // New cards are capped at 20 per session.
     expect(rowNames()).toEqual(["Big, 카드 1001장, 오늘 20"]);
     expect(postgrest.requests.filter((request) => request === "GET cards")).toHaveLength(2);
+  });
+
+  it("reads a library of exactly two pages with one request per page, the first counting them", async () => {
+    postgrest.seed("decks", deckRow("d-big", "Big"));
+    postgrest.seed(
+      "cards",
+      ...Array.from({ length: 2000 }, (_, index) =>
+        cardRow(`c-${String(index)}`, "d-big", `w${String(index)}`),
+      ),
+    );
+
+    await render(Decks, {});
+
+    // Control: every card is read.
+    expect(rowNames()).toEqual(["Big, 카드 2000장, 오늘 20"]);
+    expect(postgrest.requests.filter((request) => request === "GET cards")).toHaveLength(2);
+  });
+
+  it("reads no card's sides, which the deck list does not show", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("fr", "d-fr", "chat"));
+
+    await render(Decks, {});
+
+    // Control: the card is read and counted.
+    expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
+    expect(postgrest.selected.filter((read) => read.startsWith("cards: "))).toEqual([
+      "cards: id,deck_id,created_at",
+    ]);
   });
 
   it("says the server cannot be reached when PostgREST does not answer", async () => {
