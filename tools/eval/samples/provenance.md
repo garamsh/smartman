@@ -5,7 +5,7 @@ Where each file of the extract-cards eval's sample set comes from, and under wha
 ## Generated samples
 
 - `NN-<layout>-<pair>-<style>.jpg` and the `.json` beside it, 24 pairs, are written by `tools/eval/generate.py` with seed `20261015`: `uv run --locked --script tools/eval/generate.py` from the repository root.
-- Each `.json` is the ground truth of its image: the cards the page shows, its layout, languages, hand, distortion and fonts.
+- Each `.json` is the ground truth of its image: the cards the page shows, its layout, languages, hand, distortion and fonts. A card holds its `front` and `meaning`, and, in the dictionary layout, which prints them, its `partOfSpeech` (`n.` or `v.` for English, a bracket notation such as `[동]` for Japanese) and the `examples` the page shows.
 - They are synthetic. Each is a page rendered in one of four layouts (two-column list, bilingual table, dictionary entries, textbook glossary), for English to Korean or Japanese to Korean, then distorted by perspective, rotation, uneven light, blur and JPEG noise. None is a photo taken with a phone.
 - Two runs of the generator on macOS 26 (arm64) with the locked dependencies wrote byte-identical files.
 - The generator's dependencies are pinned in its header and locked in `tools/eval/generate.py.lock`. No bot proposes their bump; whoever regenerates the samples moves them, with `uv lock --script tools/eval/generate.py --upgrade`, and commits the new samples in the same change.

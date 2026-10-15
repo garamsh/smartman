@@ -426,6 +426,21 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get detailLevelLabel => '카드에 담을 내용';
+
+  @override
+  String get detailLevelSimple => '간단';
+
+  @override
+  String get detailLevelBasic => '기본';
+
+  @override
+  String get detailLevelDetailed => '자세히';
+
+  @override
+  String get candidateEdited => '직접 고침';
+
+  @override
   String reviewDuplicates(int count) {
     return '이미 있는 카드 $count개';
   }

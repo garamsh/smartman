@@ -106,7 +106,13 @@ type ModelCall = {
   ];
   response_format: {
     type: string;
-    json_schema: { strict: boolean; schema: { required: string[] } };
+    json_schema: {
+      strict: boolean;
+      schema: {
+        required: string[];
+        properties: { cards: { items: { required: string[] } } };
+      };
+    };
   };
   provider: { require_parameters: boolean };
 };
@@ -185,10 +191,21 @@ async function run(
 
 const usageCalls = (r: Run) =>
   r.fake.calls.filter((call) => call.url.endsWith("/rpc/consume_extraction"));
-const twoCards = [{ front: "apple", back: "사과" }, {
-  front: "river",
-  back: "강",
-}];
+/** Two cards as the model writes them: one with a part of speech and an example, one with neither. */
+const twoCards = [{
+  front: "run",
+  meaning: "달리다",
+  partOfSpeech: "[동]",
+  examples: ["I run every morning."],
+}, { front: "river", meaning: "강", partOfSpeech: null, examples: [] }];
+/** The same cards as the function answers them. */
+const twoAnswered = [{
+  front: "run",
+  back: "[동] 달리다",
+  meaning: "달리다",
+  partOfSpeech: "[동]",
+  examples: ["I run every morning."],
+}, { front: "river", back: "강", meaning: "강" }];
 
 Deno.test("the suite runs without write or network permission", () => {
   assert.notEqual(
@@ -198,10 +215,15 @@ Deno.test("the suite runs without write or network permission", () => {
   assert.notEqual(Deno.permissions.querySync({ name: "net" }).state, "granted");
 });
 
-Deno.test("a signed-in user's photo returns the model's cards", async () => {
+Deno.test("a signed-in user's photo returns each card's fields and its composed back", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body, { cards: twoCards });
+  assert.deepEqual(r.body, { cards: twoAnswered });
+  const river = (r.body.cards as Record<string, unknown>[])[1];
+  assert.ok(
+    !Object.hasOwn(river, "partOfSpeech") && !Object.hasOwn(river, "examples"),
+    "a card without a part of speech or examples carries neither key",
+  );
   assert.equal(r.modelCalls.length, 1);
   assert.equal(r.modelCalls[0].model, "vendor/primary-model");
 });
@@ -302,7 +324,7 @@ Deno.test("a malformed body is refused with 400", async () => {
   assert.equal(control.status, 200, "control: a body with valid hints");
   const prompt = control.modelCalls[0].messages[1].content[0].text;
   assert.match(prompt, /front of each card is in the language ja/);
-  assert.match(prompt, /back of each card is in the language ko/);
+  assert.match(prompt, /meaning of each card is in the language ko/);
 });
 
 Deno.test("a method other than POST is refused with 405", async () => {
@@ -316,17 +338,21 @@ Deno.test("invalid JSON from the model is retried once, and a valid retry is ret
     replies: [{ content: "Here are your cards: [" }, cardsReply(twoCards)],
   });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body, { cards: twoCards });
+  assert.deepEqual(r.body, { cards: twoAnswered });
   assert.equal(r.modelCalls.length, 2);
 });
 
 Deno.test("invalid output twice answers 502 after exactly one retry", async () => {
-  const tooLong = [{ front: "a".repeat(501), back: "b" }];
+  const card = twoCards[1];
+  const tooLong = [{ ...card, meaning: "a".repeat(501) }];
+  const sixExamples = [{ ...card, examples: ["a", "b", "c", "d", "e", "f"] }];
+  const oldShape = [{ front: "a", back: "b" }];
   for (
-    const replies of [[{ content: "{" }, { content: "not json" }], [
-      cardsReply(tooLong),
-      { content: "{}" },
-    ]]
+    const replies of [
+      [{ content: "{" }, { content: "not json" }],
+      [cardsReply(tooLong), { content: "{}" }],
+      [cardsReply(sixExamples), cardsReply(oldShape)],
+    ]
   ) {
     const r = await run({ replies: [...replies, cardsReply(twoCards)] });
     assert.equal(r.status, 502);
@@ -370,6 +396,10 @@ Deno.test("the model call asks for the cards schema from providers that honour i
   assert.equal(call.response_format.type, "json_schema");
   assert.equal(call.response_format.json_schema.strict, true);
   assert.deepEqual(call.response_format.json_schema.schema.required, ["cards"]);
+  assert.deepEqual(
+    call.response_format.json_schema.schema.properties.cards.items.required,
+    ["front", "meaning", "partOfSpeech", "examples"],
+  );
   assert.equal(call.provider.require_parameters, true);
 });
 

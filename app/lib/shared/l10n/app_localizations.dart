@@ -805,6 +805,36 @@ abstract class AppLocalizations {
   /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요 · {deck}'**
   String reviewHint(String deck);
 
+  /// Label of the selector of how much each photo card's answer says, on the capture and review screens.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드에 담을 내용'**
+  String get detailLevelLabel;
+
+  /// Detail level: the meaning alone.
+  ///
+  /// In ko, this message translates to:
+  /// **'간단'**
+  String get detailLevelSimple;
+
+  /// Detail level, the default: the part of speech the page prints, then the meaning.
+  ///
+  /// In ko, this message translates to:
+  /// **'기본'**
+  String get detailLevelBasic;
+
+  /// Detail level: the basic answer, then each example the page prints on its own line.
+  ///
+  /// In ko, this message translates to:
+  /// **'자세히'**
+  String get detailLevelDetailed;
+
+  /// Mark on a candidate whose answer the user edited, which a detail level switch leaves as typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 고침'**
+  String get candidateEdited;
+
   /// Heading of the candidates whose card key matches a card in the deck.
   ///
   /// In ko, this message translates to:

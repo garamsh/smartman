@@ -13,35 +13,67 @@
   "cards": [
     {
       "front": "kitchen",
-      "back": "부엌"
+      "meaning": "부엌",
+      "partOfSpeech": "n.",
+      "examples": [
+        "He is cooking in the kitchen."
+      ]
     },
     {
       "front": "decide",
-      "back": "결정하다"
+      "meaning": "결정하다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "We decided to stay home."
+      ]
     },
     {
       "front": "health",
-      "back": "건강"
+      "meaning": "건강",
+      "partOfSpeech": "n.",
+      "examples": [
+        "Exercise is good for your health."
+      ]
     },
     {
       "front": "grow",
-      "back": "자라다"
+      "meaning": "자라다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "Plants grow fast in summer."
+      ]
     },
     {
       "front": "journey",
-      "back": "여행"
+      "meaning": "여행",
+      "partOfSpeech": "n.",
+      "examples": [
+        "The journey took three days."
+      ]
     },
     {
       "front": "price",
-      "back": "가격"
+      "meaning": "가격",
+      "partOfSpeech": "n.",
+      "examples": [
+        "The price is too high."
+      ]
     },
     {
       "front": "careful",
-      "back": "조심스러운"
+      "meaning": "조심스러운",
+      "partOfSpeech": "adj.",
+      "examples": [
+        "Be careful on the stairs."
+      ]
     },
     {
       "front": "schedule",
-      "back": "일정"
+      "meaning": "일정",
+      "partOfSpeech": "n.",
+      "examples": [
+        "My schedule is full this week."
+      ]
     }
   ]
 }

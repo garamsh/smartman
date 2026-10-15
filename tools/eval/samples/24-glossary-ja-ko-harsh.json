@@ -14,71 +14,71 @@
   "cards": [
     {
       "front": "泣く",
-      "back": "울다"
+      "meaning": "울다"
     },
     {
       "front": "送る",
-      "back": "보내다"
+      "meaning": "보내다"
     },
     {
       "front": "笑う",
-      "back": "웃다"
+      "meaning": "웃다"
     },
     {
       "front": "窓",
-      "back": "창문"
+      "meaning": "창문"
     },
     {
       "front": "空",
-      "back": "하늘"
+      "meaning": "하늘"
     },
     {
       "front": "忘れる",
-      "back": "잊다"
+      "meaning": "잊다"
     },
     {
       "front": "雨",
-      "back": "비"
+      "meaning": "비"
     },
     {
       "front": "古い",
-      "back": "낡다"
+      "meaning": "낡다"
     },
     {
       "front": "質問",
-      "back": "질문"
+      "meaning": "질문"
     },
     {
       "front": "花",
-      "back": "꽃"
+      "meaning": "꽃"
     },
     {
       "front": "図書館",
-      "back": "도서관"
+      "meaning": "도서관"
     },
     {
       "front": "病院",
-      "back": "병원"
+      "meaning": "병원"
     },
     {
       "front": "休む",
-      "back": "쉬다"
+      "meaning": "쉬다"
     },
     {
       "front": "写真",
-      "back": "사진"
+      "meaning": "사진"
     },
     {
       "front": "働く",
-      "back": "일하다"
+      "meaning": "일하다"
     },
     {
       "front": "使う",
-      "back": "사용하다"
+      "meaning": "사용하다"
     },
     {
       "front": "短い",
-      "back": "짧다"
+      "meaning": "짧다"
     }
   ]
 }

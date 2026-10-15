@@ -14,39 +14,48 @@
   "cards": [
     {
       "front": "教える",
-      "back": "가르치다"
+      "meaning": "가르치다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "古い",
-      "back": "낡다"
+      "meaning": "낡다",
+      "partOfSpeech": "[형]"
     },
     {
       "front": "明るい",
-      "back": "밝다"
+      "meaning": "밝다",
+      "partOfSpeech": "[형]"
     },
     {
       "front": "閉める",
-      "back": "닫다"
+      "meaning": "닫다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "図書館",
-      "back": "도서관"
+      "meaning": "도서관",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "駅",
-      "back": "역"
+      "meaning": "역",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "泳ぐ",
-      "back": "헤엄치다"
+      "meaning": "헤엄치다",
+      "partOfSpeech": "[동]"
     },
     {
       "front": "音楽",
-      "back": "음악"
+      "meaning": "음악",
+      "partOfSpeech": "[명]"
     },
     {
       "front": "高い",
-      "back": "비싸다"
+      "meaning": "비싸다",
+      "partOfSpeech": "[형]"
     }
   ]
 }

@@ -14,51 +14,51 @@
   "cards": [
     {
       "front": "料理",
-      "back": "요리"
+      "meaning": "요리"
     },
     {
       "front": "海",
-      "back": "바다"
+      "meaning": "바다"
     },
     {
       "front": "寝る",
-      "back": "자다"
+      "meaning": "자다"
     },
     {
       "front": "明日",
-      "back": "내일"
+      "meaning": "내일"
     },
     {
       "front": "時間",
-      "back": "시간"
+      "meaning": "시간"
     },
     {
       "front": "明るい",
-      "back": "밝다"
+      "meaning": "밝다"
     },
     {
       "front": "教える",
-      "back": "가르치다"
+      "meaning": "가르치다"
     },
     {
       "front": "元気",
-      "back": "건강하다"
+      "meaning": "건강하다"
     },
     {
       "front": "家族",
-      "back": "가족"
+      "meaning": "가족"
     },
     {
       "front": "古い",
-      "back": "낡다"
+      "meaning": "낡다"
     },
     {
       "front": "病院",
-      "back": "병원"
+      "meaning": "병원"
     },
     {
       "front": "暑い",
-      "back": "덥다"
+      "meaning": "덥다"
     }
   ]
 }

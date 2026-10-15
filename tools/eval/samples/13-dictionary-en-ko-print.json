@@ -13,31 +13,59 @@
   "cards": [
     {
       "front": "health",
-      "back": "건강"
+      "meaning": "건강",
+      "partOfSpeech": "n.",
+      "examples": [
+        "Exercise is good for your health."
+      ]
     },
     {
       "front": "window",
-      "back": "창문"
+      "meaning": "창문",
+      "partOfSpeech": "n.",
+      "examples": [
+        "Please open the window."
+      ]
     },
     {
       "front": "borrow",
-      "back": "빌리다"
+      "meaning": "빌리다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "Can I borrow your pen?"
+      ]
     },
     {
       "front": "bright",
-      "back": "밝은"
+      "meaning": "밝은",
+      "partOfSpeech": "adj.",
+      "examples": [
+        "The room is bright and clean."
+      ]
     },
     {
       "front": "carry",
-      "back": "나르다"
+      "meaning": "나르다",
+      "partOfSpeech": "v.",
+      "examples": [
+        "He carried the box upstairs."
+      ]
     },
     {
       "front": "early",
-      "back": "일찍"
+      "meaning": "일찍",
+      "partOfSpeech": "adv.",
+      "examples": [
+        "She gets up early."
+      ]
     },
     {
       "front": "village",
-      "back": "마을"
+      "meaning": "마을",
+      "partOfSpeech": "n.",
+      "examples": [
+        "She grew up in a small village."
+      ]
     }
   ]
 }

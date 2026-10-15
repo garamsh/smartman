@@ -23,8 +23,12 @@ HttpExtractionClient _client(
   accessToken: () async => token,
 );
 
-http.Response _json(int status, Object body) =>
-    http.Response(jsonEncode(body), status);
+/// A JSON answer as the function sends it: UTF-8, typed `application/json`.
+http.Response _json(int status, Object body) => http.Response.bytes(
+  utf8.encode(jsonEncode(body)),
+  status,
+  headers: {'content-type': 'application/json'},
+);
 
 Future<List<CandidateCard>?> _extract(HttpExtractionClient client) =>
     client.extract(_photo, cancel: Completer<void>().future);
@@ -53,10 +57,55 @@ void main() {
       final body = jsonDecode(sent.body) as Map<String, Object?>;
       expect(body.keys, ['image']);
       expect(base64Decode(body['image']! as String), _photo.bytes);
-      expect(cards!.map((card) => (card.front, card.back)), [
+      expect(cards!.map((card) => (card.front, card.meaning)), [
         ('chat', 'cat'),
         ('chien', 'dog'),
       ]);
+    },
+  );
+
+  test(
+    'reads each card\'s meaning, part of speech and examples beside its back',
+    () async {
+      final client = _client(
+        (_) async => _json(200, {
+          'cards': [
+            {
+              'front': 'run',
+              'back': '[동] 달리다',
+              'meaning': ' 달리다 ',
+              'partOfSpeech': '[동]',
+              'examples': ['I run every morning.', ' run a shop '],
+            },
+            {'front': 'river', 'back': '강', 'meaning': '강'},
+          ],
+        }),
+      );
+
+      final [run, river] = (await _extract(client))!;
+
+      expect((run.front, run.meaning, run.partOfSpeech), ('run', '달리다', '[동]'));
+      expect(run.examples, ['I run every morning.', 'run a shop']);
+      expect((river.meaning, river.partOfSpeech), ('강', null));
+      expect(river.examples, isEmpty);
+    },
+  );
+
+  test(
+    'a card from a function that sends back alone takes back as its meaning',
+    () async {
+      final client = _client(
+        (_) async => _json(200, {
+          'cards': [
+            {'front': 'chat', 'back': 'n. cat'},
+          ],
+        }),
+      );
+
+      final [card] = (await _extract(client))!;
+
+      expect((card.meaning, card.partOfSpeech), ('n. cat', null));
+      expect(card.examples, isEmpty);
     },
   );
 
@@ -90,6 +139,25 @@ void main() {
       jsonEncode({
         'cards': [
           {'front': 'chat'},
+        ],
+      }),
+      for (final field in <String, Object?>{
+        'meaning': ' ',
+        'partOfSpeech': 1,
+        'examples': 'a cat',
+      }.entries)
+        jsonEncode({
+          'cards': [
+            {'front': 'chat', 'back': 'cat', field.key: field.value},
+          ],
+        }),
+      jsonEncode({
+        'cards': [
+          {
+            'front': 'chat',
+            'back': 'cat',
+            'examples': ['a cat', ''],
+          },
         ],
       }),
     ]) {

@@ -14,43 +14,43 @@
   "cards": [
     {
       "front": "旅行",
-      "back": "여행"
+      "meaning": "여행"
     },
     {
       "front": "木",
-      "back": "나무"
+      "meaning": "나무"
     },
     {
       "front": "雪",
-      "back": "눈"
+      "meaning": "눈"
     },
     {
       "front": "始める",
-      "back": "시작하다"
+      "meaning": "시작하다"
     },
     {
       "front": "空",
-      "back": "하늘"
+      "meaning": "하늘"
     },
     {
       "front": "答える",
-      "back": "대답하다"
+      "meaning": "대답하다"
     },
     {
       "front": "山",
-      "back": "산"
+      "meaning": "산"
     },
     {
       "front": "送る",
-      "back": "보내다"
+      "meaning": "보내다"
     },
     {
       "front": "古い",
-      "back": "낡다"
+      "meaning": "낡다"
     },
     {
       "front": "安い",
-      "back": "싸다"
+      "meaning": "싸다"
     }
   ]
 }

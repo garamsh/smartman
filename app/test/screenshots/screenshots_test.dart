@@ -133,7 +133,7 @@ void main() {
       final storage = (await tester.runAsync(
         () => SharedPreferencesWithCache.create(
           cacheOptions: const SharedPreferencesWithCacheOptions(
-            allowList: themeStorageKeys,
+            allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
           ),
         ),
       ))!;
@@ -303,6 +303,7 @@ void main() {
         return deck;
       }))!;
       final client = FakeExtractionClient();
+      final preferences = await openPreferences(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [deckRepositoryProvider.overrideWithValue(repository)],
@@ -316,6 +317,7 @@ void main() {
               deck: deck.id,
               client: client,
               photos: FakePhotoSource(),
+              preferences: preferences,
             ),
           ),
         ),
@@ -330,11 +332,15 @@ void main() {
       await tester.pump();
       await tester.pump();
       await shot(tester, '22-photo-extracting');
-      client.answer({
-        'serendipity': '뜻밖의 행운',
-        'candid': '솔직한',
-        'lucid': '맑은, 또렷한',
-      });
+      client.answerCards(const [
+        CandidateCard(
+          front: 'serendipity',
+          meaning: '뜻밖의 행운',
+          partOfSpeech: '[명]',
+        ),
+        CandidateCard(front: 'candid', meaning: '솔직한', partOfSpeech: '[형]'),
+        CandidateCard(front: 'lucid', meaning: '맑은, 또렷한'),
+      ]);
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-review');
 
