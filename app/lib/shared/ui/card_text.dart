@@ -45,6 +45,25 @@ class CardText extends StatelessWidget {
   }
 }
 
+/// [style] at the size [fittedFontSize] gives [text] in [width], with the
+/// text scale and direction of [context].
+TextStyle fittedStyle(
+  BuildContext context,
+  String text, {
+  required TextStyle style,
+  required double minFontSize,
+  required double width,
+}) => style.copyWith(
+  fontSize: fittedFontSize(
+    text,
+    style: style,
+    minFontSize: minFontSize,
+    width: width,
+    textScaler: MediaQuery.textScalerOf(context),
+    textDirection: Directionality.of(context),
+  ),
+);
+
 /// The largest whole size from [style]'s down to [minFontSize] at which the
 /// widest word of [text] fits [width]; [minFontSize] when none does.
 double fittedFontSize(

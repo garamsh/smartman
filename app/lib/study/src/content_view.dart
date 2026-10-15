@@ -36,15 +36,12 @@ class ContentView extends StatelessWidget {
     if (maxLines case final maxLines?) {
       final fitted = fit == null || style == null
           ? style
-          : style.copyWith(
-              fontSize: fittedFontSize(
-                [for (final block in blocks) _plain(l10n, block)].join(' '),
-                style: style,
-                minFontSize: fit.minFontSize,
-                width: fit.width,
-                textScaler: MediaQuery.textScalerOf(context),
-                textDirection: Directionality.of(context),
-              ),
+          : fittedStyle(
+              context,
+              [for (final block in blocks) _plain(l10n, block)].join(' '),
+              style: style,
+              minFontSize: fit.minFontSize,
+              width: fit.width,
             );
       return Text.rich(
         TextSpan(
