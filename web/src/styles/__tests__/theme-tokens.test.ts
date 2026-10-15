@@ -14,7 +14,7 @@ function dartColors(set: "light" | "dark"): Map<string, string> {
   if (body === undefined) throw new Error(`theme.dart has no AppColors.${set}`);
   return new Map(
     [...body.matchAll(/(\w+): Color\(0xFF([0-9A-Fa-f]{6})\)/g)].map(([, name, hex]) => [
-      String(name).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+      String(name).replace(/[A-Z]|\d+/g, (part) => `-${part.toLowerCase()}`),
       `#${String(hex).toLowerCase()}`,
     ]),
   );
@@ -35,12 +35,12 @@ const darkCss = /prefers-color-scheme: dark\)\s*\{\s*:root \{([^}]*)\}/.exec(glo
 
 describe("the web theme's colour tokens", () => {
   it("are the light tokens of app/lib/shared/theme.dart", () => {
-    expect(dartColors("light").size).toBe(13);
+    expect(dartColors("light").size).toBe(25);
     expect(cssColors(lightCss)).toEqual(dartColors("light"));
   });
 
   it("are the dark tokens of app/lib/shared/theme.dart under prefers-color-scheme: dark", () => {
-    expect(dartColors("dark").size).toBe(13);
+    expect(dartColors("dark").size).toBe(25);
     expect(cssColors(darkCss)).toEqual(dartColors("dark"));
   });
 });
@@ -67,7 +67,14 @@ describe("the web theme's radius tokens", () => {
     );
     // Control: both sides read their tokens, the card's radius among them.
     expect(dartRadii().get("card")).toBe(24);
-    expect([...radii.keys()].sort()).toEqual(["card", "row"]);
+    expect([...radii.keys()].sort()).toEqual([
+      "button",
+      "card",
+      "field",
+      "previous",
+      "row",
+      "sheet",
+    ]);
 
     for (const [name, value] of radii) {
       expect({ name, value }).toEqual({ name, value: dartRadii().get(name) });

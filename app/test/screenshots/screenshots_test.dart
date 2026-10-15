@@ -46,11 +46,11 @@ const _density = 2.0;
 Future<void> _loadFonts() async {
   Future<ByteData> bytes(String path) async =>
       ByteData.sublistView(await File(path).readAsBytes());
-  final plex = FontLoader(appFontFamily);
-  for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
-    plex.addFont(bytes('assets/fonts/IBMPlexSansKR-$weight.ttf'));
+  final pretendard = FontLoader(appFontFamily);
+  for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) {
+    pretendard.addFont(bytes('assets/fonts/Pretendard-$weight.otf'));
   }
-  await plex.load();
+  await pretendard.load();
   await (FontLoader('MaterialIcons')..addFont(
         bytes(
           '${_flutterRoot()}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

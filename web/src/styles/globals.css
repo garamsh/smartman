@@ -2,43 +2,71 @@
 
 /* The tokens of app/lib/shared/theme.dart (docs/architecture/design.md), light first. */
 @theme {
-  --color-ground: #eef1f5;
+  --color-ground: #f4f6fa;
   --color-surface: #ffffff;
-  --color-ink: #16191f;
-  --color-muted: #5a6170;
-  --color-hairline: #dde1e7;
-  --color-know: #1b7f45;
+  --color-raised: #ffffff;
+  --color-ink: #1f2a44;
+  --color-on-primary: #ffffff;
+  --color-ink-2: #4a5470;
+  --color-muted: #687187;
+  --color-hairline: #e3e7ef;
+  --color-outline: #d5dbe7;
+  --color-brand-tint: #e8ecf5;
+  --color-hero: #1f2a44;
+  --color-on-hero: #ffffff;
+  --color-brand: #1f2a44;
+  --color-know: #1d8054;
   --color-on-know: #ffffff;
-  --color-know-dot: #1e9e4a;
-  --color-dont-know: #e0352b;
-  --color-dont-know-text: #b71c1c;
+  --color-know-dot: #2ba16a;
+  --color-dont-know: #e2574a;
+  --color-dont-know-text: #c2402f;
   --color-on-dont-know-text: #ffffff;
-  --color-depth: #dadce0;
-  --color-shadow: #000000;
+  --color-depth: #f4f6fa;
+  --color-shadow: #1f2a44;
+  --color-tint-blue: #e8ecf5;
+  --color-tint-amber: #fff1d6;
+  --color-tint-green: #e3f4ec;
+  --color-tint-red: #fce8e6;
 
+  --radius-sheet: 28px;
   --radius-card: 24px;
+  --radius-previous: 20px;
   --radius-row: 18px;
+  --radius-button: 16px;
+  --radius-field: 14px;
 }
 
 @theme inline {
-  --font-sans: var(--font-plex-sans-kr), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-pretendard), ui-sans-serif, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-ground: #0f1115;
-    --color-surface: #1a1d23;
-    --color-ink: #eceef2;
-    --color-muted: #a3a9b4;
-    --color-hairline: #2e333b;
-    --color-know: #4cc27a;
-    --color-on-know: #0f1115;
-    --color-know-dot: #5bd08a;
-    --color-dont-know: #ff6b60;
-    --color-dont-know-text: #ff8a80;
-    --color-on-dont-know-text: #0f1115;
-    --color-depth: #0f1115;
+    --color-ground: #0e1424;
+    --color-surface: #18203a;
+    --color-raised: #232d4d;
+    --color-ink: #eef1f7;
+    --color-on-primary: #1f2a44;
+    --color-ink-2: #b5bed3;
+    --color-muted: #9aa3ba;
+    --color-hairline: #2a3352;
+    --color-outline: #2e3858;
+    --color-brand-tint: #2a3560;
+    --color-hero: #232d4d;
+    --color-on-hero: #ffffff;
+    --color-brand: #1f2a44;
+    --color-know: #5ed39a;
+    --color-on-know: #0e1424;
+    --color-know-dot: #5ed39a;
+    --color-dont-know: #ff8577;
+    --color-dont-know-text: #ff8577;
+    --color-on-dont-know-text: #0e1424;
+    --color-depth: #0e1424;
     --color-shadow: #000000;
+    --color-tint-blue: #2a3560;
+    --color-tint-amber: #4a3b1e;
+    --color-tint-green: #1e3f33;
+    --color-tint-red: #4a2624;
   }
 }
 

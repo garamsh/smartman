@@ -333,7 +333,7 @@ class _Tally extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.ground,
-        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderRadius: BorderRadius.circular(AppRadius.row),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(

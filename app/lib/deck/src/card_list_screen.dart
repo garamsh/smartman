@@ -125,7 +125,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                       TodayCounted(:final total) => total,
                       _ => 0,
                     }),
-                    variant: AppButtonVariant.study,
+                    variant: AppButtonVariant.primary,
                     onPressed: switch (count) {
                       TodayCounted(:final total) when total > 0 => _study,
                       _ => null,

@@ -99,7 +99,7 @@ void main() {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AppChip(label: 'Today 3', tone: AppChipTone.know),
+            const AppChip(label: 'Today 3', tone: AppChipTone.brand),
             AppChip(label: 'Skip', icon: Icons.expand_more, onPressed: () {}),
           ],
         ),
@@ -117,8 +117,8 @@ void main() {
       expect(
         label.decoration,
         ShapeDecoration(
-          color: colors.know,
-          shape: StadiumBorder(side: BorderSide(color: colors.know)),
+          color: colors.brandTint,
+          shape: StadiumBorder(side: BorderSide(color: colors.brandTint)),
         ),
       );
       expect(_fill(tester, find.text('Skip')), colors.surface);

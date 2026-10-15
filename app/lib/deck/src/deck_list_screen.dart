@@ -250,7 +250,7 @@ class _TodayHeader extends StatelessWidget {
           const SizedBox(height: AppSpace.s12),
           AppButton(
             label: l10n.studyAll,
-            variant: AppButtonVariant.study,
+            variant: AppButtonVariant.primary,
             onPressed: onStudy,
           ),
         ],
@@ -349,7 +349,7 @@ class _TodayChip extends StatelessWidget {
     return switch (count) {
       TodayCounted(:final total) when total > 0 => AppChip(
         label: AppLocalizations.of(context).todayChip(total),
-        tone: AppChipTone.know,
+        tone: AppChipTone.brand,
       ),
       TodayUnavailable(:final message) => Tooltip(
         message: message,

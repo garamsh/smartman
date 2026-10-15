@@ -39,7 +39,22 @@ void main() {
         );
 
         expect(_fill(tester, 'primary'), colors.ink);
-        expect(_fill(tester, 'study'), colors.know);
+        expect(_fill(tester, 'onHero'), colors.onHero);
+        // The primary fill inverts in the dark theme, and its label with it.
+        expect(
+          tester
+              .widget<DefaultTextStyle>(
+                find
+                    .ancestor(
+                      of: find.text('primary'),
+                      matching: find.byType(DefaultTextStyle),
+                    )
+                    .first,
+              )
+              .style
+              .color,
+          colors.onPrimary,
+        );
         expect(_fill(tester, 'destructiveFinal'), colors.dontKnowText);
         expect(_fill(tester, 'secondary'), colors.surface);
         expect(

@@ -96,21 +96,28 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
-  # IBM Plex Sans KR, under the SIL Open Font License in assets/fonts/OFL.txt.
+  # Pretendard 1.3.9, under the SIL Open Font License in assets/fonts/OFL.txt:
+  # public/static/*.otf and LICENSE.txt of Pretendard-1.3.9.zip from
+  # github.com/orioncactus/pretendard/releases/tag/v1.3.9 (SHA-256
+  # 04be351a74d6bf7d60c480a3087e51d185485d35a52023142af1df19eb8c428a), each
+  # byte-identical to the npm package pretendard@1.3.9 (registry integrity
+  # sha512-PaQAADyLY5v4kYFwkpSJHbSSYIkiriY/1xXw75TKoZ9UQQqeU+tvP05yTdZAWibiIYoo8ZKtRv8PM7w0IaywSw==).
   # Google's "G" mark, from its Sign in with Google assets (docs/architecture/design.md).
   assets:
     - assets/fonts/OFL.txt
     - assets/google/
   fonts:
-    - family: IBM Plex Sans KR
+    - family: Pretendard
       fonts:
-        - asset: assets/fonts/IBMPlexSansKR-Regular.ttf
-        - asset: assets/fonts/IBMPlexSansKR-Medium.ttf
+        - asset: assets/fonts/Pretendard-Regular.otf
+        - asset: assets/fonts/Pretendard-Medium.otf
           weight: 500
-        - asset: assets/fonts/IBMPlexSansKR-SemiBold.ttf
+        - asset: assets/fonts/Pretendard-SemiBold.otf
           weight: 600
-        - asset: assets/fonts/IBMPlexSansKR-Bold.ttf
+        - asset: assets/fonts/Pretendard-Bold.otf
           weight: 700
+        - asset: assets/fonts/Pretendard-ExtraBold.otf
+          weight: 800
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

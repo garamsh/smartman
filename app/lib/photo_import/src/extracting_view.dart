@@ -36,7 +36,7 @@ class ExtractingView extends StatelessWidget {
               spacing: AppSpace.s16,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  borderRadius: BorderRadius.circular(AppRadius.button),
                   child: Image.memory(
                     photo.bytes,
                     width: 72,

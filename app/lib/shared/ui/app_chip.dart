@@ -4,11 +4,11 @@ import '../theme.dart';
 
 /// How a chip is coloured.
 enum AppChipTone {
-  /// The surface inside a hairline, with ink text.
+  /// The surface inside an outline, with ink text.
   neutral,
 
-  /// "Know" green, for what is due today.
-  know,
+  /// The brand tint, for what is due today.
+  brand,
 }
 
 /// A small, fully rounded label. With [onPressed] it is a button whose tap
@@ -31,8 +31,8 @@ class AppChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final (fill, onFill, outline) = switch (tone) {
-      AppChipTone.neutral => (colors.surface, colors.ink, colors.hairline),
-      AppChipTone.know => (colors.know, colors.onKnow, colors.know),
+      AppChipTone.neutral => (colors.surface, colors.ink, colors.outline),
+      AppChipTone.brand => (colors.brandTint, colors.ink, colors.brandTint),
     };
     final shape = StadiumBorder(side: BorderSide(color: outline));
     final style = AppType.micro.copyWith(

@@ -68,10 +68,10 @@ void main() {
   test('the light and dark themes carry their own tokens and the font', () {
     expect(lightTheme.brightness, Brightness.light);
     expect(lightTheme.extension<AppColors>(), AppColors.light);
-    expect(lightTheme.scaffoldBackgroundColor, const Color(0xFFEEF1F5));
+    expect(lightTheme.scaffoldBackgroundColor, const Color(0xFFF4F6FA));
     expect(darkTheme.brightness, Brightness.dark);
     expect(darkTheme.extension<AppColors>(), AppColors.dark);
-    expect(darkTheme.scaffoldBackgroundColor, const Color(0xFF0F1115));
+    expect(darkTheme.scaffoldBackgroundColor, const Color(0xFF0E1424));
     expect(lightTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
     expect(darkTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
   });
@@ -169,13 +169,24 @@ void main() {
       for (final (text, ground) in [
         (colors.ink, colors.surface),
         (colors.ink, colors.ground),
+        (colors.ink, colors.raised),
+        (colors.ink2, colors.surface),
+        (colors.ink2, colors.ground),
         (colors.muted, colors.surface),
         (colors.muted, colors.ground),
+        (colors.muted, colors.raised),
         (colors.muted, colors.depth),
+        (colors.onPrimary, colors.ink),
+        (colors.ink, colors.brandTint),
+        (colors.onHero, colors.hero),
+        (colors.brand, colors.onHero),
+        (colors.know, colors.surface),
+        (colors.know, colors.ground),
         (colors.onKnow, colors.know),
         (colors.onDontKnowText, colors.dontKnowText),
         (colors.dontKnowText, colors.surface),
-        (colors.surface, colors.ink),
+        (colors.dontKnowText, colors.ground),
+        for (final tint in colors.deckTints) (colors.ink, tint),
       ]) {
         expect(
           contrast(text, ground),
@@ -183,13 +194,16 @@ void main() {
           reason: '$text on $ground',
         );
       }
-      // Non-text, at 3:1: the answer dots on a previous card.
+      // Non-text, at 3:1: the answer dots on a previous card, which fades
+      // from the surface toward the ground.
       for (final dot in [colors.knowDot, colors.dontKnow]) {
-        expect(
-          contrast(dot, colors.surface),
-          greaterThanOrEqualTo(3),
-          reason: '$dot on ${colors.surface}',
-        );
+        for (final ground in [colors.surface, colors.depth]) {
+          expect(
+            contrast(dot, ground),
+            greaterThanOrEqualTo(3),
+            reason: '$dot on $ground',
+          );
+        }
       }
     });
   }
