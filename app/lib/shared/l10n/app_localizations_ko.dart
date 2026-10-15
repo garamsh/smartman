@@ -346,6 +346,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dataNotCleared => '이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.';
 
   @override
+  String get deleteAccount => '계정 삭제';
+
+  @override
+  String get deleteAccountNote =>
+      '계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.';
+
+  @override
+  String get deleteAccountTitle => '계정을 삭제할까요?';
+
+  @override
+  String get deleteAccountBody =>
+      '서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.';
+
+  @override
+  String get deletingAccount => '계정 삭제 중';
+
+  @override
+  String get deleteAccountRejected => '계정을 삭제하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get syncSyncing => '동기화 중';
 
   @override

@@ -379,6 +379,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t remove this device\'s data. It\'s removed when another account signs in.';
 
   @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountNote =>
+      'Deleting your account removes your cards and history from the server and this device. You can\'t undo this.';
+
+  @override
+  String get deleteAccountTitle => 'Delete your account?';
+
+  @override
+  String get deleteAccountBody =>
+      'Your decks, cards and study history are removed from the server and this device, while decks others copied and your Google account stay.';
+
+  @override
+  String get deletingAccount => 'Deleting account';
+
+  @override
+  String get deleteAccountRejected =>
+      'Couldn\'t delete your account. Try again.';
+
+  @override
   String get syncSyncing => 'Syncing';
 
   @override

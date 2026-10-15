@@ -7,13 +7,14 @@ import '../../shared/ui/app_list_row.dart';
 import '../../shared/ui/app_section_label.dart';
 import '../../shared/ui/app_sheet.dart';
 import 'account_data.dart';
+import 'account_service.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'providers.dart';
 
-/// Shows the signed-in account and signs it out; and the theme the app is
-/// drawn in.
+/// Shows the signed-in account, signs it out and deletes it; and the theme
+/// the app is drawn in.
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
 
@@ -21,8 +22,11 @@ class AccountScreen extends ConsumerStatefulWidget {
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
 }
 
+/// The account action under way, whose row shows progress.
+enum _Action { signingOut, deleting }
+
 class _AccountScreenState extends ConsumerState<AccountScreen> {
-  bool _busy = false;
+  _Action? _busy;
 
   @override
   Widget build(BuildContext context) {
@@ -50,17 +54,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppListRow(
             title: l10n.signOut,
             leading: const Icon(Icons.logout),
-            trailing: _busy
-                ? SizedBox.square(
-                    dimension: AppSpace.s24,
-                    child: CircularProgressIndicator(
-                      semanticsLabel: l10n.signingOut,
-                    ),
-                  )
+            trailing: _busy == _Action.signingOut
+                ? _Progress(l10n.signingOut)
                 : null,
-            onTap: _busy || state is! SignedIn ? null : _signOut,
+            onTap: _busy != null || state is! SignedIn ? null : _signOut,
           ),
-          // Account deletion (#26) adds its row here, below sign-out.
+          AppListRow(
+            title: l10n.deleteAccount,
+            subtitle: l10n.deleteAccountNote,
+            leading: const Icon(Icons.delete_forever_outlined),
+            destructive: true,
+            trailing: _busy == _Action.deleting
+                ? _Progress(l10n.deletingAccount)
+                : null,
+            onTap: _busy != null || state is! SignedIn ? null : _deleteAccount,
+          ),
         ],
       ),
     );
@@ -73,28 +81,71 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final service = ref.read(accountServiceProvider);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
-    setState(() => _busy = true);
+    setState(() => _busy = _Action.signingOut);
     try {
       if (!await data.push()) {
         if (!mounted || !await _confirmUnsynced()) return;
       }
+      await _endSession(service, data, messenger, l10n);
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  /// Asks before deleting the account; then deletes it, signs out and clears
+  /// the device's data, without pushing first.
+  Future<void> _deleteAccount() async {
+    final data = ref.read(accountDataProvider);
+    final service = ref.read(accountServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (!await showAppConfirm(
+      context,
+      title: l10n.deleteAccountTitle,
+      consequence: l10n.deleteAccountBody,
+      confirmLabel: l10n.delete,
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = _Action.deleting);
+    try {
       try {
-        await service.signOut();
+        await service.deleteAccount();
       } on AccountFailure catch (failure) {
         messenger.showSnackBar(
-          SnackBar(content: Text(describeAccountFailure(l10n, failure))),
+          SnackBar(content: Text(describeDeletionFailure(l10n, failure))),
         );
+        return;
       }
-      // A failed sign-out still ends the session on the device.
-      if (service.state is! SignedIn) {
-        try {
-          await data.clear();
-        } on AccountDataNotCleared {
-          messenger.showSnackBar(SnackBar(content: Text(l10n.dataNotCleared)));
-        }
-      }
+      await _endSession(service, data, messenger, l10n);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  /// Signs out, then clears the device's data. Signing out makes the gate
+  /// close this screen, so nothing here may depend on it staying mounted.
+  static Future<void> _endSession(
+    AccountService service,
+    AccountData data,
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+  ) async {
+    try {
+      await service.signOut();
+    } on AccountFailure catch (failure) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(describeAccountFailure(l10n, failure))),
+      );
+    }
+    // A failed sign-out still ends the session on the device.
+    if (service.state is! SignedIn) {
+      try {
+        await data.clear();
+      } on AccountDataNotCleared {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.dataNotCleared)));
+      }
     }
   }
 
@@ -108,6 +159,19 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       confirmLabel: l10n.signOutAnyway,
     );
   }
+}
+
+/// The progress shown in the row of the action under way.
+class _Progress extends StatelessWidget {
+  const _Progress(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: AppSpace.s24,
+    child: CircularProgressIndicator(semanticsLabel: label),
+  );
 }
 
 /// The signed-in account: an avatar with the email's initial, the email,

@@ -268,6 +268,12 @@ void main() {
       await shot(tester, '19-sign-out-warning');
       await tester.tap(find.text(ko.cancel));
       await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.text(ko.deleteAccount));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await shot(tester, '19b-delete-account-confirm');
+      await tester.tap(find.text(ko.cancel));
+      await tester.pump(const Duration(seconds: 1));
 
       // Disposing sync cancels the run a write scheduled.
       ProviderScope.containerOf(

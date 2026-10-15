@@ -28,6 +28,12 @@ abstract interface class AccountService {
   /// [AccountFailure] when the server cannot be told; the device is signed
   /// out either way.
   Future<void> signOut();
+
+  /// Deletes the signed-in account on the server, and with it every row the
+  /// account owns there; the device stays signed in until [signOut]. Throws an
+  /// [AccountFailure] when the account could not be deleted; it then still
+  /// exists.
+  Future<void> deleteAccount();
 }
 
 /// What [connectAccount] connects: the account service, and the Supabase
@@ -58,6 +64,7 @@ Future<AccountConnection> connectAccount(Map<String, String> defines) async {
   final service = await GoogleAccountService.start(
     supabase.client.auth,
     GoogleSignIn.instance,
+    functions: supabase.client.functions,
     // Android takes only the server client ID; iOS also needs its own.
     clientId: defaultTargetPlatform == TargetPlatform.iOS
         ? config.googleIosClientId.value
@@ -68,9 +75,15 @@ Future<AccountConnection> connectAccount(Map<String, String> defines) async {
 }
 
 /// Signs in with Google's native picker and exchanges the ID token it returns
-/// for a Supabase session.
+/// for a Supabase session; deletes the account through the `delete-account`
+/// Edge Function.
 final class GoogleAccountService implements AccountService {
-  GoogleAccountService._(this._auth, this._google, this._nonce);
+  GoogleAccountService._(
+    this._auth,
+    this._google,
+    this._functions,
+    this._nonce,
+  );
 
   /// Initializes [google] with a new nonce and returns the service that signs
   /// in through it. Called once per run, since [google] takes one
@@ -78,6 +91,7 @@ final class GoogleAccountService implements AccountService {
   static Future<GoogleAccountService> start(
     GoTrueClient auth,
     GoogleSignIn google, {
+    required FunctionsClient functions,
     required String? clientId,
     required String serverClientId,
   }) async {
@@ -87,11 +101,12 @@ final class GoogleAccountService implements AccountService {
       serverClientId: serverClientId,
       nonce: nonce.hashed,
     );
-    return GoogleAccountService._(auth, google, nonce);
+    return GoogleAccountService._(auth, google, functions, nonce);
   }
 
   final GoTrueClient _auth;
   final GoogleSignIn _google;
+  final FunctionsClient _functions;
   final Nonce _nonce;
 
   static const _scopes = ['email', 'profile'];
@@ -160,6 +175,21 @@ final class GoogleAccountService implements AccountService {
     }
   }
 
+  /// Calls `delete-account`, which deletes the user the session's token
+  /// names; the request carries no user id.
+  @override
+  Future<void> deleteAccount() async {
+    final FunctionResponse response;
+    try {
+      response = await _functions.invoke('delete-account');
+    } on FunctionException catch (error) {
+      throw classifyDeletionError(error);
+    }
+    if (response.status != 204) {
+      throw AccountRejected(UnexpectedDeletionAnswer(response.status));
+    }
+  }
+
   static AccountState _stateOf(Session? session) => switch (session) {
     null => const SignedOut(),
     Session(:final user) => SignedIn(
@@ -186,6 +216,9 @@ final class UnavailableAccountService implements AccountService {
 
   @override
   Future<void> signOut() async {}
+
+  @override
+  Future<void> deleteAccount() async => throw failure;
 }
 
 /// The nonce that binds a Google ID token to this app's sign-in: Google puts
@@ -214,6 +247,28 @@ final class MissingIdToken implements Exception {
   @override
   String toString() => 'MissingIdToken: Google returned no ID token';
 }
+
+/// `delete-account` answered with a success other than its 204.
+final class UnexpectedDeletionAnswer implements Exception {
+  const UnexpectedDeletionAnswer(this.status);
+
+  final int status;
+
+  @override
+  String toString() => 'UnexpectedDeletionAnswer: status $status';
+}
+
+/// The failure a `delete-account` [error] means: a request that never
+/// arrived, or a server or gateway error, is [AccountOffline]; any other
+/// refusal, an expired session's 401 among them, is [AccountRejected].
+AccountFailure classifyDeletionError(FunctionException error) =>
+    switch (error) {
+      FunctionsFetchException() => AccountOffline(error),
+      FunctionException(:final status) when status >= 500 => AccountOffline(
+        error,
+      ),
+      _ => AccountRejected(error),
+    };
 
 /// The failure a Google sign-in [error] means; null for a user who cancelled.
 AccountFailure? classifyGoogleError(GoogleSignInException error) =>

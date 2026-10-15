@@ -45,7 +45,8 @@ class AppRowSurface extends StatelessWidget {
 }
 
 /// A row with a [title], an optional [subtitle] under it, and optional
-/// [leading] and [trailing] widgets, read as one node.
+/// [leading] and [trailing] widgets, read as one node. A [destructive] row
+/// draws its title and leading icon in red.
 class AppListRow extends StatelessWidget {
   const AppListRow({
     super.key,
@@ -57,6 +58,7 @@ class AppListRow extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.onSheet = false,
+    this.destructive = false,
   });
 
   final String title;
@@ -73,9 +75,14 @@ class AppListRow extends StatelessWidget {
   /// Whether the row sits on a sheet; see [AppRowSurface.onSheet].
   final bool onSheet;
 
+  /// Whether the row starts an action that deletes something.
+  final bool destructive;
+
   @override
   Widget build(BuildContext context) {
     final subtitle = this.subtitle;
+    final colors = AppColors.of(context);
+    final leading = this.leading;
     return MergeSemantics(
       child: Semantics(
         selected: selected,
@@ -93,13 +100,26 @@ class AppListRow extends StatelessWidget {
             child: Row(
               spacing: AppSpace.s12,
               children: [
-                ?leading,
+                if (leading != null)
+                  destructive
+                      ? IconTheme.merge(
+                          data: IconThemeData(color: colors.dontKnowText),
+                          child: leading,
+                        )
+                      : leading,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(title, style: AppType.bodyStrong),
+                      Text(
+                        title,
+                        style: destructive
+                            ? AppType.bodyStrong.copyWith(
+                                color: colors.dontKnowText,
+                              )
+                            : AppType.bodyStrong,
+                      ),
                       if (subtitle != null)
                         Text(
                           subtitle,

@@ -7,6 +7,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/shared/ui/app_button.dart';
 import 'package:smartman/shared/ui/app_list_row.dart';
 
 import 'fake_account_data.dart';
@@ -239,6 +240,165 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('ada@example.com'), findsNothing);
+  });
+
+  group('deleting the account', () {
+    FakeAccountService signedIn() => FakeAccountService(
+      const SignedIn(userId: _ada, email: 'ada@example.com'),
+    );
+
+    testWidgets(
+      'is a red row with its note below sign-out, read as one node, in Korean',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester, signedIn(), locale: const Locale('ko'));
+
+        final row = find.text('계정 삭제');
+        expect(
+          tester.getRect(find.text('로그아웃')).top,
+          lessThan(tester.getRect(row).top),
+        );
+        expect(
+          tester.widget<Text>(row).style?.color,
+          AppColors.light.dontKnowText,
+        );
+        expect(
+          tester.getSemantics(row),
+          isSemantics(
+            label: '계정 삭제\n계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.',
+            hasTapAction: true,
+          ),
+        );
+        // The control: sign-out is drawn in ink, not red.
+        expect(
+          tester.widget<Text>(find.text('로그아웃')).style?.color,
+          isNot(AppColors.light.dontKnowText),
+        );
+        semantics.dispose();
+      },
+    );
+
+    testWidgets(
+      'asks first, saying what goes and what stays, with cancel above a red delete, in Korean',
+      (tester) async {
+        await pumpScreen(tester, signedIn(), locale: const Locale('ko'));
+
+        await tapAndSettle(tester, '계정 삭제');
+
+        expect(find.text('계정을 삭제할까요?'), findsOneWidget);
+        expect(
+          find.text(
+            '서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.',
+          ),
+          findsOneWidget,
+        );
+        final cancel = find.widgetWithText(AppButton, '취소');
+        final delete = find.widgetWithText(AppButton, '삭제');
+        expect(
+          tester.getRect(cancel).bottom,
+          lessThanOrEqualTo(tester.getRect(delete).top),
+        );
+        expect(
+          tester.widget<AppButton>(delete).variant,
+          AppButtonVariant.destructiveFinal,
+        );
+      },
+    );
+
+    testWidgets('cancelling keeps the account and its data', (tester) async {
+      final service = signedIn();
+      final data = FakeAccountData();
+      await pumpScreen(tester, service, data: data);
+
+      await tapAndSettle(tester, 'Delete account');
+      await tapAndSettle(tester, 'Cancel');
+
+      expect(service.deletions, 0);
+      expect(service.state, isA<SignedIn>());
+      expect([data.pushes, data.clears], [0, 0]);
+      expect(find.text('ada@example.com'), findsOneWidget);
+    });
+
+    testWidgets(
+      'deleting signs out and clears the device\'s data without pushing first',
+      (tester) async {
+        final service = signedIn();
+        final data = FakeAccountData();
+        await pumpScreen(tester, service, data: data);
+
+        await tapAndSettle(tester, 'Delete account');
+        await tapAndSettle(tester, 'Delete');
+
+        expect(service.deletions, 1);
+        expect(service.state, isA<SignedOut>());
+        expect([data.pushes, data.clears], [0, 1]);
+        expect(find.byType(SnackBar), findsNothing);
+      },
+    );
+
+    for (final (failure, message) in [
+      (
+        const AccountOffline(FormatException('offline')),
+        "Couldn't reach the server. Check your internet connection.",
+      ),
+      (
+        const AccountRejected(FormatException('401')),
+        "Couldn't delete your account. Try again.",
+      ),
+    ]) {
+      testWidgets(
+        'a deletion failing as ${failure.runtimeType} says so and keeps the account and its data',
+        (tester) async {
+          final service = signedIn()..deletionFailure = failure;
+          final data = FakeAccountData();
+          await pumpScreen(tester, service, data: data);
+
+          await tapAndSettle(tester, 'Delete account');
+          await tapAndSettle(tester, 'Delete');
+
+          expect(find.text(message), findsOneWidget);
+          expect(service.state, isA<SignedIn>());
+          expect(data.clears, 0);
+          expect(find.text('ada@example.com'), findsOneWidget);
+        },
+      );
+    }
+
+    testWidgets('data that cannot be cleared after deleting is reported', (
+      tester,
+    ) async {
+      final service = signedIn();
+      final data = FakeAccountData()
+        ..clearFailure = const AccountDataNotCleared(FormatException('disk'));
+      await pumpScreen(tester, service, data: data);
+
+      await tapAndSettle(tester, 'Delete account');
+      await tapAndSettle(tester, 'Delete');
+
+      expect(service.deletions, 1);
+      expect(
+        find.text(
+          "Couldn't remove this device's data. It's removed when another account signs in.",
+        ),
+        findsOneWidget,
+      );
+    });
+
+    for (final mode in ['light', 'dark']) {
+      testWidgets(
+        'in the $mode theme the row and the confirmation meet the tap target and contrast guidelines',
+        (tester) async {
+          await pumpScreen(tester, signedIn(), themeMode: mode);
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+
+          await tapAndSettle(tester, 'Delete account');
+          expect(find.text('Delete your account?'), findsOneWidget);
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+        },
+      );
+    }
   });
 
   testWidgets('the sync status shows only while signed in', (tester) async {
