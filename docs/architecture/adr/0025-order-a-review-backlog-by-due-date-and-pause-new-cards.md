@@ -18,7 +18,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - a user studies every day for 120 days at 20 new cards a day, which leaves 2400 cards asking for about 169 reviews a day, then skips 7 or 30 days, then studies daily for a horizon with a budget of reviews a day, standing in for a user who stops early, since the app sets no limit;
   - a reviewed card is recalled with the probability the engine's `MemoryState::retrievability` gives, a new card with 0.5; "Don't know" re-shows the card ten minutes later, recalled, for one more review of the budget; every review draws a fuzz factor;
   - the orders by retrievability sort by the engine's own retrievability, not by a key standing in for it;
-  - metrics: the mean, over the horizon's days, of the expected retained cards (the sum of retrievability over every reviewed card) at each session's start; the same at the horizon's end; the reviews spent; the new cards introduced. Each retained figure is a mean over the 20 seeds ± its standard error.
+  - metrics: the mean, over the horizon's days, of the expected retained cards (the sum of retrievability over every reviewed card) at each session's start; the same at the horizon's end; both again over the pre-skip cards alone, the cards reviewed before the skip, which are the backlog's own; the reviews spent; the new cards introduced. Each retained figure is a mean over the 20 seeds ± its standard error.
+  - the sum over every reviewed card grows with each new card introduced, so it ranks orders but cannot judge pausing new cards, which trades new learning for the backlog's retention. The pause is judged on the pre-skip cards.
 - **Order.** Every session of the horizon in backlog, its due cards in the strict order, no new card; today's queue, with its new cards, for comparison. The first four scenarios are those the issue names; the last eight check other budgets and horizons:
 
 | Skip | Budget | Horizon | Order | Mean retained over the horizon | Retained at end | Reviews | New cards |
@@ -169,6 +170,37 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 | 30 | 200 | over 5 days due | 2659.3 ± 1.4 | 3212.9 ± 1.4 | 2260.6 | 1009 | 5.0 |
 | 30 | 200 | always in backlog | 2266.0 ± 0.2 | 2260.3 ± 0.3 | 2260.3 | 0 | 60.0 |
 
+- **New cards.** The same seeds and budgets, each run against three queues: due date ascending in runs of ten with new cards paused while in backlog (over three days due), the same with today's 20 new cards a day, each at a random place among the due cards, and today's queue. "Paused leads" is the paused queue's retained pre-skip cards less the other queue's, seed by seed, ± the standard error of that paired difference:
+
+| Skip | Budget | Policy | Mean retained over the horizon, pre-skip cards | Retained at end, pre-skip cards | Paused leads, pre-skip, over the horizon | Paused leads, pre-skip, at end | Mean retained over the horizon, every card | Retained at end, every card | New cards |
+|---|---|---|---|---|---|---|---|---|---|
+| 7 | 50 | due date runs, new cards paused | 2212.6 ± 0.8 | 2233.3 ± 1.1 | — | — | 2212.8 ± 0.8 | 2239.0 ± 1.2 | 7 |
+| 7 | 50 | due date runs, new cards as today | 2209.4 ± 1.1 | 2224.0 ± 1.2 | 3.2 ± 1.0 | 9.3 ± 1.2 | 2234.1 ± 1.4 | 2280.5 ± 2.0 | 71 |
+| 7 | 50 | today: shuffle with new cards | 2199.2 ± 0.9 | 2212.8 ± 1.1 | 13.4 ± 0.9 | 20.5 ± 1.3 | 2225.8 ± 1.2 | 2270.4 ± 1.9 | 71 |
+| 7 | 200 | due date runs, new cards paused | 2273.4 ± 0.1 | 2269.7 ± 0.3 | — | — | 2748.8 ± 1.2 | 3309.3 ± 1.9 | 1104 |
+| 7 | 200 | due date runs, new cards as today | 2273.3 ± 0.1 | 2269.6 ± 0.4 | 0.1 ± 0.1 | 0.1 ± 0.4 | 2758.1 ± 1.6 | 3317.6 ± 2.7 | 1112 |
+| 7 | 200 | today: shuffle with new cards | 2272.7 ± 0.2 | 2270.5 ± 0.3 | 0.7 ± 0.1 | -0.8 ± 0.2 | 2759.7 ± 1.8 | 3322.2 ± 2.3 | 1116 |
+| 30 | 50 | due date runs, new cards paused | 2167.9 ± 1.3 | 2217.8 ± 1.8 | — | — | 2169.7 ± 1.3 | 2234.2 ± 1.7 | 20 |
+| 30 | 50 | due date runs, new cards as today | 2164.7 ± 0.8 | 2210.0 ± 1.3 | 3.2 ± 1.2 | 7.8 ± 1.8 | 2180.0 ± 0.9 | 2252.9 ± 1.6 | 55 |
+| 30 | 50 | today: shuffle with new cards | 2150.4 ± 0.9 | 2202.1 ± 1.5 | 17.5 ± 1.3 | 15.7 ± 2.0 | 2168.7 ± 1.0 | 2248.0 ± 1.9 | 58 |
+| 30 | 200 | due date runs, new cards paused | 2265.6 ± 0.2 | 2260.5 ± 0.2 | — | — | 2659.1 ± 1.2 | 3212.5 ± 1.4 | 1009 |
+| 30 | 200 | due date runs, new cards as today | 2265.2 ± 0.2 | 2260.5 ± 0.3 | 0.4 ± 0.2 | -0.0 ± 0.3 | 2672.0 ± 1.2 | 3226.8 ± 1.5 | 1024 |
+| 30 | 200 | today: shuffle with new cards | 2261.7 ± 0.3 | 2260.8 ± 0.3 | 3.9 ± 0.2 | -0.3 ± 0.4 | 2667.6 ± 1.5 | 3224.3 ± 1.7 | 1021 |
+| 7 | 25 | due date runs, new cards paused | 2151.5 ± 0.8 | 2130.8 ± 1.1 | — | — | 2151.5 ± 0.8 | 2130.8 ± 1.1 | 0 |
+| 7 | 25 | due date runs, new cards as today | 2149.1 ± 0.9 | 2126.6 ± 1.4 | 2.4 ± 0.7 | 4.2 ± 1.5 | 2156.6 ± 1.0 | 2140.5 ± 1.6 | 22 |
+| 7 | 25 | today: shuffle with new cards | 2140.7 ± 0.7 | 2111.5 ± 1.0 | 10.8 ± 0.7 | 19.3 ± 1.5 | 2150.4 ± 0.7 | 2129.7 ± 1.3 | 26 |
+| 30 | 25 | due date runs, new cards paused | 2093.3 ± 1.2 | 2097.1 ± 1.6 | — | — | 2093.3 ± 1.2 | 2097.1 ± 1.6 | 0 |
+| 30 | 25 | due date runs, new cards as today | 2091.2 ± 0.9 | 2093.5 ± 1.0 | 2.1 ± 0.8 | 3.6 ± 1.3 | 2096.8 ± 1.1 | 2104.4 ± 1.4 | 18 |
+| 30 | 25 | today: shuffle with new cards | 2078.7 ± 0.8 | 2081.1 ± 1.3 | 14.6 ± 1.2 | 16.0 ± 2.2 | 2085.4 ± 0.9 | 2094.5 ± 1.4 | 20 |
+| 7 | 100 | due date runs, new cards paused | 2259.9 ± 0.4 | 2261.2 ± 0.4 | — | — | 2382.9 ± 2.4 | 2594.0 ± 4.3 | 359 |
+| 7 | 100 | due date runs, new cards as today | 2258.3 ± 0.4 | 2260.5 ± 0.5 | 1.6 ± 0.4 | 0.6 ± 0.5 | 2387.2 ± 2.3 | 2591.4 ± 4.5 | 358 |
+| 7 | 100 | today: shuffle with new cards | 2257.0 ± 0.4 | 2262.8 ± 0.4 | 2.8 ± 0.4 | -1.6 ± 0.4 | 2389.7 ± 1.9 | 2593.5 ± 3.6 | 357 |
+| 30 | 100 | due date runs, new cards paused | 2238.6 ± 0.5 | 2260.8 ± 0.3 | — | — | 2327.8 ± 1.7 | 2552.6 ± 4.1 | 315 |
+| 30 | 100 | due date runs, new cards as today | 2236.4 ± 0.5 | 2260.3 ± 0.3 | 2.3 ± 0.5 | 0.5 ± 0.4 | 2335.9 ± 1.8 | 2552.4 ± 3.7 | 315 |
+| 30 | 100 | today: shuffle with new cards | 2230.2 ± 0.6 | 2259.0 ± 0.4 | 8.5 ± 0.7 | 1.8 ± 0.3 | 2332.4 ± 1.8 | 2557.7 ± 3.4 | 323 |
+
+- Under the tight budgets, 25 and 50, the pause keeps more of the pre-skip cards than today's new cards do with the same order, in every scenario and on both metrics: by 2.1 to 3.2 cards over the horizon and 3.6 to 9.3 at its end, each more than twice its standard error. Under 100 and 200, where the backlog clears in days, the lead is at most 2.3 cards over the horizon and within about one standard error at the end.
+- The cost is new learning: under the tight budgets the pause introduces 18 to 64 fewer new cards over the 60 days, and the retained sum over every card is 7 to 42 cards lower at the end.
 - Alternatives considered:
   - Descending or ascending retrievability, through a key of whole elapsed days over stability, which orders cards as FSRS-6's retrievability does while one decay holds for every card. The PM chose that key before the simulation ran; due date ascending won it, needs no key, and the key and its order-equivalence tests against the engine were dropped.
   - A backlog measured against the reviews done in recent days. It needs each client to read the review history, and a rule for a user with little history, whose first cards fall due against almost none. The daily load reads only the card states both clients already read.
@@ -177,7 +209,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Decision
 
 - **Backlog.** A selection of decks is in backlog when more than `backlogDays` (3) days of reviews are due: its due cards outnumber three times the daily load of its reviewed cards.
-- **Membership.** In backlog the session takes every due card and no new card. Otherwise it takes every due card and up to 20 new ones, as ADR 0009 does.
+- **Membership.** In backlog the session takes every due card and no new card: the pause keeps more of the backlog's own cards under a tight budget, beyond the standard error, at the cost of new cards learned. Otherwise it takes every due card and up to 20 new ones, as ADR 0009 does.
 - **Order.** In backlog the due cards are sorted earliest due first, equal due times in the order read, and each run of `backlogBucketSize` (10) consecutive cards is shuffled in its place with the session's `Random`. Otherwise the queue is shuffled as a whole, as ADR 0009 does, with the same draws. This supersedes ADR 0009's order for a backlog.
 - **Counts and sentence.** The counts the deck screens show come from the same selection, so a backlog shows no new card, and the deck list's header and the deck's screen add one sentence, "밀린 복습을 마칠 때까지 새 카드는 쉬어요.".
 - **Where.** `queue.dart` and `queue.ts` hold the rule, with the same constants; a change to one changes both.
@@ -186,6 +218,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Consequences
 
 - A user back from a week or more away studies the oldest part of the backlog first, a run of ten at a time, and sees no new card until at most three days of reviews are due; the deck screens say why.
+- During a backlog the user learns no new card. Under a tight budget the simulation keeps 2 to 9 more of the backlog's own cards that way, and learns 18 to 64 fewer new cards over 60 days.
 - A user who studies daily, or misses a day or two a week, sees today's queue: no backlog was called on any such day in the simulation.
 - The order is no longer uniformly random during a backlog: which run a card falls in follows its due date. Within a run it is random, and runs change as due dates do.
 - The simulation is committed with its seeds, so the evidence for the constants can be rerun, or extended to a new candidate, against the engine as it then is.
@@ -195,5 +228,6 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - Users back from a long break report that new cards stay paused long after they have caught up, or that the sentence shows while the review count is small.
 - Users who miss a day or two report new cards pausing in an ordinary week.
+- Users with a backlog that never clears, studying a little each day, learn no new card for weeks and stop studying.
 - A simulation with the engine's next model, or real review logs, ranks retrievability above due date under a daily cap.
 - Users report learning the order of their overdue cards across sessions.

@@ -88,6 +88,9 @@ struct Policy {
     /// Consecutive cards of the order shuffled together; 1 is the strict order.
     bucket: usize,
     backlog: Backlog,
+    /// Whether a session in backlog takes no new card; otherwise it takes `NEW_PER_DAY`, each
+    /// at a random place among the ordered due cards.
+    pause_new: bool,
 }
 
 /// When a session is in backlog: its due cards ordered, and no new card.
@@ -130,6 +133,8 @@ struct Outcome {
     backlog_days: f64,
     /// The mean, over the horizon's days, of the sum of retrievability at the session's start.
     mean_retained: f64,
+    /// The same over the cards reviewed before the gap.
+    mean_retained_old: f64,
 }
 
 impl Outcome {
@@ -141,6 +146,7 @@ impl Outcome {
         self.unfinished_days += other.unfinished_days;
         self.backlog_days += other.backlog_days;
         self.mean_retained += other.mean_retained;
+        self.mean_retained_old += other.mean_retained_old;
     }
 
     fn scaled(mut self, by: f64) -> Outcome {
@@ -151,6 +157,7 @@ impl Outcome {
         self.unfinished_days *= by;
         self.backlog_days *= by;
         self.mean_retained *= by;
+        self.mean_retained_old *= by;
         self
     }
 }
@@ -236,7 +243,11 @@ impl Simulation {
             Backlog::Always => true,
             Backlog::Over(days) => due.len() as f64 > days * daily_load(&self.cards),
         };
-        let fresh = if backlog { 0 } else { NEW_PER_DAY };
+        let fresh = if backlog && policy.pause_new {
+            0
+        } else {
+            NEW_PER_DAY
+        };
         // `None` stands for a new card.
         let mut queue: Vec<Option<usize>> = if backlog {
             match policy.order {
@@ -248,7 +259,12 @@ impl Simulation {
                     }
                 }
             }
-            due.into_iter().map(Some).collect()
+            let mut queue: Vec<Option<usize>> = due.into_iter().map(Some).collect();
+            for _ in 0..fresh {
+                let at = self.rng.below(queue.len() + 1);
+                queue.insert(at, None);
+            }
+            queue
         } else {
             let mut queue: Vec<Option<usize>> = due.into_iter().map(Some).collect();
             queue.extend(std::iter::repeat_n(None, fresh));
@@ -304,6 +320,7 @@ fn warm_up(seed: u64) -> Simulation {
         order: Order::Shuffle,
         bucket: 1,
         backlog: Backlog::Never,
+        pause_new: true,
     };
     for day in 0..WARM_UP_DAYS {
         sim.session(day, None, &today, true);
@@ -318,6 +335,7 @@ fn run(seed: u64, scenario: Scenario, policy: &Policy) -> Outcome {
     for day in first..first + scenario.horizon {
         let start = Timestamp(day * DAY + SESSION_START);
         outcome.mean_retained += sim.retained(start, false) / scenario.horizon as f64;
+        outcome.mean_retained_old += sim.retained(start, true) / scenario.horizon as f64;
         let (reviews, introduced, finished, backlog) =
             sim.session(day, Some(scenario.budget), policy, false);
         outcome.reviews += reviews as f64;
@@ -331,9 +349,34 @@ fn run(seed: u64, scenario: Scenario, policy: &Policy) -> Outcome {
     outcome
 }
 
+/// The mean, over every seed, of how far `ahead` leads `behind` on the cards from before the
+/// gap, run by run with the same seed, with its standard error: over the horizon, and at its end.
+fn paired_lead(scenario: Scenario, ahead: &Policy, behind: &Policy) -> [(f64, f64); 2] {
+    let leads: Vec<(f64, f64)> = SEEDS
+        .map(|seed| {
+            let (a, b) = (run(seed, scenario, ahead), run(seed, scenario, behind));
+            (
+                a.mean_retained_old - b.mean_retained_old,
+                a.retained_old - b.retained_old,
+            )
+        })
+        .collect();
+    let count = leads.len() as f64;
+    let stats = |value: fn(&(f64, f64)) -> f64| {
+        let mean = leads.iter().map(value).sum::<f64>() / count;
+        let variance = leads
+            .iter()
+            .map(|lead| (value(lead) - mean).powi(2))
+            .sum::<f64>()
+            / (count - 1.0);
+        (mean, (variance / count).sqrt())
+    };
+    [stats(|lead| lead.0), stats(|lead| lead.1)]
+}
+
 /// The mean outcome over every seed, with the standard errors of its retained at the end and
-/// its mean retained over the horizon.
-fn mean(scenario: Scenario, policy: &Policy) -> (Outcome, f64, f64) {
+/// its mean retained over the horizon, over every card and over the cards from before the gap.
+fn mean(scenario: Scenario, policy: &Policy) -> (Outcome, [f64; 4]) {
     let runs: Vec<Outcome> = SEEDS.map(|seed| run(seed, scenario, policy)).collect();
     let mut total = Outcome::default();
     for outcome in &runs {
@@ -351,8 +394,12 @@ fn mean(scenario: Scenario, policy: &Policy) -> (Outcome, f64, f64) {
     };
     (
         mean,
-        error(|outcome| outcome.retained),
-        error(|outcome| outcome.mean_retained),
+        [
+            error(|outcome| outcome.retained),
+            error(|outcome| outcome.mean_retained),
+            error(|outcome| outcome.retained_old),
+            error(|outcome| outcome.mean_retained_old),
+        ],
     )
 }
 
@@ -363,6 +410,7 @@ fn false_backlog_days(days: f64, skipped: i64) -> f64 {
         order: CHOSEN_ORDER,
         bucket: CHOSEN_BUCKET,
         backlog: Backlog::Over(days),
+        pause_new: true,
     };
     let mut total = 0.0;
     for seed in SEEDS {
@@ -408,7 +456,11 @@ const SENSITIVITY: [Scenario; 8] = [
 
 const HEADER: &str = "| Skip | Budget | Horizon | Policy | Retained at end | Retained at end, cards from before the skip | Mean retained over the horizon | Reviews | New cards | Unfinished days | Backlog days |\n|---|---|---|---|---|---|---|---|---|---|---|";
 
-fn row(scenario: Scenario, name: &str, (outcome, end_error, mean_error): (Outcome, f64, f64)) {
+fn row(
+    scenario: Scenario,
+    name: &str,
+    (outcome, [end_error, mean_error, ..]): (Outcome, [f64; 4]),
+) {
     println!(
         "| {} | {} | {} | {} | {:.1} ± {:.1} | {:.1} | {:.1} ± {:.1} | {:.0} | {:.0} | {:.1} | {:.1} |",
         scenario.gap,
@@ -427,6 +479,8 @@ fn row(scenario: Scenario, name: &str, (outcome, end_error, mean_error): (Outcom
     );
 }
 
+/// The backlog threshold the new-card table runs with, in days of reviews due.
+const CHOSEN_BACKLOG_DAYS: f64 = 3.0;
 /// The bucket size the threshold tables run with.
 const CHOSEN_BUCKET: usize = 10;
 /// The order the bucket and threshold tables run with.
@@ -479,6 +533,7 @@ fn main() {
             order: Order::Shuffle,
             bucket: 1,
             backlog: Backlog::Never,
+            pause_new: true,
         };
         row(
             scenario,
@@ -490,6 +545,7 @@ fn main() {
                 order,
                 bucket: 1,
                 backlog: Backlog::Always,
+                pause_new: true,
             };
             row(scenario, order.name(), mean(scenario, &policy));
         }
@@ -506,6 +562,7 @@ fn main() {
                 order: CHOSEN_ORDER,
                 bucket,
                 backlog: Backlog::Always,
+                pause_new: true,
             };
             row(
                 scenario,
@@ -535,6 +592,7 @@ fn main() {
                 order: CHOSEN_ORDER,
                 bucket: CHOSEN_BUCKET,
                 backlog,
+                pause_new: true,
             };
             let name = match backlog {
                 Backlog::Never => "never in backlog (today)".to_owned(),
@@ -542,6 +600,80 @@ fn main() {
                 Backlog::Over(days) => format!("over {days} days due"),
             };
             row(scenario, &name, mean(scenario, &policy));
+        }
+    }
+
+    println!(
+        "\n## New cards in a backlog\n\nIn backlog over {CHOSEN_BACKLOG_DAYS} days of reviews due, {} in runs of {CHOSEN_BUCKET}, with new cards paused or with today's {NEW_PER_DAY} a day, each at a random place among the due cards; and today's queue. The pre-skip cards are the cards reviewed before the skip: the backlog's own.\n",
+        CHOSEN_ORDER.name()
+    );
+    println!(
+        "| Skip | Budget | Horizon | Policy | Mean retained over the horizon, pre-skip cards | Retained at end, pre-skip cards | Mean retained over the horizon, every card | Retained at end, every card | New cards | Backlog days | Paused leads this, pre-skip cards, over the horizon | Paused leads this, pre-skip cards, at end |\n|---|---|---|---|---|---|---|---|---|---|---|---|"
+    );
+    let budgets = SCENARIOS.into_iter().chain([
+        scenario(7, 25, 60),
+        scenario(30, 25, 60),
+        scenario(7, 100, 60),
+        scenario(30, 100, 60),
+    ]);
+    for scenario in budgets {
+        let policies = [
+            (
+                "due date runs, new cards paused",
+                Backlog::Over(CHOSEN_BACKLOG_DAYS),
+                CHOSEN_ORDER,
+                true,
+            ),
+            (
+                "due date runs, new cards as today",
+                Backlog::Over(CHOSEN_BACKLOG_DAYS),
+                CHOSEN_ORDER,
+                false,
+            ),
+            (
+                "today: shuffle with new cards",
+                Backlog::Never,
+                Order::Shuffle,
+                false,
+            ),
+        ];
+        let paused = Policy {
+            order: CHOSEN_ORDER,
+            bucket: CHOSEN_BUCKET,
+            backlog: Backlog::Over(CHOSEN_BACKLOG_DAYS),
+            pause_new: true,
+        };
+        for (name, backlog, order, pause_new) in policies {
+            let policy = Policy {
+                order,
+                bucket: CHOSEN_BUCKET,
+                backlog,
+                pause_new,
+            };
+            let (outcome, [end, mean_all, end_old, mean_old]) = mean(scenario, &policy);
+            let lead = if pause_new {
+                "— | —".to_owned()
+            } else {
+                let [(over, over_error), (at_end, end_error)] =
+                    paired_lead(scenario, &paused, &policy);
+                format!("{over:.1} ± {over_error:.1} | {at_end:.1} ± {end_error:.1}")
+            };
+            println!(
+                "| {} | {} | {} | {name} | {:.1} ± {:.1} | {:.1} ± {:.1} | {:.1} ± {:.1} | {:.1} ± {:.1} | {:.0} | {:.1} | {lead} |",
+                scenario.gap,
+                scenario.budget,
+                scenario.horizon,
+                outcome.mean_retained_old,
+                mean_old,
+                outcome.retained_old,
+                end_old,
+                outcome.mean_retained,
+                mean_all,
+                outcome.retained,
+                end,
+                outcome.introduced,
+                outcome.backlog_days,
+            );
         }
     }
 
