@@ -82,6 +82,16 @@ class _CurrentCardState extends State<CurrentCard>
     if (mounted) widget.onAnswer(answer);
   }
 
+  /// Answers from a screen reader's action, which can reach the card while it
+  /// is scrolled out of view: the card is brought into view first.
+  Future<void> _answerFromAction(Answer answer) async {
+    await Scrollable.ensureVisible(
+      context,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+    );
+    if (mounted) await _commit(answer);
+  }
+
   void _toggleRevealed() {
     if (!_committed) setState(() => _revealed = !_revealed);
   }
@@ -100,9 +110,10 @@ class _CurrentCardState extends State<CurrentCard>
       onTapHint: _revealed ? l10n.hideAnswer : l10n.showAnswer,
       onTap: _toggleRevealed,
       customSemanticsActions: {
-        CustomSemanticsAction(label: l10n.know): () => _commit(Answer.know),
+        CustomSemanticsAction(label: l10n.know): () =>
+            _answerFromAction(Answer.know),
         CustomSemanticsAction(label: l10n.dontKnow): () =>
-            _commit(Answer.dontKnow),
+            _answerFromAction(Answer.dontKnow),
       },
       excludeSemantics: true,
       child: GestureDetector(

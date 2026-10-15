@@ -14,31 +14,17 @@ import 'session.dart';
 import 'study_style.dart';
 
 /// Every card answered in the session, oldest at the top and newest at the
-/// bottom, in one scroll view that opens at the newest and returns there after
-/// each answer. Only the cards near the viewport are built.
+/// bottom, as the sliver above the current card in its scroll view. Only the
+/// cards near the viewport are built.
 ///
 /// The list runs oldest first, not reversed, because a list paints its
 /// children in index order and each card must paint over the one above it.
-class PreviousCards extends StatefulWidget {
+class PreviousCards extends StatelessWidget {
   const PreviousCards({super.key, required this.cards, required this.onToggle});
 
   /// Oldest first.
   final List<PreviousCard> cards;
   final void Function(int position) onToggle;
-
-  @override
-  State<PreviousCards> createState() => _PreviousCardsState();
-}
-
-class _PreviousCardsState extends State<PreviousCards> {
-  ScrollController? _controller;
-  var _count = 0;
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
 
   /// The height of the slot of the card at [index] of [count].
   static double _extent(int index, int count) {
@@ -48,55 +34,28 @@ class _PreviousCardsState extends State<PreviousCards> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final cards = widget.cards;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        var total = 0.0;
-        for (var index = 0; index < cards.length; index++) {
-          total += _extent(index, cards.length);
-        }
-        final viewport = constraints.maxHeight;
-        final end = max(0.0, total - viewport);
-        final controller = _controller ??= ScrollController(
-          initialScrollOffset: end,
-        );
-        if (cards.length != _count) {
-          _count = cards.length;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (controller.hasClients) {
-              controller.jumpTo(controller.position.maxScrollExtent);
-            }
-          });
-        }
-        return ListView.builder(
-          controller: controller,
-          // Fewer cards than fill the view sit at its bottom.
-          padding: EdgeInsets.only(top: max(0, viewport - total)),
-          itemCount: cards.length,
-          itemExtentBuilder: (index, _) =>
-              index < cards.length ? _extent(index, cards.length) : null,
-          findChildIndexCallback: (key) => switch (key) {
-            ValueKey<int>(:final value) when value < cards.length => value,
-            _ => null,
-          },
-          itemBuilder: (context, index) {
-            final card = cards[index];
-            final depth = cards.length - index;
-            return _Slot(
-              key: ValueKey(card.position),
-              depth: depth,
-              child: _PreviousCardView(
-                card: card,
-                depth: depth,
-                onTap: () => widget.onToggle(card.position),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => SliverVariedExtentList.builder(
+    itemCount: cards.length,
+    itemExtentBuilder: (index, _) =>
+        index < cards.length ? _extent(index, cards.length) : null,
+    findChildIndexCallback: (key) => switch (key) {
+      ValueKey<int>(:final value) when value < cards.length => value,
+      _ => null,
+    },
+    itemBuilder: (context, index) {
+      final card = cards[index];
+      final depth = cards.length - index;
+      return _Slot(
+        key: ValueKey(card.position),
+        depth: depth,
+        child: _PreviousCardView(
+          card: card,
+          depth: depth,
+          onTap: () => onToggle(card.position),
+        ),
+      );
+    },
+  );
 }
 
 /// How far a card [depth] steps from the current one is scaled down.

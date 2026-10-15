@@ -211,16 +211,19 @@ void main() {
 
       await tap(tester, find.text(ko.studyCount(4)));
       await shot(tester, '12-study-start');
-      // The current card's centre, where StudyStyle places it.
+      // The current card's centre, where StudyStyle places it at rest.
       final current = Offset(
         _phone.width / _density / 2,
         _phone.height / _density * 0.57,
       );
-      for (final offset in [400.0, -400.0, 400.0]) {
+      for (final offset in [400.0, -400.0, 400.0, 400.0]) {
         await tester.dragFrom(current, Offset(offset, 0));
         await tester.pumpAndSettle();
       }
       await shot(tester, '13-study-session');
+      await tester.dragFrom(current, const Offset(0, 400));
+      await tester.pumpAndSettle();
+      await shot(tester, '13b-study-scrolled-back');
       await tester.longPress(
         find
             .bySemanticsLabel(

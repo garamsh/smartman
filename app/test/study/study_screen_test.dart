@@ -237,6 +237,15 @@ final _answerVisibility = find.descendant(
 bool _answerShown(WidgetTester tester) =>
     tester.widget<Visibility>(_answerVisibility).visible;
 
+/// The session's one scroll view: the stack and the current card.
+final _sessionScroll = find.ancestor(
+  of: find.byType(PreviousCards),
+  matching: find.byType(Scrollable),
+);
+
+double _scrollOffset(WidgetTester tester) =>
+    tester.state<ScrollableState>(_sessionScroll).position.pixels;
+
 const _sentence =
     'This sentence is long enough to wrap across the width of half a card. ';
 
@@ -375,7 +384,6 @@ void main() {
         final position = (half as StatefulElement).state as ScrollableState;
         expect(position.position.maxScrollExtent, greaterThan(0));
       }
-
       await tester.timedDrag(
         _currentCard,
         const Offset(200, 0),
@@ -451,6 +459,169 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a vertical drag scrolls the stack and the current card together and answers nothing, and a horizontal swipe still answers',
+    (tester) async {
+      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
+      final study = await _open(tester, [...names, 'g', 'h']);
+      for (final _ in names) {
+        await study.know();
+      }
+      // After every answer the view is back at its end, the card at 57%.
+      final rest = tester.getCenter(_currentCard).dy;
+      expect(rest, closeTo(_phone.height * 0.57, 1));
+
+      // Past the touch slop the drag is a scroll; from there the card and
+      // the stack follow the finger.
+      final gesture = await tester.startGesture(tester.getCenter(_currentCard));
+      await gesture.moveBy(const Offset(0, kDragSlopDefault + 1));
+      await tester.pump();
+      final card = tester.getCenter(_currentCard).dy;
+      final newest = tester.getCenter(_previous('f front')).dy;
+      for (var moved = 0; moved < 10; moved++) {
+        await gesture.moveBy(const Offset(0, 15));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(tester.getCenter(_currentCard).dy, closeTo(card + 150, 1));
+      expect(
+        tester.getCenter(_previous('f front')).dy,
+        closeTo(newest + 150, 1),
+      );
+      expect(study.current, 'g front');
+      expect(_dragOffset(tester, _currentCard), 0);
+
+      await study.swipe(200);
+      expect(study.current, 'h front');
+    },
+  );
+
+  testWidgets(
+    'the view stays at its end through an answer, on the frame the next card appears',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c', 'd', 'e']);
+      for (final _ in ['a', 'b', 'c']) {
+        await study.know();
+      }
+
+      await tester.timedDrag(
+        _currentCard,
+        const Offset(200, 0),
+        const Duration(seconds: 1),
+      );
+      final next = find.descendant(
+        of: _currentCard,
+        matching: find.text('e front'),
+      );
+      for (var frame = 0; frame < 60 && next.evaluate().isEmpty; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      expect(next, findsOneWidget, reason: 'the next card is on screen');
+      final position = tester.state<ScrollableState>(_sessionScroll).position;
+      expect(position.maxScrollExtent, greaterThan(0));
+      expect(position.pixels, position.maxScrollExtent);
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'an answer given while scrolled back returns the view to its end',
+    (tester) async {
+      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
+      final study = await _open(tester, [...names, 'g', 'h']);
+      for (final _ in names) {
+        await study.know();
+      }
+      await tester.drag(_currentCard, const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final card = tester.getRect(_currentCard);
+      expect(card.bottom, greaterThan(_phone.height), reason: 'partly hidden');
+
+      // Swiped by its visible top.
+      await tester.timedDragFrom(
+        Offset(card.center.dx, card.top + 20),
+        const Offset(200, 0),
+        const Duration(seconds: 1),
+      );
+      await tester.pumpAndSettle();
+
+      expect(study.current, 'h front');
+      expect(
+        tester.getCenter(_currentCard).dy,
+        closeTo(_phone.height * 0.57, 1),
+      );
+    },
+  );
+
+  testWidgets(
+    'a toggle while scrolled back leaves the view where it is, and the current card unchanged',
+    (tester) async {
+      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
+      final study = await _open(tester, [...names, 'g', 'h']);
+      for (final _ in names) {
+        await study.know();
+      }
+      await tester.drag(_currentCard, const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final offset = _scrollOffset(tester);
+      final card = tester.getRect(_currentCard);
+
+      // To "Don't know", the card's last answer, which puts it back.
+      await tester.tap(_previous('e front'));
+      await tester.pumpAndSettle();
+
+      expect(
+        _label(tester, _previous('e front')),
+        endsWith("Answer: Don't know. Changed"),
+      );
+      expect(_scrollOffset(tester), offset);
+      expect(tester.getRect(_currentCard), card);
+      expect(study.current, 'g front');
+    },
+  );
+
+  testWidgets(
+    'a screen reader answering the card while it is scrolled out of view brings it into view first',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final names = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+      final study = await _open(tester, [...names, 'k', 'l']);
+      for (final _ in names) {
+        await study.know();
+      }
+      await tester.drag(_currentCard, const Offset(0, 520));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(_currentCard).top, greaterThan(_phone.height));
+
+      final node = tester.getSemantics(_currentCard);
+      node.owner!.performAction(
+        node.id,
+        SemanticsAction.customAction,
+        CustomSemanticsAction.getIdentifier(
+          const CustomSemanticsAction(label: 'Know'),
+        ),
+      );
+      await tester.pump();
+
+      // In view while it flies off.
+      expect(
+        tester.getRect(_currentCard).bottom,
+        lessThanOrEqualTo(_phone.height),
+      );
+      await tester.pumpAndSettle();
+      expect(study.current, 'l front');
+      expect(
+        tester.getCenter(_currentCard).dy,
+        closeTo(_phone.height * 0.57, 1),
+      );
+      semantics.dispose();
+    },
+  );
+
   testWidgets('a block this version cannot show renders as its placeholder', (
     tester,
   ) async {
@@ -484,7 +655,7 @@ void main() {
       }
 
       final stack = find.byType(PreviousCards);
-      final scrollable = find.descendant(
+      final scrollable = find.ancestor(
         of: stack,
         matching: find.byType(Scrollable),
       );
