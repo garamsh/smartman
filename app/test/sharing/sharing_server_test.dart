@@ -53,6 +53,20 @@ void main() {
     users.clear();
   });
 
+  /// The decks [viewer] lists, among those of this test's users; earlier
+  /// tests' public decks stay on the stack.
+  Future<List<PublicDeckSummary>> listOurs(
+    _User viewer, {
+    String search = '',
+    BrowseSort sort = BrowseSort.newest,
+  }) async {
+    final ours = {for (final user in users) user.id};
+    return [
+      for (final deck in await viewer.sharing.listDecks(search, sort))
+        if (ours.contains(deck.owner)) deck,
+    ];
+  }
+
   /// A new account, signed up and signed in on its own client.
   Future<_User> signUp(String name) async {
     const options = AuthClientOptions(authFlowType: AuthFlowType.implicit);
@@ -114,7 +128,7 @@ void main() {
     await bea.device.deck.createDeck('Diary');
     await bea.sync();
 
-    final listed = await ada.sharing.listDecks('', BrowseSort.newest);
+    final listed = await listOurs(ada);
     expect(
       [
         for (final summary in listed)
@@ -146,7 +160,11 @@ void main() {
         ('gato', CardSource.shared, deck.id),
       },
     );
-    final after = await ada.sharing.listDecks('span', BrowseSort.mostCopied);
+    final after = await listOurs(
+      ada,
+      search: 'span',
+      sort: BrowseSort.mostCopied,
+    );
     expect(after.single.importCount, 1);
 
     // The copy syncs as Ada's own cards, with their source and origin.
@@ -172,7 +190,7 @@ void main() {
     expect(await ada.device.deckNames(), ['Mine']);
     // Control: the deck is readable to Ada, so the pull's owner filter is
     // what keeps it out.
-    expect(await ada.sharing.listDecks('', BrowseSort.newest), hasLength(1));
+    expect(await listOurs(ada), hasLength(1));
   }, skip: skip);
 
   test('a publish on one device reaches the owner\'s other device', () async {
@@ -205,20 +223,20 @@ void main() {
 
     await ada.sharing.block(bea.id);
     await ada.sharing.block(bea.id);
-    expect(await ada.sharing.listDecks('', BrowseSort.newest), isEmpty);
+    expect(await listOurs(ada), isEmpty);
     // Control: Bea, who blocked no one, still lists her own deck.
-    expect(await bea.sharing.listDecks('', BrowseSort.newest), hasLength(1));
+    expect(await listOurs(bea), hasLength(1));
   }, skip: skip);
 
   test('an unpublished deck leaves the listing and refuses a copy', () async {
     final bea = await signUp('bea');
     final ada = await signUp('ada');
     final deck = await publish(bea, 'Spanish', ['perro'], displayName: 'Bea');
-    final listed = (await ada.sharing.listDecks('', BrowseSort.newest)).single;
+    final listed = (await listOurs(ada)).single;
 
     await bea.sharing.makePrivate(deck.id);
 
-    expect(await ada.sharing.listDecks('', BrowseSort.newest), isEmpty);
+    expect(await listOurs(ada), isEmpty);
     await expectLater(
       ada.sharing.copy(listed, const CopyIntoNewDeck()),
       throwsA(isA<DeckNoLongerPublic>()),
@@ -238,6 +256,6 @@ void main() {
           .writeVisibility(deck, const PrivateDeck(), at: DateTime.now()),
       throwsA(isA<SharingRejected>()),
     );
-    expect(await ada.sharing.listDecks('', BrowseSort.newest), hasLength(1));
+    expect(await listOurs(ada), hasLength(1));
   }, skip: skip);
 }
