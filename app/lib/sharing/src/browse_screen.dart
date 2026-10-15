@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -96,7 +97,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
           const SizedBox(height: AppSpace.s16),
           AppTextField(
             hint: l10n.searchPublicDecks,
-            prefixIcon: const Icon(Icons.search),
+            prefixIcon: const Icon(LucideIcons.search),
             textInputAction: TextInputAction.search,
             onChanged: _onSearch,
             onSubmitted: (search) {
@@ -133,7 +134,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
   List<Widget> _results(AppLocalizations l10n) {
     if (_isOnline == false) {
-      return [_Message(l10n.browseOffline, icon: Icons.cloud_off)];
+      return [_Message(l10n.browseOffline, icon: LucideIcons.cloudOff)];
     }
     final decks = _decks;
     if (decks == null) return [const _Progress()];
@@ -158,7 +159,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     deck.importCount,
                   ),
                   trailing: Icon(
-                    Icons.chevron_right,
+                    LucideIcons.chevronRight,
                     color: AppColors.of(context).muted,
                   ),
                   onTap: () => _open(deck),
@@ -173,7 +174,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 stackTrace ?? StackTrace.current,
               ),
             },
-            icon: error is SharingOffline ? Icons.cloud_off : null,
+            icon: error is SharingOffline ? LucideIcons.cloudOff : null,
             onRetry: _load,
           ),
           _ => const _Progress(),

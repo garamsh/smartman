@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
@@ -76,7 +77,10 @@ class _UnsupportedBlock extends StatelessWidget {
         child: Row(
           spacing: StudyStyle.blockGap,
           children: [
-            Icon(Icons.help_outline, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              LucideIcons.circleQuestionMark,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             Expanded(
               child: Text(
                 label,

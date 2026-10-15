@@ -55,6 +55,9 @@ dependencies:
   image: ^4.12.0
   http: ^1.6.0
   connectivity_plus: ^7.3.2
+  # Lucide's 2 px, round-capped icons (docs/architecture/design.md).
+  lucide_icons_flutter: 3.1.25
+  url_launcher: 6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +75,11 @@ dev_dependencies:
   google_sign_in_platform_interface: ^3.1.0
   plugin_platform_interface: ^2.1.8
   shared_preferences_platform_interface: ^2.4.2
+  # The launcher icons and the native splash are generated from assets/brand/
+  # by these, pinned exactly since their output is committed; check-generated.sh
+  # reruns both.
+  flutter_launcher_icons: 0.14.4
+  flutter_native_splash: 2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -103,9 +111,11 @@ flutter:
   # byte-identical to the npm package pretendard@1.3.9 (registry integrity
   # sha512-PaQAADyLY5v4kYFwkpSJHbSSYIkiriY/1xXw75TKoZ9UQQqeU+tvP05yTdZAWibiIYoo8ZKtRv8PM7w0IaywSw==).
   # Google's "G" mark, from its Sign in with Google assets (docs/architecture/design.md).
+  # The brand's lockups and symbol (docs/architecture/design.md).
   assets:
     - assets/fonts/OFL.txt
     - assets/google/
+    - assets/brand/
   fonts:
     - family: Pretendard
       fonts:
@@ -138,3 +148,27 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# The launcher icons, from the owner's 1024 px app icon; iOS 18 and later draws
+# the dark one in dark mode.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/brand/icon/app-icon-light-1024.png
+  image_path_ios_dark_transparent: assets/brand/icon/app-icon-dark-1024.png
+  remove_alpha_ios: true
+  background_color_ios: "#FFFFFF"
+
+# The native splash: the navy symbol on the light ground, the white one on the
+# dark ground.
+flutter_native_splash:
+  color: "#F4F6FA"
+  image: assets/brand/splash/splash-light.png
+  color_dark: "#0E1424"
+  image_dark: assets/brand/splash/splash-dark.png
+  android_12:
+    color: "#F4F6FA"
+    image: assets/brand/splash/android12-light.png
+    color_dark: "#0E1424"
+    image_dark: assets/brand/splash/android12-dark.png
+  web: false

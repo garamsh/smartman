@@ -147,7 +147,10 @@ void main() {
           find.descendant(of: list.row(deck), matching: finder);
       expect(inRow('Alpha', find.text('2 cards')), findsOneWidget);
       expect(inRow('Alpha', find.text('Today 3')), findsOneWidget);
-      expect(inRow('Alpha', find.byIcon(Icons.chevron_right)), findsOneWidget);
+      expect(
+        inRow('Alpha', find.byIcon(LucideIcons.chevronRight)),
+        findsOneWidget,
+      );
       expect(inRow('Beta', find.text('1 card')), findsOneWidget);
       expect(inRow('Beta', find.textContaining('Today')), findsNothing);
       expect(inRow('Gamma', find.text('0 cards')), findsOneWidget);

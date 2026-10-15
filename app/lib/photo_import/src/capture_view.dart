@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Card;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
@@ -226,7 +227,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                     children: [
                       IconButton(
                         tooltip: l10n.close,
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(LucideIcons.x),
                         color: colors.ink,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -236,7 +237,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                             label: l10n.photoTarget(
                               widget.target?.name ?? l10n.newDeck,
                             ),
-                            icon: Icons.expand_more,
+                            icon: LucideIcons.chevronDown,
                             onPressed: _chooseTarget,
                           ),
                         ),
@@ -285,7 +286,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                           child: IconButton.filledTonal(
                             iconSize: 28,
                             tooltip: l10n.photoAlbum,
-                            icon: const Icon(Icons.photo_library_outlined),
+                            icon: const Icon(LucideIcons.images),
                             onPressed: _busy
                                 ? null
                                 : () => _take(widget.photos.pickFromLibrary),
@@ -317,7 +318,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     Widget check(bool chosen) => chosen
-        ? Icon(Icons.check, color: colors.know)
+        ? Icon(LucideIcons.check, color: colors.know)
         : const SizedBox.shrink();
     final chosen = await showAppSheet<_TargetChoice>(
       context,
@@ -336,7 +337,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
               ),
             AppListRow(
               title: l10n.newDeck,
-              leading: const Icon(Icons.add),
+              leading: const Icon(LucideIcons.plus),
               onSheet: true,
               selected: widget.target == null,
               trailing: check(widget.target == null),

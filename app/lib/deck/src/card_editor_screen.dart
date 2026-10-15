@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -140,7 +141,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       appBar: AppBar(
         leading: IconButton(
           tooltip: l10n.close,
-          icon: const Icon(Icons.close),
+          icon: const Icon(LucideIcons.x),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(_isNew ? l10n.newCard : l10n.editCard),
@@ -148,7 +149,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           if (card != null)
             IconButton(
               tooltip: l10n.deleteCard,
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(LucideIcons.trash2),
               onPressed: () => _delete(card),
             ),
           Padding(

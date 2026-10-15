@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -49,7 +50,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                 if (sharing != null)
                   IconButton(
                     tooltip: l10n.browse,
-                    icon: const Icon(Icons.travel_explore),
+                    icon: const Icon(LucideIcons.compass),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => sharing.browseScreen(),
@@ -58,7 +59,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                   ),
                 IconButton(
                   tooltip: l10n.account,
-                  icon: const Icon(Icons.account_circle_outlined),
+                  icon: const Icon(LucideIcons.user),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => ref.read(accountScreenProvider)(),
@@ -140,7 +141,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     return AppBar(
       leading: IconButton(
         tooltip: l10n.clearSelection,
-        icon: const Icon(Icons.close),
+        icon: const Icon(LucideIcons.x),
         onPressed: () => setState(() => _selected = null),
       ),
       title: Text(l10n.decksSelected(selected.length)),
@@ -310,7 +311,7 @@ class _DeckRow extends ConsumerWidget {
       leading: selected == null
           ? null
           : Icon(
-              selected ? Icons.check_circle : Icons.radio_button_unchecked,
+              selected ? LucideIcons.circleCheck : LucideIcons.circle,
               color: selected ? colors.know : colors.muted,
             ),
       trailing: Row(
@@ -322,7 +323,8 @@ class _DeckRow extends ConsumerWidget {
             DeckSelection(deck.id),
             (context, count) => _TodayChip(count: count),
           ),
-          if (selected == null) Icon(Icons.chevron_right, color: colors.muted),
+          if (selected == null)
+            Icon(LucideIcons.chevronRight, color: colors.muted),
         ],
       ),
       onTap: selected == null
@@ -354,7 +356,7 @@ class _TodayChip extends StatelessWidget {
       TodayUnavailable(:final message) => Tooltip(
         message: message,
         child: Icon(
-          Icons.error_outline,
+          LucideIcons.circleAlert,
           color: colors.muted,
           semanticLabel: message,
         ),

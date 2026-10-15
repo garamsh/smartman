@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
@@ -207,7 +208,7 @@ class _TopBar extends StatelessWidget {
             children: [
               IconButton(
                 tooltip: l10n.close,
-                icon: const Icon(Icons.close),
+                icon: const Icon(LucideIcons.x),
                 onPressed: onClose,
               ),
               if (progress != null) ...[

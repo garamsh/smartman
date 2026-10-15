@@ -28,10 +28,24 @@ test.describe("signed out", () => {
   test("the theme follows the system's dark mode", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/login");
-    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(238, 241, 245)");
+    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(244, 246, 250)");
 
     await page.emulateMedia({ colorScheme: "dark" });
-    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(15, 17, 21)");
+    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(14, 20, 36)");
+  });
+
+  test("the icons and the manifest are served without a session", async ({ request }) => {
+    for (const path of ["/favicon.svg", "/favicon-32.png", "/apple-touch-icon.png"]) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect({ path, status: response.status() }).toEqual({ path, status: 200 });
+    }
+    const manifest = await request.get("/manifest.webmanifest", { maxRedirects: 0 });
+    expect(manifest.status()).toBe(200);
+    expect(await manifest.json()).toMatchObject({ theme_color: "#1F2A44" });
+    for (const { src } of ((await manifest.json()) as { icons: { src: string }[] }).icons) {
+      const icon = await request.get(src, { maxRedirects: 0 });
+      expect({ src, status: icon.status() }).toEqual({ src, status: 200 });
+    }
   });
 
   test("/api/health answers 200 without a session", async ({ request }) => {

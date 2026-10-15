@@ -41,8 +41,8 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 const _phone = Size(780, 1688);
 const _density = 2.0;
 
-/// Loads the bundled font and Material's icons, which tests otherwise draw
-/// as boxes.
+/// Loads the bundled font, Lucide's icons and Material's, which tests
+/// otherwise draw as boxes.
 Future<void> _loadFonts() async {
   Future<ByteData> bytes(String path) async =>
       ByteData.sublistView(await File(path).readAsBytes());
@@ -51,6 +51,10 @@ Future<void> _loadFonts() async {
     pretendard.addFont(bytes('assets/fonts/Pretendard-$weight.otf'));
   }
   await pretendard.load();
+  await (FontLoader('packages/lucide_icons_flutter/Lucide')..addFont(
+        rootBundle.load('packages/lucide_icons_flutter/assets/lucide.ttf'),
+      ))
+      .load();
   await (FontLoader('MaterialIcons')..addFont(
         bytes(
           '${_flutterRoot()}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

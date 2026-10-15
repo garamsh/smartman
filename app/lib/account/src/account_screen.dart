@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -53,7 +54,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppSectionLabel(l10n.accountSection),
           AppListRow(
             title: l10n.signOut,
-            leading: const Icon(Icons.logout),
+            leading: const Icon(LucideIcons.logOut),
             trailing: _busy == _Action.signingOut
                 ? _Progress(l10n.signingOut)
                 : null,
@@ -62,7 +63,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppListRow(
             title: l10n.deleteAccount,
             subtitle: l10n.deleteAccountNote,
-            leading: const Icon(Icons.delete_forever_outlined),
+            leading: const Icon(LucideIcons.trash2),
             destructive: true,
             trailing: _busy == _Action.deleting
                 ? _Progress(l10n.deletingAccount)
@@ -199,7 +200,7 @@ class _ProfileHeader extends ConsumerWidget {
               shape: const CircleBorder(),
             ),
             child: email == null || email.isEmpty
-                ? Icon(Icons.person, color: colors.surface)
+                ? Icon(LucideIcons.user, color: colors.surface)
                 : Text(
                     email.characters.first.toUpperCase(),
                     style: AppType.headline.copyWith(color: colors.surface),

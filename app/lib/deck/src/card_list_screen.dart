@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -147,7 +148,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
             else ...[
               AppTextField(
                 hint: l10n.searchCards,
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(LucideIcons.search),
                 onChanged: (query) => setState(() => _query = query),
               ),
               const SizedBox(height: AppSpace.s12),

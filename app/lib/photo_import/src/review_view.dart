@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
@@ -50,7 +51,7 @@ class ReviewView extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(
           tooltip: l10n.close,
-          icon: const Icon(Icons.close),
+          icon: const Icon(LucideIcons.x),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -229,7 +230,7 @@ class _DuplicateChoiceChip extends StatelessWidget {
         for (final option in DuplicateChoice.values)
           MenuItemButton(
             leadingIcon: option == choice
-                ? const Icon(Icons.check)
+                ? const Icon(LucideIcons.check)
                 : const SizedBox.square(dimension: AppSpace.s24),
             onPressed: () => onSelected(option),
             child: Text(label(option)),
@@ -237,7 +238,7 @@ class _DuplicateChoiceChip extends StatelessWidget {
       ],
       builder: (context, controller, _) => AppChip(
         label: label(choice),
-        icon: Icons.expand_more,
+        icon: LucideIcons.chevronDown,
         onPressed: () =>
             controller.isOpen ? controller.close() : controller.open(),
       ),

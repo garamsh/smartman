@@ -40,5 +40,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // The files under public/, the icons, the manifest and brand/, are served to everyone.
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|brand/|.*\\.(?:svg|png|webmanifest)$).*)",
+  ],
 };

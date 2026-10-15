@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
 import "@/styles/globals.css";
@@ -19,6 +19,18 @@ const pretendard = localFont({
 export const metadata: Metadata = {
   title: "smartman",
   description: "카드로 외우는 암기 앱",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1F2A44",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
