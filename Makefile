@@ -30,6 +30,7 @@ lint:
 	./check-ios-client-id.sh
 	./check-generated.sh
 	./deno.sh lint
+	./web.sh lint
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
 	echo "analyzed $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -43,6 +44,7 @@ lint:
 
 format:
 	./deno.sh format
+	./web.sh format
 	cd app && $(DART_FILES); \
 	dart format --output=none --set-exit-if-changed $$files && \
 	echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -64,6 +66,7 @@ test:
 	./supabase/test-db.sh
 	./supabase/test-sync.sh
 	./deno.sh test
+	./web.sh test
 
 build:
 	cd app && flutter build apk --debug $(APP_CONFIG) && \
@@ -84,5 +87,6 @@ build:
 	cd engine-wasm && cargo build --locked --release && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
+	./web.sh build
 
 ci: lint format test build
