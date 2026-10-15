@@ -16,7 +16,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - wasm-bindgen 0.2.129 is the current release (crates.io, 2026-09-25). Its CLI release archive holds both `wasm-bindgen` and `wasm-bindgen-test-runner`; `taiki-e/install-action` at the commit CI already pins installs it prebuilt (`manifests/wasm-bindgen.json` there). wasm-bindgen-test 0.3.79 and js-sys 0.3.106 require wasm-bindgen `=0.2.129` exactly (crates.io dependency lists).
 - With a `Result<T, E>` return, wasm-bindgen's JS glue throws `E`, and TypeScript cannot type a thrown value. A returned union can be typed, and narrowed with `in` or a `kind` switch.
 - tsify 0.5.8 (crates.io, 2026-08-23) derives the TypeScript declaration of a serde type into the `.d.ts`, so the declared shape and the serialized one come from one Rust definition. Its README at tag `v0.5.8` deprecates the `into_wasm_abi` and `from_wasm_abi` attributes, which leak on a failed conversion, in favour of `Ts<T>`.
-- A release build for `wasm32-unknown-unknown` embeds the absolute source paths of dependencies, under the builder's Cargo home, in panic locations. Cargo's `trim-paths` profile option is unstable in Cargo 1.99.0.
+- A release build for `wasm32-unknown-unknown` embeds the absolute source paths of dependencies, under the builder's Cargo home, in panic locations. Cargo's `trim-paths` profile option is unstable in Cargo 1.99.0. Its name section also carries symbol names whose crate hashes differ with the checkout's path: two checkouts of one commit at different paths built different modules until the symbols were stripped.
 
 ## Decision
 
@@ -24,7 +24,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **Surface.** `reviewNewCard`, `reviewCard`, `replay` and `retrievability`, as the bridge's, with the answers `"know"` and `"dontKnow"`, an optional fuzz factor, and times as `bigint` whole seconds.
 - **Errors.** Each operation returns `Outcome<T>`: `{ ok: T }`, or `{ error: EngineError }`, where `EngineError` is a union told apart by `kind`, one member per engine `Error` variant. An argument the TypeScript types rule out is thrown as a JS `Error`, as a programming error.
 - **Types.** The crate declares its own types with serde and tsify, and converts to and from the engine's by exhaustive matches, as the bridge crate does.
-- **Build.** The `wasm-bindgen` CLI, not wasm-pack, at the release `engine-wasm/Cargo.lock` pins, writes `--target web` output to `engine-wasm/pkg/`. `wasm-bindgen.sh generate` builds it with the Cargo home and the repository mapped to fixed prefixes, so every host writes the same module, and `check-generated.sh` reruns it.
+- **Build.** The `wasm-bindgen` CLI, not wasm-pack, at the release `engine-wasm/Cargo.lock` pins, writes `--target web` output to `engine-wasm/pkg/`. `wasm-bindgen.sh generate` builds it with the Cargo home and the repository mapped to fixed prefixes and the release profile stripping symbols, so every host writes the same module, and `check-generated.sh` reruns it.
 - **Tests.** `wasm-bindgen.sh test` runs `cargo test` in `engine-wasm/` through `wasm-bindgen-test-runner` in Node.
 
 ## Consequences
@@ -38,7 +38,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Signs the decision was wrong
 
-- `pkg/` differs between the macOS and Linux jobs for a reason other than the paths remapped.
+- `pkg/` differs between the macOS and Linux jobs for a reason other than the paths remapped and the symbols stripped.
 - tsify falls behind a wasm-bindgen release often enough that hand-written declarations would have cost less.
 - The web app wraps every call to turn `Outcome` back into a throw, or needs a rating the two answers do not give.
 - wasm-pack's packaging (`package.json`, a bundler target) turns out to be what the web app's build needs.

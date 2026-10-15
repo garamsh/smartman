@@ -93,16 +93,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly replay: (a: number, b: number) => [number, number, number];
-    readonly retrievability: (a: any, b: bigint) => [number, number, number];
-    readonly reviewCard: (a: any, b: any, c: bigint, d: number, e: number) => [number, number, number];
-    readonly reviewNewCard: (a: any, b: bigint, c: number, d: number) => [number, number, number];
-    readonly __wbindgen_malloc: (a: number, b: number) => number;
-    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __externref_table_alloc: () => number;
-    readonly __externref_table_dealloc: (a: number) => void;
-    readonly __wbindgen_start: () => void;
+    readonly replay: (a: number, b: number, c: number) => void;
+    readonly retrievability: (a: number, b: number, c: bigint) => void;
+    readonly reviewCard: (a: number, b: number, c: number, d: bigint, e: number, f: number) => void;
+    readonly reviewNewCard: (a: number, b: number, c: bigint, d: number, e: number) => void;
+    readonly __wbindgen_export: (a: number, b: number) => number;
+    readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
