@@ -13,59 +13,59 @@
   "cards": [
     {
       "front": "example",
-      "back": "예시"
+      "meaning": "예시"
     },
     {
       "front": "always",
-      "back": "항상"
+      "meaning": "항상"
     },
     {
       "front": "fresh",
-      "back": "신선한"
+      "meaning": "신선한"
     },
     {
       "front": "slowly",
-      "back": "천천히"
+      "meaning": "천천히"
     },
     {
       "front": "never",
-      "back": "결코"
+      "meaning": "결코"
     },
     {
       "front": "decide",
-      "back": "결정하다"
+      "meaning": "결정하다"
     },
     {
       "front": "friendship",
-      "back": "우정"
+      "meaning": "우정"
     },
     {
       "front": "window",
-      "back": "창문"
+      "meaning": "창문"
     },
     {
       "front": "hungry",
-      "back": "배고픈"
+      "meaning": "배고픈"
     },
     {
       "front": "simple",
-      "back": "간단한"
+      "meaning": "간단한"
     },
     {
       "front": "explain",
-      "back": "설명하다"
+      "meaning": "설명하다"
     },
     {
       "front": "holiday",
-      "back": "휴일"
+      "meaning": "휴일"
     },
     {
       "front": "weather",
-      "back": "날씨"
+      "meaning": "날씨"
     },
     {
       "front": "experience",
-      "back": "경험"
+      "meaning": "경험"
     }
   ]
 }

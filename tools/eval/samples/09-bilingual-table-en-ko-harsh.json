@@ -13,51 +13,51 @@
   "cards": [
     {
       "front": "mountain",
-      "back": "산"
+      "meaning": "산"
     },
     {
       "front": "island",
-      "back": "섬"
+      "meaning": "섬"
     },
     {
       "front": "garden",
-      "back": "정원"
+      "meaning": "정원"
     },
     {
       "front": "answer",
-      "back": "대답"
+      "meaning": "대답"
     },
     {
       "front": "experience",
-      "back": "경험"
+      "meaning": "경험"
     },
     {
       "front": "reason",
-      "back": "이유"
+      "meaning": "이유"
     },
     {
       "front": "prepare",
-      "back": "준비하다"
+      "meaning": "준비하다"
     },
     {
       "front": "borrow",
-      "back": "빌리다"
+      "meaning": "빌리다"
     },
     {
       "front": "festival",
-      "back": "축제"
+      "meaning": "축제"
     },
     {
       "front": "repeat",
-      "back": "반복하다"
+      "meaning": "반복하다"
     },
     {
       "front": "already",
-      "back": "이미"
+      "meaning": "이미"
     },
     {
       "front": "always",
-      "back": "항상"
+      "meaning": "항상"
     }
   ]
 }

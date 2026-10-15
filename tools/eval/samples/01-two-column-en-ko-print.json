@@ -13,51 +13,51 @@
   "cards": [
     {
       "front": "prepare",
-      "back": "준비하다"
+      "meaning": "준비하다"
     },
     {
       "front": "often",
-      "back": "자주"
+      "meaning": "자주"
     },
     {
       "front": "bright",
-      "back": "밝은"
+      "meaning": "밝은"
     },
     {
       "front": "remember",
-      "back": "기억하다"
+      "meaning": "기억하다"
     },
     {
       "front": "reason",
-      "back": "이유"
+      "meaning": "이유"
     },
     {
       "front": "heavy",
-      "back": "무거운"
+      "meaning": "무거운"
     },
     {
       "front": "festival",
-      "back": "축제"
+      "meaning": "축제"
     },
     {
       "front": "forget",
-      "back": "잊다"
+      "meaning": "잊다"
     },
     {
       "front": "polite",
-      "back": "공손한"
+      "meaning": "공손한"
     },
     {
       "front": "arrive",
-      "back": "도착하다"
+      "meaning": "도착하다"
     },
     {
       "front": "weather",
-      "back": "날씨"
+      "meaning": "날씨"
     },
     {
       "front": "customer",
-      "back": "손님"
+      "meaning": "손님"
     }
   ]
 }

@@ -14,55 +14,55 @@
   "cards": [
     {
       "front": "飲む",
-      "back": "마시다"
+      "meaning": "마시다"
     },
     {
       "front": "暗い",
-      "back": "어둡다"
+      "meaning": "어둡다"
     },
     {
       "front": "話す",
-      "back": "말하다"
+      "meaning": "말하다"
     },
     {
       "front": "教える",
-      "back": "가르치다"
+      "meaning": "가르치다"
     },
     {
       "front": "静か",
-      "back": "조용하다"
+      "meaning": "조용하다"
     },
     {
       "front": "小さい",
-      "back": "작다"
+      "meaning": "작다"
     },
     {
       "front": "走る",
-      "back": "달리다"
+      "meaning": "달리다"
     },
     {
       "front": "笑う",
-      "back": "웃다"
+      "meaning": "웃다"
     },
     {
       "front": "短い",
-      "back": "짧다"
+      "meaning": "짧다"
     },
     {
       "front": "木",
-      "back": "나무"
+      "meaning": "나무"
     },
     {
       "front": "仕事",
-      "back": "일"
+      "meaning": "일"
     },
     {
       "front": "花",
-      "back": "꽃"
+      "meaning": "꽃"
     },
     {
       "front": "山",
-      "back": "산"
+      "meaning": "산"
     }
   ]
 }
