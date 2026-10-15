@@ -1,19 +1,15 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
-import 'package:smartman/shared/ui/card_text.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/previous_cards.dart';
@@ -328,132 +324,6 @@ void main() {
       expect(_answerShown(tester), isFalse);
       expect(find.byType(ButtonStyleButton), findsNothing);
       expect(study.current, 'a front');
-    },
-  );
-
-  testWidgets(
-    'a question shrinks until its widest word fits, breaks only between words above the floor, and sits centred in its half',
-    (tester) async {
-      // Pretendard's own widths; the test font draws every glyph an em wide.
-      final pretendard = FontLoader(appFontFamily);
-      for (final weight in [
-        'Regular',
-        'Medium',
-        'SemiBold',
-        'Bold',
-        'ExtraBold',
-      ]) {
-        pretendard.addFont(
-          Future.value(
-            ByteData.sublistView(
-              File('assets/fonts/Pretendard-$weight.otf').readAsBytesSync(),
-            ),
-          ),
-        );
-      }
-      await pretendard.load();
-
-      for (final front in [
-        'meticulous',
-        'incomprehensibility',
-        'once in a blue moon',
-      ]) {
-        await _open(
-          tester,
-          ['w'],
-          sides: {
-            'w': ([TextContent(front)], [const TextContent('answer')]),
-          },
-        );
-        final card = tester.getRect(_currentCard);
-        final text = find.descendant(
-          of: _currentCard,
-          matching: find.text(front),
-        );
-        final paragraph = tester.renderObject<RenderParagraph>(text);
-        final size = paragraph.text.style!.fontSize!;
-        final width = (card.width - 1) / 2 - StudyStyle.cardPadding * 2;
-        double widest(double at) => front
-            .split(' ')
-            .map(
-              (word) => (TextPainter(
-                text: TextSpan(
-                  text: word,
-                  style: AppType.question.copyWith(fontSize: at),
-                ),
-                textDirection: TextDirection.ltr,
-              )..layout()).width,
-            )
-            .reduce((a, b) => a > b ? a : b);
-
-        expect(
-          size,
-          lessThanOrEqualTo(AppType.question.fontSize!),
-          reason: front,
-        );
-        expect(
-          size,
-          greaterThanOrEqualTo(AppType.questionFloor),
-          reason: front,
-        );
-        if (widest(AppType.questionFloor) <= width) {
-          // The widest word fits at this size, and every word sits on one
-          // line.
-          expect(widest(size), lessThanOrEqualTo(width), reason: front);
-          var start = 0;
-          for (final word in front.split(' ')) {
-            final boxes = paragraph.getBoxesForSelection(
-              TextSelection(
-                baseOffset: start,
-                extentOffset: start + word.length,
-              ),
-            );
-            expect(
-              boxes.map((box) => box.top).toSet(),
-              hasLength(1),
-              reason: '"$word" of "$front" breaks across lines',
-            );
-            start += word.length + 1;
-          }
-        } else {
-          // Past the floor a word may break, at the floor's size.
-          expect(size, AppType.questionFloor, reason: front);
-        }
-        // Centred in the question's half, across and down.
-        final half = Rect.fromLTRB(
-          card.left,
-          card.top,
-          card.left + card.width / 2,
-          card.bottom,
-        );
-        expect(
-          tester.getCenter(text).dx,
-          closeTo(half.center.dx, 1),
-          reason: front,
-        );
-        expect(
-          tester.getCenter(text).dy,
-          closeTo(half.center.dy, 1),
-          reason: front,
-        );
-      }
-      // Control: the two single words exercise both sides of the floor.
-      expect(
-        fittedFontSize(
-          'meticulous',
-          style: AppType.question,
-          minFontSize: AppType.questionFloor,
-          width:
-              (_phone.width - 2 * StudyStyle.cardMargin - 1) / 2 -
-              StudyStyle.cardPadding * 2,
-          textScaler: TextScaler.noScaling,
-          textDirection: TextDirection.ltr,
-        ),
-        allOf(
-          greaterThan(AppType.questionFloor),
-          lessThan(AppType.question.fontSize!),
-        ),
-      );
     },
   );
 

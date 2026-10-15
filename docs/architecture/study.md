@@ -97,7 +97,8 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - `app/test/study/today_counter_test.dart` checks that the due and new counts add up to the length of the queue a session over the decks opens, in a backlog too, when the count is read again, and the pace: 10 s a card below 20 reviews, and the median of the latest 200 over older reviews that would move it.
 - `engine/examples/backlog.rs` is the simulation that chose the backlog's order, run and threshold ([`engine.md`](engine.md)).
 - `app/test/study/previous_cards_test.dart` checks that a stack of 300 answers above the current card builds only the cards near the view.
-- `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish, and checks it against the tap target and contrast guidelines in the light and the dark theme. With Pretendard loaded, it checks that "meticulous", "incomprehensibility" and "once in a blue moon" shrink until their widest word fits, break only between words while the floor fits, and sit centred in their half.
+- `app/test/study/card_fit_test.dart` loads Pretendard, in a file of its own so the other tests keep the test font, and checks on a 390-wide current card that "meticulous", "incomprehensibility" and "once in a blue moon" shrink until their widest word fits, break only between words while the floor fits, and sit centred in their half.
+- `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish, and checks it against the tap target and contrast guidelines in the light and the dark theme.
 - `flutter test` loads the library from `app/rust/target/release/`, so `make test` builds the crate there first.
 
 ### Versions
