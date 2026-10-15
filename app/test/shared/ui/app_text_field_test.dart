@@ -39,7 +39,7 @@ void main() {
         // The label, the field and its error are read as one text field.
         expect(
           tester.getSemantics(find.byType(EditableText)),
-          containsSemantics(
+          isSemantics(
             isTextField: true,
             label: 'Name\nA short name\nEnter a name',
           ),

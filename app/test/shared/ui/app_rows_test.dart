@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/shared/theme.dart';
 import 'package:smartman/shared/ui/app_chip.dart';
 import 'package:smartman/shared/ui/app_list_row.dart';
 import 'package:smartman/shared/ui/app_section_label.dart';
