@@ -58,7 +58,8 @@ case "$1" in
 lint)
 	sources=$(files "$scope")
 	# shellcheck disable=SC2086 # one path per line, none with spaces
-	(cd web && npx eslint --max-warnings 0 $sources && npx tsc --noEmit)
+	# next typegen writes the route types (PageProps, LayoutProps) both read, as next build would.
+	(cd web && npx next typegen >/dev/null && npx eslint --max-warnings 0 $sources && npx tsc --noEmit)
 	echo "linted $(echo "$sources" | wc -l | tr -d ' ') files with eslint, type rules included, selected by: $scope; type-checked web/tsconfig.json"
 
 	# The control: the pattern finds each kind of Vercel-only line, so a clean result below means none.

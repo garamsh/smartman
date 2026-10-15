@@ -21,11 +21,18 @@ export function SignInButton() {
     if (error) setState("failed");
   }
 
+  function start() {
+    // A click handler's rejection reaches no error boundary, so it is shown here.
+    signIn().catch(() => {
+      setState("failed");
+    });
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <button
         type="button"
-        onClick={() => void signIn()}
+        onClick={start}
         disabled={state === "pending"}
         className="min-h-13 rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
       >

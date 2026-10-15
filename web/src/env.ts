@@ -17,8 +17,8 @@ export function parseEnv(source: {
   NEXT_PUBLIC_SUPABASE_URL: string | undefined;
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: string | undefined;
 }): Env {
-  const url = source.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url || !URL.canParse(url) || !/^https?:$/.test(new URL(url).protocol)) {
+  const url = source.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (!/^https?:$/.test(protocolOf(url))) {
     throw new EnvError("NEXT_PUBLIC_SUPABASE_URL is not an http(s) URL");
   }
   const key = source.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -26,6 +26,15 @@ export function parseEnv(source: {
     throw new EnvError("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not a Supabase publishable key");
   }
   return { supabaseUrl: url, supabasePublishableKey: key };
+}
+
+/** The protocol of [value] as a URL, or "" when it is none; `URL.canParse` is missing in Safari 16. */
+function protocolOf(value: string): string {
+  try {
+    return new URL(value).protocol;
+  } catch {
+    return "";
+  }
 }
 
 // Each variable is named in full so `next build` inlines it into the client bundle.

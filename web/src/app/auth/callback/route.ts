@@ -12,9 +12,10 @@ export async function GET(request: NextRequest) {
   target.search = "";
 
   if (!code) {
-    // Supabase sends `error` instead of a code when the user cancels at Google.
+    // Supabase sends `error` instead of a code; `access_denied` is the user cancelling at Google.
+    const cancelled = request.nextUrl.searchParams.get("error") === "access_denied";
     target.pathname = "/login";
-    target.searchParams.set("error", "cancelled");
+    target.searchParams.set("error", cancelled ? "cancelled" : "failed");
     return NextResponse.redirect(target);
   }
 

@@ -27,7 +27,8 @@ const eslintConfig = defineConfig([
           patterns: [
             {
               regex: "^@/features/[^/]+/(?!index$|actions$)",
-              message: "Import a feature through its index.ts or actions.ts (docs/architecture/structure.md).",
+              message:
+                "Import a feature through its index.ts or actions.ts (docs/architecture/structure.md).",
             },
           ],
         },

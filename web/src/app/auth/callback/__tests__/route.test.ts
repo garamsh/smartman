@@ -38,7 +38,13 @@ describe("GET /auth/callback", () => {
     expect(await readSession(await createClient())).toEqual({ kind: "signed-out" });
   });
 
-  it("opens /login with error=cancelled when no code arrives", async () => {
+  it("opens /login with error=failed when Supabase sends another error instead of a code", async () => {
+    const response = await callback("?error=server_error");
+
+    expect(response.headers.get("location")).toBe("http://localhost:3000/login?error=failed");
+  });
+
+  it("opens /login with error=cancelled when the user cancelled at Google", async () => {
     const response = await callback("?error=access_denied");
 
     expect(response.headers.get("location")).toBe("http://localhost:3000/login?error=cancelled");
