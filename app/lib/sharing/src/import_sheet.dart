@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_section_label.dart';
+import '../../shared/ui/app_sheet.dart';
 import 'model.dart';
 import 'sharing_service.dart';
 
@@ -13,10 +16,8 @@ Future<String?> showImportSheet(
   BuildContext context, {
   required SharingService sharing,
   required PublicDeckSummary deck,
-}) => showModalBottomSheet<String>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
+}) => showAppSheet<String>(
+  context,
   builder: (_) => _ImportSheet(sharing: sharing, deck: deck),
 );
 
@@ -40,16 +41,7 @@ class _ImportSheetState extends State<_ImportSheet> {
   bool _saving = false;
   String? _error;
 
-  Future<void> _save(AppLocalizations l10n) async {
-    final target = switch ((_destination, _target)) {
-      (_Destination.newDeck, _) => const CopyIntoNewDeck(),
-      (_Destination.existingDeck, final deck?) => CopyIntoDeck(
-        deck,
-        _onDuplicate,
-      ),
-      (_Destination.existingDeck, null) => null,
-    };
-    if (target == null) return;
+  Future<void> _save(AppLocalizations l10n, CopyTarget target) async {
     final navigator = Navigator.of(context);
     setState(() {
       _saving = true;
@@ -77,124 +69,108 @@ class _ImportSheetState extends State<_ImportSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    final error = _error;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          0,
-          16,
-          16 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: StreamBuilder(
-          stream: _decks,
-          builder: (context, snapshot) {
-            final decks = snapshot.data ?? const <Deck>[];
-            // The chosen deck, while it still exists.
-            final target = decks.any((deck) => deck.id == _target)
-                ? _target
-                : null;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 12,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    l10n.importToMyDecks,
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+    final colors = AppColors.of(context);
+    return StreamBuilder(
+      stream: _decks,
+      builder: (context, snapshot) {
+        final decks = snapshot.data ?? const <Deck>[];
+        // The chosen deck, while it still exists.
+        final chosen = decks.any((deck) => deck.id == _target) ? _target : null;
+        final target = switch ((_destination, chosen)) {
+          (_Destination.newDeck, _) => const CopyIntoNewDeck(),
+          (_Destination.existingDeck, final deck?) => CopyIntoDeck(
+            deck,
+            _onDuplicate,
+          ),
+          (_Destination.existingDeck, null) => null,
+        };
+        final error = _error;
+        return AppSheet(
+          title: l10n.importToMyDecks,
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpace.s12,
+            children: [
+              SegmentedButton<_Destination>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: _Destination.newDeck,
+                    label: Text(l10n.importAsNewDeck),
                   ),
-                ),
-                SegmentedButton<_Destination>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(
-                      value: _Destination.newDeck,
-                      label: Text(l10n.importAsNewDeck),
-                    ),
-                    ButtonSegment(
-                      value: _Destination.existingDeck,
-                      label: Text(l10n.importIntoExistingDeck),
-                      enabled: decks.isNotEmpty,
-                    ),
-                  ],
-                  selected: {_destination},
-                  onSelectionChanged: _saving
-                      ? null
-                      : (selected) =>
-                            setState(() => _destination = selected.single),
-                ),
-                if (_destination == _Destination.newDeck)
-                  Text(
-                    l10n.importNewDeckHint(widget.deck.name),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: AppColors.of(context).muted,
-                    ),
-                  )
-                else ...[
-                  DropdownMenu<DeckId>(
-                    expandedInsets: EdgeInsets.zero,
-                    label: Text(l10n.importTargetDeck),
-                    initialSelection: target,
-                    enabled: !_saving,
-                    onSelected: (deck) => setState(() => _target = deck),
-                    dropdownMenuEntries: [
-                      for (final deck in decks)
-                        DropdownMenuEntry(value: deck.id, label: deck.name),
-                    ],
-                  ),
-                  Text(l10n.importDuplicates, style: textTheme.titleSmall),
-                  RadioGroup<DuplicateChoice>(
-                    groupValue: _onDuplicate,
-                    onChanged: (choice) {
-                      if (_saving || choice == null) return;
-                      setState(() => _onDuplicate = choice);
-                    },
-                    child: Column(
-                      children: [
-                        for (final choice in DuplicateChoice.values)
-                          RadioListTile<DuplicateChoice>(
-                            value: choice,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(switch (choice) {
-                              DuplicateChoice.skip => l10n.duplicateSkip,
-                              DuplicateChoice.mergeBack =>
-                                l10n.duplicateMergeBack,
-                              DuplicateChoice.addNew => l10n.duplicateAddNew,
-                            }),
-                          ),
-                      ],
-                    ),
+                  ButtonSegment(
+                    value: _Destination.existingDeck,
+                    label: Text(l10n.importIntoExistingDeck),
+                    enabled: decks.isNotEmpty,
                   ),
                 ],
-                if (error != null)
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      error,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: AppColors.of(context).dontKnowText,
-                      ),
-                    ),
+                selected: {_destination},
+                onSelectionChanged: _saving
+                    ? null
+                    : (selected) =>
+                          setState(() => _destination = selected.single),
+              ),
+              if (_destination == _Destination.newDeck)
+                Text(
+                  l10n.importNewDeckHint(widget.deck.name),
+                  style: AppType.secondary.copyWith(color: colors.muted),
+                )
+              else ...[
+                DropdownMenu<DeckId>(
+                  expandedInsets: EdgeInsets.zero,
+                  label: Text(l10n.importTargetDeck),
+                  initialSelection: chosen,
+                  enabled: !_saving,
+                  onSelected: (deck) => setState(() => _target = deck),
+                  dropdownMenuEntries: [
+                    for (final deck in decks)
+                      DropdownMenuEntry(value: deck.id, label: deck.name),
+                  ],
+                ),
+                AppSectionLabel(l10n.importDuplicates),
+                RadioGroup<DuplicateChoice>(
+                  groupValue: _onDuplicate,
+                  onChanged: (choice) {
+                    if (_saving || choice == null) return;
+                    setState(() => _onDuplicate = choice);
+                  },
+                  child: Column(
+                    children: [
+                      for (final choice in DuplicateChoice.values)
+                        RadioListTile<DuplicateChoice>(
+                          value: choice,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(switch (choice) {
+                            DuplicateChoice.skip => l10n.duplicateSkip,
+                            DuplicateChoice.mergeBack =>
+                              l10n.duplicateMergeBack,
+                            DuplicateChoice.addNew => l10n.duplicateAddNew,
+                          }, style: AppType.body),
+                        ),
+                    ],
                   ),
-                FilledButton(
-                  onPressed:
-                      _saving ||
-                          (_destination == _Destination.existingDeck &&
-                              target == null)
-                      ? null
-                      : () => _save(l10n),
-                  child: Text(l10n.importConfirm),
                 ),
               ],
-            );
-          },
-        ),
-      ),
+              if (error != null)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    error,
+                    style: AppType.caption.copyWith(color: colors.dontKnowText),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            AppButton(
+              label: l10n.importConfirm,
+              size: AppButtonSize.cta,
+              loading: _saving,
+              onPressed: target == null ? null : () => _save(l10n, target),
+            ),
+          ],
+        );
+      },
     );
   }
 }

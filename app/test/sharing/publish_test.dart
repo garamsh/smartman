@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 import 'package:smartman/sharing/sharing.dart';
 
 import 'fakes.dart';
@@ -44,13 +45,13 @@ void main() {
 
       await app.deckMenu('Publish');
       expect(find.text('Publish "French"'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'Public name'), findsOneWidget);
+      expect(find.widgetWithText(AppTextField, 'Public name'), findsOneWidget);
       await tester.enterText(
-        find.widgetWithText(TextField, 'Public name'),
+        find.widgetWithText(AppTextField, 'Public name'),
         'Ada',
       );
       await tester.enterText(
-        find.widgetWithText(TextField, 'Description (optional)'),
+        find.widgetWithText(AppTextField, 'Description (optional)'),
         'Cats',
       );
       await tester.pump();
@@ -83,13 +84,13 @@ void main() {
       await app.tapText("I won't publish inappropriate or copyrighted content");
 
       await tester.enterText(
-        find.widgetWithText(TextField, 'Public name'),
+        find.widgetWithText(AppTextField, 'Public name'),
         'A',
       );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
       expect(find.text('Use 2 to 20 characters'), findsOneWidget);
       await tester.enterText(
-        find.widgetWithText(TextField, 'Public name'),
+        find.widgetWithText(AppTextField, 'Public name'),
         'a' * 21,
       );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
@@ -99,7 +100,7 @@ void main() {
 
       // Control: a valid name publishes.
       await tester.enterText(
-        find.widgetWithText(TextField, 'Public name'),
+        find.widgetWithText(AppTextField, 'Public name'),
         'Ad',
       );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
@@ -109,25 +110,27 @@ void main() {
     },
   );
 
-  testWidgets('a description over 300 characters is refused with a message', (
-    tester,
-  ) async {
-    final app = await _openFrench(
-      tester,
-      server: FakeSharingServer(name: DisplayName.tryParse('Ada')),
-    );
-    await app.deckMenu('Publish');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Description (optional)'),
-      'x' * 301,
-    );
-    await app.tapText("I won't publish inappropriate or copyrighted content");
-    await app.tap(find.widgetWithText(FilledButton, 'Publish'));
+  testWidgets(
+    'a description over 300 characters, as the server counts them, is refused with a message',
+    (tester) async {
+      final app = await _openFrench(
+        tester,
+        server: FakeSharingServer(name: DisplayName.tryParse('Ada')),
+      );
+      await app.deckMenu('Publish');
+      await tester.enterText(
+        find.widgetWithText(AppTextField, 'Description (optional)'),
+        // 151 characters the field counts once each, of two code points each.
+        '👍🏽' * 151,
+      );
+      await app.tapText("I won't publish inappropriate or copyrighted content");
+      await app.tap(find.widgetWithText(FilledButton, 'Publish'));
 
-    expect(find.text('Use at most 300 characters'), findsOneWidget);
-    expect(app.server.writes, isEmpty);
-    await app.close();
-  });
+      expect(find.text('Use at most 300 characters'), findsOneWidget);
+      expect(app.server.writes, isEmpty);
+      await app.close();
+    },
+  );
 
   testWidgets('a later publish does not ask for the display name again', (
     tester,
@@ -138,7 +141,7 @@ void main() {
     );
     await app.deckMenu('Publish');
 
-    expect(find.widgetWithText(TextField, 'Public name'), findsNothing);
+    expect(find.widgetWithText(AppTextField, 'Public name'), findsNothing);
     await app.tapText("I won't publish inappropriate or copyrighted content");
     await app.tap(find.widgetWithText(FilledButton, 'Publish'));
     expect(find.text('Deck published'), findsOneWidget);
@@ -245,7 +248,7 @@ void main() {
         await app.tapText('Publish');
         await app.meetsGuidelines();
         await tester.enterText(
-          find.widgetWithText(TextField, 'Public name'),
+          find.widgetWithText(AppTextField, 'Public name'),
           'A',
         );
         await app.tapText(
@@ -254,7 +257,7 @@ void main() {
         await app.tap(find.widgetWithText(FilledButton, 'Publish'));
         await app.meetsGuidelines();
         await tester.enterText(
-          find.widgetWithText(TextField, 'Public name'),
+          find.widgetWithText(AppTextField, 'Public name'),
           'Ada',
         );
         await app.tap(find.widgetWithText(FilledButton, 'Publish'));

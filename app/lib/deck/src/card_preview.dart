@@ -16,18 +16,12 @@ class CardPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final style = Theme.of(context).textTheme.titleLarge;
+    const style = AppType.title;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppShadow.card(colors),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: minHeight),
@@ -54,7 +48,7 @@ class _Half extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(AppSpace.s16),
     child: SizedBox(
       width: double.infinity,
       child: Text(text, style: style),

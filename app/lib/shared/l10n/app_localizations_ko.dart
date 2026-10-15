@@ -106,6 +106,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get save => '저장';
 
   @override
+  String get create => '만들기';
+
+  @override
   String get rename => '이름 바꾸기';
 
   @override
@@ -366,6 +369,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String photoTarget(String name) {
     return '추가할 덱 · $name';
   }
+
+  @override
+  String get photoTargetTitle => '추가할 덱';
 
   @override
   String get photoAlbum => '앨범에서 고르기';

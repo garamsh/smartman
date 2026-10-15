@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_text_field.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'model.dart';
@@ -76,38 +79,33 @@ class _BrowseScreenState extends State<BrowseScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.gutter,
+          0,
+          AppSpace.gutter,
+          AppSpace.s16,
+        ),
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Semantics(
-              header: true,
-              child: Text(
-                l10n.browse,
-                style: textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+          Semantics(
+            header: true,
+            child: Text(l10n.browse, style: AppType.title),
           ),
-          TextField(
+          const SizedBox(height: AppSpace.s16),
+          AppTextField(
+            hint: l10n.searchPublicDecks,
+            prefixIcon: const Icon(Icons.search),
+            textInputAction: TextInputAction.search,
             onChanged: _onSearch,
             onSubmitted: (search) {
               _typing?.cancel();
               _search = search;
               _load();
             },
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: l10n.searchPublicDecks,
-              prefixIcon: const Icon(Icons.search),
-            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.s12),
           SegmentedButton<BrowseSort>(
             showSelectedIcon: false,
             segments: [
@@ -126,7 +124,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
               _load();
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpace.s16),
           ..._results(l10n),
         ],
       ),
@@ -138,7 +136,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       return [_Message(l10n.browseOffline, icon: Icons.cloud_off)];
     }
     final decks = _decks;
-    if (decks == null) return [_progress(l10n)];
+    if (decks == null) return [const _Progress()];
     return [
       FutureBuilder(
         future: decks,
@@ -152,7 +150,19 @@ class _BrowseScreenState extends State<BrowseScreen> {
           AsyncSnapshot(hasData: true, :final data?) => Column(
             children: [
               for (final deck in data)
-                _DeckRow(deck: deck, onTap: () => _open(deck)),
+                AppListRow(
+                  title: deck.name,
+                  subtitle: l10n.publicDeckLine(
+                    deck.ownerName.value,
+                    deck.cardCount,
+                    deck.importCount,
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: AppColors.of(context).muted,
+                  ),
+                  onTap: () => _open(deck),
+                ),
             ],
           ),
           AsyncSnapshot(:final error?, :final stackTrace) => _Message(
@@ -166,80 +176,26 @@ class _BrowseScreenState extends State<BrowseScreen> {
             icon: error is SharingOffline ? Icons.cloud_off : null,
             onRetry: _load,
           ),
-          _ => _progress(l10n),
+          _ => const _Progress(),
         },
       ),
     ];
   }
-
-  Widget _progress(AppLocalizations l10n) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 48),
-    child: Center(
-      child: CircularProgressIndicator(semanticsLabel: l10n.loading),
-    ),
-  );
 }
 
-/// A public deck: its name, its owner's display name, and its card and copy
-/// counts.
-class _DeckRow extends StatelessWidget {
-  const _DeckRow({required this.deck, required this.onTap});
-
-  final PublicDeckSummary deck;
-  final VoidCallback onTap;
+/// Progress while a list loads.
+class _Progress extends StatelessWidget {
+  const _Progress();
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: MergeSemantics(
-        child: Material(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.row),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.row),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-              child: Row(
-                spacing: 12,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 2,
-                      children: [
-                        Text(
-                          deck.name,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          l10n.publicDeckLine(
-                            deck.ownerName.value,
-                            deck.cardCount,
-                            deck.importCount,
-                          ),
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: colors.muted),
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
+    child: Center(
+      child: CircularProgressIndicator(
+        semanticsLabel: AppLocalizations.of(context).loading,
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// A state in place of the list: what happened, and a retry when [onRetry]
@@ -253,19 +209,26 @@ class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final icon = this.icon;
     final onRetry = this.onRetry;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
       child: Column(
-        spacing: 12,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppSpace.s12,
         children: [
-          if (icon != null) Icon(icon, color: AppColors.of(context).muted),
-          Text(text, textAlign: TextAlign.center),
+          if (icon != null) Icon(icon, color: colors.muted),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: AppType.body.copyWith(color: colors.muted),
+          ),
           if (onRetry != null)
-            OutlinedButton(
+            AppButton(
+              label: AppLocalizations.of(context).retry,
+              variant: AppButtonVariant.secondary,
               onPressed: onRetry,
-              child: Text(AppLocalizations.of(context).retry),
             ),
         ],
       ),

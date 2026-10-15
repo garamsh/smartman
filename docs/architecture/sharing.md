@@ -41,7 +41,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 ### Reporting and blocking
 
 - The preview's menu offers "신고하기" and "이 사용자 차단".
-- "신고하기" asks for a reason, inappropriate, spam, copyright or other, and files it once; a second report of the same deck says "이미 신고한 덱이에요".
+- "신고하기" asks in a sheet for a reason, inappropriate, spam, copyright or other, and files it once; a second report of the same deck says "이미 신고한 덱이에요".
 - "이 사용자 차단" asks for confirmation, then blocks the owner and returns to the browse screen, which lists again without the owner's decks.
 
 ### Failures
@@ -52,7 +52,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 ### Interface
 
 - Every string comes from the shared ARB set, in Korean and English. Icon buttons carry tooltips, headings are marked as headers, progress indicators carry a label, and a sheet's error is a live region.
-- The screens follow [`design.md`](design.md): rows on rounded surfaces over the ground, split card rows, one primary action at the bottom.
+- The screens follow [`design.md`](design.md) and are built from the shared components ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md)): browse rows are `AppListRow`s, the preview's cards `CardSplitRow`s, the publish, import and report sheets `AppSheet`s, the block confirmation `showAppConfirm`, the chip `AppChip`, and each screen's or sheet's one primary action an `AppButton` at the bottom.
 
 ### Tests
 
@@ -60,6 +60,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - `app/test/sharing/browse_screen_test.dart` — the listing, search, sort, the offline state, a failed request, and the guidelines in both themes.
 - `app/test/sharing/public_deck_screen_test.dart` — the preview, each import option, a deck no longer public, report and block, and the guidelines in both themes.
 - `app/test/sharing/publish_test.dart` — publish, display name and description validation, the required agreement, a refused publish, unpublish, the chips, the offline menu item, and the guidelines in both themes.
+- `app/test/screenshots/screenshots_test.dart` draws the deck menu, the publish sheet, the public chips, browse, the preview, and the import, report and block sheets in both themes when asked to.
 - `app/test/sharing/sharing_server_test.dart` — `SupabaseSharingServer` against the local stack `supabase/test-sync.sh` starts: publish, list, preview, copy count, report, block, and that sync never pulls another user's public deck.
 
 ## Rationale

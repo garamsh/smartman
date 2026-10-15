@@ -20,11 +20,11 @@ Current architecture of the system and the decisions behind it. This file is the
 
 ## Index
 
-- `structure.md` — the structural rules of the app and the web app: the domain and the feature as units, what may reference what, and the composition site.
+- `structure.md` — the structural rules of the app and the web app: the domain and the feature as units, what may reference what, the shared code below the app's domains, and the composition site.
 - `deck.md` — the `deck` domain: decks, cards, content blocks, the card key, and the duplicate rule.
 - `engine.md` — the scheduling engine: FSRS-6 in the pure Rust crate `engine/`, its public surface, its reference values, and its WebAssembly build in `engine-wasm/` for the web app.
 - `account.md` — the `account` domain: the gate that requires sign-in, Google sign-in through Supabase Auth, the session, and the configuration it reads from `app/config/`.
-- `design.md` — the app's design language: the principles every screen follows, where each is applied today, and the shared light and dark theme.
+- `design.md` — the app's design language: the principles every screen follows, where each is applied today, the shared light and dark theme with its tokens, and the shared components every screen builds from.
 - `study.md` — the `study` domain: the study session over one or more decks, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
 - `sync.md` — the `sync` domain: the local sync columns and cursor, a run's pull and push, the conflict rules, when sync runs, sign-out, and the status the account screen shows.
 - `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, public decks with their profiles, reports and blocks, the extraction count, and the pgTAP tests `make test` runs.
@@ -41,7 +41,7 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0008-google-sign-in-nonce.md` — send Google sign-in a nonce drawn once per run, its SHA-256 hex to Google and the raw value to Supabase, superseding ADR 0006's "No nonce is sent".
 - `adr/0009-multi-deck-session-and-random-queue-order.md` — study a non-empty selection of decks in one session, with a header count and a "study all" action, and draw the queue's order and the re-show gap from one seeded random source; supersedes ADR 0005's queue order, re-show gap and single-deck entry point.
 - `adr/0010-server-schema-and-row-level-security.md` — sync to a per-user Supabase schema guarded by row-level security, with server-set revisions from one sequence drawn under a per-user lock, composite foreign keys between a user's rows, and pgTAP tests in `make test`; its "Tests" decision superseded by ADR 0014.
-- `adr/0011-shared-app-theme-bundled-font-and-today-builder.md` — draw every screen from one shared light and dark theme with a bundled IBM Plex Sans KR, chosen per device, and show study's counts in deck screens through one builder provider; supersedes ADR 0009's header provider and ADR 0007's study colour constants.
+- `adr/0011-shared-app-theme-bundled-font-and-today-builder.md` — draw every screen from one shared light and dark theme with a bundled IBM Plex Sans KR, chosen per device, and show study's counts in deck screens through one builder provider; supersedes ADR 0009's header provider and ADR 0007's study colour constants; its sizes kept beside each screen superseded by ADR 0021.
 - `adr/0012-fuzz-review-intervals.md` — fuzz review intervals as py-fsrs 6.3.2 does, with a factor in `[0, 1)` the app draws from the session's random source and stores on each review; supersedes ADR 0003's "The engine does not fuzz".
 - `adr/0013-extract-cards-function-and-eval.md` — extract cards in a dependency-free Deno Edge Function with an optional retry model, limit it per user through one locked SQL function, and choose its model with a budget-capped eval in `tools/eval/`.
 - `adr/0014-database-tests-on-a-stack-of-their-own.md` — run the database tests on a throwaway local stack per run, under its own project id and a reserved port, stopped on every exit; supersedes ADR 0010's "Tests" decision.
@@ -50,4 +50,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0018-engine-as-webassembly.md` — build the engine as WebAssembly in `engine-wasm/` with the wasm-bindgen CLI, taking the app's two answers and returning engine errors as typed values.
 - `adr/0019-web-app-stack-portability-and-sign-in.md` — build the web app on Next.js in `web/`, with no Vercel-only feature, a standalone build in a non-root image built from the repository root, configuration frozen at build from two public variables, and Google sign-in through `@supabase/ssr`'s cookie session behind a proxy that sends a signed-out visitor to `/login`.
 - `adr/0020-public-decks-in-a-sharing-domain.md` — share decks through a `sharing` domain reached from `deck` through one provider, publishing on the server before the device, copying through the deck import, with public read policies, a column grant on `decks`, and pulls filtered by owner.
+- `adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md` — draw every screen from one type, spacing, radius and height scale in the theme file, and build every button, field, row and modal from a shared component layer in `app/lib/shared/ui/`, with every modal a sheet; supersedes ADR 0011's sizes kept beside each screen.
 - `adr/0000-template.md` — the template every ADR is written from.

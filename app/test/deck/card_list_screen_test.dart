@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_list_screen.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'deck_screens.dart';
 
@@ -169,6 +170,40 @@ void main() {
     expect(decks!.single.name, 'Français');
     await screens.close();
   });
+
+  testWidgets(
+    'the rename sheet opens focused on the current name, refuses an empty one, and saves on Enter',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      await screens.push((deck) => CardListScreen(deck: deck));
+      await screens.tap(find.byTooltip('Deck actions'));
+      await screens.tap(find.text('Rename'));
+      EditableText field() => tester.widget<EditableText>(
+        find.descendant(
+          of: find.widgetWithText(AppTextField, 'Name'),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(field().focusNode.hasFocus, isTrue);
+      expect(field().controller.text, 'French');
+
+      await screens.enter('Name', '  ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a name'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsOneWidget);
+
+      await screens.enter('Name', 'Français');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      final decks = await tester.runAsync(
+        () => screens.repository.watchDecks().first,
+      );
+      expect(decks!.single.name, 'Français');
+      await screens.close();
+    },
+  );
 
   testWidgets(
     'the deck menu deletes the deck after confirming, and closes it',

@@ -198,8 +198,8 @@ void main() {
     final app = await _openSpanish(tester);
 
     await app.deckMenu('Report');
-    final report = find.widgetWithText(TextButton, 'Report');
-    expect(tester.widget<TextButton>(report).onPressed, isNull);
+    final report = find.widgetWithText(FilledButton, 'Report');
+    expect(tester.widget<FilledButton>(report).onPressed, isNull);
     await app.tapText('Spam');
     await app.tap(report);
 
@@ -211,7 +211,7 @@ void main() {
 
     await app.deckMenu('Report');
     await app.tapText('Other');
-    await app.tap(find.widgetWithText(TextButton, 'Report'));
+    await app.tap(find.widgetWithText(FilledButton, 'Report'));
     expect(find.text("You've already reported this deck."), findsOneWidget);
     expect(app.server.reports, hasLength(1));
     await app.close();

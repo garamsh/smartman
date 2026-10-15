@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_sheet.dart';
+import '../../shared/ui/app_text_field.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'model.dart';
@@ -18,10 +21,8 @@ Future<void> showPublishSheet(
   required Deck deck,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
-  final message = await showModalBottomSheet<String>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
+  final message = await showAppSheet<String>(
+    context,
     builder: (_) => _PublishSheet(sharing: sharing, deck: deck),
   );
   if (message != null) {
@@ -96,141 +97,107 @@ class _PublishSheetState extends State<_PublishSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          0,
-          16,
-          16 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.publishTitle(widget.deck.name),
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+    final title = l10n.publishTitle(widget.deck.name);
+    return FutureBuilder(
+      future: _name,
+      builder: (context, snapshot) => switch (snapshot) {
+        AsyncSnapshot(
+          connectionState: ConnectionState.done,
+          :final error?,
+          :final stackTrace,
+        ) =>
+          AppSheet(
+            title: title,
+            body: switch (error) {
+              SharingFailure() => describeSharingFailure(l10n, error),
+              _ => Error.throwWithStackTrace(
+                error,
+                stackTrace ?? StackTrace.current,
               ),
-              FutureBuilder(
-                future: _name,
-                builder: (context, snapshot) => switch (snapshot) {
-                  AsyncSnapshot(
-                    connectionState: ConnectionState.done,
-                    :final error?,
-                    :final stackTrace,
-                  ) =>
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      spacing: 12,
-                      children: [
-                        Text(switch (error) {
-                          SharingFailure() => describeSharingFailure(
-                            l10n,
-                            error,
-                          ),
-                          _ => Error.throwWithStackTrace(
-                            error,
-                            stackTrace ?? StackTrace.current,
-                          ),
-                        }),
-                        OutlinedButton(
-                          onPressed: () => setState(() {
-                            // Shown by the builder, which subscribes a frame later.
-                            _name = widget.sharing.displayName()..ignore();
-                          }),
-                          child: Text(l10n.retry),
-                        ),
-                      ],
-                    ),
-                  AsyncSnapshot(
-                    connectionState: ConnectionState.done,
-                    :final data,
-                  ) =>
-                    _form(l10n, askName: data == null),
-                  _ => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        semanticsLabel: l10n.loading,
-                      ),
-                    ),
-                  ),
-                },
+            },
+            actions: [
+              AppButton(
+                label: l10n.retry,
+                variant: AppButtonVariant.secondary,
+                size: AppButtonSize.cta,
+                onPressed: () => setState(() {
+                  // Shown by the builder, which subscribes a frame later.
+                  _name = widget.sharing.displayName()..ignore();
+                }),
               ),
             ],
           ),
+        AsyncSnapshot(connectionState: ConnectionState.done, :final data) =>
+          _form(l10n, title, askName: data == null),
+        _ => AppSheet(
+          title: title,
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
+            child: Center(
+              child: CircularProgressIndicator(semanticsLabel: l10n.loading),
+            ),
+          ),
         ),
-      ),
+      },
     );
   }
 
-  Widget _form(AppLocalizations l10n, {required bool askName}) {
+  Widget _form(AppLocalizations l10n, String title, {required bool askName}) {
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final error = _error;
     final nameInvalid =
         _showErrors && DisplayName.tryParse(_nameField.text) == null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 12,
-      children: [
-        if (askName)
-          TextField(
-            controller: _nameField,
-            enabled: !_saving,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: l10n.displayName,
-              helperText: l10n.displayNameHelp,
-              helperMaxLines: 2,
+    return AppSheet(
+      title: title,
+      body: askName ? l10n.displayNameHelp : null,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppSpace.s16,
+        children: [
+          if (askName)
+            AppTextField(
+              label: l10n.displayName,
+              controller: _nameField,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => setState(() {}),
               errorText: nameInvalid ? l10n.displayNameLength : null,
             ),
-          ),
-        TextField(
-          controller: _descriptionField,
-          enabled: !_saving,
-          minLines: 2,
-          maxLines: 5,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            labelText: l10n.deckDescription,
-            counterText: '${_description.runes.length}/$maxDescriptionLength',
+          AppTextField(
+            label: l10n.deckDescription,
+            controller: _descriptionField,
+            minLines: 2,
+            maxLines: 5,
+            maxLength: maxDescriptionLength,
+            onChanged: (_) => setState(() {}),
             errorText: _descriptionTooLong
                 ? l10n.deckDescriptionTooLong(maxDescriptionLength)
                 : null,
           ),
-        ),
-        CheckboxListTile(
-          value: _agreed,
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          onChanged: _saving
-              ? null
-              : (agreed) => setState(() => _agreed = agreed ?? false),
-          title: Text(l10n.publishAgreement),
-        ),
-        if (error != null)
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              error,
-              style: textTheme.bodyMedium?.copyWith(color: colors.dontKnowText),
-            ),
+          CheckboxListTile(
+            value: _agreed,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            onChanged: _saving
+                ? null
+                : (agreed) => setState(() => _agreed = agreed ?? false),
+            title: Text(l10n.publishAgreement, style: AppType.body),
           ),
-        FilledButton(
-          onPressed: _agreed && !_saving
-              ? () => _publish(l10n, askName: askName)
-              : null,
-          child: Text(l10n.publishConfirm),
+          if (error != null)
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                error,
+                style: AppType.caption.copyWith(color: colors.dontKnowText),
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        AppButton(
+          label: l10n.publishConfirm,
+          size: AppButtonSize.cta,
+          loading: _saving,
+          onPressed: _agreed ? () => _publish(l10n, askName: askName) : null,
         ),
       ],
     );

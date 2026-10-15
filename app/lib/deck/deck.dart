@@ -23,7 +23,7 @@ export 'src/deck_repository.dart'
 export 'src/failure.dart'
     show DeckDeleted, DeckFailure, StorageFailure, UnreadableCard;
 export 'src/failure_message.dart' show describeFailure;
-export 'src/name_dialog.dart' show showNameDialog;
+export 'src/name_sheet.dart' show showNameSheet;
 export 'src/model.dart'
     show
         Card,

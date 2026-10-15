@@ -108,6 +108,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get save => 'Save';
 
   @override
+  String get create => 'Create';
+
+  @override
   String get rename => 'Rename';
 
   @override
@@ -400,6 +403,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String photoTarget(String name) {
     return 'Add to · $name';
   }
+
+  @override
+  String get photoTargetTitle => 'Add to';
 
   @override
   String get photoAlbum => 'Choose from album';

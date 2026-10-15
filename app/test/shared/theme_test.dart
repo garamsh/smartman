@@ -95,6 +95,62 @@ void main() {
     ], isEmpty);
   });
 
+  test('a spacing or font-size literal is found, and a token is not', () {
+    expect(styleLiterals('EdgeInsets.all(16)'), ['EdgeInsets.all(16)']);
+    expect(styleLiterals('EdgeInsets.fromLTRB(4, 0, 4, 8)'), [
+      'EdgeInsets.fromLTRB(4, 0, 4, 8)',
+    ]);
+    expect(styleLiterals('Column(spacing: 12, children: [])'), ['spacing: 12']);
+    expect(styleLiterals('const SizedBox(height: 4)'), ['SizedBox(height: 4)']);
+    expect(styleLiterals('TextStyle(fontSize: 13)'), ['fontSize: 13']);
+    // Controls: tokens, zero, a sum of tokens, a sized child and a computed
+    // inset are not spacing literals.
+    expect(
+      styleLiterals('''
+        EdgeInsets.fromLTRB(AppSpace.gutter, 0, AppSpace.gutter, AppSpace.s16)
+        Row(spacing: AppSpace.s12)
+        SizedBox(height: AppSpace.s32 + AppSpace.s20)
+        SizedBox(width: 64, child: Text('x'))
+        EdgeInsets.only(top: max(0, viewport - total))
+      '''),
+      isEmpty,
+    );
+  });
+
+  test('no spacing or font-size literal is written outside the theme and its components', () {
+    final sources = _appSources();
+    // Control: the scan reads the screens, which build their insets.
+    expect(
+      sources['lib/deck/src/deck_list_screen.dart'],
+      contains('EdgeInsets'),
+    );
+
+    expect([
+      for (final MapEntry(key: path, value: source) in sources.entries)
+        if (path != 'lib/shared/theme.dart' &&
+            !path.startsWith('lib/shared/ui/'))
+          for (final literal in styleLiterals(source))
+            if (!_studyGeometry.contains((path, literal))) '$path: $literal',
+    ], isEmpty);
+  });
+
+  test('no screen opens a dialog, or a sheet other than the app sheet', () {
+    final modal = RegExp(r'\b(AlertDialog|showDialog|showModalBottomSheet)\b');
+    final sources = _appSources();
+    // Control: the app sheet opens the platform's sheet, so the expression
+    // finds what it is meant to.
+    expect(
+      modal.hasMatch(sources['lib/shared/ui/app_sheet.dart'] ?? ''),
+      isTrue,
+    );
+
+    expect([
+      for (final MapEntry(key: path, value: source) in sources.entries)
+        if (path != 'lib/shared/ui/app_sheet.dart' && modal.hasMatch(source))
+          path,
+    ], isEmpty);
+  });
+
   /// The WCAG 2.1 contrast ratio of two opaque colours.
   double contrast(Color a, Color b) {
     final (lighter, darker) = a.computeLuminance() > b.computeLuminance()
@@ -139,3 +195,68 @@ void main() {
     });
   }
 }
+
+/// Every Dart source under `lib/` keyed by its path under `app/`, leaving out
+/// generated code.
+Map<String, String> _appSources() => {
+  for (final entity in Directory('lib').listSync(recursive: true))
+    if (entity is File &&
+        entity.path.endsWith('.dart') &&
+        !entity.path.endsWith('.g.dart') &&
+        !entity.path.startsWith('lib/study/src/rust/') &&
+        !entity.path.startsWith('lib/shared/l10n/'))
+      entity.path: entity.readAsStringSync(),
+};
+
+/// The study screen's computed geometry, the one place a number stands in an
+/// inset outside the theme: a previous card's text starts below its dot.
+const _studyGeometry = {
+  (
+    'lib/study/src/previous_cards.dart',
+    'EdgeInsets.fromLTRB(\n'
+        '      StudyStyle.cardPadding + StudyStyle.dotSize,\n'
+        '      StudyStyle.cardPadding * 1.5,\n'
+        '      StudyStyle.cardPadding,\n'
+        '      StudyStyle.cardPadding,\n'
+        '    )',
+  ),
+};
+
+final _number = RegExp(r'(?<![\w.])(\d+(?:\.\d+)?)(?![\w.])');
+
+bool _hasNonZeroNumber(String text) =>
+    _number.allMatches(text).any((match) => double.parse(match[1]!) != 0);
+
+/// The text of [source] from the parenthesis at [open] to the one closing it.
+String _balanced(String source, int open) {
+  var depth = 0;
+  for (var i = open; i < source.length; i++) {
+    switch (source[i]) {
+      case '(':
+        depth++;
+      case ')':
+        if (--depth == 0) return source.substring(open, i + 1);
+    }
+  }
+  return source.substring(open);
+}
+
+/// The spacing and font-size literals in [source]: an `EdgeInsets` or a
+/// childless `SizedBox` built from a number, a `spacing:` given a number, and
+/// every `fontSize:`. Zero is no spacing value, so it is allowed.
+List<String> styleLiterals(String source) => [
+  for (final match in RegExp(
+    r'EdgeInsets(?:Directional)?\.\w+(?=\()',
+  ).allMatches(source))
+    if (_balanced(source, match.end) case final args
+        when _hasNonZeroNumber(args))
+      '${match[0]}$args',
+  for (final match in RegExp(r'\bSizedBox(?=\()').allMatches(source))
+    if (_balanced(source, match.end) case final args
+        when !args.contains('child:') && _hasNonZeroNumber(args))
+      'SizedBox$args',
+  for (final match in RegExp(r'spacing:\s*([^,)\n]+)').allMatches(source))
+    if (_hasNonZeroNumber(match[1]!)) match[0]!,
+  for (final match in RegExp(r'fontSize:\s*[^,)\n]+').allMatches(source))
+    match[0]!,
+];

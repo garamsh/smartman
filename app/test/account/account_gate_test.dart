@@ -21,6 +21,7 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../sharing/fakes.dart';
@@ -225,17 +226,20 @@ void main() {
         await pumpApp(tester, account);
         await tapAndSettle(tester, find.text('New deck'));
         await tester.enterText(
-          find.widgetWithText(TextField, 'Name'),
+          find.widgetWithText(AppTextField, 'Name'),
           'French',
         );
-        await tapAndSettle(tester, find.text('Save'));
+        await tapAndSettle(tester, find.text('Create'));
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Add card'));
         await tester.enterText(
-          find.widgetWithText(TextField, 'Question'),
+          find.widgetWithText(AppTextField, 'Question'),
           'Chat',
         );
-        await tester.enterText(find.widgetWithText(TextField, 'Answer'), 'cat');
+        await tester.enterText(
+          find.widgetWithText(AppTextField, 'Answer'),
+          'cat',
+        );
         await tapAndSettle(tester, find.text('Save'));
         await tester.pageBack();
         await tester.pumpAndSettle();
