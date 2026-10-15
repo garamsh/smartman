@@ -63,7 +63,7 @@ npm run dev
 - `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; both are public, and the dev project's are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `app/config/dev.json`. Git ignores `.env.local`.
 - Google sign-in returns to `<origin>/auth/callback`, which must be among Supabase Auth's allowed redirect URLs; only the owner changes that list.
 
-## Run the web app's image
+The image, built from the repository root:
 
 ```sh
 docker build -f web/Dockerfile \
@@ -72,7 +72,7 @@ docker build -f web/Dockerfile \
 docker run --rm -p 3000:3000 smartman-web
 ```
 
-- Build from the repository root: the image bundles the fonts in `app/assets/fonts/`.
+- It is built from the root because it bundles the fonts in `app/assets/fonts/`.
 - Both values are frozen into the image, so an image serves one Supabase project.
 - `GET /api/health` answers 200 once the server runs. The image serves on port 3000 as a non-root user.
 - The design and deployment rules are in `docs/architecture/web.md`.
