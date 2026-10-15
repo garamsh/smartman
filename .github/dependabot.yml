@@ -33,3 +33,17 @@ updates:
     directory: "/app/rust"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/engine-wasm"
+    schedule:
+      interval: "weekly"
+    groups:
+      # Released together and pinned to each other; one moved alone does not resolve (docs/architecture/engine.md).
+      wasm-bindgen:
+        patterns:
+          - "wasm-bindgen*"
+          - "js-sys"
+  - package-ecosystem: "rust-toolchain"
+    directory: "/engine-wasm"
+    schedule:
+      interval: "weekly"
