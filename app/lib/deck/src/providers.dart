@@ -80,6 +80,39 @@ final accountScreenProvider = Provider<Widget Function()>(
   ),
 );
 
+/// What the deck screens offer of sharing decks with other users: browsing
+/// public decks, and publishing one of the user's own.
+abstract interface class DeckSharing {
+  /// Whether the device is online now, kept current. Publishing needs the
+  /// network, so the deck menu disables it while offline.
+  Stream<bool> watchOnline();
+
+  /// The screen that browses other users' public decks.
+  Widget browseScreen();
+
+  /// Asks for what publishing [deck] needs and publishes it, reporting a
+  /// failure to the user itself.
+  Future<void> publish(BuildContext context, Deck deck);
+
+  /// Makes [deck] private again, reporting a failure to the user itself.
+  Future<void> unpublish(BuildContext context, Deck deck);
+}
+
+/// Sharing, or null while the app has none, which hides its entries. The
+/// composition site overrides it, so this domain does not depend on the one
+/// that shares decks.
+final deckSharingProvider = Provider<DeckSharing?>((ref) => null);
+
+/// Whether the device is online, as sharing reports it; offline without it.
+final onlineProvider = StreamProvider.autoDispose<bool>(
+  (ref) => ref.watch(deckSharingProvider)?.watchOnline() ?? Stream.value(false),
+);
+
+/// One deck, kept current; null once it is deleted.
+final deckProvider = StreamProvider.autoDispose.family<Deck?, DeckId>(
+  (ref, id) => ref.watch(deckRepositoryProvider).watchDeck(id),
+);
+
 /// How many cards each deck holds, kept current; a deck with none is absent.
 final cardCountsProvider = StreamProvider.autoDispose<Map<DeckId, int>>(
   (ref) => ref.watch(deckRepositoryProvider).watchCardCounts(),

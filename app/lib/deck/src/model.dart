@@ -20,6 +20,23 @@ final class DeckSelection {
       decks.isEmpty ? null : DeckSelection(decks.first, decks.skip(1));
 }
 
+/// Whether other signed-in users can find a deck.
+sealed class DeckVisibility {
+  const DeckVisibility();
+}
+
+/// Only its owner sees the deck; the default.
+final class PrivateDeck extends DeckVisibility {
+  const PrivateDeck();
+}
+
+/// Others can find, preview and copy the deck, since [publishedAt].
+final class PublicDeck extends DeckVisibility {
+  const PublicDeck(this.publishedAt);
+
+  final DateTime publishedAt;
+}
+
 /// A named collection of cards.
 final class Deck {
   const Deck({
@@ -27,17 +44,23 @@ final class Deck {
     required this.name,
     required this.createdAt,
     required this.updatedAt,
+    this.visibility = const PrivateDeck(),
+    this.description,
   });
 
   final DeckId id;
   final String name;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DeckVisibility visibility;
+
+  /// What the owner wrote about the deck when publishing it, if anything.
+  final String? description;
 }
 
 /// Where a card came from: the editor writes [manual], photo import
-/// [import].
-enum CardSource { manual, import }
+/// [import], and a copy of another user's public deck [shared].
+enum CardSource { manual, import, shared }
 
 /// A card inside a deck.
 final class Card {
@@ -50,6 +73,7 @@ final class Card {
     required this.source,
     required this.createdAt,
     required this.updatedAt,
+    this.originDeckId,
   });
 
   final CardId id;
@@ -60,4 +84,8 @@ final class Card {
   final CardSource source;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// The public deck a [CardSource.shared] card was copied from; null for any
+  /// other card.
+  final DeckId? originDeckId;
 }

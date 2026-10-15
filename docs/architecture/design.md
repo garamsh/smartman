@@ -41,6 +41,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences.
    - Deck list and card list: an empty list says how to start, and a search with no match says to try other words.
    - Every screen: a storage failure says what failed and to try again.
+   - Browse: offline, it says the public decks appear once connected; the deck menu says why publishing is disabled.
 
 ### Theme
 
@@ -83,15 +84,15 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 - **`AppTextField`** — every text field: a label above, a hint inside, an error below, and a counter where a limit exists. The label, field and error are read as one.
 - **`AppSheet`** with **`showAppSheet`** — every modal: a drag handle, a title, an optional body, content, and actions pinned at the bottom above the keyboard, the primary last.
 - **`showAppConfirm`** — every irreversible action: a sheet that states the consequence in one sentence, with a cancel and a red final button.
-- **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the deck rows and the photo import deck chooser. **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the photo review rows and the skeleton rows. On a sheet a row takes the ground colour.
-- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "내 덱 n", "이미 있는 카드 n개", "화면", and the answer in the whole-card sheet.
-- **`AppChip`** — a fully rounded label, or a button when it has an action: the "오늘 n" chip, the camera's deck chip, and the duplicate option chip.
+- **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the deck rows, the browse rows and the photo import deck chooser. **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the photo review rows and the skeleton rows. On a sheet a row takes the ground colour.
+- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "내 덱 n", "이미 있는 카드 n개", "화면", the import sheet's duplicate options, and the answer in the whole-card sheet.
+- **`AppChip`** — a fully rounded label, or a button when it has an action: the "오늘 n" chip, the "공개됨" chip, the camera's deck chip, and the duplicate option chip.
 
 Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `LinearProgressIndicator` — are themed in `app/lib/shared/theme.dart`.
 
 ### Checks
 
-- Each screen and each sheet is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/account/account_screen_test.dart`, `app/test/study/study_screen_test.dart`, `app/test/photo_import/photo_import_screen_test.dart` and, for each component, `app/test/shared/ui/`.
+- Each screen and each sheet is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/account/account_screen_test.dart`, `app/test/study/study_screen_test.dart`, `app/test/photo_import/photo_import_screen_test.dart`, the sharing screens' tests under `app/test/sharing/` and, for each component, `app/test/shared/ui/`.
 - `app/test/shared/theme_test.dart` fails on a spacing or font-size literal outside the theme and the components, and on a dialog, or a sheet opened other than through `showAppSheet`.
 - `app/test/screenshots/screenshots_test.dart` draws every screen and sheet in both themes, in Korean at a phone's size, when run with `--update-goldens --dart-define=SCREENSHOTS=true`; it writes them to `app/build/screenshots/` and is skipped otherwise.
 

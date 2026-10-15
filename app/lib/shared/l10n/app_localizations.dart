@@ -864,6 +864,300 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이 덱은 삭제됐어요. 다른 덱을 골라 주세요.'**
   String get deckDeleted;
+
+  /// Opens other users' public decks; also the title of that screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'둘러보기'**
+  String get browse;
+
+  /// Deck menu item that publishes the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개하기'**
+  String get publish;
+
+  /// Deck menu item that makes a public deck private.
+  ///
+  /// In ko, this message translates to:
+  /// **'비공개로 전환'**
+  String get unpublish;
+
+  /// Why publishing is disabled: the device is offline.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되면 바꿀 수 있어요'**
+  String get publishNeedsNetwork;
+
+  /// Chip on a deck others can find.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개됨'**
+  String get publicChip;
+
+  /// Hint of the search field on the browse screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 이름이나 설명으로 검색'**
+  String get searchPublicDecks;
+
+  /// Browse sort: most recently published first.
+  ///
+  /// In ko, this message translates to:
+  /// **'최신순'**
+  String get sortNewest;
+
+  /// Browse sort: most copied first.
+  ///
+  /// In ko, this message translates to:
+  /// **'가져오기 많은 순'**
+  String get sortMostCopied;
+
+  /// A public deck's owner display name, card count and copy count.
+  ///
+  /// In ko, this message translates to:
+  /// **'{owner} · 카드 {cards}장 · 가져오기 {copies}회'**
+  String publicDeckLine(String owner, int cards, int copies);
+
+  /// Browse screen with no public deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 공개된 덱이 없어요. 내 덱을 공개해 처음으로 나눠 보세요.'**
+  String get noPublicDecks;
+
+  /// Browse search with no match.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾는 덱이 없어요. 다른 단어로 검색해 보세요.'**
+  String get noPublicMatches;
+
+  /// Browse screen while offline.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되지 않았어요. 연결되면 공개 덱을 볼 수 있어요.'**
+  String get browseOffline;
+
+  /// Label of a progress indicator.
+  ///
+  /// In ko, this message translates to:
+  /// **'불러오는 중'**
+  String get loading;
+
+  /// Sharing failure: the server could not be reached.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.'**
+  String get sharingOffline;
+
+  /// Sharing failure: the server refused the session or the request.
+  ///
+  /// In ko, this message translates to:
+  /// **'요청이 거절됐어요. 계정 화면에서 다시 로그인한 뒤 시도해 주세요.'**
+  String get sharingRejected;
+
+  /// Sharing failure: the server answered unexpectedly.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.'**
+  String get sharingFailed;
+
+  /// Copying a deck its owner made private, deleted, or that was hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 덱은 더 이상 공개되어 있지 않아요.'**
+  String get deckNoLongerPublic;
+
+  /// Primary button of a public deck, and title of the sheet it opens.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 덱으로 가져오기'**
+  String get importToMyDecks;
+
+  /// Below a public deck's preview when it holds more cards than shown.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {total}장 중 처음 {shown}장'**
+  String previewFirstCards(int shown, int total);
+
+  /// Menu item and dialog button that report a public deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고하기'**
+  String get reportDeck;
+
+  /// Menu item that blocks a public deck's owner.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사용자 차단'**
+  String get blockUser;
+
+  /// Title of the report dialog.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고 이유'**
+  String get reportTitle;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'부적절한 내용'**
+  String get reportInappropriate;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'스팸'**
+  String get reportSpam;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'저작권 침해'**
+  String get reportCopyright;
+
+  /// Report reason.
+  ///
+  /// In ko, this message translates to:
+  /// **'기타'**
+  String get reportOther;
+
+  /// After a report was filed.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고했어요. 검토할게요.'**
+  String get reported;
+
+  /// After a second report of the same deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 신고한 덱이에요.'**
+  String get alreadyReported;
+
+  /// Title of the block confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name} 님을 차단할까요?'**
+  String blockTitle(String name);
+
+  /// Body of the block confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사용자의 덱이 둘러보기에 더 이상 나오지 않아요.'**
+  String get blockBody;
+
+  /// Confirms blocking a user.
+  ///
+  /// In ko, this message translates to:
+  /// **'차단'**
+  String get block;
+
+  /// After a user was blocked.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name} 님을 차단했어요.'**
+  String blocked(String name);
+
+  /// Import option: copy into a new deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 덱으로'**
+  String get importAsNewDeck;
+
+  /// Import option: copy into one of the user's decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'기존 덱에 추가'**
+  String get importIntoExistingDeck;
+
+  /// What importing as a new deck does.
+  ///
+  /// In ko, this message translates to:
+  /// **'\"{name}\" 덱을 새로 만들어 모든 카드를 가져와요.'**
+  String importNewDeckHint(String name);
+
+  /// Label of the deck chooser when importing into a deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱'**
+  String get importTargetDeck;
+
+  /// Heading of the duplicate options when importing into a deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 있는 카드는'**
+  String get importDuplicates;
+
+  /// Button that copies a public deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'가져오기'**
+  String get importConfirm;
+
+  /// After copying a public deck: how many cards were added or merged, and into which deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count, plural, =0{\"{deck}\"에 새로 가져온 카드가 없어요} other{\"{deck}\"에 카드 {count}장을 가져왔어요}}'**
+  String copiedCards(String deck, int count);
+
+  /// Title of the publish sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'\"{name}\" 공개하기'**
+  String publishTitle(String name);
+
+  /// Label of the display name field.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 이름'**
+  String get displayName;
+
+  /// Help below the display name field.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개한 덱에 이 이름이 표시돼요. 이메일은 표시되지 않아요.'**
+  String get displayNameHelp;
+
+  /// Error for a display name of the wrong length.
+  ///
+  /// In ko, this message translates to:
+  /// **'2~20자로 입력하세요'**
+  String get displayNameLength;
+
+  /// Label of the description field when publishing.
+  ///
+  /// In ko, this message translates to:
+  /// **'설명 (선택)'**
+  String get deckDescription;
+
+  /// Error for a description that is too long.
+  ///
+  /// In ko, this message translates to:
+  /// **'{max}자 이내로 입력하세요'**
+  String deckDescriptionTooLong(int max);
+
+  /// Agreement checkbox the publish button requires.
+  ///
+  /// In ko, this message translates to:
+  /// **'부적절하거나 저작권을 침해하는 내용을 공개하지 않겠습니다'**
+  String get publishAgreement;
+
+  /// Button that publishes a deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개'**
+  String get publishConfirm;
+
+  /// After a deck was published.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱을 공개했어요'**
+  String get published;
+
+  /// After a deck was made private.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱을 비공개로 전환했어요'**
+  String get unpublished;
 }
 
 class _AppLocalizationsDelegate

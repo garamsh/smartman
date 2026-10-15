@@ -520,4 +520,193 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deckDeleted => 'This deck was deleted. Choose another deck.';
+
+  @override
+  String get browse => 'Browse';
+
+  @override
+  String get publish => 'Publish';
+
+  @override
+  String get unpublish => 'Make private';
+
+  @override
+  String get publishNeedsNetwork => 'Available when you\'re online';
+
+  @override
+  String get publicChip => 'Public';
+
+  @override
+  String get searchPublicDecks => 'Search names and descriptions';
+
+  @override
+  String get sortNewest => 'Newest';
+
+  @override
+  String get sortMostCopied => 'Most copied';
+
+  @override
+  String publicDeckLine(String owner, int cards, int copies) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cards,
+      locale: localeName,
+      other: '$cards cards',
+      one: '1 card',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      copies,
+      locale: localeName,
+      other: 'copied $copies times',
+      one: 'copied once',
+    );
+    return '$owner · $_temp0 · $_temp1';
+  }
+
+  @override
+  String get noPublicDecks =>
+      'No public decks yet. Publish one of yours to be the first.';
+
+  @override
+  String get noPublicMatches => 'No decks match. Try other words.';
+
+  @override
+  String get browseOffline =>
+      'You\'re offline. Public decks appear once you\'re connected.';
+
+  @override
+  String get loading => 'Loading';
+
+  @override
+  String get sharingOffline =>
+      'You\'re offline. Check your connection and try again.';
+
+  @override
+  String get sharingRejected =>
+      'The request was refused. Sign in again from the account screen and try again.';
+
+  @override
+  String get sharingFailed =>
+      'Can\'t do that right now. Please try again in a moment.';
+
+  @override
+  String get deckNoLongerPublic => 'This deck is no longer public.';
+
+  @override
+  String get importToMyDecks => 'Add to my decks';
+
+  @override
+  String previewFirstCards(int shown, int total) {
+    return 'First $shown of $total cards';
+  }
+
+  @override
+  String get reportDeck => 'Report';
+
+  @override
+  String get blockUser => 'Block this user';
+
+  @override
+  String get reportTitle => 'Why are you reporting this deck?';
+
+  @override
+  String get reportInappropriate => 'Inappropriate content';
+
+  @override
+  String get reportSpam => 'Spam';
+
+  @override
+  String get reportCopyright => 'Copyright infringement';
+
+  @override
+  String get reportOther => 'Other';
+
+  @override
+  String get reported => 'Reported. We\'ll review it.';
+
+  @override
+  String get alreadyReported => 'You\'ve already reported this deck.';
+
+  @override
+  String blockTitle(String name) {
+    return 'Block $name?';
+  }
+
+  @override
+  String get blockBody => 'Their decks will no longer appear when you browse.';
+
+  @override
+  String get block => 'Block';
+
+  @override
+  String blocked(String name) {
+    return 'Blocked $name.';
+  }
+
+  @override
+  String get importAsNewDeck => 'As a new deck';
+
+  @override
+  String get importIntoExistingDeck => 'Into a deck';
+
+  @override
+  String importNewDeckHint(String name) {
+    return 'Creates the deck \"$name\" with every card.';
+  }
+
+  @override
+  String get importTargetDeck => 'Deck';
+
+  @override
+  String get importDuplicates => 'Cards already in the deck';
+
+  @override
+  String get importConfirm => 'Add';
+
+  @override
+  String copiedCards(String deck, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Added $count cards to \"$deck\"',
+      one: 'Added 1 card to \"$deck\"',
+      zero: 'No new cards for \"$deck\"',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String publishTitle(String name) {
+    return 'Publish \"$name\"';
+  }
+
+  @override
+  String get displayName => 'Public name';
+
+  @override
+  String get displayNameHelp =>
+      'Shown with your public decks. Your email is never shown.';
+
+  @override
+  String get displayNameLength => 'Use 2 to 20 characters';
+
+  @override
+  String get deckDescription => 'Description (optional)';
+
+  @override
+  String deckDescriptionTooLong(int max) {
+    return 'Use at most $max characters';
+  }
+
+  @override
+  String get publishAgreement =>
+      'I won\'t publish inappropriate or copyrighted content';
+
+  @override
+  String get publishConfirm => 'Publish';
+
+  @override
+  String get published => 'Deck published';
+
+  @override
+  String get unpublished => 'Deck is private again';
 }
