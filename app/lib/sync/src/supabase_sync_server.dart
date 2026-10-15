@@ -23,23 +23,32 @@ final class SupabaseSyncServer implements SyncServer {
   final Duration timeout;
 
   @override
-  Future<List<Pulled<DeckRow>>> pullDecks(int after, int limit) =>
-      _pull('decks', after, limit, _decodeDeck);
+  Future<List<Pulled<DeckRow>>> pullDecks(UserId owner, int after, int limit) =>
+      _pull('decks', owner, after, limit, _decodeDeck);
 
   @override
-  Future<List<Pulled<CardRow>>> pullCards(int after, int limit) =>
-      _pull('cards', after, limit, _decodeCard);
+  Future<List<Pulled<CardRow>>> pullCards(UserId owner, int after, int limit) =>
+      _pull('cards', owner, after, limit, _decodeCard);
 
   @override
-  Future<List<Pulled<ReviewRow>>> pullReviews(int after, int limit) =>
-      _pull('reviews', after, limit, _decodeReview);
+  Future<List<Pulled<ReviewRow>>> pullReviews(
+    UserId owner,
+    int after,
+    int limit,
+  ) => _pull('reviews', owner, after, limit, _decodeReview);
 
   @override
-  Future<List<Pulled<CardStateRow>>> pullCardStates(int after, int limit) =>
-      _pull('card_states', after, limit, _decodeCardState);
+  Future<List<Pulled<CardStateRow>>> pullCardStates(
+    UserId owner,
+    int after,
+    int limit,
+  ) => _pull('card_states', owner, after, limit, _decodeCardState);
 
+  /// Filters on [owner] as well as row-level security does, since the
+  /// policies also let the session read other users' public decks and cards.
   Future<List<Pulled<R>>> _pull<R>(
     String table,
+    UserId owner,
     int after,
     int limit,
     R Function(_Fields fields) decode,
@@ -47,6 +56,7 @@ final class SupabaseSyncServer implements SyncServer {
     final rows = await _client
         .from(table)
         .select()
+        .eq('user_id', owner.value)
         .gt('revision', after)
         .order('revision', ascending: true)
         .limit(limit);
@@ -64,6 +74,9 @@ final class SupabaseSyncServer implements SyncServer {
           'id': row.id,
           'user_id': owner.value,
           'name': row.name,
+          'visibility': row.visibility,
+          'published_at': _timeOrNull(row.publishedAt),
+          'description': row.description,
           'created_at': _time(row.createdAt),
           'updated_at': _time(row.updatedAt),
           'deleted_at': _timeOrNull(row.deletedAt),
@@ -83,6 +96,7 @@ final class SupabaseSyncServer implements SyncServer {
           'back': jsonDecode(row.back),
           'card_key': row.cardKey,
           'source': row.source,
+          'origin_deck_id': row.originDeckId,
           'created_at': _time(row.createdAt),
           'updated_at': _time(row.updatedAt),
           'deleted_at': _timeOrNull(row.deletedAt),
@@ -192,6 +206,9 @@ String? _timeOrNull(DateTime? time) => time == null ? null : _time(time);
 DeckRow _decodeDeck(_Fields row) => DeckRow(
   id: row.string('id'),
   name: row.string('name'),
+  visibility: row.string('visibility'),
+  publishedAt: row.timeOrNull('published_at'),
+  description: row.stringOrNull('description'),
   createdAt: row.time('created_at'),
   updatedAt: row.time('updated_at'),
   deletedAt: row.timeOrNull('deleted_at'),
@@ -205,6 +222,7 @@ CardRow _decodeCard(_Fields row) => CardRow(
   back: row.json('back'),
   cardKey: row.string('card_key'),
   source: row.string('source'),
+  originDeckId: row.stringOrNull('origin_deck_id'),
   createdAt: row.time('created_at'),
   updatedAt: row.time('updated_at'),
   deletedAt: row.timeOrNull('deleted_at'),
@@ -245,6 +263,8 @@ extension type _Fields(Map<String, dynamic> row) {
   };
 
   String string(String key) => _read<String>(key);
+
+  String? stringOrNull(String key) => _read<String?>(key);
 
   int integer(String key) => _read<int>(key);
 

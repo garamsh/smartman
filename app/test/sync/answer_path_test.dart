@@ -12,6 +12,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
+import '../sharing/fakes.dart';
 import 'fake_sync_server.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
@@ -46,6 +47,8 @@ void main() {
         server,
         themeStorage,
         null,
+        null,
+        FakeReachability(),
       ),
     );
     await tester.pumpAndSettle();

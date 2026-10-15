@@ -10,12 +10,21 @@ typedef Pulled<R> = ({R row, int revision});
 /// the local database's row classes; their `dirty` flag is not sent, and a
 /// pulled row's is false.
 abstract interface class SyncServer {
-  /// Up to [limit] rows of each table with a revision above [after], lowest
-  /// revision first.
-  Future<List<Pulled<DeckRow>>> pullDecks(int after, int limit);
-  Future<List<Pulled<CardRow>>> pullCards(int after, int limit);
-  Future<List<Pulled<ReviewRow>>> pullReviews(int after, int limit);
-  Future<List<Pulled<CardStateRow>>> pullCardStates(int after, int limit);
+  /// Up to [limit] of [owner]'s rows of each table with a revision above
+  /// [after], lowest revision first. Rows of other accounts the session may
+  /// read, such as their public decks, are never pulled.
+  Future<List<Pulled<DeckRow>>> pullDecks(UserId owner, int after, int limit);
+  Future<List<Pulled<CardRow>>> pullCards(UserId owner, int after, int limit);
+  Future<List<Pulled<ReviewRow>>> pullReviews(
+    UserId owner,
+    int after,
+    int limit,
+  );
+  Future<List<Pulled<CardStateRow>>> pullCardStates(
+    UserId owner,
+    int after,
+    int limit,
+  );
 
   /// Inserts or replaces [rows] as [owner]'s.
   Future<void> pushDecks(UserId owner, List<DeckRow> rows);
