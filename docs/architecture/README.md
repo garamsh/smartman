@@ -22,7 +22,7 @@ Current architecture of the system and the decisions behind it. This file is the
 
 - `structure.md` — the structural rules of the app: the domain as unit, what may reference what, and the composition site.
 - `deck.md` — the `deck` domain: decks, cards, content blocks, the card key, and the duplicate rule.
-- `engine.md` — the scheduling engine: FSRS-6 in the pure Rust crate `engine/`, its public surface, and its reference values.
+- `engine.md` — the scheduling engine: FSRS-6 in the pure Rust crate `engine/`, its public surface, its reference values, and its WebAssembly build in `engine-wasm/` for the web app.
 - `account.md` — the `account` domain: Google sign-in through Supabase Auth, the session, and the configuration it reads from `app/config/`.
 - `design.md` — the app's design language: the principles every screen follows, where each is applied today, and the shared light and dark theme.
 - `study.md` — the `study` domain: the study session over one or more decks, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
@@ -44,4 +44,5 @@ Current architecture of the system and the decisions behind it. This file is the
 - `adr/0013-extract-cards-function-and-eval.md` — extract cards in a dependency-free Deno Edge Function with an optional retry model, limit it per user through one locked SQL function, and choose its model with a budget-capped eval in `tools/eval/`.
 - `adr/0014-database-tests-on-a-stack-of-their-own.md` — run the database tests on a throwaway local stack per run, under its own project id and a reserved port, stopped on every exit; supersedes ADR 0010's "Tests" decision.
 - `adr/0015-sync-protocol-and-conflict-policy.md` — sync in the background by pull then push per table, with last-writer-wins edits, winning tombstones, unioned reviews and recomputed card states, a database owned by one account, and `sync` importing `supabase_flutter`; supersedes ADR 0006's "the only domain importing `supabase_flutter`".
+- `adr/0018-engine-as-webassembly.md` — build the engine as WebAssembly in `engine-wasm/` with the wasm-bindgen CLI, taking the app's two answers and returning engine errors as typed values.
 - `adr/0000-template.md` — the template every ADR is written from.

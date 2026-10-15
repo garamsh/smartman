@@ -35,6 +35,16 @@ jobs:
         with:
           tool: flutter_rust_bridge_codegen@${{ steps.frb.outputs.version }}
           fallback: cargo-install
+      # The wasm-bindgen CLI and its test runner, at the release engine-wasm/Cargo.lock pins.
+      - id: wasm-bindgen
+        run: echo "version=$(sed -n '/^name = "wasm-bindgen"$/{n;s/^version = "\(.*\)"$/\1/p;}' engine-wasm/Cargo.lock)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+        with:
+          tool: wasm-bindgen@${{ steps.wasm-bindgen.outputs.version }}
+      # make test runs engine-wasm/'s tests in node, through wasm-bindgen-test-runner.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
       # make test runs the database tests where Docker is; only the ubuntu runner has it.
       - if: runner.os == 'Linux'
         uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
