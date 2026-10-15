@@ -57,6 +57,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
         actions: [
           PopupMenuButton<_DeckAction>(
             tooltip: l10n.deckActions,
+            icon: const Icon(LucideIcons.ellipsisVertical),
             onSelected: (action) => switch (action) {
               _DeckAction.rename => _rename(),
               _DeckAction.publish => sharing?.publish(context, current),
@@ -103,30 +104,46 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
               children: [
                 Semantics(
                   header: true,
-                  child: Text(_name, style: AppType.title),
+                  child: Text(_name, style: AppType.deckTitle),
                 ),
                 if (public) AppChip(label: l10n.publicChip),
               ],
             ),
-            const SizedBox(height: AppSpace.s4),
+            const SizedBox(height: AppSpace.s16),
             ref.watch(todayProvider)(
               deck,
               (context, count) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: AppSpace.s16,
+                spacing: AppSpace.s20,
                 children: [
-                  Text(switch (count) {
-                    TodayCounted(:final review, :final fresh) =>
-                      l10n.deckSummary(value.length, review, fresh),
-                    TodayUnavailable(:final message) => message,
-                    TodayPending() => l10n.cardCount(value.length),
-                  }, style: AppType.secondary.copyWith(color: colors.muted)),
+                  Wrap(
+                    spacing: AppSpace.s8,
+                    runSpacing: AppSpace.s8,
+                    children: [
+                      _StatPill(l10n.statCards(value.length)),
+                      if (count case TodayCounted(
+                        :final review,
+                        :final fresh,
+                      )) ...[
+                        _StatPill(l10n.statReview(review)),
+                        _StatPill(l10n.statNew(fresh)),
+                      ],
+                      if (count case TodayUnavailable(:final message))
+                        Text(
+                          message,
+                          style: AppType.secondary.copyWith(
+                            color: colors.muted,
+                          ),
+                        ),
+                    ],
+                  ),
                   AppButton(
                     label: l10n.studyCount(switch (count) {
                       TodayCounted(:final total) => total,
                       _ => 0,
                     }),
-                    variant: AppButtonVariant.primary,
+                    icon: LucideIcons.play,
+                    size: AppButtonSize.cta,
                     onPressed: switch (count) {
                       TodayCounted(:final total) when total > 0 => _study,
                       _ => null,
@@ -135,7 +152,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpace.s24),
+            const SizedBox(height: AppSpace.sectionGap),
             if (value.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
@@ -149,10 +166,11 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
               AppTextField(
                 hint: l10n.searchCards,
                 prefixIcon: const Icon(LucideIcons.search),
+                height: AppSize.search,
                 onChanged: (query) => setState(() => _query = query),
               ),
               const SizedBox(height: AppSpace.s12),
-              ..._rows(l10n, value),
+              _rows(l10n, value),
             ],
           ],
         ),
@@ -167,6 +185,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
       bottomNavigationBar: BottomActions(
         secondary: AppButton(
           label: l10n.newCard,
+          icon: LucideIcons.plus,
           variant: AppButtonVariant.secondary,
           size: AppButtonSize.cta,
           onPressed: () => _open(null),
@@ -175,6 +194,8 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
             ? null
             : AppButton(
                 label: l10n.addFromPhoto,
+                icon: LucideIcons.camera,
+                variant: AppButtonVariant.secondary,
                 size: AppButtonSize.cta,
                 onPressed: () => _importPhoto(photoImport),
               ),
@@ -182,8 +203,9 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
     );
   }
 
-  /// A row for each card whose front or back holds the search, ignoring case.
-  List<Widget> _rows(AppLocalizations l10n, List<Card> cards) {
+  /// A row for each card whose front or back holds the search, ignoring case,
+  /// in one rounded group.
+  Widget _rows(AppLocalizations l10n, List<Card> cards) {
     final query = _query.trim().toLowerCase();
     final rows =
         [
@@ -199,25 +221,34 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
               row.back.toLowerCase().contains(query),
         );
     if (rows.isEmpty) {
-      return [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
-          child: Text(
-            l10n.noMatches,
-            textAlign: TextAlign.center,
-            style: AppType.body.copyWith(color: AppColors.of(context).muted),
-          ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
+        child: Text(
+          l10n.noMatches,
+          textAlign: TextAlign.center,
+          style: AppType.body.copyWith(color: AppColors.of(context).muted),
         ),
-      ];
+      );
     }
-    return [
-      for (final row in rows)
-        CardSplitRow(
-          front: row.front,
-          back: row.back,
-          onTap: () => _open(row.card),
-        ),
-    ];
+    final colors = AppColors.of(context);
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.row),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (final (i, row) in rows.indexed) ...[
+            if (i > 0) const Divider(height: 1, thickness: 1),
+            CardSplitRow(
+              front: row.front,
+              back: row.back,
+              grouped: true,
+              onTap: () => _open(row.card),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// Opens photo import for this deck. When it saved into another deck, that
@@ -290,49 +321,74 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
 }
 
 /// A card as two columns, front and back, split by a thin divider; read-only
-/// without [onTap].
+/// without [onTap]. On its own it is a row on its rounded surface; [grouped]
+/// it is one row of a group that draws the surface.
 class CardSplitRow extends StatelessWidget {
   const CardSplitRow({
     super.key,
     required this.front,
     required this.back,
     this.onTap,
+    this.grouped = false,
   });
 
   final String front;
   final String back;
   final VoidCallback? onTap;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return AppRowSurface(
-      onTap: onTap,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpace.s16),
-                child: Text(front, style: AppType.body),
+    final content = IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: Text(front, style: AppType.label),
+            ),
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: Text(
+                back,
+                style: AppType.secondary.copyWith(color: colors.ink2),
               ),
             ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpace.s16),
-                child: Text(
-                  back,
-                  style: AppType.body.copyWith(color: colors.muted),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+    final onTap = this.onTap;
+    if (!grouped) return AppRowSurface(onTap: onTap, child: content);
+    return onTap == null ? content : InkWell(onTap: onTap, child: content);
   }
+}
+
+/// One count of the deck screen, on a white pill.
+class _StatPill extends StatelessWidget {
+  const _StatPill(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: ShapeDecoration(
+      color: AppColors.of(context).surface,
+      shape: const StadiumBorder(),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s16,
+        vertical: AppSpace.s8,
+      ),
+      child: Text(text, style: AppType.section),
+    ),
+  );
 }
 
 /// One line of text for a card side; a block this version cannot show is

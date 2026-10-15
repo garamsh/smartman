@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
@@ -111,6 +112,9 @@ Future<_List> _open(
           );
         }),
         accountScreenProvider.overrideWithValue(Scaffold.new),
+        accountAvatarProvider.overrideWithValue(
+          () => const SizedBox.square(dimension: 32),
+        ),
         if (photoImport != null)
           photoImportProvider.overrideWithValue(photoImport),
       ],
@@ -167,12 +171,19 @@ void main() {
     (tester) async {
       final list = await _open(
         tester,
-        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 4, fresh: 3)},
+        today: {
+          'Alpha+Beta+Gamma': const TodayCounted(
+            review: 4,
+            fresh: 3,
+            perCard: Duration(seconds: 25),
+          ),
+        },
       );
 
       expect(list.counted, contains(equals(list.ids.values.toSet())));
-      expect(find.text('7 cards for today'), findsOneWidget);
-      expect(find.text('Review 4 · New 3'), findsOneWidget);
+      expect(find.bySemanticsLabel('7 cards for today'), findsOneWidget);
+      // Seven cards at 25 s each take 175 s, about 3 minutes.
+      expect(find.text('4 to review · 3 new · about 3 min'), findsOneWidget);
 
       await list.tap('Study all');
 
@@ -188,7 +199,7 @@ void main() {
     );
 
     expect(find.text('Storage failed'), findsOneWidget);
-    expect(find.textContaining('for today'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp('for today')), findsNothing);
     await list.close();
   });
 
@@ -280,7 +291,7 @@ void main() {
     tester,
   ) async {
     final list = await _open(tester);
-    expect(find.text('Decks'), findsOneWidget);
+    expect(find.bySemanticsLabel('smartman'), findsOneWidget);
     expect(list.selected('Alpha'), isFalse);
 
     await list.longPress('Beta');
@@ -339,7 +350,7 @@ void main() {
     await tester.tap(find.byTooltip('Clear selection'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Decks'), findsOneWidget);
+    expect(find.bySemanticsLabel('smartman'), findsOneWidget);
     expect(find.textContaining('selected'), findsNothing);
     await list.tap('Alpha');
     expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);

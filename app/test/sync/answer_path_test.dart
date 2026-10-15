@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/account/account.dart';
+import 'package:smartman/deck/deck.dart' show DeckListScreen;
 import 'package:smartman/main.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
@@ -50,13 +51,16 @@ void main() {
         null,
         null,
         FakeReachability(),
+        const LegalLinks(),
+        '1.0.0',
       ),
     );
     await tester.pumpAndSettle();
-    final sync = ProviderScope.containerOf(tester.element(find.text('Decks')))
-        .read(syncControllerProvider);
+    final sync = ProviderScope.containerOf(
+      tester.element(find.byType(DeckListScreen)),
+    ).read(syncControllerProvider);
 
-    await tapAndSettle(tester, 'New deck');
+    await tapAndSettle(tester, 'Create by hand');
     await tester.enterText(find.widgetWithText(AppTextField, 'Name'), 'French');
     await tapAndSettle(tester, 'Create');
     await tapAndSettle(tester, 'French');
@@ -73,7 +77,7 @@ void main() {
     // The run that started with the app is still waiting on the server.
     expect(sync.status.value, isA<Syncing>());
     expect(server.requests, isEmpty);
-    expect(find.text('0 / 2'), findsOneWidget);
+    expect(find.text('0/2'), findsOneWidget);
     final first = find.text('Chat').evaluate().isEmpty ? 'Chien' : 'Chat';
 
     await tester.timedDrag(
@@ -83,7 +87,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget);
     expect(sync.status.value, isA<Syncing>());
 
     sync.dispose();

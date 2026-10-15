@@ -13,12 +13,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'smartman';
 
   @override
-  String get decksTitle => 'Decks';
-
-  @override
-  String get noDecks => 'No decks yet. Create a new deck to start.';
-
-  @override
   String get newDeck => 'New deck';
 
   @override
@@ -154,7 +148,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String studyProgress(int answered, int total) {
-    return '$answered / $total';
+    return '$answered/$total';
   }
 
   @override
@@ -202,39 +196,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get answerChanged => 'Changed';
 
   @override
-  String get sessionSummaryTitle => 'Session complete';
+  String get sessionSummaryTitle => 'You\'ve finished today\'s cards';
 
   @override
   String get nothingToStudy => 'Nothing to study right now.';
-
-  @override
-  String cardsStudied(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count cards studied',
-      one: '1 card studied',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String knowCount(int count) {
-    return 'Know: $count';
-  }
-
-  @override
-  String dontKnowCount(int count) {
-    return 'Don\'t know: $count';
-  }
-
-  @override
-  String timeSpent(int minutes, int seconds) {
-    return 'Time spent: $minutes min $seconds s';
-  }
-
-  @override
-  String get done => 'Done';
 
   @override
   String get answerNotSaved =>
@@ -252,13 +217,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeBody =>
-      'Flashcards you answer with a swipe, shown again just before you forget.';
+      'Swipe to answer,\nand meet each card again just before you forget';
 
   @override
-  String get signInWithGoogle => 'Sign in with Google';
+  String get signInWithGoogle => 'Continue with Google';
 
   @override
-  String get signInWithAppleSoon => 'Sign in with Apple (coming soon)';
+  String get signInWithAppleSoon => 'Continue with Apple · Coming soon';
 
   @override
   String get signingIn => 'Signing in';
@@ -299,8 +264,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeDark => 'Dark';
 
   @override
-  String todayBreakdown(int review, int fresh) {
-    return 'Review $review · New $fresh';
+  String todayBreakdown(int review, int fresh, int minutes) {
+    return '$review to review · $fresh new · about $minutes min';
   }
 
   @override
@@ -332,17 +297,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addFromPhoto => 'Add from photo';
-
-  @override
-  String deckSummary(int cards, int review, int fresh) {
-    String _temp0 = intl.Intl.pluralLogic(
-      cards,
-      locale: localeName,
-      other: '$cards cards',
-      one: '1 card',
-    );
-    return '$_temp0 · $review to review today · $fresh new';
-  }
 
   @override
   String studyCount(int count) {
@@ -729,4 +683,99 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unpublished => 'Deck is private again';
+
+  @override
+  String get todayTitle => 'Today\'s cards';
+
+  @override
+  String get todayCountUnit => 'cards';
+
+  @override
+  String get emptyHomeTitle => 'Shall we make your first deck?';
+
+  @override
+  String get emptyHomeBody =>
+      'Take a photo of a vocabulary page and we\'ll make the cards for you. You can also type them in.';
+
+  @override
+  String get createManually => 'Create by hand';
+
+  @override
+  String get browsePublicDecks => 'Browse public decks';
+
+  @override
+  String get newDeckTitle => 'Create a deck';
+
+  @override
+  String get newDeckBody => 'You can change the name later.';
+
+  @override
+  String statCards(int count) {
+    return '$count cards';
+  }
+
+  @override
+  String statReview(int count) {
+    return '$count to review';
+  }
+
+  @override
+  String statNew(int count) {
+    return '$count new';
+  }
+
+  @override
+  String get swipeDontKnowHint => 'Don\'t know';
+
+  @override
+  String get swipeKnowHint => 'Know';
+
+  @override
+  String get nextReviewToday =>
+      'Your next review is today. We\'ll show these again just before you forget.';
+
+  @override
+  String get nextReviewTomorrow =>
+      'Your next review is tomorrow. We\'ll show these again just before you forget.';
+
+  @override
+  String nextReviewInDays(int days) {
+    return 'Your next review is in $days days. We\'ll show these again just before you forget.';
+  }
+
+  @override
+  String get summaryStudied => 'Studied';
+
+  @override
+  String get timeSpentLabel => 'Time spent';
+
+  @override
+  String timeSpentValue(int minutes, int seconds) {
+    return '$minutes min $seconds s';
+  }
+
+  @override
+  String get backToDecks => 'Back to decks';
+
+  @override
+  String consentNotice(String terms, String privacy) {
+    return 'By continuing, you agree to the $terms and the $privacy.';
+  }
+
+  @override
+  String get termsOfService => 'Terms of Service';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get comingSoonBody => 'This isn\'t ready yet. It will open here soon.';
+
+  @override
+  String get linkNotOpened => 'Couldn\'t open the link. Please try again.';
+
+  @override
+  String appVersion(String version) {
+    return 'Version $version';
+  }
 }

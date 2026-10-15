@@ -20,6 +20,7 @@ class AppTextField extends StatelessWidget {
     this.textInputAction,
     this.prefixIcon,
     this.style,
+    this.height = AppSize.field,
     this.onChanged,
     this.onSubmitted,
   });
@@ -42,14 +43,21 @@ class AppTextField extends StatelessWidget {
   /// The text's style; [AppType.body] when null.
   final TextStyle? style;
 
+  /// The field's least height: [AppSize.field], or [AppSize.search] for a
+  /// search over a list.
+  final double height;
+
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+
+  /// The height of a line of [AppType.body], which [style] keeps.
+  static const _line = 24.0;
 
   @override
   Widget build(BuildContext context) {
     final label = this.label;
     final field = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: AppSize.field),
+      constraints: BoxConstraints(minHeight: height),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -62,6 +70,11 @@ class AppTextField extends StatelessWidget {
         onChanged: onChanged,
         onSubmitted: onSubmitted,
         decoration: InputDecoration(
+          // One line of body text, centred in the field's height.
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: AppSpace.s16,
+            vertical: (height - _line) / 2,
+          ),
           hintText: hint,
           errorText: errorText,
           prefixIcon: prefixIcon,
@@ -74,7 +87,10 @@ class AppTextField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpace.s8,
         children: [
-          Text(label, style: AppType.section),
+          Text(
+            label,
+            style: AppType.section.copyWith(color: AppColors.of(context).ink2),
+          ),
           field,
         ],
       ),

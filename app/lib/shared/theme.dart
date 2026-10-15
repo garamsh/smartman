@@ -30,6 +30,9 @@ abstract final class AppSpace {
 
 /// The corner radii of the app's rounded surfaces. A chip is fully rounded.
 abstract final class AppRadius {
+  /// The bottom corners of the sign-in screen's brand panel.
+  static const panel = 40.0;
+
   /// A sheet's top corners.
   static const sheet = 28.0;
 

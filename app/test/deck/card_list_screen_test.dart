@@ -44,7 +44,9 @@ void main() {
       await screens.push((deck) => CardListScreen(deck: deck));
 
       expect(find.text('French'), findsOneWidget);
-      expect(find.text('3 cards · 1 to review today · 2 new'), findsOneWidget);
+      expect(find.text('3 cards'), findsOneWidget);
+      expect(find.text('1 to review'), findsOneWidget);
+      expect(find.text('2 new'), findsOneWidget);
 
       await screens.tap(find.text('Study · 3'));
 

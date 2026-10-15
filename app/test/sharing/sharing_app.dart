@@ -87,6 +87,9 @@ class SharingApp {
             ),
           ),
           accountScreenProvider.overrideWithValue(Scaffold.new),
+          accountAvatarProvider.overrideWithValue(
+            () => const SizedBox.square(dimension: 32),
+          ),
         ],
         child: MaterialApp(
           theme: lightTheme,
