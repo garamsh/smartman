@@ -115,7 +115,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 
 #### Photo
 
-- The camera is `camera`'s back camera without audio, released while the app is in the background. The library is `image_picker`'s picker, asked for at most 2048 px per side, without full metadata so no photo-library permission is needed.
+- The camera is `camera`'s back camera without audio, released while the app is out of the foreground and opened again when it returns, after a refusal too, so access allowed in Settings takes effect. One open runs at a time, and a lifecycle change during one is applied when it lands. The library is `image_picker`'s picker, asked for at most 2048 px per side, without full metadata so no photo-library permission is needed.
 - Every photo is decoded, turned upright by its EXIF orientation, scaled so its long side is at most 2048 px keeping its aspect ratio, and encoded as JPEG at quality 85, stepping down to 40 until it is at most 6 MiB. This runs on a background isolate with the pure-Dart `image` package.
 - A file `image` cannot decode, such as a HEIC photo, is `PhotoUnreadable`.
 
@@ -146,7 +146,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 
 #### App tests
 
-- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client (`app/test/photo_import/fakes.dart`) over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, reduce motion, nothing written before adding, and the accessibility guidelines in both themes.
+- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client (`app/test/photo_import/fakes.dart`) over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, the camera across a lifecycle change or a departure during an open, reduce motion, nothing written before adding, and the accessibility guidelines in both themes.
 - `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
 - `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.
 - `app/test/photo_import/photo_test.dart` checks the downscaling: aspect ratio, long side, size limit and orientation.
