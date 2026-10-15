@@ -27,7 +27,7 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 - `web/Dockerfile` is built from the repository root: `docker build -f web/Dockerfile .`, with both variables as `--build-arg`. `web/Dockerfile.dockerignore` admits only `web/`, `app/assets/fonts/` and `engine-wasm/pkg/` ([ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
 - Three stages install the locked packages, build, and copy the standalone server and static files into the runtime stage. Each starts from the same index digest of `node:24.22.0-trixie-slim`, and the frontend is pinned by digest in the `# syntax=` line.
 - The runtime stage runs `node server.js` on port 3000 as the base image's `node` user, uid 1000.
-- Dependabot's `docker` entry for `/web` proposes the base image's move. `make lint` fails while a `FROM` names another Node.js release than `web/.nvmrc`, so the PR that moves the image also moves the file.
+- Dependabot's `docker` entry for `/web` proposes only a new digest of the same `node:24.22.0-trixie-slim` tag; it ignores every Node.js release change. `make lint` fails while a `FROM` names another release than `web/.nvmrc`, and `web.sh` fails while the running Node.js differs from that file, so a release change moves `web/.nvmrc`, the `node-version` of `.github/workflows/ci.yml`'s `setup-node` step and the three `FROM` digests together, which Dependabot cannot do. The PM moves them, in one PR, to a new LTS release verified per ci.md.
 - What the image runs is the web app alone; nothing in it may reach a Supabase secret.
 
 ### Sign-in
