@@ -45,6 +45,7 @@ void main() {
         FakeAccountService(const SignedIn(userId: _ada, email: null)),
         server,
         themeStorage,
+        null,
       ),
     );
     await tester.pumpAndSettle();

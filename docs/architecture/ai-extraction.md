@@ -1,6 +1,6 @@
 # AI extraction
 
-The `extract-cards` Edge Function that turns a photo of a vocabulary page into candidate cards, its limits and privacy, how its model is switched, and the eval that chooses the model.
+The `extract-cards` Edge Function that turns a photo of a vocabulary page into candidate cards, its limits and privacy, how its model is switched, the eval that chooses the model, and the app's `photo_import` domain that calls it.
 
 ## Current decisions
 
@@ -80,13 +80,87 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 - The samples are `tools/eval/samples/`: 24 synthetic photos and their ground truth, written by `tools/eval/generate.py` from `tools/eval/vocabulary.json` and the OFL fonts in `tools/eval/fonts/`. Provenance and licences are in `tools/eval/samples/provenance.md`.
 - The eval needs `supabase/functions/.env`, so it runs on the owner's machine, not in CI.
 
+### App: the `photo_import` domain
+
+- The app side is the domain `app/lib/photo_import/`; its public surface is `app/lib/photo_import/photo_import.dart`, with internals under `app/lib/photo_import/src/` ([`structure.md`](structure.md)). It exports:
+  - `PhotoImportScreen`, the screen `deck`'s `photoImportProvider` builds;
+  - `ExtractionClient`, the seam to the function, `CandidateCard`, and `HttpExtractionClient`;
+  - `PhotoSource` and `CameraSession`, the seam to the camera and the photo library, and `DevicePhotoSource`;
+  - `JpegPhoto`, and the failures: `PhotoImportFailure` and its cases.
+- It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it.
+- The screen receives its client and photo source; it constructs neither.
+- The composition site, `app/lib/main.dart`, builds the client from the Supabase client `connectAccount` returns ([`account.md`](account.md)), without importing `supabase_flutter`:
+  - the URL is `extractCardsUrl` of the client's public PostgREST URL, which swaps its `/rest/v1` suffix for `/functions/v1/extract-cards`, as the Supabase client builds both from the project URL;
+  - the token is read from the client's current session at each request.
+- A build with no Supabase client gets no extraction client, and `photoImportProvider` stays null, which hides both photo buttons.
+
+#### Flow
+
+- **Capture** — a full-screen camera view in the dark theme:
+  - a page-frame guide, and the hint "단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요";
+  - a top chip "추가할 덱 · <name>" that opens a sheet of every deck and "새 덱";
+  - the album button bottom-left and the shutter in the centre.
+- **Extracting** — the photo's thumbnail, "카드를 찾고 있어요", an indeterminate bar, skeleton rows, and "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요":
+  - "취소", or leaving the screen, aborts the request;
+  - the skeleton rows shimmer, and hold still under reduce motion.
+- **Review** — "카드 n개를 찾았어요" and "눌러서 고치고, 뺄 카드는 체크를 끄세요 · <deck>":
+  - each candidate is a row with a checkbox and its front and back split by a divider;
+  - a tap on a side edits it in place, and a side left empty keeps its previous text;
+  - candidates with one card key on the photo are combined into one before review, their backs joined by `deck`'s merge-back rule;
+  - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));
+  - "다시 찍기" at the top right returns to the camera;
+  - "카드 n개 추가" counts the checked candidates not set to skip, and is disabled at 0.
+- **Saving** — one `DeckRepository.importCards` call. For a new deck, the name dialog asks for its name first. The screen then pops with the deck saved into, and the deck screens open that deck's card list.
+- Nothing is written before "카드 n개 추가": not the deck, not a card.
+
+#### Photo
+
+- The camera is `camera`'s back camera without audio, released while the app is in the background. The library is `image_picker`'s picker, asked for at most 2048 px per side, without full metadata so no photo-library permission is needed.
+- Every photo is decoded, turned upright by its EXIF orientation, scaled so its long side is at most 2048 px keeping its aspect ratio, and encoded as JPEG at quality 85, stepping down to 40 until it is at most 6 MiB. This runs on a background isolate with the pure-Dart `image` package.
+- A file `image` cannot decode, such as a HEIC photo, is `PhotoUnreadable`.
+
+#### Request and failures
+
+- `HttpExtractionClient` posts `{"image": <base64 JPEG>}` to `<SUPABASE_URL>/functions/v1/extract-cards` with the session's access token as `Authorization: Bearer`, through `package:http` with an abortable request. Without a session it sends nothing.
+- The answer is parsed at the boundary: a `200` must hold a non-empty `cards` list of two non-empty sides each.
+- Each failure is a `PhotoImportFailure`, shown in place of the screen with its ARB message:
+
+| Failure | When | Offers |
+|---|---|---|
+| `ExtractionOffline` | the request could not reach the server | retry, retake |
+| `PhotoRefused` | `413` or `415` | retake |
+| `NoCardsFound` | `422` | retake |
+| `DailyLimitReached` | `429` | close |
+| `ModelFailed` | `502` | retry, retake |
+| `SignInRequired` | `401`, or no session | close |
+| `ServiceFailed` | any other status, or a `200` outside the contract | retry, retake |
+| `PhotoUnreadable` | the photo cannot be decoded | retake |
+| `CameraDenied`, `CameraUnavailable` | the camera is refused or missing | shown in place of the preview; the album still works |
+
+- A `DeckFailure` while reading the deck or saving is shown in a snack bar, as the deck screens show one; `DeckDeleted` says the deck was deleted meanwhile.
+
+#### Permissions
+
+- `app/ios/Runner/Info.plist` holds `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` and `NSMicrophoneUsageDescription` in English, and `app/ios/Runner/ko.lproj/InfoPlist.strings` and `en.lproj/InfoPlist.strings` hold them in Korean and English. The microphone key is there because `camera`'s setup asks for it; the app never opens audio.
+- `app/android/app/src/main/AndroidManifest.xml` declares `CAMERA` and removes the `RECORD_AUDIO` that `camera_android_camerax` merges in.
+
+#### App tests
+
+- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client (`app/test/photo_import/fakes.dart`) over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, reduce motion, nothing written before adding, and the accessibility guidelines in both themes.
+- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
+- `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.
+- `app/test/photo_import/photo_test.dart` checks the downscaling: aspect ratio, long side, size limit and orientation.
+- `app/test/photo_import/permissions_test.dart` reads `Info.plist`, both `InfoPlist.strings`, the Xcode project and the Android manifest.
+- No test or CI job calls the deployed function.
+
 ## Rationale
 
 - [ADR 0013](adr/0013-extract-cards-function-and-eval.md) records the function's shape, the limit's mechanism, the retry model, and where the eval lives.
-- Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM.
+- Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 
 ## Open questions
 
+- On Android, the system may end the app while the photo picker is open; the picked photo is then lost and the user picks again. `image_picker`'s `retrieveLostData` could recover it.
 - Which model `CARD_MODEL` names. The eval has not run: it waits for the owner's `supabase/functions/.env`, so `docs/eval/` holds no report yet.
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.
 - `SUPABASE_SERVICE_ROLE_KEY` is Supabase's legacy key form. A project that disables legacy keys would need the function to read `SUPABASE_SECRET_KEYS` instead.

@@ -4,8 +4,8 @@ The structural rules of the app: what the unit is, what may reference what, and 
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)) and `sync` ([`sync.md`](sync.md)).
-- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)) and `photo_import` ([`ai-extraction.md`](ai-extraction.md)).
+- `sync` depends on `account` and `study` through their surfaces; `account` reaches `sync`, and `deck` reaches `study` and `account`, only through providers the composition site overrides. `photo_import` depends on `deck` through its surface, and `deck` reaches `photo_import` only through a provider the composition site overrides. The composition site is `app/lib/main.dart`.
 
 ### Boundaries and dependency direction
 

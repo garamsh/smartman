@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 
 import '../../shared/database.dart';
+import 'card_import.dart';
 import 'card_key.dart';
 import 'content.dart';
 import 'failure.dart';
@@ -226,6 +227,76 @@ class DeckRepository {
     await (_db.update(_db.cards)..where((card) => card.id.equals(id.value)))
         .write(_cardTombstone(_clock()));
   });
+
+  /// Saves [cards] as import cards into [target] in one transaction, creating
+  /// the deck first when the target is a new one. A card whose key collides
+  /// with a card already in the deck, or with one saved earlier in [cards],
+  /// does what its [ImportedCard.onDuplicate] says; no card is overwritten or
+  /// deleted.
+  Future<CardsImported> importCards(
+    ImportTarget target,
+    List<ImportedCard> cards,
+  ) => _guard(
+    () => _db.transaction(() async {
+      final deck = switch (target) {
+        ImportIntoDeck(:final deck) => await _getDeck(deck),
+        ImportIntoNewDeck(:final name) => await createDeck(name),
+      };
+      var added = 0;
+      var merged = 0;
+      for (final card in cards) {
+        final key = CardKey.fromFront(card.front);
+        final existing = await _findByKey(deck.id, key);
+        switch ((existing, card.onDuplicate)) {
+          case (null, _) || (_, DuplicateChoice.addNew):
+            final now = _clock();
+            await _db
+                .into(_db.cards)
+                .insert(
+                  CardRow(
+                    id: _newId(),
+                    deckId: deck.id.value,
+                    front: encodeContent([TextContent(card.front)]),
+                    back: encodeContent([TextContent(card.back)]),
+                    cardKey: key.value,
+                    source: CardSource.import.name,
+                    createdAt: now,
+                    updatedAt: now,
+                    dirty: true,
+                  ),
+                );
+            added++;
+          case (final existing?, DuplicateChoice.mergeBack):
+            if (mergeBack(existing.back, card.back) case final back?) {
+              await (_db.update(
+                _db.cards,
+              )..where((row) => row.id.equals(existing.id.value))).write(
+                CardsCompanion(
+                  back: Value(encodeContent(back)),
+                  updatedAt: Value(_clock()),
+                  dirty: const Value(true),
+                ),
+              );
+              merged++;
+            }
+          case (_?, DuplicateChoice.skip):
+            break;
+        }
+      }
+      return CardsImported(deck: deck, added: added, merged: merged);
+    }),
+  );
+
+  /// The deck, unless it was deleted; then [DeckDeleted].
+  Future<Deck> _getDeck(DeckId id) async {
+    final row =
+        await (_db.select(_db.decks)..where(
+              (deck) => deck.id.equals(id.value) & deck.deletedAt.isNull(),
+            ))
+            .getSingleOrNull();
+    if (row == null) throw DeckDeleted(id);
+    return _toDeck(row);
+  }
 
   static DecksCompanion _deckTombstone(DateTime at) => DecksCompanion(
     deletedAt: Value(at),

@@ -8,11 +8,21 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'package:smartman/account/account.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 
 import 'account/fake_account_service.dart';
 import 'sync/fake_sync_server.dart';
+
+/// An extraction client the test never calls.
+final class _NoExtraction implements ExtractionClient {
+  @override
+  Future<List<CandidateCard>?> extract(
+    JpegPhoto photo, {
+    required Future<void> cancel,
+  }) => throw UnimplementedError('not called');
+}
 
 void main() {
   late Scheduler scheduler;
@@ -20,8 +30,12 @@ void main() {
   setUpAll(() async => scheduler = await Scheduler.load());
 
   /// Composes the app over an in-memory database and theme storage holding
-  /// [themeMode] when given.
-  Future<void> pumpApp(WidgetTester tester, {String? themeMode}) async {
+  /// [themeMode] when given, extracting cards through [extraction].
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    String? themeMode,
+    ExtractionClient? extraction,
+  }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
     final themeStorage = (await tester.runAsync(
@@ -39,6 +53,7 @@ void main() {
         FakeAccountService(),
         FakeSyncServer(const UserId('00000000-0000-4000-8000-00000000000a')),
         themeStorage,
+        extraction,
       ),
     );
     await tester.pumpAndSettle();
@@ -76,6 +91,19 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('photo import is offered only with an extraction client', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    expect(find.text('New deck'), findsOneWidget);
+    expect(find.text('Create from photo'), findsNothing);
+    await unmountApp(tester);
+
+    await pumpApp(tester, extraction: _NoExtraction());
+    expect(find.text('Create from photo'), findsOneWidget);
+    await unmountApp(tester);
+  });
 
   testWidgets('opens on an empty deck list', (tester) async {
     await pumpApp(tester);

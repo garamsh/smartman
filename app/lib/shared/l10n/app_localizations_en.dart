@@ -387,4 +387,127 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncRetry => 'Try again';
+
+  @override
+  String get photoCaptureHint =>
+      'Fit one page of a vocabulary book or textbook inside the frame';
+
+  @override
+  String photoTarget(String name) {
+    return 'Add to · $name';
+  }
+
+  @override
+  String get photoAlbum => 'Choose from album';
+
+  @override
+  String get photoShutter => 'Take photo';
+
+  @override
+  String get cameraDenied =>
+      'The app isn\'t allowed to use the camera. Allow it in Settings, or choose a photo from your album.';
+
+  @override
+  String get cameraUnavailable =>
+      'Couldn\'t open the camera. Choose a photo from your album.';
+
+  @override
+  String get photoThumbnail => 'Your photo';
+
+  @override
+  String get extractingTitle => 'Finding cards';
+
+  @override
+  String get extractingNote =>
+      'Your photo is used only to make cards and isn\'t kept on the server';
+
+  @override
+  String reviewTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Found $count cards',
+      one: 'Found 1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reviewHint(String deck) {
+    return 'Tap to edit, and uncheck the cards to leave out · $deck';
+  }
+
+  @override
+  String reviewDuplicates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards already in the deck',
+      one: '1 card already in the deck',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get includeCard => 'Include';
+
+  @override
+  String get duplicateSkip => 'Skip';
+
+  @override
+  String get duplicateMergeBack => 'Merge back';
+
+  @override
+  String get duplicateAddNew => 'Add as new';
+
+  @override
+  String get retake => 'Retake';
+
+  @override
+  String get retry => 'Try again';
+
+  @override
+  String addCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add $count cards',
+      one: 'Add 1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get extractionOffline =>
+      'You\'re offline. Check your connection and try again.';
+
+  @override
+  String get photoRefused =>
+      'This photo can\'t be sent. Retake it or choose another.';
+
+  @override
+  String get noCardsFound => 'No cards found. Try a brighter, straighter photo';
+
+  @override
+  String get dailyLimitReached =>
+      'You\'ve reached today\'s limit for photos. Try again tomorrow.';
+
+  @override
+  String get modelFailed =>
+      'Couldn\'t read the cards. Please try again in a moment';
+
+  @override
+  String get signInRequired =>
+      'You need to sign in. Sign in again from the account screen.';
+
+  @override
+  String get serviceFailed =>
+      'Can\'t make cards from photos right now. Please try again in a moment.';
+
+  @override
+  String get photoUnreadable =>
+      'Couldn\'t read this photo. Choose another one.';
+
+  @override
+  String get deckDeleted => 'This deck was deleted. Choose another deck.';
 }
