@@ -6,11 +6,12 @@ import '../theme.dart';
 
 /// What a button does, which decides how prominent it is.
 enum AppButtonVariant {
-  /// The screen's or the sheet's one primary action: an ink fill.
+  /// The screen's or the sheet's one primary action: the navy fill, inverted
+  /// in the dark theme.
   primary,
 
-  /// Starts studying: a "Know" green fill, as the approved deck screens show.
-  study,
+  /// The action on the today card: a white fill with a navy label.
+  onHero,
 
   /// An action beside the primary one: an outline on the surface.
   secondary,
@@ -46,9 +47,13 @@ class AppButton extends StatelessWidget {
     this.size = AppButtonSize.regular,
     this.loading = false,
     this.loadingLabel,
+    this.icon,
   });
 
   final String label;
+
+  /// An icon before the label.
+  final IconData? icon;
 
   /// Null disables the button.
   final VoidCallback? onPressed;
@@ -62,7 +67,7 @@ class AppButton extends StatelessWidget {
 
   bool get _filled => switch (variant) {
     AppButtonVariant.primary ||
-    AppButtonVariant.study ||
+    AppButtonVariant.onHero ||
     AppButtonVariant.destructiveFinal => true,
     AppButtonVariant.secondary ||
     AppButtonVariant.destructive ||
@@ -89,8 +94,8 @@ class AppButton extends StatelessWidget {
             onPressed();
           };
     final (fill, onFill) = switch (variant) {
-      AppButtonVariant.primary => (colors.ink, colors.surface),
-      AppButtonVariant.study => (colors.know, colors.onKnow),
+      AppButtonVariant.primary => (colors.ink, colors.onPrimary),
+      AppButtonVariant.onHero => (colors.onHero, colors.brand),
       AppButtonVariant.destructiveFinal => (
         colors.dontKnowText,
         colors.onDontKnowText,
@@ -108,10 +113,20 @@ class AppButton extends StatelessWidget {
               semanticsLabel: loadingLabel ?? label,
             ),
           )
-        : Text(label, textAlign: TextAlign.center);
+        : switch (icon) {
+            final icon? => Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: AppSpace.s8,
+              children: [
+                Icon(icon, size: AppSize.smallIcon),
+                Flexible(child: Text(label, textAlign: TextAlign.center)),
+              ],
+            ),
+            null => Text(label, textAlign: TextAlign.center),
+          };
     return switch (variant) {
       AppButtonVariant.primary ||
-      AppButtonVariant.study ||
+      AppButtonVariant.onHero ||
       AppButtonVariant.destructiveFinal => FilledButton(
         style: FilledButton.styleFrom(
           minimumSize: minimumSize,

@@ -154,8 +154,10 @@ describe("the deck list", () => {
     await render(Decks, {});
 
     expect(
-      screen.getByText("아직 덱이 없습니다. 휴대폰 앱에서 덱을 만들면 여기에 나타나요."),
+      screen.getByText("아직 덱이 없어요. 휴대폰 앱에서 덱을 만들면 여기에 나타나요."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "모두 학습" })).toBeDisabled();
+    // With nothing to study, the today card says it is done and offers no session.
+    expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "모두 학습" })).not.toBeInTheDocument();
   });
 });

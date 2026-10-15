@@ -13,12 +13,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appTitle => 'smartman';
 
   @override
-  String get decksTitle => '덱';
-
-  @override
-  String get noDecks => '아직 덱이 없어요. 새 덱을 만들어 시작해 보세요.';
-
-  @override
   String get newDeck => '새 덱';
 
   @override
@@ -47,7 +41,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get deckName => '이름';
+  String get deckName => '덱 이름';
 
   @override
   String get deckNameRequired => '이름을 입력하세요';
@@ -146,7 +140,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String studyProgress(int answered, int total) {
-    return '$answered / $total';
+    return '$answered/$total';
   }
 
   @override
@@ -194,33 +188,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get answerChanged => '수정됨';
 
   @override
-  String get sessionSummaryTitle => '학습 끝';
+  String get sessionSummaryTitle => '오늘 할 카드를 마쳤어요';
 
   @override
   String get nothingToStudy => '지금 학습할 카드가 없어요.';
-
-  @override
-  String cardsStudied(int count) {
-    return '학습한 카드: $count장';
-  }
-
-  @override
-  String knowCount(int count) {
-    return '안다: $count번';
-  }
-
-  @override
-  String dontKnowCount(int count) {
-    return '모른다: $count번';
-  }
-
-  @override
-  String timeSpent(int minutes, int seconds) {
-    return '걸린 시간: $minutes분 $seconds초';
-  }
-
-  @override
-  String get done => '완료';
 
   @override
   String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
@@ -235,13 +206,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountTitle => '계정';
 
   @override
-  String get welcomeBody => '밀어서 답하고, 잊을 때쯤 다시 보여 주는 암기 카드.';
+  String get welcomeBody => '밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드';
 
   @override
-  String get signInWithGoogle => 'Google로 로그인';
+  String get signInWithGoogle => 'Google로 계속하기';
 
   @override
-  String get signInWithAppleSoon => 'Apple로 로그인 (준비 중)';
+  String get signInWithAppleSoon => 'Apple로 계속하기 · 준비 중';
 
   @override
   String get signingIn => '로그인 중';
@@ -280,8 +251,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get themeDark => '다크';
 
   @override
-  String todayBreakdown(int review, int fresh) {
-    return '복습 $review · 새 카드 $fresh';
+  String todayBreakdown(int review, int fresh, int minutes) {
+    return '복습 $review · 새 카드 $fresh · 약 $minutes분';
   }
 
   @override
@@ -309,16 +280,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addFromPhoto => '사진으로 추가';
 
   @override
-  String deckSummary(int cards, int review, int fresh) {
-    return '카드 $cards장 · 오늘 복습 $review · 새 카드 $fresh';
-  }
-
-  @override
   String get backlogPaused => '밀린 복습을 마칠 때까지 새 카드는 쉬어요.';
 
   @override
   String studyCount(int count) {
-    return '학습 · $count장';
+    return '학습하기 · $count장';
   }
 
   @override
@@ -508,7 +474,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get publishNeedsNetwork => '인터넷에 연결되면 바꿀 수 있어요';
 
   @override
-  String get publicChip => '공개됨';
+  String get publicChip => '공개';
 
   @override
   String get searchPublicDecks => '덱 이름이나 설명으로 검색';
@@ -663,4 +629,99 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unpublished => '덱을 비공개로 전환했어요';
+
+  @override
+  String get todayTitle => '오늘 할 카드';
+
+  @override
+  String get todayCountUnit => '장';
+
+  @override
+  String get emptyHomeTitle => '첫 덱을 만들어 볼까요?';
+
+  @override
+  String get emptyHomeBody => '단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.';
+
+  @override
+  String get createManually => '직접 만들기';
+
+  @override
+  String get browsePublicDecks => '공개 덱 둘러보기';
+
+  @override
+  String get newDeckTitle => '새 덱 만들기';
+
+  @override
+  String get newDeckBody => '이름은 나중에도 바꿀 수 있어요.';
+
+  @override
+  String statCards(int count) {
+    return '카드 $count';
+  }
+
+  @override
+  String statReview(int count) {
+    return '복습 $count';
+  }
+
+  @override
+  String statNew(int count) {
+    return '새 카드 $count';
+  }
+
+  @override
+  String get swipeDontKnowHint => '모른다';
+
+  @override
+  String get swipeKnowHint => '안다';
+
+  @override
+  String get nextReviewToday => '다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.';
+
+  @override
+  String get nextReviewTomorrow => '다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.';
+
+  @override
+  String nextReviewInDays(int days) {
+    return '다음 복습은 $days일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.';
+  }
+
+  @override
+  String get summaryStudied => '학습한 카드';
+
+  @override
+  String get timeSpentLabel => '걸린 시간';
+
+  @override
+  String timeSpentValue(int minutes, int seconds) {
+    return '$minutes분 $seconds초';
+  }
+
+  @override
+  String get backToDecks => '덱으로 돌아가기';
+
+  @override
+  String consentNotice(String terms, String privacy) {
+    return '계속하면 $terms과 $privacy에 동의하는 것으로 봐요.';
+  }
+
+  @override
+  String get termsOfService => '이용약관';
+
+  @override
+  String get privacyPolicy => '개인정보 처리방침';
+
+  @override
+  String get comingSoonBody => '아직 준비 중이에요. 곧 열어 드릴게요.';
+
+  @override
+  String get linkNotOpened => '링크를 열지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String appVersion(String version) {
+    return '버전 $version';
+  }
+
+  @override
+  String get todayDone => '오늘 할 카드를 다 했어요';
 }

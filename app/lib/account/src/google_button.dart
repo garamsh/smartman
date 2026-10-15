@@ -20,7 +20,7 @@ class GoogleSignInButton extends StatelessWidget {
     final style = GoogleButtonStyle.of(context);
     final spacing = GoogleButtonStyle.spacing(Theme.of(context).platform);
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppRadius.control),
+      borderRadius: BorderRadius.circular(AppRadius.button),
       side: BorderSide(color: style.stroke),
     );
     return Semantics(

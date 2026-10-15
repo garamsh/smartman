@@ -41,16 +41,20 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 const _phone = Size(780, 1688);
 const _density = 2.0;
 
-/// Loads the bundled font and Material's icons, which tests otherwise draw
-/// as boxes.
+/// Loads the bundled font, Lucide's icons and Material's, which tests
+/// otherwise draw as boxes.
 Future<void> _loadFonts() async {
   Future<ByteData> bytes(String path) async =>
       ByteData.sublistView(await File(path).readAsBytes());
-  final plex = FontLoader(appFontFamily);
-  for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
-    plex.addFont(bytes('assets/fonts/IBMPlexSansKR-$weight.ttf'));
+  final pretendard = FontLoader(appFontFamily);
+  for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) {
+    pretendard.addFont(bytes('assets/fonts/Pretendard-$weight.otf'));
   }
-  await plex.load();
+  await pretendard.load();
+  await (FontLoader('packages/lucide_icons_flutter/Lucide')..addFont(
+        rootBundle.load('packages/lucide_icons_flutter/assets/lucide.ttf'),
+      ))
+      .load();
   await (FontLoader('MaterialIcons')..addFont(
         bytes(
           '${_flutterRoot()}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
@@ -84,10 +88,23 @@ void main() {
   final ko = lookupAppLocalizations(const Locale('ko'));
 
   for (final mode in ['light', 'dark']) {
-    Future<void> shot(WidgetTester tester, String name) => expectLater(
-      find.byType(MaterialApp).first,
-      matchesGoldenFile('../../build/screenshots/$mode/$name.png'),
-    );
+    /// Decodes the images on screen, which a test otherwise draws blank.
+    Future<void> loadImages(WidgetTester tester) async {
+      await tester.runAsync(() async {
+        for (final element in find.byType(Image).evaluate()) {
+          await precacheImage((element.widget as Image).image, element);
+        }
+      });
+      await tester.pump();
+    }
+
+    Future<void> shot(WidgetTester tester, String name) async {
+      await loadImages(tester);
+      await expectLater(
+        find.byType(MaterialApp).first,
+        matchesGoldenFile('../../build/screenshots/$mode/$name.png'),
+      );
+    }
 
     void phone(WidgetTester tester) {
       // Release builds draw neither the debug banner nor flat shadows;
@@ -110,16 +127,6 @@ void main() {
 
     Future<void> tap(WidgetTester tester, Finder finder) async {
       await tester.tap(finder);
-      await tester.pumpAndSettle();
-    }
-
-    /// Decodes the images on screen, which a test otherwise draws blank.
-    Future<void> loadImages(WidgetTester tester) async {
-      await tester.runAsync(() async {
-        for (final element in find.byType(Image).evaluate()) {
-          await precacheImage((element.widget as Image).image, element);
-        }
-      });
       await tester.pumpAndSettle();
     }
 
@@ -146,13 +153,15 @@ void main() {
           account,
           server,
           storage,
-          null,
-          null,
+          // The first-run home shows every way to start.
+          FakeExtractionClient(),
+          FakeSharingServer(),
           FakeReachability(),
+          const LegalLinks(),
+          '1.0.0',
         ),
       );
       await tester.pumpAndSettle();
-      await loadImages(tester);
       await shot(tester, '01-sign-in');
 
       await tap(tester, find.text(ko.signInWithGoogle));
@@ -171,7 +180,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await tap(tester, find.text(ko.newDeck));
+      await tap(tester, find.text(ko.createManually));
       await shot(tester, '03-new-deck-sheet');
       await enter(ko.deckName, '영단어 기본');
       await tap(tester, find.text(ko.create));
@@ -248,8 +257,14 @@ void main() {
       await shot(tester, '14-whole-card-sheet');
       await dismissSheet(tester);
       await tap(tester, find.byTooltip(ko.close));
+      // The engine schedules the answers off the test's clock; the summary
+      // names the next review once it has.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 1)),
+      );
+      await tester.pumpAndSettle();
       await shot(tester, '15-study-summary');
-      await tap(tester, find.text(ko.done));
+      await tap(tester, find.text(ko.backToDecks));
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 
@@ -261,6 +276,13 @@ void main() {
 
       await tap(tester, find.byTooltip(ko.account));
       await shot(tester, '18-account');
+      await tester.ensureVisible(find.text(ko.termsOfService));
+      await tester.pumpAndSettle();
+      await shot(tester, '18b-account-footer');
+      await tap(tester, find.text(ko.termsOfService));
+      await shot(tester, '18c-coming-soon');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       server.failure = const SyncOffline('no route to host');
       await tester.tap(find.text(ko.signOut));
       await tester.pump();
@@ -421,6 +443,9 @@ void main() {
               ),
             ),
             accountScreenProvider.overrideWithValue(Scaffold.new),
+            accountAvatarProvider.overrideWithValue(
+              () => const SizedBox.square(dimension: 32),
+            ),
           ],
           child: MaterialApp(
             theme: lightTheme,

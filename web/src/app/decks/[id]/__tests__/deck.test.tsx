@@ -15,6 +15,12 @@ vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const open = (id: string) => render(Deck, { params: Promise.resolve({ id }) });
 
+/** The deck's count pills, in order. */
+const pills = () =>
+  within(screen.getByRole("list", { name: "개수" }))
+    .getAllByRole("listitem")
+    .map((pill) => pill.textContent);
+
 /** The card rows on screen, each as "front | back". */
 const rows = () =>
   within(screen.getByRole("region", { name: "카드" }))
@@ -51,8 +57,8 @@ describe("the deck page", () => {
     await open("d-fr");
 
     expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
-    expect(screen.getByText("카드 3장 · 오늘 복습 1 · 새 카드 1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "학습 · 2장" })).toHaveAttribute(
+    expect(pills()).toEqual(["카드 3", "복습 1", "새 카드 1"]);
+    expect(screen.getByRole("link", { name: "학습하기 · 2장" })).toHaveAttribute(
       "href",
       "/study?decks=d-fr",
     );
@@ -63,7 +69,7 @@ describe("the deck page", () => {
     const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
     // Control: one card due every four days and one every day are not a backlog.
     await open("d-fr");
-    expect(screen.getByText("카드 3장 · 오늘 복습 1 · 새 카드 1")).toBeInTheDocument();
+    expect(pills()).toEqual(["카드 3", "복습 1", "새 카드 1"]);
     expect(screen.queryByText(paused)).not.toBeInTheDocument();
     cleanup();
 
@@ -83,9 +89,9 @@ describe("the deck page", () => {
     );
     await open("d-fr");
 
-    expect(screen.getByText("카드 7장 · 오늘 복습 5 · 새 카드 0")).toBeInTheDocument();
+    expect(pills()).toEqual(["카드 7", "복습 5", "새 카드 0"]);
     expect(screen.getByText(paused)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "학습 · 5장" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "학습하기 · 5장" })).toBeInTheDocument();
   });
 
   it("keeps the cards whose front or back holds the search, ignoring case", async () => {
@@ -99,7 +105,7 @@ describe("the deck page", () => {
     await user.type(screen.getByRole("searchbox", { name: "검색" }), "zèbre");
     expect(rows()).toEqual([]);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "찾는 카드가 없습니다. 다른 말로 검색해 보세요.",
+      "찾는 카드가 없어요. 다른 말로 검색해 보세요.",
     );
   });
 

@@ -32,24 +32,37 @@ final class TodayPending extends TodayCount {
   const TodayPending();
 }
 
-/// [review] cards are due and [fresh] cards are new.
+/// [review] cards are due and [fresh] cards are new, and the user takes
+/// [perCard] over one card.
 final class TodayCounted extends TodayCount {
-  const TodayCounted({required this.review, required this.fresh})
-    : backlog = false;
+  const TodayCounted({
+    required this.review,
+    required this.fresh,
+    this.perCard = defaultPerCard,
+  }) : backlog = false;
 
   /// So many reviews are due that new cards pause until they are done.
-  const TodayCounted.backlog({required this.review})
-    : fresh = 0,
-      backlog = true;
+  const TodayCounted.backlog({
+    required this.review,
+    this.perCard = defaultPerCard,
+  }) : fresh = 0,
+       backlog = true;
 
   final int review;
   final int fresh;
+  final Duration perCard;
+
+  /// The time one card is taken to need while the user's own pace is unknown.
+  static const defaultPerCard = Duration(seconds: 10);
 
   /// Whether new cards pause for a backlog of reviews.
   final bool backlog;
 
   /// The size of the session: every due card and every new one.
   int get total => review + fresh;
+
+  /// The whole minutes the session takes at [perCard], rounded up.
+  int get minutes => (total * perCard.inMilliseconds / 60000).ceil();
 }
 
 /// The count could not be read; [message] says why, for the user.
@@ -86,6 +99,15 @@ final photoImportProvider = Provider<Widget Function(DeckId? deck)?>(
 final accountScreenProvider = Provider<Widget Function()>(
   (ref) => throw UnimplementedError(
     'accountScreenProvider is overridden at the composition site',
+  ),
+);
+
+/// Builds the signed-in account's avatar, at the size of the home screen's
+/// top bar. The composition site overrides it, as it does
+/// [accountScreenProvider].
+final accountAvatarProvider = Provider<Widget Function()>(
+  (ref) => throw UnimplementedError(
+    'accountAvatarProvider is overridden at the composition site',
   ),
 );
 

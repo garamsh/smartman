@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -14,12 +15,14 @@ import { SessionSummary } from "./session-summary";
 import { ShortcutHelp } from "./shortcut-help";
 
 const button =
-  "flex min-h-13 items-center justify-center gap-2 rounded-row px-5 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+  "flex min-h-13 items-center justify-center gap-2 rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+
+const quiet = `${button} border border-outline bg-surface text-ink`;
 
 /** A key hint beside a control's name, left out of the name screen readers announce. */
 function Hint({ children }: { children: string }) {
   return (
-    <kbd aria-hidden className="font-sans text-sm font-normal opacity-80">
+    <kbd aria-hidden className="font-sans text-caption font-normal opacity-80">
       {children}
     </kbd>
   );
@@ -156,20 +159,26 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
 
   const studying = view.kind === "studying";
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-4 px-5 py-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-study flex-col gap-4 px-5 py-6">
       <header className="flex items-center gap-4">
         {studying ? (
           <button
             type="button"
             onClick={leave}
+            aria-label="끝내기"
             aria-keyshortcuts="Escape"
-            className={`${button} border border-hairline bg-surface text-ink`}
+            title="끝내기 (Esc)"
+            className="flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
-            끝내기 <Hint>Esc</Hint>
+            <X aria-hidden className="size-6" strokeWidth={2} />
           </button>
         ) : (
-          <Link href="/" className={`${button} border border-hairline bg-surface text-ink`}>
-            덱으로
+          <Link
+            href="/"
+            aria-label="덱으로"
+            className="flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <X aria-hidden className="size-6" strokeWidth={2} />
           </Link>
         )}
         <div className="flex flex-1 items-center gap-3">
@@ -183,14 +192,14 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             className="h-2 flex-1 overflow-hidden rounded-full bg-hairline"
           >
             <div
-              className="h-full rounded-full bg-know transition-[width]"
+              className="h-full rounded-full bg-ink transition-[width]"
               style={{
                 width: `${String(view.total === 0 ? 0 : (100 * view.answered) / view.total)}%`,
               }}
             />
           </div>
-          <span aria-hidden className="text-sm text-muted tabular-nums">
-            {view.answered} / {view.total}
+          <span aria-hidden className="text-secondary font-bold text-ink tabular-nums">
+            {view.answered}/{view.total}
           </span>
         </div>
         <button
@@ -200,7 +209,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             setHelpOpen(true);
           }}
           aria-keyshortcuts="?"
-          className={`${button} border border-hairline bg-surface text-ink`}
+          className={quiet}
         >
           단축키 <Hint>?</Hint>
         </button>
@@ -214,7 +223,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             onClick={() => {
               writes.retry();
             }}
-            className={`${button} self-start bg-ink text-surface`}
+            className={`${button} self-start bg-ink text-on-primary`}
           >
             다시 시도
           </button>
@@ -227,18 +236,15 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
         <>
           <section
             aria-label="현재 카드"
-            className="grid min-h-52 grid-cols-1 gap-6 rounded-card bg-surface p-6 sm:grid-cols-2"
+            className="grid min-h-52 grid-cols-1 rounded-card bg-surface shadow-raised sm:grid-cols-[1fr_auto_1fr]"
           >
-            <div aria-label="문제" role="group">
-              <CardSide blocks={view.current.front} />
+            <div aria-label="문제" role="group" className="flex items-center justify-center p-6">
+              <CardSide blocks={view.current.front} size="question" />
             </div>
-            <div
-              aria-label="답"
-              role="group"
-              className="border-t border-hairline pt-6 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
-            >
+            <span aria-hidden className="mx-7 h-px bg-hairline sm:mx-0 sm:my-7 sm:h-auto sm:w-px" />
+            <div aria-label="답" role="group" className="flex items-center justify-center p-6">
               {revealed ? (
-                <CardSide blocks={view.current.back} />
+                <CardSide blocks={view.current.back} size="answer" />
               ) : (
                 <p className="text-muted">답이 가려져 있어요.</p>
               )}
@@ -251,8 +257,9 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
                 answer("dontKnow");
               }}
               aria-keyshortcuts="ArrowLeft J"
-              className={`${button} bg-dont-know-text text-on-dont-know-text`}
+              className={quiet}
             >
+              <ChevronLeft aria-hidden className="size-5 text-dont-know-text" strokeWidth={2} />
               모른다 <Hint>← J</Hint>
             </button>
             <button
@@ -262,7 +269,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
               }}
               aria-keyshortcuts="Space"
               aria-pressed={revealed}
-              className={`${button} border border-hairline bg-surface text-ink`}
+              className={quiet}
             >
               답 보기 <Hint>Space</Hint>
             </button>
@@ -272,9 +279,10 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
                 answer("know");
               }}
               aria-keyshortcuts="ArrowRight K"
-              className={`${button} bg-know text-on-know`}
+              className={quiet}
             >
               안다 <Hint>→ K</Hint>
+              <ChevronRight aria-hidden className="size-5 text-know" strokeWidth={2} />
             </button>
           </div>
         </>
@@ -287,7 +295,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           type="button"
           onClick={toggleLast}
           aria-keyshortcuts="Z"
-          className={`${button} self-center border border-hairline bg-surface text-ink`}
+          className={`${quiet} self-center`}
         >
           마지막 답 바꾸기 <Hint>Z</Hint>
         </button>

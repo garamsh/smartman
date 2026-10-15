@@ -11,7 +11,7 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 
 - `app/` — the Flutter application (iOS and Android).
 - `app/config/` — the app's configuration per environment, passed with `--dart-define-from-file`; only `dev.json` exists. Its values are public; a Supabase secret or service-role key never goes there.
-- `app/assets/fonts/` — the app's font, IBM Plex Sans KR (Regular, Medium, SemiBold, Bold), bundled under the SIL Open Font License 1.1 in `app/assets/fonts/OFL.txt`; the app downloads no font at run time. The files are those of `ofl/ibmplexsanskr/` in google/fonts at commit `2aa273e00174c62d5de0a8c4365299e26d0ecff2`. No bot proposes their update; the PM decides when to fetch a newer commit.
+- `app/assets/fonts/` — the app's and the web app's font, Pretendard 1.3.9 (Regular, Medium, SemiBold, Bold, ExtraBold), bundled under the SIL Open Font License 1.1 in `app/assets/fonts/OFL.txt`; neither downloads a font at run time. The files are `public/static/*.otf` of `Pretendard-1.3.9.zip` from the v1.3.9 release of github.com/orioncactus/pretendard (SHA-256 `04be351a74d6bf7d60c480a3087e51d185485d35a52023142af1df19eb8c428a`), each byte-identical to the npm package `pretendard@1.3.9`. No bot proposes their update; the PM moves them by the same verification.
 - `app/rust/` — the flutter_rust_bridge crate through which the app calls the engine.
 - `engine/` — the Rust crate that schedules reviews with FSRS.
 - `engine-wasm/` — the engine as WebAssembly for the web app; its generated module, committed, is in `engine-wasm/pkg/`.
@@ -62,7 +62,7 @@ npm ci
 npm run dev
 ```
 
-- `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; both are public, and the dev project's are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `app/config/dev.json`. Git ignores `.env.local`.
+- `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; both are public, and the dev project's are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `app/config/dev.json`. `NEXT_PUBLIC_TERMS_URL` and `NEXT_PUBLIC_PRIVACY_URL` are optional, as `TERMS_URL` and `PRIVACY_URL` are in `app/config/dev.json`: empty, the legal links open a page saying the document is coming. Git ignores `.env.local`.
 - Google sign-in returns to `<origin>/auth/callback`, which must be among Supabase Auth's allowed redirect URLs; only the owner changes that list.
 
 The image, built from the repository root:

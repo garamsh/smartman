@@ -2,10 +2,6 @@
   "@@locale": "ko",
   "appTitle": "smartman",
   "@appTitle": {"description": "The app's name, shown by the operating system."},
-  "decksTitle": "덱",
-  "@decksTitle": {"description": "Title of the deck list screen."},
-  "noDecks": "아직 덱이 없어요. 새 덱을 만들어 시작해 보세요.",
-  "@noDecks": {"description": "Shown when there is no deck."},
   "newDeck": "새 덱",
   "@newDeck": {"description": "Button and dialog title for creating a deck."},
   "deckActions": "덱 작업",
@@ -24,7 +20,7 @@
     "description": "Body of the deck deletion confirmation, naming how many cards go with the deck.",
     "placeholders": {"count": {"type": "int"}}
   },
-  "deckName": "이름",
+  "deckName": "덱 이름",
   "@deckName": {"description": "Label of the deck name field."},
   "deckNameRequired": "이름을 입력하세요",
   "@deckNameRequired": {"description": "Error shown when a deck name is empty."},
@@ -96,7 +92,7 @@
   "@dontKnow": {"description": "Answer: the user did not know the card. Shown on the current card while it is dragged left, and the name of its screen-reader action."},
   "close": "닫기",
   "@close": {"description": "Label of the study screen's close button."},
-  "studyProgress": "{answered} / {total}",
+  "studyProgress": "{answered}/{total}",
   "@studyProgress": {
     "description": "Study screen top bar: cards answered so far out of the cards in the session.",
     "placeholders": {"answered": {"type": "int"}, "total": {"type": "int"}}
@@ -131,32 +127,10 @@
   "@showWholeCard": {"description": "Accessibility hint of long-pressing a card answered earlier: it opens the whole card."},
   "answerChanged": "수정됨",
   "@answerChanged": {"description": "Small label on a card answered earlier whose answer differs from the one first given."},
-  "sessionSummaryTitle": "학습 끝",
+  "sessionSummaryTitle": "오늘 할 카드를 마쳤어요",
   "@sessionSummaryTitle": {"description": "Heading of the end-of-session summary."},
   "nothingToStudy": "지금 학습할 카드가 없어요.",
   "@nothingToStudy": {"description": "Shown in the summary when the deck had nothing due and no new card."},
-  "cardsStudied": "학습한 카드: {count}장",
-  "@cardsStudied": {
-    "description": "Summary line: distinct cards answered in the session.",
-    "placeholders": {"count": {"type": "int"}}
-  },
-  "knowCount": "안다: {count}번",
-  "@knowCount": {
-    "description": "Summary line: how many answers stand as Know.",
-    "placeholders": {"count": {"type": "int"}}
-  },
-  "dontKnowCount": "모른다: {count}번",
-  "@dontKnowCount": {
-    "description": "Summary line: how many answers stand as Don't know.",
-    "placeholders": {"count": {"type": "int"}}
-  },
-  "timeSpent": "걸린 시간: {minutes}분 {seconds}초",
-  "@timeSpent": {
-    "description": "Summary line: time from the first card to the end of the session.",
-    "placeholders": {"minutes": {"type": "int"}, "seconds": {"type": "int"}}
-  },
-  "done": "완료",
-  "@done": {"description": "Closes the session summary."},
   "answerNotSaved": "답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.",
   "@answerNotSaved": {"description": "Shown when an answer could not be written to the local database."},
   "schedulingFailure": "이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.",
@@ -165,11 +139,11 @@
   "@account": {"description": "Label of the home screen button that opens the account screen."},
   "accountTitle": "계정",
   "@accountTitle": {"description": "Title of the account screen."},
-  "welcomeBody": "밀어서 답하고, 잊을 때쯤 다시 보여 주는 암기 카드.",
-  "@welcomeBody": {"description": "Sign-in screen line under the app name, saying what the app does."},
-  "signInWithGoogle": "Google로 로그인",
+  "welcomeBody": "밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드",
+  "@welcomeBody": {"description": "Sign-in screen line under the logo, saying what the app does, in two lines."},
+  "signInWithGoogle": "Google로 계속하기",
   "@signInWithGoogle": {"description": "Button that opens Google's account picker to sign in."},
-  "signInWithAppleSoon": "Apple로 로그인 (준비 중)",
+  "signInWithAppleSoon": "Apple로 계속하기 · 준비 중",
   "@signInWithAppleSoon": {"description": "Disabled sign-in screen button holding the place of Apple sign-in, which is not available yet."},
   "signingIn": "로그인 중",
   "@signingIn": {"description": "Accessible label of the progress indicator while signing in."},
@@ -195,10 +169,10 @@
   "@themeLight": {"description": "Theme choice: always light."},
   "themeDark": "다크",
   "@themeDark": {"description": "Theme choice: always dark."},
-  "todayBreakdown": "복습 {review} · 새 카드 {fresh}",
+  "todayBreakdown": "복습 {review} · 새 카드 {fresh} · 약 {minutes}분",
   "@todayBreakdown": {
-    "description": "Line under the today count: how many of the cards are due reviews and how many are new.",
-    "placeholders": {"review": {"type": "int"}, "fresh": {"type": "int"}}
+    "description": "Today card line under the count: due reviews, new cards, and the minutes the session takes at the user's pace.",
+    "placeholders": {"review": {"type": "int"}, "fresh": {"type": "int"}, "minutes": {"type": "int"}}
   },
   "myDecks": "내 덱 {count}",
   "@myDecks": {
@@ -221,18 +195,13 @@
   "@createFromPhoto": {"description": "Deck list bottom-bar button that creates a deck from a photo."},
   "addFromPhoto": "사진으로 추가",
   "@addFromPhoto": {"description": "Card list bottom-bar button that adds cards from a photo."},
-  "deckSummary": "카드 {cards}장 · 오늘 복습 {review} · 새 카드 {fresh}",
-  "@deckSummary": {
-    "description": "Line under a deck name: its cards, and how many due reviews and new cards a session would study now.",
-    "placeholders": {"cards": {"type": "int"}, "review": {"type": "int"}, "fresh": {"type": "int"}}
-  },
   "backlogPaused": "밀린 복습을 마칠 때까지 새 카드는 쉬어요.",
   "@backlogPaused": {
     "description": "Sentence under the today count while so many reviews are due that a session takes no new card."
   },
-  "studyCount": "학습 · {count}장",
+  "studyCount": "학습하기 · {count}장",
   "@studyCount": {
-    "description": "Card list button that studies the deck, with how many cards the session would study.",
+    "description": "Deck screen button that studies the deck, with how many cards the session would study.",
     "placeholders": {"count": {"type": "int"}}
   },
   "searchCards": "검색",
@@ -366,8 +335,8 @@
   "@unpublish": {"description": "Deck menu item that makes a public deck private."},
   "publishNeedsNetwork": "인터넷에 연결되면 바꿀 수 있어요",
   "@publishNeedsNetwork": {"description": "Why publishing is disabled: the device is offline."},
-  "publicChip": "공개됨",
-  "@publicChip": {"description": "Chip on a deck others can find."},
+  "publicChip": "공개",
+  "@publicChip": {"description": "Chip beside a deck the user has published."},
   "searchPublicDecks": "덱 이름이나 설명으로 검색",
   "@searchPublicDecks": {"description": "Hint of the search field on the browse screen."},
   "sortNewest": "최신순",
@@ -479,5 +448,80 @@
   "published": "덱을 공개했어요",
   "@published": {"description": "After a deck was published."},
   "unpublished": "덱을 비공개로 전환했어요",
-  "@unpublished": {"description": "After a deck was made private."}
+  "@unpublished": {"description": "After a deck was made private."},
+  "todayTitle": "오늘 할 카드",
+  "@todayTitle": {"description": "Today card's heading on the home screen, above the count."},
+  "todayCountUnit": "장",
+  "@todayCountUnit": {"description": "Unit after the large count on the today card: cards."},
+  "emptyHomeTitle": "첫 덱을 만들어 볼까요?",
+  "@emptyHomeTitle": {"description": "Home screen heading before the user has any deck."},
+  "emptyHomeBody": "단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.",
+  "@emptyHomeBody": {"description": "Home screen line under the first-deck heading."},
+  "createManually": "직접 만들기",
+  "@createManually": {"description": "Empty home screen button that opens the new-deck sheet."},
+  "browsePublicDecks": "공개 덱 둘러보기",
+  "@browsePublicDecks": {"description": "Empty home screen button that opens the public decks."},
+  "newDeckTitle": "새 덱 만들기",
+  "@newDeckTitle": {"description": "Title of the sheet that names a new deck."},
+  "newDeckBody": "이름은 나중에도 바꿀 수 있어요.",
+  "@newDeckBody": {"description": "Line under the new-deck sheet's title."},
+  "statCards": "카드 {count}",
+  "@statCards": {
+    "description": "Deck screen pill: how many cards the deck holds.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statReview": "복습 {count}",
+  "@statReview": {
+    "description": "Deck screen pill: how many cards are due now.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "statNew": "새 카드 {count}",
+  "@statNew": {
+    "description": "Deck screen pill: how many new cards a session would study now.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "swipeDontKnowHint": "모른다",
+  "@swipeDontKnowHint": {"description": "Hint under the study card, beside a left chevron: swiping left answers Don't know."},
+  "swipeKnowHint": "안다",
+  "@swipeKnowHint": {"description": "Hint under the study card, beside a right chevron: swiping right answers Know."},
+  "nextReviewToday": "다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.",
+  "@nextReviewToday": {"description": "Summary line when the first answered card is due again later today."},
+  "nextReviewTomorrow": "다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.",
+  "@nextReviewTomorrow": {"description": "Summary line when the first answered card is due again tomorrow."},
+  "nextReviewInDays": "다음 복습은 {days}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.",
+  "@nextReviewInDays": {
+    "description": "Summary line when the first answered card is due again in two or more days.",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "summaryStudied": "학습한 카드",
+  "@summaryStudied": {"description": "Summary tile label under the number of distinct cards answered."},
+  "timeSpentLabel": "걸린 시간",
+  "@timeSpentLabel": {"description": "Summary row label: time from the first card to the end of the session."},
+  "timeSpentValue": "{minutes}분 {seconds}초",
+  "@timeSpentValue": {
+    "description": "Summary row value: the time spent.",
+    "placeholders": {"minutes": {"type": "int"}, "seconds": {"type": "int"}}
+  },
+  "backToDecks": "덱으로 돌아가기",
+  "@backToDecks": {"description": "Summary button that closes the session."},
+  "consentNotice": "계속하면 {terms}과 {privacy}에 동의하는 것으로 봐요.",
+  "@consentNotice": {
+    "description": "Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.",
+    "placeholders": {"terms": {"type": "String"}, "privacy": {"type": "String"}}
+  },
+  "termsOfService": "이용약관",
+  "@termsOfService": {"description": "Link to the terms of service."},
+  "privacyPolicy": "개인정보 처리방침",
+  "@privacyPolicy": {"description": "Link to the privacy policy."},
+  "comingSoonBody": "아직 준비 중이에요. 곧 열어 드릴게요.",
+  "@comingSoonBody": {"description": "Body of the page a link opens before its document exists."},
+  "linkNotOpened": "링크를 열지 못했어요. 다시 시도해 주세요.",
+  "@linkNotOpened": {"description": "Shown when the terms or privacy link could not be opened."},
+  "appVersion": "버전 {version}",
+  "@appVersion": {
+    "description": "Account screen footer: the app's version.",
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "todayDone": "오늘 할 카드를 다 했어요",
+  "@todayDone": {"description": "Today card when no card is due or new now; the study button is hidden."}
 }

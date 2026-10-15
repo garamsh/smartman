@@ -36,7 +36,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["src/lib/**", "src/env.ts"],
+    files: ["src/lib/**", "src/components/**", "src/env.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -44,7 +44,8 @@ const eslintConfig = defineConfig([
           patterns: [
             {
               regex: "^@/(features|app)/",
-              message: "src/lib/ imports no feature or route (docs/architecture/structure.md).",
+              message:
+                "src/lib/ and src/components/ import no feature or route (docs/architecture/structure.md).",
             },
           ],
         },

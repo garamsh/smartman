@@ -1,0 +1,50 @@
+# ADR 0027: Draw both clients in the smartman brand: navy tokens, Pretendard, the brand marks, stroke icons and the v2 screens
+
+> Status: accepted
+> Date: 2026-10-15
+
+Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
+
+## Context
+
+- Issue #72: the owner supplied the smartman brand (a navy `#1F2A44`, a symbol, a horizontal and a stacked lockup, an app icon and favicons) and approved the v2 screens on 2026-10-15. The PM decided the tokens, the type scale, the shapes, the brand's use on each screen, the icons, the splash and the web icons in the issue; this ADR records them as the project's rules.
+- [ADR 0011](0011-shared-app-theme-bundled-font-and-today-builder.md) chose IBM Plex Sans KR and the first colour values, and [ADR 0021](0021-type-and-spacing-scales-and-a-shared-component-layer.md) the type, radius and height values and a green `study` button. The component layer and the scales' roles stay; their values change.
+- Three of the issue's light values missed the issue's own WCAG rule, by the WCAG 2.1 formula `app/test/shared/theme_test.dart` uses: muted `#6B748A` on the ground `#F4F6FA` at 4.32:1 (4.5 needed), "Know" text `#1F8A5B` at 4.33:1 on the surface and 4.01:1 on the ground, and the "Know" dot `#2EAD72` at 2.86:1 on the surface (3 needed). The PM chose the nearest values of the same hue that pass, over narrowing the test: muted `#687187` (4.51:1 on the ground), "Know" `#1D8054` (4.55:1 on the ground, 4.92:1 on the surface) and its dot `#2BA16A` (3.03:1 on the ground).
+- Pretendard's v1.3.9 release (github.com/orioncactus/pretendard, the latest on 2026-10-15) publishes no checksum. `Pretendard-1.3.9.zip` has SHA-256 `04be351a74d6bf7d60c480a3087e51d185485d35a52023142af1df19eb8c428a`, and its five OTF files and `LICENSE.txt` are byte-identical to the npm package `pretendard@1.3.9`, whose tarball matched the registry's integrity `sha512-PaQAADyLY5v4kYFwkpSJHbSSYIkiriY/1xXw75TKoZ9UQQqeU+tvP05yTdZAWibiIYoo8ZKtRv8PM7w0IaywSw==`. The PM accepted that cross-check.
+- Alternatives considered:
+  - The brand's SVGs in the app through `flutter_svg`: a dependency for six marks the owner also supplied as 4x PNGs, from which the app takes 1x to 3x.
+  - Material's outlined icons for the 2 px stroke the issue asks for: they are drawn as filled outlines with square joins. Lucide draws every icon as a 2 px, round-capped and round-joined stroke, and ships for Flutter (`lucide_icons_flutter`) and React (`lucide-react`).
+  - Launcher icons and the splash drawn by hand: `flutter_launcher_icons` and `flutter_native_splash` write every density and the platforms' catalogues from one source, pinned exactly since their output is committed. Each also edited a file it did not need to: `flutter_launcher_icons` 0.14.4 set `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` to `AppIcon` in `project.pbxproj`, and `flutter_native_splash` 2.4.8 re-indented `Info.plist` and added `UIStatusBarHidden`; both edits are reverted, so the generators are not rerun by `check-generated.sh`, and a test compares their output with the sources instead.
+  - The web's today line with "약 n분" and its summary with the next review: the first needs each user's recent review durations, which the web does not read, and issue #69 owns the web's data loading; the second needs the state each write computes, which the write queue does not report.
+
+## Decision
+
+- **Colours.** `AppColors` holds the issue's values under the existing token names where one exists, and new tokens where none did: `raised`, `ink2`, `outline`, `brandTint`, `onPrimary`, `hero`, `onHero`, `brand` and the four deck tile tints. The three light values above are the adjusted ones. One primary colour: a primary action is the navy fill, inverted in the dark theme (`#EEF1F7` under `#1F2A44`); green and red mean "안다" and "모른다" alone, in answers, dots, hints and the summary's counts. The `study` button variant and the green "오늘 n" chip are removed; the chip takes the brand tint.
+- **Type.** Pretendard 1.3.9, Regular to ExtraBold, is bundled under `app/assets/fonts/` with its `OFL.txt`, and the web app links the same files; IBM Plex Sans KR is removed. `AppType` keeps ADR 0021's roles with the issue's values (display 28/800, title 22/800, headline 18/700, body 16/500, row title 16/700, label 15/700, secondary 14, caption 13, micro 12), and adds the roles the screens need: the study card's question 30/800 and answer 20/600, the today count 36/800 and the deck name 26/800.
+- **Shapes.** Radii: sheet 28, card 24, previous card 20, row 18, button 16, field 14, and 40 for the sign-in panel's bottom corners. Heights: call to action 56, button 52, field 52, search 48, tap target 44. Spacing gains 28, the gap between sections.
+- **Brand.** The lockups and the symbol are committed as PNGs at 1x to 3x under `app/assets/brand/` and as SVGs under `web/public/brand/`, and drawn where the issue places them: the horizontal lockup heading the home screen, the stacked lockup on the sign-in screen's ground panel, the symbol faint on the today card, and the mascot on the first-run home, the summary and the account screen's foot. The home screen's account button is the account's initial in a navy circle, inverted in the dark theme.
+- **Icons.** Every icon is Lucide's: `lucide_icons_flutter` 3.1.25 and `lucide-react` 1.57.0, pinned exactly.
+- **Launcher icons and splash.** The launcher icons come from `app-icon-light-1024.png`, with the dark icon for iOS 18 and later, through `flutter_launcher_icons` 0.14.4; the splash is the navy symbol on `#F4F6FA` and the white one on `#0E1424`, through `flutter_native_splash` 2.4.8, Android 12's included. `app/test/launcher_assets_test.dart` fails when a generated file is missing or does not draw its source.
+- **Web icons.** `web/public/` serves `favicon.svg`, a 32 px PNG, `apple-touch-icon.png` and `manifest.webmanifest` with the 192 and 512 icons and the theme colour `#1F2A44`, to signed-out visitors too, and the image copies `public/`.
+- **The screens.** Home, the today card, deck rows, the first-run home, the deck screen, every sheet, the study screen and its summary, sign-in and account follow the issue. Two additions carry data:
+  - the today card's minutes are its cards times the median time of the user's latest 200 reviews, or 10 s a card with fewer than 20;
+  - the summary names the next review, by calendar day, once the engine has scheduled every answer, and grows past a card's cap so its button stays in reach;
+  - a card's text, on the current card, the previous cards and the card preview, is centred across and down, and shrinks from its style's size to a floor (question 30 to 18, answer 20 to 15, a previous card's 16 to 12) until its widest word fits the half, so it breaks only between words; only a word wider than the half at the floor breaks inside itself. At 30 in half a phone's card, any word longer than about nine letters would otherwise break mid-word, which reads as a different word (the PM's review of PR #75);
+  - with nothing to study, the today card says "오늘 할 카드를 다 했어요" and offers no session.
+- **Legal links.** The terms of service and the privacy policy are optional configuration: `TERMS_URL` and `PRIVACY_URL` in `app/config/*.json`, opened with `url_launcher` 6.3.3, and `NEXT_PUBLIC_TERMS_URL` and `NEXT_PUBLIC_PRIVACY_URL` on the web. An empty value opens a "준비 중" page; anything but an https URL fails at start-up. The account screen names the app's version through `package_info_plus` 10.2.2.
+- **Supersessions.** This replaces ADR 0011's font and colour values, ADR 0021's type values, field radius and height and its `study` variant, and ADR 0024's label "Apple로 로그인 (준비 중)", now "Apple로 계속하기 · 준비 중" beside "Google로 계속하기".
+
+## Consequences
+
+- Both clients draw one brand from one token set, and the web's token test keeps the two in step.
+- The app's font files shrink from about 11 MB to about 8 MB. The brand PNGs add about 340 KB, and `lucide_icons_flutter` seven icon fonts of about 3.8 MB, which a release build's icon tree shaking cuts to the glyphs the app uses. The font is frozen at v1.3.9 until the PM moves it by the same cross-check.
+- Four new pinned dependencies need moving: Dependabot's pub entry proposes `lucide_icons_flutter`, `url_launcher`, `package_info_plus` and the two generators, and its npm entry `lucide-react`. Moving a generator means rerunning it, reverting the two unrelated edits, and the test above passing.
+- Each deck row reads the pace once, beside its count: one more query per row, over the latest 200 reviews.
+- The web shows neither the minutes nor the next review, nor a deck's "공개" chip, until its data loading reads what they need (#69).
+
+## Signs the decision was wrong
+
+- A screen still needs a value between the scales' steps, or a colour pair the tests do not check fails a contrast audit.
+- Users read the minutes as a promise and find them wrong for new users, whose 10 s default is far from their pace.
+- The generators' unrelated edits grow, or a move changes their output so the test cannot tell a stale icon from a new one.
+- Lucide's icon fonts fall behind the icons the screens need, or `lucide_icons_flutter` stops following Lucide's releases.

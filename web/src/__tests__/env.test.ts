@@ -12,7 +12,27 @@ describe("parseEnv", () => {
     expect(parseEnv(valid)).toEqual({
       supabaseUrl: "https://project.supabase.co",
       supabasePublishableKey: "sb_publishable_abc",
+      termsUrl: null,
+      privacyUrl: null,
     });
+  });
+
+  it("reads each legal link as an https URL, and an empty one as none", () => {
+    expect(
+      parseEnv({
+        ...valid,
+        NEXT_PUBLIC_TERMS_URL: "https://example.test/terms",
+        NEXT_PUBLIC_PRIVACY_URL: " ",
+      }),
+    ).toMatchObject({ termsUrl: "https://example.test/terms", privacyUrl: null });
+    for (const url of ["example.test/terms", "http://example.test/terms"]) {
+      expect(() => parseEnv({ ...valid, NEXT_PUBLIC_TERMS_URL: url })).toThrow(
+        "NEXT_PUBLIC_TERMS_URL is not an https URL",
+      );
+      expect(() => parseEnv({ ...valid, NEXT_PUBLIC_PRIVACY_URL: url })).toThrow(
+        "NEXT_PUBLIC_PRIVACY_URL is not an https URL",
+      );
+    }
   });
 
   it("rejects a missing or non-http URL", () => {

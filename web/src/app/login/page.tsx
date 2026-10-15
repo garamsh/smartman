@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { LegalLinks } from "@/components/legal-links";
 import { SignInButton } from "@/features/auth";
 
 import { CallbackError } from "./_components/callback-error";
@@ -17,6 +18,12 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
         <Suspense>
           <CallbackError searchParams={searchParams} />
         </Suspense>
+      </div>
+      <div className="flex flex-col gap-1 text-center">
+        <p className="text-caption text-muted">
+          계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 봐요.
+        </p>
+        <LegalLinks />
       </div>
     </main>
   );

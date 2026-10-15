@@ -104,18 +104,6 @@ abstract class AppLocalizations {
   /// **'smartman'**
   String get appTitle;
 
-  /// Title of the deck list screen.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱'**
-  String get decksTitle;
-
-  /// Shown when there is no deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'아직 덱이 없어요. 새 덱을 만들어 시작해 보세요.'**
-  String get noDecks;
-
   /// Button and dialog title for creating a deck.
   ///
   /// In ko, this message translates to:
@@ -155,7 +143,7 @@ abstract class AppLocalizations {
   /// Label of the deck name field.
   ///
   /// In ko, this message translates to:
-  /// **'이름'**
+  /// **'덱 이름'**
   String get deckName;
 
   /// Error shown when a deck name is empty.
@@ -335,7 +323,7 @@ abstract class AppLocalizations {
   /// Study screen top bar: cards answered so far out of the cards in the session.
   ///
   /// In ko, this message translates to:
-  /// **'{answered} / {total}'**
+  /// **'{answered}/{total}'**
   String studyProgress(int answered, int total);
 
   /// Accessibility label of the study progress: cards answered out of the cards in the session.
@@ -400,7 +388,7 @@ abstract class AppLocalizations {
   /// Heading of the end-of-session summary.
   ///
   /// In ko, this message translates to:
-  /// **'학습 끝'**
+  /// **'오늘 할 카드를 마쳤어요'**
   String get sessionSummaryTitle;
 
   /// Shown in the summary when the deck had nothing due and no new card.
@@ -408,36 +396,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'지금 학습할 카드가 없어요.'**
   String get nothingToStudy;
-
-  /// Summary line: distinct cards answered in the session.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습한 카드: {count}장'**
-  String cardsStudied(int count);
-
-  /// Summary line: how many answers stand as Know.
-  ///
-  /// In ko, this message translates to:
-  /// **'안다: {count}번'**
-  String knowCount(int count);
-
-  /// Summary line: how many answers stand as Don't know.
-  ///
-  /// In ko, this message translates to:
-  /// **'모른다: {count}번'**
-  String dontKnowCount(int count);
-
-  /// Summary line: time from the first card to the end of the session.
-  ///
-  /// In ko, this message translates to:
-  /// **'걸린 시간: {minutes}분 {seconds}초'**
-  String timeSpent(int minutes, int seconds);
-
-  /// Closes the session summary.
-  ///
-  /// In ko, this message translates to:
-  /// **'완료'**
-  String get done;
 
   /// Shown when an answer could not be written to the local database.
   ///
@@ -463,22 +421,22 @@ abstract class AppLocalizations {
   /// **'계정'**
   String get accountTitle;
 
-  /// Sign-in screen line under the app name, saying what the app does.
+  /// Sign-in screen line under the logo, saying what the app does, in two lines.
   ///
   /// In ko, this message translates to:
-  /// **'밀어서 답하고, 잊을 때쯤 다시 보여 주는 암기 카드.'**
+  /// **'밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드'**
   String get welcomeBody;
 
   /// Button that opens Google's account picker to sign in.
   ///
   /// In ko, this message translates to:
-  /// **'Google로 로그인'**
+  /// **'Google로 계속하기'**
   String get signInWithGoogle;
 
   /// Disabled sign-in screen button holding the place of Apple sign-in, which is not available yet.
   ///
   /// In ko, this message translates to:
-  /// **'Apple로 로그인 (준비 중)'**
+  /// **'Apple로 계속하기 · 준비 중'**
   String get signInWithAppleSoon;
 
   /// Accessible label of the progress indicator while signing in.
@@ -553,11 +511,11 @@ abstract class AppLocalizations {
   /// **'다크'**
   String get themeDark;
 
-  /// Line under the today count: how many of the cards are due reviews and how many are new.
+  /// Today card line under the count: due reviews, new cards, and the minutes the session takes at the user's pace.
   ///
   /// In ko, this message translates to:
-  /// **'복습 {review} · 새 카드 {fresh}'**
-  String todayBreakdown(int review, int fresh);
+  /// **'복습 {review} · 새 카드 {fresh} · 약 {minutes}분'**
+  String todayBreakdown(int review, int fresh, int minutes);
 
   /// Label above the deck rows, with how many decks there are.
   ///
@@ -595,22 +553,16 @@ abstract class AppLocalizations {
   /// **'사진으로 추가'**
   String get addFromPhoto;
 
-  /// Line under a deck name: its cards, and how many due reviews and new cards a session would study now.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드 {cards}장 · 오늘 복습 {review} · 새 카드 {fresh}'**
-  String deckSummary(int cards, int review, int fresh);
-
   /// Sentence under the today count while so many reviews are due that a session takes no new card.
   ///
   /// In ko, this message translates to:
   /// **'밀린 복습을 마칠 때까지 새 카드는 쉬어요.'**
   String get backlogPaused;
 
-  /// Card list button that studies the deck, with how many cards the session would study.
+  /// Deck screen button that studies the deck, with how many cards the session would study.
   ///
   /// In ko, this message translates to:
-  /// **'학습 · {count}장'**
+  /// **'학습하기 · {count}장'**
   String studyCount(int count);
 
   /// Hint of the card list search field.
@@ -961,10 +913,10 @@ abstract class AppLocalizations {
   /// **'인터넷에 연결되면 바꿀 수 있어요'**
   String get publishNeedsNetwork;
 
-  /// Chip on a deck others can find.
+  /// Chip beside a deck the user has published.
   ///
   /// In ko, this message translates to:
-  /// **'공개됨'**
+  /// **'공개'**
   String get publicChip;
 
   /// Hint of the search field on the browse screen.
@@ -1230,6 +1182,168 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'덱을 비공개로 전환했어요'**
   String get unpublished;
+
+  /// Today card's heading on the home screen, above the count.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드'**
+  String get todayTitle;
+
+  /// Unit after the large count on the today card: cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'장'**
+  String get todayCountUnit;
+
+  /// Home screen heading before the user has any deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 덱을 만들어 볼까요?'**
+  String get emptyHomeTitle;
+
+  /// Home screen line under the first-deck heading.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.'**
+  String get emptyHomeBody;
+
+  /// Empty home screen button that opens the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 만들기'**
+  String get createManually;
+
+  /// Empty home screen button that opens the public decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 덱 둘러보기'**
+  String get browsePublicDecks;
+
+  /// Title of the sheet that names a new deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 덱 만들기'**
+  String get newDeckTitle;
+
+  /// Line under the new-deck sheet's title.
+  ///
+  /// In ko, this message translates to:
+  /// **'이름은 나중에도 바꿀 수 있어요.'**
+  String get newDeckBody;
+
+  /// Deck screen pill: how many cards the deck holds.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}'**
+  String statCards(int count);
+
+  /// Deck screen pill: how many cards are due now.
+  ///
+  /// In ko, this message translates to:
+  /// **'복습 {count}'**
+  String statReview(int count);
+
+  /// Deck screen pill: how many new cards a session would study now.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 카드 {count}'**
+  String statNew(int count);
+
+  /// Hint under the study card, beside a left chevron: swiping left answers Don't know.
+  ///
+  /// In ko, this message translates to:
+  /// **'모른다'**
+  String get swipeDontKnowHint;
+
+  /// Hint under the study card, beside a right chevron: swiping right answers Know.
+  ///
+  /// In ko, this message translates to:
+  /// **'안다'**
+  String get swipeKnowHint;
+
+  /// Summary line when the first answered card is due again later today.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.'**
+  String get nextReviewToday;
+
+  /// Summary line when the first answered card is due again tomorrow.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.'**
+  String get nextReviewTomorrow;
+
+  /// Summary line when the first answered card is due again in two or more days.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 {days}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.'**
+  String nextReviewInDays(int days);
+
+  /// Summary tile label under the number of distinct cards answered.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습한 카드'**
+  String get summaryStudied;
+
+  /// Summary row label: time from the first card to the end of the session.
+  ///
+  /// In ko, this message translates to:
+  /// **'걸린 시간'**
+  String get timeSpentLabel;
+
+  /// Summary row value: the time spent.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분 {seconds}초'**
+  String timeSpentValue(int minutes, int seconds);
+
+  /// Summary button that closes the session.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱으로 돌아가기'**
+  String get backToDecks;
+
+  /// Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속하면 {terms}과 {privacy}에 동의하는 것으로 봐요.'**
+  String consentNotice(String terms, String privacy);
+
+  /// Link to the terms of service.
+  ///
+  /// In ko, this message translates to:
+  /// **'이용약관'**
+  String get termsOfService;
+
+  /// Link to the privacy policy.
+  ///
+  /// In ko, this message translates to:
+  /// **'개인정보 처리방침'**
+  String get privacyPolicy;
+
+  /// Body of the page a link opens before its document exists.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 준비 중이에요. 곧 열어 드릴게요.'**
+  String get comingSoonBody;
+
+  /// Shown when the terms or privacy link could not be opened.
+  ///
+  /// In ko, this message translates to:
+  /// **'링크를 열지 못했어요. 다시 시도해 주세요.'**
+  String get linkNotOpened;
+
+  /// Account screen footer: the app's version.
+  ///
+  /// In ko, this message translates to:
+  /// **'버전 {version}'**
+  String appVersion(String version);
+
+  /// Today card when no card is due or new now; the study button is hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드를 다 했어요'**
+  String get todayDone;
 }
 
 class _AppLocalizationsDelegate

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
 import '../../shared/ui/app_list_row.dart';
 import '../../shared/ui/app_section_label.dart';
 import '../../shared/ui/app_sheet.dart';
+import '../../shared/ui/mascot.dart';
+import 'account_avatar.dart';
 import 'account_data.dart';
 import 'account_service.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
+import 'legal.dart';
 import 'providers.dart';
 
 /// Shows the signed-in account, signs it out and deletes it; and the theme
@@ -44,16 +48,16 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         children: [
           // The gate leaves this screen once no account is signed in.
           if (state case SignedIn(:final email)) ...[
-            _ProfileHeader(email: email),
-            const SizedBox(height: AppSpace.s32),
+            _ProfileCard(email: email),
+            const SizedBox(height: AppSpace.sectionGap),
           ],
           AppSectionLabel(l10n.displaySection),
           const _ThemeRow(),
-          const SizedBox(height: AppSpace.s24),
+          const SizedBox(height: AppSpace.sectionGap),
           AppSectionLabel(l10n.accountSection),
           AppListRow(
             title: l10n.signOut,
-            leading: const Icon(Icons.logout),
+            leading: const Icon(LucideIcons.logOut),
             trailing: _busy == _Action.signingOut
                 ? _Progress(l10n.signingOut)
                 : null,
@@ -62,13 +66,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppListRow(
             title: l10n.deleteAccount,
             subtitle: l10n.deleteAccountNote,
-            leading: const Icon(Icons.delete_forever_outlined),
+            leading: const Icon(LucideIcons.trash2),
             destructive: true,
             trailing: _busy == _Action.deleting
                 ? _Progress(l10n.deletingAccount)
                 : null,
             onTap: _busy != null || state is! SignedIn ? null : _deleteAccount,
           ),
+          const SizedBox(height: AppSpace.s40),
+          const _Footer(),
         ],
       ),
     );
@@ -174,10 +180,10 @@ class _Progress extends StatelessWidget {
   );
 }
 
-/// The signed-in account: an avatar with the email's initial, the email,
-/// and where sync stands.
-class _ProfileHeader extends ConsumerWidget {
-  const _ProfileHeader({required this.email});
+/// The signed-in account on a card: an avatar with the email's initial, the
+/// email, and where sync stands.
+class _ProfileCard extends ConsumerWidget {
+  const _ProfileCard({required this.email});
 
   final String? email;
 
@@ -185,37 +191,51 @@ class _ProfileHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final email = this.email;
-    return Row(
-      spacing: AppSpace.s16,
-      children: [
-        ExcludeSemantics(
-          child: Container(
-            width: AppSize.avatar,
-            height: AppSize.avatar,
-            alignment: Alignment.center,
-            decoration: ShapeDecoration(
-              color: colors.ink,
-              shape: const CircleBorder(),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s20),
+        child: Row(
+          spacing: AppSpace.s16,
+          children: [
+            const AccountAvatar(size: AppSize.avatar),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: AppSpace.s4,
+                children: [
+                  Text(email ?? l10n.signedIn, style: AppType.bodyStrong),
+                  ref.watch(syncStatusProvider)(),
+                ],
+              ),
             ),
-            child: email == null || email.isEmpty
-                ? Icon(Icons.person, color: colors.surface)
-                : Text(
-                    email.characters.first.toUpperCase(),
-                    style: AppType.headline.copyWith(color: colors.surface),
-                  ),
-          ),
+          ],
         ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: AppSpace.s4,
-            children: [
-              Text(email ?? l10n.signedIn, style: AppType.bodyStrong),
-              ref.watch(syncStatusProvider)(),
-            ],
-          ),
+      ),
+    );
+  }
+}
+
+/// The screen's foot: the mascot, faint, the app's version, and the links to
+/// the terms and the privacy policy.
+class _Footer extends ConsumerWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      spacing: AppSpace.s8,
+      children: [
+        const Opacity(opacity: 0.5, child: Mascot(size: AppSize.mascotSmall)),
+        Text(
+          l10n.appVersion(ref.watch(appVersionProvider)),
+          style: AppType.caption.copyWith(color: AppColors.of(context).muted),
         ),
+        const LegalLinksRow(),
       ],
     );
   }

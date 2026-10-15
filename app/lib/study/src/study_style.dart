@@ -8,6 +8,7 @@ abstract final class StudyStyle {
   /// Space between a card and the screen's left and right edges.
   static const cardMargin = AppSpace.gutter;
   static const cardRadius = AppRadius.card;
+  static const previousRadius = AppRadius.previous;
   static const cardPadding = AppSpace.s16;
 
   /// Space between two content blocks, and inside a block's placeholder.
@@ -23,8 +24,9 @@ abstract final class StudyStyle {
   /// screen height.
   static const currentCenterFraction = 0.57;
 
-  /// The least space kept below the current card.
-  static const currentBottomGap = AppSpace.s16;
+  /// The least space kept below the current card, which holds the hint row
+  /// under it.
+  static const currentBottomGap = AppSpace.s16 + hintGap + AppSize.smallIcon;
 
   /// A card half narrower than this, in logical pixels at text scale 1, puts
   /// the answer under the question.
@@ -48,9 +50,15 @@ abstract final class StudyStyle {
   static const depthSteps = 5;
   static const depthMaxBlur = 1.2;
 
-  static const dotSize = 7.0;
+  static const dotSize = AppSize.dot;
   static const topBarHeight = 56.0;
-  static const progressHeight = 4.0;
+  static const progressHeight = AppSize.progress;
+
+  /// How far the divider between a card's halves stops short of its edges.
+  static const dividerInset = AppSpace.s28;
+
+  /// Space between the current card and the hint row under it.
+  static const hintGap = AppSpace.s12;
 
   /// The drag after which the answer chip and tint appear.
   static const dragFeedbackDistance = 40.0;
@@ -86,7 +94,7 @@ abstract final class StudyStyle {
   /// A previous card's shadow, in the theme's [AppColors.shadow].
   static List<BoxShadow> previousShadow(AppColors colors) => [
     BoxShadow(
-      color: colors.shadow.withValues(alpha: 0.12),
+      color: colors.shadow.withValues(alpha: 0.06),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),

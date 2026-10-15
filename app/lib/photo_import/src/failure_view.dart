@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -31,7 +32,7 @@ class FailureView extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(
           tooltip: l10n.close,
-          icon: const Icon(Icons.close),
+          icon: const Icon(LucideIcons.x),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

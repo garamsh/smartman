@@ -102,6 +102,8 @@ fi
   NEXT_TELEMETRY_DISABLED=1 npx next build >/dev/null)
 rm -rf web/.next/standalone/.next/static
 cp -R web/.next/static web/.next/standalone/.next/static
+rm -rf web/.next/standalone/public
+cp -R web/public web/.next/standalone/public
 server_log=$(mktemp)
 PORT="$web_port" HOSTNAME=127.0.0.1 NODE_ENV=production node web/.next/standalone/server.js >"$server_log" 2>&1 &
 server=$!

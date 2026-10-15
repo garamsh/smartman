@@ -5,26 +5,31 @@ import '../../shared/ui/app_button.dart';
 import '../../shared/ui/app_sheet.dart';
 import '../../shared/ui/app_text_field.dart';
 
-/// Asks for a deck name in a sheet titled [title], whose primary button reads
-/// [action]; returns the name trimmed, or null when the sheet is dismissed.
+/// Asks for a deck name in a sheet titled [title], with an optional [body]
+/// line under it, whose primary button reads [action]; returns the name
+/// trimmed, or null when the sheet is dismissed.
 Future<String?> showNameSheet(
   BuildContext context, {
   required String title,
   required String action,
+  String? body,
   String initial = '',
 }) => showAppSheet<String>(
   context,
-  builder: (_) => _NameSheet(title: title, action: action, initial: initial),
+  builder: (_) =>
+      _NameSheet(title: title, body: body, action: action, initial: initial),
 );
 
 class _NameSheet extends StatefulWidget {
   const _NameSheet({
     required this.title,
+    required this.body,
     required this.action,
     required this.initial,
   });
 
   final String title;
+  final String? body;
   final String action;
   final String initial;
 
@@ -56,6 +61,7 @@ class _NameSheetState extends State<_NameSheet> {
     final l10n = AppLocalizations.of(context);
     return AppSheet(
       title: widget.title,
+      body: widget.body,
       content: AppTextField(
         label: l10n.deckName,
         controller: _controller,

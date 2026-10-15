@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
@@ -31,17 +32,21 @@ class SyncStatusView extends ConsumerWidget {
           color: colors.muted,
         ),
         Synced() => _StatusLine(
-          icon: Icon(Icons.cloud_done_outlined, size: 18, color: colors.know),
+          icon: Icon(LucideIcons.check, size: 18, color: colors.know),
           text: l10n.syncSynced,
           color: colors.muted,
         ),
         SyncInterrupted(failure: SyncOffline()) => _StatusLine(
-          icon: Icon(Icons.cloud_off_outlined, size: 18, color: colors.muted),
+          icon: Icon(LucideIcons.cloudOff, size: 18, color: colors.muted),
           text: l10n.syncOffline,
           color: colors.muted,
         ),
         SyncInterrupted(failure: SyncRejected() || SyncFailed()) => _StatusLine(
-          icon: Icon(Icons.error_outline, size: 18, color: colors.dontKnowText),
+          icon: Icon(
+            LucideIcons.circleAlert,
+            size: 18,
+            color: colors.dontKnowText,
+          ),
           text: l10n.syncFailed,
           color: colors.dontKnowText,
           action: AppButton(

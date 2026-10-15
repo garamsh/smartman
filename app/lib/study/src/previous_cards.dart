@@ -153,7 +153,7 @@ class _PreviousCardView extends StatelessWidget {
       Answer.know => l10n.know,
       Answer.dontKnow => l10n.dontKnow,
     };
-    final radius = BorderRadius.circular(StudyStyle.cardRadius);
+    final radius = BorderRadius.circular(StudyStyle.previousRadius);
     final colors = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: StudyStyle.cardMargin),
@@ -176,6 +176,7 @@ class _PreviousCardView extends StatelessWidget {
           decoration: BoxDecoration(
             color: Color.lerp(colors.surface, colors.depth, steps),
             borderRadius: radius,
+            border: Border.all(color: colors.hairline),
             boxShadow: StudyStyle.previousShadow(colors),
           ),
           child: Material(
@@ -243,26 +244,34 @@ class _Blur extends StatelessWidget {
         );
 }
 
+/// One side of a previous card, centred, its text shrunk toward
+/// [AppType.compactFloor] until its widest word fits, and cut to
+/// [StudyStyle.previousLines] lines. Its sides keep clear of the answer dot.
 class _CompactHalf extends StatelessWidget {
   const _CompactHalf(this.blocks, {required this.style});
 
   final List<Content> blocks;
   final TextStyle? style;
 
+  static const _inset = StudyStyle.cardPadding + StudyStyle.dotSize;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      StudyStyle.cardPadding + StudyStyle.dotSize,
-      StudyStyle.cardPadding,
-      StudyStyle.cardPadding,
-      StudyStyle.cardPadding,
-    ),
-    child: Align(
-      alignment: Alignment.centerLeft,
-      child: ContentView(
-        blocks,
-        style: style,
-        maxLines: StudyStyle.previousLines,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _inset,
+        vertical: StudyStyle.cardPadding,
+      ),
+      child: Center(
+        child: ContentView(
+          blocks,
+          style: style,
+          maxLines: StudyStyle.previousLines,
+          fit: (
+            minFontSize: AppType.compactFloor,
+            width: constraints.maxWidth - _inset * 2,
+          ),
+        ),
       ),
     ),
   );
