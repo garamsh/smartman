@@ -13,7 +13,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - `CardKey`, and `describeContent`, the one line of text a card side shows;
   - `DeckRepository` and its save results;
   - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, and `mergeBack`;
-  - `showNameDialog`, the deck name dialog, which photo import uses to name a new deck;
+  - `showNameSheet`, the sheet that asks for a deck's name, which photo import uses to name a new deck;
   - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, and `describeFailure`, the message a user reads for one;
   - `TodayCount`, with `TodayPending`, `TodayCounted` and `TodayUnavailable`, and `TodayBuilder`;
   - `deckRepositoryProvider`, `studyScreenProvider`, `todayProvider`, `accountScreenProvider`, `photoImportProvider` and `DeckListScreen`.

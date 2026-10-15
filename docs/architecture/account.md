@@ -31,7 +31,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - Sign-in opens the platform's Google account picker (`GoogleSignIn.authenticate`), then passes the Google ID token and an access token for `email` and `profile` to Supabase's `signInWithIdToken`.
 - Each run draws one random nonce when it initializes Google Sign-In: Google receives its SHA-256 as hex and puts it in the ID token, and `signInWithIdToken` receives the raw value, which Supabase checks against the token. Every sign-in in a run carries the same nonce, since Google Sign-In is initialized once per run ([ADR 0008](adr/0008-google-sign-in-nonce.md)).
 - `supabase_flutter` stores the session on the device and restores it at start; the app then opens past the gate.
-- Sign-out first asks `AccountData` to push every unsynced change. When some did not arrive, a dialog, "동기화되지 않은 변경이 있어요", offers "취소", which keeps the account signed in, and "그래도 로그아웃".
+- Sign-out first asks `AccountData` to push every unsynced change. When some did not arrive, a confirmation sheet, "동기화되지 않은 변경이 있어요", offers "취소", which keeps the account signed in, and "그래도 로그아웃".
 - It then ends the Supabase session on the device, tells the server, and signs out of Google so the next sign-in shows the picker again. Once the device is signed out, even after a failure telling the server, `AccountData` clears the device's data; a failure there is shown in a snack bar.
 - The state is `SignedOut`, `SignedIn` with the account's email, or `AccountUnavailable` when the build's configuration cannot sign anyone in.
 

@@ -110,7 +110,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
   - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));
   - "다시 찍기" at the top right returns to the camera;
   - "카드 n개 추가" counts the checked candidates not set to skip, and is disabled at 0.
-- **Saving** — one `DeckRepository.importCards` call. For a new deck, the name dialog asks for its name first. The screen then pops with the deck saved into, and the deck screens open that deck's card list.
+- **Saving** — one `DeckRepository.importCards` call. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the deck screens open that deck's card list.
 - Nothing is written before "카드 n개 추가": not the deck, not a card.
 
 #### Photo
