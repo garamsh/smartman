@@ -35,7 +35,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 
 - A tap opens the preview: the name, the owner's display name with the counts, the description, and the first 20 cards as split rows, with "카드 n장 중 처음 20장" when there are more.
 - "내 덱으로 가져오기" opens a sheet: "새 덱으로", the default, creates a deck named after the public one; "기존 덱에 추가" takes one of the user's decks and a duplicate option, "건너뛰기" by default, or "뒷면 합치기" or "새 카드로 추가".
-- A copy reads every live card of the deck, calls `record_deck_import`, and refuses with `DeckNoLongerPublic` when the deck is no longer public. It then saves through `DeckRepository.importCards` with `FromPublicDeck`, so each added card is an ordinary card with `source = shared` and `origin_deck_id`, and the duplicate rule of [`deck.md`](deck.md) applies. A copy into a new deck adds every card, duplicates included. Nothing links the copy to the source afterwards.
+- A copy reads every live card of the deck, calls `record_deck_import`, which counts the user's first copy of the deck and no later one, and refuses with `DeckNoLongerPublic` when the deck is no longer public. It then saves through `DeckRepository.importCards` with `FromPublicDeck`, so each added card is an ordinary card with `source = shared` and `origin_deck_id`, and the duplicate rule of [`deck.md`](deck.md) applies. A copy into a new deck adds every card, duplicates included. Nothing links the copy to the source afterwards.
 - Copies hold the text of each side, as imports do.
 
 ### Reporting and blocking
