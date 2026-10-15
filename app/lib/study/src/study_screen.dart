@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,9 +8,9 @@ import '../../shared/ui/app_button.dart';
 import 'current_card.dart';
 import 'failure.dart';
 import 'failure_message.dart';
-import 'previous_cards.dart';
 import 'providers.dart';
 import 'session.dart';
+import 'session_scroll.dart';
 import 'study_style.dart';
 
 /// Studies the cards of [decks] in one session, one card at a time, answered
@@ -148,34 +146,25 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     };
     if (previous == null) return current;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return CustomMultiChildLayout(
-      delegate: _SessionLayout(
-        currentCenter: currentCenter,
-        currentMaxHeight: currentMaxHeight,
+    return SessionScroll(
+      cards: previous,
+      onToggle: _session.toggle,
+      currentCenter: currentCenter,
+      currentMaxHeight: currentMaxHeight,
+      current: AnimatedSwitcher(
+        duration: reduceMotion
+            ? StudyStyle.fadeDuration
+            : StudyStyle.settleDuration,
+        switchInCurve: Curves.easeOutCubic,
+        transitionBuilder: reduceMotion
+            ? AnimatedSwitcher.defaultTransitionBuilder
+            : _emerge,
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...previous, ?current],
+        ),
+        child: current,
       ),
-      children: [
-        LayoutId(
-          id: _Region.previous,
-          child: PreviousCards(cards: previous, onToggle: _session.toggle),
-        ),
-        LayoutId(
-          id: _Region.current,
-          child: AnimatedSwitcher(
-            duration: reduceMotion
-                ? StudyStyle.fadeDuration
-                : StudyStyle.settleDuration,
-            switchInCurve: Curves.easeOutCubic,
-            transitionBuilder: reduceMotion
-                ? AnimatedSwitcher.defaultTransitionBuilder
-                : _emerge,
-            layoutBuilder: (current, previous) => Stack(
-              alignment: Alignment.topCenter,
-              children: [...previous, ?current],
-            ),
-            child: current,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -194,52 +183,6 @@ Widget _emerge(Widget child, Animation<double> animation) => AnimatedBuilder(
   ),
   child: child,
 );
-
-enum _Region { previous, current }
-
-/// Places the current card with its centre at [currentCenter] while it fits
-/// above the bottom, and the previous cards in the space above it.
-class _SessionLayout extends MultiChildLayoutDelegate {
-  _SessionLayout({required this.currentCenter, required this.currentMaxHeight});
-
-  final double currentCenter;
-  final double currentMaxHeight;
-
-  @override
-  void performLayout(Size size) {
-    final current = layoutChild(
-      _Region.current,
-      BoxConstraints(
-        minWidth: max(0, size.width - StudyStyle.cardMargin * 2),
-        maxWidth: max(0, size.width - StudyStyle.cardMargin * 2),
-        maxHeight: max(
-          0,
-          min(currentMaxHeight, size.height - StudyStyle.currentBottomGap),
-        ),
-      ),
-    );
-    final top = max(
-      0.0,
-      min(
-        currentCenter - current.height / 2,
-        size.height - StudyStyle.currentBottomGap - current.height,
-      ),
-    );
-    positionChild(_Region.current, Offset(StudyStyle.cardMargin, top));
-    layoutChild(
-      _Region.previous,
-      BoxConstraints.tight(
-        Size(size.width, max(0, top - StudyStyle.previousGap)),
-      ),
-    );
-    positionChild(_Region.previous, Offset.zero);
-  }
-
-  @override
-  bool shouldRelayout(_SessionLayout oldDelegate) =>
-      currentCenter != oldDelegate.currentCenter ||
-      currentMaxHeight != oldDelegate.currentMaxHeight;
-}
 
 /// The close button, the progress bar and the count of cards answered.
 class _TopBar extends StatelessWidget {

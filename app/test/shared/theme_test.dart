@@ -129,8 +129,7 @@ void main() {
       for (final MapEntry(key: path, value: source) in sources.entries)
         if (path != 'lib/shared/theme.dart' &&
             !path.startsWith('lib/shared/ui/'))
-          for (final literal in styleLiterals(source))
-            if (!_studyGeometry.contains((path, literal))) '$path: $literal',
+          for (final literal in styleLiterals(source)) '$path: $literal',
     ], isEmpty);
   });
 
@@ -206,20 +205,6 @@ Map<String, String> _appSources() => {
         !entity.path.startsWith('lib/study/src/rust/') &&
         !entity.path.startsWith('lib/shared/l10n/'))
       entity.path: entity.readAsStringSync(),
-};
-
-/// The study screen's computed geometry, the one place a number stands in an
-/// inset outside the theme: a previous card's text starts below its dot.
-const _studyGeometry = {
-  (
-    'lib/study/src/previous_cards.dart',
-    'EdgeInsets.fromLTRB(\n'
-        '      StudyStyle.cardPadding + StudyStyle.dotSize,\n'
-        '      StudyStyle.cardPadding * 1.5,\n'
-        '      StudyStyle.cardPadding,\n'
-        '      StudyStyle.cardPadding,\n'
-        '    )',
-  ),
 };
 
 final _number = RegExp(r'(?<![\w.])(\d+(?:\.\d+)?)(?![\w.])');

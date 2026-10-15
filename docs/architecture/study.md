@@ -20,14 +20,20 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - `newCardLimit`, `reshowGapMin` and `reshowGapMax` are constants in `app/lib/study/src/queue.dart`.
 - Every random choice of a session comes from one `Random`, which `studyRandomProvider` makes from the session's start time. The composition site seeds it from that time; tests inject their own.
 - `TodayCounter` counts the queue a session over its decks would build now, as due cards and new ones, and passes the count to the builder `deck` gives it: the deck list's header, a deck row's chip, the card list's line and study button. It reads the count when it is built, when its decks change, and when its route comes back on top; a failed read is passed on as its localized message.
-- The screen has a top bar (the close button, a progress bar and the count of cards answered out of the session's cards), the current card, and above it every card answered so far ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)). It shows no deck name, no answer button and no hint text, and never builds the next card.
+- The screen has a top bar (the close button, a progress bar and the count of cards answered out of the session's cards) above one scroll view: every card answered so far, then the current card ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md), [ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md)). It shows no deck name, no answer button and no hint text, and never builds the next card.
 - The current card:
-  - sits full width less 20 on each side, its centre at 57% of the screen height while it fits;
-  - holds the question on its left half and the answer on its right, hidden until a tap and hidden again by the next; when a half would be narrower than 140 at the current text scale, the answer sits under the question;
+  - sits full width less 20 on each side, last in the scroll view and painted over the stack, its centre at 57% of the screen height while it fits when the view is at its end;
+  - holds the question on its left half and the answer on its right, hidden until a tap and hidden again by the next; when a half would be narrower than 140 at the current text scale, the answer sits under the question, in two halves of the same height divided at the middle;
+  - centres each half's content vertically while it fits;
   - renders each side's content blocks through one block renderer, `ContentView`, with `UnsupportedContent` as a labelled placeholder;
-  - grows with its content from 200 to 55% of the screen height, then scrolls inside.
-- Dragging the current card moves and tilts it; past 40 a chip and a tint name the answer. Released past 100, or flung faster than 700 per second, it answers "Know" to the right and "Don't know" to the left, with a light haptic; otherwise it springs back.
-- The previous cards are every answer of the session, re-shows included, newest nearest, in one scroll view that opens at the newest and builds only the cards near it. Each shows two lines of each side, a dot for its answer and "수정됨" once the answer differs from the first given; it is smaller, greyer and blurrier a step per card of depth up to a cap, unblurred past it, and opaque. A long-press opens the whole card in a sheet.
+  - grows with its content from 200 to 55% of the screen height, then each half scrolls inside, from the top.
+- A horizontal drag of the current card moves and tilts it; past 40 a chip and a tint name the answer. Released past 100, or flung faster than 700 per second, it answers "Know" to the right and "Don't know" to the left, with a light haptic; otherwise it springs back. A vertical drag scrolls the view.
+- The previous cards are every answer of the session, re-shows included, newest nearest the current card, built only near the view. Each shows two lines of each side, centred vertically in its half, a dot for its answer and "수정됨" once the answer differs from the first given; it is smaller, greyer and blurrier a step per card of depth up to a cap, unblurred past it, and opaque. A long-press opens the whole card in a sheet.
+- The scroll view ([ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md)):
+  - opens at its end, and stays there as cards are added while it is there; fewer cards than fill it sit at its bottom;
+  - dragged down, reveals earlier cards, the current card moving down with them;
+  - returns to its end when an answer commits while it is scrolled back, at once under reduce motion; a swipe starts only on the part of the card on screen, and a screen reader's answer action brings the card into view first;
+  - stays where it is on a toggle, one that puts its card back included.
 - Tapping a previous card toggles its answer between "Know" and "Don't know", any number of times:
   - to "Don't know", a card's last answer puts the card back as a "Don't know" does, unless it is waiting or on screen;
   - to "Know", a card's last answer removes the card's re-show while it waits behind the card on screen;
@@ -81,7 +87,7 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - `app/test/study/correction_test.dart` runs a session over an in-memory database and the real engine, and checks the state stored after each toggle against a chain of the bridge's `review_card` calls over the corrected history, from the state before the session. It also checks that toggling a fuzzed answer twice gives back the stored state, with the review's factor kept.
 - `app/test/study/toggle_test.dart` covers the queue effects of a toggle; `app/test/study/queue_test.dart` covers the queue's membership over several decks, its order under seeded sources, and the re-show gap.
 - `app/test/study/today_counter_test.dart` checks that the due and new counts add up to the length of the queue a session over the decks opens, and when the count is read again.
-- `app/test/study/previous_cards_test.dart` checks that a stack of 300 answers builds only the cards near the view.
+- `app/test/study/previous_cards_test.dart` checks that a stack of 300 answers above the current card builds only the cards near the view.
 - `app/test/study/study_screen_test.dart` drives the screen on a 390 by 844 view with a scheduler that answers at once, or a repository whose writes never finish, and checks it against the tap target and contrast guidelines in the light and the dark theme.
 - `flutter test` loads the library from `app/rust/target/release/`, so `make test` builds the crate there first.
 
@@ -99,9 +105,10 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 - [ADR 0005](adr/0005-study-queue-and-card-state.md) records the queue policy, the re-show gap, why the state is stored as parts in `card_states`, and how `deck` opens the session.
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md) records the session over several decks, the header card, the random order and gap, and why they supersede ADR 0005's.
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the swipe screen, the toggleable stack, and why a toggle replays the card's session answers in Dart rather than through the bridge's `replay`.
+- [ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md) records why the current card scrolls with the stack, what an answer or a toggle does while the view is scrolled back, and why each half of the card centres its content.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the screen's colours moved onto the app theme, and why `TodayCounter` shows its count through a builder `deck` supplies.
 - [ADR 0012](adr/0012-fuzz-review-intervals.md) records where each answer's fuzz factor comes from and why it is stored on its review.
-- Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, issue #18 the current screen, and issue #19 the session over several decks, as decided by the PM.
+- Issue #9 records the surface the app needs and the requirement that every engine error reach Dart typed. Issue #12 records the first session flow, issue #18 the current screen, issue #56 the one scroll view and the centred halves, and issue #19 the session over several decks, as decided by the PM.
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records why sync recomputes a card's state through `Scheduler.fold` rather than merging states.
 
 ## Open questions

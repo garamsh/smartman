@@ -2,9 +2,9 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
-import 'package:smartman/study/src/previous_cards.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/session.dart';
+import 'package:smartman/study/src/session_scroll.dart';
 
 import 'fixtures.dart';
 
@@ -25,7 +25,7 @@ Finder _card(int position) => find.byWidgetPredicate(
 
 void main() {
   testWidgets(
-    'a stack of 300 answers builds only the cards near the view, and the first is still reached and toggled',
+    'a stack of 300 answers above the current card builds only the cards near the view, and the first is still reached and toggled',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -52,7 +52,13 @@ void main() {
               alignment: Alignment.topCenter,
               child: SizedBox(
                 height: 360,
-                child: PreviousCards(cards: cards, onToggle: toggled.add),
+                child: SessionScroll(
+                  cards: cards,
+                  onToggle: toggled.add,
+                  current: const SizedBox(height: 120),
+                  currentCenter: 280,
+                  currentMaxHeight: 120,
+                ),
               ),
             ),
           ),

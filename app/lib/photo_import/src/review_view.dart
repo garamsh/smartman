@@ -325,7 +325,10 @@ class _EditableSideState extends State<_EditableSide> {
         onTap: edit,
         child: Padding(
           padding: const EdgeInsets.all(AppSpace.s16),
-          child: Text(widget.text, style: widget.style),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(widget.text, style: widget.style),
+          ),
         ),
       ),
     );

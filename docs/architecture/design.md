@@ -19,7 +19,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Card list: the rows show front and back with no column headings; the deck name is the only title.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
-   - Study: a swipe answers, with the custom actions "안다" and "모른다"; a tap toggles a previous answer, with a tap hint.
+   - Study: a horizontal swipe answers, with the custom actions "안다" and "모른다", and a vertical drag scrolls the stack and the current card together; a tap toggles a previous answer, with a tap hint.
    - Deck list: a long-press selects decks; the rows expose their selected state, and selection mode has visible controls.
    - Every sheet: a drag or a tap outside dismisses it, and Android's back does the same.
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
@@ -31,12 +31,12 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: any answer of the session is corrected by a tap, with no confirmation.
    - Card editor: a duplicate front opens a sheet that offers to add anyway or open the existing card; nothing is overwritten.
    - Card list, card editor and account: deleting a deck, deleting a card, and signing out with unsynced changes are confirmed through `showAppConfirm`, which states the consequence in one sentence beside a red final button.
-6. **One visual language.** Theme tokens only; the split card, question left and answer right, wherever a card appears; rounded surfaces on the ground colour; 44 pt minimum targets.
-   - Study, card editor and duplicate sheet: the same split card.
+6. **One visual language.** Theme tokens only; the split card, question left and answer right, each half's content centred vertically, wherever a card appears; rounded surfaces on the ground colour; 44 pt minimum targets.
+   - Study, card editor, duplicate sheet and photo review: the same split card, each half centred.
    - Deck list and card list: rows on rounded surfaces over the ground.
    - Every screen and sheet: the tokens below and the components that use them.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
-   - Study: an answered card flies off and rises into the stack while the next emerges from below; under reduce motion they cross-fade.
+   - Study: an answered card flies off and rises into the stack while the next emerges from below; under reduce motion they cross-fade. The current card moves with the stack as it scrolls, and an answer given while scrolled back returns the view to its end.
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences.
    - Deck list and card list: an empty list says how to start, and a search with no match says to try other words.
@@ -54,7 +54,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 
 ### Tokens
 
-`app/lib/shared/theme.dart` holds every token beside the colours ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md)). No other file under `app/lib/`, except the components in `app/lib/shared/ui/`, writes a spacing or font-size number; the study screen's computed geometry in `app/lib/study/src/study_style.dart` is the one exception, listed in `app/test/shared/theme_test.dart`.
+`app/lib/shared/theme.dart` holds every token beside the colours ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md)). No other file under `app/lib/`, except the components in `app/lib/shared/ui/`, writes a spacing or font-size number.
 
 - **Type**, `AppType`, all IBM Plex Sans KR, and the theme's `TextTheme` built from it:
 
@@ -99,6 +99,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 ## Rationale
 
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the study screen these principles generalize.
+- [ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md) records why the current card scrolls with the stack and why each half of a split card centres its content.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme is one file with a token extension, why the font is bundled, and why the choice is stored in `shared_preferences`.
 - [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md) records why the scales sit in the theme file, why the components are a shared layer of their own, and why every modal is a sheet.
 - Issue #58 records the scales and the component set as the PM decided them on 2026-10-15.
