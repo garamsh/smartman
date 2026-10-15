@@ -661,6 +661,42 @@ abstract class AppLocalizations {
   /// **'이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.'**
   String get dataNotCleared;
 
+  /// Account screen row that deletes the account.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정 삭제'**
+  String get deleteAccount;
+
+  /// Line under the delete-account row: what deletion removes, and that it cannot be undone.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.'**
+  String get deleteAccountNote;
+
+  /// Title of the account deletion confirmation.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정을 삭제할까요?'**
+  String get deleteAccountTitle;
+
+  /// Body of the account deletion confirmation: what is removed, and what stays.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.'**
+  String get deleteAccountBody;
+
+  /// Accessible label of the progress indicator while deleting the account.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정 삭제 중'**
+  String get deletingAccount;
+
+  /// Shown when the server refused to delete the account.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정을 삭제하지 못했어요. 다시 시도해 주세요.'**
+  String get deleteAccountRejected;
+
   /// Account screen sync status while a sync runs.
   ///
   /// In ko, this message translates to:

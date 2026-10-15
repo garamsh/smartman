@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,7 @@ final class _NoExtraction implements ExtractionClient {
 
 void main() {
   late Scheduler scheduler;
+  late QueryExecutor executor;
   setUpAll(() async {
     scheduler = await Scheduler.load();
     GoogleSignInPlatform.instance = FakeGoogleSignIn();
@@ -91,9 +93,10 @@ void main() {
         ),
       ),
     ))!;
+    executor = NativeDatabase.memory();
     await tester.pumpWidget(
       composeApp(
-        NativeDatabase.memory(),
+        executor,
         scheduler,
         account,
         server ?? FakeSyncServer(_ada),
@@ -120,6 +123,27 @@ void main() {
   Future<void> tapAndSettle(WidgetTester tester, Finder target) async {
     await tester.tap(target);
     await tester.pumpAndSettle();
+  }
+
+  /// The rows the device's database holds in the synced tables and the sync
+  /// state, read from the database the app was composed over.
+  Future<int> deviceRows(WidgetTester tester) async {
+    final rows = (await tester.runAsync(
+      () => executor.runSelect(
+        'SELECT (SELECT count(*) FROM decks) + (SELECT count(*) FROM cards)'
+        ' + (SELECT count(*) FROM reviews) + (SELECT count(*) FROM card_states)'
+        ' + (SELECT count(*) FROM sync_state) AS n',
+        const [],
+      ),
+    ))!;
+    return rows.single['n']! as int;
+  }
+
+  /// Creates the deck "French" from the deck list.
+  Future<void> createDeck(WidgetTester tester) async {
+    await tapAndSettle(tester, find.text('New deck'));
+    await tester.enterText(find.widgetWithText(AppTextField, 'Name'), 'French');
+    await tapAndSettle(tester, find.text('Create'));
   }
 
   /// The buttons on screen that respond to a tap.
@@ -204,6 +228,53 @@ void main() {
     expect(find.byType(DeckListScreen), findsNothing);
     await unmountApp(tester);
   });
+
+  // The gate closes the account screen as soon as the session ends, while
+  // the screen's sign-out or deletion is still running.
+  testWidgets(
+    'signing out under the gate still clears the device\'s data from the database',
+    (tester) async {
+      final account = FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      );
+      await pumpApp(tester, account);
+      await createDeck(tester);
+      // The setup put a deck on the device.
+      expect(await deviceRows(tester), greaterThan(0));
+
+      await tapAndSettle(tester, find.byTooltip('Account'));
+      await tapAndSettle(tester, find.text('Sign out'));
+
+      expect(find.byType(SignInScreen), findsOneWidget);
+      expect(find.byType(AccountScreen), findsNothing);
+      expect(await deviceRows(tester), 0);
+      await unmountApp(tester);
+    },
+  );
+
+  testWidgets(
+    'deleting the account under the gate shows the sign-in screen and clears the device\'s data from the database',
+    (tester) async {
+      final account = FakeAccountService(
+        const SignedIn(userId: _ada, email: 'ada@example.com'),
+      );
+      await pumpApp(tester, account);
+      await createDeck(tester);
+      expect(await deviceRows(tester), greaterThan(0));
+
+      await tapAndSettle(tester, find.byTooltip('Account'));
+      await tapAndSettle(tester, find.text('Delete account'));
+      await tapAndSettle(tester, find.text('Delete'));
+
+      expect(account.deletions, 1);
+      expect(account.state, isA<SignedOut>());
+      expect(find.byType(SignInScreen), findsOneWidget);
+      expect(find.byType(AccountScreen), findsNothing);
+      expect(find.byType(DeckListScreen), findsNothing);
+      expect(await deviceRows(tester), 0);
+      await unmountApp(tester);
+    },
+  );
 
   group('no deck or study screen is reachable while signed out', () {
     /// Each screen the deck list leads to, and how to open it from there.
@@ -294,6 +365,7 @@ void main() {
       return GoogleAccountService.start(
         auth,
         GoogleSignIn.instance,
+        functions: FunctionsClient('https://example.test/functions/v1', {}),
         clientId: null,
         serverClientId: 'web-client-id',
       );

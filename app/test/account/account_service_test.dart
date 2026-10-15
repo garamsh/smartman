@@ -47,28 +47,39 @@ void main() {
     requests = [];
   });
 
-  Future<GoogleAccountService> start(GoTrueClient auth) =>
-      GoogleAccountService.start(
-        auth,
-        GoogleSignIn.instance,
-        clientId: null,
-        serverClientId: 'web-client-id',
-      );
+  Future<GoogleAccountService> start(
+    GoTrueClient auth, {
+    http.Client? functionsHttp,
+  }) {
+    final functions = FunctionsClient(
+      'https://example.test/functions/v1',
+      const {},
+      httpClient: functionsHttp,
+    );
+    addTearDown(functions.dispose);
+    return GoogleAccountService.start(
+      auth,
+      GoogleSignIn.instance,
+      functions: functions,
+      clientId: null,
+      serverClientId: 'web-client-id',
+    );
+  }
 
-  /// A service over a Supabase Auth client whose server answers with
-  /// [respond].
+  /// A service over a Supabase Auth client and an Edge Functions client
+  /// whose server answers with [respond].
   Future<GoogleAccountService> serviceAnswering(
     Future<http.Response> Function(http.Request) respond,
-  ) => start(
-    GoTrueClient(
-      url: _url,
-      autoRefreshToken: false,
-      httpClient: MockClient((request) {
-        requests.add(request);
-        return respond(request);
-      }),
-    ),
-  );
+  ) {
+    final server = MockClient((request) {
+      requests.add(request);
+      return respond(request);
+    });
+    return start(
+      GoTrueClient(url: _url, autoRefreshToken: false, httpClient: server),
+      functionsHttp: server,
+    );
+  }
 
   Future<http.Response> grant(http.Request request) async =>
       http.Response(jsonEncode(_session()), 200);
@@ -268,6 +279,73 @@ void main() {
     expect(service.state, isA<SignedOut>());
   });
 
+  group('deleting the account', () {
+    const deletePath = '/functions/v1/delete-account';
+
+    /// A signed-in service whose `delete-account` answers with [respond].
+    Future<GoogleAccountService> signedInDeleting(
+      Future<http.Response> Function(http.Request) respond,
+    ) async {
+      final service = await serviceAnswering(
+        (request) =>
+            request.url.path == deletePath ? respond(request) : grant(request),
+      );
+      await service.signIn();
+      // The setup signed in.
+      expect(service.state, isA<SignedIn>());
+      requests.clear();
+      return service;
+    }
+
+    test('posts to delete-account with no body, so it names no user, and leaves sign-out to the caller', () async {
+      final service = await signedInDeleting(
+        (_) async => http.Response('', 204),
+      );
+
+      await service.deleteAccount();
+
+      final request = requests.single;
+      expect(request.method, 'POST');
+      expect(request.url.path, deletePath);
+      expect(request.body, isEmpty);
+      expect(service.state, isA<SignedIn>());
+      expect(google.signOuts, 0);
+    });
+
+    for (final (name, respond, failure) in [
+      (
+        'a request that never arrives is offline',
+        (http.Request _) async =>
+            throw http.ClientException('no route to host'),
+        isA<AccountOffline>(),
+      ),
+      (
+        'the function failing with 502 is offline',
+        (http.Request _) async =>
+            http.Response('{"error":"delete_failed"}', 502),
+        isA<AccountOffline>(),
+      ),
+      (
+        'the function refusing the session with 401 is a rejection',
+        (http.Request _) async =>
+            http.Response('{"error":"unauthenticated"}', 401),
+        isA<AccountRejected>(),
+      ),
+      (
+        'a success other than 204 is a rejection',
+        (http.Request _) async => http.Response('', 200),
+        isA<AccountRejected>(),
+      ),
+    ]) {
+      test('$name, and the account stays signed in', () async {
+        final service = await signedInDeleting(respond);
+
+        expect(await failureOf(service.deleteAccount), failure);
+        expect(service.state, isA<SignedIn>());
+      });
+    }
+  });
+
   test('a build without configuration is unavailable, not a crash', () async {
     final (:service, :client) = await connectAccount(const {});
 
@@ -281,5 +359,6 @@ void main() {
       ),
     );
     expect(await failureOf(service.signIn), isA<AccountMisconfigured>());
+    expect(await failureOf(service.deleteAccount), isA<AccountMisconfigured>());
   });
 }

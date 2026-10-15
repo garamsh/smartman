@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/shared/ui/app_chip.dart';
 import 'package:smartman/shared/ui/app_list_row.dart';
@@ -37,6 +38,55 @@ void main() {
           tester.getSemantics(find.text('My decks 2')),
           isSemantics(isHeader: true, label: 'My decks 2'),
         );
+        await meetsGuidelines(tester);
+      },
+    );
+
+    testWidgets(
+      'in ${mode.name} a destructive row draws its title and icon in red, and a plain row in ink',
+      (tester) async {
+        await pumpComponent(
+          tester,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppListRow(
+                title: 'Delete account',
+                subtitle: 'This removes everything.',
+                leading: const Icon(Icons.delete_forever_outlined),
+                destructive: true,
+                onTap: () {},
+              ),
+              AppListRow(
+                title: 'Sign out',
+                leading: const Icon(Icons.logout),
+                onTap: () {},
+              ),
+            ],
+          ),
+          themeMode: mode,
+        );
+
+        Color? textColor(String text) => tester
+            .renderObject<RenderParagraph>(find.text(text))
+            .text
+            .style
+            ?.color;
+        Color? iconColor(IconData icon) => tester
+            .renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.byIcon(icon),
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+            .style
+            ?.color;
+        expect(textColor('Delete account'), colors.dontKnowText);
+        expect(iconColor(Icons.delete_forever_outlined), colors.dontKnowText);
+        expect(textColor('This removes everything.'), colors.muted);
+        expect(textColor('Sign out'), isNot(colors.dontKnowText));
+        expect(iconColor(Icons.logout), isNot(colors.dontKnowText));
         await meetsGuidelines(tester);
       },
     );
