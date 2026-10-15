@@ -14,12 +14,30 @@ test.skip(
   "needs the local Supabase stack supabase/test-web.sh starts, which sets E2E_SUPABASE_URL and E2E_SUPABASE_KEY",
 );
 
+// What the browser reported, printed when the test fails: the write runs out of sight.
+const browserLog: string[] = [];
+test.afterEach(({}, testInfo) => {
+  if (testInfo.status !== testInfo.expectedStatus) console.log(browserLog.join("\n"));
+  browserLog.length = 0;
+});
+
 test("a signed-in user studies a card, and the server holds its review and state", async ({
   page,
   context,
   baseURL,
 }) => {
   if (!supabaseUrl || !supabaseKey || !baseURL) throw new Error("skipped above");
+  page.on("console", (message) => browserLog.push(`console ${message.type()}: ${message.text()}`));
+  page.on("requestfailed", (request) =>
+    browserLog.push(
+      `failed ${request.method()} ${request.url()}: ${request.failure()?.errorText ?? ""}`,
+    ),
+  );
+  page.on("response", (response) => {
+    if (response.request().method() === "POST") {
+      browserLog.push(`POST ${response.url()} answered ${String(response.status())}`);
+    }
+  });
   const email = `web-study-${randomUUID()}@example.com`;
   const password = "web-study-password";
 
