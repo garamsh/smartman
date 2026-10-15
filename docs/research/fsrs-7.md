@@ -123,10 +123,10 @@ The same reviews would be synced by FSRS-6 and FSRS-7 devices at once.
 
 ### The web build (#43)
 
-- Issue #43 builds `engine-wasm/` from `engine/` by path, and runs the reference values under WebAssembly (PR #49, open).
+- `engine-wasm/` builds the engine for the web app from `engine/` by path, and runs the reference values under WebAssembly ([`engine.md`](../architecture/engine.md), [ADR 0018](../architecture/adr/0018-engine-as-webassembly.md)).
 - An FSRS-7 engine reaches the web by regenerating `engine-wasm/pkg/`. The WASM surface gains `stability_fast` in the state parts it passes.
 - The web app shares the server's `card_states`, so it is one more member of the mixed fleet above.
-- If the move happens after #43 merges, the engine, the bridge and the WASM crate change in one PR, so no build ships a different model from another.
+- The engine, the bridge and the WASM crate then change in one PR, so no build ships a different model from another.
 
 ## 6. Cost
 
