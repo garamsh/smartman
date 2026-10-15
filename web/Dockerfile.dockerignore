@@ -1,0 +1,10 @@
+# The context is the repository root; admit only the web project and the fonts it bundles.
+*
+!web/
+!app/assets/fonts/
+web/node_modules/
+web/.next/
+web/.env*
+!web/.env.example
+web/test-results/
+web/playwright-report/
