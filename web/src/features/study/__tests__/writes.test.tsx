@@ -59,7 +59,11 @@ describe("a study session's writes", () => {
   });
 
   it("writes one review per answer and the card state the engine computes", async () => {
-    render(<StudyScreen plan={{ startedAt: start, cards: [card], before: {} }} />);
+    // A long interval, so the answer's fuzz factor moves the due day.
+    const before = { stability: 20, difficulty: 5, lastReview: start - 20 * day, due: start - day };
+    render(
+      <StudyScreen plan={{ startedAt: start, cards: [card], before: { [card.id]: before } }} />,
+    );
 
     vi.setSystemTime(start + 4000);
     await userEvent.setup().keyboard("k");
@@ -76,7 +80,7 @@ describe("a study session's writes", () => {
       duration_ms: 4000,
       updated_at: iso(start + 4000),
     });
-    const state = await expected(null, "know", start + 4000, storedFactor(postgrest));
+    const state = await expected(before, "know", start + 4000, storedFactor(postgrest));
     expect(postgrest.rows.card_states[0]).toMatchObject({
       user_id: testUser.id,
       card_id: "c1",
@@ -86,6 +90,24 @@ describe("a study session's writes", () => {
       due: iso(state.due),
       updated_at: iso(start + 4000),
       deleted_at: null,
+    });
+  });
+
+  it("schedules a new card's first answer from no state", async () => {
+    render(<StudyScreen plan={{ startedAt: start, cards: [card], before: {} }} />);
+
+    vi.setSystemTime(start + 4000);
+    await userEvent.setup().keyboard("j");
+
+    await waitFor(() => {
+      expect(postgrest.rows.card_states).toHaveLength(1);
+    });
+    expect(postgrest.rows.reviews[0]).toMatchObject({ rating: "again", duration_ms: 4000 });
+    const state = await expected(null, "dontKnow", start + 4000, storedFactor(postgrest));
+    expect(postgrest.rows.card_states[0]).toMatchObject({
+      stability: state.stability,
+      difficulty: state.difficulty,
+      due: iso(state.due),
     });
   });
 
