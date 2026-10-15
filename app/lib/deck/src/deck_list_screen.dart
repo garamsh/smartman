@@ -9,6 +9,7 @@ import 'failure_message.dart';
 import 'model.dart';
 import 'name_dialog.dart';
 import 'providers.dart';
+import 'public_chip.dart';
 
 /// Lists decks under today's count and creates them. A long-press enters a
 /// selection mode that studies several decks in one session.
@@ -29,6 +30,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     final decks = ref.watch(decksProvider);
     final counts = ref.watch(cardCountsProvider);
     final photoImport = ref.watch(photoImportProvider);
+    final sharing = ref.watch(deckSharingProvider);
     // A deck deleted while selected drops out of the selection.
     final selected = switch ((_selected, decks)) {
       (final selected?, AsyncData(:final value)) => {
@@ -41,6 +43,16 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
       appBar: selected == null
           ? AppBar(
               actions: [
+                if (sharing != null)
+                  IconButton(
+                    tooltip: l10n.browse,
+                    icon: const Icon(Icons.travel_explore),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => sharing.browseScreen(),
+                      ),
+                    ),
+                  ),
                 IconButton(
                   tooltip: l10n.account,
                   icon: const Icon(Icons.account_circle_outlined),
@@ -343,6 +355,7 @@ class _DeckRow extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    if (deck.visibility is PublicDeck) const PublicChip(),
                     ref.watch(todayProvider)(
                       DeckSelection(deck.id),
                       (context, count) => _TodayChip(count: count),

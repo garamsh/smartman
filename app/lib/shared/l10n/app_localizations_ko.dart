@@ -452,4 +452,173 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get deckDeleted => '이 덱은 삭제됐어요. 다른 덱을 골라 주세요.';
+
+  @override
+  String get browse => '둘러보기';
+
+  @override
+  String get publish => '공개하기';
+
+  @override
+  String get unpublish => '비공개로 전환';
+
+  @override
+  String get publishNeedsNetwork => '인터넷에 연결되면 바꿀 수 있어요';
+
+  @override
+  String get publicChip => '공개됨';
+
+  @override
+  String get searchPublicDecks => '덱 이름이나 설명으로 검색';
+
+  @override
+  String get sortNewest => '최신순';
+
+  @override
+  String get sortMostCopied => '가져오기 많은 순';
+
+  @override
+  String publicDeckLine(String owner, int cards, int copies) {
+    return '$owner · 카드 $cards장 · 가져오기 $copies회';
+  }
+
+  @override
+  String get noPublicDecks => '아직 공개된 덱이 없어요. 내 덱을 공개해 처음으로 나눠 보세요.';
+
+  @override
+  String get noPublicMatches => '찾는 덱이 없어요. 다른 단어로 검색해 보세요.';
+
+  @override
+  String get browseOffline => '인터넷에 연결되지 않았어요. 연결되면 공개 덱을 볼 수 있어요.';
+
+  @override
+  String get loading => '불러오는 중';
+
+  @override
+  String get sharingOffline => '인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.';
+
+  @override
+  String get sharingRejected => '요청이 거절됐어요. 계정 화면에서 다시 로그인한 뒤 시도해 주세요.';
+
+  @override
+  String get sharingFailed => '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get deckNoLongerPublic => '이 덱은 더 이상 공개되어 있지 않아요.';
+
+  @override
+  String get importToMyDecks => '내 덱으로 가져오기';
+
+  @override
+  String previewFirstCards(int shown, int total) {
+    return '카드 $total장 중 처음 $shown장';
+  }
+
+  @override
+  String get reportDeck => '신고하기';
+
+  @override
+  String get blockUser => '이 사용자 차단';
+
+  @override
+  String get reportTitle => '신고 이유';
+
+  @override
+  String get reportInappropriate => '부적절한 내용';
+
+  @override
+  String get reportSpam => '스팸';
+
+  @override
+  String get reportCopyright => '저작권 침해';
+
+  @override
+  String get reportOther => '기타';
+
+  @override
+  String get reported => '신고했어요. 검토할게요.';
+
+  @override
+  String get alreadyReported => '이미 신고한 덱이에요.';
+
+  @override
+  String blockTitle(String name) {
+    return '$name 님을 차단할까요?';
+  }
+
+  @override
+  String get blockBody => '이 사용자의 덱이 둘러보기에 더 이상 나오지 않아요.';
+
+  @override
+  String get block => '차단';
+
+  @override
+  String blocked(String name) {
+    return '$name 님을 차단했어요.';
+  }
+
+  @override
+  String get importAsNewDeck => '새 덱으로';
+
+  @override
+  String get importIntoExistingDeck => '기존 덱에 추가';
+
+  @override
+  String importNewDeckHint(String name) {
+    return '\"$name\" 덱을 새로 만들어 모든 카드를 가져와요.';
+  }
+
+  @override
+  String get importTargetDeck => '덱';
+
+  @override
+  String get importDuplicates => '이미 있는 카드는';
+
+  @override
+  String get importConfirm => '가져오기';
+
+  @override
+  String copiedCards(String deck, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '\"$deck\"에 카드 $count장을 가져왔어요',
+      zero: '\"$deck\"에 새로 가져온 카드가 없어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String publishTitle(String name) {
+    return '\"$name\" 공개하기';
+  }
+
+  @override
+  String get displayName => '공개 이름';
+
+  @override
+  String get displayNameHelp => '공개한 덱에 이 이름이 표시돼요. 이메일은 표시되지 않아요.';
+
+  @override
+  String get displayNameLength => '2~20자로 입력하세요';
+
+  @override
+  String get deckDescription => '설명 (선택)';
+
+  @override
+  String deckDescriptionTooLong(int max) {
+    return '$max자 이내로 입력하세요';
+  }
+
+  @override
+  String get publishAgreement => '부적절하거나 저작권을 침해하는 내용을 공개하지 않겠습니다';
+
+  @override
+  String get publishConfirm => '공개';
+
+  @override
+  String get published => '덱을 공개했어요';
+
+  @override
+  String get unpublished => '덱을 비공개로 전환했어요';
 }

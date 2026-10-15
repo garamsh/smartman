@@ -13,6 +13,7 @@ import 'deck/deck.dart';
 import 'photo_import/photo_import.dart';
 import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
+import 'sharing/sharing.dart';
 import 'shared/theme.dart';
 import 'study/study.dart';
 import 'sync/sync.dart';
@@ -42,6 +43,11 @@ Future<void> main() async {
         ),
         null => null,
       },
+      switch (account.client) {
+        final client? => SupabaseSharingServer(client),
+        null => null,
+      },
+      DeviceReachability(),
     ),
   );
 }
@@ -49,8 +55,10 @@ Future<void> main() async {
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
 /// [server], keeping the theme choice in [themeStorage], and extracting
-/// cards from photos through [extraction], whose absence hides photo import.
-/// Sync starts at once.
+/// cards from photos through [extraction], whose absence hides photo import,
+/// and sharing decks through [sharing] while [reachability] says the device
+/// is online; without [sharing] the app offers no sharing. Sync starts at
+/// once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
@@ -58,6 +66,8 @@ Widget composeApp(
   SyncServer server,
   SharedPreferencesWithCache themeStorage,
   ExtractionClient? extraction,
+  SharingServer? sharing,
+  Reachability reachability,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
@@ -84,6 +94,16 @@ Widget composeApp(
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      deckSharingProvider.overrideWithValue(
+        sharing == null
+            ? null
+            : SharingService(
+                server: sharing,
+                decks: deckRepository,
+                reachability: reachability,
+                clock: DateTime.now,
+              ),
+      ),
       photoImportProvider.overrideWithValue(
         extraction == null
             ? null

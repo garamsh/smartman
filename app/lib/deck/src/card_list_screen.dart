@@ -10,6 +10,7 @@ import 'failure_message.dart';
 import 'model.dart';
 import 'name_dialog.dart';
 import 'providers.dart';
+import 'public_chip.dart';
 
 /// A deck's cards, searchable, under the action that studies them; opens a
 /// card for editing and the deck for renaming or deleting.
@@ -22,7 +23,7 @@ class CardListScreen extends ConsumerStatefulWidget {
   ConsumerState<CardListScreen> createState() => _CardListScreenState();
 }
 
-enum _DeckAction { rename, delete }
+enum _DeckAction { rename, publish, unpublish, delete }
 
 class _CardListScreenState extends ConsumerState<CardListScreen> {
   late String _name = widget.deck.name;
@@ -35,6 +36,17 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
     final textTheme = Theme.of(context).textTheme;
     final cards = ref.watch(cardsProvider(widget.deck.id));
     final photoImport = ref.watch(photoImportProvider);
+    final sharing = ref.watch(deckSharingProvider);
+    final online = switch (ref.watch(onlineProvider)) {
+      AsyncData(:final value) => value,
+      _ => false,
+    };
+    // The deck as stored now, so a publish made here or synced in shows.
+    final current = switch (ref.watch(deckProvider(widget.deck.id))) {
+      AsyncData(value: final deck?) => deck,
+      _ => widget.deck,
+    };
+    final public = current.visibility is PublicDeck;
     final deck = DeckSelection(widget.deck.id);
     return Scaffold(
       appBar: AppBar(
@@ -43,6 +55,8 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
             tooltip: l10n.deckActions,
             onSelected: (action) => switch (action) {
               _DeckAction.rename => _rename(),
+              _DeckAction.publish => sharing?.publish(context, current),
+              _DeckAction.unpublish => sharing?.unpublish(context, current),
               _DeckAction.delete => _delete(),
             },
             itemBuilder: (_) => [
@@ -50,6 +64,17 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                 value: _DeckAction.rename,
                 child: Text(l10n.rename),
               ),
+              if (sharing != null)
+                PopupMenuItem(
+                  value: public ? _DeckAction.unpublish : _DeckAction.publish,
+                  enabled: online,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    enabled: online,
+                    title: Text(public ? l10n.unpublish : l10n.publish),
+                    subtitle: online ? null : Text(l10n.publishNeedsNetwork),
+                  ),
+                ),
               PopupMenuItem(
                 value: _DeckAction.delete,
                 child: Text(l10n.deleteDeck),
@@ -62,14 +87,22 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
         AsyncData(:final value) => ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                _name,
-                style: textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    _name,
+                    style: textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
+                if (public) const PublicChip(),
+              ],
             ),
             const SizedBox(height: 4),
             ref.watch(todayProvider)(
@@ -171,7 +204,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
     }
     return [
       for (final row in rows)
-        _CardRow(
+        CardSplitRow(
           front: row.front,
           back: row.back,
           onTap: () => _open(row.card),
@@ -259,17 +292,19 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
   }
 }
 
-/// A card as two columns, front and back, split by a thin divider.
-class _CardRow extends StatelessWidget {
-  const _CardRow({
+/// A card as two columns, front and back, split by a thin divider; read-only
+/// without [onTap].
+class CardSplitRow extends StatelessWidget {
+  const CardSplitRow({
+    super.key,
     required this.front,
     required this.back,
-    required this.onTap,
+    this.onTap,
   });
 
   final String front;
   final String back;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

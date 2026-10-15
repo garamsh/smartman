@@ -11,10 +11,12 @@ import 'package:smartman/account/account.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import 'account/fake_account_service.dart';
+import 'sharing/fakes.dart';
 import 'sync/fake_sync_server.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
@@ -35,12 +37,14 @@ void main() {
 
   /// Composes the app over an in-memory database and theme storage holding
   /// [themeMode] when given, signed in through [account] when given and as a
-  /// restored session otherwise, extracting cards through [extraction].
+  /// restored session otherwise, extracting cards through [extraction], and
+  /// sharing decks through [sharing].
   Future<void> pumpApp(
     WidgetTester tester, {
     String? themeMode,
     AccountService? account,
     ExtractionClient? extraction,
+    SharingServer? sharing,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
@@ -63,6 +67,8 @@ void main() {
         FakeSyncServer(_ada),
         themeStorage,
         extraction,
+        sharing,
+        FakeReachability(),
       ),
     );
     await tester.pumpAndSettle();
@@ -115,6 +121,33 @@ void main() {
 
     await pumpApp(tester, extraction: _NoExtraction());
     expect(find.text('Create from photo'), findsOneWidget);
+    await unmountApp(tester);
+  });
+
+  testWidgets('sharing is offered only with a sharing server', (tester) async {
+    await pumpApp(tester);
+    expect(find.byTooltip('Account'), findsOneWidget);
+    expect(find.byTooltip('Browse'), findsNothing);
+    await createDeckAndOpen(tester, 'French');
+    await tester.tap(find.byTooltip('Deck actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Publish'), findsNothing);
+    await unmountApp(tester);
+
+    await pumpApp(tester, sharing: FakeSharingServer());
+    await tester.tap(find.byTooltip('Browse'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('No public decks yet. Publish one of yours to be the first.'),
+      findsOneWidget,
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await createDeckAndOpen(tester, 'French');
+    await tester.tap(find.byTooltip('Deck actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Publish'), findsOneWidget);
     await unmountApp(tester);
   });
 

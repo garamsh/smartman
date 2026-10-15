@@ -23,6 +23,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../sharing/fakes.dart';
 import '../sync/fake_sync_server.dart';
 import 'fake_account_service.dart';
 import 'fake_google_sign_in.dart';
@@ -96,6 +97,8 @@ void main() {
         server ?? FakeSyncServer(_ada),
         themeStorage,
         _NoExtraction(),
+        null,
+        FakeReachability(),
       ),
     );
     await tester.pumpAndSettle();
