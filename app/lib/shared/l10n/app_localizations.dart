@@ -684,6 +684,174 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'다시 시도'**
   String get syncRetry;
+
+  /// Hint over the camera view of photo import.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요'**
+  String get photoCaptureHint;
+
+  /// Chip on the camera view naming the deck the cards go into; tapping it switches the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'추가할 덱 · {name}'**
+  String photoTarget(String name);
+
+  /// Tooltip of the camera view's album button.
+  ///
+  /// In ko, this message translates to:
+  /// **'앨범에서 고르기'**
+  String get photoAlbum;
+
+  /// Tooltip of the camera view's shutter button.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 찍기'**
+  String get photoShutter;
+
+  /// Shown in place of the camera preview when camera access is refused.
+  ///
+  /// In ko, this message translates to:
+  /// **'카메라 사용이 허용되지 않았어요. 설정에서 허용하거나 앨범에서 사진을 골라 주세요.'**
+  String get cameraDenied;
+
+  /// Shown in place of the camera preview when the device has no usable camera.
+  ///
+  /// In ko, this message translates to:
+  /// **'카메라를 열 수 없어요. 앨범에서 사진을 골라 주세요.'**
+  String get cameraUnavailable;
+
+  /// Semantic label of the photo thumbnail while cards are extracted.
+  ///
+  /// In ko, this message translates to:
+  /// **'찍은 사진'**
+  String get photoThumbnail;
+
+  /// Title while the photo is sent for extraction.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드를 찾고 있어요'**
+  String get extractingTitle;
+
+  /// Privacy note shown while cards are extracted.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
+  String get extractingNote;
+
+  /// Title of the review screen: how many candidate cards were found.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}개를 찾았어요'**
+  String reviewTitle(int count);
+
+  /// Line under the review title, ending with the deck the cards go into.
+  ///
+  /// In ko, this message translates to:
+  /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요 · {deck}'**
+  String reviewHint(String deck);
+
+  /// Heading of the candidates whose card key matches a card in the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 있는 카드 {count}개'**
+  String reviewDuplicates(int count);
+
+  /// Semantic label of a candidate's checkbox.
+  ///
+  /// In ko, this message translates to:
+  /// **'포함'**
+  String get includeCard;
+
+  /// Duplicate option: write nothing for this candidate.
+  ///
+  /// In ko, this message translates to:
+  /// **'건너뛰기'**
+  String get duplicateSkip;
+
+  /// Duplicate option: append this back to the existing card's back.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒷면 합치기'**
+  String get duplicateMergeBack;
+
+  /// Duplicate option: add this candidate as a separate card.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 카드로 추가'**
+  String get duplicateAddNew;
+
+  /// Button that returns to the camera for a new photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 찍기'**
+  String get retake;
+
+  /// Button that sends the same photo again.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 시도'**
+  String get retry;
+
+  /// Primary button of the review screen, with how many cards it adds or merges.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}개 추가'**
+  String addCards(int count);
+
+  /// Photo import failure: the server could not be reached.
+  ///
+  /// In ko, this message translates to:
+  /// **'인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.'**
+  String get extractionOffline;
+
+  /// Photo import failure: the photo was too large or of an unsupported type.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사진은 보낼 수 없어요. 다시 찍거나 다른 사진을 골라 주세요.'**
+  String get photoRefused;
+
+  /// Photo import failure: the model found no card on the page.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요'**
+  String get noCardsFound;
+
+  /// Photo import failure: the daily extraction limit was reached.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.'**
+  String get dailyLimitReached;
+
+  /// Photo import failure: the model failed.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요'**
+  String get modelFailed;
+
+  /// Photo import failure: no session, or one the server refused.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인이 필요해요. 계정 화면에서 다시 로그인해 주세요.'**
+  String get signInRequired;
+
+  /// Photo import failure: the server answered unexpectedly.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금은 사진으로 카드를 만들 수 없어요. 잠시 후 다시 시도해 주세요.'**
+  String get serviceFailed;
+
+  /// Photo import failure: the file is not an image the app reads.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.'**
+  String get photoUnreadable;
+
+  /// Shown when cards are saved into a deck that was deleted meanwhile, such as on another device.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 덱은 삭제됐어요. 다른 덱을 골라 주세요.'**
+  String get deckDeleted;
 }
 
 class _AppLocalizationsDelegate

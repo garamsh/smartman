@@ -4,11 +4,13 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'account/account.dart';
 import 'deck/deck.dart';
+import 'photo_import/photo_import.dart';
 import 'shared/database.dart';
 import 'shared/l10n/app_localizations.dart';
 import 'shared/theme.dart';
@@ -32,20 +34,30 @@ Future<void> main() async {
       account.service,
       connectSyncServer(account),
       themeStorage,
+      switch (account.client) {
+        final client? => HttpExtractionClient(
+          http.Client(),
+          functionUrl: extractCardsUrl(client.rest.url),
+          accessToken: () async => client.auth.currentSession?.accessToken,
+        ),
+        null => null,
+      },
     ),
   );
 }
 
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
-/// [server], and keeping the theme choice in [themeStorage]. Sync starts at
-/// once.
+/// [server], keeping the theme choice in [themeStorage], and extracting
+/// cards from photos through [extraction], whose absence hides photo import.
+/// Sync starts at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
   AccountService account,
   SyncServer server,
   SharedPreferencesWithCache themeStorage,
+  ExtractionClient? extraction,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
@@ -72,6 +84,15 @@ Widget composeApp(
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      photoImportProvider.overrideWithValue(
+        extraction == null
+            ? null
+            : (deck) => PhotoImportScreen(
+                deck: deck,
+                client: extraction,
+                photos: const DevicePhotoSource(),
+              ),
+      ),
       studyRepositoryProvider.overrideWithValue(studyRepository),
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),

@@ -17,6 +17,7 @@ import 'package:smartman/account/src/account_service.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
@@ -55,6 +56,15 @@ String _expiredSession() {
   });
 }
 
+/// An extraction client the test never calls.
+final class _NoExtraction implements ExtractionClient {
+  @override
+  Future<List<CandidateCard>?> extract(
+    JpegPhoto photo, {
+    required Future<void> cancel,
+  }) => throw UnimplementedError('not called');
+}
+
 void main() {
   late Scheduler scheduler;
   setUpAll(() async {
@@ -62,8 +72,8 @@ void main() {
     GoogleSignInPlatform.instance = FakeGoogleSignIn();
   });
 
-  /// Composes the app, signing in through [account] and syncing with
-  /// [server].
+  /// Composes the app, signing in through [account], syncing with [server],
+  /// and offering photo import.
   Future<void> pumpApp(
     WidgetTester tester,
     AccountService account, {
@@ -85,6 +95,7 @@ void main() {
         account,
         server ?? FakeSyncServer(_ada),
         themeStorage,
+        _NoExtraction(),
       ),
     );
     await tester.pumpAndSettle();
@@ -197,6 +208,8 @@ void main() {
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Study · 1'));
       },
+      'photo import': (tester) =>
+          tapAndSettle(tester, find.text('Create from photo')),
       'account': (tester) => tapAndSettle(tester, find.byTooltip('Account')),
     };
     for (final MapEntry(key: name, value: open) in routes.entries) {
@@ -238,6 +251,7 @@ void main() {
         expect(find.byType(DeckListScreen), findsNothing);
         expect(find.byType(StudyScreen), findsNothing);
         expect(find.byType(AccountScreen), findsNothing);
+        expect(find.byType(PhotoImportScreen), findsNothing);
         expect(find.text('French'), findsNothing);
         expect(find.text('Chat'), findsNothing);
         await unmountApp(tester);

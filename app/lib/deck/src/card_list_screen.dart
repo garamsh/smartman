@@ -138,11 +138,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
         primary: photoImport == null
             ? null
             : FilledButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => photoImport(widget.deck.id),
-                  ),
-                ),
+                onPressed: () => _importPhoto(photoImport),
                 child: Text(l10n.addFromPhoto),
               ),
       ),
@@ -181,6 +177,19 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
           onTap: () => _open(row.card),
         ),
     ];
+  }
+
+  /// Opens photo import for this deck. When it saved into another deck, that
+  /// deck's list replaces this one.
+  Future<void> _importPhoto(Widget Function(DeckId? deck) photoImport) async {
+    final navigator = Navigator.of(context);
+    final deck = await navigator.push(
+      MaterialPageRoute<Deck>(builder: (_) => photoImport(widget.deck.id)),
+    );
+    if (deck == null || deck.id == widget.deck.id || !mounted) return;
+    await navigator.pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
+    );
   }
 
   void _study() => Navigator.of(context).push(

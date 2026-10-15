@@ -1,0 +1,6 @@
+/* Shown when photo import first opens the camera. */
+"NSCameraUsageDescription" = "The camera takes a photo of a vocabulary page to make cards from it.";
+/* Shown if the photo library is asked for; the picker itself needs no permission. */
+"NSPhotoLibraryUsageDescription" = "A photo you choose from your library is used to make cards from it.";
+/* Required by the camera package; photo import records no sound. */
+"NSMicrophoneUsageDescription" = "Photo import takes photos only and records no sound.";

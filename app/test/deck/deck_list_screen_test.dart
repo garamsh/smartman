@@ -218,6 +218,61 @@ void main() {
     await list.close();
   });
 
+  testWidgets('a photo import that saved returns to the deck it saved into', (
+    tester,
+  ) async {
+    final list = await _open(
+      tester,
+      photoImport: (_) => Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => Navigator.of(context).pop(
+              Deck(
+                id: const DeckId('deck1'),
+                name: 'Beta',
+                createdAt: DateTime.utc(2026, 10, 15),
+                updatedAt: DateTime.utc(2026, 10, 15),
+              ),
+            ),
+            child: const Text('saved'),
+          ),
+        ),
+      ),
+    );
+    expect(list.ids['Beta'], const DeckId('deck1'));
+
+    await list.tap('Create from photo');
+    await list.tap('saved');
+
+    expect(find.byType(DeckListScreen), findsNothing);
+    expect(find.text('Beta'), findsOneWidget);
+    expect(find.text('Add card'), findsOneWidget);
+    await list.close();
+  });
+
+  testWidgets('a photo import left without saving returns to the deck list', (
+    tester,
+  ) async {
+    final list = await _open(
+      tester,
+      photoImport: (_) => Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('left'),
+          ),
+        ),
+      ),
+    );
+
+    await list.tap('Create from photo');
+    await list.tap('left');
+
+    expect(find.byType(DeckListScreen), findsOneWidget);
+    expect(find.text('Add card'), findsNothing);
+    await list.close();
+  });
+
   testWidgets('a long-press enters selection mode with that deck selected', (
     tester,
   ) async {

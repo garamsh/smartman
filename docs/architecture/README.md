@@ -28,7 +28,7 @@ Current architecture of the system and the decisions behind it. This file is the
 - `study.md` — the `study` domain: the study session over one or more decks, its queue and stored card state, and the flutter_rust_bridge crate and bindings through which it calls the engine.
 - `sync.md` — the `sync` domain: the local sync columns and cursor, a run's pull and push, the conflict rules, when sync runs, sign-out, and the status the account screen shows.
 - `server.md` — the Supabase schema the app syncs to: the four tables, row-level security, server-set revisions, tombstones, the extraction count, and the pgTAP tests `make test` runs.
-- `ai-extraction.md` — the `extract-cards` Edge Function: its contract, limits and privacy, how its model is switched, and the eval that chooses the model.
+- `ai-extraction.md` — the `extract-cards` Edge Function: its contract, limits and privacy, how its model is switched, the eval that chooses the model, and the app's `photo_import` domain that calls it.
 - `adr/0001-domain-structure.md` — partition the app by domain, with siblings reached only through their public surface.
 - `adr/0002-domain-public-surface-and-shared-database.md` — declare a domain's surface in one library file, and keep the drift database below the domains.
 - `adr/0003-fsrs-engine.md` — schedule with FSRS-6 as py-fsrs 6.3.2 implements it, without learning steps or fuzz; its no-fuzz decision superseded by ADR 0012.

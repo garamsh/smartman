@@ -358,4 +358,98 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get syncRetry => '다시 시도';
+
+  @override
+  String get photoCaptureHint => '단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요';
+
+  @override
+  String photoTarget(String name) {
+    return '추가할 덱 · $name';
+  }
+
+  @override
+  String get photoAlbum => '앨범에서 고르기';
+
+  @override
+  String get photoShutter => '사진 찍기';
+
+  @override
+  String get cameraDenied => '카메라 사용이 허용되지 않았어요. 설정에서 허용하거나 앨범에서 사진을 골라 주세요.';
+
+  @override
+  String get cameraUnavailable => '카메라를 열 수 없어요. 앨범에서 사진을 골라 주세요.';
+
+  @override
+  String get photoThumbnail => '찍은 사진';
+
+  @override
+  String get extractingTitle => '카드를 찾고 있어요';
+
+  @override
+  String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
+
+  @override
+  String reviewTitle(int count) {
+    return '카드 $count개를 찾았어요';
+  }
+
+  @override
+  String reviewHint(String deck) {
+    return '눌러서 고치고, 뺄 카드는 체크를 끄세요 · $deck';
+  }
+
+  @override
+  String reviewDuplicates(int count) {
+    return '이미 있는 카드 $count개';
+  }
+
+  @override
+  String get includeCard => '포함';
+
+  @override
+  String get duplicateSkip => '건너뛰기';
+
+  @override
+  String get duplicateMergeBack => '뒷면 합치기';
+
+  @override
+  String get duplicateAddNew => '새 카드로 추가';
+
+  @override
+  String get retake => '다시 찍기';
+
+  @override
+  String get retry => '다시 시도';
+
+  @override
+  String addCards(int count) {
+    return '카드 $count개 추가';
+  }
+
+  @override
+  String get extractionOffline => '인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.';
+
+  @override
+  String get photoRefused => '이 사진은 보낼 수 없어요. 다시 찍거나 다른 사진을 골라 주세요.';
+
+  @override
+  String get noCardsFound => '카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요';
+
+  @override
+  String get dailyLimitReached => '오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.';
+
+  @override
+  String get modelFailed => '카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요';
+
+  @override
+  String get signInRequired => '로그인이 필요해요. 계정 화면에서 다시 로그인해 주세요.';
+
+  @override
+  String get serviceFailed => '지금은 사진으로 카드를 만들 수 없어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get photoUnreadable => '이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.';
+
+  @override
+  String get deckDeleted => '이 덱은 삭제됐어요. 다른 덱을 골라 주세요.';
 }

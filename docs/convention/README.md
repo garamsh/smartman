@@ -41,8 +41,11 @@ These apply only when the project uses that stack. The bootstrap process (root `
 
 | File | Extends | Governs |
 |---|---|---|
+| `stack-container.md` | — | Container images the project builds |
+| `stack-nextjs.md` | — | Next.js App Router applications: the web app in `web/`, whose project root is that directory |
+| `stack-tailwind.md` | — | Tailwind CSS styling |
 
-This project keeps none. Its stacks — Flutter/Dart, Rust, Supabase — have no file here, so it runs on the stack-neutral files alone.
+This project keeps these three for the web app (M8). Its other stacks — Flutter/Dart, Rust, Supabase — have no file here, so the app, the engine and the backend run on the stack-neutral files alone.
 
 A stack file states the concrete form of what any stack-neutral file governs — the test client and file placement behind `testing.md`, the comment syntax behind `code-comments.md` and the commands behind an entry-point name in `ci.md` among them. It states the same of a structural rule (`docs/architecture/README.md` §Rules, "Structural rules live in `structure.md`"): the package and file names the unit takes in its language. It also states a structural case its framework decides (§Rules, "Structural rules yield only to what a framework imposes"). It never restates the rule itself. These two tables and those rules are where the split is recorded — the files do not point at each other.
 
