@@ -9,15 +9,18 @@ import '../../shared/ui/app_list_row.dart';
 import '../../shared/ui/app_section_label.dart';
 import '../../shared/ui/app_text_field.dart';
 import 'candidates.dart';
+import 'detail_level.dart';
 
-/// The candidates to check, edit or leave out, with those whose key the deck
-/// already holds grouped below with a duplicate option each.
+/// How much each answer says, over the candidates to check, edit or leave
+/// out, with those whose key the deck already holds grouped below with a
+/// duplicate option each.
 class ReviewView extends StatelessWidget {
   const ReviewView({
     super.key,
     required this.review,
     required this.deckName,
     required this.saving,
+    required this.onLevel,
     required this.onChanged,
     required this.onRetake,
     required this.onSave,
@@ -26,6 +29,9 @@ class ReviewView extends StatelessWidget {
   final Review review;
   final String deckName;
   final bool saving;
+
+  /// Chooses the detail level, which recomposes every answer not typed.
+  final ValueChanged<DetailLevel> onLevel;
 
   /// Called after a row of [review] changed in place.
   final VoidCallback onChanged;
@@ -85,10 +91,13 @@ class ReviewView extends StatelessWidget {
             style: AppType.secondary.copyWith(color: colors.muted),
           ),
           const SizedBox(height: AppSpace.s16),
+          DetailLevelSelector(level: review.level, onChanged: onLevel),
+          const SizedBox(height: AppSpace.s16),
           for (final row in fresh)
             _CandidateRow(
               key: ObjectKey(row),
               row: row,
+              level: review.level,
               duplicate: false,
               onChanged: onChanged,
             ),
@@ -99,6 +108,7 @@ class ReviewView extends StatelessWidget {
               _CandidateRow(
                 key: ObjectKey(row),
                 row: row,
+                level: review.level,
                 duplicate: true,
                 onChanged: onChanged,
               ),
@@ -125,17 +135,20 @@ class ReviewView extends StatelessWidget {
   }
 }
 
-/// A candidate: its checkbox, its front and back split by a divider, each
-/// edited in place on a tap, and its duplicate option when [duplicate].
+/// A candidate: its checkbox, its front and its answer at [level] split by a
+/// divider, each edited in place on a tap, an answer typed by hand marked
+/// edited, and its duplicate option when [duplicate].
 class _CandidateRow extends StatelessWidget {
   const _CandidateRow({
     super.key,
     required this.row,
+    required this.level,
     required this.duplicate,
     required this.onChanged,
   });
 
   final ReviewRow row;
+  final DetailLevel level;
   final bool duplicate;
   final VoidCallback onChanged;
 
@@ -176,10 +189,11 @@ class _CandidateRow extends StatelessWidget {
                 Expanded(
                   child: _EditableSide(
                     label: l10n.cardBack,
-                    text: row.back,
+                    text: row.backAt(level),
+                    mark: row.edited ? l10n.candidateEdited : null,
                     style: AppType.body.copyWith(color: colors.muted),
                     onSubmitted: (text) {
-                      row.back = text;
+                      row.editedBack = text;
                       onChanged();
                     },
                   ),
@@ -245,18 +259,21 @@ class _DuplicateChoiceChip extends StatelessWidget {
   }
 }
 
-/// A card side as text that becomes a field on a tap. Leaving the field keeps
-/// its text, or the previous text when it was left empty.
+/// A card side as text that becomes a field on a tap, with [mark] under it
+/// when there is one. Leaving the field keeps its text, or the previous text
+/// when it was left empty.
 class _EditableSide extends StatefulWidget {
   const _EditableSide({
     required this.label,
     required this.text,
+    this.mark,
     required this.style,
     required this.onSubmitted,
   });
 
   final String label;
   final String text;
+  final String? mark;
   final TextStyle? style;
   final ValueChanged<String> onSubmitted;
 
@@ -316,9 +333,10 @@ class _EditableSideState extends State<_EditableSide> {
       setState(() => _editing = true);
     }
 
+    final mark = widget.mark;
     return Semantics(
       button: true,
-      label: '${widget.label}: ${widget.text}',
+      label: ['${widget.label}: ${widget.text}', ?mark].join(', '),
       onTap: edit,
       excludeSemantics: true,
       child: InkWell(
@@ -327,7 +345,22 @@ class _EditableSideState extends State<_EditableSide> {
           padding: const EdgeInsets.all(AppSpace.s16),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(widget.text, style: widget.style),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.text, style: widget.style),
+                if (mark != null) ...[
+                  const SizedBox(height: AppSpace.s4),
+                  Text(
+                    mark,
+                    style: AppType.caption.copyWith(
+                      color: AppColors.of(context).muted,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),

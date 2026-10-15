@@ -2,15 +2,43 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'detail_level.dart';
 import 'failure.dart';
 import 'photo.dart';
 
-/// A card the model read off the page, before the user reviews it.
+/// A card the model read off the page, before the user reviews it: its
+/// fields as the page prints them.
 final class CandidateCard {
-  const CandidateCard({required this.front, required this.back});
+  const CandidateCard({
+    required this.front,
+    required this.meaning,
+    this.partOfSpeech,
+    this.examples = const [],
+  });
 
   final String front;
-  final String back;
+  final String meaning;
+
+  /// The page's own notation, such as "[동]"; null when it prints none.
+  final String? partOfSpeech;
+
+  /// Empty when the page prints none.
+  final List<String> examples;
+
+  /// The answer at [level]: the meaning, with the part of speech and a space
+  /// before it from [DetailLevel.basic], and each example on a line of its
+  /// own at [DetailLevel.detailed].
+  String backAt(DetailLevel level) {
+    final basic = switch (partOfSpeech) {
+      final partOfSpeech? => '$partOfSpeech $meaning',
+      null => meaning,
+    };
+    return switch (level) {
+      DetailLevel.simple => meaning,
+      DetailLevel.basic => basic,
+      DetailLevel.detailed => [basic, ...examples].join('\n'),
+    };
+  }
 }
 
 /// Sends a photo to `extract-cards` and returns the cards it found.
@@ -87,18 +115,41 @@ List<CandidateCard> _parseCards(String body) {
     throw const ServiceFailed('the success body is not JSON');
   }
   if (decoded case {'cards': final List<Object?> cards} when cards.isNotEmpty) {
-    return [
-      for (final card in cards)
-        switch (card) {
-          {'front': final String front, 'back': final String back}
-              when front.trim().isNotEmpty && back.trim().isNotEmpty =>
-            CandidateCard(front: front.trim(), back: back.trim()),
-          _ => throw const ServiceFailed('a card is not two non-empty sides'),
-        },
-    ];
+    return [for (final card in cards) _parseCard(card)];
   }
   throw const ServiceFailed('the success body holds no card list');
 }
+
+/// A card of non-empty `front` and `back`, with the optional `meaning`,
+/// `partOfSpeech` and `examples`. A function deployed before those fields
+/// sends `back` alone, which is then the meaning.
+CandidateCard _parseCard(Object? card) {
+  if (card
+      case final Map<String, Object?> fields &&
+          {'front': final String front, 'back': final String back}
+      when front.trim().isNotEmpty && back.trim().isNotEmpty) {
+    return CandidateCard(
+      front: front.trim(),
+      meaning: fields.containsKey('meaning')
+          ? _text(fields['meaning'])
+          : back.trim(),
+      partOfSpeech: fields.containsKey('partOfSpeech')
+          ? _text(fields['partOfSpeech'])
+          : null,
+      examples: switch (fields['examples']) {
+        null => const [],
+        final List<Object?> list => [for (final item in list) _text(item)],
+        _ => throw const ServiceFailed('examples is not a list'),
+      },
+    );
+  }
+  throw const ServiceFailed('a card is not two non-empty sides');
+}
+
+String _text(Object? value) => switch (value) {
+  final String text when text.trim().isNotEmpty => text.trim(),
+  _ => throw const ServiceFailed('a card field is not non-empty text'),
+};
 
 /// The URL of `extract-cards` for the project whose PostgREST URL is
 /// [restUrl]. The Supabase client builds both as `<project url>/rest/v1` and

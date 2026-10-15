@@ -308,6 +308,16 @@
     "description": "Line under the review title, ending with the deck the cards go into.",
     "placeholders": {"deck": {"type": "String"}}
   },
+  "detailLevelLabel": "카드에 담을 내용",
+  "@detailLevelLabel": {"description": "Label of the selector of how much each photo card's answer says, on the capture and review screens."},
+  "detailLevelSimple": "간단",
+  "@detailLevelSimple": {"description": "Detail level: the meaning alone."},
+  "detailLevelBasic": "기본",
+  "@detailLevelBasic": {"description": "Detail level, the default: the part of speech the page prints, then the meaning."},
+  "detailLevelDetailed": "자세히",
+  "@detailLevelDetailed": {"description": "Detail level: the basic answer, then each example the page prints on its own line."},
+  "candidateEdited": "직접 고침",
+  "@candidateEdited": {"description": "Mark on a candidate whose answer the user edited, which a detail level switch leaves as typed."},
   "reviewDuplicates": "이미 있는 카드 {count}개",
   "@reviewDuplicates": {
     "description": "Heading of the candidates whose card key matches a card in the deck.",

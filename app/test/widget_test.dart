@@ -52,7 +52,7 @@ void main() {
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: themeStorageKeys,
+          allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
         ),
       ),
     ))!;
