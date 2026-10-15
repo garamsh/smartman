@@ -6,6 +6,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 /// A deck named "French" in an in-memory database, shown by the deck screens
 /// with stand-ins for what the composition site provides.
@@ -42,7 +43,7 @@ class DeckScreens {
 
   /// Types [text] into the field labelled [label].
   Future<void> enter(String label, String text) async {
-    await tester.enterText(find.widgetWithText(TextField, label), text);
+    await tester.enterText(find.widgetWithText(AppTextField, label), text);
     await tester.pump();
   }
 

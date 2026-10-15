@@ -8,6 +8,8 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/database.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/shared/ui/app_chip.dart';
+import 'package:smartman/shared/ui/app_list_row.dart';
 
 import 'fakes.dart';
 
@@ -138,16 +140,12 @@ class _Import {
   }
 
   /// The review row showing [text].
-  Finder row(String text) => find.ancestor(
-    of: find.text(text),
-    matching: find.byWidgetPredicate(
-      (widget) => widget is Container && widget.decoration != null,
-    ),
-  );
+  Finder row(String text) =>
+      find.ancestor(of: find.text(text), matching: find.byType(AppRowSurface));
 
   Future<void> choose(String rowText, String option) async {
     await tap(
-      find.descendant(of: row(rowText), matching: find.byType(ActionChip)),
+      find.descendant(of: row(rowText), matching: find.byType(AppChip)),
     );
     await tap(find.widgetWithText(MenuItemButton, option));
   }
@@ -239,7 +237,7 @@ void main() {
       expect(await import.deckNames(), ['French', 'Spanish']);
       await import.tap(find.text('Add 2 cards'));
       await tester.enterText(find.byType(TextField), 'Page 12');
-      await import.tap(find.text('Save'));
+      await import.tap(find.text('Create'));
 
       expect(await import.deckNames(), ['French', 'Page 12', 'Spanish']);
       final saved = import.popped! as Deck;
@@ -768,7 +766,7 @@ void main() {
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'capture, extracting and review meet the guidelines in ${mode.name}',
+        'capture, the deck sheet, extracting, review and a failure meet the guidelines in ${mode.name}',
         (tester) async {
           final semantics = tester.ensureSemantics();
           final import = await _Import.open(
@@ -789,11 +787,22 @@ void main() {
           }
 
           await check();
+          await import.tap(find.text('Add to · French'));
+          expect(find.text('Add to'), findsOneWidget);
+          await check();
+          await import.tap(find.text('Spanish'));
+          expect(find.text('Add to · Spanish'), findsOneWidget);
           await import.shoot();
           await check();
           import.client.answer({'chat': 'talk', 'chien': 'dog'});
           await tester.pumpAndSettle();
-          expect(find.text('Skip'), findsOneWidget);
+          expect(find.text('Add 2 cards'), findsOneWidget);
+          await check();
+          await import.tap(find.text('Retake'));
+          await import.shoot();
+          import.client.fail(const ModelFailed());
+          await tester.pumpAndSettle();
+          expect(find.text('Try again'), findsOneWidget);
           await check();
           await import.close();
           semantics.dispose();

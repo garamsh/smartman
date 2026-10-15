@@ -266,6 +266,12 @@ abstract class AppLocalizations {
   /// **'저장'**
   String get save;
 
+  /// Primary button of the sheet that names a new deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'만들기'**
+  String get create;
+
   /// Deck menu item for renaming.
   ///
   /// In ko, this message translates to:
@@ -696,6 +702,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'추가할 덱 · {name}'**
   String photoTarget(String name);
+
+  /// Title of the sheet on the camera view that chooses the deck the cards go into.
+  ///
+  /// In ko, this message translates to:
+  /// **'추가할 덱'**
+  String get photoTargetTitle;
 
   /// Tooltip of the camera view's album button.
   ///

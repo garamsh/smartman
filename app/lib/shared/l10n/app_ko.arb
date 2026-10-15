@@ -64,6 +64,8 @@
   "cancel": "취소",
   "@cancel": {"description": "Dismisses a dialog without acting."},
   "save": "저장",
+  "create": "만들기",
+  "@create": {"description": "Primary button of the sheet that names a new deck."},
   "@save": {"description": "Confirms a dialog."},
   "rename": "이름 바꾸기",
   "@rename": {"description": "Deck menu item for renaming."},
@@ -267,6 +269,8 @@
     "description": "Chip on the camera view naming the deck the cards go into; tapping it switches the deck.",
     "placeholders": {"name": {"type": "String"}}
   },
+  "photoTargetTitle": "추가할 덱",
+  "@photoTargetTitle": {"description": "Title of the sheet on the camera view that chooses the deck the cards go into."},
   "photoAlbum": "앨범에서 고르기",
   "@photoAlbum": {"description": "Tooltip of the camera view's album button."},
   "photoShutter": "사진 찍기",

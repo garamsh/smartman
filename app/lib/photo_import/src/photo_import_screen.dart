@@ -170,7 +170,11 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
     if (_target case final deck?) {
       target = ImportIntoDeck(deck);
     } else {
-      final name = await showNameDialog(context, title: l10n.newDeck);
+      final name = await showNameSheet(
+        context,
+        title: l10n.newDeck,
+        action: l10n.create,
+      );
       if (name == null || !mounted) return;
       target = ImportIntoNewDeck(name);
     }

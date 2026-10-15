@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/theme.dart';
+
 /// A screen's bottom bar: a [secondary] action, and a [primary] one beside it
 /// when the screen has one to offer.
 class BottomActions extends StatelessWidget {
@@ -13,9 +15,14 @@ class BottomActions extends StatelessWidget {
     final primary = this.primary;
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.gutter,
+          AppSpace.s8,
+          AppSpace.gutter,
+          AppSpace.s16,
+        ),
         child: Row(
-          spacing: 12,
+          spacing: AppSpace.s12,
           children: [
             Expanded(child: secondary),
             if (primary != null) Expanded(child: primary),

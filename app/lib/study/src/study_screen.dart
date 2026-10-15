@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
 import 'current_card.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -250,48 +251,55 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
+    final colors = AppColors.of(context);
     final progress = this.progress;
     return Material(
-      color: AppColors.of(context).ground,
+      color: colors.ground,
       child: SizedBox(
         height: StudyStyle.topBarHeight,
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: l10n.close,
-              icon: const Icon(Icons.close),
-              onPressed: onClose,
-            ),
-            if (progress != null) ...[
-              Expanded(
-                child: LinearProgressIndicator(
-                  value: progress.total == 0
-                      ? 1
-                      : progress.answered / progress.total,
-                  minHeight: StudyStyle.progressHeight,
-                  borderRadius: BorderRadius.circular(
-                    StudyStyle.progressHeight,
-                  ),
-                  semanticsLabel: l10n.studyProgressSemantics(
-                    progress.answered,
-                    progress.total,
-                  ),
-                ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+          child: Row(
+            spacing: AppSpace.s12,
+            children: [
+              IconButton(
+                tooltip: l10n.close,
+                icon: const Icon(Icons.close),
+                onPressed: onClose,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: StudyStyle.cardMargin,
-                ),
-                child: ExcludeSemantics(
-                  child: Text(
-                    l10n.studyProgress(progress.answered, progress.total),
-                    style: theme.textTheme.labelLarge,
+              if (progress != null) ...[
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: progress.total == 0
+                        ? 1
+                        : progress.answered / progress.total,
+                    minHeight: StudyStyle.progressHeight,
+                    color: colors.know,
+                    backgroundColor: colors.hairline,
+                    borderRadius: BorderRadius.circular(
+                      StudyStyle.progressHeight,
+                    ),
+                    semanticsLabel: l10n.studyProgressSemantics(
+                      progress.answered,
+                      progress.total,
+                    ),
                   ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpace.s12),
+                  child: ExcludeSemantics(
+                    child: Text(
+                      l10n.studyProgress(progress.answered, progress.total),
+                      style: AppType.caption.copyWith(
+                        color: colors.muted,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -307,39 +315,98 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final colors = AppColors.of(context);
     final time = summary.timeSpent;
+    final muted = AppType.secondary.copyWith(color: colors.muted);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
-        boxShadow: StudyStyle.currentShadow(colors),
+        boxShadow: AppShadow.raised(colors),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minHeight: StudyStyle.currentMinHeight,
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(StudyStyle.cardPadding),
+          padding: const EdgeInsets.all(AppSpace.s24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            spacing: StudyStyle.cardPadding / 2,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(l10n.sessionSummaryTitle, style: textTheme.headlineSmall),
-              if (summary.cardsStudied == 0) Text(l10n.nothingToStudy),
-              Text(l10n.cardsStudied(summary.cardsStudied)),
-              Text(l10n.knowCount(summary.knowCount)),
-              Text(l10n.dontKnowCount(summary.dontKnowCount)),
+              Semantics(
+                header: true,
+                child: Text(l10n.sessionSummaryTitle, style: AppType.title),
+              ),
+              const SizedBox(height: AppSpace.s4),
+              if (summary.cardsStudied == 0)
+                Text(l10n.nothingToStudy, style: muted),
+              Text(l10n.cardsStudied(summary.cardsStudied), style: muted),
               Text(
                 l10n.timeSpent(time.inMinutes, time.inSeconds.remainder(60)),
+                style: muted,
               ),
-              FilledButton(
+              const SizedBox(height: AppSpace.s16),
+              Row(
+                spacing: AppSpace.s8,
+                children: [
+                  Expanded(
+                    child: _Tally(
+                      text: l10n.knowCount(summary.knowCount),
+                      dot: colors.knowDot,
+                    ),
+                  ),
+                  Expanded(
+                    child: _Tally(
+                      text: l10n.dontKnowCount(summary.dontKnowCount),
+                      dot: colors.dontKnow,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpace.s20),
+              AppButton(
+                label: l10n.done,
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.done),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One answer's count on the ground, after its dot.
+class _Tally extends StatelessWidget {
+  const _Tally({required this.text, required this.dot});
+
+  final String text;
+  final Color dot;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.ground,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s12,
+          vertical: AppSpace.s12,
+        ),
+        child: Row(
+          spacing: AppSpace.s8,
+          children: [
+            Container(
+              width: StudyStyle.dotSize,
+              height: StudyStyle.dotSize,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+            ),
+            Expanded(child: Text(text, style: AppType.bodyStrong)),
+          ],
         ),
       ),
     );

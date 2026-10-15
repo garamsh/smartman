@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 
@@ -35,47 +37,53 @@ class FailureView extends StatelessWidget {
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpace.s24),
           child: Semantics(
             liveRegion: true,
             child: Text(
               describePhotoImportFailure(l10n, failure),
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: AppType.bodyStrong,
             ),
           ),
         ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.s8,
+            AppSpace.gutter,
+            AppSpace.s16,
+          ),
           child: Row(
-            spacing: 12,
+            spacing: AppSpace.s12,
             children: [
               if (isRetakeable(failure))
                 Expanded(
-                  child: onRetry == null
-                      ? FilledButton(
-                          onPressed: onRetake,
-                          child: Text(l10n.retake),
-                        )
-                      : OutlinedButton(
-                          onPressed: onRetake,
-                          child: Text(l10n.retake),
-                        ),
+                  child: AppButton(
+                    label: l10n.retake,
+                    variant: onRetry == null
+                        ? AppButtonVariant.primary
+                        : AppButtonVariant.secondary,
+                    size: AppButtonSize.cta,
+                    onPressed: onRetake,
+                  ),
                 ),
               if (onRetry != null)
                 Expanded(
-                  child: FilledButton(
+                  child: AppButton(
+                    label: l10n.retry,
+                    size: AppButtonSize.cta,
                     onPressed: onRetry,
-                    child: Text(l10n.retry),
                   ),
                 ),
               if (!isRetakeable(failure) && onRetry == null)
                 Expanded(
-                  child: FilledButton(
+                  child: AppButton(
+                    label: l10n.close,
+                    size: AppButtonSize.cta,
                     onPressed: () => Navigator.of(context).pop(),
-                    child: Text(l10n.close),
                   ),
                 ),
             ],
