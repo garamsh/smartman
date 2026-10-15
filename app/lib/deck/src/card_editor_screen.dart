@@ -222,8 +222,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   }
 }
 
-/// The sheet shown when a save collides with [existing]: save anyway, open the
-/// existing card, or cancel. Nothing is overwritten either way.
+/// The sheet shown when a save collides with [existing]: save anyway or open
+/// the existing card; dismissing it does neither. Nothing is overwritten.
 class _DuplicateSheet extends StatelessWidget {
   const _DuplicateSheet({required this.existing, required this.isNew});
 
@@ -241,12 +241,6 @@ class _DuplicateSheet extends StatelessWidget {
         back: describeContent(l10n, existing.back),
       ),
       actions: [
-        AppButton(
-          label: l10n.cancel,
-          variant: AppButtonVariant.text,
-          size: AppButtonSize.cta,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         AppButton(
           label: l10n.openExistingCard,
           variant: AppButtonVariant.secondary,

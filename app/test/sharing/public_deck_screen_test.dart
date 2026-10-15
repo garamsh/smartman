@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/shared/ui/app_button.dart';
 import 'package:smartman/sharing/sharing.dart';
 
 import 'fakes.dart';
@@ -200,6 +201,15 @@ void main() {
     await app.deckMenu('Report');
     final report = find.widgetWithText(FilledButton, 'Report');
     expect(tester.widget<FilledButton>(report).onPressed, isNull);
+    // The sheet is dismissed by a drag or the scrim, so it offers no cancel.
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(AppButton),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Cancel'), findsNothing);
     await app.tapText('Spam');
     await app.tap(report);
 

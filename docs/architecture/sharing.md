@@ -19,7 +19,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 ### Publishing
 
 - The card list's deck menu offers "공개하기" on a private deck and "비공개로 전환" on a public one. While `Reachability` reports no connection, the item is disabled with "인터넷에 연결되면 바꿀 수 있어요".
-- "공개하기" opens a sheet: the display name the first time (2 to 20 characters, trimmed), an optional description of at most 300 characters, and the required checkbox "부적절하거나 저작권을 침해하는 내용을 공개하지 않겠습니다", then "공개", disabled until it is checked.
+- "공개하기" opens a sheet: the display name the first time (2 to 20 characters, trimmed), an optional description of at most 300 characters, and the required checkbox "부적절하거나 저작권을 침해하는 내용은 공개하지 않을게요", then "공개", disabled until it is checked.
 - A publish writes the server first, then the device: the profile when it is new, then the deck's row with `visibility = public`, `published_at` and the description, then the local row through `DeckRepository.setVisibility`, unsynced, for sync to push as usual. A refused publish leaves the deck private on the device and says why in the sheet.
 - "비공개로 전환" writes `visibility = private` the same way and keeps the description for the next publish.
 - A public deck shows a "공개됨" chip on its deck list row and beside its name on the card list.
@@ -41,7 +41,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 ### Reporting and blocking
 
 - The preview's menu offers "신고하기" and "이 사용자 차단".
-- "신고하기" asks in a sheet for a reason, inappropriate, spam, copyright or other, and files it once; a second report of the same deck says "이미 신고한 덱이에요".
+- "신고하기" asks in a sheet for a reason, inappropriate, spam, copyright or other, with "신고하기" as its one action and no cancel, and files it once; a second report of the same deck says "이미 신고한 덱이에요".
 - "이 사용자 차단" asks for confirmation, then blocks the owner and returns to the browse screen, which lists again without the owner's decks.
 
 ### Failures

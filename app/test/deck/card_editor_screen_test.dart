@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_editor_screen.dart';
 import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/shared/ui/app_button.dart';
 import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'deck_screens.dart';
@@ -129,6 +130,11 @@ void main() {
 
     await screens.tap(find.byTooltip('Delete card'));
     expect(find.text('Delete this card?'), findsOneWidget);
+    // The confirmation keeps its cancel, and the delete comes last, below it.
+    expect(
+      tester.getRect(find.text('Cancel')).bottom,
+      lessThanOrEqualTo(tester.getRect(find.text('Delete')).top),
+    );
     await screens.tap(find.text('Delete'));
 
     expect(find.byType(CardEditorScreen), findsNothing);
@@ -194,18 +200,33 @@ void main() {
       await screens.close();
     });
 
-    testWidgets('Cancel returns to the editor and stores nothing', (
-      tester,
-    ) async {
-      final screens = await collide(tester);
+    testWidgets(
+      'the sheet offers no cancel, and dismissing it returns to the editor and stores nothing',
+      (tester) async {
+        final screens = await collide(tester);
+        final actions = find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byType(AppButton),
+        );
+        // Control: the finder reaches the sheet's actions.
+        expect(actions, findsNWidgets(2));
+        expect(
+          find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.text('Cancel'),
+          ),
+          findsNothing,
+        );
 
-      await screens.tap(find.text('Cancel'));
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(BottomSheet), findsNothing);
-      expect(find.text('Add card'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'chat (talk)'), findsOneWidget);
-      expect(await _stored(screens), [('Chat', 'cat')]);
-      await screens.close();
-    });
+        expect(find.byType(BottomSheet), findsNothing);
+        expect(find.text('Add card'), findsOneWidget);
+        expect(find.widgetWithText(TextField, 'chat (talk)'), findsOneWidget);
+        expect(await _stored(screens), [('Chat', 'cat')]);
+        await screens.close();
+      },
+    );
   });
 }

@@ -23,6 +23,9 @@ Future<T?> showAppSheet<T>(
 /// The app's sheet: a drag handle, a [title], an optional [body] in one or
 /// two sentences, optional [content], and [actions] pinned at the bottom
 /// above the keyboard, full width, with the primary one last.
+///
+/// A drag or a tap on the scrim dismisses every sheet, so [actions] hold no
+/// cancel; only [showAppConfirm] adds one, above its destructive button.
 class AppSheet extends StatelessWidget {
   const AppSheet({
     super.key,
@@ -110,8 +113,9 @@ class AppSheet extends StatelessWidget {
 }
 
 /// Asks before an action that cannot be undone: a sheet titled [title] that
-/// states its [consequence] in one sentence, with a cancel and a red
-/// [confirmLabel] button. Resolves to whether the user confirmed.
+/// states its [consequence] in one sentence, with a cancel and, last at the
+/// bottom, a red [confirmLabel] button. Resolves to whether the user
+/// confirmed.
 Future<bool> showAppConfirm(
   BuildContext context, {
   required String title,
