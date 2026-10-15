@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     // src/styles/fonts is a link to the app's bundled fonts, outside this project.
     turbopackAdditionalRoots: {
       fonts: { path: path.join(import.meta.dirname, "../app/assets/fonts") },
+      engine: { path: path.join(import.meta.dirname, "../engine-wasm/pkg") },
     },
   },
 };

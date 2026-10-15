@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { http, HttpResponse } from "msw";
 
 /** The Supabase project every test is configured with (vitest.config.ts). */
@@ -73,6 +75,18 @@ export const handlers = [
   }),
   http.post(`${supabaseUrl}/auth/v1/logout`, () => new HttpResponse(null, { status: 204 })),
 ];
+
+/**
+ * The app's own static files, as the browser fetches them: Vite names a file it serves by its
+ * path on disk under `/@fs/`. Only the engine's `.wasm` is fetched this way.
+ */
+export const staticFiles = http.get("http://localhost:3000/@fs/*", async ({ request }) => {
+  const file = decodeURIComponent(new URL(request.url).pathname.slice("/@fs".length));
+  if (!file.endsWith(".wasm")) return new HttpResponse(null, { status: 404 });
+  return new HttpResponse(await readFile(file), {
+    headers: { "content-type": "application/wasm" },
+  });
+});
 
 /** Supabase Auth unreachable: every request fails at the network. */
 export const supabaseUnreachable = http.all(`${supabaseUrl}/*`, () => HttpResponse.error());
