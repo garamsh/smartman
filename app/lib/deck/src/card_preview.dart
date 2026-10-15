@@ -49,8 +49,8 @@ class _Half extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(AppSpace.s16),
-    child: SizedBox(
-      width: double.infinity,
+    child: Align(
+      alignment: Alignment.centerLeft,
       child: Text(text, style: style),
     ),
   );

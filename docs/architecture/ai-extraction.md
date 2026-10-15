@@ -104,7 +104,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
   - "취소", or leaving the screen, aborts the request;
   - the skeleton rows shimmer, and hold still under reduce motion.
 - **Review** — "카드 n개를 찾았어요" and "눌러서 고치고, 뺄 카드는 체크를 끄세요 · <deck>":
-  - each candidate is a row with a checkbox and its front and back split by a divider;
+  - each candidate is a row with a checkbox and its front and back split by a divider, each centred vertically in its side;
   - a tap on a side edits it in place, and a side left empty keeps its previous text;
   - candidates with one card key on the photo are combined into one before review, their backs joined by `deck`'s merge-back rule;
   - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));

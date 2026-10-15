@@ -505,6 +505,30 @@ void main() {
     );
 
     testWidgets(
+      'a short side sits vertically centred beside a taller one in its row',
+      (tester) async {
+        final import = await _Import.open(tester);
+
+        await import.extract({'chien': 'dog\nhound\npuppy'});
+
+        final short = find.text('chien');
+        final side = find
+            .ancestor(of: short, matching: find.byType(Expanded))
+            .first;
+        expect(
+          tester.getRect(side).height,
+          greaterThan(tester.getRect(short).height * 2),
+          reason: 'the taller back stretches the row',
+        );
+        expect(
+          tester.getCenter(short).dy,
+          closeTo(tester.getCenter(side).dy, 1),
+        );
+        await import.close();
+      },
+    );
+
+    testWidgets(
       'cards with one key on the photo are combined, their backs merged',
       (tester) async {
         final import = await _Import.open(tester);
