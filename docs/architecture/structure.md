@@ -1,6 +1,6 @@
 # Structure
 
-The structural rules of the app: what the unit is, what may reference what, and when a new unit is earned.
+The structural rules of the app and the web app: what the unit is, what may reference what, and when a new unit is earned.
 
 ## Current decisions
 
@@ -38,6 +38,15 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - **Every other unit receives what it depends on and constructs none of it**, whatever the shape makes the unit — a domain, a layer, or an adapter.
 - **The composition site stays thin.** It constructs and passes; it decides nothing else. It opens the theme storage, and passes the themes and the stored choice to `MaterialApp`, whose home is `account`'s `AccountGate`; the gate decides between the sign-in screen and the app ([ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md)).
 
+### The web app
+
+- **`web/` is a project of its own** ([ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md), [`web.md`](web.md)). Nothing under `web/` imports code from `app/`. It reads two of the app's files: the fonts in `app/assets/fonts/`, through the link `web/src/styles/fonts`, and `app/lib/shared/theme.dart`, whose tokens a test compares with `web/src/styles/globals.css`.
+- **A feature is the unit**, under `web/src/features/<name>/`, as a domain is under `app/lib/`, and is earned the same way. The first is `auth`.
+- **A feature is reached only through its two entry points**, stack-nextjs §13's spelling of a domain's public surface: `index.ts`, what a Server Component reads, and `actions.ts`, its Server Actions. A feature's own files import each other directly.
+- **Shared code sits below every feature**: `web/src/lib/` and `web/src/env.ts` import no feature and no route.
+- **The import rules are checked by ESLint.** `web/eslint.config.mjs` fails on an import of `@/features/<name>/` other than its `index` or `actions`, and on an import of `@/features/` or `@/app/` from `web/src/lib/` or `web/src/env.ts`.
+- **The web app has no single composition site.** Next.js calls each route, Route Handler, Server Action and the proxy as an entry point of its own, per request. Each constructs the Supabase client it needs through `web/src/lib/supabase/`, the one place that constructs one.
+
 ## Rationale
 
 - [ADR 0001](adr/0001-domain-structure.md) records why the app is partitioned by domain and which sibling-dependency relation it takes.
@@ -46,6 +55,7 @@ The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Dom
 - [ADR 0006](adr/0006-account-native-google-sign-in.md) records why only the `account` domain imports the Google packages, and [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) why `sync` imports `supabase_flutter` beside it.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme sits in shared code and how the composition site applies it.
 - [ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md) records why the app's home is the account gate, reached through a provider `account` exposes.
+- [ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md) records why the web app is a project of its own and how it reaches the app's fonts.
 
 ## Open questions
 

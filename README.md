@@ -4,7 +4,7 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 
 ## Who it is for
 
-- People who memorize material by studying decks of cards on iOS or Android.
+- People who memorize material by studying decks of cards on iOS or Android, or in a browser.
 - Contributors: start at `AGENTS.md`, then `docs/convention/README.md` and `docs/architecture/README.md`.
 
 ## Layout
@@ -15,6 +15,7 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - `app/rust/` — the flutter_rust_bridge crate through which the app calls the engine.
 - `engine/` — the Rust crate that schedules reviews with FSRS.
 - `engine-wasm/` — the engine as WebAssembly for the web app; its generated module, committed, is in `engine-wasm/pkg/`.
+- `web/` — the Next.js web app, its `Dockerfile`, and its e2e specs in `web/e2e/`; `web.sh` runs the checks over it.
 - `supabase/` — the Supabase CLI project for the backend: its configuration, migrations in `supabase/migrations/`, and pgTAP tests in `supabase/tests/`.
 - `supabase/functions/extract-cards/` — the Edge Function that turns a photo of a vocabulary page into candidate cards, with its Deno tests.
 - `tools/eval/` — the eval that measures candidate models for that function, its generated sample set, and the generator.
@@ -37,6 +38,8 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - wasm-bindgen-cli at the release of the `wasm-bindgen` crate in `engine-wasm/Cargo.lock`, 0.2.129, for the engine's WebAssembly module and its tests: the prebuilt archive for this host from the 0.2.129 release at github.com/wasm-bindgen/wasm-bindgen/releases, its `wasm-bindgen` and `wasm-bindgen-test-runner` on the `PATH`. CI installs the same archive. A build of the same release from source (`cargo install wasm-bindgen-cli`) writes a different `.wasm`, which `make lint` reports as stale. Without it, `make lint` skips checking `engine-wasm/pkg/` and `make test` skips the WebAssembly tests, and each says so; another release fails both.
 - Node 24.22.0 to run the WebAssembly tests; CI installs the same release, set in `.github/workflows/ci.yml`. The PM bumps both when a new LTS release ships. Without it, `make test` skips those tests and says so.
 - jq, which `make lint` uses to list the engine's cargo targets, to read service-role keys' JWT payloads, and to read `app/config/dev.json`.
+- Node.js 24.22.0 for the web app, named in `web/.nvmrc`; CI installs the same release from that file. The PM bumps it together with the `node:` base image in `web/Dockerfile`, whose digest Dependabot proposes; `make lint` fails while the two differ. Without Node.js, `make lint`, `make format`, `make test` and `make build` skip the web app and say so.
+- docker-buildx, for the web app's image: on macOS, `brew install docker-buildx`, then link it into `~/.docker/cli-plugins/`. Without Docker and buildx, `make test` skips the web app's e2e specs and `make build` its image, and both say so.
 - uv, only to regenerate the engine's reference values and the eval's samples; it fetches the Python and the packages each generator pins.
 
 ## Run the app
@@ -48,12 +51,38 @@ flutter run --dart-define-from-file=config/dev.json
 
 The app opens on the sign-in screen until a Google account signs in; a session stored by an earlier run opens it straight away, offline too. Without the file, the sign-in screen says sign-in is not set up, and nothing else runs.
 
+## Run the web app
+
+```sh
+cd web
+cp .env.example .env.local   # then fill in the two values
+npm ci
+npm run dev
+```
+
+- `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; both are public, and the dev project's are `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `app/config/dev.json`. Git ignores `.env.local`.
+- Google sign-in returns to `<origin>/auth/callback`, which must be among Supabase Auth's allowed redirect URLs; only the owner changes that list.
+
+## Run the web app's image
+
+```sh
+docker build -f web/Dockerfile \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=... \
+  -t smartman-web .
+docker run --rm -p 3000:3000 smartman-web
+```
+
+- Build from the repository root: the image bundles the fonts in `app/assets/fonts/`.
+- Both values are frozen into the image, so an image serves one Supabase project.
+- `GET /api/health` answers 200 once the server runs. The image serves on port 3000 as a non-root user.
+- The design and deployment rules are in `docs/architecture/web.md`.
+
 ## Run the checks
 
-- `make lint` — checks Markdown Contents lists, fails on a Supabase secret or service-role key in any file, checks that the iOS URL scheme matches the iOS client ID in `app/config/dev.json`, checks that the app's committed generated code (flutter_rust_bridge's included) and `engine-wasm/pkg/` match their generators, lints and type-checks the TypeScript under `supabase/functions/` and `tools/eval/` with deno (`deno.sh`), runs `flutter analyze` over the app's Dart files, and runs clippy over the engine, the bridge crate and `engine-wasm/` with warnings denied.
-- `make format` — fails when a TypeScript file under `supabase/functions/` or `tools/eval/`, a Dart file in the app, or a Rust file in the engine, the bridge crate or `engine-wasm/` is not formatted; `deno fmt`, `dart format` or `cargo fmt` fixes it.
-- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, the engine's WebAssembly tests in Node (`wasm-bindgen.sh test`), and the database tests in `supabase/tests/` on a throwaway local stack of their own (`supabase/test-db.sh`), stopped afterwards, so concurrent checkouts do not collide and a running local stack is left untouched. It then runs the two-device sync test, `app/test/sync/two_devices_test.dart`, against another throwaway stack with Auth and PostgREST (`supabase/test-sync.sh`). Without Docker it skips both and prints why. Last, it runs the Deno tests of the Edge Function and the eval, with no network: OpenRouter and Supabase are faked.
-- `make build` — builds, given `app/config/dev.json`, a debug Android APK holding the bridge library, on macOS also the iOS simulator app without code signing, the engine crate with its rustdoc, and `engine-wasm/` for `wasm32-unknown-unknown` with its rustdoc, warnings denied. It reports which builds it ran.
+- `make lint` — checks Markdown Contents lists, fails on a Supabase secret or service-role key in any file, checks that the iOS URL scheme matches the iOS client ID in `app/config/dev.json`, checks that the app's committed generated code (flutter_rust_bridge's included) and `engine-wasm/pkg/` match their generators, lints and type-checks the TypeScript under `supabase/functions/` and `tools/eval/` with deno (`deno.sh`), lints and type-checks the web app with ESLint and `tsc` and fails on Vercel-only code in it (`web.sh`), runs `flutter analyze` over the app's Dart files, and runs clippy over the engine, the bridge crate and `engine-wasm/` with warnings denied.
+- `make format` — fails when a TypeScript file under `supabase/functions/` or `tools/eval/`, a file Prettier checks in the web app, a Dart file in the app, or a Rust file in the engine, the bridge crate or `engine-wasm/` is not formatted; `deno fmt`, `npx prettier --write .` in `web/`, `dart format` or `cargo fmt` fixes it.
+- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, the engine's WebAssembly tests in Node (`wasm-bindgen.sh test`), and the database tests in `supabase/tests/` on a throwaway local stack of their own (`supabase/test-db.sh`), stopped afterwards, so concurrent checkouts do not collide and a running local stack is left untouched. It then runs the two-device sync test, `app/test/sync/two_devices_test.dart`, against another throwaway stack with Auth and PostgREST (`supabase/test-sync.sh`). Without Docker it skips both and prints why. Then it runs the Deno tests of the Edge Function and the eval, with no network: OpenRouter and Supabase are faked. Last, it runs the web app's Vitest suite, with Supabase faked, and, where Docker and buildx answer, builds the web app's image, runs it, checks it answers `/api/health` as a non-root user, and runs the Playwright specs in `web/e2e/` against it.
+- `make build` — builds, given `app/config/dev.json`, a debug Android APK holding the bridge library, on macOS also the iOS simulator app without code signing, the engine crate with its rustdoc, `engine-wasm/` for `wasm32-unknown-unknown` with its rustdoc, warnings denied, and the web app with `next build`, then its image where Docker and buildx answer. It reports which builds it ran.
 - `make ci` — runs all four in that order. CI runs the same target.
 
 ## Run the backend locally
