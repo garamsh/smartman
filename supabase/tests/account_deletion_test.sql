@@ -3,7 +3,8 @@
 begin;
 select plan(7);
 
--- A and B each own a row in every table, report and block each other, and B copied A's deck.
+-- A and B each own a row in every table, report, block and copy each other, and B holds a card
+-- copied from A's deck.
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.com'),
   ('00000000-0000-4000-8000-00000000000b', 'b@example.com');
@@ -40,6 +41,9 @@ insert into public.deck_reports (deck_id, reporter_id, reason) values
 insert into public.user_blocks (blocker_id, blocked_id) values
   ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000b'),
   ('00000000-0000-4000-8000-00000000000b', '00000000-0000-4000-8000-00000000000a');
+insert into public.deck_imports (deck_id, user_id) values
+  ('deck-b', '00000000-0000-4000-8000-00000000000a'),
+  ('deck-a', '00000000-0000-4000-8000-00000000000b');
 
 -- Every uuid column of every table in public, as "table.column", that holds [who] in some row.
 create function pg_temp.columns_holding(who uuid) returns setof text language plpgsql as $$
@@ -65,8 +69,8 @@ $$;
 
 select results_eq(
   $$select tablename::text collate "default" from pg_tables where schemaname = 'public' order by 1$$,
-  array['card_states', 'cards', 'deck_reports', 'decks', 'extraction_usage', 'profiles',
-    'reviews', 'user_blocks'],
+  array['card_states', 'cards', 'deck_imports', 'deck_reports', 'decks', 'extraction_usage',
+    'profiles', 'reviews', 'user_blocks'],
   'these are every table in public, so a new table fails here until this test covers it');
 
 select is_empty(
@@ -77,8 +81,8 @@ select is_empty(
 
 select results_eq(
   $$select pg_temp.columns_holding('00000000-0000-4000-8000-00000000000a')$$,
-  array['card_states.user_id', 'cards.user_id', 'deck_reports.reporter_id', 'decks.user_id',
-    'extraction_usage.user_id', 'profiles.user_id', 'reviews.user_id', 'user_blocks.blocked_id',
+  array['card_states.user_id', 'cards.user_id', 'deck_imports.user_id', 'deck_reports.reporter_id',
+    'decks.user_id', 'extraction_usage.user_id', 'profiles.user_id', 'reviews.user_id', 'user_blocks.blocked_id',
     'user_blocks.blocker_id'],
   'before deletion, A''s id is in every table, in each column that can hold it');
 
@@ -96,7 +100,7 @@ select results_eq(
   $$select pg_temp.columns_holding('00000000-0000-4000-8000-00000000000b')$$,
   array['card_states.user_id', 'cards.user_id', 'decks.user_id', 'extraction_usage.user_id',
     'profiles.user_id', 'reviews.user_id'],
-  'B keeps its own rows; its report on A''s deck and its block of A go, and nothing else');
+  'B keeps its own rows; its report on and copy of A''s deck and its block of A go, and nothing else');
 
 select results_eq(
   $$select id, origin_deck_id from public.cards order by id$$,
