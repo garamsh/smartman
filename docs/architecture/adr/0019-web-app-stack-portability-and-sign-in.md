@@ -11,7 +11,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - the stack: Next.js App Router with strict TypeScript and the `src/` layout, Tailwind CSS v4 with CSS-first `@theme`, Vitest with Testing Library and MSW, Playwright for e2e, pinned with a lock file;
   - portability, after the owner's decision of 2026-10-14 to deploy on Vercel first and on a personal cluster later: no Vercel-only feature or `@vercel/*` runtime package, the Node.js runtime only, `output: "standalone"`, configuration only through `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` read by `src/env.ts`, and `GET /api/health` answering 200 without Supabase;
   - a multi-stage `web/Dockerfile` with a non-root user and `FROM …@sha256:` digests, built, run and checked in CI;
-  - sign-in through Supabase Auth with Google and `@supabase/ssr`, mandatory as on the phone ([`account.md`](../account.md) makes it optional on the phone today; open issue #28 makes it mandatory there), redirecting through `<origin>/auth/callback`;
+  - sign-in through Supabase Auth with Google and `@supabase/ssr`, mandatory as on the phone ([ADR 0017](0017-require-sign-in-through-an-account-gate.md)), redirecting through `<origin>/auth/callback`;
   - the design tokens of `app/lib/shared/theme.dart` in `@theme`, light and dark following `prefers-color-scheme`, with IBM Plex Sans KR self-hosted from `app/assets/fonts/`.
 - `NEXT_PUBLIC_` values are inlined at `next build` and frozen there (stack-nextjs §8). A value the container reads only at start would need the client to receive it some other way.
 - Alternatives considered for the font, which is about 11 MB in four files:
