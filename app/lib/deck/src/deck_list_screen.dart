@@ -143,6 +143,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
           : BottomActions(
               secondary: AppButton(
                 label: l10n.newDeck,
+                icon: LucideIcons.plus,
                 variant: AppButtonVariant.secondary,
                 size: AppButtonSize.cta,
                 onPressed: _create,
@@ -151,6 +152,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                   ? null
                   : AppButton(
                       label: l10n.createFromPhoto,
+                      icon: LucideIcons.camera,
                       size: AppButtonSize.cta,
                       onPressed: () => _importPhoto(photoImport),
                     ),
