@@ -41,8 +41,12 @@ sealed class _Camera {
   const _Camera();
 }
 
+/// An open is in flight. [wanted] is false while the app is out of the
+/// foreground, so the session it brings is closed rather than shown.
 final class _Opening extends _Camera {
-  const _Opening();
+  const _Opening({this.wanted = true});
+
+  final bool wanted;
 }
 
 final class _Open extends _Camera {
@@ -55,6 +59,14 @@ final class _Closed extends _Camera {
   const _Closed(this.failure);
 
   final PhotoImportFailure failure;
+}
+
+/// Released while the app is out of the foreground; [closing] completes once
+/// the session is closed.
+final class _Released extends _Camera {
+  const _Released(this.closing);
+
+  final Future<void> closing;
 }
 
 class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
@@ -77,16 +89,16 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// The camera is released while the app is in the background, as `camera`
-  /// leaves that to the app.
+  /// The camera is released while the app is out of the foreground, as
+  /// `camera` leaves that to the app, and opened again when it returns. One
+  /// open runs at a time: a change during one is applied when it lands.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.inactive:
-        _close();
-        setState(() => _camera = const _Opening());
+        _release();
       case AppLifecycleState.resumed:
-        if (_camera is _Opening) _open();
+        _resume();
       case AppLifecycleState.detached ||
           AppLifecycleState.hidden ||
           AppLifecycleState.paused:
@@ -94,16 +106,49 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _open() async {
+  void _release() {
+    switch (_camera) {
+      case _Open(:final session):
+        setState(() => _camera = _Released(session.close()));
+      case _Opening():
+        setState(() => _camera = const _Opening(wanted: false));
+      case _Released() || _Closed():
+        break;
+    }
+  }
+
+  /// A failed open is tried again, so access allowed in Settings takes effect.
+  void _resume() {
+    switch (_camera) {
+      case _Released(:final closing):
+        setState(() => _camera = const _Opening());
+        _open(after: closing);
+      case _Closed():
+        setState(() => _camera = const _Opening());
+        _open();
+      case _Opening():
+        setState(() => _camera = const _Opening());
+      case _Open():
+        break;
+    }
+  }
+
+  /// Opens the camera once [after] completes; `camera` keeps one camera per
+  /// app, so a session still closing would otherwise close the new one.
+  Future<void> _open({Future<void>? after}) async {
+    await after;
+    final CameraSession session;
     try {
-      final session = await widget.photos.openCamera();
-      if (!mounted || _camera is! _Opening) {
-        await session.close();
-        return;
-      }
-      setState(() => _camera = _Open(session));
+      session = await widget.photos.openCamera();
     } on PhotoImportFailure catch (failure) {
       if (mounted) setState(() => _camera = _Closed(failure));
+      return;
+    }
+    if (_camera case _Opening(wanted: true) when mounted) {
+      setState(() => _camera = _Open(session));
+    } else {
+      final closing = session.close();
+      if (mounted) setState(() => _camera = _Released(closing));
     }
   }
 
@@ -143,7 +188,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
             _Open(:final session) => ClipRect(
               child: FittedBox(fit: BoxFit.cover, child: session.preview),
             ),
-            _Opening() => const SizedBox.shrink(),
+            _Opening() || _Released() => const SizedBox.shrink(),
             _Closed(:final failure) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),

@@ -19,15 +19,30 @@ final class FakePhotoSource implements PhotoSource {
   /// Thrown by [pickFromLibrary] instead of returning, when set.
   PhotoImportFailure? libraryFailure;
 
+  /// When set, each [openCamera] waits until [finishOpen] lets it finish.
+  bool holdOpens = false;
+  final _held = <Completer<void>>[];
+
+  /// Calls to [openCamera], including those that fail or are held.
+  int openCalls = 0;
   int opened = 0;
   int closed = 0;
 
   @override
   Future<CameraSession> openCamera() async {
+    openCalls++;
+    if (holdOpens) {
+      final held = Completer<void>();
+      _held.add(held);
+      await held.future;
+    }
     if (cameraFailure case final failure?) throw failure;
     opened++;
     return _FakeCamera(this);
   }
+
+  /// Lets the oldest held open finish; it fails if [cameraFailure] is set.
+  void finishOpen() => _held.removeAt(0).complete();
 
   @override
   Future<JpegPhoto?> pickFromLibrary() async {

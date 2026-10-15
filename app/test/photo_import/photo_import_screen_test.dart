@@ -103,6 +103,20 @@ class _Import {
 
   bool get hasPopped => !identical(popped, _notPopped);
 
+  /// Moves the app to [state], as the system does around a permission prompt.
+  Future<void> lifecycle(AppLifecycleState state) async {
+    tester.binding.handleAppLifecycleStateChanged(state);
+    await tester.pump();
+  }
+
+  /// Lets the oldest held camera open finish; the session it brings is shown
+  /// a frame later.
+  Future<void> finishOpen() async {
+    photos.finishOpen();
+    await tester.pump();
+    await tester.pump();
+  }
+
   Future<void> tap(Finder finder) async {
     await tester.tap(finder);
     await tester.pumpAndSettle();
@@ -304,6 +318,87 @@ void main() {
       expect((import.photos.opened, import.photos.closed), (1, 0));
 
       await import.shoot();
+
+      expect((import.photos.opened, import.photos.closed), (1, 1));
+      await import.close();
+    });
+
+    testWidgets(
+      'a prompt answered during an open leaves that one open and its session',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) => import.photos.holdOpens = true,
+        );
+        final photos = import.photos;
+        final preview = find.byKey(const Key('camera preview'));
+
+        // Control: an open with no lifecycle change shows its session.
+        expect(preview, findsNothing);
+        await import.finishOpen();
+        expect(preview, findsOneWidget);
+        expect((photos.openCalls, photos.opened, photos.closed), (1, 1, 0));
+
+        await import.lifecycle(AppLifecycleState.inactive);
+        await import.lifecycle(AppLifecycleState.resumed);
+        expect(photos.openCalls, 2);
+        expect(preview, findsNothing);
+
+        // The prompt makes the app inactive; answering it resumes the app.
+        await import.lifecycle(AppLifecycleState.inactive);
+        await import.lifecycle(AppLifecycleState.resumed);
+        await import.finishOpen();
+
+        expect(preview, findsOneWidget);
+        expect((photos.openCalls, photos.opened, photos.closed), (2, 2, 1));
+        await import.shoot();
+        expect(import.client.calls.single.photo, same(testPhoto));
+        await import.close();
+      },
+    );
+
+    testWidgets('a refused open is tried once more when the app returns', (
+      tester,
+    ) async {
+      final import = await _Import.open(
+        tester,
+        before: (import) => import.photos.holdOpens = true,
+      );
+      final photos = import.photos;
+
+      await import.lifecycle(AppLifecycleState.inactive);
+      photos.cameraFailure = const CameraDenied('denied');
+      await import.finishOpen();
+      expect(
+        find.text(
+          "The app isn't allowed to use the camera. Allow it in Settings, or choose a photo from your album.",
+        ),
+        findsOneWidget,
+      );
+      expect(photos.openCalls, 1);
+
+      // Access allowed in Settings, then back to the app.
+      photos.cameraFailure = null;
+      await import.lifecycle(AppLifecycleState.resumed);
+      expect(photos.openCalls, 2);
+      await import.finishOpen();
+
+      expect(find.byKey(const Key('camera preview')), findsOneWidget);
+      expect((photos.openCalls, photos.opened, photos.closed), (2, 1, 0));
+      await import.close();
+    });
+
+    testWidgets('leaving the screen during an open closes its late session', (
+      tester,
+    ) async {
+      final import = await _Import.open(
+        tester,
+        before: (import) => import.photos.holdOpens = true,
+      );
+
+      await import.tap(find.byTooltip('Close'));
+      expect(import.hasPopped, isTrue);
+      await import.finishOpen();
 
       expect((import.photos.opened, import.photos.closed), (1, 1));
       await import.close();
