@@ -34,7 +34,7 @@ export function SignInButton() {
         type="button"
         onClick={start}
         disabled={state === "pending"}
-        className="min-h-13 rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+        className="min-h-button rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
       >
         Google로 로그인
       </button>

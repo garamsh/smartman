@@ -45,7 +45,7 @@ export function CardList({ cards }: { cards: Card[] }) {
           onChange={(event) => {
             setSearch(event.target.value);
           }}
-          className="h-12 w-full rounded-field border border-outline bg-surface pr-4 pl-12 text-body placeholder:text-muted focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink"
+          className="h-search w-full rounded-field border border-outline bg-surface pr-4 pl-12 text-body placeholder:text-muted focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink"
         />
       </div>
       {shown.length === 0 ? (

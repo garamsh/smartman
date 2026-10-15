@@ -14,7 +14,7 @@ export async function Profile() {
             className="flex items-center gap-4 rounded-card bg-surface p-5"
           >
             <AccountAvatar email={session.email} size="large" />
-            <p className="min-w-0 text-body font-bold break-all">{session.email}</p>
+            <p className="min-w-0 text-body-strong break-all">{session.email}</p>
           </section>
           <section aria-labelledby="account-section" className="flex flex-col gap-3">
             <h2 id="account-section" className="text-section text-ink-2">

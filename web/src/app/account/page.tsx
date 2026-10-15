@@ -13,12 +13,12 @@ export const metadata: Metadata = { title: "계정 · smartman" };
 /** The signed-in account: who it is, signing out, and the legal links. */
 export default function AccountPage() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-list flex-col gap-7 px-5 py-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-list flex-col gap-section-gap px-gutter py-6">
       <header className="flex items-center gap-1">
         <Link
           href="/"
           aria-label="덱 목록"
-          className="-ml-3 flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="-ml-3 flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           <ChevronLeft aria-hidden className="size-6" strokeWidth={2} />
         </Link>
@@ -29,7 +29,7 @@ export default function AccountPage() {
       </Suspense>
       <footer className="mt-auto flex flex-col items-center gap-2 pt-10">
         <span className="opacity-50">
-          <Mascot className="size-7" />
+          <Mascot className="size-mascot-small" />
         </span>
         <LegalLinks />
       </footer>

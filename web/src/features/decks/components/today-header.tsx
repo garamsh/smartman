@@ -24,7 +24,7 @@ export function TodayHeader({
       aria-labelledby="today-title"
       className="relative flex flex-col gap-5 overflow-hidden rounded-card bg-hero p-6 text-on-hero shadow-card"
     >
-      <span aria-hidden className="absolute -top-4 -right-4 size-30 opacity-12">
+      <span aria-hidden className="absolute -top-4 -right-4 size-hero-symbol opacity-12">
         {/* The white symbol in both themes, on the navy card. */}
         <Image
           src="/brand/smartman-symbol-dark.svg"
@@ -53,9 +53,9 @@ export function TodayHeader({
           </div>
           <Link
             href={`/study?decks=${decks.map(encodeURIComponent).join(",")}`}
-            className="flex min-h-13 items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero"
+            className="flex min-h-button items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero"
           >
-            <Play aria-hidden className="size-4.5" strokeWidth={2} />
+            <Play aria-hidden className="size-small-icon" strokeWidth={2} />
             모두 학습
           </Link>
         </>

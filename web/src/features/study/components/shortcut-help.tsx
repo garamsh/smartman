@@ -48,7 +48,7 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
           ref={close}
           type="button"
           onClick={onClose}
-          className="min-h-13 rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="min-h-button rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           닫기
         </button>

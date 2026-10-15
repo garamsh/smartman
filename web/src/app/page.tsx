@@ -8,10 +8,10 @@ import { Decks } from "./_components/decks";
 /** The deck list a signed-in user lands on: today's cards over every deck, and each deck. */
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-list flex-col gap-7 px-5 py-6">
-      <header className="flex min-h-11 items-center justify-between">
+    <main className="mx-auto flex min-h-dvh w-full max-w-list flex-col gap-section-gap px-gutter py-6">
+      <header className="flex min-h-tap-target items-center justify-between">
         <h1>
-          <BrandMark mark="lockup" alt="smartman" className="h-lockup w-auto" />
+          <BrandMark mark="lockup" alt="smartman" className="h-lockup-height w-auto" />
         </h1>
         <Suspense>
           <AccountLink />

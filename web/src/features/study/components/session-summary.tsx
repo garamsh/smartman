@@ -21,7 +21,7 @@ export function SessionSummary({ summary, total }: { summary: Summary; total: nu
       className="flex flex-col gap-6 rounded-card bg-surface p-6 shadow-raised"
     >
       <div className="flex flex-col items-center gap-4 text-center">
-        <Mascot className="size-28 bg-brand-tint" />
+        <Mascot className="size-mascot-medium bg-brand-tint" />
         <h2 id="session-summary-title" className="text-title">
           오늘 할 카드를 마쳤어요
         </h2>
@@ -41,14 +41,14 @@ export function SessionSummary({ summary, total }: { summary: Summary; total: nu
         </ul>
         <p className="flex items-center justify-between rounded-row bg-ground p-4">
           <span className="text-secondary text-muted">걸린 시간</span>
-          <span className="text-body font-bold">
+          <span className="text-body-strong">
             {Math.floor(seconds / 60)}분 {seconds % 60}초
           </span>
         </p>
       </div>
       <Link
         href="/"
-        className="flex min-h-14 items-center justify-center rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="flex min-h-cta items-center justify-center rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         덱으로 돌아가기
       </Link>

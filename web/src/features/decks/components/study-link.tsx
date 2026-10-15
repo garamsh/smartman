@@ -2,7 +2,7 @@ import { Play } from "lucide-react";
 import Link from "next/link";
 
 const look =
-  "flex min-h-14 items-center justify-center gap-2 rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "flex min-h-cta items-center justify-center gap-2 rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 /**
  * The primary button that opens a study session over [decks], named [label]; disabled when the
@@ -19,7 +19,7 @@ export function StudyLink({
 }) {
   const content = (
     <>
-      <Play aria-hidden className="size-4.5" strokeWidth={2} />
+      <Play aria-hidden className="size-small-icon" strokeWidth={2} />
       {label}
     </>
   );

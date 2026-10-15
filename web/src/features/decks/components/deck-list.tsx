@@ -20,7 +20,7 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
       {rows.length === 0 ? (
         <p className="text-muted">아직 덱이 없어요. 휴대폰 앱에서 덱을 만들면 여기에 나타나요.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-row-gap">
           {rows.map(({ deck, cards, today }) => (
             <li key={deck.id}>
               <Link
@@ -30,12 +30,12 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
               >
                 <span
                   aria-hidden
-                  className={`flex size-11 shrink-0 items-center justify-center rounded-field text-headline ${deckTint(deck.id)}`}
+                  className={`flex size-deck-tile shrink-0 items-center justify-center rounded-field text-headline ${deckTint(deck.id)}`}
                 >
                   {deck.name.trim().charAt(0).toLocaleUpperCase()}
                 </span>
                 <span className="flex flex-1 flex-col">
-                  <span className="text-body font-bold">{deck.name}</span>
+                  <span className="text-body-strong">{deck.name}</span>
                   <span className="text-caption text-muted">카드 {cards}장</span>
                 </span>
                 {today > 0 && (

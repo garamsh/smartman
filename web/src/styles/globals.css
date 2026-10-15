@@ -59,18 +59,24 @@
   --text-body: 16px;
   --text-body--line-height: 24px;
   --text-body--font-weight: 500;
+  --text-body-strong: 16px;
+  --text-body-strong--line-height: 24px;
+  --text-body-strong--font-weight: 700;
   --text-label: 15px;
   --text-label--line-height: 20px;
   --text-label--font-weight: 700;
   --text-secondary: 14px;
   --text-secondary--line-height: 20px;
+  --text-secondary--font-weight: 400;
   --text-caption: 13px;
   --text-caption--line-height: 18px;
+  --text-caption--font-weight: 400;
   --text-section: 13px;
   --text-section--line-height: 18px;
   --text-section--font-weight: 600;
   --text-micro: 12px;
   --text-micro--line-height: 16px;
+  --text-micro--font-weight: 400;
   --text-question: 30px;
   --text-question--line-height: 38px;
   --text-question--font-weight: 800;
@@ -79,8 +85,28 @@
   --text-answer--line-height: 28px;
   --text-answer--font-weight: 600;
 
-  /* The horizontal lockup's height in the home page's header. */
-  --spacing-lockup: 30px;
+  /* AppSpace in theme.dart: every step is a whole number of Tailwind's spacing unit, and the
+     named gaps are tokens of their own. */
+  --spacing: 4px;
+  --spacing-gutter: 20px;
+  --spacing-row-gap: 8px;
+  --spacing-section-gap: 28px;
+
+  /* The sizes of AppSize in theme.dart that the web draws, under the same names. */
+  --spacing-cta: 56px;
+  --spacing-button: 52px;
+  --spacing-search: 48px;
+  --spacing-tap-target: 44px;
+  --spacing-avatar: 56px;
+  --spacing-small-avatar: 32px;
+  --spacing-deck-tile: 44px;
+  --spacing-small-icon: 18px;
+  --spacing-lockup-height: 30px;
+  --spacing-mascot-medium: 112px;
+  --spacing-mascot-small: 28px;
+  --spacing-hero-symbol: 120px;
+  --spacing-progress: 8px;
+  --spacing-dot: 8px;
 
   /* The column a list sits in at desktop width, and the widest a study card grows. */
   --container-list: 560px;

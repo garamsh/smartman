@@ -7,7 +7,7 @@ export default function StudyPage({ searchParams }: PageProps<"/study">) {
   return (
     <Suspense
       fallback={
-        <main className="mx-auto flex min-h-dvh w-full max-w-3xl px-5 py-6">
+        <main className="mx-auto flex min-h-dvh w-full max-w-3xl px-gutter py-6">
           <p className="text-muted">카드를 불러오는 중이에요.</p>
         </main>
       }

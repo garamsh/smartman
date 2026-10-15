@@ -32,7 +32,7 @@ export async function Study({
 
 function Failure({ failure }: { failure: LibraryFailure }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl px-5 py-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-3xl px-gutter py-6">
       <ReadFailure failure={failure} />
     </main>
   );

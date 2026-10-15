@@ -27,7 +27,7 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
       <Link
         href="/"
         aria-label="덱 목록"
-        className="-ml-3 flex size-11 items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="-ml-3 flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         <ChevronLeft aria-hidden className="size-6" strokeWidth={2} />
       </Link>
