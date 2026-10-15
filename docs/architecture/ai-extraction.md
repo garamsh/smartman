@@ -17,7 +17,12 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 - `POST` with the user's access token as `Authorization: Bearer`, and a JSON body:
   - `image` — one JPEG, PNG or WebP image, base64-encoded, at most 6 MiB decoded. The type is read from the image's leading bytes; a declared type is ignored.
   - `languages` — optional `front` and `back` BCP 47 tags, the deck's languages, passed to the model as hints.
-- Success is `200` with `{ "cards": [{ "front", "back" }] }`: 1 to 100 cards, each side plain trimmed text of 1 to 500 characters (code points).
+- Success is `200` with `{ "cards": [...] }`, 1 to 100 cards, each field plain trimmed text as the page prints it ([ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md)):
+  - `front` — the headword or phrase, 1 to 500 characters (code points);
+  - `meaning` — the meaning or meanings, 1 to 500 characters;
+  - `partOfSpeech` — present only when the page prints one for the entry, its own notation verbatim, such as `[동]`, `n.` or `(형)`, 1 to 500 characters;
+  - `examples` — present only when the page prints any for the entry, 1 to 5 example sentences or phrases of 1 to 500 characters each;
+  - `back` — the answer at the 기본 level below, for apps that read only `front` and `back`: `partOfSpeech`, a space and `meaning`, or `meaning` alone; at most 1001 characters.
 - Every refusal is `{ "error": "<code>" }`, the code naming the case the app shows:
 
 | Status | Code | When |
@@ -39,8 +44,10 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 
 - OpenRouter chat completions, with the image as a data URL and `response_format` a strict JSON schema of the card list, generated from the same limits the parser enforces (`cards.ts`).
 - `provider.require_parameters` routes only to providers that honour the schema; `max_tokens` is 16384.
-- The prompt is `prompt_v1.ts`. A changed prompt is a new versioned file, so an eval result names the prompt it measured.
-- The reply is parsed, not trusted: anything other than JSON of exactly the schema's shape, after trimming each side, is invalid output.
+- The schema asks for `front`, `meaning`, `partOfSpeech` and `examples` on every card, since strict structured outputs require every key: an absent part of speech is `null`, absent examples an empty list, and the parser turns both into an absent field.
+- The prompt is `prompt_v2.ts`. A changed prompt is a new versioned file, so an eval result names the prompt it measured.
+- Nothing is invented: the prompt asks for each field exactly as written and forbids supplying a part of speech, a meaning or an example the page does not print for the entry. The eval measures how often a model does anyway.
+- The reply is parsed, not trusted: anything other than JSON of exactly the schema's shape, after trimming each field, is invalid output — a field empty once trimmed or over 500 characters, more than 5 examples, or more than 100 cards among it.
 - Invalid output is retried once; a second invalid output is `502`. An HTTP or network failure is `502` without a retry.
 - A valid empty list is `422`.
 
@@ -65,20 +72,25 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 ### Tests
 
 - `supabase/functions/extract-cards/*_test.ts`, run by `make test` through `deno.sh`, with Supabase and OpenRouter replaced by a fake `fetch`: no network in CI.
-- They cover authentication, size and type refusal, the schema and the one retry, the daily limit, the configuration, and the log line. They run without write or network permission, and a test asserts that, so a write anywhere fails the suite.
+- They cover authentication, size and type refusal, the fields and the composed `back`, a missing part of speech, the field limits, the schema and the one retry, the daily limit, the configuration, and the log line. They run without write or network permission, and a test asserts that, so a write anywhere fails the suite.
 - The SQL side of the limit is tested by `supabase/tests/extraction_usage_test.sql`.
 
 ### Eval
 
-- `tools/eval/run.ts` runs every configuration in `tools/eval/candidates.json` over every sample and writes `docs/eval/extract-cards.md`: per configuration, precision, recall, F1, p50 and p90 latency, cost per image, and total spend, then the recommendation.
+- `tools/eval/run.ts` runs every configuration in `tools/eval/candidates.json` over every sample and writes `docs/eval/extract-cards.md`: per configuration, precision, recall, F1, part-of-speech and examples precision, the invented rate, p50 and p90 latency, cost per image, and total spend, then the recommendation.
 - A candidate names patterns, not IDs. At run time each resolves to the newest model in OpenRouter's model list that matches, takes images, and supports structured outputs, and the report records the exact IDs and prices.
-- Scores are per image, then averaged. A candidate card matches when both sides equal the ground truth after the card key normalization ([`deck.md`](deck.md)); an image with no cards scores 0.
+- Scores are per image, then averaged. A candidate card matches when its front and meaning equal the ground truth after the card key normalization ([`deck.md`](deck.md)); an image with no cards scores 0.
+- Over the matched cards of every image:
+  - part-of-speech precision is the share of returned parts of speech equal to the page's, and examples precision the share of returned examples the page prints, each after the same normalization;
+  - the invented rate is the share of returned fields — a part of speech, or a card's examples — on an entry whose page prints no such field;
+  - each is shown as a dash when the configuration returned no such field.
 - The recommendation is the cheapest configuration per image whose F1 is within 2 points of the best.
 - Spend is capped at $10 across all runs, recorded in `tools/eval/spend.json`, which each run appends to.
   - A run starts only when a dry estimate fits the remaining budget; `--dry-run` prints the estimate and calls no model.
   - Before each image it checks that the worst case of a call and its retry still fits, and stops otherwise.
   - It prints the run's spend and the total after each run.
 - The samples are `tools/eval/samples/`: 24 synthetic photos and their ground truth, written by `tools/eval/generate.py` from `tools/eval/vocabulary.json` and the OFL fonts in `tools/eval/fonts/`. Provenance and licences are in `tools/eval/samples/provenance.md`.
+- A ground-truth card holds `front` and `meaning`, and the `partOfSpeech` and `examples` its page prints: the six dictionary pages print a part of speech for every entry — `n.`, `v.`, `adj.` or `adv.` for English, a bracket notation such as `[동]` for Japanese — and an example under each English entry; the other layouts print neither.
 - The eval needs `supabase/functions/.env`, so it runs on the owner's machine, not in CI.
 
 ### App: the `photo_import` domain
@@ -86,32 +98,51 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 - The app side is the domain `app/lib/photo_import/`; its public surface is `app/lib/photo_import/photo_import.dart`, with internals under `app/lib/photo_import/src/` ([`structure.md`](structure.md)). It exports:
   - `PhotoImportScreen`, the screen `deck`'s `photoImportProvider` builds;
   - `ExtractionClient`, the seam to the function, `CandidateCard`, and `HttpExtractionClient`;
+  - `DetailLevel`, and `detailLevelStorageKeys`, the key the device storage it is given must cache;
   - `PhotoSource` and `CameraSession`, the seam to the camera and the photo library, and `DevicePhotoSource`;
   - `JpegPhoto`, and the failures: `PhotoImportFailure` and its cases.
 - It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it.
-- The screen receives its client and photo source; it constructs neither.
+- The screen receives its client, its photo source, and the device storage the detail level is kept in; it constructs none of them.
 - The composition site, `app/lib/main.dart`, builds the client from the Supabase client `connectAccount` returns ([`account.md`](account.md)), without importing `supabase_flutter`:
   - the URL is `extractCardsUrl` of the client's public PostgREST URL, which swaps its `/rest/v1` suffix for `/functions/v1/extract-cards`, as the Supabase client builds both from the project URL;
-  - the token is read from the client's current session at each request.
+  - the token is read from the client's current session at each request;
+  - the device storage is the one `shared_preferences` store it opens for the theme ([`design.md`](design.md)), caching `themeStorageKeys` and `detailLevelStorageKeys`.
 - A build with no Supabase client gets no extraction client, and `photoImportProvider` stays null, which hides both photo buttons.
+
+#### Detail level
+
+- How much each card's answer says, composed in the app from one extraction, so a switch is instant and never counts against the daily limit ([ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md)):
+
+| Level | Answer |
+|---|---|
+| 간단 (Simple) | `meaning` |
+| 기본 (Basic), the default | `partOfSpeech`, a space, then `meaning`; `meaning` alone when there is no part of speech |
+| 자세히 (Detailed) | the 기본 answer, then each example on its own line |
+
+- The web photo flow, when it is built, composes by the same rule.
+- The choice is stored on the device with `shared_preferences`, as the theme is, read when the screen opens, and applied at once; 기본 when none is stored.
+- Candidates combined on one card key take each candidate's answer at the current level, joined by `deck`'s merge-back rule.
 
 #### Flow
 
 - **Capture** — a full-screen camera view in the dark theme:
   - a page-frame guide, and the hint "단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요";
   - a top chip "추가할 덱 · <name>" that opens a sheet of every deck and "새 덱";
+  - under it, "카드에 담을 내용" over a segmented control of 간단, 기본 and 자세히;
   - the album button bottom-left and the shutter in the centre.
 - **Extracting** — the photo's thumbnail, "카드를 찾고 있어요", an indeterminate bar, skeleton rows, and "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요":
   - "취소", or leaving the screen, aborts the request;
   - the skeleton rows shimmer, and hold still under reduce motion.
 - **Review** — "카드 n개를 찾았어요" and "눌러서 고치고, 뺄 카드는 체크를 끄세요 · <deck>":
+  - the same "카드에 담을 내용" control at the top; a switch recomposes every candidate's answer at once;
   - each candidate is a row with a checkbox and its front and back split by a divider, each centred vertically in its side;
   - a tap on a side edits it in place, and a side left empty keeps its previous text;
+  - an answer typed by hand stays as typed through every switch, marked "직접 고침" under it;
   - candidates with one card key on the photo are combined into one before review, their backs joined by `deck`'s merge-back rule;
   - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));
   - "다시 찍기" at the top right returns to the camera;
   - "카드 n개 추가" counts the checked candidates not set to skip, and is disabled at 0.
-- **Saving** — one `DeckRepository.importCards` call. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the deck screens open that deck's card list.
+- **Saving** — one `DeckRepository.importCards` call, each answer as the review shows it, plain text as every import writes. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the deck screens open that deck's card list.
 - Nothing is written before "카드 n개 추가": not the deck, not a card.
 
 #### Photo
@@ -123,7 +154,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 #### Request and failures
 
 - `HttpExtractionClient` posts `{"image": <base64 JPEG>}` to `<SUPABASE_URL>/functions/v1/extract-cards` with the session's access token as `Authorization: Bearer`, through `package:http` with an abortable request. Without a session it sends nothing.
-- The answer is parsed at the boundary: a `200` must hold a non-empty `cards` list of two non-empty sides each.
+- The answer is parsed at the boundary: a `200` must hold a non-empty `cards` list, each card a non-empty `front` and `back`, and a non-empty `meaning`, `partOfSpeech` and list of non-empty `examples` where present. A card without `meaning`, from a function deployed before the fields, takes `back` as its meaning, so every level shows that `back`.
 - Each failure is a `PhotoImportFailure`, shown in place of the screen with its ARB message:
 
 | Failure | When | Offers |
@@ -147,8 +178,8 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 
 #### App tests
 
-- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client (`app/test/photo_import/fakes.dart`) over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, the camera across a lifecycle change or a departure during an open, reduce motion, nothing written before adding, and the accessibility guidelines in both themes.
-- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
+- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, the camera across a lifecycle change or a departure during an open, reduce motion, nothing written before adding, the default level, each level as shown, saved and remembered, a switch on review keeping a typed answer marked edited, combined candidates at a level, and the accessibility guidelines in both themes.
+- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, the fields, an answer without them, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
 - `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.
 - `app/test/photo_import/photo_test.dart` checks the downscaling: aspect ratio, long side, size limit and orientation.
 - `app/test/photo_import/permissions_test.dart` reads `Info.plist`, both `InfoPlist.strings`, the Xcode project and the Android manifest.
@@ -157,11 +188,13 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 ## Rationale
 
 - [ADR 0013](adr/0013-extract-cards-function-and-eval.md) records the function's shape, the limit's mechanism, the retry model, and where the eval lives.
+- [ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md) records why one extraction returns each card's fields and the app composes the answer, why `back` stays, and why prompt v1 was removed.
+- Issue #73 records the fields, the no-invention rule, the three levels and where the user chooses them, as decided by the PM on 2026-10-15.
 - Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 
 ## Open questions
 
 - On Android, the system may end the app while the photo picker is open; the picked photo is then lost and the user picks again. `image_picker`'s `retrieveLostData` could recover it.
-- Which model `CARD_MODEL` names. The eval has not run: it waits for the owner's `supabase/functions/.env`, so `docs/eval/` holds no report yet.
+- Which model `CARD_MODEL` names, and how often each model invents a part of speech or an example. The eval has not run, with prompt v1 or v2: it waits for the owner's `supabase/functions/.env`, so `docs/eval/` holds no report yet.
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.
 - `SUPABASE_SERVICE_ROLE_KEY` is Supabase's legacy key form. A project that disables legacy keys would need the function to read `SUPABASE_SECRET_KEYS` instead.

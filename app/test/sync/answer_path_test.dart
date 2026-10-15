@@ -8,6 +8,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart' show DeckListScreen;
 import 'package:smartman/main.dart';
+import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
@@ -36,7 +37,7 @@ void main() {
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: themeStorageKeys,
+          allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
         ),
       ),
     ))!;

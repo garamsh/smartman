@@ -13,43 +13,43 @@
   "cards": [
     {
       "front": "slowly",
-      "back": "천천히"
+      "meaning": "천천히"
     },
     {
       "front": "bridge",
-      "back": "다리"
+      "meaning": "다리"
     },
     {
       "front": "useful",
-      "back": "유용한"
+      "meaning": "유용한"
     },
     {
       "front": "weather",
-      "back": "날씨"
+      "meaning": "날씨"
     },
     {
       "front": "always",
-      "back": "항상"
+      "meaning": "항상"
     },
     {
       "front": "grow",
-      "back": "자라다"
+      "meaning": "자라다"
     },
     {
       "front": "dangerous",
-      "back": "위험한"
+      "meaning": "위험한"
     },
     {
       "front": "carry",
-      "back": "나르다"
+      "meaning": "나르다"
     },
     {
       "front": "reason",
-      "back": "이유"
+      "meaning": "이유"
     },
     {
       "front": "young",
-      "back": "젊은"
+      "meaning": "젊은"
     }
   ]
 }

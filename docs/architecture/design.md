@@ -27,6 +27,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
    - Account: a theme choice applies at once and is stored after.
+   - Photo import: a detail level switch recomposes every answer at once and is stored after.
    - Account and photo review: `AppButton`'s loading state shows progress in the button the user pressed, and the button cannot be pressed twice.
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation sheet. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account.
    - Study: any answer of the session is corrected by a tap, with no confirmation.

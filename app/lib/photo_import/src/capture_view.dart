@@ -7,13 +7,14 @@ import '../../shared/theme.dart';
 import '../../shared/ui/app_chip.dart';
 import '../../shared/ui/app_list_row.dart';
 import '../../shared/ui/app_sheet.dart';
+import 'detail_level.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'photo.dart';
 import 'photo_source.dart';
 
 /// A full-screen dark camera view with a page-frame guide, the deck the cards
-/// go into, the album button and the shutter.
+/// go into, how much each card says, the album button and the shutter.
 class CaptureView extends StatefulWidget {
   const CaptureView({
     super.key,
@@ -21,6 +22,8 @@ class CaptureView extends StatefulWidget {
     required this.decks,
     required this.target,
     required this.onTarget,
+    required this.level,
+    required this.onLevel,
     required this.onPhoto,
     required this.onFailure,
   });
@@ -33,6 +36,9 @@ class CaptureView extends StatefulWidget {
 
   /// Chooses the deck the cards go into; null for a new deck.
   final ValueChanged<DeckId?> onTarget;
+
+  final DetailLevel level;
+  final ValueChanged<DetailLevel> onLevel;
 
   final ValueChanged<JpegPhoto> onPhoto;
   final ValueChanged<PhotoImportFailure> onFailure;
@@ -245,6 +251,27 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                       // Balances the close button, so the chip is centred.
                       const SizedBox(width: AppSpace.s40 + AppSpace.s8),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.gutter,
+                    AppSpace.s8,
+                    AppSpace.gutter,
+                    0,
+                  ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.row),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpace.s12),
+                      child: DetailLevelSelector(
+                        level: widget.level,
+                        onChanged: widget.onLevel,
+                      ),
+                    ),
                   ),
                 ),
                 const Spacer(),

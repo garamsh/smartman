@@ -425,6 +425,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get detailLevelLabel => 'What each card says';
+
+  @override
+  String get detailLevelSimple => 'Simple';
+
+  @override
+  String get detailLevelBasic => 'Basic';
+
+  @override
+  String get detailLevelDetailed => 'Detailed';
+
+  @override
+  String get candidateEdited => 'Edited';
+
+  @override
   String reviewDuplicates(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

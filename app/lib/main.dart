@@ -26,9 +26,9 @@ Future<void> main() async {
   final account = await connectAccount(accountDefines());
   final legal = LegalLinks.parse(accountDefines());
   final package = await PackageInfo.fromPlatform();
-  final themeStorage = await SharedPreferencesWithCache.create(
+  final preferences = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
-      allowList: themeStorageKeys,
+      allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
     ),
   );
   runApp(
@@ -37,7 +37,7 @@ Future<void> main() async {
       scheduler,
       account.service,
       connectSyncServer(account),
-      themeStorage,
+      preferences,
       switch (account.client) {
         final client? => HttpExtractionClient(
           http.Client(),
@@ -59,8 +59,9 @@ Future<void> main() async {
 
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
-/// [server], keeping the theme choice in [themeStorage], and extracting
-/// cards from photos through [extraction], whose absence hides photo import,
+/// [server], keeping the theme choice and photo import's detail level in
+/// [preferences], and extracting cards from photos through [extraction],
+/// whose absence hides photo import,
 /// and sharing decks through [sharing] while [reachability] says the device
 /// is online; without [sharing] the app offers no sharing. The sign-in and
 /// account screens link to [legal] and name the app's [version]. Sync starts
@@ -70,7 +71,7 @@ Widget composeApp(
   Scheduler scheduler,
   AccountService account,
   SyncServer server,
-  SharedPreferencesWithCache themeStorage,
+  SharedPreferencesWithCache preferences,
   ExtractionClient? extraction,
   SharingServer? sharing,
   Reachability reachability,
@@ -119,6 +120,7 @@ Widget composeApp(
                 deck: deck,
                 client: extraction,
                 photos: const DevicePhotoSource(),
+                preferences: preferences,
               ),
       ),
       studyRepositoryProvider.overrideWithValue(studyRepository),
@@ -144,7 +146,7 @@ Widget composeApp(
       accountDataProvider.overrideWithValue(sync),
       syncControllerProvider.overrideWithValue(sync),
       syncStatusProvider.overrideWithValue(SyncStatusView.new),
-      themeStorageProvider.overrideWithValue(themeStorage),
+      themeStorageProvider.overrideWithValue(preferences),
     ],
     child: const SmartmanApp(),
   );
