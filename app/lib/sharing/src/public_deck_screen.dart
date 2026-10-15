@@ -235,7 +235,7 @@ class _State extends StatelessWidget {
 }
 
 /// Asks why the deck is reported; pops with the reason, or nothing when
-/// cancelled.
+/// dismissed.
 class _ReportSheet extends StatefulWidget {
   const _ReportSheet();
 
@@ -273,14 +273,7 @@ class _ReportSheetState extends State<_ReportSheet> {
       ),
       actions: [
         AppButton(
-          label: l10n.cancel,
-          variant: AppButtonVariant.secondary,
-          size: AppButtonSize.cta,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        AppButton(
           label: l10n.reportDeck,
-          variant: AppButtonVariant.destructiveFinal,
           size: AppButtonSize.cta,
           onPressed: reason == null
               ? null

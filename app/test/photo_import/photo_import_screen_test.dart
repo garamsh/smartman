@@ -706,7 +706,7 @@ void main() {
       ),
       (
         const NoCardsFound(),
-        'No cards found. Try a brighter, straighter photo',
+        'No cards found. Try a brighter, straighter photo.',
         false,
         true,
       ),
@@ -718,7 +718,7 @@ void main() {
       ),
       (
         const ModelFailed(),
-        "Couldn't read the cards. Please try again in a moment",
+        "Couldn't read the cards. Please try again in a moment.",
         true,
         true,
       ),

@@ -7,6 +7,7 @@ import '../../shared/ui/app_button.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
+import 'google_button.dart';
 import 'providers.dart';
 
 /// The app's welcome while no account is signed in: its name, what it does,
@@ -37,18 +38,25 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: AppSpace.s12,
             children: [
+              // One part above the wordmark and two below centre it on the
+              // upper third.
               const Spacer(),
               Semantics(
                 header: true,
-                child: Text(l10n.appTitle, style: AppType.display),
+                child: Text(
+                  l10n.appTitle,
+                  textAlign: TextAlign.center,
+                  style: AppType.display,
+                ),
               ),
+              const SizedBox(height: AppSpace.s12),
               Text(
                 l10n.welcomeBody,
+                textAlign: TextAlign.center,
                 style: AppType.body.copyWith(color: colors.muted),
               ),
-              const Spacer(),
+              const Spacer(flex: 2),
               ...switch (state) {
                 AccountUnavailable(:final failure) => [
                   Text(
@@ -58,23 +66,25 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ],
                 _ when _busy => [
-                  Center(
-                    child: CircularProgressIndicator(
-                      semanticsLabel: l10n.signingIn,
+                  SizedBox(
+                    height: AppSize.cta + AppSpace.s8 + AppSize.tapTarget,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        semanticsLabel: l10n.signingIn,
+                      ),
                     ),
                   ),
                 ],
                 _ => [
-                  AppButton(
+                  GoogleSignInButton(
                     label: l10n.signInWithGoogle,
-                    variant: AppButtonVariant.secondary,
-                    size: AppButtonSize.cta,
                     onPressed: _signIn,
                   ),
+                  const SizedBox(height: AppSpace.s8),
                   // Apple sign-in (M4b) fills this slot.
                   AppButton(
                     label: l10n.signInWithAppleSoon,
-                    size: AppButtonSize.cta,
+                    variant: AppButtonVariant.text,
                     onPressed: null,
                   ),
                 ],

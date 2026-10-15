@@ -23,8 +23,12 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - Sign-in is required: `AccountGate` shows `SignInScreen` while the state is `SignedOut` or `AccountUnavailable`, and the app only while it is `SignedIn` ([ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md)).
 - The gate shows the state the service holds now and never waits on the network: a session restored at start opens the app offline, expired or not, while its refresh runs in the background.
 - When the state leaves `SignedIn`, by sign-out or by the client dropping the session, the gate closes every screen opened over the app, so the sign-in screen is the only one left.
-- `SignInScreen` is the app's welcome: the app's name, one line on what it does, "Google로 로그인", and a disabled "Apple로 로그인 (준비 중)" that Apple sign-in (M4b) fills. With `AccountUnavailable` it shows the misconfiguration message in place of the buttons, and no app runs.
-- `AccountScreen` is reached only from the app, so it shows the signed-in account, sign-out and the theme.
+- `SignInScreen` is the app's welcome: the app's name as a display-size wordmark with one line on what it does, centred in the upper third; at the bottom, in thumb reach, Google's "Google로 로그인" button and, quieter below it, a disabled "Apple로 로그인 (준비 중)" text button that Apple sign-in (M4b) fills. With `AccountUnavailable` it shows the misconfiguration message in place of the buttons, and no app runs.
+- The Google button is Google's own, drawn to its branding guidelines in the light or dark variant of the theme, with the "G" mark from Google's asset bundle ([`design.md`](design.md), [ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)).
+- `AccountScreen` is reached only from the app, so it shows the signed-in account, the theme and sign-out:
+  - a profile header: an avatar with the email's first letter, the email, and the sync status under it;
+  - "화면", the theme control on a rounded surface;
+  - "계정", with "로그아웃" as an `AppListRow`. Account deletion (#26) adds its row to this section.
 
 ### Sign-in and session
 
@@ -59,14 +63,14 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 
 ### Interface
 
-- Every string comes from the shared ARB set. The buttons are labelled by their text, the Apple slot is read out as a disabled button, the app's name on the sign-in screen is a heading, and the progress indicator shown while signing in or out carries a semantic label.
-- The screen's "화면" section picks the app theme: 시스템, 라이트 or 다크, in a segmented control. The choice belongs to the shared theme ([`design.md`](design.md)); this screen only shows it.
+- Every string comes from the shared ARB set. The buttons and the sign-out row are labelled by their text, the Google mark and the avatar are excluded from semantics, the Apple slot is read out as a disabled button, the section labels are headings, the app's name on the sign-in screen is a heading, and the progress indicator shown while signing in or out carries a semantic label.
+- The account screen's "화면" section picks the app theme: 시스템, 라이트 or 다크, in a segmented control. The choice belongs to the shared theme ([`design.md`](design.md)); this screen only shows it.
 
 ### Tests
 
 - `app/test/account/account_gate_test.dart` composes the app through `composeApp`: signed out shows only the sign-in screen; signing in opens the deck list; signing out returns to the gate; each screen over the deck list closes when the session ends; a restored, expired session opens the deck list over a Supabase Auth client whose server never answers, with signed out as the control; and an unavailable build shows the message.
-- `app/test/account/sign_in_screen_test.dart` drives the sign-in screen with a substitute `AccountService` (`app/test/account/fake_account_service.dart`): the welcome, the progress while signing in, a cancelled sign-in, each failure, and the disabled Apple slot.
-- `app/test/account/account_screen_test.dart` drives the account screen with the same substitute and an `AccountData` (`app/test/account/fake_account_data.dart`): the signed-in account, sign-out with and without unsynced changes, a failed clear, a failed sign-out, and the sync status shown only while signed in.
+- `app/test/account/sign_in_screen_test.dart` drives the sign-in screen with a substitute `AccountService` (`app/test/account/fake_account_service.dart`): the welcome, the wordmark in the upper third and the buttons at the bottom, the progress while signing in, a cancelled sign-in, each failure, the disabled Apple slot below Google's button, and Google's light and dark buttons with the mark and the label, meeting the tap target and contrast guidelines in both themes.
+- `app/test/account/account_screen_test.dart` drives the account screen with the same substitute and an `AccountData` (`app/test/account/fake_account_data.dart`): the profile header and the order of the sections, sign-out with and without unsynced changes, a failed clear, a failed sign-out, and the sync status shown only while signed in.
 - `app/test/account/account_service_test.dart` runs the real service over a substitute Google Sign-In platform and a Supabase Auth client whose HTTP client is substituted. It checks that the raw nonce sent to Supabase hashes to the one Google was given, and that each start draws a new one.
 - `app/test/account/config_test.dart` covers the configuration's parsing and checks that `app/config/dev.json` parses.
 

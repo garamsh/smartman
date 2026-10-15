@@ -44,7 +44,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The card key is the front's text normalized in this order: Unicode NFKC, trim, collapse each whitespace run to one space, case-fold. Punctuation and accents are kept.
 - Case-folding is Dart's lowercase mapping, which matches Unicode simple case folding; full folding such as `ß` to `ss` is not applied.
 - A duplicate is another card in the same deck with an equal key. Cards in other decks are never duplicates.
-- Adding or editing a card whose key collides is refused with the existing card, unless the caller allows the duplicate. The editor then opens a bottom sheet, "이 덱에 이미 있는 카드예요", which says that case and spacing are ignored, shows the existing card as a split card, and offers "그래도 추가" (or "그래도 저장" when editing), "기존 카드 열기" and "취소". No card is overwritten or deleted by the rule.
+- Adding or editing a card whose key collides is refused with the existing card, unless the caller allows the duplicate. The editor then opens a bottom sheet, "이 덱에 이미 있는 카드예요", which says that case and spacing are ignored, shows the existing card as a split card, and offers "기존 카드 열기" and, last, "그래도 추가" (or "그래도 저장" when editing); dismissing it does neither ([ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)). No card is overwritten or deleted by the rule.
 - The check is one lookup on the `(deck_id, card_key)` index, inside the same transaction as the write.
 
 ### Import

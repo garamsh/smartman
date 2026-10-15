@@ -7,6 +7,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
+import 'package:smartman/shared/ui/app_list_row.dart';
 
 import 'fake_account_data.dart';
 import 'fake_account_service.dart';
@@ -75,8 +76,48 @@ void main() {
       ),
     );
 
-    expect(find.text('Signed in as grace@example.com'), findsOneWidget);
+    expect(find.text('grace@example.com'), findsOneWidget);
   });
+
+  testWidgets(
+    'a profile header with the initial, the email and the sync status, then the display and account sections, in Korean',
+    (tester) async {
+      await pumpScreen(
+        tester,
+        FakeAccountService(
+          const SignedIn(userId: _ada, email: 'grace@example.com'),
+        ),
+        locale: const Locale('ko'),
+      );
+
+      double top(Finder finder) => tester.getRect(finder).top;
+      final initial = find.text('G');
+      expect(initial, findsOneWidget);
+      expect(find.bySemanticsLabel('G'), findsNothing);
+      final email = find.text('grace@example.com');
+      expect(
+        tester.getRect(initial).right,
+        lessThan(tester.getRect(email).left),
+      );
+      expect(top(email), lessThan(top(find.text('sync status'))));
+      // Display, then account with sign-out, each heading over rows.
+      final display = find.text('화면');
+      final account = find.descendant(
+        of: find.byType(ListView),
+        matching: find.text('계정'),
+      );
+      final signOut = find.text('로그아웃');
+      expect(top(find.text('sync status')), lessThan(top(display)));
+      expect(top(display), lessThan(top(find.text('다크'))));
+      expect(top(find.text('다크')), lessThan(top(account)));
+      expect(top(account), lessThan(top(signOut)));
+      expect(tester.getSemantics(account).flagsCollection.isHeader, isTrue);
+      expect(
+        find.ancestor(of: signOut, matching: find.byType(AppListRow)),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('signing out returns to the signed-out state', (tester) async {
     await pumpScreen(
@@ -88,7 +129,7 @@ void main() {
 
     await tapAndSettle(tester, 'Sign out');
 
-    expect(find.text('Signed in as ada@example.com'), findsNothing);
+    expect(find.text('ada@example.com'), findsNothing);
   });
 
   testWidgets('signing out pushes, then clears the device\'s data', (
@@ -107,7 +148,7 @@ void main() {
 
     expect([data.pushes, data.clears], [1, 1]);
     expect(find.text("Some changes aren't synced"), findsNothing);
-    expect(find.text('Signed in as ada@example.com'), findsNothing);
+    expect(find.text('ada@example.com'), findsNothing);
   });
 
   testWidgets(
@@ -125,7 +166,7 @@ void main() {
       await tapAndSettle(tester, '취소');
       expect(service.state, isA<SignedIn>());
       expect(data.clears, 0);
-      expect(find.text('ada@example.com 계정으로 로그인했습니다'), findsOneWidget);
+      expect(find.text('ada@example.com'), findsOneWidget);
     },
   );
 
@@ -197,7 +238,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Signed in as ada@example.com'), findsNothing);
+    expect(find.text('ada@example.com'), findsNothing);
   });
 
   testWidgets('the sync status shows only while signed in', (tester) async {
@@ -230,7 +271,7 @@ void main() {
         find.text("Couldn't reach the server. Check your internet connection."),
         findsOneWidget,
       );
-      expect(find.text('Signed in as ada@example.com'), findsNothing);
+      expect(find.text('ada@example.com'), findsNothing);
     },
   );
 

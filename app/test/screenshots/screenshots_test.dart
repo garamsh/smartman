@@ -113,6 +113,16 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Decodes the images on screen, which a test otherwise draws blank.
+    Future<void> loadImages(WidgetTester tester) async {
+      await tester.runAsync(() async {
+        for (final element in find.byType(Image).evaluate()) {
+          await precacheImage((element.widget as Image).image, element);
+        }
+      });
+      await tester.pumpAndSettle();
+    }
+
     Future<void> dismissSheet(WidgetTester tester) =>
         tap(tester, find.byType(ModalBarrier).last);
 
@@ -142,6 +152,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await loadImages(tester);
       await shot(tester, '01-sign-in');
 
       await tap(tester, find.text(ko.signInWithGoogle));
@@ -189,7 +200,9 @@ void main() {
       await enter(ko.cardBack, '순간의');
       await tap(tester, find.text(ko.save));
       await shot(tester, '06-duplicate-sheet');
-      await tap(tester, find.text(ko.cancel));
+      // Above a tall sheet, where the barrier's centre is not.
+      await tester.tapAt(const Offset(20, 100));
+      await tester.pumpAndSettle();
       await tap(tester, find.byTooltip(ko.close));
       await shot(tester, '07-card-list');
 

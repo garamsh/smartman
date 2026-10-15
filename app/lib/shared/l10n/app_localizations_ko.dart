@@ -16,7 +16,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get decksTitle => '덱';
 
   @override
-  String get noDecks => '아직 덱이 없습니다. 새 덱을 만들어 시작하세요.';
+  String get noDecks => '아직 덱이 없어요. 새 덱을 만들어 시작해 보세요.';
 
   @override
   String get newDeck => '새 덱';
@@ -40,8 +40,8 @@ class AppLocalizationsKo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '카드 $count장도 함께 삭제됩니다.',
-      zero: '이 덱에는 카드가 없습니다.',
+      other: '카드 $count장도 함께 삭제돼요.',
+      zero: '이 덱에는 카드가 없어요.',
     );
     return '$_temp0';
   }
@@ -53,7 +53,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckNameRequired => '이름을 입력하세요';
 
   @override
-  String get noCards => '아직 카드가 없습니다. 카드를 추가해 시작하세요.';
+  String get noCards => '아직 카드가 없어요. 카드를 추가해 시작해 보세요.';
 
   @override
   String get newCard => '카드 추가';
@@ -94,10 +94,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get storageFailure => '기기 저장소를 읽거나 쓰지 못했습니다. 다시 시도해 주세요.';
+  String get storageFailure => '기기 저장소를 읽거나 쓰지 못했어요. 다시 시도해 주세요.';
 
   @override
-  String get unreadableCard => '이 덱에 읽을 수 없는 카드가 있습니다.';
+  String get unreadableCard => '이 덱에 읽을 수 없는 카드가 있어요.';
 
   @override
   String get cancel => '취소';
@@ -197,7 +197,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sessionSummaryTitle => '학습 끝';
 
   @override
-  String get nothingToStudy => '지금 학습할 카드가 없습니다.';
+  String get nothingToStudy => '지금 학습할 카드가 없어요.';
 
   @override
   String cardsStudied(int count) {
@@ -223,10 +223,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get done => '완료';
 
   @override
-  String get answerNotSaved => '답을 기기에 저장하지 못했습니다. 이 카드의 일정은 바뀌지 않았습니다.';
+  String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
 
   @override
-  String get schedulingFailure => '이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.';
+  String get schedulingFailure => '이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.';
 
   @override
   String get account => '계정';
@@ -247,12 +247,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get signingIn => '로그인 중';
 
   @override
-  String signedInAs(String email) {
-    return '$email 계정으로 로그인했습니다';
-  }
-
-  @override
-  String get signedIn => '로그인했습니다';
+  String get signedIn => '로그인했어요';
 
   @override
   String get signOut => '로그아웃';
@@ -261,13 +256,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get signingOut => '로그아웃 중';
 
   @override
-  String get accountOffline => '서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.';
+  String get accountOffline => '서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.';
 
   @override
-  String get accountMisconfigured => '이 앱의 로그인 설정에 문제가 있어 로그인할 수 없습니다.';
+  String get accountMisconfigured => '이 앱의 로그인 설정에 문제가 있어 로그인할 수 없어요.';
 
   @override
-  String get accountRejected => 'Google 로그인이 거부되었습니다. 다시 시도해 주세요.';
+  String get accountRejected => 'Google 로그인이 거부됐어요. 다시 시도해 주세요.';
+
+  @override
+  String get accountSection => '계정';
 
   @override
   String get displaySection => '화면';
@@ -324,7 +322,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchCards => '검색';
 
   @override
-  String get noMatches => '찾는 카드가 없습니다. 다른 말로 검색해 보세요.';
+  String get noMatches => '찾는 카드가 없어요. 다른 단어로 검색해 보세요.';
 
   @override
   String get saveAndNext => '저장하고 다음 카드';
@@ -333,7 +331,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteCardTitle => '이 카드를 삭제할까요?';
 
   @override
-  String get deleteCardBody => '이 카드의 학습 기록도 함께 삭제됩니다.';
+  String get deleteCardBody => '이 카드의 학습 기록도 함께 삭제돼요.';
 
   @override
   String get unsyncedChangesTitle => '동기화되지 않은 변경이 있어요';
@@ -439,13 +437,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get photoRefused => '이 사진은 보낼 수 없어요. 다시 찍거나 다른 사진을 골라 주세요.';
 
   @override
-  String get noCardsFound => '카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요';
+  String get noCardsFound => '카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요.';
 
   @override
   String get dailyLimitReached => '오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.';
 
   @override
-  String get modelFailed => '카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요';
+  String get modelFailed => '카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   @override
   String get signInRequired => '로그인이 필요해요. 계정 화면에서 다시 로그인해 주세요.';
@@ -617,7 +615,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get publishAgreement => '부적절하거나 저작권을 침해하는 내용을 공개하지 않겠습니다';
+  String get publishAgreement => '부적절하거나 저작권을 침해하는 내용은 공개하지 않을게요';
 
   @override
   String get publishConfirm => '공개';

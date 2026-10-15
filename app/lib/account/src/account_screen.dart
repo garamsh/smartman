@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_list_row.dart';
 import '../../shared/ui/app_section_label.dart';
 import '../../shared/ui/app_sheet.dart';
 import 'account_data.dart';
@@ -30,35 +30,38 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final state = ref.watch(accountStateProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTitle)),
-      bottomNavigationBar: const SafeArea(child: _ThemeSection()),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.gutter),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: AppSpace.s16,
-            children: switch (state) {
-              SignedIn(:final email) => [
-                Text(
-                  email == null ? l10n.signedIn : l10n.signedInAs(email),
-                  textAlign: TextAlign.center,
-                  style: AppType.body,
-                ),
-                Center(child: ref.watch(syncStatusProvider)()),
-                AppButton(
-                  label: l10n.signOut,
-                  variant: AppButtonVariant.secondary,
-                  loading: _busy,
-                  loadingLabel: l10n.signingOut,
-                  onPressed: _signOut,
-                ),
-              ],
-              // The gate leaves this screen once no account is signed in.
-              SignedOut() || AccountUnavailable() => [],
-            },
-          ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.gutter,
+          AppSpace.s8,
+          AppSpace.gutter,
+          AppSpace.s24,
         ),
+        children: [
+          // The gate leaves this screen once no account is signed in.
+          if (state case SignedIn(:final email)) ...[
+            _ProfileHeader(email: email),
+            const SizedBox(height: AppSpace.s32),
+          ],
+          AppSectionLabel(l10n.displaySection),
+          const _ThemeRow(),
+          const SizedBox(height: AppSpace.s24),
+          AppSectionLabel(l10n.accountSection),
+          AppListRow(
+            title: l10n.signOut,
+            leading: const Icon(Icons.logout),
+            trailing: _busy
+                ? SizedBox.square(
+                    dimension: AppSpace.s24,
+                    child: CircularProgressIndicator(
+                      semanticsLabel: l10n.signingOut,
+                    ),
+                  )
+                : null,
+            onTap: _busy || state is! SignedIn ? null : _signOut,
+          ),
+          // Account deletion (#26) adds its row here, below sign-out.
+        ],
       ),
     );
   }
@@ -107,38 +110,78 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 }
 
-/// The "화면" section: following the system, light or dark, applied at once.
-class _ThemeSection extends ConsumerWidget {
-  const _ThemeSection();
+/// The signed-in account: an avatar with the email's initial, the email,
+/// and where sync stands.
+class _ProfileHeader extends ConsumerWidget {
+  const _ProfileHeader({required this.email});
+
+  final String? email;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(AppSpace.gutter),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppSectionLabel(l10n.displaySection),
-          SegmentedButton<ThemeMode>(
-            segments: [
-              ButtonSegment(
-                value: ThemeMode.system,
-                label: Text(l10n.themeSystem),
-              ),
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: Text(l10n.themeLight),
-              ),
-              ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
-            ],
-            selected: {ref.watch(themeModeProvider)},
-            showSelectedIcon: false,
-            onSelectionChanged: (choice) =>
-                ref.read(themeModeProvider.notifier).choose(choice.single),
+    final colors = AppColors.of(context);
+    final email = this.email;
+    return Row(
+      spacing: AppSpace.s16,
+      children: [
+        ExcludeSemantics(
+          child: Container(
+            width: AppSize.avatar,
+            height: AppSize.avatar,
+            alignment: Alignment.center,
+            decoration: ShapeDecoration(
+              color: colors.ink,
+              shape: const CircleBorder(),
+            ),
+            child: email == null || email.isEmpty
+                ? Icon(Icons.person, color: colors.surface)
+                : Text(
+                    email.characters.first.toUpperCase(),
+                    style: AppType.headline.copyWith(color: colors.surface),
+                  ),
           ),
-        ],
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: AppSpace.s4,
+            children: [
+              Text(email ?? l10n.signedIn, style: AppType.bodyStrong),
+              ref.watch(syncStatusProvider)(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The theme the app is drawn in, on a row: following the system, light or
+/// dark, applied at once.
+class _ThemeRow extends ConsumerWidget {
+  const _ThemeRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return AppRowSurface(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s12),
+        child: SegmentedButton<ThemeMode>(
+          segments: [
+            ButtonSegment(
+              value: ThemeMode.system,
+              label: Text(l10n.themeSystem),
+            ),
+            ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeLight)),
+            ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
+          ],
+          selected: {ref.watch(themeModeProvider)},
+          showSelectedIcon: false,
+          onSelectionChanged: (choice) =>
+              ref.read(themeModeProvider.notifier).choose(choice.single),
+        ),
       ),
     );
   }

@@ -58,8 +58,8 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 
 ### Theme
 
-- `web/src/styles/globals.css` declares the colour tokens of `app/lib/shared/theme.dart` ([`design.md`](design.md)) in `@theme`, under the same names in kebab case, and the radii `card` (24px) and `row` (16px). Under `prefers-color-scheme: dark` it overrides each colour with the dark set.
-- `web/src/styles/__tests__/theme-tokens.test.ts` fails when a token differs from theme.dart's, in either set.
+- `web/src/styles/globals.css` declares the colour tokens of `app/lib/shared/theme.dart` ([`design.md`](design.md)) in `@theme`, under the same names in kebab case, and the radii `card` (24px) and `row` (18px). Under `prefers-color-scheme: dark` it overrides each colour with the dark set.
+- `web/src/styles/__tests__/theme-tokens.test.ts` fails when a colour token differs from theme.dart's, in either set, or a radius from `AppRadius`.
 - `web/src/styles/fonts` links to `app/assets/fonts/`. `next.config.ts` names that directory in `turbopackAdditionalRoots`, and the root layout bundles Regular, Medium, SemiBold and Bold with `next/font/local`; nothing is downloaded at run time.
 - Buttons are at least 52 px high (`min-h-13`), and the focus ring is a visible outline.
 
