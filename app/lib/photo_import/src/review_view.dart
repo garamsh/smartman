@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_chip.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_section_label.dart';
+import '../../shared/ui/app_text_field.dart';
 import 'candidates.dart';
 
 /// The candidates to check, edit or leave out, with those whose key the deck
@@ -32,7 +37,6 @@ class ReviewView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final fresh = [
       for (final row in review.rows)
         if (!review.isDuplicate(row)) row,
@@ -49,26 +53,38 @@ class ReviewView extends StatelessWidget {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [TextButton(onPressed: onRetake, child: Text(l10n.retake))],
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpace.s12),
+            child: AppButton(
+              label: l10n.retake,
+              variant: AppButtonVariant.text,
+              onPressed: onRetake,
+            ),
+          ),
+        ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.gutter,
+          0,
+          AppSpace.gutter,
+          AppSpace.s16,
+        ),
         children: [
           Semantics(
             header: true,
             child: Text(
               l10n.reviewTitle(review.rows.length),
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppType.title,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpace.s4),
           Text(
             l10n.reviewHint(deckName),
-            style: textTheme.bodyMedium?.copyWith(color: colors.muted),
+            style: AppType.secondary.copyWith(color: colors.muted),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpace.s16),
           for (final row in fresh)
             _CandidateRow(
               key: ObjectKey(row),
@@ -77,18 +93,8 @@ class ReviewView extends StatelessWidget {
               onChanged: onChanged,
             ),
           if (duplicates.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
-              child: Semantics(
-                header: true,
-                child: Text(
-                  l10n.reviewDuplicates(duplicates.length),
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: AppSpace.s16),
+            AppSectionLabel(l10n.reviewDuplicates(duplicates.length)),
             for (final row in duplicates)
               _CandidateRow(
                 key: ObjectKey(row),
@@ -101,10 +107,17 @@ class ReviewView extends StatelessWidget {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: FilledButton(
-            onPressed: count == 0 || saving ? null : onSave,
-            child: Text(l10n.addCards(count)),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.s8,
+            AppSpace.gutter,
+            AppSpace.s16,
+          ),
+          child: AppButton(
+            label: l10n.addCards(count),
+            size: AppButtonSize.cta,
+            loading: saving,
+            onPressed: count == 0 ? null : onSave,
           ),
         ),
       ),
@@ -130,13 +143,7 @@ class _CandidateRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.row),
-      ),
+    return AppRowSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -158,7 +165,7 @@ class _CandidateRow extends StatelessWidget {
                   child: _EditableSide(
                     label: l10n.cardFront,
                     text: row.front,
-                    style: textTheme.bodyLarge,
+                    style: AppType.body,
                     onSubmitted: (text) {
                       row.front = text;
                       onChanged();
@@ -170,7 +177,7 @@ class _CandidateRow extends StatelessWidget {
                   child: _EditableSide(
                     label: l10n.cardBack,
                     text: row.back,
-                    style: textTheme.bodyLarge?.copyWith(color: colors.muted),
+                    style: AppType.body.copyWith(color: colors.muted),
                     onSubmitted: (text) {
                       row.back = text;
                       onChanged();
@@ -182,7 +189,12 @@ class _CandidateRow extends StatelessWidget {
           ),
           if (duplicate)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.s12,
+                0,
+                AppSpace.s12,
+                AppSpace.s12,
+              ),
               child: _DuplicateChoiceChip(
                 choice: row.choice,
                 onSelected: (choice) {
@@ -218,14 +230,14 @@ class _DuplicateChoiceChip extends StatelessWidget {
           MenuItemButton(
             leadingIcon: option == choice
                 ? const Icon(Icons.check)
-                : const SizedBox.square(dimension: 24),
+                : const SizedBox.square(dimension: AppSpace.s24),
             onPressed: () => onSelected(option),
             child: Text(label(option)),
           ),
       ],
-      builder: (context, controller, _) => ActionChip(
-        avatar: const Icon(Icons.expand_more),
-        label: Text(label(choice)),
+      builder: (context, controller, _) => AppChip(
+        label: label(choice),
+        icon: Icons.expand_more,
         onPressed: () =>
             controller.isOpen ? controller.close() : controller.open(),
       ),
@@ -282,20 +294,18 @@ class _EditableSideState extends State<_EditableSide> {
   Widget build(BuildContext context) {
     if (_editing) {
       return Padding(
-        padding: const EdgeInsets.all(8),
-        child: TextField(
+        padding: const EdgeInsets.all(AppSpace.s8),
+        child: AppTextField(
+          label: widget.label,
           controller: _controller,
           focusNode: _focus,
           autofocus: true,
           maxLines: null,
           style: widget.style,
           textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            labelText: widget.label,
-            errorText: _controller.text.trim().isEmpty
-                ? AppLocalizations.of(context).cardSideRequired
-                : null,
-          ),
+          errorText: _controller.text.trim().isEmpty
+              ? AppLocalizations.of(context).cardSideRequired
+              : null,
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _commit(),
         ),
@@ -314,7 +324,7 @@ class _EditableSideState extends State<_EditableSide> {
       child: InkWell(
         onTap: edit,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpace.s16),
           child: Text(widget.text, style: widget.style),
         ),
       ),

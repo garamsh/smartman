@@ -6,12 +6,12 @@ import '../../shared/theme.dart';
 /// the app theme's [AppColors].
 abstract final class StudyStyle {
   /// Space between a card and the screen's left and right edges.
-  static const cardMargin = 20.0;
+  static const cardMargin = AppSpace.gutter;
   static const cardRadius = AppRadius.card;
-  static const cardPadding = 16.0;
+  static const cardPadding = AppSpace.s16;
 
   /// Space between two content blocks, and inside a block's placeholder.
-  static const blockGap = 8.0;
+  static const blockGap = AppSpace.s8;
 
   /// The current card's height before its content grows it.
   static const currentMinHeight = 200.0;
@@ -24,7 +24,7 @@ abstract final class StudyStyle {
   static const currentCenterFraction = 0.57;
 
   /// The least space kept below the current card.
-  static const currentBottomGap = 16.0;
+  static const currentBottomGap = AppSpace.s16;
 
   /// A card half narrower than this, in logical pixels at text scale 1, puts
   /// the answer under the question.
@@ -36,7 +36,7 @@ abstract final class StudyStyle {
   static const previousOverlap = 30.0;
 
   /// Space between the nearest previous card and the current card.
-  static const previousGap = 12.0;
+  static const previousGap = AppSpace.s12;
   static const previousLines = 2;
 
   /// How much each step away from the current card shrinks a previous card,
@@ -80,13 +80,8 @@ abstract final class StudyStyle {
   static const tintOpacity = 0.12;
 
   /// The current card's shadow, in the theme's [AppColors.shadow].
-  static List<BoxShadow> currentShadow(AppColors colors) => [
-    BoxShadow(
-      color: colors.shadow.withValues(alpha: 0.2),
-      blurRadius: 24,
-      offset: const Offset(0, 8),
-    ),
-  ];
+  static List<BoxShadow> currentShadow(AppColors colors) =>
+      AppShadow.raised(colors);
 
   /// A previous card's shadow, in the theme's [AppColors.shadow].
   static List<BoxShadow> previousShadow(AppColors colors) => [

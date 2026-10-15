@@ -13,6 +13,7 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'account/fake_account_service.dart';
 import 'sync/fake_sync_server.dart';
@@ -84,13 +85,13 @@ void main() {
   }
 
   Future<void> enterText(WidgetTester tester, String label, String text) =>
-      tester.enterText(find.widgetWithText(TextField, label), text);
+      tester.enterText(find.widgetWithText(AppTextField, label), text);
 
   Future<void> createDeckAndOpen(WidgetTester tester, String name) async {
     await tester.tap(find.text('New deck'));
     await tester.pumpAndSettle();
     await enterText(tester, 'Name', name);
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
     await tester.tap(find.text(name));
     await tester.pumpAndSettle();
@@ -306,10 +307,35 @@ void main() {
         await tester.pumpAndSettle();
         expect(brightness(tester).name, mode);
         await meetsGuidelines();
-        await createDeckAndOpen(tester, 'French');
+        await tester.tap(find.text('New deck'));
+        await tester.pumpAndSettle();
+        expect(find.text('Create'), findsOneWidget);
+        await meetsGuidelines();
+        await enterText(tester, 'Name', 'French');
+        await tester.tap(find.text('Create'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('French'));
+        await tester.pumpAndSettle();
         await meetsGuidelines();
         await addCard(tester, 'Chat', 'cat');
         await meetsGuidelines();
+
+        await tester.tap(find.byTooltip('Deck actions'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rename'));
+        await tester.pumpAndSettle();
+        expect(find.text('Rename deck'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Deck actions'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Delete deck'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete "French"?'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text('Add card'));
         await tester.pumpAndSettle();
@@ -329,6 +355,12 @@ void main() {
         await tester.tap(find.text('Chat'));
         await tester.pumpAndSettle();
         await meetsGuidelines();
+        await tester.tap(find.byTooltip('Delete card'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete this card?'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
         await tester.pageBack();

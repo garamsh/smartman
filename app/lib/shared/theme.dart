@@ -5,13 +5,182 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// The family of the bundled IBM Plex Sans KR, declared in `pubspec.yaml`.
 const appFontFamily = 'IBM Plex Sans KR';
 
-/// The corner radii of the app's rounded surfaces.
+/// The spacing scale, on a 4 px base. Every padding, margin and gap in the
+/// app is one of these.
+abstract final class AppSpace {
+  static const s4 = 4.0;
+  static const s8 = 8.0;
+  static const s12 = 12.0;
+  static const s16 = 16.0;
+  static const s20 = 20.0;
+  static const s24 = 24.0;
+  static const s32 = 32.0;
+  static const s40 = 40.0;
+
+  /// Space between the screen's left and right edges and its content.
+  static const gutter = s20;
+
+  /// Space between two rows of a list.
+  static const rowGap = s8;
+}
+
+/// The corner radii of the app's rounded surfaces. A chip is fully rounded.
 abstract final class AppRadius {
+  /// A sheet's top corners.
+  static const sheet = 28.0;
+
   /// A card: a study card, a header, or a card preview.
   static const card = 24.0;
 
-  /// A row in a list, a field or a button.
-  static const row = 16.0;
+  /// A row in a list.
+  static const row = 18.0;
+
+  /// A button or a field.
+  static const control = 16.0;
+}
+
+/// The heights of the app's controls.
+abstract final class AppSize {
+  /// The screen's or the sheet's primary action, at the bottom.
+  static const cta = 56.0;
+
+  /// Every other button.
+  static const button = 52.0;
+
+  /// A one-line field.
+  static const field = 48.0;
+
+  /// The least width and height of anything tapped.
+  static const tapTarget = 44.0;
+
+  /// A sheet's drag handle.
+  static const handle = Size(40, 5);
+}
+
+/// The app's type scale, all IBM Plex Sans KR, with explicit line heights.
+/// A style without a colour takes the text colour of where it is drawn.
+abstract final class AppType {
+  /// A home screen's title: 28/36, bold.
+  static const display = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 28,
+    height: 36 / 28,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.5,
+  );
+
+  /// A pushed screen's title and the deck name: 22/30, bold.
+  static const title = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 22,
+    height: 30 / 22,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.3,
+  );
+
+  /// A sheet's title: 20/28, bold.
+  static const headline = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 20,
+    height: 28 / 20,
+    fontWeight: FontWeight.w700,
+  );
+
+  /// Running text: 16/24.
+  static const body = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 16,
+    height: 24 / 16,
+    fontWeight: FontWeight.w400,
+  );
+
+  /// A row's title: 16/24, semibold.
+  static const bodyStrong = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 16,
+    height: 24 / 16,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// A button's label: 15/20, semibold.
+  static const label = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 15,
+    height: 20 / 15,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// Secondary text, such as a sheet's body or a row's second line: 14/20.
+  static const secondary = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 14,
+    height: 20 / 14,
+    fontWeight: FontWeight.w400,
+  );
+
+  /// Small supporting text: 13/18.
+  static const caption = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 13,
+    height: 18 / 13,
+    fontWeight: FontWeight.w400,
+  );
+
+  /// A section label: 13/18, semibold.
+  static const section = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 13,
+    height: 18 / 13,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// Chips and hints: 12/16.
+  static const micro = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 12,
+    height: 16 / 12,
+    fontWeight: FontWeight.w400,
+  );
+
+  /// The scale as Material's text theme, so Material widgets draw in it.
+  static const textTheme = TextTheme(
+    displayLarge: display,
+    displayMedium: display,
+    displaySmall: display,
+    headlineLarge: display,
+    headlineMedium: title,
+    headlineSmall: headline,
+    titleLarge: title,
+    titleMedium: bodyStrong,
+    titleSmall: section,
+    bodyLarge: body,
+    bodyMedium: secondary,
+    bodySmall: caption,
+    labelLarge: label,
+    labelMedium: section,
+    labelSmall: micro,
+  );
+}
+
+/// The two shadows the app draws, in the theme's [AppColors.shadow].
+abstract final class AppShadow {
+  /// A card resting on the ground: a header, a card preview, a previous card.
+  static List<BoxShadow> card(AppColors colors) => [
+    BoxShadow(
+      color: colors.shadow.withValues(alpha: 0.12),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
+  /// A surface raised over others: the current study card, a sheet.
+  static List<BoxShadow> raised(AppColors colors) => [
+    BoxShadow(
+      color: colors.shadow.withValues(alpha: 0.2),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
+  ];
 }
 
 /// The app's colour tokens. Every colour a screen draws comes from here or
@@ -191,14 +360,19 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     inverseSurface: colors.ink,
     onInverseSurface: colors.surface,
   );
-  final rounded = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(AppRadius.row),
+  final control = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(AppRadius.control),
   );
-  const buttonSize = Size(64, 52);
+  const buttonSize = Size(AppSize.tapTarget, AppSize.button);
+  final textTheme = AppType.textTheme.apply(
+    bodyColor: colors.ink,
+    displayColor: colors.ink,
+  );
   return ThemeData(
     brightness: brightness,
     colorScheme: scheme,
     fontFamily: appFontFamily,
+    textTheme: textTheme,
     scaffoldBackgroundColor: colors.ground,
     extensions: [colors],
     appBarTheme: AppBarTheme(
@@ -206,37 +380,98 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
       foregroundColor: colors.ink,
       elevation: 0,
       scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: AppType.title.copyWith(color: colors.ink),
     ),
     dividerTheme: DividerThemeData(color: colors.hairline),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(minimumSize: buttonSize, shape: rounded),
+      style: FilledButton.styleFrom(
+        minimumSize: buttonSize,
+        shape: control,
+        textStyle: AppType.label,
+      ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: buttonSize,
-        shape: rounded,
+        shape: control,
+        textStyle: AppType.label,
         foregroundColor: colors.ink,
         side: BorderSide(color: colors.hairline),
         backgroundColor: colors.surface,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: colors.ink),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(AppSize.tapTarget, AppSize.tapTarget),
+        shape: control,
+        textStyle: AppType.label,
+        foregroundColor: colors.ink,
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: colors.surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.row),
-        borderSide: BorderSide.none,
+      hintStyle: AppType.body.copyWith(color: colors.muted),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.s16,
+        vertical: AppSpace.s12,
       ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.hairline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.hairline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.ink, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.dontKnowText),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: colors.dontKnowText, width: 1.5),
+      ),
+      errorStyle: AppType.caption.copyWith(color: colors.dontKnowText),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: colors.ground,
-      showDragHandle: true,
+      backgroundColor: colors.surface,
+      modalBackgroundColor: colors.surface,
+      showDragHandle: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.sheet),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
     ),
-    dialogTheme: DialogThemeData(backgroundColor: colors.surface),
-    snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        minimumSize: const Size(AppSize.tapTarget, AppSize.button),
+        textStyle: AppType.label,
+        foregroundColor: colors.ink,
+        selectedForegroundColor: colors.surface,
+        selectedBackgroundColor: colors.ink,
+        backgroundColor: colors.surface,
+        side: BorderSide(color: colors.hairline),
+        shape: control,
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: control,
+      contentTextStyle: AppType.secondary.copyWith(color: colors.surface),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: colors.surface,
+      textStyle: AppType.body.copyWith(color: colors.ink),
+      shape: control,
+    ),
   );
 }
 

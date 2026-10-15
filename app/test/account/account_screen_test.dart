@@ -19,9 +19,10 @@ void main() {
     AccountService service, {
     Locale locale = const Locale('en'),
     AccountData? data,
+    String? themeMode,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
+        InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
     final storage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
@@ -143,6 +144,37 @@ void main() {
     expect(service.state, isA<SignedOut>());
     expect(data.clears, 1);
   });
+
+  for (final mode in ['light', 'dark']) {
+    testWidgets(
+      'in the $mode theme the screen and the unsynced warning meet the tap target and contrast guidelines',
+      (tester) async {
+        Future<void> meetsGuidelines() async {
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+        }
+
+        await pumpScreen(
+          tester,
+          FakeAccountService(
+            const SignedIn(userId: _ada, email: 'ada@example.com'),
+          ),
+          data: FakeAccountData()..pushSucceeds = false,
+          themeMode: mode,
+        );
+        expect(
+          Theme.of(tester.element(find.text('Display'))).brightness.name,
+          mode,
+        );
+        await meetsGuidelines();
+
+        await tapAndOpen(tester, 'Sign out');
+        expect(find.text("Some changes aren't synced"), findsOneWidget);
+        await meetsGuidelines();
+      },
+    );
+  }
 
   testWidgets('data that cannot be cleared is reported after signing out', (
     tester,

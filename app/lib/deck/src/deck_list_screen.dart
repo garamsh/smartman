@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_chip.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_section_label.dart';
 import 'bottom_actions.dart';
 import 'card_list_screen.dart';
 import 'failure_message.dart';
 import 'model.dart';
-import 'name_dialog.dart';
+import 'name_sheet.dart';
 import 'providers.dart';
 
 /// Lists decks under today's count and creates them. A long-press enters a
@@ -56,13 +60,24 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
       body: switch ((decks, counts)) {
         (AsyncData(value: final decks), AsyncData(value: final counts)) =>
           ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.gutter,
+              0,
+              AppSpace.gutter,
+              AppSpace.s16,
+            ),
             children: [
               _LargeTitle(l10n.decksTitle),
               if (decks.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Text(l10n.noDecks, textAlign: TextAlign.center),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
+                  child: Text(
+                    l10n.noDecks,
+                    textAlign: TextAlign.center,
+                    style: AppType.body.copyWith(
+                      color: AppColors.of(context).muted,
+                    ),
+                  ),
                 )
               else if (DeckSelection.of([for (final d in decks) d.id])
                   case final all?) ...[
@@ -85,22 +100,25 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
         (AsyncError(:final error, :final stackTrace), _) ||
         (_, AsyncError(:final error, :final stackTrace)) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpace.gutter),
             child: Text(describeProviderError(l10n, error, stackTrace)),
           ),
         ),
         _ => const Center(child: CircularProgressIndicator()),
       },
       bottomNavigationBar: BottomActions(
-        secondary: OutlinedButton(
+        secondary: AppButton(
+          label: l10n.newDeck,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.cta,
           onPressed: _create,
-          child: Text(l10n.newDeck),
         ),
         primary: photoImport == null
             ? null
-            : FilledButton(
+            : AppButton(
+                label: l10n.createFromPhoto,
+                size: AppButtonSize.cta,
                 onPressed: () => _importPhoto(photoImport),
-                child: Text(l10n.createFromPhoto),
               ),
       ),
     );
@@ -116,9 +134,13 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
       ),
       title: Text(l10n.decksSelected(selected.length)),
       actions: [
-        TextButton(
-          onPressed: study == null ? null : () => _study(study),
-          child: Text(l10n.studySelected(selected.length)),
+        Padding(
+          padding: const EdgeInsets.only(right: AppSpace.s12),
+          child: AppButton(
+            label: l10n.studySelected(selected.length),
+            variant: AppButtonVariant.text,
+            onPressed: study == null ? null : () => _study(study),
+          ),
         ),
       ],
     );
@@ -150,9 +172,11 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
 
   Future<void> _create() async {
     final repository = ref.read(deckRepositoryProvider);
-    final name = await showNameDialog(
+    final l10n = AppLocalizations.of(context);
+    final name = await showNameSheet(
       context,
-      title: AppLocalizations.of(context).newDeck,
+      title: l10n.newDeck,
+      action: l10n.create,
     );
     if (name == null || !mounted) return;
     await reportingFailure(context, () => repository.createDeck(name));
@@ -167,15 +191,8 @@ class _LargeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Semantics(
-      header: true,
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.headlineLarge
-            ?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    ),
+    padding: const EdgeInsets.only(bottom: AppSpace.s20),
+    child: Semantics(header: true, child: Text(text, style: AppType.display)),
   );
 }
 
@@ -191,42 +208,39 @@ class _TodayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: AppSpace.s24),
+      padding: const EdgeInsets.all(AppSpace.s20),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadow.card(colors),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 4,
+        spacing: AppSpace.s4,
         children: [
           ...switch (count) {
             TodayCounted(:final review, :final fresh, :final total) => [
-              Text(
-                l10n.todayCards(total),
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Text(l10n.todayCards(total), style: AppType.title),
               Text(
                 l10n.todayBreakdown(review, fresh),
-                style: textTheme.bodyMedium?.copyWith(color: colors.muted),
+                style: AppType.secondary.copyWith(color: colors.muted),
               ),
             ],
-            TodayUnavailable(:final message) => [Text(message)],
-            TodayPending() => [const SizedBox(height: 56)],
+            TodayUnavailable(:final message) => [
+              Text(message, style: AppType.body),
+            ],
+            // The two lines' height, so the header does not jump.
+            TodayPending() => [
+              const SizedBox(height: AppSpace.s32 + AppSpace.s20),
+            ],
           },
-          const SizedBox(height: 12),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.know,
-              foregroundColor: colors.onKnow,
-            ),
+          const SizedBox(height: AppSpace.s12),
+          AppButton(
+            label: l10n.studyAll,
+            variant: AppButtonVariant.study,
             onPressed: onStudy,
-            child: Text(l10n.studyAll),
           ),
         ],
       ),
@@ -244,28 +258,14 @@ class _DecksLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              l10n.myDecks(count),
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (showHint)
-            Text(
+    return AppSectionLabel(
+      l10n.myDecks(count),
+      trailing: showHint
+          ? Text(
               l10n.selectHint,
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.of(context).muted,
-              ),
-            ),
-        ],
-      ),
+              style: AppType.micro.copyWith(color: AppColors.of(context).muted),
+            )
+          : null,
     );
   }
 }
@@ -291,71 +291,36 @@ class _DeckRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final selected = this.selected;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: MergeSemantics(
-        child: Semantics(
-          selected: selected,
-          child: Material(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.row),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.row),
-              onTap: selected == null
-                  ? () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => CardListScreen(deck: deck),
-                      ),
-                    )
-                  : onSelect,
-              onLongPress: onSelect,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-                child: Row(
-                  spacing: 12,
-                  children: [
-                    if (selected != null)
-                      Icon(
-                        selected
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: selected ? colors.know : colors.muted,
-                      ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 2,
-                        children: [
-                          Text(
-                            deck.name,
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            l10n.cardCount(cardCount),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colors.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ref.watch(todayProvider)(
-                      DeckSelection(deck.id),
-                      (context, count) => _TodayChip(count: count),
-                    ),
-                    if (selected == null)
-                      Icon(Icons.chevron_right, color: colors.muted),
-                  ],
-                ),
-              ),
+    return AppListRow(
+      title: deck.name,
+      subtitle: l10n.cardCount(cardCount),
+      selected: selected,
+      leading: selected == null
+          ? null
+          : Icon(
+              selected ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: selected ? colors.know : colors.muted,
             ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpace.s8,
+        children: [
+          ref.watch(todayProvider)(
+            DeckSelection(deck.id),
+            (context, count) => _TodayChip(count: count),
           ),
-        ),
+          if (selected == null) Icon(Icons.chevron_right, color: colors.muted),
+        ],
       ),
+      onTap: selected == null
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CardListScreen(deck: deck),
+              ),
+            )
+          : onSelect,
+      onLongPress: onSelect,
     );
   }
 }
@@ -370,17 +335,9 @@ class _TodayChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return switch (count) {
-      TodayCounted(:final total) when total > 0 => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: colors.know,
-          borderRadius: BorderRadius.circular(AppRadius.row),
-        ),
-        child: Text(
-          AppLocalizations.of(context).todayChip(total),
-          style: Theme.of(context).textTheme.labelMedium
-              ?.copyWith(color: colors.onKnow, fontWeight: FontWeight.w600),
-        ),
+      TodayCounted(:final total) when total > 0 => AppChip(
+        label: AppLocalizations.of(context).todayChip(total),
+        tone: AppChipTone.know,
       ),
       TodayUnavailable(:final message) => Tooltip(
         message: message,

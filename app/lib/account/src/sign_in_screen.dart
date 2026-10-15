@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -22,33 +24,37 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final text = Theme.of(context).textTheme;
+    final colors = AppColors.of(context);
     final state = ref.watch(accountStateProvider);
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.s24,
+            AppSpace.gutter,
+            AppSpace.s16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
+            spacing: AppSpace.s12,
             children: [
               const Spacer(),
               Semantics(
                 header: true,
-                child: Text(
-                  l10n.appTitle,
-                  style: text.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: Text(l10n.appTitle, style: AppType.display),
               ),
-              Text(l10n.welcomeBody, style: text.bodyLarge),
+              Text(
+                l10n.welcomeBody,
+                style: AppType.body.copyWith(color: colors.muted),
+              ),
               const Spacer(),
               ...switch (state) {
                 AccountUnavailable(:final failure) => [
                   Text(
                     describeAccountFailure(l10n, failure),
                     textAlign: TextAlign.center,
+                    style: AppType.body,
                   ),
                 ],
                 _ when _busy => [
@@ -59,14 +65,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ],
                 _ => [
-                  OutlinedButton(
+                  AppButton(
+                    label: l10n.signInWithGoogle,
+                    variant: AppButtonVariant.secondary,
+                    size: AppButtonSize.cta,
                     onPressed: _signIn,
-                    child: Text(l10n.signInWithGoogle),
                   ),
                   // Apple sign-in (M4b) fills this slot.
-                  FilledButton(
+                  AppButton(
+                    label: l10n.signInWithAppleSoon,
+                    size: AppButtonSize.cta,
                     onPressed: null,
-                    child: Text(l10n.signInWithAppleSoon),
                   ),
                 ],
               },
