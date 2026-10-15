@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// Shown when there is no deck.
   ///
   /// In ko, this message translates to:
-  /// **'아직 덱이 없습니다. 새 덱을 만들어 시작하세요.'**
+  /// **'아직 덱이 없어요. 새 덱을 만들어 시작해 보세요.'**
   String get noDecks;
 
   /// Button and dialog title for creating a deck.
@@ -149,7 +149,7 @@ abstract class AppLocalizations {
   /// Body of the deck deletion confirmation, naming how many cards go with the deck.
   ///
   /// In ko, this message translates to:
-  /// **'{count, plural, =0{이 덱에는 카드가 없습니다.} other{카드 {count}장도 함께 삭제됩니다.}}'**
+  /// **'{count, plural, =0{이 덱에는 카드가 없어요.} other{카드 {count}장도 함께 삭제돼요.}}'**
   String deleteDeckBody(int count);
 
   /// Label of the deck name field.
@@ -167,7 +167,7 @@ abstract class AppLocalizations {
   /// Shown when a deck has no card.
   ///
   /// In ko, this message translates to:
-  /// **'아직 카드가 없습니다. 카드를 추가해 시작하세요.'**
+  /// **'아직 카드가 없어요. 카드를 추가해 시작해 보세요.'**
   String get noCards;
 
   /// Bottom-bar button and editor title for adding a card.
@@ -245,13 +245,13 @@ abstract class AppLocalizations {
   /// Shown when the local database fails.
   ///
   /// In ko, this message translates to:
-  /// **'기기 저장소를 읽거나 쓰지 못했습니다. 다시 시도해 주세요.'**
+  /// **'기기 저장소를 읽거나 쓰지 못했어요. 다시 시도해 주세요.'**
   String get storageFailure;
 
   /// Shown when a stored card cannot be read.
   ///
   /// In ko, this message translates to:
-  /// **'이 덱에 읽을 수 없는 카드가 있습니다.'**
+  /// **'이 덱에 읽을 수 없는 카드가 있어요.'**
   String get unreadableCard;
 
   /// Dismisses a dialog without acting.
@@ -406,7 +406,7 @@ abstract class AppLocalizations {
   /// Shown in the summary when the deck had nothing due and no new card.
   ///
   /// In ko, this message translates to:
-  /// **'지금 학습할 카드가 없습니다.'**
+  /// **'지금 학습할 카드가 없어요.'**
   String get nothingToStudy;
 
   /// Summary line: distinct cards answered in the session.
@@ -442,13 +442,13 @@ abstract class AppLocalizations {
   /// Shown when an answer could not be written to the local database.
   ///
   /// In ko, this message translates to:
-  /// **'답을 기기에 저장하지 못했습니다. 이 카드의 일정은 바뀌지 않았습니다.'**
+  /// **'답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.'**
   String get answerNotSaved;
 
   /// Shown when the scheduling engine refused a review.
   ///
   /// In ko, this message translates to:
-  /// **'이 카드의 다음 복습 일정을 계산하지 못했습니다. 일정은 바뀌지 않았습니다.'**
+  /// **'이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.'**
   String get schedulingFailure;
 
   /// Label of the home screen button that opens the account screen.
@@ -487,16 +487,10 @@ abstract class AppLocalizations {
   /// **'로그인 중'**
   String get signingIn;
 
-  /// Account screen text while signed in, naming the account's email.
-  ///
-  /// In ko, this message translates to:
-  /// **'{email} 계정으로 로그인했습니다'**
-  String signedInAs(String email);
-
   /// Account screen text while signed in to an account without an email.
   ///
   /// In ko, this message translates to:
-  /// **'로그인했습니다'**
+  /// **'로그인했어요'**
   String get signedIn;
 
   /// Button that signs out.
@@ -514,20 +508,26 @@ abstract class AppLocalizations {
   /// Shown when signing in or out could not reach the server.
   ///
   /// In ko, this message translates to:
-  /// **'서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'**
+  /// **'서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.'**
   String get accountOffline;
 
   /// Shown when the app's sign-in configuration is missing or rejected by Google or Supabase.
   ///
   /// In ko, this message translates to:
-  /// **'이 앱의 로그인 설정에 문제가 있어 로그인할 수 없습니다.'**
+  /// **'이 앱의 로그인 설정에 문제가 있어 로그인할 수 없어요.'**
   String get accountMisconfigured;
 
   /// Shown when Google or Supabase refused the sign-in.
   ///
   /// In ko, this message translates to:
-  /// **'Google 로그인이 거부되었습니다. 다시 시도해 주세요.'**
+  /// **'Google 로그인이 거부됐어요. 다시 시도해 주세요.'**
   String get accountRejected;
+
+  /// Heading of the account screen section that holds sign-out.
+  ///
+  /// In ko, this message translates to:
+  /// **'계정'**
+  String get accountSection;
 
   /// Heading of the account screen section that chooses the theme.
   ///
@@ -616,7 +616,7 @@ abstract class AppLocalizations {
   /// Shown when no card matches the card list search.
   ///
   /// In ko, this message translates to:
-  /// **'찾는 카드가 없습니다. 다른 말로 검색해 보세요.'**
+  /// **'찾는 카드가 없어요. 다른 단어로 검색해 보세요.'**
   String get noMatches;
 
   /// Editor button that saves the card and opens an empty editor for the next one.
@@ -634,7 +634,7 @@ abstract class AppLocalizations {
   /// Body of the card deletion confirmation: the card review history goes with it.
   ///
   /// In ko, this message translates to:
-  /// **'이 카드의 학습 기록도 함께 삭제됩니다.'**
+  /// **'이 카드의 학습 기록도 함께 삭제돼요.'**
   String get deleteCardBody;
 
   /// Title of the sign-out warning shown when some changes could not reach the server.
@@ -826,7 +826,7 @@ abstract class AppLocalizations {
   /// Photo import failure: the model found no card on the page.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요'**
+  /// **'카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요.'**
   String get noCardsFound;
 
   /// Photo import failure: the daily extraction limit was reached.
@@ -838,7 +838,7 @@ abstract class AppLocalizations {
   /// Photo import failure: the model failed.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요'**
+  /// **'카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.'**
   String get modelFailed;
 
   /// Photo import failure: no session, or one the server refused.
@@ -1138,7 +1138,7 @@ abstract class AppLocalizations {
   /// Agreement checkbox the publish button requires.
   ///
   /// In ko, this message translates to:
-  /// **'부적절하거나 저작권을 침해하는 내용을 공개하지 않겠습니다'**
+  /// **'부적절하거나 저작권을 침해하는 내용은 공개하지 않을게요'**
   String get publishAgreement;
 
   /// Button that publishes a deck.

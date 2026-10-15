@@ -264,11 +264,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signingIn => 'Signing in';
 
   @override
-  String signedInAs(String email) {
-    return 'Signed in as $email';
-  }
-
-  @override
   String get signedIn => 'Signed in';
 
   @override
@@ -287,6 +282,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountRejected => 'Google sign-in was refused. Please try again.';
+
+  @override
+  String get accountSection => 'Account';
 
   @override
   String get displaySection => 'Display';
@@ -496,7 +494,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'This photo can\'t be sent. Retake it or choose another.';
 
   @override
-  String get noCardsFound => 'No cards found. Try a brighter, straighter photo';
+  String get noCardsFound =>
+      'No cards found. Try a brighter, straighter photo.';
 
   @override
   String get dailyLimitReached =>
@@ -504,7 +503,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modelFailed =>
-      'Couldn\'t read the cards. Please try again in a moment';
+      'Couldn\'t read the cards. Please try again in a moment.';
 
   @override
   String get signInRequired =>
