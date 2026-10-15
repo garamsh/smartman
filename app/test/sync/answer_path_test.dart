@@ -10,6 +10,7 @@ import 'package:smartman/main.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import '../account/fake_account_service.dart';
 import 'fake_sync_server.dart';
@@ -53,13 +54,16 @@ void main() {
         .read(syncControllerProvider);
 
     await tapAndSettle(tester, 'New deck');
-    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'French');
-    await tapAndSettle(tester, 'Save');
+    await tester.enterText(find.widgetWithText(AppTextField, 'Name'), 'French');
+    await tapAndSettle(tester, 'Create');
     await tapAndSettle(tester, 'French');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
-      await tester.enterText(find.widgetWithText(TextField, 'Question'), front);
-      await tester.enterText(find.widgetWithText(TextField, 'Answer'), back);
+      await tester.enterText(
+        find.widgetWithText(AppTextField, 'Question'),
+        front,
+      );
+      await tester.enterText(find.widgetWithText(AppTextField, 'Answer'), back);
       await tapAndSettle(tester, 'Save');
     }
     await tapAndSettle(tester, 'Study · 2');

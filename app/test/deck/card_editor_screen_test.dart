@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_editor_screen.dart';
 import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'deck_screens.dart';
 
@@ -27,7 +28,7 @@ Future<List<(String, String)>> _stored(DeckScreens screens) async => [
 bool _focused(WidgetTester tester, String label) => tester
     .widget<EditableText>(
       find.descendant(
-        of: find.widgetWithText(TextField, label),
+        of: find.widgetWithText(AppTextField, label),
         matching: find.byType(EditableText),
       ),
     )

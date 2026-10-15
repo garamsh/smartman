@@ -3,6 +3,9 @@ import 'package:flutter/material.dart' hide Card;
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_chip.dart';
+import '../../shared/ui/app_list_row.dart';
+import '../../shared/ui/app_sheet.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'photo.dart';
@@ -177,7 +180,6 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
   Widget _build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
     final camera = _camera;
     return Scaffold(
       backgroundColor: colors.ground,
@@ -191,11 +193,11 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
             _Opening() || _Released() => const SizedBox.shrink(),
             _Closed(:final failure) => Center(
               child: Padding(
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.all(AppSpace.s32),
                 child: Text(
                   describePhotoImportFailure(l10n, failure),
                   textAlign: TextAlign.center,
-                  style: textTheme.bodyLarge?.copyWith(color: colors.ink),
+                  style: AppType.body.copyWith(color: colors.ink),
                 ),
               ),
             ),
@@ -209,7 +211,7 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border.all(color: colors.ink, width: 2),
-                      borderRadius: BorderRadius.circular(AppRadius.row),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
                   ),
                 ),
@@ -218,56 +220,63 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
           SafeArea(
             child: Column(
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: l10n.close,
-                      icon: const Icon(Icons.close),
-                      color: colors.ink,
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: ActionChip(
-                          avatar: Icon(Icons.expand_more, color: colors.ink),
-                          label: Text(
-                            l10n.photoTarget(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: l10n.close,
+                        icon: const Icon(Icons.close),
+                        color: colors.ink,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: AppChip(
+                            label: l10n.photoTarget(
                               widget.target?.name ?? l10n.newDeck,
                             ),
+                            icon: Icons.expand_more,
+                            onPressed: _chooseTarget,
                           ),
-                          onPressed: _chooseTarget,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 48),
-                  ],
+                      // Balances the close button, so the chip is centred.
+                      const SizedBox(width: AppSpace.s40 + AppSpace.s8),
+                    ],
+                  ),
                 ),
                 const Spacer(),
                 if (camera is! _Closed)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.s32,
+                    ),
                     child: DecoratedBox(
-                      decoration: BoxDecoration(
+                      decoration: ShapeDecoration(
                         color: colors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.row),
+                        shape: const StadiumBorder(),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: AppSpace.s16,
+                          vertical: AppSpace.s8,
                         ),
                         child: Text(
                           l10n.photoCaptureHint,
                           textAlign: TextAlign.center,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colors.ink,
-                          ),
+                          style: AppType.secondary.copyWith(color: colors.ink),
                         ),
                       ),
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.s24,
+                    AppSpace.s16,
+                    AppSpace.s24,
+                    AppSpace.s24,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -306,26 +315,31 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
 
   Future<void> _chooseTarget() async {
     final l10n = AppLocalizations.of(context);
-    final chosen = await showModalBottomSheet<_TargetChoice>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
+    final colors = AppColors.of(context);
+    Widget check(bool chosen) => chosen
+        ? Icon(Icons.check, color: colors.know)
+        : const SizedBox.shrink();
+    final chosen = await showAppSheet<_TargetChoice>(
+      context,
+      builder: (context) => AppSheet(
+        title: l10n.photoTargetTitle,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final deck in widget.decks)
-              ListTile(
-                title: Text(deck.name),
+              AppListRow(
+                title: deck.name,
+                onSheet: true,
                 selected: deck.id == widget.target?.id,
-                trailing: deck.id == widget.target?.id
-                    ? const Icon(Icons.check)
-                    : null,
+                trailing: check(deck.id == widget.target?.id),
                 onTap: () => Navigator.of(context).pop(_TargetChoice(deck.id)),
               ),
-            ListTile(
+            AppListRow(
+              title: l10n.newDeck,
               leading: const Icon(Icons.add),
-              title: Text(l10n.newDeck),
+              onSheet: true,
               selected: widget.target == null,
-              trailing: widget.target == null ? const Icon(Icons.check) : null,
+              trailing: check(widget.target == null),
               onTap: () => Navigator.of(context).pop(const _TargetChoice(null)),
             ),
           ],

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
 import 'failure.dart';
 import 'providers.dart';
 import 'status.dart';
@@ -43,9 +44,10 @@ class SyncStatusView extends ConsumerWidget {
           icon: Icon(Icons.error_outline, size: 18, color: colors.dontKnowText),
           text: l10n.syncFailed,
           color: colors.dontKnowText,
-          action: TextButton(
+          action: AppButton(
+            label: l10n.syncRetry,
+            variant: AppButtonVariant.text,
             onPressed: controller.retry,
-            child: Text(l10n.syncRetry),
           ),
         ),
       },
@@ -70,13 +72,13 @@ class _StatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
-    spacing: 8,
+    spacing: AppSpace.s8,
     children: [
       ExcludeSemantics(child: icon),
       Flexible(
         child: Semantics(
           liveRegion: true,
-          child: Text(text, style: TextStyle(color: color)),
+          child: Text(text, style: AppType.secondary.copyWith(color: color)),
         ),
       ),
       ?action,

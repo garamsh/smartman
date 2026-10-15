@@ -6,6 +6,8 @@ import 'package:flutter/material.dart' hide Card;
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_section_label.dart';
+import '../../shared/ui/app_sheet.dart';
 import 'content_view.dart';
 import 'rust/api/engine.dart';
 import 'session.dart';
@@ -329,30 +331,18 @@ class _AnswerDot extends StatelessWidget {
 /// Opens [card]'s whole front and back in a sheet.
 void _showWholeCard(BuildContext context, Card card) {
   final l10n = AppLocalizations.of(context);
-  final theme = Theme.of(context);
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          StudyStyle.cardMargin,
-          0,
-          StudyStyle.cardMargin,
-          StudyStyle.cardMargin,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: StudyStyle.cardPadding / 2,
-          children: [
-            Text(l10n.cardFront, style: theme.textTheme.labelLarge),
-            ContentView(card.front, style: theme.textTheme.bodyLarge),
-            const Divider(height: StudyStyle.cardPadding * 2),
-            Text(l10n.cardBack, style: theme.textTheme.labelLarge),
-            ContentView(card.back, style: theme.textTheme.bodyLarge),
-          ],
-        ),
+  showAppSheet<void>(
+    context,
+    builder: (context) => AppSheet(
+      title: l10n.cardFront,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ContentView(card.front, style: AppType.body),
+          const Divider(height: AppSpace.s32),
+          AppSectionLabel(l10n.cardBack),
+          ContentView(card.back, style: AppType.body),
+        ],
       ),
     ),
   );

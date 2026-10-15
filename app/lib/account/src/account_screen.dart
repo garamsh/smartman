@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../../shared/ui/app_button.dart';
+import '../../shared/ui/app_section_label.dart';
+import '../../shared/ui/app_sheet.dart';
 import 'account_data.dart';
 import 'account_state.dart';
 import 'failure.dart';
@@ -30,24 +33,26 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       bottomNavigationBar: const SafeArea(child: _ThemeSection()),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpace.gutter),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            spacing: 16,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpace.s16,
             children: switch (state) {
               SignedIn(:final email) => [
                 Text(
                   email == null ? l10n.signedIn : l10n.signedInAs(email),
                   textAlign: TextAlign.center,
+                  style: AppType.body,
                 ),
-                ref.watch(syncStatusProvider)(),
-                if (_busy)
-                  CircularProgressIndicator(semanticsLabel: l10n.signingOut)
-                else
-                  OutlinedButton(
-                    onPressed: _signOut,
-                    child: Text(l10n.signOut),
-                  ),
+                Center(child: ref.watch(syncStatusProvider)()),
+                AppButton(
+                  label: l10n.signOut,
+                  variant: AppButtonVariant.secondary,
+                  loading: _busy,
+                  loadingLabel: l10n.signingOut,
+                  onPressed: _signOut,
+                ),
               ],
               // The gate leaves this screen once no account is signed in.
               SignedOut() || AccountUnavailable() => [],
@@ -93,24 +98,12 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   /// Whether the user signs out although some changes are not synced.
   Future<bool> _confirmUnsynced() async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.unsyncedChangesTitle),
-        content: Text(l10n.unsyncedChangesBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.signOutAnyway),
-          ),
-        ],
-      ),
+    return showAppConfirm(
+      context,
+      title: l10n.unsyncedChangesTitle,
+      consequence: l10n.unsyncedChangesBody,
+      confirmLabel: l10n.signOutAnyway,
     );
-    return confirmed ?? false;
   }
 }
 
@@ -122,16 +115,12 @@ class _ThemeSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpace.gutter),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 12,
         children: [
-          Text(
-            l10n.displaySection,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          AppSectionLabel(l10n.displaySection),
           SegmentedButton<ThemeMode>(
             segments: [
               ButtonSegment(
