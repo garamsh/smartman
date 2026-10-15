@@ -1,3 +1,8 @@
+// Each request to the stack carries its own bound, the request timeout the
+// app treats as offline, so the file sets no bound over a test's sum of them.
+@Timeout.none
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +22,40 @@ const _urlVariable = 'SMARTMAN_SYNC_TEST_URL';
 const _keyVariable = 'SMARTMAN_SYNC_TEST_KEY';
 
 List<Content> _text(String text) => [TextContent(text)];
+
+/// Runs [step] until it completes within [bound] in all, trying again while
+/// the auth server answers that the request may be retried. [step] is told
+/// whether an earlier attempt failed.
+Future<T> _withinBound<T>(
+  Duration bound,
+  Future<T> Function(bool retry) step,
+) async {
+  final elapsed = Stopwatch()..start();
+  for (var retry = false; ; retry = true) {
+    try {
+      return await step(retry).timeout(bound - elapsed.elapsed);
+    } on AuthRetryableFetchException {
+      if (elapsed.elapsed >= bound) rethrow;
+    }
+  }
+}
+
+/// Signs [client] in to [email]'s account, creating it if no account has it.
+Future<AuthResponse> _signInOrUp(
+  SupabaseClient client,
+  String email,
+  String password,
+) async {
+  try {
+    return await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+  } on AuthApiException catch (error) {
+    if (error.code != 'invalid_credentials') rethrow;
+    return client.auth.signUp(email: email, password: password);
+  }
+}
 
 void main() {
   final url = Platform.environment[_urlVariable];
@@ -48,12 +87,26 @@ void main() {
     final first = SupabaseClient(url!, key!, authOptions: options);
     final second = SupabaseClient(url, key, authOptions: options);
     clients.addAll([first, second]);
-    final signUp = await first.auth.signUp(email: email, password: password);
-    await second.auth.signInWithPassword(email: email, password: password);
-    account = UserId(signUp.user!.id);
+    final firstServer = SupabaseSyncServer(first);
+    final secondServer = SupabaseSyncServer(second);
+    // Signing in is bounded as each sync request is.
+    final bound = firstServer.timeout;
+    // A timed-out sign-up may have created the account, so a retry signs in.
+    await _withinBound(
+      bound,
+      (retry) => retry
+          ? _signInOrUp(first, email, password)
+          : first.auth.signUp(email: email, password: password),
+    );
+    await _withinBound(
+      bound,
+      (_) => second.auth.signInWithPassword(email: email, password: password),
+    );
+    expect(first.auth.currentUser?.email, email);
+    account = UserId(first.auth.currentUser!.id);
     expect(second.auth.currentUser?.id, account.value);
-    a = Device('a', SupabaseSyncServer(first), scheduler);
-    b = Device('b', SupabaseSyncServer(second), scheduler);
+    a = Device('a', firstServer, scheduler);
+    b = Device('b', secondServer, scheduler);
   });
 
   tearDown(() async {
