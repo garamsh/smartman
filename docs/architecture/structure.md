@@ -56,7 +56,7 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
   - an entry under `app/lib/` outside the closed list;
   - an import from a foundation into a domain or `home/`, and an import of `home/` from anywhere but `main.dart`;
   - an import into a domain's `src/` from outside that domain;
-  - a foundation file that files outside its folder import from exactly one domain or `home/`.
+  - a foundation file whose importers outside its folder all sit in one domain or all in `home/`.
   A class inside a foundation file that serves one domain is not visible to it; review holds that.
 - **The app theme is a foundation.** `app/lib/design/theme.dart` holds every colour token, the type, spacing, radius, height and shadow scales and the light and dark themes, and `app/lib/design/theme_choice.dart` the user's choice between them; no other file under `app/lib/` writes a colour ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md), [`design.md`](design.md)).
 - **The components are a foundation.** `app/lib/design/` holds the buttons, fields, rows, chips, section labels, sheets and the mascot every screen builds from, one file per component. They import only Flutter, the theme and the strings, and a domain imports the file it uses ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md), [`design.md`](design.md)).
