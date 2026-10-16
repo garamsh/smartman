@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
@@ -8,24 +9,11 @@ import 'package:smartman/home/src/deck_screen.dart';
 import 'deck_screens.dart';
 
 /// The front of every card row on screen, top to bottom.
-List<String?> _rowFronts(WidgetTester tester) => [
-  for (final row
-      in find
-          .ancestor(
-            of: find.byType(VerticalDivider),
-            matching: find.byType(Row),
-          )
-          .evaluate())
-    tester
-        .widget<Text>(
-          find
-              .descendant(
-                of: find.byElementPredicate((element) => element == row),
-                matching: find.byType(Text),
-              )
-              .first,
-        )
-        .data,
+List<String> _rowFronts(WidgetTester tester) => [
+  for (final row in tester.widgetList<CardAnswerRow>(
+    find.byType(CardAnswerRow),
+  ))
+    row.front,
 ];
 
 void main() {
@@ -45,10 +33,15 @@ void main() {
 
       expect(find.text('French'), findsOneWidget);
       expect(find.text('3 cards'), findsOneWidget);
-      expect(find.text('1 to review'), findsOneWidget);
-      expect(find.text('2 new'), findsOneWidget);
+      expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
+      // Chat was reviewed after a day's interval, so it is learning.
+      expect(find.text('0 / 3 mastered'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('0 mastered, 1 learning, 2 new'),
+        findsOneWidget,
+      );
 
-      await screens.tap(find.text('Study · 3'));
+      await screens.tap(find.text('Study'));
 
       expect(screens.session, {screens.deck.id});
       await screens.close();
@@ -69,8 +62,7 @@ void main() {
       );
       await screens.push((deck) => DeckScreen(deck: deck));
 
-      expect(find.text('3 to review'), findsOneWidget);
-      expect(find.text('0 new'), findsOneWidget);
+      expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
       expect(find.text(paused), findsOneWidget);
       await screens.close();
 
@@ -83,8 +75,7 @@ void main() {
       );
       await screens.push((deck) => DeckScreen(deck: deck));
 
-      expect(find.text('3 to review'), findsOneWidget);
-      expect(find.text('0 new'), findsOneWidget);
+      expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
       expect(find.text(paused), findsNothing);
       await screens.close();
     },
@@ -121,7 +112,7 @@ void main() {
         // The count is in the state the case names: read as zero, pending,
         // or failed.
         expect(
-          find.text('0 to review'),
+          find.bySemanticsLabel('0 cards for today'),
           counted ? findsOneWidget : findsNothing,
           reason: today,
         );
@@ -131,7 +122,7 @@ void main() {
           reason: today,
         );
 
-        await screens.tap(find.text('Study · 0'));
+        await screens.tap(find.text('Study'));
 
         expect(screens.session, {screens.deck.id}, reason: today);
         await screens.close();
@@ -139,26 +130,67 @@ void main() {
     },
   );
 
-  testWidgets('cards show as front | back rows, and a tap opens one to edit', (
-    tester,
-  ) async {
-    final screens = await DeckScreens.open(tester, cards: cards);
-    await screens.push((deck) => DeckScreen(deck: deck));
-    expect(_rowFronts(tester), ['Chat', 'Chien', 'Hund']);
+  testWidgets(
+    'each card shows its question with the answer hidden, a tap shows it and a second hides it',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(_rowFronts(tester), ['Chat', 'Chien', 'Hund']);
+      expect(find.text('dog'), findsNothing);
+      expect(find.bySemanticsLabel('Chien, answer hidden'), findsOneWidget);
 
-    await screens.tap(find.text('Chien'));
+      await screens.tap(find.text('Chien'));
+      expect(find.text('dog'), findsOneWidget);
+      expect(find.bySemanticsLabel('Chien, answer dog'), findsOneWidget);
+      // Control: the other cards keep their answers hidden.
+      expect(find.text('cat'), findsNothing);
 
-    expect(find.text('Edit card'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Chien'), findsOneWidget);
-    await screens.close();
-  });
+      await screens.tap(find.text('Chien'));
+      expect(find.text('dog'), findsNothing);
+      expect(find.byType(CardEditorScreen), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a long-press, or a screen reader\'s action, opens a card to edit',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+
+      await tester.longPress(find.text('Chien'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit card'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Chien'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      final semantics = tester.ensureSemantics();
+      final node = tester.getSemantics(find.byType(CardAnswerRow).first);
+      final edit = CustomSemanticsAction.getIdentifier(
+        const CustomSemanticsAction(label: 'Edit card'),
+      );
+      expect(node.getSemanticsData().customSemanticsActionIds, contains(edit));
+      tester.binding.pipelineOwner.semanticsOwner!.performAction(
+        node.id,
+        SemanticsAction.customAction,
+        edit,
+      );
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
+      semantics.dispose();
+      await screens.close();
+    },
+  );
 
   testWidgets(
     'search keeps the cards whose front or back holds the text, ignoring case',
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.byType(AppTextField), findsNothing);
 
+      await screens.tap(find.byTooltip('Search cards'));
       await screens.enter('Search', 'dog');
       expect(_rowFronts(tester), ['Chien', 'Hund']);
 
@@ -169,35 +201,42 @@ void main() {
       expect(_rowFronts(tester), isEmpty);
       expect(find.text('No card matches. Try other words.'), findsOneWidget);
 
-      await screens.enter('Search', '');
+      await screens.enter('Search', 'CHAT');
+      await screens.tap(find.byTooltip('Close search'));
+      expect(find.byType(AppTextField), findsNothing);
       expect(_rowFronts(tester), ['Chat', 'Chien', 'Hund']);
       await screens.close();
     },
   );
 
-  testWidgets('the photo button is absent until photo import exists', (
+  testWidgets('without photo import, Add card opens the editor at once', (
     tester,
   ) async {
     final screens = await DeckScreens.open(tester);
     await screens.push((deck) => DeckScreen(deck: deck));
 
-    expect(find.text('Add card'), findsOneWidget);
-    expect(find.text('Add from photo'), findsNothing);
+    await screens.tap(find.text('Add card'));
+
+    expect(find.text('Photo'), findsNothing);
+    expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
     await screens.close();
   });
 
-  testWidgets('with photo import, the photo button opens it for this deck', (
-    tester,
-  ) async {
-    final screens = await DeckScreens.open(tester, photoImport: true);
-    await screens.push((deck) => DeckScreen(deck: deck));
+  testWidgets(
+    'with photo import, Add card offers typing it in or a photo, which opens photo import for this deck',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, photoImport: true);
+      await screens.push((deck) => DeckScreen(deck: deck));
 
-    await screens.tap(find.text('Add from photo'));
+      await screens.tap(find.text('Add card'));
+      expect(find.text('Type it in'), findsOneWidget);
+      await screens.tap(find.text('Photo'));
 
-    expect(find.text('photo import'), findsOneWidget);
-    expect(screens.photoImports, [screens.deck.id]);
-    await screens.close();
-  });
+      expect(find.text('photo import'), findsOneWidget);
+      expect(screens.photoImports, [screens.deck.id]);
+      await screens.close();
+    },
+  );
 
   testWidgets(
     'a photo import into another deck replaces this list with that deck, and one into this deck returns here',
@@ -209,7 +248,8 @@ void main() {
       await screens.push((deck) => DeckScreen(deck: deck));
 
       Future<void> saveInto(Deck deck) async {
-        await screens.tap(find.text('Add from photo'));
+        await screens.tap(find.text('Add card'));
+        await screens.tap(find.text('Photo'));
         screens.navigator.currentState!.pop(deck);
         await tester.pumpAndSettle();
       }

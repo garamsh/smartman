@@ -1356,6 +1356,270 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'계속 학습'**
   String get todayKeepStudying;
+
+  /// The bottom bar's first tab: today's cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘'**
+  String get tabToday;
+
+  /// The bottom bar's second tab: the user's decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱'**
+  String get tabDecks;
+
+  /// The bottom bar's third tab: the study record.
+  ///
+  /// In ko, this message translates to:
+  /// **'기록'**
+  String get tabRecord;
+
+  /// What a screen reader calls the bottom bar of tabs.
+  ///
+  /// In ko, this message translates to:
+  /// **'탭'**
+  String get tabsLabel;
+
+  /// The 기록 tab until its content arrives.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습 기록은 곧 여기에서 볼 수 있어요.'**
+  String get recordComingSoon;
+
+  /// The decks tab's action that enters selection mode, to study several decks in one session.
+  ///
+  /// In ko, this message translates to:
+  /// **'선택'**
+  String get selectDecks;
+
+  /// The hint in the decks tab's search field, which filters decks by name.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 검색'**
+  String get searchDecks;
+
+  /// The decks tab when no deck name holds the search.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾는 덱이 없어요. 다른 단어로 검색해 보세요.'**
+  String get noDeckMatches;
+
+  /// Under a deck row's progress bar: how many of its cards are mastered (interval of 21 days or more).
+  ///
+  /// In ko, this message translates to:
+  /// **'{cards}장 중 {mastered}장 익힘'**
+  String deckMastered(int cards, int mastered);
+
+  /// Under 공개 덱 둘러보기 on the decks tab.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 사람이 만든 덱을 내 덱으로 가져와요'**
+  String get browsePublicDecksBody;
+
+  /// Under 직접 만들기 in the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'이름을 정하고 카드를 하나씩 넣어요'**
+  String get createManuallyBody;
+
+  /// Under 사진으로 만들기 in the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어장 사진을 찍으면 카드를 찾아 드려요'**
+  String get createFromPhotoBody;
+
+  /// The new-deck sheet's option that opens the public decks.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 덱에서 가져오기'**
+  String get importFromPublic;
+
+  /// Under 공개 덱에서 가져오기 in the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 사람이 만든 덱을 복사해요'**
+  String get importFromPublicBody;
+
+  /// What a screen reader reads for a progress bar of mastered, learning and new cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'익힘 {mastered}장, 학습 중 {learning}장, 새 카드 {fresh}장'**
+  String progressSemantics(int mastered, int learning, int fresh);
+
+  /// Under the deck's name on its page: how many cards it holds.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장'**
+  String deckSummary(int count);
+
+  /// Under a published deck's name on its page.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장 · 공개'**
+  String deckSummaryPublic(int count);
+
+  /// What a screen reader calls the deck page's navy card.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 이 덱'**
+  String get todayThisDeck;
+
+  /// After the large count on a navy card: the unit and the minutes the cards take.
+  ///
+  /// In ko, this message translates to:
+  /// **'장 · 약 {minutes}분'**
+  String todayCountMinutes(int minutes);
+
+  /// On the deck page's navy card: mastered cards of all.
+  ///
+  /// In ko, this message translates to:
+  /// **'{mastered} / {total} 익힘'**
+  String masteredOf(int mastered, int total);
+
+  /// The deck page's button that studies the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습하기'**
+  String get studyDeck;
+
+  /// The deck page's top bar button that opens the card search.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 검색'**
+  String get searchCardsAction;
+
+  /// The button that closes the deck page's card search.
+  ///
+  /// In ko, this message translates to:
+  /// **'검색 닫기'**
+  String get closeSearch;
+
+  /// The add-card sheet's option that opens the card editor.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 입력'**
+  String get addCardManually;
+
+  /// Under 직접 입력 in the add-card sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'문제와 답을 하나씩 적어요'**
+  String get addCardManuallyBody;
+
+  /// The add-card sheet's option that opens photo import for the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진'**
+  String get addCardPhoto;
+
+  /// Under 사진 in the add-card sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어장 사진에서 카드를 찾아요'**
+  String get addCardPhotoBody;
+
+  /// What a screen reader reads for a card row whose answer is hidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'{front}, 답 가려짐'**
+  String cardAnswerHidden(String front);
+
+  /// What a screen reader reads for a card row whose answer is shown.
+  ///
+  /// In ko, this message translates to:
+  /// **'{front}, 답 {back}'**
+  String cardAnswerShown(String front, String back);
+
+  /// What a screen reader reads for the today card's goal ring.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 목표 {goal}장 중 {done}장'**
+  String goalRingSemantics(int done, int goal);
+
+  /// On the today card: how much of the day's goal is done.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 목표 {goal}장 중 {done}장 했어요'**
+  String goalLine(int done, int goal);
+
+  /// On the done card: the day's goal was reached.
+  ///
+  /// In ko, this message translates to:
+  /// **'목표 {goal}장 달성'**
+  String goalReached(int goal);
+
+  /// A streak chip: study days in a row with an answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'{days}일 연속'**
+  String streakDays(int days);
+
+  /// Heading of the forecast of cards due on each of the next seven study days.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞으로 7일'**
+  String get forecastTitle;
+
+  /// Beside the forecast's heading: tomorrow's cards and the seven days' total.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일 {tomorrow}장 · 이번 주 {week}장'**
+  String forecastSummary(int tomorrow, int week);
+
+  /// Beside the forecast's heading on the done card: the seven days' total.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 주 {week}장'**
+  String forecastWeek(int week);
+
+  /// The forecast's label for today.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘'**
+  String get forecastToday;
+
+  /// The forecast's label for tomorrow.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일'**
+  String get forecastTomorrow;
+
+  /// One day of the forecast as a screen reader reads it.
+  ///
+  /// In ko, this message translates to:
+  /// **'{day} {count}장'**
+  String forecastDay(String day, int count);
+
+  /// Heading over the decks that hold cards for today.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 덱'**
+  String get todayDecks;
+
+  /// A today's-deck row: how many of its cards are left today.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}장'**
+  String deckDueCount(int count);
+
+  /// What a screen reader reads for a today's-deck row, which studies the deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}, 오늘 {count}장 학습'**
+  String studyDeckToday(String name, int count);
+
+  /// On the done card: when the next cards fall due, how many, and their minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 복습은 {day} · {cards}장, 약 {minutes}분'**
+  String nextReview(String day, int cards, int minutes);
+
+  /// On the done card when no card falls due in the next seven days.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞으로 7일 동안 복습할 카드가 없어요'**
+  String get noNextReview;
 }
 
 class _AppLocalizationsDelegate

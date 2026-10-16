@@ -7,9 +7,9 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'model.dart';
 
-/// A deck on a row: its tile, name and card count, "공개" when it is
-/// published, [today] beside them, and a chevron that [onOpen] follows; in
-/// selection mode, a check in place of the tile and the chevron.
+/// A deck on a row: its tile, its name with "공개" when it is published and
+/// [today] beside them, and [progress] under them, or its card count while
+/// [progress] is null; in selection mode, a check in place of the tile.
 class DeckRow extends StatelessWidget {
   const DeckRow({
     super.key,
@@ -19,6 +19,7 @@ class DeckRow extends StatelessWidget {
     required this.onSelect,
     required this.onOpen,
     this.today,
+    this.progress,
   });
 
   final Deck deck;
@@ -36,44 +37,80 @@ class DeckRow extends StatelessWidget {
   /// What the deck holds for today, as its caller draws it.
   final Widget? today;
 
+  /// How far the deck's cards have come, as its caller draws it.
+  final Widget? progress;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final selected = this.selected;
-    return AppListRow(
-      title: deck.name,
-      subtitle: l10n.cardCount(cardCount),
-      selected: selected,
-      leading: selected == null
-          ? _DeckTile(deck: deck)
-          : SizedBox.square(
-              dimension: AppSize.deckTile,
-              child: Icon(
-                selected ? LucideIcons.circleCheck : LucideIcons.circle,
-                color: selected ? colors.ink : colors.muted,
-              ),
+    return MergeSemantics(
+      child: Semantics(
+        selected: selected,
+        child: AppRowSurface(
+          onTap: selected == null ? onOpen : onSelect,
+          onLongPress: onSelect,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s16,
+              AppSpace.s12,
+              AppSpace.s12,
+              AppSpace.s12,
             ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: AppSpace.s8,
-        children: [
-          if (deck.visibility is PublicDeck) AppChip(label: l10n.publicChip),
-          ?today,
-          if (selected == null)
-            Icon(LucideIcons.chevronRight, color: colors.muted),
-        ],
+            child: Row(
+              spacing: AppSpace.s12,
+              children: [
+                if (selected == null)
+                  DeckTile(deck: deck)
+                else
+                  SizedBox.square(
+                    dimension: AppSize.deckTile,
+                    child: Icon(
+                      selected ? LucideIcons.circleCheck : LucideIcons.circle,
+                      color: selected ? colors.ink : colors.muted,
+                    ),
+                  ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: AppSpace.s4,
+                    children: [
+                      Row(
+                        spacing: AppSpace.s8,
+                        children: [
+                          Expanded(
+                            child: Text(deck.name, style: AppType.bodyStrong),
+                          ),
+                          if (deck.visibility is PublicDeck)
+                            AppChip(label: l10n.publicChip),
+                          ?today,
+                        ],
+                      ),
+                      progress ??
+                          Text(
+                            l10n.cardCount(cardCount),
+                            style: AppType.caption.copyWith(
+                              color: colors.muted,
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      onTap: selected == null ? onOpen : onSelect,
-      onLongPress: onSelect,
     );
   }
 }
 
 /// The deck name's first letter on a rounded tile, in one of the four tints,
-/// the same one for a deck every time.
-class _DeckTile extends StatelessWidget {
-  const _DeckTile({required this.deck});
+/// the same one for a deck every time; decorative, beside the name.
+class DeckTile extends StatelessWidget {
+  const DeckTile({super.key, required this.deck});
 
   final Deck deck;
 
@@ -81,17 +118,19 @@ class _DeckTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tints = AppColors.of(context).deckTints;
     final name = deck.name.trim();
-    return Container(
-      width: AppSize.deckTile,
-      height: AppSize.deckTile,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: tints[deckTintIndex(deck.id, tints.length)],
-        borderRadius: BorderRadius.circular(AppRadius.field),
-      ),
-      child: Text(
-        name.isEmpty ? '' : name.characters.first.toUpperCase(),
-        style: AppType.headline,
+    return ExcludeSemantics(
+      child: Container(
+        width: AppSize.deckTile,
+        height: AppSize.deckTile,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: tints[deckTintIndex(deck.id, tints.length)],
+          borderRadius: BorderRadius.circular(AppRadius.field),
+        ),
+        child: Text(
+          name.isEmpty ? '' : name.characters.first.toUpperCase(),
+          style: AppType.headline,
+        ),
       ),
     );
   }

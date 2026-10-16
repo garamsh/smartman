@@ -96,17 +96,26 @@ void main() {
   Future<void> enterText(WidgetTester tester, String label, String text) =>
       tester.enterText(find.widgetWithText(AppTextField, label), text);
 
+  /// Shows the tab named [label].
+  Future<void> showTab(WidgetTester tester, String label) async {
+    await tester.tap(find.text(label));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> createDeckAndOpen(WidgetTester tester, String name) async {
     // The first deck is made from the first-run home, later ones from the
-    // bottom bar.
-    final firstRun = find.text('Create by hand');
-    await tester.tap(
-      firstRun.evaluate().isEmpty ? find.text('New deck') : firstRun,
-    );
+    // decks tab's new-deck sheet.
+    if (find.text('Create by hand').evaluate().isEmpty) {
+      await showTab(tester, 'Decks');
+      await tester.tap(find.text('New deck'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('Create by hand'));
     await tester.pumpAndSettle();
     await enterText(tester, 'Deck name', name);
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
+    await showTab(tester, 'Decks');
     await tester.tap(find.text(name));
     await tester.pumpAndSettle();
   }
@@ -166,16 +175,24 @@ void main() {
   testWidgets('sharing is offered only with a sharing server', (tester) async {
     await pumpApp(tester);
     expect(find.byTooltip('Account'), findsOneWidget);
-    expect(find.byTooltip('Browse'), findsNothing);
+    expect(find.text('Browse public decks'), findsNothing);
     await createDeckAndOpen(tester, 'French');
     await tester.tap(find.byTooltip('Deck actions'));
     await tester.pumpAndSettle();
     expect(find.text('Rename'), findsOneWidget);
     expect(find.text('Publish'), findsNothing);
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Browse public decks'), findsNothing);
+    await tester.tap(find.text('New deck'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copy a public deck'), findsNothing);
     await unmountApp(tester);
 
     await pumpApp(tester, sharing: FakeSharingServer());
-    await tester.tap(find.byTooltip('Browse'));
+    await tester.tap(find.text('Browse public decks'));
     await tester.pumpAndSettle();
     expect(
       find.text('No public decks yet. Publish one of yours to be the first.'),
@@ -187,6 +204,14 @@ void main() {
     await tester.tap(find.byTooltip('Deck actions'));
     await tester.pumpAndSettle();
     expect(find.text('Publish'), findsOneWidget);
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Browse public decks'), findsOneWidget);
+    await tester.tap(find.text('New deck'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copy a public deck'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -252,6 +277,12 @@ void main() {
       await tester.tap(find.text('Add anyway'));
       await tester.pumpAndSettle();
 
+      // The deck holds both cards; their answers show once tapped.
+      expect(find.text('Chat'), findsNWidgets(2));
+      for (final row in find.text('Chat').evaluate().toList()) {
+        await tester.tap(find.byWidget(row.widget));
+      }
+      await tester.pumpAndSettle();
       expect(find.text('cat'), findsOneWidget);
       expect(find.text('chat (talk)'), findsOneWidget);
       await unmountApp(tester);
@@ -296,7 +327,7 @@ void main() {
     await createDeckAndOpen(tester, 'French');
     await addCard(tester, 'Chat', 'cat');
 
-    await tester.tap(find.text('Study · 1'));
+    await tester.tap(find.text('Study'));
     await tester.pumpAndSettle();
 
     expect(find.text('Chat'), findsOneWidget);
@@ -306,7 +337,7 @@ void main() {
   });
 
   testWidgets(
-    "the deck list's header counts today's cards across every deck, and Study all studies them in one session",
+    "the today card counts today's cards across every deck, and Study all studies them in one session",
     (tester) async {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
@@ -318,6 +349,7 @@ void main() {
       await addCard(tester, 'Hund', 'dog');
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await showTab(tester, 'Today');
 
       expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
       await tester.tap(find.text('Study all'));
@@ -329,18 +361,19 @@ void main() {
   );
 
   testWidgets(
-    'with no card left and none answered today, Keep studying and Study · 0 open a session with nothing to study',
+    'with no card left and none answered today, Keep studying and the deck\'s Study open a session with nothing to study',
     (tester) async {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
 
-      await tester.tap(find.text('Study · 0'));
+      await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('No cards to study today'), findsOneWidget);
       await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await showTab(tester, 'Today');
 
       expect(find.text("You've done today's cards"), findsOneWidget);
       await tester.tap(find.text('Keep studying'));
@@ -351,12 +384,12 @@ void main() {
   );
 
   testWidgets(
-    'with no card left and one answered today, Keep studying and Study · 0 open the completion card',
+    'with no card left and one answered today, Keep studying and the deck\'s Study open the completion card',
     (tester) async {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
       await addCard(tester, 'Chat', 'cat');
-      await tester.tap(find.text('Study · 1'));
+      await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Know'));
       await tester.pumpAndSettle();
@@ -377,13 +410,14 @@ void main() {
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Study · 0'));
+      await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('Done for today'), findsOneWidget);
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await showTab(tester, 'Today');
 
       expect(find.text("You've done today's cards"), findsOneWidget);
       await tester.tap(find.text('Keep studying'));
@@ -449,7 +483,7 @@ void main() {
 
   for (final mode in ['light', 'dark']) {
     testWidgets(
-      'in the $mode theme the sign-in screen, every deck screen and the account screen meet the tap target and contrast guidelines',
+      'in the $mode theme the sign-in screen, every tab, every deck screen and the account screen meet the tap target and contrast guidelines',
       (tester) async {
         Future<void> meetsGuidelines() async {
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -475,6 +509,17 @@ void main() {
         await meetsGuidelines();
         await enterText(tester, 'Deck name', 'French');
         await tester.tap(find.text('Create'));
+        await tester.pumpAndSettle();
+        // The 오늘 tab with its done card, and the 기록 and 덱 tabs.
+        await meetsGuidelines();
+        await showTab(tester, 'Record');
+        await meetsGuidelines();
+        await showTab(tester, 'Decks');
+        await meetsGuidelines();
+        await tester.tap(find.text('New deck'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
         await tester.tap(find.text('French'));
         await tester.pumpAndSettle();
@@ -516,6 +561,14 @@ void main() {
 
         await tester.tap(find.text('Chat'));
         await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Search cards'));
+        await tester.pumpAndSettle();
+        // The answer shown, and the search open in the top bar.
+        await meetsGuidelines();
+        await tester.tap(find.byTooltip('Close search'));
+        await tester.pumpAndSettle();
+        await tester.longPress(find.text('Chat'));
+        await tester.pumpAndSettle();
         await meetsGuidelines();
         await tester.tap(find.byTooltip('Delete card'));
         await tester.pumpAndSettle();
@@ -527,14 +580,19 @@ void main() {
         await tester.pumpAndSettle();
         await tester.pageBack();
         await tester.pumpAndSettle();
-        // The home with its today card and a deck row.
+        // The decks tab with a deck row and its progress.
         await meetsGuidelines();
 
-        await tester.longPress(find.text('French'));
+        await tester.tap(find.text('Select'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('French'));
         await tester.pumpAndSettle();
         await meetsGuidelines();
         await tester.tap(find.byTooltip('Clear selection'));
         await tester.pumpAndSettle();
+        // The 오늘 tab with its today card, the next seven days and a deck.
+        await showTab(tester, 'Today');
+        await meetsGuidelines();
 
         await tester.tap(find.byTooltip('Account'));
         await tester.pumpAndSettle();

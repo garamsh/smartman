@@ -1,12 +1,19 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../deck/deck.dart'
-    show DeckFailure, DeckSelection, deckRepositoryProvider, describeFailure;
+    show
+        Card,
+        CardId,
+        DeckFailure,
+        DeckSelection,
+        deckRepositoryProvider,
+        describeFailure;
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
+import 'model.dart';
 import 'providers.dart';
 import 'queue.dart';
 
@@ -60,6 +67,50 @@ final class TodayUnavailable extends TodayCount {
   final String message;
 }
 
+/// What [decks] hold for today, read through [ref]: their cards and the
+/// stored states of those reviewed, the study day, the queue a session would
+/// study now, and its count at the user's pace.
+///
+/// A failed read throws the [DeckFailure] or `StudyFailure` that reports it.
+Future<
+  ({
+    List<Card> cards,
+    Map<CardId, CardState> states,
+    StudyDay day,
+    SelectedQueue queue,
+    TodayCounted count,
+  })
+>
+readToday(DeckSelection decks, WidgetRef ref) async {
+  final repository = ref.read(studyRepositoryProvider);
+  final (cards, states) = await readCards(
+    decks,
+    ref.read(deckRepositoryProvider),
+    repository,
+  );
+  final now = ref.read(studyClockProvider)();
+  final zone = ref.read(studyZoneProvider);
+  final day = StudyDay.at(
+    now,
+    firstAnswers: await repository.firstAnswersSince(studyDayStart(now, zone)),
+    offsetAt: zone,
+  );
+  final queue = selectQueue(cards, states, day);
+  final pace =
+      await repository.medianReviewDuration() ?? TodayCounted.defaultPerCard;
+  final fresh = queue.cards
+      .where((card) => !states.containsKey(card.id))
+      .length;
+  final count = queue.backlog
+      ? TodayCounted.backlog(review: queue.cards.length, perCard: pace)
+      : TodayCounted(
+          review: queue.cards.length - fresh,
+          fresh: fresh,
+          perCard: pace,
+        );
+  return (cards: cards, states: states, day: day, queue: queue, count: count);
+}
+
 /// Builds what the caller shows of a [TodayCount].
 typedef TodayBuilder = Widget Function(BuildContext context, TodayCount count);
 
@@ -83,37 +134,8 @@ class _TodayCounterState extends ConsumerState<TodayCounter> {
   late Future<TodayCounted> _count = _read();
   bool _onTop = true;
 
-  Future<TodayCounted> _read() async {
-    final (cards, states) = await readCards(
-      widget.decks,
-      ref.read(deckRepositoryProvider),
-      ref.read(studyRepositoryProvider),
-    );
-    final repository = ref.read(studyRepositoryProvider);
-    final now = ref.read(studyClockProvider)();
-    final zone = ref.read(studyZoneProvider);
-    final day = StudyDay.at(
-      now,
-      firstAnswers: await repository.firstAnswersSince(
-        studyDayStart(now, zone),
-      ),
-      offsetAt: zone,
-    );
-    final queue = selectQueue(cards, states, day);
-    final pace =
-        await repository.medianReviewDuration() ?? TodayCounted.defaultPerCard;
-    if (queue.backlog) {
-      return TodayCounted.backlog(review: queue.cards.length, perCard: pace);
-    }
-    final fresh = queue.cards
-        .where((card) => !states.containsKey(card.id))
-        .length;
-    return TodayCounted(
-      review: queue.cards.length - fresh,
-      fresh: fresh,
-      perCard: pace,
-    );
-  }
+  Future<TodayCounted> _read() async =>
+      (await readToday(widget.decks, ref)).count;
 
   @override
   void didChangeDependencies() {

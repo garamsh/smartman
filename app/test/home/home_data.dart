@@ -112,3 +112,18 @@ class UnreadableDecks extends DeckRepository {
     return super.listCards(deck);
   }
 }
+
+/// Stores one answer of [card] at [at], recorded as "Know".
+Future<void> storeAnswerAt(AppDatabase db, CardId card, DateTime at) => db
+    .into(db.reviews)
+    .insert(
+      ReviewsCompanion.insert(
+        id: 'answer${_reviews++}',
+        cardId: card.value,
+        rating: 'good',
+        reviewedAt: at,
+        durationMs: 3000,
+        fuzzFactor: const Value(0),
+        updatedAt: at,
+      ),
+    );

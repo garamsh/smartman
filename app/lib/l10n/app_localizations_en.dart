@@ -808,4 +808,185 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todayKeepStudying => 'Keep studying';
+
+  @override
+  String get tabToday => 'Today';
+
+  @override
+  String get tabDecks => 'Decks';
+
+  @override
+  String get tabRecord => 'Record';
+
+  @override
+  String get tabsLabel => 'Tabs';
+
+  @override
+  String get recordComingSoon => 'Your study record will appear here soon.';
+
+  @override
+  String get selectDecks => 'Select';
+
+  @override
+  String get searchDecks => 'Search decks';
+
+  @override
+  String get noDeckMatches => 'No deck matches. Try other words.';
+
+  @override
+  String deckMastered(int cards, int mastered) {
+    return '$mastered of $cards mastered';
+  }
+
+  @override
+  String get browsePublicDecksBody => 'Copy decks other people made into yours';
+
+  @override
+  String get createManuallyBody => 'Name it and add cards one by one';
+
+  @override
+  String get createFromPhotoBody =>
+      'Take a photo of a vocabulary page and we\'ll find the cards';
+
+  @override
+  String get importFromPublic => 'Copy a public deck';
+
+  @override
+  String get importFromPublicBody => 'Copy a deck someone else made';
+
+  @override
+  String progressSemantics(int mastered, int learning, int fresh) {
+    return '$mastered mastered, $learning learning, $fresh new';
+  }
+
+  @override
+  String deckSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deckSummaryPublic(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0 · Public';
+  }
+
+  @override
+  String get todayThisDeck => 'This deck today';
+
+  @override
+  String todayCountMinutes(int minutes) {
+    return 'cards · about $minutes min';
+  }
+
+  @override
+  String masteredOf(int mastered, int total) {
+    return '$mastered / $total mastered';
+  }
+
+  @override
+  String get studyDeck => 'Study';
+
+  @override
+  String get searchCardsAction => 'Search cards';
+
+  @override
+  String get closeSearch => 'Close search';
+
+  @override
+  String get addCardManually => 'Type it in';
+
+  @override
+  String get addCardManuallyBody => 'Write the question and the answer';
+
+  @override
+  String get addCardPhoto => 'Photo';
+
+  @override
+  String get addCardPhotoBody => 'Find cards in a photo of a vocabulary page';
+
+  @override
+  String cardAnswerHidden(String front) {
+    return '$front, answer hidden';
+  }
+
+  @override
+  String cardAnswerShown(String front, String back) {
+    return '$front, answer $back';
+  }
+
+  @override
+  String goalRingSemantics(int done, int goal) {
+    return '$done of today\'s goal of $goal';
+  }
+
+  @override
+  String goalLine(int done, int goal) {
+    return '$done of today\'s $goal done';
+  }
+
+  @override
+  String goalReached(int goal) {
+    return 'Goal of $goal reached';
+  }
+
+  @override
+  String streakDays(int days) {
+    return '$days-day streak';
+  }
+
+  @override
+  String get forecastTitle => 'Next 7 days';
+
+  @override
+  String forecastSummary(int tomorrow, int week) {
+    return 'Tomorrow $tomorrow · This week $week';
+  }
+
+  @override
+  String forecastWeek(int week) {
+    return 'This week $week';
+  }
+
+  @override
+  String get forecastToday => 'Today';
+
+  @override
+  String get forecastTomorrow => 'Tomorrow';
+
+  @override
+  String forecastDay(String day, int count) {
+    return '$day $count';
+  }
+
+  @override
+  String get todayDecks => 'Today\'s decks';
+
+  @override
+  String deckDueCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String studyDeckToday(String name, int count) {
+    return 'Study $name, $count today';
+  }
+
+  @override
+  String nextReview(String day, int cards, int minutes) {
+    return 'Next review $day · $cards, about $minutes min';
+  }
+
+  @override
+  String get noNextReview => 'No reviews in the next 7 days';
 }
