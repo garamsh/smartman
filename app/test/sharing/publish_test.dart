@@ -67,7 +67,7 @@ void main() {
       final stored = await _stored(app);
       expect(stored.visibility, isA<PublicDeck>());
       expect(stored.description, 'Cats');
-      expect(find.text('Public'), findsOneWidget);
+      expect(find.text('1 card · Public'), findsOneWidget);
       await tester.tap(find.byTooltip('Deck actions'));
       await tester.pumpAndSettle();
       expect(find.text('Make private'), findsOneWidget);
@@ -177,7 +177,7 @@ void main() {
     await app.deckMenu('Publish');
     await app.tapText("I won't publish inappropriate or copyrighted content");
     await app.tap(find.widgetWithText(FilledButton, 'Publish'));
-    expect(find.text('Public'), findsOneWidget);
+    expect(find.text('1 card · Public'), findsOneWidget);
     // Snack bars queue; the first leaves before the second shows.
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
@@ -185,7 +185,7 @@ void main() {
     await app.deckMenu('Make private');
 
     expect(find.text('Deck is private again'), findsOneWidget);
-    expect(find.text('Public'), findsNothing);
+    expect(find.text('1 card · Public'), findsNothing);
     expect((await _stored(app)).visibility, isA<PrivateDeck>());
     expect(app.server.writes.last.visibility, isA<PrivateDeck>());
     await app.close();
@@ -261,7 +261,7 @@ void main() {
           'Ada',
         );
         await app.tap(find.widgetWithText(FilledButton, 'Publish'));
-        expect(find.text('Public'), findsOneWidget);
+        expect(find.text('1 card · Public'), findsOneWidget);
         await app.meetsGuidelines();
         await tester.pageBack();
         await tester.pumpAndSettle();

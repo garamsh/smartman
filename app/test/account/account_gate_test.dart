@@ -288,14 +288,20 @@ void main() {
       'card editor': (tester) async {
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Add card'));
+        await tapAndSettle(tester, find.text('Type it in'));
       },
       'study': (tester) async {
         await tapAndSettle(tester, find.text('French'));
-        await tapAndSettle(tester, find.text('Study · 1'));
+        await tapAndSettle(tester, find.text('Study'));
       },
-      'photo import': (tester) =>
-          tapAndSettle(tester, find.text('Create from photo')),
-      'account': (tester) => tapAndSettle(tester, find.byTooltip('Account')),
+      'photo import': (tester) async {
+        await tapAndSettle(tester, find.text('New deck'));
+        await tapAndSettle(tester, find.text('Create from photo'));
+      },
+      'account': (tester) async {
+        await tapAndSettle(tester, find.text('Today'));
+        await tapAndSettle(tester, find.byTooltip('Account'));
+      },
     };
     for (final MapEntry(key: name, value: open) in routes.entries) {
       testWidgets('the $name screen closes when the session ends', (
@@ -311,8 +317,11 @@ void main() {
           'French',
         );
         await tapAndSettle(tester, find.text('Create'));
+        await tapAndSettle(tester, find.text('Decks'));
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Add card'));
+        // With photo import, Add card asks how.
+        await tapAndSettle(tester, find.text('Type it in'));
         await tester.enterText(
           find.widgetWithText(AppTextField, 'Question'),
           'Chat',
