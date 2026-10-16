@@ -1,6 +1,6 @@
 # ADR 0027: Draw both clients in the smartman brand: navy tokens, Pretendard, the brand marks, stroke icons and the v2 screens
 
-> Status: accepted
+> Status: accepted; its "Legal links" decision, but for its `url_launcher` and `package_info_plus` pins, superseded by ADR-0032
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
