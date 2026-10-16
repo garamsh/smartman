@@ -347,3 +347,31 @@ test("each page that waits on the server shows its skeleton, still under reduced
   }
   await still.close();
 });
+
+test("the account avatar stays a 56 px circle beside an email too long for one line", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("skipped above");
+  const email = `web-avatar-${randomUUID()}@a-long-subdomain-that-takes-the-email-past-the-card.example.com`;
+  await signUpInBrowser(context, baseURL, email, "web-avatar-pw");
+
+  await page.goto("/account");
+  const card = page.getByRole("region", { name: "프로필", exact: true });
+  const shown = card.getByText(email, { exact: true });
+  await expect(shown).toBeVisible();
+  await shot(page, "11-account-long-email");
+  const avatar = card.locator('[aria-hidden="true"]');
+  const cardBox = await card.boundingBox();
+  const emailBox = await shown.boundingBox();
+  const lineHeight = await shown.evaluate((node) => parseFloat(getComputedStyle(node).lineHeight));
+  // The email wraps, so it is long enough to squeeze the avatar if the avatar could shrink.
+  expect(emailBox?.height).toBeGreaterThan(lineHeight);
+  expect(await avatar.boundingBox()).toMatchObject({ width: 56, height: 56 });
+  const radius = await avatar.evaluate((node) => parseFloat(getComputedStyle(node).borderRadius));
+  expect(radius).toBeGreaterThanOrEqual(28);
+  // The email stays inside the card.
+  if (!cardBox || !emailBox) throw new Error("the card and the email are visible above");
+  expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+});
