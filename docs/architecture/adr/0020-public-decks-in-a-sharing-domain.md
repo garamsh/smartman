@@ -1,6 +1,6 @@
 # ADR 0020: Share decks through a sharing domain that publishes on the server first and copies through the deck import
 
-> Status: accepted
+> Status: accepted; its "Seam in deck" superseded by ADR-0039
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

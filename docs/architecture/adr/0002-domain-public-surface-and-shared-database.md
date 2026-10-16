@@ -1,6 +1,6 @@
 # ADR 0002: Declare a domain's surface in one library file, and keep the database below the domains
 
-> Status: accepted
+> Status: accepted; its `app/lib/shared/` as the one folder that is not a domain, the database's and the ARB files' folders with their departures, and its test's two rules as the whole check superseded by ADR-0039
 > Date: 2026-10-14
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

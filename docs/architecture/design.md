@@ -54,6 +54,13 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - Korean, in `app/lib/shared/l10n/app_ko.arb`, is 해요체 throughout: plain, short, and consistent in its sentence endings ("아직 덱이 없어요.", "카드 3개를 찾았어요"). No sentence ends in 합쇼체 ("…ㅂ니다", "…ㅂ니까"). A label or a button names its action ("로그아웃", "그래도 추가").
 - English, in `app_en.arb`, matches it in tone: plain, second person, no exclamation marks.
 
+### Where it lives
+
+- The theme, its tokens, the user's theme choice and the shared components are the app's foundation `app/lib/design/` ([`structure.md`](structure.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)): `design/theme.dart` the tokens and the themes, `design/theme_choice.dart` the choice, and one file per component beside them, with their tests under `app/test/design/`. It imports no domain and holds nothing one domain alone uses.
+- `GoogleButtonStyle` is Google's, not the design system's, and only `account` draws it, so it belongs in `account/src/google_button.dart`; the colour check lists that file as its one exception beside the theme and the components.
+- On the web, the brand's marks, the skeleton and the theme choice with its store are the foundation `web/src/design/` ([`web.md`](web.md)).
+- Not yet moved ([`structure.md`](structure.md) §Not yet moved): they are still in `app/lib/shared/theme.dart`, the choice and `GoogleButtonStyle` included, and `app/lib/shared/ui/`, with their tests under `app/test/shared/`. The paths below name where each file is now.
+
 ### Theme
 
 - `app/lib/shared/theme.dart` holds every colour token as `AppColors`, a light and a dark set, and the light and dark `ThemeData` built from them ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md)). No other file under `app/lib/` writes a colour; `app/test/shared/theme_test.dart` fails when one does.

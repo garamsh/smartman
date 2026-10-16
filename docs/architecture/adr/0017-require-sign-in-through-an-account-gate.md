@@ -1,6 +1,6 @@
 # ADR 0017: Require sign-in through an account gate at the app's root, which opens the app from the session the device holds
 
-> Status: accepted
+> Status: accepted; its `signedInHomeProvider` superseded by ADR-0039
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
