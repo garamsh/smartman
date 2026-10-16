@@ -52,7 +52,8 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - `authenticated` may select, insert, update and delete in `cards` and `card_states`, and select and delete in `decks`. On `decks` it may insert and update every column but `hidden` and `import_count`.
 - `reviews` is insert-only for `authenticated`, except `rating` and `updated_at`, which a toggle changes ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)). A client inserts `fuzz_factor` with its review and never changes it. A client cannot delete a review or set its `deleted_at`; a review goes only with its account, through the `auth.users` cascade.
 - Row-level security is on for all four tables, with one policy per command allowing only rows where `user_id = auth.uid()`. The `reviews` delete policy exists but no client holds the privilege it would narrow.
-- `decks` and `cards` also have a select policy letting any signed-in user read a visibly public deck and its live cards. Writes stay the owner's, since no write policy names another user's rows. A pull therefore filters on its account's `user_id` ([`sync.md`](sync.md)).
+- The one select policy of `decks` and of `cards` also lets any signed-in user read a visibly public deck and its live cards, and that of `profiles` the name of a user with one. Each tests the owner's condition first and ORs in the public one, so a read of one's own rows never runs the public condition's subquery ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §7). Migration `20261016200000_checks_and_policies.sql` merged each table's former owner and public pair into it, changing no row's visibility. Writes stay the owner's, since no write policy names another user's rows.
+- Every policy names `to authenticated` and reads `(select auth.uid())`. A pull therefore filters on its account's `user_id` ([`sync.md`](sync.md)).
 - The privileges are granted in the migration, not left to the project's default privileges.
 - `record_deck_import` runs as `security definer` and `authenticated` may execute it, which the Security Advisor reports as lint `0029_authenticated_security_definer_function_executable`. That is intended: it writes `deck_imports` and `import_count`, which no client may write, and [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §7 lists it among the `security definer` functions, granted to the one role that calls it (issue #113).
 - The app does not use the service role.
@@ -77,6 +78,19 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 - A card's deck, and a review's or card state's card, belong to the row's own user. Composite foreign keys enforce it: `cards (user_id, deck_id)` references `decks (user_id, id)`, and `reviews` and `card_states` reference `cards (user_id, id)`, each with `on delete cascade`.
 
+### Checks
+
+- Besides the column checks above, five checks hold on every row ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §5):
+  - `decks_name_check`: `deleted_at is not null or name <> ''`;
+  - `cards_card_key_check`: `deleted_at is not null or card_key <> ''`;
+  - `card_states_stability_check`: `stability >= 0.001`;
+  - `card_states_difficulty_check`: `difficulty between 1 and 10`, the engine's clamps with the one above;
+  - `cards_origin_deck_id_check`: `(source = 'shared') = (origin_deck_id is not null)`.
+- A tombstone may have an empty name or card key, since the purge strips them.
+- Migration `20261016200000_checks_and_policies.sql` added them. It first counts each check's failing rows and raises, changing nothing, unless every count is zero. It then adds each `not valid` and validates it, in the same transaction, so the lock the addition takes lasts to commit. A table large enough for that lock to matter is validated in a later migration.
+- **Constraint names.** Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
+- A row a check refuses fails a sync run as `SyncFailed` ([`sync.md`](sync.md)).
+
 ### Indexes
 
 - Each index serves a named query, and a new query names its index or why it has none ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) lists them). Migration `20261016150000_server_indexes.sql` added these, changing no row:
@@ -93,18 +107,10 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 - **Key versions.** New ids are version 7; rows created before that keep their version 4 ids ([`sync.md`](sync.md)).
 - **Time.** Every time column is `timestamptz`, as today. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` stay the client's, at millisecond precision. `revision` stays the server's.
-- **Constraint names.** Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
-- **Checks.** Five new checks are added `not valid` and then validated:
-  - `decks_name_check`: `deleted_at is not null or name <> ''`;
-  - `cards_card_key_check`: `deleted_at is not null or card_key <> ''`;
-  - `card_states_stability_check`: `stability >= 0.001`;
-  - `card_states_difficulty_check`: `difficulty between 1 and 10`;
-  - `cards_origin_deck_id_check`: `(source = 'shared') = (origin_deck_id is not null)`.
 - **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`. `public.sync_horizon()` returns the horizon to `authenticated` ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
   - Study history survives deletion (the owner's decision, issue #93). A card tombstone that reviews reference keeps its row, stripped of `front`, `back` and `card_key`, so its reviews stay in the streak and the statistics. One that no review references is deleted, and so is every card state tombstone.
   - A deck tombstone is deleted once no card row references it. Until then it keeps its row, stripped of its name and description and made private.
   - Only account deletion removes reviews and the kept rows.
-- **Policies.** Each of `decks`, `cards` and `profiles` gets one select policy in place of today's two permissive ones. It tests the owner's rule first and ORs in the public rule, so a read of one's own rows never evaluates the public rule's subquery. Every policy names `to authenticated` and reads `(select auth.uid())`.
 - **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
 - **Streak.** `public.study_streak_before(time_zone, before)`, `security invoker`, returns how many study days in a row before `before` hold an answer, with days from 04:00 to 04:00 in the zone named. It reads one backward probe of `reviews_live_user_id_reviewed_at` per day, and the web's `readToday` calls it in place of paging through the answers ([`web.md`](web.md)).
 - **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count.
@@ -126,6 +132,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `deck_reports_test.sql` — reports are insert-only by their reporter, once per deck, and the third distinct reporter hides the deck;
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
   - `uuid_keys_test.sql` — every synced id and every reference to one is `uuid` with no default, with `extraction_usage.id` as control; the five foreign keys are back; `list_public_decks` returns `uuid` ids and `record_deck_import` takes one, executable by `authenticated` and not `anon`; and a report takes the lock its deck's id took as text, with the third report's hide as control;
+  - `checks_policies_test.sql` — each of the five checks refuses what it names, with an accepted row beside each as control, tombstones included, and all five are validated; `decks`, `cards` and `profiles` have one policy per command, the select policy testing the owner first, with an insert policy as the pattern's control;
   - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
 - `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts a throwaway stack of its own with only Postgres, which applies the migrations, runs the tests and prints their count ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)). Where Docker does not, it prints that the tests were skipped and why.
@@ -144,7 +151,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
-- Issue #104 records the uuid conversion, and issue #113 the advisor lints read after #112.
+- Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
