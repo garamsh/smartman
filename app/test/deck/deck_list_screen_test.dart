@@ -220,7 +220,7 @@ void main() {
   );
 
   testWidgets(
-    'with nothing to study the today card says it is done and offers no session',
+    'with nothing to study the today card says it is done, and Keep studying opens a session over every deck',
     (tester) async {
       var list = await _open(
         tester,
@@ -230,14 +230,17 @@ void main() {
       expect(find.text("You've done today's cards"), findsOneWidget);
       expect(find.text('Study all'), findsNothing);
       expect(find.bySemanticsLabel(RegExp('for today')), findsNothing);
+      await list.tap('Keep studying');
+      expect(list.sessions, [list.ids.values.toSet()]);
       await list.close();
 
-      // Control: one card to study shows the count and the button.
+      // Control: one card to study shows the count and Study all.
       list = await _open(
         tester,
         today: {'Alpha+Beta+Gamma': const TodayCounted(review: 1, fresh: 0)},
       );
       expect(find.text("You've done today's cards"), findsNothing);
+      expect(find.text('Keep studying'), findsNothing);
       expect(find.text('Study all'), findsOneWidget);
       await list.close();
     },

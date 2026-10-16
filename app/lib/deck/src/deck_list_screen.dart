@@ -302,7 +302,7 @@ class _EmptyHome extends StatelessWidget {
 /// Today's cards over every deck on the brand's navy card: the count, its
 /// split into due and new with the minutes it takes, and the action that
 /// studies them, with the symbol faint in the corner; with none, that today's
-/// cards are done.
+/// cards are done, and the action that keeps studying.
 class _TodayCard extends StatelessWidget {
   const _TodayCard({required this.count, required this.onStudy});
 
@@ -406,17 +406,16 @@ class _TodayCard extends StatelessWidget {
                       const SizedBox(height: AppSpace.s40 + AppSpace.s28),
                     ],
                   },
-                  // With nothing to study the card says so, and offers no
-                  // session.
-                  if (!done) ...[
-                    const SizedBox(height: AppSpace.s20),
-                    AppButton(
-                      label: l10n.studyAll,
-                      icon: LucideIcons.play,
-                      variant: AppButtonVariant.onHero,
-                      onPressed: onStudy,
-                    ),
-                  ],
+                  // With nothing left the card says so and still offers a
+                  // session, which opens on the completion card or on
+                  // nothing to study.
+                  const SizedBox(height: AppSpace.s20),
+                  AppButton(
+                    label: done ? l10n.todayKeepStudying : l10n.studyAll,
+                    icon: LucideIcons.play,
+                    variant: AppButtonVariant.onHero,
+                    onPressed: onStudy,
+                  ),
                 ],
               ),
             ),

@@ -528,5 +528,7 @@
     "placeholders": {"version": {"type": "String"}}
   },
   "todayDone": "오늘 할 카드를 다 했어요",
-  "@todayDone": {"description": "Today card when no card is due or new now; the study button is hidden."}
+  "@todayDone": {"description": "Today card when no card is due or new now; todayKeepStudying is its button."},
+  "todayKeepStudying": "계속 학습",
+  "@todayKeepStudying": {"description": "The today card's button when no card is left today: opens the study screen over every deck, on the completion card or on nothing to study."}
 }

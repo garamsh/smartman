@@ -1345,11 +1345,17 @@ abstract class AppLocalizations {
   /// **'버전 {version}'**
   String appVersion(String version);
 
-  /// Today card when no card is due or new now; the study button is hidden.
+  /// Today card when no card is due or new now; todayKeepStudying is its button.
   ///
   /// In ko, this message translates to:
   /// **'오늘 할 카드를 다 했어요'**
   String get todayDone;
+
+  /// The today card's button when no card is left today: opens the study screen over every deck, on the completion card or on nothing to study.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속 학습'**
+  String get todayKeepStudying;
 }
 
 class _AppLocalizationsDelegate

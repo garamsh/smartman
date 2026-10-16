@@ -805,4 +805,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todayDone => 'You\'ve done today\'s cards';
+
+  @override
+  String get todayKeepStudying => 'Keep studying';
 }
