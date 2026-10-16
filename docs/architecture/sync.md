@@ -46,7 +46,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - it deletes each synced local row the pull did not return;
   - it then pushes as usual.
   - A pushed row refused for a parent the server no longer holds (`23503`) is deleted locally, since a delete elsewhere wins.
-- **Local purge.** After a run that leaves no row unsynced, the device deletes its tombstoned decks, cards and card states. The device's foreign keys then delete those cards' reviews and states, as the server's purge does.
+- **Local purge.** After a run that leaves no row unsynced, the device purges its tombstones as the server does. A tombstoned card that no review references is deleted, with its state, and so is a tombstoned deck that no card references. A tombstoned card or deck that is still referenced is stripped of its content in place, so no foreign key cascades to a review. The streak and the statistics read reviews whether or not their card is live ([`server.md`](server.md)).
 - **Order.** The server's purge job is turned on only after the app release that reads the horizon has shipped ([`server.md`](server.md)). Its first mark is taken that day, so its first purge comes 90 days later. A device still on an older release then misses a delete only if it also stayed unsynced through those 90 days.
 
 ### A run

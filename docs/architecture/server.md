@@ -87,12 +87,15 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `decks_tombstone_revision`, `cards_tombstone_revision` and `card_states_tombstone_revision` on `revision` where `deleted_at is not null`, for the purge.
 - **Index names** are `{table}_[{predicate}_]{columns}`. The predicate is `live` (`deleted_at is null`), `tombstone` (`deleted_at is not null`) or `public` (visibly public). Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
 - **Checks.** Five new checks are added `not valid` and then validated:
-  - `decks_name_check`: `name <> ''`;
-  - `cards_card_key_check`: `card_key <> ''`;
+  - `decks_name_check`: `deleted_at is not null or name <> ''`;
+  - `cards_card_key_check`: `deleted_at is not null or card_key <> ''`;
   - `card_states_stability_check`: `stability >= 0.001`;
   - `card_states_difficulty_check`: `difficulty between 1 and 10`;
   - `cards_origin_deck_id_check`: `(source = 'shared') = (origin_deck_id is not null)`.
-- **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then hard-deletes `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`. A card's reviews go with it through the cascade. `public.sync_horizon()` returns the horizon to `authenticated` ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
+- **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`. `public.sync_horizon()` returns the horizon to `authenticated` ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
+  - Study history survives deletion (the owner's decision, issue #93). A card tombstone that reviews reference keeps its row, stripped of `front`, `back` and `card_key`, so its reviews stay in the streak and the statistics. One that no review references is deleted, and so is every card state tombstone.
+  - A deck tombstone is deleted once no card row references it. Until then it keeps its row, stripped of its name and description and made private.
+  - Only account deletion removes reviews and the kept rows.
 - **Policies.** Each of `decks`, `cards` and `profiles` gets one select policy in place of today's two permissive ones. It tests the owner's rule first and ORs in the public rule, so a read of one's own rows never evaluates the public rule's subquery. Every policy names `to authenticated` and reads `(select auth.uid())`.
 - **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
 - **Streak.** `public.study_streak_before(time_zone, before)`, `security invoker`, returns how many study days in a row before `before` hold an answer, with days from 04:00 to 04:00 in the zone named. It reads one backward probe of `reviews_live_user_id_reviewed_at` per day, and the web's `readToday` calls it in place of paging through the answers ([`web.md`](web.md)).

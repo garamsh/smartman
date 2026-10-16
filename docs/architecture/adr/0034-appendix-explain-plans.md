@@ -1,6 +1,6 @@
 # EXPLAIN plans for ADR 0034
 
-The measurements behind [ADR 0034](0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md): the scripts that seeded a local stack and an SQLite file, the queries timed, and every plan before and after the target schema. Taken on 2026-10-16 at `b4958d2`, and for the queries #95 added at `cf494ca`; frozen with the ADR.
+The measurements behind [ADR 0034](0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md): the scripts that seeded a local stack and an SQLite file, the queries timed, and every plan before and after the target schema. Taken on 2026-10-16 at `b4958d25d79c43fd935ec764c34e1816846804b8`, and for the queries #95 added at `cf494ca6fcc4fbd2e934f3ad5acdcfd191d141f4`; frozen with the ADR.
 
 ## Setup
 
@@ -121,7 +121,7 @@ Table sizes after seeding:
 Time: 92.328 ms
 ```
 
-## Queries
+## Server queries
 
 ```sql
 -- The real queries, each as its client sends it (file:line in the label), run as the
@@ -2015,7 +2015,7 @@ Run Time: real 0.026 user 0.007590 sys 0.015894
 
 ## Queries #95 added
 
-Read at `cf494ca`. Each server run is a fresh stack seeded by the script above, with the warm second run kept. The first run took the queries before and after the target DDL. The second run took the streak function's `max()` form after it, since a first `exists` form, kept in the first run, read every row once. On the phone, `seed2.sql` adds today's answers to the same file: 20 cards answered for the first time and 200 answers to older cards. The streak probe ran after the proposed indexes.
+Read at `cf494ca6fcc4fbd2e934f3ad5acdcfd191d141f4`. Each server run is a fresh stack seeded by the script above, with the warm second run kept. The first run took the queries before and after the target DDL. The second run took the streak function's `max()` form after it, since a first `exists` form, kept in the first run, read every row once. On the phone, `seed2.sql` adds today's answers to the same file: 20 cards answered for the first time and 200 answers to older cards. The streak probe ran after the proposed indexes.
 
 ```sql
 -- The queries #95 added (main at cf494ca), run as the heavy user under row-level security.

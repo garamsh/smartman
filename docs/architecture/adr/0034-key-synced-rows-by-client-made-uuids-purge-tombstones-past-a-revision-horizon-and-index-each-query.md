@@ -8,7 +8,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Context
 
 - Issue #93 asks for a production-grade data model, decided with evidence, before more features build on it. The owner decided on 2026-10-16 that ids are uuids. This ADR is the design; the PM opens the implementation issues from it.
-- The schema was read on `main` at `b4958d2`. The queries #95 added were read at `cf494ca`, where it merged with [ADR 0033](0033-count-cards-left-per-study-day-from-04-00-and-continue-as-unrecorded-practice.md), and are measured on the same seed:
+- The schema was read on `main` at `b4958d25d79c43fd935ec764c34e1816846804b8`. The queries #95 added were read at `cf494ca6fcc4fbd2e934f3ad5acdcfd191d141f4`, where it merged with [ADR 0033](0033-count-cards-left-per-study-day-from-04-00-and-continue-as-unrecorded-practice.md), and are measured on the same seed:
   - `supabase/migrations/` creates nine tables in `public`. `decks`, `cards` and `reviews` have `text` primary keys; `card_states` is keyed `(user_id, card_id)`; `profiles`, `deck_reports`, `user_blocks` and `deck_imports` have composite or uuid keys; `extraction_usage` has an identity.
   - Both clients already create v4 uuid strings: the app through `uuid`'s `v4` (`app/lib/main.dart:79-85`), and the web through `crypto.randomUUID()` (`web/src/features/study/components/study-screen.tsx:64`).
   - Every time column on the server is already `timestamptz`.
@@ -36,7 +36,11 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
      - keeping tombstones forever, today's state, where tables grow with every delete;
      - a fixed time-to-live with no horizon, where a device unsynced past it keeps deleted rows, the failure Couchbase documents;
      - purging by `deleted_at`, a device's clock;
-     - a shorter retention such as Couchbase's 3 days, which would make full rebuilds routine.
+     - a shorter retention such as Couchbase's 3 days, which would make full rebuilds routine;
+     - for the owner's rule that study history survives deletion:
+       - keeping reviews past their card's purge by `on delete set null (card_id)`, which Postgres 15 and later allow for `on delete` only (sql-createtable: "A subset of columns can only be specified for ON DELETE actions"). It loses which card each review was of, which #90's retention and mastered count need;
+       - a per-day roll-up of reviews before the purge, which keeps the streak and day counts but not the per-card history, and is a second table to sync and keep equal to the reviews;
+       - never purging card tombstones, which keeps the content the user deleted.
   4. Indexes:
      - adding a `deck_id` index beside `cards_user_id_deck_id`, two indexes on every card write;
      - adding the owner to the preview query instead, which leaves released apps scanning;
@@ -148,14 +152,19 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **Why tombstones cannot be dropped at once.** A device learns of a delete only by pulling the tombstone above its cursor. Drop the tombstone before the device pulls it, and the device keeps the row forever. Couchbase's Sync Gateway names that failure for its 3-day default: "tombstones being purged before all clients have had a chance to be notified".
 - **The horizon.** Retention is 90 days, made safe at any length by a horizon:
   - A `pg_cron` job (Supabase Cron is `pg_cron`) runs daily at 18:00 UTC, 03:00 in Korea. It records the sequence's last value in `private.revision_marks`.
-  - It then deletes the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark in `private.sync_horizon`.
+  - It then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, as the next bullet decides, and stores that mark in `private.sync_horizon`.
   - The marks are server time, so no device clock decides what is purged.
   - `public.sync_horizon()`, `security definer`, returns the horizon to `authenticated`.
   - A device whose cursor for a table is above zero but below the horizon may have missed a purged tombstone. It rebuilds that table: it pulls from revision 0, deletes each synced local row the pull did not return, and pushes ([`sync.md`](../sync.md)). Ninety days bounds how often that full pull happens, not whether deletes arrive.
   - Measured: deleting the seed's tombstones below a horizon took 68.7 ms without the partial index on `revision`, read through `cards_user_id_revision`, and 11.0 ms with it.
-- **Reviews follow their card.** Clients cannot tombstone a review ([ADR 0010](0010-server-schema-and-row-level-security.md)), so a review leaves only through its card's cascade, at the purge.
-  - The device deletes its local tombstones after a run that leaves nothing unsynced, and its foreign keys take those cards' reviews with them. Every device thus counts only the reviews of live cards.
-  - #90's statistics therefore count only those reviews.
+- **Study history survives deletion.** The owner decided on 2026-10-16 (issue #93) that deleting a card or a deck removes its content, not its reviews: the streak and #90's statistics keep counting them, on the server and on the phone. Clients cannot tombstone a review ([ADR 0010](0010-server-schema-and-row-level-security.md)), so only the purge and account deletion could remove one. The purge therefore treats a tombstone by whether reviews hang from it:
+  - a card tombstone that no review references is deleted, with its card state;
+  - a card tombstone that reviews reference keeps its row, stripped of its content: `front` and `back` become `[]` and `card_key` becomes `''`. Its id, deck, times and `deleted_at` stay, so each review keeps the card it was of. #90's retention leaves out "a card's first answer", and its mastered count is per card, so both need that link;
+  - a card state tombstone is deleted; the reviews refold it on demand;
+  - a deck tombstone that no card row references any longer is deleted; one that still holds stripped cards keeps its row with `name` `''`, `description` null, and `visibility` `private`.
+  - The strip is an update, so the revision trigger gives it a new revision. Devices pull it like any edit and drop the content from their own copy of the tombstone. Only the rows that are deleted outright need the horizon.
+  - Storage stays bounded. A kept card row holds ids, times and a revision, the same kind of row as a review. Each one is kept only while at least one review references it, so kept card rows never outnumber the reviews they keep. Reviews grow with study, not with deletes, and account deletion removes them all ([ADR 0026](0026-delete-the-account-through-an-edge-function.md)).
+  - The device's local purge, after a run that leaves nothing unsynced, follows the same rule. It deletes a tombstoned card that no review references, with its state, and a tombstoned deck that no card references. It strips the others in place, so its foreign keys never cascade to a review. The streak and #90's statistics read reviews without filtering on whether their card is live.
   - The cron job also deletes `cron.job_run_details` rows older than 30 days, which Supabase says "grows with every Job run and is never cleaned up automatically".
 - **Account deletion.** [ADR 0026](0026-delete-the-account-through-an-edge-function.md) is unchanged: every table still cascades from `auth.users`, and the purge's tables hold no user id. The new indexes make its cascade read by index where it now scans: measured, deleting an ordinary user took 34.9 ms before and 9.1 ms after. The three cascades that had no index took 8.6, 4.3 and 5.5 ms before, and under 0.2 ms each after.
 
@@ -228,8 +237,8 @@ Phone, query → index (`app/lib/`), timed by the `sqlite3` shell's `.timer` (re
 
 - **NOT NULL.** Every column is `not null` except those whose null means something: `deleted_at`, `published_at`, `description`, `origin_deck_id` and `fuzz_factor`. That holds today and binds new columns.
 - **Checks added.** Each is guarded by a count of the rows that would fail it, which must be zero on production before the check is added (§9, step 3):
-  - `decks_name_check`: `name <> ''`. The app refuses an empty name and trims it (`app/lib/deck/src/name_sheet.dart:51`).
-  - `cards_card_key_check`: `card_key <> ''`. The app refuses an empty front.
+  - `decks_name_check`: `deleted_at is not null or name <> ''`. The app refuses an empty name and trims it (`app/lib/deck/src/name_sheet.dart:51`); a purged deck's stripped row (§3) has none.
+  - `cards_card_key_check`: `deleted_at is not null or card_key <> ''`. The app refuses an empty front; a purged card's stripped row has none.
   - `card_states_stability_check`: `stability >= 0.001`; `card_states_difficulty_check`: `difficulty between 1 and 10`. These are the engine's clamps (`engine/src/fsrs.rs:14-16`).
   - `cards_origin_deck_id_check`: `(source = 'shared') = (origin_deck_id is not null)`, which the import sets (`deck_repository.dart:304-311`).
 - **How they are added.** Each check is added `not valid`, then validated in a second statement, so validation does not hold the write lock. On production's rows both take milliseconds.
@@ -305,12 +314,11 @@ Each step is one pull request and, on the server, one migration that the PM push
    - Rollback: an app release cannot be withdrawn from devices that took it; the release is tested with the migration test of §8 and the two-device test against a stack with steps 1 to 3 applied.
    - Verify: the v5 → v6 migration test; a device upgraded with unsynced rows pushes them.
 5. **Web: v7 ids** (web deploy). The web's answers take `uuid`'s `v7()`. No order with the app. Rollback: redeploy the previous build.
-6. **Purge job** (owner: deletes tombstones).
+6. **Purge job** (owner: deletes tombstones no review references, and strips the content of those that reviews do).
    - Creates `private.revision_marks`, the `pg_cron` job and the purge function, after step 4's release is in the stores.
    - The first purge comes 90 days after the first mark.
    - Rollback: `cron.unschedule` stops it. Purged tombstones do not return, which the horizon makes safe.
-   - Verify: `cron.job_run_details` shows daily success; `sync_horizon()` rises after day 90; a device below it rebuilds in the two-device test.
-
+   - Verify: `cron.job_run_details` shows daily success; `sync_horizon()` rises after day 90; a device below it rebuilds in the two-device test; pgTAP shows a studied card's tombstone stripped with its reviews kept, and an unstudied one deleted.
 7. **Server streak function and the web's streak read** (migration, additive; web).
    - `public.study_streak_before(time_zone text, before timestamptz) returns integer`: `security invoker`, so the policies decide what it reads; `stable`, `set search_path = ''`; `execute` revoked from `public` and `anon` and granted to `authenticated`. A zone Postgres does not know raises, and the web passes only the zone it already validated or Asia/Seoul.
    - `read-today.ts` calls it through `rpc` in place of `readStreakBefore`'s paging.
@@ -319,7 +327,7 @@ Each step is one pull request and, on the server, one migration that the PM push
    - Rollback: the web returns to the paging; drop the function.
    - Verify: `EXPLAIN` shows one `Index Only Scan Backward` per day; the web's streak equals the paging's on the same rows.
 
-- **Order against #87–#91.** #87 merged as #95 at `cf494ca` with ADR 0033, so its reads are on `main` now:
+- **Order against #87–#91.** #87 merged as #95 at `cf494ca6fcc4fbd2e934f3ad5acdcfd191d141f4` with ADR 0033, so its reads are on `main` now:
   - Step 1 comes next. `read-today.ts`'s reads of today's reviews and the streak, and the pace, then read `reviews_live_user_id_reviewed_at` instead of every row the user has. #89 and #90 add phone reads by study day, which the phone's `reviews_live_reviewed_at` (step 4) serves.
   - Step 7 follows step 1, before #91 builds more of the web on `readToday`.
   - Steps 2 and 3 are independent of #88–#91 and can land between them.
@@ -339,7 +347,7 @@ Each step is one pull request and, on the server, one migration that the PM push
 - New rows insert near the end of each primary key. Ids created after the change reveal their creation time to whoever can read the row, which already shows it.
 - The phone keeps the server's millisecond precision, and its order of times is right as long as every write stays UTC and truncated. A write that skips the truncation sorts wrongly within one millisecond.
 - The server's tables stop growing with deletes after 90 days. A device left unsynced for longer pays one full pull per table, and an unsynced edit to a row deleted and purged elsewhere is dropped.
-- Statistics count only the reviews of live cards, on every device.
+- Study history survives deleting a card or a deck, on every device. A deleted card that was studied leaves a row without content for as long as its reviews exist. Only account deletion removes those rows.
 - Each real query has an index or a stated reason for none. A new query names its index, or why it has none, in its pull request.
 - Searching public decks by one or two Korean syllables stays a scan, even after the trigram index.
 
@@ -347,6 +355,7 @@ Each step is one pull request and, on the server, one migration that the PM push
 
 - `supabase inspect db outliers` shows an insert into `reviews` among its top statements while v7 ids are in use, which would mean locality was not the cost.
 - Users report a deleted deck or card coming back, which would mean the horizon rebuild misses a case.
+- Stripped card rows grow to rival live cards in number, which would mean users delete studied cards often enough that a roll-up would store less.
 - A device that was unsynced for weeks, not months, rebuilds, which would mean the horizon rises faster than 90 days of marks.
 - A phone fails to open its database after the v6 migration, which would mean a stored value the conversion did not expect.
 - Users search public decks with one- or two-syllable words often enough that the scan shows in the outliers before 20,000 decks.
