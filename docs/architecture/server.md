@@ -73,6 +73,35 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 - A card's deck, and a review's or card state's card, belong to the row's own user. Composite foreign keys enforce it: `cards (user_id, deck_id)` references `decks (user_id, id)`, and `reviews` and `card_states` reference `cards (user_id, id)`, each with `on delete cascade`.
 
+### Target data model (not built yet)
+
+[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built: each bullet holds once the migration that its implementation issue adds has been pushed. Until then the decisions above describe the database.
+
+- **Keys.** Every id column holds `uuid`: `decks.id`, `cards.id`, `cards.deck_id`, `cards.origin_deck_id`, `reviews.id`, `reviews.card_id`, `card_states.card_id`, `deck_reports.deck_id` and `deck_imports.deck_id`. Clients still create every synced id. New ids are version 7; rows created before that keep their version 4 ids. No id column has a default. `extraction_usage.id` stays an identity.
+- **Conversion.** One transaction drops the five foreign keys and the two policies that name a converted column, casts each column with `USING col::uuid`, and recreates them. It runs only after a check finds every value in canonical lowercase form. `list_public_decks` returns `uuid` ids, and `record_deck_import` takes a `uuid`. PostgREST sends a uuid as the same JSON string, so app and web versions already released keep working.
+- **Time.** Every time column is `timestamptz`, as today. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` stay the client's, at millisecond precision. `revision` stays the server's.
+- **Indexes.** Each index serves a named query (ADR 0034 lists them):
+  - `reviews_live_user_id_reviewed_at` on `(user_id, reviewed_at)` where `deleted_at is null`;
+  - `cards_deck_id_created_at_id` on `(deck_id, created_at, id)`, replacing `cards_user_id_deck_id`;
+  - `deck_reports_reporter_id`, `user_blocks_blocked_id` and `deck_imports_user_id`, for the account-deletion cascade;
+  - `decks_tombstone_revision`, `cards_tombstone_revision` and `card_states_tombstone_revision` on `revision` where `deleted_at is not null`, for the purge.
+- **Index names** are `{table}_[{predicate}_]{columns}`. The predicate is `live` (`deleted_at is null`), `tombstone` (`deleted_at is not null`) or `public` (visibly public). Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
+- **Checks.** Five new checks are added `not valid` and then validated:
+  - `decks_name_check`: `deleted_at is not null or name <> ''`;
+  - `cards_card_key_check`: `deleted_at is not null or card_key <> ''`;
+  - `card_states_stability_check`: `stability >= 0.001`;
+  - `card_states_difficulty_check`: `difficulty between 1 and 10`;
+  - `cards_origin_deck_id_check`: `(source = 'shared') = (origin_deck_id is not null)`.
+- **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`. `public.sync_horizon()` returns the horizon to `authenticated` ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
+  - Study history survives deletion (the owner's decision, issue #93). A card tombstone that reviews reference keeps its row, stripped of `front`, `back` and `card_key`, so its reviews stay in the streak and the statistics. One that no review references is deleted, and so is every card state tombstone.
+  - A deck tombstone is deleted once no card row references it. Until then it keeps its row, stripped of its name and description and made private.
+  - Only account deletion removes reviews and the kept rows.
+- **Policies.** Each of `decks`, `cards` and `profiles` gets one select policy in place of today's two permissive ones. It tests the owner's rule first and ORs in the public rule, so a read of one's own rows never evaluates the public rule's subquery. Every policy names `to authenticated` and reads `(select auth.uid())`.
+- **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
+- **Streak.** `public.study_streak_before(time_zone, before)`, `security invoker`, returns how many study days in a row before `before` hold an answer, with days from 04:00 to 04:00 in the zone named. It reads one backward probe of `reviews_live_user_id_reviewed_at` per day, and the web's `readToday` calls it in place of paging through the answers ([`web.md`](web.md)).
+- **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count served by `cards_deck_id_created_at_id`.
+- **Watching.** After each pushed migration, the PM reads Supabase's Security and Performance Advisors, and monthly reads `supabase inspect db outliers` and `index-stats`. Each lint is fixed or recorded in an issue.
+
 ### Tests
 
 - pgTAP tests in `supabase/tests/`, one file per concern, run by `supabase test db`:
@@ -104,6 +133,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records how sync pushes reviews within the column grant, and the two-device test's stack.
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
+- [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
