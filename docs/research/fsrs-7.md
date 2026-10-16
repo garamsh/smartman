@@ -9,7 +9,7 @@ Whether to move the engine from FSRS-6 (py-fsrs 6.3.2, [ADR 0003](../architectur
 - **ts-fsrs has it in a beta.** The `preview` branch ([ts-fsrs]) carries FSRS-7 (PR #520, merged 2026-09-18; corrected by #540 on 2026-09-24). It ships on npm as `ts-fsrs@6.0.0-beta.14` (2026-10-09, dist-tag `beta`). The stable `ts-fsrs@5.4.2` (dist-tag `latest`) is FSRS-6. Its FSRS-7 guide says the implementation rounds each new state value to eight decimals, and it computes in `f64`.
 - **The definition is still moving.**
   - [srs-benchmark] `models/fsrs_v7.py` has had 22 commits since the one that added FSRS-7 on 2026-03-11. The last of them, PR #348 (2026-08-29), changed the parameter count to 34.
-  - The same revision's README still lists 35 default parameters under §Default Parameters. Those values differ from the 34 in `init_w`.
+  - The same revision's README still lists 35 default parameters under its section "Default Parameters". Those values differ from the 34 in `init_w`.
   - fsrs-rs issue #445 (open) reports that `clip_fsrs7_parameters` drops a lower bound that srs-benchmark enforces.
   - fsrs-rs issue #446 (open) asks to align crate major versions with FSRS versions, because 6.x crates now hold FSRS-7.
   - fsrs-rs's own `docs/COMPATIBILITY.MD` at [fsrs-rs] says `FSRS::new(&[])` gives FSRS-6 defaults, while `src/model.rs` at the same commit maps an empty parameter list to FSRS-7 (PR #455).

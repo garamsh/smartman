@@ -9,7 +9,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - smartman is a memorization app: a Flutter client in `app/` with a Supabase backend in `supabase/`. The client holds no feature code yet.
 - The subject areas are already named by the PM who asks for the work: `deck`, `study`, `auth`, `sync` (issue #2).
-- The bootstrap candidates were layered, hexagonal, and domain partitioning, read from the template's `docs/architecture/structures/` as adopted in commit `db222b4`.
+- The bootstrap candidates were layered, hexagonal, and domain partitioning, read from the template's `docs/architecture/structures/` as adopted in commit `db222b41cab7f02114d028f3b414c80d58167f12`.
 - Domain partitioning leaves one point to the project: whether a domain may depend on a sibling at all. *Domain-Driven Design* (Evans, 2003) ranges from Shared Kernel, where two contexts share code, to Separate Ways, where neither references the other.
 
 ## Decision

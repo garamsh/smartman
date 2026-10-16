@@ -26,6 +26,10 @@ BRIDGE_LIB := rust_lib_smartman
 
 lint:
 	./check-contents-list.sh
+	./check-object-names.sh
+	./check-convention-index.sh
+	./check-section-citations.sh
+	./check-heading-prefixes.sh
 	./check-secrets.sh
 	./check-ios-client-id.sh
 	./check-generated.sh

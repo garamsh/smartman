@@ -37,7 +37,7 @@ Selection is not once. A change that alters the project's stack carries the sele
 
 ## Stack-specific
 
-These apply only when the project uses that stack. The bootstrap process (root `README.md` §Bootstrap) keeps the relevant ones and deletes the rest, removing the rows below for the files it deletes.
+These apply only when the project uses that stack. The bootstrap process keeps the relevant ones and deletes the rest, removing the rows below for the files it deletes.
 
 | File | Extends | Governs |
 |---|---|---|
@@ -47,7 +47,7 @@ These apply only when the project uses that stack. The bootstrap process (root `
 
 This project keeps these three for the web app (M8). Its other stacks — Flutter/Dart, Rust, Supabase — have no file here, so the app, the engine and the backend run on the stack-neutral files alone.
 
-A stack file states the concrete form of what any stack-neutral file governs — the test client and file placement behind `testing.md`, the comment syntax behind `code-comments.md` and the commands behind an entry-point name in `ci.md` among them. It states the same of a structural rule (`docs/architecture/README.md` §Rules, "Structural rules live in `structure.md`"): the package and file names the unit takes in its language. It also states a structural case its framework decides (§Rules, "Structural rules yield only to what a framework imposes"). It never restates the rule itself. These two tables and those rules are where the split is recorded — the files do not point at each other.
+A stack file states the concrete form of what any stack-neutral file governs — the test client and file placement behind `testing.md`, the comment syntax behind `code-comments.md` and the commands behind an entry-point name in `ci.md` among them. It states the same of a structural rule (`docs/architecture/README.md` §Rules, "Structural rules live in `structure.md`"): the package and file names the unit takes in its language. It also states a structural case its framework decides (`docs/architecture/README.md` §Rules, "Structural rules yield only to what a framework imposes"). It never restates the rule itself. These two tables and those rules are where the split is recorded — the files do not point at each other.
 
 A stack built on another stack takes a row with a base in the Extends column. The derived file holds only the rules its stack changes — one rule, not the section around it — and the base governs every rule it does not, so a project keeping the derived file keeps the base too. A base has no base of its own: one level, so that opening two files is always enough.
 
