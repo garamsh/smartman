@@ -329,11 +329,20 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Know'));
       await tester.pumpAndSettle();
-      // The answer is written off the test's clock; the deck page reads its
-      // count again when the session closes.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
+      // The deck page reads its count again when the session closes, so wait
+      // until the answer's review row is stored: its write runs on real time,
+      // and its continuations on frames.
+      for (var tries = 0; ; tries++) {
+        final rows = await tester.runAsync(
+          () => executor.runSelect('SELECT COUNT(*) AS n FROM reviews', []),
+        );
+        if (rows!.single['n'] == 1) break;
+        if (tries == 100) fail('the answer was never stored');
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
 
