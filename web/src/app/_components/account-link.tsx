@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { AccountAvatar, getSession } from "@/features/auth";
+import { AccountAvatar, getSession } from "@/features/account";
 
 /** The signed-in account's avatar, which opens the account page. */
 export async function AccountLink() {

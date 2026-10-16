@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonLine } from "@/components/skeleton";
+import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /** The home page while its decks are read: the today card and three deck rows, in their sizes. */
 export function DecksSkeleton() {

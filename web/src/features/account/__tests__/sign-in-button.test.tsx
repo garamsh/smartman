@@ -7,7 +7,7 @@ import { SignInButton } from "../components/sign-in-button";
 
 const signInWithOAuth = vi.fn();
 
-vi.mock("@/lib/supabase/browser", () => ({
+vi.mock("@/supabase/browser", () => ({
   createClient: () => ({ auth: { signInWithOAuth } }),
 }));
 

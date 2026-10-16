@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { BrandMark } from "@/components/brand";
-import { LegalLinks } from "@/components/legal-links";
-import { SignInButton } from "@/features/auth";
+import { BrandMark } from "@/design/brand";
+import { LegalLinks } from "@/features/legal";
+import { SignInButton } from "@/features/account";
 
 import { CallbackError } from "./_components/callback-error";
 

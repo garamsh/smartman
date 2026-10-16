@@ -4,7 +4,7 @@ import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
-import { createClient } from "@/lib/supabase/browser";
+import { createClient } from "@/supabase/browser";
 
 /**
  * Google's "G" mark for the button of each theme: Google's own pixels, from its asset bundle

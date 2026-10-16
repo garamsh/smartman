@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testAuthCode, testUser } from "@/testing/mocks/handlers";
 import { setRequestCookies } from "@/testing/next-headers";
 import { signInStartedCookies } from "@/testing/session";
-import { createClient } from "@/lib/supabase/server";
-import { readSession } from "@/lib/supabase/session";
+import { createClient } from "@/supabase/server";
+import { readSession } from "@/supabase/session";
 
 import { GET } from "../route";
 

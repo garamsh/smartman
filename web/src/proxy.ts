@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { env } from "@/env";
-import { readSession } from "@/lib/supabase/session";
+import { readSession } from "@/supabase/session";
 
 /** The paths a signed-out visitor may open; `/api` is outside the matcher. */
 const publicPaths = new Set(["/login", "/auth/callback", "/terms", "/privacy"]);

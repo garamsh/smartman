@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
 
-import { describeContent } from "@/lib/card-content";
+import { describeContent } from "../card-content";
 import type { Card } from "../library";
 
 /**

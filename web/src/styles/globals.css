@@ -165,7 +165,7 @@
   --font-sans: var(--font-pretendard), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* The dark set: chosen on the account page (data-theme, src/lib/theme.ts), or by the system
+/* The dark set: chosen on the account page (data-theme, src/design/theme.ts), or by the system
    while the choice is the system's. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {

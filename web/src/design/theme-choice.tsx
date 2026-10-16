@@ -8,7 +8,7 @@ import {
   storeThemeChoice,
   type ThemeChoice as Choice,
   type ThemeStoreFailure,
-} from "@/lib/theme";
+} from "@/design/theme";
 
 const choices: readonly { value: Choice; label: string }[] = [
   { value: "system", label: "시스템" },

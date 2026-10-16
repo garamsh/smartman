@@ -5,7 +5,7 @@ import { render } from "@/testing/render";
 
 import LoginPage from "../page";
 
-vi.mock("@/lib/supabase/browser", () => ({
+vi.mock("@/supabase/browser", () => ({
   createClient: () => ({ auth: { signInWithOAuth: vi.fn() } }),
 }));
 

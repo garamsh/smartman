@@ -1,7 +1,5 @@
 import { Check, X } from "lucide-react";
 
-import { describeContent } from "@/lib/card-content";
-
 import type { Answer } from "../answer-write";
 import type { PreviousAnswer } from "../session";
 
@@ -25,8 +23,7 @@ export const grades = {
 
 /** What a screen reader reads for an answer of the session: its sides and its grade. */
 export function answerLabel(answer: PreviousAnswer): string {
-  const front = describeContent(answer.card.front);
-  const back = describeContent(answer.card.back);
+  const { front, back } = answer.card.text;
   const changed = answer.changed ? ". 수정됨" : "";
   return `앞면: ${front}. 뒷면: ${back}. 답: ${grades[answer.answer].name}${changed}`;
 }
@@ -78,11 +75,11 @@ export function GradedCard({
       <GradeChip answer={answer.answer} className="absolute -top-3 right-4" />
       <div className="grid min-h-28 grid-cols-[1fr_auto_1fr]">
         <p className="flex items-center justify-center p-4 text-center text-headline text-ink">
-          <span className="line-clamp-2 break-words">{describeContent(answer.card.front)}</span>
+          <span className="line-clamp-2 break-words">{answer.card.text.front}</span>
         </p>
         <span aria-hidden className={`my-5 w-px ${grade.line}`} />
         <p className="flex items-center justify-center p-4 text-center text-body text-ink-2">
-          <span className="line-clamp-2 break-words">{describeContent(answer.card.back)}</span>
+          <span className="line-clamp-2 break-words">{answer.card.text.back}</span>
         </p>
       </div>
       {standing === "centred" && (

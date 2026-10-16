@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { LegalDocument, type LegalSection } from "@/components/legal-document";
+import { LegalDocument, type LegalSection } from "@/features/legal";
 
 export const metadata: Metadata = { title: "이용약관 · smartman" };
 

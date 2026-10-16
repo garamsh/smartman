@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { render } from "@/testing/render";
 
-import PrivacyPage from "../privacy/page";
-import TermsPage from "../terms/page";
+import PrivacyPage from "../(legal)/privacy/page";
+import TermsPage from "../(legal)/terms/page";
 
 /** The headings issue #86 requires of each document, in the order they appear. */
 const documents = [

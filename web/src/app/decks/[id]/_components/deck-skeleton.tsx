@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonLine } from "@/components/skeleton";
+import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
  * A deck's page while it is read: the back link's place, the name, the three pills, the study

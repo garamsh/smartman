@@ -1,3 +1,4 @@
+export { type Content, describeContent } from "./card-content";
 export { CardList } from "./components/card-list";
 export { DeckList, type DeckRow, PublicChip } from "./components/deck-list";
 export { EmptyHome } from "./components/empty-home";
