@@ -23,6 +23,8 @@ export type SessionPlan = {
     answeredAnyDeck: boolean;
     /** Study days in a row before today holding an answer. */
     streakBefore: number;
+    /** Whether an answer is stored before today in any deck. */
+    answeredBefore: boolean;
   };
 };
 
@@ -61,7 +63,12 @@ export type SessionView = {
   answered: number;
   total: number;
 } & (
-  | { kind: "studying"; current: Card }
+  | {
+      kind: "studying";
+      current: Card;
+      /** Whether the user has no answer stored or given yet, so the first-run guide shows. */
+      firstRun: boolean;
+    }
   | { kind: "complete"; completion: Completion }
   | { kind: "empty" }
 );
@@ -185,6 +192,16 @@ export class StudySession {
     return this.write(card.id, { kind: "toggle", reviewId: answered.review.id }, now);
   }
 
+  /**
+   * Changes the answer at [position] to [answer], as `toggle` does, and returns what to write;
+   * an answer that already stands as [answer] is left as it is.
+   */
+  redecide(position: number, answer: Answer): AnswerWrite | null {
+    const answered = this.answers[position];
+    if (!answered || answered.answer === answer) return null;
+    return this.toggle(position);
+  }
+
   /** Toggles the session's last answer. */
   toggleLast(): AnswerWrite | null {
     return this.toggle(this.answers.length - 1);
@@ -292,7 +309,11 @@ export class StudySession {
     const answered = new Set(this.written().map((entry) => entry.card.id)).size;
     const counts = { previous, answered, total: this.total };
     const current = this.practicing ? this.practiceQueue[0] : this.queue[0];
-    if (current) return { ...counts, kind: "studying", current };
+    if (current) {
+      const { answeredAnyDeck, answeredBefore } = this.plan.today;
+      const firstRun = !answeredAnyDeck && !answeredBefore && this.answers.length === 0;
+      return { ...counts, kind: "studying", current, firstRun };
+    }
     if (this.practiceSet().length === 0) return { ...counts, kind: "empty" };
     return { ...counts, kind: "complete", completion: this.completion() };
   }

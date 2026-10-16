@@ -147,6 +147,8 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   const answer = page.getByRole("group", { name: "답", exact: true });
   await expect(question).toHaveText(/^(chat|chien)$/);
   const first = (await question.textContent()) ?? "";
+  // The user's first session: the guide shows above the first card.
+  await expect(page.getByRole("region", { name: "학습 안내" })).toBeVisible();
   await shot(page, "03-study-question");
   await page.keyboard.press("Space");
   await expect(answer).toHaveText(backs.get(first) ?? "");
@@ -154,16 +156,33 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await page.keyboard.press("k");
   const second = first === "chat" ? "chien" : "chat";
   await expect(question).toHaveText(second);
-  await expect(page.getByRole("region", { name: "이전 답" }).getByRole("button")).toHaveCount(1);
+  await expect(
+    page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
+  ).toHaveCount(1);
   await page.keyboard.press("Space");
   await expect(answer).toHaveText(backs.get(second) ?? "");
+  await expect(page.getByRole("region", { name: "학습 안내" })).toHaveCount(0);
   await shot(page, "05-study-stack");
+  // ↑ centres the earlier card, which offers the change to its other answer.
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("button", { name: "모른다로 바꾸기", exact: true })).toBeVisible();
+  await shot(page, "05b-study-earlier");
+  await page.getByRole("button", { name: "지금 카드로", exact: true }).click();
+  await expect(question).toHaveText(second);
+  // At a phone's width: the same cards with the large answer buttons, and no list beside.
+  const desktop = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("complementary", { name: "이번 학습" })).toBeHidden();
+  await shot(page, "05c-study-phone-width");
+  if (desktop) await page.setViewportSize(desktop);
   await page.keyboard.press("k");
   // No card is left today: the completion card takes the current card's place, below the stack.
   const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
   await expect(completion).toBeVisible();
   await expect(question).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "이전 답" }).getByRole("button")).toHaveCount(2);
+  await expect(
+    page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
+  ).toHaveCount(2);
   await expect(completion.getByText("2 안다", { exact: true })).toBeVisible();
   await expect(completion.getByText("연속 1일", { exact: true })).toBeVisible();
   await shot(page, "06-study-complete");
@@ -205,7 +224,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "06b-study-practice");
   await page.keyboard.press("k");
   await page.keyboard.press("z");
-  await expect(page.getByRole("region", { name: "이전 답" }).getByRole("button")).toHaveCount(4);
+  await expect(
+    page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
+  ).toHaveCount(4);
   expect(page.url()).toBe(studyUrl);
   expect(browserLog.filter((line) => line.startsWith("POST ")).length).toBe(posts);
   const practisedReviews = await phone
