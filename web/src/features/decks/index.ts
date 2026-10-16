@@ -1,5 +1,6 @@
 export { CardList } from "./components/card-list";
 export { DeckList, type DeckRow, PublicChip } from "./components/deck-list";
+export { EmptyHome } from "./components/empty-home";
 export { ReadFailure } from "./components/read-failure";
 export { StudyLink } from "./components/study-link";
 export { TodayHeader } from "./components/today-header";
