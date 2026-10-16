@@ -1,6 +1,6 @@
 # EXPLAIN plans for ADR 0034
 
-The measurements behind [ADR 0034](0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md): the scripts that seeded a local stack and an SQLite file, the queries timed, and every plan before and after the target schema. Taken on 2026-10-16 at `b4958d2`; frozen with the ADR.
+The measurements behind [ADR 0034](0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md): the scripts that seeded a local stack and an SQLite file, the queries timed, and every plan before and after the target schema. Taken on 2026-10-16 at `b4958d2`, and for the queries #95 added at `cf494ca`; frozen with the ADR.
 
 ## Setup
 
@@ -2011,4 +2011,631 @@ QUERY PLAN
 Run Time: real 0.000 user 0.000408 sys 0.000122
 ### P12 delete 100 cards (the purge, and the cascade to reviews)
 Run Time: real 0.026 user 0.007590 sys 0.015894
+```
+
+## Queries #95 added
+
+Read at `cf494ca`. Each server run is a fresh stack seeded by the script above, with the warm second run kept. The first run took the queries before and after the target DDL. The second run took the streak function's `max()` form after it, since a first `exists` form, kept in the first run, read every row once. On the phone, `seed2.sql` adds today's answers to the same file: 20 cards answered for the first time and 200 answers to older cards. The streak probe ran after the proposed indexes.
+
+```sql
+-- The queries #95 added (main at cf494ca), run as the heavy user under row-level security.
+-- The study day starts at 04:00 in Asia/Seoul, as web/src/features/study/queue.ts computes it.
+\pset pager off
+select ((date_trunc('day', (now() at time zone 'Asia/Seoul') - interval '4 hours') + interval '4 hours')
+  at time zone 'Asia/Seoul') as day_start \gset
+select '{' || array_to_string(array(
+  select distinct card_id::text from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+    and reviewed_at >= :'day_start' order by 1 limit 100), ',') || '}' as today_cards \gset
+select count(*) as reviews_before_today from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+    and reviewed_at < :'day_start';
+
+begin;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-000000000000","role":"authenticated"}';
+set local statement_timeout = '120s';
+
+\echo '### Q14 today''s reviews, first page and count: web/src/features/study/read-today.ts:55-61'
+explain (analyze, buffers, costs off, summary on)
+select id, card_id, rating, reviewed_at, duration_ms from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+  and reviewed_at >= :'day_start' order by id limit 1000 offset 0;
+explain (analyze, buffers, costs off, summary on)
+select count(*) from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+  and reviewed_at >= :'day_start';
+
+\echo '### Q15 earlier reviews of 100 of today''s cards, first page: read-today.ts:80-91'
+explain (analyze, buffers, costs off, summary on)
+select id, card_id from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+  and reviewed_at < :'day_start' and card_id = any (:'today_cards')
+  order by id limit 1000 offset 0;
+
+\echo '### Q16 the streak, one page of 1,000 earlier answers newest first: read-today.ts:121-129'
+explain (analyze, buffers, costs off, summary on)
+select reviewed_at from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+  and reviewed_at < :'day_start' order by reviewed_at desc limit 1000 offset 0;
+\echo '### Q16 page 50 of the same paging'
+explain (analyze, buffers, costs off, summary on)
+select reviewed_at from public.reviews
+  where user_id = '00000000-0000-4000-8000-000000000000' and deleted_at is null
+  and reviewed_at < :'day_start' order by reviewed_at desc limit 1000 offset 49000;
+
+\echo '### Q17 proposed: the streak in one statement, one index probe per study day (Asia/Seoul)'
+explain (analyze, buffers, costs off, summary on)
+with recursive days(day_start, streak) as (
+  select ((:'day_start'::timestamptz at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', 0
+  union all
+  select ((d.day_start at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', d.streak + 1
+  from days d
+  where exists (
+    select 1 from public.reviews r
+    where r.user_id = (select auth.uid()) and r.deleted_at is null
+      and r.reviewed_at >= d.day_start
+      and r.reviewed_at < ((d.day_start at time zone 'Asia/Seoul') + interval '1 day') at time zone 'Asia/Seoul')
+)
+select max(streak) from days;
+with recursive days(day_start, streak) as (
+  select ((:'day_start'::timestamptz at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', 0
+  union all
+  select ((d.day_start at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', d.streak + 1
+  from days d
+  where exists (
+    select 1 from public.reviews r
+    where r.user_id = (select auth.uid()) and r.deleted_at is null
+      and r.reviewed_at >= d.day_start
+      and r.reviewed_at < ((d.day_start at time zone 'Asia/Seoul') + interval '1 day') at time zone 'Asia/Seoul')
+)
+select max(streak) as streak_before from days;
+commit;
+```
+
+Before:
+
+```text
+ reviews_before_today
+----------------------
+                99837
+(1 row)
+
+BEGIN
+SET
+SET
+SET
+### Q14 today's reviews, first page and count: web/src/features/study/read-today.ts:55-61
+                                                         QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=75.987..76.066 rows=163 loops=1)
+   Buffers: shared hit=2623
+   InitPlan 1
+     ->  Result (actual time=0.106..0.107 rows=1 loops=1)
+   ->  Sort (actual time=75.985..76.037 rows=163 loops=1)
+         Sort Key: reviews.id
+         Sort Method: quicksort  Memory: 46kB
+         Buffers: shared hit=2623
+         ->  Result (actual time=12.969..74.930 rows=163 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=2623
+               ->  Bitmap Heap Scan on reviews (actual time=12.858..74.716 rows=163 loops=1)
+                     Recheck Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                     Filter: ((deleted_at IS NULL) AND (reviewed_at >= '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 99837
+                     Heap Blocks: exact=2128
+                     Buffers: shared hit=2623
+                     ->  Bitmap Index Scan on reviews_user_id_revision (actual time=12.003..12.008 rows=100000 loops=1)
+                           Index Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                           Buffers: shared hit=495
+ Planning:
+   Buffers: shared hit=58
+ Planning Time: 0.840 ms
+ Execution Time: 76.363 ms
+(24 rows)
+
+                                                      QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=88.898..88.901 rows=1 loops=1)
+   Buffers: shared hit=2623
+   InitPlan 1
+     ->  Result (actual time=0.032..0.033 rows=1 loops=1)
+   ->  Result (actual time=9.002..88.685 rows=163 loops=1)
+         One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+         Buffers: shared hit=2623
+         ->  Bitmap Heap Scan on reviews (actual time=8.963..88.543 rows=163 loops=1)
+               Recheck Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+               Filter: ((deleted_at IS NULL) AND (reviewed_at >= '2026-10-15 19:00:00+00'::timestamp with time zone))
+               Rows Removed by Filter: 99837
+               Heap Blocks: exact=2128
+               Buffers: shared hit=2623
+               ->  Bitmap Index Scan on reviews_user_id_revision (actual time=8.313..8.313 rows=100000 loops=1)
+                     Index Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                     Buffers: shared hit=495
+ Planning Time: 0.323 ms
+ Execution Time: 89.928 ms
+(18 rows)
+
+### Q15 earlier reviews of 100 of today's cards, first page: read-today.ts:80-91
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=5.908..6.126 rows=898 loops=1)
+   Buffers: shared hit=323
+   InitPlan 1
+     ->  Result (actual time=0.025..0.026 rows=1 loops=1)
+   ->  Sort (actual time=5.906..5.994 rows=898 loops=1)
+         Sort Key: reviews.id
+         Sort Method: quicksort  Memory: 144kB
+         Buffers: shared hit=323
+         ->  Result (actual time=0.140..3.014 rows=898 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=323
+               ->  Index Scan using reviews_user_id_card_id on reviews (actual time=0.110..2.825 rows=898 loops=1)
+                     Index Cond: ((user_id = '00000000-0000-4000-8000-000000000000'::uuid) AND (card_id = ANY ('{00c8e1a9-8bd2-4cd9-bc73-3ec8a11d0a9c,0168485d-23a1-43a3-bb54-5dbef046e13f,0600baf2-0600-40fd-b745-e46a83c04f7f,061276d3-29d8-422a-8010-2d87088ed32a,061298ff-8613-4ef4-a0ad-d32ed8b86561,06ac6f3f-2123-4c91-be40-9ce6b6dc7efa,087001ad-926e-4e19-94d6-94e874744490,0a6e34c8-a1a4-4912-84e2-494f7b4cfbec,0aa42dec-b7e2-4c21-a502-1e1ed624ef67,0cc884d6-ea3c-4979-a0d7-328be4445e9d,0eb31f7e-b27e-4894-b6bc-241a407291e7,0f003a32-78ca-4c94-9f2c-efed764395f3,13c85d8c-bac2-4a88-a4e2-dd3602decb7b,15e82225-883a-4681-8ef3-e318674c05b3,167746fb-a43c-4ba0-b349-a1f3e47012a7,19597622-5603-4132-822e-6a6c9db508d5,1cac77e9-b368-4521-8b66-7819f46d05f4,1e047c5d-5b7d-4054-aebe-c20cc63a7389,1e5cea76-aafd-42d0-92e9-6304fc1624ea,1f119511-ba1f-402d-9150-6a97e3d852d2,203fc780-9459-4bee-bc13-1febb6745dda,2108c132-8438-4672-a577-97a906da44f6,226db278-73f7-472a-843e-665b30cef600,25451406-113a-4a96-adb5-7c156754fdd8,29ca3c7e-fb80-423e-bedb-f45f99165e87,2a039fb1-e49f-4ba9-a395-cba1fa3aeb38,2eda12bd-7ef1-4f9a-b0be-f7d2183b1bb0,2f38cf3e-713d-4a93-afc8-896b8f32bc06,2f6c6e06-a190-4b9b-b3d4-bd5415bbbaf1,2fad9e15-f012-4670-969e-c2d7117cde9a,30ab9014-9cb8-45cc-85cd-1063a3a69ef8,3151ff3e-8d72-44c5-865c-ea1f9347ebae,31b1b3ab-b8e1-43d3-9754-a8868f261435,324d0fda-0737-45c6-839d-d0503b17b66a,33bbec97-e80c-4fe2-a2af-c7efcaee5260,34191183-e997-4b56-9f95-f70fac29ee11,341ebe7e-0737-4f19-a844-999cf093c758,37599863-0442-465b-9166-39ebe2b95caf,38b06130-0733-402f-b695-93e64eeffc46,39657982-0118-440b-82f8-e1ce73c78616,3a9556cb-ca8f-455b-bb4b-0eb36b4cc0c4,3c9080f7-21cb-4f57-8ce7-5b64009b6029,40dc6d32-bde5-4e95-9644-ae2c59328b01,420a21ce-8b55-475b-b721-46b9f558e3d8,42827713-91d2-4f61-849b-7be34e87f1e0,4450b20f-48ec-4021-b985-caf427da52c9,445547f7-95bc-4a66-a5cd-673b25f35986,479cc03b-340b-438f-bb9f-aded788b9035,47c0b52f-9a94-48c3-86a9-7c6a0a2d3372,47ceb136-f16b-45d8-8156-d9bc7b63bf06,499ea3b6-9590-4ea7-a407-cc6c6301b6e8,4af3f810-0f31-4a85-9af1-280097cfe370,4e60b3de-79f6-4134-a64d-239186cd5d71,51285f9b-c471-4059-959e-29590414cb2a,56e8bf31-3171-4689-8d48-167c043746c3,5758a50d-9b5a-4992-8860-24ed757654e4,5c907086-df7d-4e26-89ff-eb5b481ccfb6,6210a3a0-6105-4d72-9550-187d52e64cda,621b7e9d-a3ae-4b6a-a7c4-20f596409a2b,6249365f-7df1-48e0-88c2-a0f5a54b5f0d,6408f563-a09a-4723-a2a5-b4ca711a1179,648c7144-26ad-493e-900c-6ec7844a252e,65a73047-4f10-4ee2-8592-7b52964206cb,6623677a-fe65-431c-b37a-033f2ca25128,665cbcb2-ef60-4635-aecc-414eb563a409,67696c4b-f0b6-4436-8d32-9af6408f33f1,676ceb5d-d524-4cd1-b404-3c0c7cb5c732,6b3792dd-ac2d-4735-8020-0f600ec1f34d,6d833871-065b-4cf4-9e19-44d77fc49b73,6e1b916d-10e3-47c4-b3ea-ae2d63edda1d,6ff8b98f-301d-4aeb-844e-9e9981ae16a9,7044bc60-8165-4346-8156-762ffd780362,72041338-7aeb-49b6-951e-d4e210668e27,73784f9e-b062-4aca-9f1e-8d7fd50d0dbe,7569a345-a5ea-43d7-96b6-dee69be0e197,77b2787f-69a4-4be0-9b72-625aaf5c20bb,79231011-2a7e-4f70-8d25-3b1e1b19c155,7bad87af-dc09-4d98-a9bd-9b81ccd26320,7c5e72d0-9189-47c2-a223-e991ca51a019,7cfdc736-23d6-479e-aa13-3f853bf50a07,7dd00d72-a5b5-4eaa-9f45-fa46aaffaf2b,7fc827a0-6f43-43ef-94eb-2e0f74b95a13,804034cc-34ec-44b5-9b3b-40eaea3990df,8330483b-d20e-4042-81ac-6a5d9bf88fe1,83c37e7f-2929-4574-9994-d0d0e9f49f07,84170cf0-a15e-4ec7-8601-bd052b2458a4,860877fb-9b9b-4054-b7f2-02ad3dafcc51,870d4275-bd84-4b59-ac8d-303901019aa7,87d5a216-ebd8-4dc6-b838-510febcd5db2,880b160b-6603-44d7-8c10-0d8a2fcbdaaf,88d7fa26-dc64-43a2-a076-6421415b4ad1,8c94ece8-71fd-4e5b-bd16-5f53d168d8b6,8d6cbc30-002f-4830-808e-74e2bcdb51d6,8df99953-5302-45f2-b3b9-51cab27f60a1,8eeabe9b-4527-42ac-9bbf-69df836e7cbd,90a5f550-25d3-4381-be7b-88b922f40977,93127924-5108-47f6-b203-e21a016fd0bb,9571da1d-01d7-4f61-82d5-47c3582f8b5a,9655c488-654c-4d79-bc5d-609f8aac2419,9737be38-6c11-49d8-b568-434d3b4a917d}'::text[])))
+                     Filter: ((deleted_at IS NULL) AND (reviewed_at < '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 102
+                     Buffers: shared hit=323
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 1.602 ms
+ Execution Time: 6.332 ms
+(20 rows)
+
+### Q16 the streak, one page of 1,000 earlier answers newest first: read-today.ts:121-129
+                                                        QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=140.099..140.358 rows=1000 loops=1)
+   Buffers: shared hit=2626
+   InitPlan 1
+     ->  Result (actual time=0.019..0.020 rows=1 loops=1)
+   ->  Sort (actual time=140.097..140.199 rows=1000 loops=1)
+         Sort Key: reviews.reviewed_at DESC
+         Sort Method: top-N heapsort  Memory: 49kB
+         Buffers: shared hit=2626
+         ->  Result (actual time=10.463..107.824 rows=99837 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=2623
+               ->  Bitmap Heap Scan on reviews (actual time=10.439..77.899 rows=99837 loops=1)
+                     Recheck Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                     Filter: ((deleted_at IS NULL) AND (reviewed_at < '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 163
+                     Heap Blocks: exact=2128
+                     Buffers: shared hit=2623
+                     ->  Bitmap Index Scan on reviews_user_id_revision (actual time=10.037..10.037 rows=100000 loops=1)
+                           Index Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                           Buffers: shared hit=495
+ Planning:
+   Buffers: shared hit=11
+ Planning Time: 1.135 ms
+ Execution Time: 140.616 ms
+(24 rows)
+
+### Q16 page 50 of the same paging
+                                                        QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=117.347..117.618 rows=1000 loops=1)
+   Buffers: shared hit=2623
+   InitPlan 1
+     ->  Result (actual time=0.028..0.029 rows=1 loops=1)
+   ->  Sort (actual time=107.986..112.942 rows=50000 loops=1)
+         Sort Key: reviews.reviewed_at DESC
+         Sort Method: quicksort  Memory: 3073kB
+         Buffers: shared hit=2623
+         ->  Result (actual time=8.174..67.761 rows=99837 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=2623
+               ->  Bitmap Heap Scan on reviews (actual time=8.142..47.947 rows=99837 loops=1)
+                     Recheck Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                     Filter: ((deleted_at IS NULL) AND (reviewed_at < '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 163
+                     Heap Blocks: exact=2128
+                     Buffers: shared hit=2623
+                     ->  Bitmap Index Scan on reviews_user_id_revision (actual time=7.704..7.705 rows=100000 loops=1)
+                           Index Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                           Buffers: shared hit=495
+ Planning Time: 0.227 ms
+ Execution Time: 118.106 ms
+(22 rows)
+
+### Q17 proposed: the streak in one statement, one index probe per study day (Asia/Seoul)
+                                                                                           QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=369.542..369.551 rows=1 loops=1)
+   Buffers: shared hit=2623, temp written=219
+   CTE days
+     ->  Recursive Union (actual time=0.002..369.238 rows=366 loops=1)
+           Buffers: shared hit=2623, temp written=219
+           ->  Result (actual time=0.001..0.002 rows=1 loops=1)
+           ->  Result (actual time=1.006..1.006 rows=1 loops=366)
+                 One-Time Filter: ((InitPlan 2).col1 = (InitPlan 1).col1)
+                 Buffers: shared hit=2623, temp written=219
+                 InitPlan 1
+                   ->  Result (actual time=0.006..0.006 rows=1 loops=1)
+                 InitPlan 2
+                   ->  Result (actual time=0.022..0.023 rows=1 loops=1)
+                 ->  Nested Loop Semi Join (actual time=1.004..1.004 rows=1 loops=366)
+                       Join Filter: ((r.reviewed_at >= d.day_start) AND (r.reviewed_at < (((d.day_start AT TIME ZONE 'Asia/Seoul'::text) + '1 day'::interval) AT TIME ZONE 'Asia/Seoul'::text)))
+                       Rows Removed by Join Filter: 621
+                       Buffers: shared hit=2623, temp written=219
+                       ->  WorkTable Scan on days d (actual time=0.000..0.000 rows=1 loops=366)
+                       ->  Materialize (actual time=0.000..0.409 rows=622 loops=366)
+                             Buffers: shared hit=2623, temp written=219
+                             ->  Index Scan using reviews_user_id_revision on reviews r (actual time=0.062..69.518 rows=100000 loops=1)
+                                   Index Cond: (user_id = (InitPlan 1).col1)
+                                   Filter: (deleted_at IS NULL)
+                                   Buffers: shared hit=2623
+   ->  CTE Scan on days (actual time=0.004..369.413 rows=366 loops=1)
+         Buffers: shared hit=2623, temp written=219
+ Planning:
+   Buffers: shared hit=9
+ Planning Time: 0.765 ms
+ Execution Time: 370.450 ms
+(30 rows)
+
+ streak_before
+---------------
+           365
+(1 row)
+
+COMMIT
+```
+
+After:
+
+```text
+ reviews_before_today
+----------------------
+                99837
+(1 row)
+
+BEGIN
+SET
+SET
+SET
+### Q14 today's reviews, first page and count: web/src/features/study/read-today.ts:55-61
+                                                                             QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.351..0.382 rows=163 loops=1)
+   Buffers: shared hit=170
+   InitPlan 1
+     ->  Result (actual time=0.027..0.027 rows=1 loops=1)
+   ->  Sort (actual time=0.350..0.362 rows=163 loops=1)
+         Sort Key: reviews.id
+         Sort Method: quicksort  Memory: 46kB
+         Buffers: shared hit=170
+         ->  Result (actual time=0.044..0.254 rows=163 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=167
+               ->  Index Scan using reviews_live_user_id_reviewed_at on reviews (actual time=0.013..0.188 rows=163 loops=1)
+                     Index Cond: ((user_id = '00000000-0000-4000-8000-000000000000'::uuid) AND (reviewed_at >= '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Buffers: shared hit=167
+ Planning:
+   Buffers: shared hit=60
+ Planning Time: 0.505 ms
+ Execution Time: 0.454 ms
+(18 rows)
+
+                                                                          QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=0.187..0.188 rows=1 loops=1)
+   Buffers: shared hit=167
+   InitPlan 1
+     ->  Result (actual time=0.008..0.008 rows=1 loops=1)
+   ->  Result (actual time=0.041..0.171 rows=163 loops=1)
+         One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+         Buffers: shared hit=167
+         ->  Index Only Scan using reviews_live_user_id_reviewed_at on reviews (actual time=0.031..0.140 rows=163 loops=1)
+               Index Cond: ((user_id = '00000000-0000-4000-8000-000000000000'::uuid) AND (reviewed_at >= '2026-10-15 19:00:00+00'::timestamp with time zone))
+               Heap Fetches: 163
+               Buffers: shared hit=167
+ Planning Time: 0.130 ms
+ Execution Time: 0.217 ms
+(13 rows)
+
+### Q15 earlier reviews of 100 of today's cards, first page: read-today.ts:80-91
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    QUERY PLAN
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=1.178..1.353 rows=898 loops=1)
+   Buffers: shared hit=291
+   InitPlan 1
+     ->  Result (actual time=0.009..0.009 rows=1 loops=1)
+   ->  Sort (actual time=1.177..1.244 rows=898 loops=1)
+         Sort Key: reviews.id
+         Sort Method: quicksort  Memory: 88kB
+         Buffers: shared hit=291
+         ->  Result (actual time=0.043..0.816 rows=898 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=291
+               ->  Index Scan using reviews_user_id_card_id on reviews (actual time=0.032..0.684 rows=898 loops=1)
+                     Index Cond: ((user_id = '00000000-0000-4000-8000-000000000000'::uuid) AND (card_id = ANY ('{00c8e1a9-8bd2-4cd9-bc73-3ec8a11d0a9c,0168485d-23a1-43a3-bb54-5dbef046e13f,0600baf2-0600-40fd-b745-e46a83c04f7f,061276d3-29d8-422a-8010-2d87088ed32a,061298ff-8613-4ef4-a0ad-d32ed8b86561,06ac6f3f-2123-4c91-be40-9ce6b6dc7efa,087001ad-926e-4e19-94d6-94e874744490,0a6e34c8-a1a4-4912-84e2-494f7b4cfbec,0aa42dec-b7e2-4c21-a502-1e1ed624ef67,0cc884d6-ea3c-4979-a0d7-328be4445e9d,0eb31f7e-b27e-4894-b6bc-241a407291e7,0f003a32-78ca-4c94-9f2c-efed764395f3,13c85d8c-bac2-4a88-a4e2-dd3602decb7b,15e82225-883a-4681-8ef3-e318674c05b3,167746fb-a43c-4ba0-b349-a1f3e47012a7,19597622-5603-4132-822e-6a6c9db508d5,1cac77e9-b368-4521-8b66-7819f46d05f4,1e047c5d-5b7d-4054-aebe-c20cc63a7389,1e5cea76-aafd-42d0-92e9-6304fc1624ea,1f119511-ba1f-402d-9150-6a97e3d852d2,203fc780-9459-4bee-bc13-1febb6745dda,2108c132-8438-4672-a577-97a906da44f6,226db278-73f7-472a-843e-665b30cef600,25451406-113a-4a96-adb5-7c156754fdd8,29ca3c7e-fb80-423e-bedb-f45f99165e87,2a039fb1-e49f-4ba9-a395-cba1fa3aeb38,2eda12bd-7ef1-4f9a-b0be-f7d2183b1bb0,2f38cf3e-713d-4a93-afc8-896b8f32bc06,2f6c6e06-a190-4b9b-b3d4-bd5415bbbaf1,2fad9e15-f012-4670-969e-c2d7117cde9a,30ab9014-9cb8-45cc-85cd-1063a3a69ef8,3151ff3e-8d72-44c5-865c-ea1f9347ebae,31b1b3ab-b8e1-43d3-9754-a8868f261435,324d0fda-0737-45c6-839d-d0503b17b66a,33bbec97-e80c-4fe2-a2af-c7efcaee5260,34191183-e997-4b56-9f95-f70fac29ee11,341ebe7e-0737-4f19-a844-999cf093c758,37599863-0442-465b-9166-39ebe2b95caf,38b06130-0733-402f-b695-93e64eeffc46,39657982-0118-440b-82f8-e1ce73c78616,3a9556cb-ca8f-455b-bb4b-0eb36b4cc0c4,3c9080f7-21cb-4f57-8ce7-5b64009b6029,40dc6d32-bde5-4e95-9644-ae2c59328b01,420a21ce-8b55-475b-b721-46b9f558e3d8,42827713-91d2-4f61-849b-7be34e87f1e0,4450b20f-48ec-4021-b985-caf427da52c9,445547f7-95bc-4a66-a5cd-673b25f35986,479cc03b-340b-438f-bb9f-aded788b9035,47c0b52f-9a94-48c3-86a9-7c6a0a2d3372,47ceb136-f16b-45d8-8156-d9bc7b63bf06,499ea3b6-9590-4ea7-a407-cc6c6301b6e8,4af3f810-0f31-4a85-9af1-280097cfe370,4e60b3de-79f6-4134-a64d-239186cd5d71,51285f9b-c471-4059-959e-29590414cb2a,56e8bf31-3171-4689-8d48-167c043746c3,5758a50d-9b5a-4992-8860-24ed757654e4,5c907086-df7d-4e26-89ff-eb5b481ccfb6,6210a3a0-6105-4d72-9550-187d52e64cda,621b7e9d-a3ae-4b6a-a7c4-20f596409a2b,6249365f-7df1-48e0-88c2-a0f5a54b5f0d,6408f563-a09a-4723-a2a5-b4ca711a1179,648c7144-26ad-493e-900c-6ec7844a252e,65a73047-4f10-4ee2-8592-7b52964206cb,6623677a-fe65-431c-b37a-033f2ca25128,665cbcb2-ef60-4635-aecc-414eb563a409,67696c4b-f0b6-4436-8d32-9af6408f33f1,676ceb5d-d524-4cd1-b404-3c0c7cb5c732,6b3792dd-ac2d-4735-8020-0f600ec1f34d,6d833871-065b-4cf4-9e19-44d77fc49b73,6e1b916d-10e3-47c4-b3ea-ae2d63edda1d,6ff8b98f-301d-4aeb-844e-9e9981ae16a9,7044bc60-8165-4346-8156-762ffd780362,72041338-7aeb-49b6-951e-d4e210668e27,73784f9e-b062-4aca-9f1e-8d7fd50d0dbe,7569a345-a5ea-43d7-96b6-dee69be0e197,77b2787f-69a4-4be0-9b72-625aaf5c20bb,79231011-2a7e-4f70-8d25-3b1e1b19c155,7bad87af-dc09-4d98-a9bd-9b81ccd26320,7c5e72d0-9189-47c2-a223-e991ca51a019,7cfdc736-23d6-479e-aa13-3f853bf50a07,7dd00d72-a5b5-4eaa-9f45-fa46aaffaf2b,7fc827a0-6f43-43ef-94eb-2e0f74b95a13,804034cc-34ec-44b5-9b3b-40eaea3990df,8330483b-d20e-4042-81ac-6a5d9bf88fe1,83c37e7f-2929-4574-9994-d0d0e9f49f07,84170cf0-a15e-4ec7-8601-bd052b2458a4,860877fb-9b9b-4054-b7f2-02ad3dafcc51,870d4275-bd84-4b59-ac8d-303901019aa7,87d5a216-ebd8-4dc6-b838-510febcd5db2,880b160b-6603-44d7-8c10-0d8a2fcbdaaf,88d7fa26-dc64-43a2-a076-6421415b4ad1,8c94ece8-71fd-4e5b-bd16-5f53d168d8b6,8d6cbc30-002f-4830-808e-74e2bcdb51d6,8df99953-5302-45f2-b3b9-51cab27f60a1,8eeabe9b-4527-42ac-9bbf-69df836e7cbd,90a5f550-25d3-4381-be7b-88b922f40977,93127924-5108-47f6-b203-e21a016fd0bb,9571da1d-01d7-4f61-82d5-47c3582f8b5a,9655c488-654c-4d79-bc5d-609f8aac2419,9737be38-6c11-49d8-b568-434d3b4a917d}'::uuid[])))
+                     Filter: ((deleted_at IS NULL) AND (reviewed_at < '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 102
+                     Buffers: shared hit=291
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.214 ms
+ Execution Time: 1.454 ms
+(20 rows)
+
+### Q16 the streak, one page of 1,000 earlier answers newest first: read-today.ts:121-129
+                                                                         QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.030..1.376 rows=1000 loops=1)
+   Buffers: shared hit=1007
+   InitPlan 1
+     ->  Result (actual time=0.009..0.009 rows=1 loops=1)
+   ->  Result (actual time=0.030..1.264 rows=1000 loops=1)
+         One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+         Buffers: shared hit=1007
+         ->  Index Only Scan Backward using reviews_live_user_id_reviewed_at on reviews (actual time=0.019..1.106 rows=1000 loops=1)
+               Index Cond: ((user_id = '00000000-0000-4000-8000-000000000000'::uuid) AND (reviewed_at < '2026-10-15 19:00:00+00'::timestamp with time zone))
+               Heap Fetches: 1000
+               Buffers: shared hit=1007
+ Planning:
+   Buffers: shared hit=5
+ Planning Time: 0.167 ms
+ Execution Time: 1.466 ms
+(15 rows)
+
+### Q16 page 50 of the same paging
+                                                        QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=91.531..91.805 rows=1000 loops=1)
+   Buffers: shared hit=1793
+   InitPlan 1
+     ->  Result (actual time=0.012..0.012 rows=1 loops=1)
+   ->  Sort (actual time=84.666..88.509 rows=50000 loops=1)
+         Sort Key: reviews.reviewed_at DESC
+         Sort Method: quicksort  Memory: 3073kB
+         Buffers: shared hit=1793
+         ->  Result (actual time=5.230..53.444 rows=99837 loops=1)
+               One-Time Filter: ((InitPlan 1).col1 = '00000000-0000-4000-8000-000000000000'::uuid)
+               Buffers: shared hit=1790
+               ->  Bitmap Heap Scan on reviews (actual time=5.215..34.479 rows=99837 loops=1)
+                     Recheck Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                     Filter: ((deleted_at IS NULL) AND (reviewed_at < '2026-10-15 19:00:00+00'::timestamp with time zone))
+                     Rows Removed by Filter: 163
+                     Heap Blocks: exact=1640
+                     Buffers: shared hit=1790
+                     ->  Bitmap Index Scan on reviews_user_id_card_id (actual time=4.835..4.835 rows=100000 loops=1)
+                           Index Cond: (user_id = '00000000-0000-4000-8000-000000000000'::uuid)
+                           Buffers: shared hit=150
+ Planning Time: 0.209 ms
+ Execution Time: 92.480 ms
+(22 rows)
+
+### Q17 proposed: the streak in one statement, one index probe per study day (Asia/Seoul)
+                                                                                           QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=359.170..359.175 rows=1 loops=1)
+   Buffers: shared hit=11622, temp written=219
+   CTE days
+     ->  Recursive Union (actual time=0.003..358.772 rows=366 loops=1)
+           Buffers: shared hit=11622, temp written=219
+           ->  Result (actual time=0.001..0.002 rows=1 loops=1)
+           ->  Result (actual time=0.978..0.978 rows=1 loops=366)
+                 One-Time Filter: ((InitPlan 2).col1 = (InitPlan 1).col1)
+                 Buffers: shared hit=11622, temp written=219
+                 InitPlan 1
+                   ->  Result (actual time=0.004..0.004 rows=1 loops=1)
+                 InitPlan 2
+                   ->  Result (actual time=0.017..0.017 rows=1 loops=1)
+                 ->  Nested Loop Semi Join (actual time=0.975..0.975 rows=1 loops=366)
+                       Join Filter: ((r.reviewed_at >= d.day_start) AND (r.reviewed_at < (((d.day_start AT TIME ZONE 'Asia/Seoul'::text) + '1 day'::interval) AT TIME ZONE 'Asia/Seoul'::text)))
+                       Rows Removed by Join Filter: 626
+                       Buffers: shared hit=11622, temp written=219
+                       ->  WorkTable Scan on days d (actual time=0.000..0.000 rows=1 loops=366)
+                       ->  Materialize (actual time=0.000..0.356 rows=627 loops=366)
+                             Buffers: shared hit=11622, temp written=219
+                             ->  Index Scan using reviews_user_id_card_id on reviews r (actual time=0.020..56.933 rows=100000 loops=1)
+                                   Index Cond: (user_id = (InitPlan 1).col1)
+                                   Filter: (deleted_at IS NULL)
+                                   Buffers: shared hit=11622
+   ->  CTE Scan on days (actual time=0.005..359.042 rows=366 loops=1)
+         Buffers: shared hit=11622, temp written=219
+ Planning:
+   Buffers: shared hit=13
+ Planning Time: 0.630 ms
+ Execution Time: 359.784 ms
+(30 rows)
+
+ streak_before
+---------------
+           365
+(1 row)
+
+COMMIT
+```
+
+The streak function's `max()` form, after:
+
+```sql
+-- The streak in one statement: for each study day back from yesterday, the latest answer before
+-- the day's end, read by one backward probe of reviews_live_user_id_reviewed_at (Asia/Seoul).
+\pset pager off
+select ((date_trunc('day', (now() at time zone 'Asia/Seoul') - interval '4 hours') + interval '4 hours')
+  at time zone 'Asia/Seoul') as day_start \gset
+begin;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-000000000000","role":"authenticated"}';
+\echo '### Q17 proposed: the streak, one max() probe per study day'
+explain (analyze, buffers, costs off, summary on)
+with recursive days(day_start, streak) as (
+  select ((:'day_start'::timestamptz at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', 0
+  union all
+  select ((d.day_start at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', d.streak + 1
+  from days d
+  where (
+    select max(r.reviewed_at) from public.reviews r
+    where r.user_id = (select auth.uid()) and r.deleted_at is null
+      and r.reviewed_at < ((d.day_start at time zone 'Asia/Seoul') + interval '1 day') at time zone 'Asia/Seoul'
+  ) >= d.day_start
+)
+select max(streak) from days;
+with recursive days(day_start, streak) as (
+  select ((:'day_start'::timestamptz at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', 0
+  union all
+  select ((d.day_start at time zone 'Asia/Seoul') - interval '1 day') at time zone 'Asia/Seoul', d.streak + 1
+  from days d
+  where (
+    select max(r.reviewed_at) from public.reviews r
+    where r.user_id = (select auth.uid()) and r.deleted_at is null
+      and r.reviewed_at < ((d.day_start at time zone 'Asia/Seoul') + interval '1 day') at time zone 'Asia/Seoul'
+  ) >= d.day_start
+)
+select max(streak) as streak_before from days;
+commit;
+```
+
+```text
+BEGIN
+SET
+SET
+### Q17 proposed: the streak, one max() probe per study day
+                                                                                                    QUERY PLAN
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate (actual time=40.401..40.405 rows=1 loops=1)
+   Buffers: shared hit=1463
+   CTE days
+     ->  Recursive Union (actual time=0.004..39.914 rows=366 loops=1)
+           Buffers: shared hit=1463
+           ->  Result (actual time=0.002..0.003 rows=1 loops=1)
+           ->  WorkTable Scan on days d (actual time=0.103..0.104 rows=1 loops=366)
+                 Filter: ((SubPlan 4) >= day_start)
+                 Rows Removed by Filter: 0
+                 Buffers: shared hit=1463
+                 SubPlan 4
+                   ->  Result (actual time=0.098..0.098 rows=1 loops=366)
+                         Buffers: shared hit=1463
+                         InitPlan 1
+                           ->  Result (actual time=0.005..0.005 rows=1 loops=1)
+                         InitPlan 2
+                           ->  Result (actual time=0.042..0.042 rows=1 loops=1)
+                         InitPlan 3
+                           ->  Limit (actual time=0.096..0.096 rows=1 loops=366)
+                                 Buffers: shared hit=1463
+                                 ->  Result (actual time=0.096..0.096 rows=1 loops=366)
+                                       One-Time Filter: ((InitPlan 2).col1 = (InitPlan 1).col1)
+                                       Buffers: shared hit=1463
+                                       ->  Index Only Scan Backward using reviews_live_user_id_reviewed_at on reviews r (actual time=0.093..0.093 rows=1 loops=366)
+                                             Index Cond: ((user_id = (InitPlan 1).col1) AND (reviewed_at < (((d.day_start AT TIME ZONE 'Asia/Seoul'::text) + '1 day'::interval) AT TIME ZONE 'Asia/Seoul'::text)))
+                                             Heap Fetches: 365
+                                             Buffers: shared hit=1463
+   ->  CTE Scan on days (actual time=0.007..40.197 rows=366 loops=1)
+         Buffers: shared hit=1463
+ Planning:
+   Buffers: shared hit=215
+ Planning Time: 6.447 ms
+ Execution Time: 40.648 ms
+(33 rows)
+
+ streak_before
+---------------
+           365
+(1 row)
+
+COMMIT
+```
+
+Phone:
+
+```sql
+CREATE TEMP TABLE n AS WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 1000) SELECT i FROM n;
+-- Today (from 1731500000): 20 cards answered for the first time, and 200 answers to older cards.
+BEGIN;
+INSERT INTO reviews SELECT printf('t%07d', i), printf('c%06d', i), 'good', 1731500000 + i * 60, 5000, 0.5, 1731500000, NULL, 0 FROM n WHERE i <= 200;
+INSERT INTO cards SELECT printf('new%03d', i), 'd0001', '[]', '[]', 'new ' || i, 'manual', NULL, 1731400000, 1731400000, NULL, 0 FROM n WHERE i <= 20;
+INSERT INTO reviews SELECT printf('f%07d', i), printf('new%03d', i), 'good', 1731500000 + i * 90, 5000, 0.5, 1731500000, NULL, 0 FROM n WHERE i <= 20;
+COMMIT;
+ANALYZE;
+```
+
+```sql
+PRAGMA foreign_keys = ON;
+.eqp on
+.timer on
+.print '### P13 firstAnswersSince: app/lib/study/src/study_repository.dart:88-101'
+SELECT MIN(reviewed_at) FROM reviews WHERE deleted_at IS NULL GROUP BY card_id HAVING MIN(reviewed_at) >= 1731500000;
+.print '### P13r the same, from today''s cards (proposed rewrite)'
+SELECT MIN(reviewed_at) FROM reviews WHERE deleted_at IS NULL AND card_id IN (SELECT card_id FROM reviews WHERE deleted_at IS NULL AND reviewed_at >= 1731500000) GROUP BY card_id HAVING MIN(reviewed_at) >= 1731500000;
+.print '### P14 answersSince: study_repository.dart:104-125'
+SELECT * FROM reviews WHERE deleted_at IS NULL AND reviewed_at >= 1731500000 ORDER BY reviewed_at;
+.print '### P15 answerTimes: study_repository.dart:128-140'
+SELECT reviewed_at FROM reviews WHERE deleted_at IS NULL ORDER BY reviewed_at DESC;
+```
+
+```sql
+.eqp on
+.timer on
+.print '### P15p the streak by one probe per study day (proposed; days of 86,400 s here, local boundaries in the app)'
+WITH RECURSIVE days(day_start, streak) AS (
+  SELECT 1731500000 - 86400, 0
+  UNION ALL
+  SELECT day_start - 86400, streak + 1 FROM days
+  WHERE EXISTS (SELECT 1 FROM reviews WHERE deleted_at IS NULL AND reviewed_at >= day_start AND reviewed_at < day_start + 86400)
+)
+SELECT MAX(streak) FROM days;
+```
+
+Before:
+
+```text
+### P13 firstAnswersSince: app/lib/study/src/study_repository.dart:88-101
+QUERY PLAN
+|--SCAN reviews
+`--USE TEMP B-TREE FOR GROUP BY
+Run Time: real 0.064 user 0.058188 sys 0.004282
+### P13r the same, from today s cards (proposed rewrite)
+QUERY PLAN
+|--SCAN reviews
+|--LIST SUBQUERY 1
+|  |--SCAN reviews
+|  `--CREATE BLOOM FILTER
+`--USE TEMP B-TREE FOR GROUP BY
+Run Time: real 0.057 user 0.053645 sys 0.002796
+### P14 answersSince: study_repository.dart:104-125
+QUERY PLAN
+|--SCAN reviews
+`--USE TEMP B-TREE FOR ORDER BY
+Run Time: real 0.014 user 0.011750 sys 0.001396
+### P15 answerTimes: study_repository.dart:128-140
+QUERY PLAN
+|--SCAN reviews
+`--USE TEMP B-TREE FOR ORDER BY
+Run Time: real 0.126 user 0.086198 sys 0.003040
+```
+
+After:
+
+```text
+### P13 firstAnswersSince: app/lib/study/src/study_repository.dart:88-101
+QUERY PLAN
+`--SCAN reviews USING INDEX reviews_card_id_reviewed_at
+Run Time: real 0.092 user 0.085791 sys 0.004660
+### P13r the same, from today s cards (proposed rewrite)
+QUERY PLAN
+|--SEARCH reviews USING INDEX reviews_card_id_reviewed_at (card_id=?)
+`--LIST SUBQUERY 1
+   |--SEARCH reviews USING INDEX reviews_live_reviewed_at (reviewed_at>?)
+   `--CREATE BLOOM FILTER
+Run Time: real 0.004 user 0.004181 sys 0.000401
+### P14 answersSince: study_repository.dart:104-125
+QUERY PLAN
+`--SEARCH reviews USING INDEX reviews_live_reviewed_at (reviewed_at>?)
+Run Time: real 0.002 user 0.001264 sys 0.000130
+### P15 answerTimes: study_repository.dart:128-140
+QUERY PLAN
+`--SCAN reviews USING INDEX reviews_live_reviewed_at
+Run Time: real 0.050 user 0.036131 sys 0.001734
+### P15p the streak by one probe per study day (proposed; days of 86,400 s here, local boundaries in the app)
+QUERY PLAN
+|--CO-ROUTINE days
+|  |--SETUP
+|  |  `--SCAN CONSTANT ROW
+|  `--RECURSIVE STEP
+|     |--SCAN days
+|     `--CORRELATED SCALAR SUBQUERY 2
+|        `--SEARCH reviews USING INDEX reviews_live_reviewed_at (reviewed_at>? AND reviewed_at<?)
+`--SEARCH days
+Run Time: real 0.021 user 0.001949 sys 0.008287
 ```

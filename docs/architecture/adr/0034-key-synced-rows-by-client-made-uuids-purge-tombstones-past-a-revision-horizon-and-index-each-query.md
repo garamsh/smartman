@@ -8,7 +8,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Context
 
 - Issue #93 asks for a production-grade data model, decided with evidence, before more features build on it. The owner decided on 2026-10-16 that ids are uuids. This ADR is the design; the PM opens the implementation issues from it.
-- The schema was read on `main` at `b4958d2`:
+- The schema was read on `main` at `b4958d2`. The queries #95 added were read at `cf494ca`, where it merged with [ADR 0033](0033-count-cards-left-per-study-day-from-04-00-and-continue-as-unrecorded-practice.md), and are measured on the same seed:
   - `supabase/migrations/` creates nine tables in `public`. `decks`, `cards` and `reviews` have `text` primary keys; `card_states` is keyed `(user_id, card_id)`; `profiles`, `deck_reports`, `user_blocks` and `deck_imports` have composite or uuid keys; `extraction_usage` has an identity.
   - Both clients already create v4 uuid strings: the app through `uuid`'s `v4` (`app/lib/main.dart:79-85`), and the web through `crypto.randomUUID()` (`web/src/features/study/components/study-screen.tsx:64`).
   - Every time column on the server is already `timestamptz`.
@@ -174,6 +174,9 @@ Server, query → index. Times are warm `EXPLAIN (ANALYZE)` runs on the seed, th
 | A study selection's cards, `read-library.ts:64` | `cards_deck_id_created_at_id` (new) | 5.0 → 1.1 ms |
 | Card states, `web/src/features/study/read-states.ts:24-32` | `card_states_pkey` (exists) | 3.5 → 0.75 ms |
 | Toggle a review, `supabase_sync_server.dart:152-156` and `web/src/features/study/record-answer.ts:53-57` | `reviews_pkey` (exists) | 8.8 → 0.44 ms |
+| Today's reviews, first page and count, `web/src/features/study/read-today.ts:55-61` | `reviews_live_user_id_reviewed_at` (new) | 76.4 → 0.45 ms; count 89.9 → 0.22 ms, index only |
+| Earlier reviews of up to 100 of today's cards, `read-today.ts:80-91` | `reviews_user_id_card_id` (exists), on `(user_id, card_id = any(…))` | 6.3 → 1.5 ms |
+| The streak, 1,000 earlier answers a page newest first until a day gap, `read-today.ts:121-129` | replaced by `study_streak_before` (§9, step 7), one backward probe of `reviews_live_user_id_reviewed_at` per study day | first page 140.6 → 1.5 ms, page 50 118.1 → 92.5 ms; the function 40.6 ms for 365 days in one request |
 | Preview a public deck, `app/lib/sharing/src/supabase_sharing_server.dart:62-69` | `cards_deck_id_created_at_id (deck_id, created_at, id)` (new) | 6.9 → 1.1 ms warm; 285 → 14 ms cold |
 | `list_public_decks`, newest; its card count | `decks_public_published_at` (exists); `cards_deck_id_created_at_id` | 14.8 → 6.5 ms |
 | `list_public_decks`, most copied with a search | none below the threshold in §6 | 31.5 → 12.9 ms |
@@ -202,7 +205,19 @@ Phone, query → index (`app/lib/`), timed by the `sqlite3` shell's `.timer` (re
 | One card's reviews for the fold, `sync/src/sync_store.dart:204-208`; the cascade from `cards` | `reviews_card_id_reviewed_at (card_id, reviewed_at)` (new) | 18 → under 1 ms; 1,907 → 26 ms |
 | States of a selection, `study_repository.dart:25-30` | `card_states` primary key (exists) | index search, unchanged |
 | Unsynced rows, `sync_store.dart:241-252`; any unsynced row, `sync_store.dart:83-86` | `{table}_unsynced (id) WHERE "dirty"` (new, one per synced table) | 8 → 1 ms; `dirty = 1` still scans |
+| First answers since the day began, `study/src/study_repository.dart:88-101` (`min(reviewed_at)` per `card_id`, `having` ≥ the start) | `reviews_card_id_reviewed_at` and `reviews_live_reviewed_at`, after a rewrite that groups only the cards answered since the start | 64 ms; the indexes alone 92 ms; rewritten 4 ms |
+| Answers since the day began, `study_repository.dart:104-125` | `reviews_live_reviewed_at` | 14 → 2 ms |
+| Every answer's time for the streak, `study_repository.dart:128-140` | `reviews_live_reviewed_at`, read one probe per study day instead of every row | 126 ms; the index alone 50 ms; 7 ms by probes for 365 days |
 
+- The #95 queries, by the same rule:
+  - **Earlier reviews of today's cards** need no new index: `reviews_user_id_card_id`, which the composite foreign key's cascade already required, takes `card_id = any(…)` under `user_id`. Its plan shows both in the index condition.
+  - **The streak** read on the web pages 1,000 answers at a time. A user with 100,000 answers and a year's streak sends 100 requests, each reading deeper by offset: page 50 still read every one of the user's rows in 92.5 ms after the indexes.
+    - A function returning the streak in one request replaces the paging (§9, step 7). It walks back one study day at a time from the day before `before`, taking `max(reviewed_at)` before each day's end, which Postgres answers with one backward probe of `reviews_live_user_id_reviewed_at`. It stops at the first day with no answer. It counts the same days as `web/src/features/study/queue.ts`'s streak, with day boundaries at 04:00 in the zone the call names, so a day across an offset change starts and ends at 04:00 local time, as ADR 0033 reads them.
+    - Measured: 366 probes, 40.6 ms in one statement.
+    - A function returning every distinct study day was passed over: it would read every answer of the user to return days the streak stops reading at the first gap.
+    - A first form, an `exists` per day, was planned as one read of all the user's rows and took 360 ms; the `max()` form is the one specified.
+  - **On the phone**, `firstAnswersSince` groups every review by card to find the cards first answered since the day began. Indexes alone made it slower, from 64 to 92 ms, because the grouping still visits every row in card order. Step 4 rewrites it to group only the cards with an answer since the start, found through `reviews_live_reviewed_at`, then read through `reviews_card_id_reviewed_at`: 4 ms.
+  - `answerTimes` reads every answer's time to count the streak. Step 4 replaces it with the same walk as the server's, one probe of `reviews_live_reviewed_at` per study day with the day boundaries computed in the app: 7 ms for 365 days, against 50 ms for reading every row through the index.
 - SQLite says child key indexes "are not required … but they are almost always beneficial" (foreignkeys). Without `reviews (card_id)`, deleting 100 cards scanned `reviews` once per card: measured, 1.907 s against 0.026 s with the index.
 - SQLite uses a partial index only when a term of the query matches the index's term (partialindex: "SQLite does not have a sophisticated theorem prover").
   - Measured: `WHERE "dirty"`, which drift writes for `row.dirty`, uses `reviews_unsynced`. `WHERE dirty = 1` in `hasUnsynced` still scans.
@@ -264,7 +279,7 @@ Phone, query → index (`app/lib/`), timed by the `sqlite3` shell's `.timer` (re
 
 ### 9. Migration plan for production
 
-Each step is one pull request and, on the server, one migration that the PM pushes after merge. "Owner" marks a step that changes or deletes existing data; the PM pushes it only after the owner approves.
+Each step is one pull request and, on the server, one migration that the PM pushes after merge. The steps are numbered by when they were decided, not by order; the order is the list after them. "Owner" marks a step that changes or deletes existing data; the PM pushes it only after the owner approves.
 
 1. **Server indexes** (additive).
    - Creates the six new server indexes and drops `cards_user_id_deck_id` after its replacement exists.
@@ -285,6 +300,7 @@ Each step is one pull request and, on the server, one migration that the PM push
    - Verify: `pg_constraint` shows the checks validated; the RLS tests pass; the Security Advisor shows no `0006` lint.
 4. **App: schema v6, v7 ids, horizon-aware sync** (app release).
    - The local migration of §8; new ids from `v7()`; the run reads `sync_horizon()` and rebuilds below it; the local purge.
+   - `firstAnswersSince` grouped only over the cards answered since the start, and the streak read by one probe per study day in place of `answerTimes` (§4).
    - `sync_horizon()` ships in this step's server migration, returning 0 until a purge has run. That migration is additive and goes before the release.
    - Rollback: an app release cannot be withdrawn from devices that took it; the release is tested with the migration test of §8 and the two-device test against a stack with steps 1 to 3 applied.
    - Verify: the v5 → v6 migration test; a device upgraded with unsynced rows pushes them.
@@ -295,10 +311,19 @@ Each step is one pull request and, on the server, one migration that the PM push
    - Rollback: `cron.unschedule` stops it. Purged tombstones do not return, which the horizon makes safe.
    - Verify: `cron.job_run_details` shows daily success; `sync_horizon()` rises after day 90; a device below it rebuilds in the two-device test.
 
-- **Order against #87–#91.**
-  - Step 1 comes before #87. #87, #89 and #90 read reviews by study day, which `reviews_live_user_id_reviewed_at` serves on the web, and which the phone's `reviews_live_reviewed_at` (step 4) serves.
-  - Steps 2 and 3 are independent of #87–#91 and can land between them.
-  - Step 4 touches the app's database and sync, which #87–#90 read but do not change. It lands after #87 and before #90, whose statistics depend on the local purge's rule for reviews.
+7. **Server streak function and the web's streak read** (migration, additive; web).
+   - `public.study_streak_before(time_zone text, before timestamptz) returns integer`: `security invoker`, so the policies decide what it reads; `stable`, `set search_path = ''`; `execute` revoked from `public` and `anon` and granted to `authenticated`. A zone Postgres does not know raises, and the web passes only the zone it already validated or Asia/Seoul.
+   - `read-today.ts` calls it through `rpc` in place of `readStreakBefore`'s paging.
+   - pgTAP tests the 04:00 boundary, an offset change and a gap against the same fixtures as `queue.ts`'s streak tests.
+   - Needs step 1's index. No order with the app, which counts its own streak.
+   - Rollback: the web returns to the paging; drop the function.
+   - Verify: `EXPLAIN` shows one `Index Only Scan Backward` per day; the web's streak equals the paging's on the same rows.
+
+- **Order against #87–#91.** #87 merged as #95 at `cf494ca` with ADR 0033, so its reads are on `main` now:
+  - Step 1 comes next. `read-today.ts`'s reads of today's reviews and the streak, and the pace, then read `reviews_live_user_id_reviewed_at` instead of every row the user has. #89 and #90 add phone reads by study day, which the phone's `reviews_live_reviewed_at` (step 4) serves.
+  - Step 7 follows step 1, before #91 builds more of the web on `readToday`.
+  - Steps 2 and 3 are independent of #88–#91 and can land between them.
+  - Step 4 touches the app's database, sync and the three `StudyRepository` reads #95 added. It lands before #89 and #90, which read the same reviews by day, and before #90's statistics, which depend on the local purge's rule for reviews.
   - Step 5 lands with or before #91, which restructures the web.
   - Step 6 comes last.
 

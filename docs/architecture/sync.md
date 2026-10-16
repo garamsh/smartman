@@ -39,6 +39,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - `reviews_live_reviewed_at` on `reviewed_at` where `deleted_at IS NULL`;
   - one `{table}_unsynced` index per synced table, partial on `"dirty"`.
   - Each partial index is declared with `TableIndex.sql`. A query reaches it only by repeating its term, so the check for unsynced rows reads `WHERE "dirty"`, not `dirty = 1`.
+- **Study reads.** `StudyRepository.firstAnswersSince` groups only the cards answered since the day began, found through `reviews_live_reviewed_at`. The streak is read one probe of that index per study day, in place of reading every answer's time (`answerTimes`) ([`study.md`](study.md)).
 - **No new local checks.** A check added on the device would have to hold for every stored row, or the table rebuild aborts and the database no longer opens. The server's checks are the authority, and a row they refuse fails the run as `SyncFailed`, as any constraint does.
 - **Horizon.** A run first reads `sync_horizon()`. If a table's cursor is above zero but below the horizon, the device may have missed purged tombstones, so it rebuilds:
   - it pulls that table from revision 0, merging as usual;
