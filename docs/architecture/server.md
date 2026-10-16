@@ -6,9 +6,12 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 ### Location and migrations
 
-- The schema is defined by migrations in `supabase/migrations/`, applied in order by the Supabase CLI: `supabase db reset` locally, `supabase db push` to the remote project ([ADR 0010](adr/0010-server-schema-and-row-level-security.md)).
+- The schema is defined by migrations in `supabase/migrations/`, applied in order: by the Supabase CLI's `supabase db reset` locally ([ADR 0010](adr/0010-server-schema-and-row-level-security.md)), and by Supabase's GitHub integration on the remote project.
 - `supabase/seed.sql` holds no rows; the tests insert their own.
-- Only the PM pushes a migration to the remote project, after the pull request that adds it merges.
+- **Deploy path.** `main` is the deployed state. When a pull request adding a migration merges into `main`, Supabase's GitHub integration applies the migration to the production project; no one runs `supabase db push`. Its `Supabase Preview` check on the merge commit records the run.
+  - Measured: #115's merge `9b98292d2f642e794e5d32d969e3999629c5964b` at 13:55:55Z on 2026-10-16, with `Supabase Preview` running 13:56:27–13:56:35Z; #118's merge `a940deaef30ca376e34cd83631bd4112055cda6a` at 15:41:51Z, with the check 15:42:24–15:42:33Z. A `supabase db push` minutes after #115's merge reported "Remote database is up to date" (issue #117).
+  - To confirm a migration reached production: the `Supabase Preview` check succeeded on the merge commit, and `supabase migration list --linked` lists the migration's version in its remote column.
+- **Gate.** A pull request whose migration changes or deletes existing data merges only after the owner approves it, since merging deploys it; the PM asks with the reviewed pull request in hand. An additive migration needs no such approval, but it is deployed as merged, so it must be correct then. Workers make no change to the remote project.
 
 ### Tables
 
@@ -103,7 +106,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 ### Target data model (not built yet)
 
-[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been pushed. Until then the decisions above describe the database.
+[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been applied. Until then the decisions above describe the database.
 
 - **Key versions.** New ids are version 7; rows created before that keep their version 4 ids ([`sync.md`](sync.md)).
 - **Time.** Every time column is `timestamptz`, as today. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` stay the client's, at millisecond precision. `revision` stays the server's.
@@ -113,7 +116,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - Only account deletion removes reviews and the kept rows.
 - **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
 - **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count.
-- **Watching.** After each pushed migration, the PM reads Supabase's Security and Performance Advisors, and monthly reads `supabase inspect db outliers` and `index-stats`. Each lint is fixed or recorded in an issue.
+- **Watching.** After each applied migration, the PM reads Supabase's Security and Performance Advisors, and monthly reads `supabase inspect db outliers` and `index-stats`. Each lint is fixed or recorded in an issue.
 
 ### Streak
 
