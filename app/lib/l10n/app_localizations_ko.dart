@@ -290,17 +290,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get themeDark => '다크';
 
   @override
-  String todayBreakdown(int review, int fresh, int minutes) {
-    return '복습 $review · 새 카드 $fresh · 약 $minutes분';
-  }
-
-  @override
   String myDecks(int count) {
     return '내 덱 $count';
   }
-
-  @override
-  String get selectHint => '길게 눌러 여러 덱 선택';
 
   @override
   String cardCount(int count) {
@@ -316,15 +308,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get createFromPhoto => '사진으로 만들기';
 
   @override
-  String get addFromPhoto => '사진으로 추가';
-
-  @override
   String get backlogPaused => '밀린 복습을 마칠 때까지 새 카드는 쉬어요.';
-
-  @override
-  String studyCount(int count) {
-    return '학습하기 · $count장';
-  }
 
   @override
   String get searchCards => '검색';
@@ -673,9 +657,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get todayTitle => '오늘 할 카드';
 
   @override
-  String get todayCountUnit => '장';
-
-  @override
   String get emptyHomeTitle => '첫 덱을 만들어 볼까요?';
 
   @override
@@ -692,21 +673,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get newDeckBody => '이름은 나중에도 바꿀 수 있어요.';
-
-  @override
-  String statCards(int count) {
-    return '카드 $count';
-  }
-
-  @override
-  String statReview(int count) {
-    return '복습 $count';
-  }
-
-  @override
-  String statNew(int count) {
-    return '새 카드 $count';
-  }
 
   @override
   String consentNotice(String terms, String privacy) {
@@ -900,4 +866,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get noNextReview => '앞으로 7일 동안 복습할 카드가 없어요';
+
+  @override
+  String get backlogTitle => '다시 시작하면 돼요';
+
+  @override
+  String backlogBody(int count) {
+    return '밀린 복습 $count장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.';
+  }
+
+  @override
+  String backlogStudy(int count, int minutes) {
+    return '$count장 학습 · 약 $minutes분';
+  }
 }

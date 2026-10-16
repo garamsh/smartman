@@ -171,11 +171,11 @@ void main() {
         const CustomSemanticsAction(label: 'Edit card'),
       );
       expect(node.getSemanticsData().customSemanticsActionIds, contains(edit));
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(
-        node.id,
-        SemanticsAction.customAction,
-        edit,
-      );
+      tester
+          .renderObject(find.byType(CardAnswerRow).first)
+          .owner!
+          .semanticsOwner!
+          .performAction(node.id, SemanticsAction.customAction, edit);
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
       semantics.dispose();

@@ -15,8 +15,9 @@ import '../../sync/sync.dart';
 import 'hero.dart';
 
 /// The 오늘 tab over [decks]: the today card, the next seven days, and the
-/// decks that hold cards for today; once today's cards are done, the done
-/// card, the seven days and 계속 학습.
+/// decks that hold cards for today; in a backlog, the backlog card in place of
+/// the today card; once today's cards are done, the done card, the seven days
+/// and 계속 학습.
 class TodayTab extends StatelessWidget {
   const TodayTab({super.key, required this.decks});
 
@@ -55,6 +56,15 @@ class TodayTab extends StatelessWidget {
                       size: AppButtonSize.cta,
                       onPressed: () => _study(context, all),
                     ),
+                  ],
+                  TodayOverview(count: TodayCounted(backlog: true)) => [
+                    _BacklogCard(
+                      overview: overview,
+                      onStudy: () => _study(context, all),
+                    ),
+                    const SizedBox(height: AppSpace.s12),
+                    _Forecast(overview: overview),
+                    _TodayDecks(decks: decks),
                   ],
                   TodayOverview() => [
                     _TodayCard(
@@ -208,9 +218,94 @@ class _TodayCard extends StatelessWidget {
             Text(l10n.goalLine(goal.done, goal.goal), style: quiet),
           ],
         ),
-        if (count.backlog) Text(l10n.backlogPaused, style: quiet),
         AppButton(
           label: l10n.studyAll,
+          icon: LucideIcons.play,
+          variant: AppButtonVariant.onHero,
+          onPressed: onStudy,
+        ),
+      ],
+    );
+  }
+}
+
+/// In a backlog of reviews, on the navy card: the mascot cheering, that the
+/// user can pick up again, how many reviews are overdue and that new cards
+/// pause, and the button that studies them, with their minutes.
+class _BacklogCard extends StatelessWidget {
+  const _BacklogCard({required this.overview, required this.onStudy});
+
+  final TodayOverview overview;
+  final VoidCallback onStudy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final count = overview.count;
+    return _HeroCard(
+      children: [
+        Row(
+          spacing: AppSpace.s16,
+          children: [
+            ExcludeSemantics(
+              child: SizedBox.square(
+                dimension: AppSize.mascotGuide,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Mascot(size: AppSize.mascotGuide, fill: colors.surface),
+                    Positioned(
+                      right: -AppSpace.s4,
+                      bottom: -AppSpace.s4,
+                      child: Container(
+                        width: AppSpace.s24,
+                        height: AppSpace.s24,
+                        decoration: ShapeDecoration(
+                          color: colors.tintAmber,
+                          shape: const CircleBorder(),
+                        ),
+                        child: Icon(
+                          LucideIcons.check,
+                          size: AppSpace.s16,
+                          color: colors.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: AppSpace.s4,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      l10n.backlogTitle,
+                      style: AppType.headline.copyWith(color: colors.onHero),
+                    ),
+                  ),
+                  Text(
+                    l10n.backlogBody(count.total),
+                    style: AppType.secondary.copyWith(
+                      color: heroQuiet(colors),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (overview.streak > 0)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _StreakChip(days: overview.streak, onHero: true),
+          ),
+        AppButton(
+          label: l10n.backlogStudy(count.total, count.minutes),
           icon: LucideIcons.play,
           variant: AppButtonVariant.onHero,
           onPressed: onStudy,

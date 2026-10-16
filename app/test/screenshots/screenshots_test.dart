@@ -368,6 +368,57 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('the today tab in a backlog in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow.subtract(const Duration(days: 90)),
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        for (final (name, count) in [('영단어 기본', 52), ('토익 빈출', 32)]) {
+          final deck = await repository.createDeck(name);
+          for (var i = 0; i < count; i++) {
+            final saved = await repository.addCard(
+              deck.id,
+              front: [TextContent('$name $i')],
+              back: [TextContent('$i')],
+            );
+            if (saved case CardSaved(:final card)) {
+              // Overdue after a month's interval: far more than three days'
+              // load.
+              await storeState(db, card.id, due: homeNow, days: 30);
+            }
+          }
+        }
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            ...homeOverrides(db),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await shot(tester, '16d-today-backlog');
+      await unmount(tester);
+    });
+
     testWidgets('photo import in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
@@ -513,6 +564,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text('영단어 기본'));
       await tap(tester, find.byTooltip(ko.deckActions));
       await shot(tester, '25-deck-menu-publish');
@@ -531,7 +583,7 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '28-deck-list-public');
 
-      await tap(tester, find.byTooltip(ko.browse));
+      await tap(tester, find.text(ko.browsePublicDecks));
       await shot(tester, '29-browse');
       await tap(tester, find.text('스페인어 동물'));
       await shot(tester, '30-public-deck');

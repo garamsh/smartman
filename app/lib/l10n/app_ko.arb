@@ -200,18 +200,11 @@
   "@themeLight": {"description": "Theme choice: always light."},
   "themeDark": "다크",
   "@themeDark": {"description": "Theme choice: always dark."},
-  "todayBreakdown": "복습 {review} · 새 카드 {fresh} · 약 {minutes}분",
-  "@todayBreakdown": {
-    "description": "Today card line under the count: due reviews, new cards, and the minutes the session takes at the user's pace.",
-    "placeholders": {"review": {"type": "int"}, "fresh": {"type": "int"}, "minutes": {"type": "int"}}
-  },
   "myDecks": "내 덱 {count}",
   "@myDecks": {
     "description": "Label above the deck rows, with how many decks there are.",
     "placeholders": {"count": {"type": "int"}}
   },
-  "selectHint": "길게 눌러 여러 덱 선택",
-  "@selectHint": {"description": "Hint beside the deck rows label: a long-press selects several decks."},
   "cardCount": "카드 {count}장",
   "@cardCount": {
     "description": "How many cards a deck holds, under its name.",
@@ -224,16 +217,9 @@
   },
   "createFromPhoto": "사진으로 만들기",
   "@createFromPhoto": {"description": "Deck list bottom-bar button that creates a deck from a photo."},
-  "addFromPhoto": "사진으로 추가",
-  "@addFromPhoto": {"description": "Card list bottom-bar button that adds cards from a photo."},
   "backlogPaused": "밀린 복습을 마칠 때까지 새 카드는 쉬어요.",
   "@backlogPaused": {
     "description": "Sentence under the today count while so many reviews are due that a session takes no new card."
-  },
-  "studyCount": "학습하기 · {count}장",
-  "@studyCount": {
-    "description": "Deck screen button that studies the deck, with how many cards the session would study.",
-    "placeholders": {"count": {"type": "int"}}
   },
   "searchCards": "검색",
   "@searchCards": {"description": "Hint of the card list search field."},
@@ -482,8 +468,6 @@
   "@unpublished": {"description": "After a deck was made private."},
   "todayTitle": "오늘 할 카드",
   "@todayTitle": {"description": "Today card's heading on the home screen, above the count."},
-  "todayCountUnit": "장",
-  "@todayCountUnit": {"description": "Unit after the large count on the today card: cards."},
   "emptyHomeTitle": "첫 덱을 만들어 볼까요?",
   "@emptyHomeTitle": {"description": "Home screen heading before the user has any deck."},
   "emptyHomeBody": "단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.",
@@ -496,21 +480,6 @@
   "@newDeckTitle": {"description": "Title of the sheet that names a new deck."},
   "newDeckBody": "이름은 나중에도 바꿀 수 있어요.",
   "@newDeckBody": {"description": "Line under the new-deck sheet's title."},
-  "statCards": "카드 {count}",
-  "@statCards": {
-    "description": "Deck screen pill: how many cards the deck holds.",
-    "placeholders": {"count": {"type": "int"}}
-  },
-  "statReview": "복습 {count}",
-  "@statReview": {
-    "description": "Deck screen pill: how many cards are due now.",
-    "placeholders": {"count": {"type": "int"}}
-  },
-  "statNew": "새 카드 {count}",
-  "@statNew": {
-    "description": "Deck screen pill: how many new cards a session would study now.",
-    "placeholders": {"count": {"type": "int"}}
-  },
   "consentNotice": "계속하면 {terms}과 {privacy}에 동의하는 것으로 봐요.",
   "@consentNotice": {
     "description": "Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.",
@@ -618,5 +587,11 @@
   "nextReview": "다음 복습은 {day} · {cards}장, 약 {minutes}분",
   "@nextReview": {"description": "On the done card: when the next cards fall due, how many, and their minutes.", "placeholders": {"day": {"type": "String"}, "cards": {"type": "int"}, "minutes": {"type": "int"}}},
   "noNextReview": "앞으로 7일 동안 복습할 카드가 없어요",
-  "@noNextReview": {"description": "On the done card when no card falls due in the next seven days."}
+  "@noNextReview": {"description": "On the done card when no card falls due in the next seven days."},
+  "backlogTitle": "다시 시작하면 돼요",
+  "@backlogTitle": {"description": "Heading of the today card in a backlog."},
+  "backlogBody": "밀린 복습 {count}장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.",
+  "@backlogBody": {"description": "Under the backlog heading: how many reviews are overdue, in what order, and that new cards pause.", "placeholders": {"count": {"type": "int"}}},
+  "backlogStudy": "{count}장 학습 · 약 {minutes}분",
+  "@backlogStudy": {"description": "The backlog card's button: how many cards and their minutes.", "placeholders": {"count": {"type": "int"}, "minutes": {"type": "int"}}}
 }

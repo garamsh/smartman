@@ -305,17 +305,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeDark => 'Dark';
 
   @override
-  String todayBreakdown(int review, int fresh, int minutes) {
-    return '$review to review · $fresh new · about $minutes min';
-  }
-
-  @override
   String myDecks(int count) {
     return 'My decks $count';
   }
-
-  @override
-  String get selectHint => 'Long-press to select several decks';
 
   @override
   String cardCount(int count) {
@@ -337,16 +329,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createFromPhoto => 'Create from photo';
 
   @override
-  String get addFromPhoto => 'Add from photo';
-
-  @override
   String get backlogPaused =>
       'New cards wait until you catch up on your reviews.';
-
-  @override
-  String studyCount(int count) {
-    return 'Study · $count';
-  }
 
   @override
   String get searchCards => 'Search';
@@ -748,9 +732,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todayTitle => 'Today\'s cards';
 
   @override
-  String get todayCountUnit => 'cards';
-
-  @override
   String get emptyHomeTitle => 'Shall we make your first deck?';
 
   @override
@@ -768,21 +749,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newDeckBody => 'You can change the name later.';
-
-  @override
-  String statCards(int count) {
-    return '$count cards';
-  }
-
-  @override
-  String statReview(int count) {
-    return '$count to review';
-  }
-
-  @override
-  String statNew(int count) {
-    return '$count new';
-  }
 
   @override
   String consentNotice(String terms, String privacy) {
@@ -989,4 +955,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noNextReview => 'No reviews in the next 7 days';
+
+  @override
+  String get backlogTitle => 'Pick up where you left off';
+
+  @override
+  String backlogBody(int count) {
+    return '$count overdue reviews, most urgent first. New cards wait for now.';
+  }
+
+  @override
+  String backlogStudy(int count, int minutes) {
+    return 'Study $count · about $minutes min';
+  }
 }

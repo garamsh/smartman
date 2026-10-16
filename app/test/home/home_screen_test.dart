@@ -3,7 +3,6 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
@@ -330,9 +329,9 @@ void main() {
     );
 
     testWidgets(
-      'in a backlog the today card says new cards wait, and not otherwise',
+      'in a backlog the backlog card counts the overdue reviews, says new cards wait, and studies every deck, and not otherwise',
       (tester) async {
-        const paused = 'New cards wait until you catch up on your reviews.';
+        const title = 'Pick up where you left off';
         // Seven reviews due after 30-day intervals are far more than three
         // days' load, so the new card waits.
         var list = await _open(
@@ -342,13 +341,21 @@ void main() {
           dueDays: 30,
         );
 
-        expect(find.bySemanticsLabel('7 cards for today'), findsOneWidget);
-        expect(find.text(paused), findsOneWidget);
+        expect(find.text(title), findsOneWidget);
+        expect(
+          find.text(
+            '7 overdue reviews, most urgent first. New cards wait for now.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Study all'), findsNothing);
+        // Seven cards at 10 s each, about 2 minutes.
+        await list.tap('Study 7 · about 2 min');
+        expect(list.session, list.ids.values.toSet());
         await list.close();
 
         // Control: the same reviews after one-day intervals are within three
-        // days' load, so the card takes the new card and has no such
-        // sentence.
+        // days' load, so the today card takes the new card.
         list = await _open(
           tester,
           fresh: {'Gamma': 1},
@@ -356,7 +363,7 @@ void main() {
         );
 
         expect(find.bySemanticsLabel('8 cards for today'), findsOneWidget);
-        expect(find.text(paused), findsNothing);
+        expect(find.text(title), findsNothing);
         await list.close();
       },
     );

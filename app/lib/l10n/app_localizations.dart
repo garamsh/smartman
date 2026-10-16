@@ -577,23 +577,11 @@ abstract class AppLocalizations {
   /// **'다크'**
   String get themeDark;
 
-  /// Today card line under the count: due reviews, new cards, and the minutes the session takes at the user's pace.
-  ///
-  /// In ko, this message translates to:
-  /// **'복습 {review} · 새 카드 {fresh} · 약 {minutes}분'**
-  String todayBreakdown(int review, int fresh, int minutes);
-
   /// Label above the deck rows, with how many decks there are.
   ///
   /// In ko, this message translates to:
   /// **'내 덱 {count}'**
   String myDecks(int count);
-
-  /// Hint beside the deck rows label: a long-press selects several decks.
-  ///
-  /// In ko, this message translates to:
-  /// **'길게 눌러 여러 덱 선택'**
-  String get selectHint;
 
   /// How many cards a deck holds, under its name.
   ///
@@ -613,23 +601,11 @@ abstract class AppLocalizations {
   /// **'사진으로 만들기'**
   String get createFromPhoto;
 
-  /// Card list bottom-bar button that adds cards from a photo.
-  ///
-  /// In ko, this message translates to:
-  /// **'사진으로 추가'**
-  String get addFromPhoto;
-
   /// Sentence under the today count while so many reviews are due that a session takes no new card.
   ///
   /// In ko, this message translates to:
   /// **'밀린 복습을 마칠 때까지 새 카드는 쉬어요.'**
   String get backlogPaused;
-
-  /// Deck screen button that studies the deck, with how many cards the session would study.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습하기 · {count}장'**
-  String studyCount(int count);
 
   /// Hint of the card list search field.
   ///
@@ -1255,12 +1231,6 @@ abstract class AppLocalizations {
   /// **'오늘 할 카드'**
   String get todayTitle;
 
-  /// Unit after the large count on the today card: cards.
-  ///
-  /// In ko, this message translates to:
-  /// **'장'**
-  String get todayCountUnit;
-
   /// Home screen heading before the user has any deck.
   ///
   /// In ko, this message translates to:
@@ -1296,24 +1266,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이름은 나중에도 바꿀 수 있어요.'**
   String get newDeckBody;
-
-  /// Deck screen pill: how many cards the deck holds.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드 {count}'**
-  String statCards(int count);
-
-  /// Deck screen pill: how many cards are due now.
-  ///
-  /// In ko, this message translates to:
-  /// **'복습 {count}'**
-  String statReview(int count);
-
-  /// Deck screen pill: how many new cards a session would study now.
-  ///
-  /// In ko, this message translates to:
-  /// **'새 카드 {count}'**
-  String statNew(int count);
 
   /// Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.
   ///
@@ -1620,6 +1572,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'앞으로 7일 동안 복습할 카드가 없어요'**
   String get noNextReview;
+
+  /// Heading of the today card in a backlog.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 시작하면 돼요'**
+  String get backlogTitle;
+
+  /// Under the backlog heading: how many reviews are overdue, in what order, and that new cards pause.
+  ///
+  /// In ko, this message translates to:
+  /// **'밀린 복습 {count}장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.'**
+  String backlogBody(int count);
+
+  /// The backlog card's button: how many cards and their minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}장 학습 · 약 {minutes}분'**
+  String backlogStudy(int count, int minutes);
 }
 
 class _AppLocalizationsDelegate
