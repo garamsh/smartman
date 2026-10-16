@@ -1,8 +1,8 @@
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:smartman/account/account.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/shared/database.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 import 'package:uuid/uuid.dart';

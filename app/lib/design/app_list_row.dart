@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
+import 'theme.dart';
 
 /// A row of a list: a rounded surface on the ground, tappable when [onTap] or
 /// [onLongPress] is given, with the row gap below it. [child] fills it.

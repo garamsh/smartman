@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../theme.dart';
 import 'app_button.dart';
+import 'theme.dart';
 
 /// Opens the sheet [builder] makes over the current screen, with the
 /// platform's sheet motion, or none under reduce motion. Resolves to what the

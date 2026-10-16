@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../account/account.dart';
-import '../../shared/database.dart';
+import '../../database/database.dart';
 import 'failure.dart';
 import 'server.dart';
 

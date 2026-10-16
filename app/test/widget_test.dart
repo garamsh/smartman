@@ -9,13 +9,13 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart' show DeckListScreen;
+import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/shared/theme.dart';
 import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
-import 'package:smartman/shared/ui/app_text_field.dart';
 
 import 'account/fake_account_service.dart';
 import 'sharing/fakes.dart';

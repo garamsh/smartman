@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 
-import '../../shared/database.dart';
+import '../../database/database.dart';
 import 'card_import.dart';
 import 'card_key.dart';
 import 'content.dart';

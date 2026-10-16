@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/session.dart';
 import 'package:smartman/study/src/session_scroll.dart';

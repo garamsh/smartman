@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
+import 'theme.dart';
 
 /// A label over a group of rows, read as a heading, with an optional
 /// [trailing] widget at its end.

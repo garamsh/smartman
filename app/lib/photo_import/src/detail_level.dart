@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 
 /// How much of a page's entry each card's answer says.
 enum DetailLevel {

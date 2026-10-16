@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
-import '../../shared/ui/app_list_row.dart';
+import '../../design/app_button.dart';
+import '../../design/app_list_row.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'photo.dart';
 
 /// The photo, "카드를 찾고 있어요", an indeterminate bar and skeleton rows

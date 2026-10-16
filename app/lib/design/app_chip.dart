@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
+import 'theme.dart';
 
 /// How a chip is coloured.
 enum AppChipTone {

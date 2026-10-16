@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
 
 /// Google's "Sign in with Google" button, full width: the "G" mark and
 /// [label] on the light button in the light theme and the dark one in the
@@ -64,4 +64,64 @@ class GoogleSignInButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Google's "Sign in with Google" button as its branding guidelines specify
+/// (developers.google.com/identity/branding-guidelines): each theme's fill,
+/// one-pixel stroke, label colour and "G" mark, the label's size, and the
+/// space around the mark per platform.
+final class GoogleButtonStyle {
+  const GoogleButtonStyle._({
+    required this.fill,
+    required this.stroke,
+    required this.label,
+    required this.mark,
+  });
+
+  /// The light button, drawn in the light theme.
+  static const light = GoogleButtonStyle._(
+    fill: Color(0xFFFFFFFF),
+    stroke: Color(0xFF747775),
+    label: Color(0xFF1F1F1F),
+    mark: 'assets/google/g_mark_light.png',
+  );
+
+  /// The dark button, drawn in the dark theme.
+  static const dark = GoogleButtonStyle._(
+    fill: Color(0xFF131314),
+    stroke: Color(0xFF8E918F),
+    label: Color(0xFFE3E3E3),
+    mark: 'assets/google/g_mark_dark.png',
+  );
+
+  /// The button of the theme [context] is drawn in.
+  static GoogleButtonStyle of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? dark : light;
+
+  final Color fill;
+  final Color stroke;
+  final Color label;
+
+  /// The "G" mark's asset, taken from Google's button for this theme.
+  final String mark;
+
+  /// The mark's width and height.
+  static const markSize = 20.0;
+
+  /// The label: medium weight, 14 on 20.
+  static const labelStyle = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 14,
+    height: 20 / 14,
+    fontWeight: FontWeight.w500,
+  );
+
+  /// The space before the mark, between the mark and the label, and after
+  /// the label: 16, 12 and 16 on iOS, 12, 10 and 12 elsewhere.
+  static ({double start, double gap, double end}) spacing(
+    TargetPlatform platform,
+  ) => switch (platform) {
+    TargetPlatform.iOS || TargetPlatform.macOS => (start: 16, gap: 12, end: 16),
+    _ => (start: 12, gap: 10, end: 12),
+  };
 }

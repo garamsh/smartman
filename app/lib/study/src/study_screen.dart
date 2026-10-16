@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'completion_card.dart';
 import 'current_card.dart';
 import 'failure.dart';
-import 'first_run_guide.dart';
 import 'failure_message.dart';
+import 'first_run_guide.dart';
 import 'providers.dart';
 import 'session.dart';
 import 'session_scroll.dart';

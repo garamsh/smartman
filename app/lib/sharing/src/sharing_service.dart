@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../account/account.dart';
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
+import '../../l10n/app_localizations.dart';
 import 'browse_screen.dart';
 import 'failure.dart';
 import 'failure_message.dart';
