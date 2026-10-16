@@ -96,12 +96,12 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 ### App: the `photo_import` domain
 
 - The app side is the domain `app/lib/photo_import/`; its public surface is `app/lib/photo_import/photo_import.dart`, with internals under `app/lib/photo_import/src/` ([`structure.md`](structure.md)). It exports:
-  - `PhotoImportScreen`, the screen `deck`'s `photoImportProvider` builds;
+  - `PhotoImportScreen`, and `photoImportProvider`, which builds it for a deck or for a new one, null while the app has no extraction client; the composition site overrides it with a builder over the client, and `home/`'s screens read it for their photo buttons ([`home.md`](home.md));
   - `ExtractionClient`, the seam to the function, `CandidateCard`, and `HttpExtractionClient`;
   - `DetailLevel`, and `detailLevelStorageKeys`, the key the device storage it is given must cache;
   - `PhotoSource` and `CameraSession`, the seam to the camera and the photo library, and `DevicePhotoSource`;
   - `JpegPhoto`, and the failures: `PhotoImportFailure` and its cases.
-- It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it.
+- It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it, and `home/` opens its screen.
 - The screen receives its client, its photo source, and the device storage the detail level is kept in; it constructs none of them.
 - The composition site, `app/lib/main.dart`, builds the client from the Supabase client `connectAccount` returns ([`account.md`](account.md)), without importing `supabase_flutter`:
   - the URL is `extractCardsUrl` of the client's public PostgREST URL, which swaps its `/rest/v1` suffix for `/functions/v1/extract-cards`, as the Supabase client builds both from the project URL;
@@ -142,7 +142,7 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
   - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));
   - "다시 찍기" at the top right returns to the camera;
   - "카드 n개 추가" counts the checked candidates not set to skip, and is disabled at 0.
-- **Saving** — one `DeckRepository.importCards` call, each answer as the review shows it, plain text as every import writes. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the deck screens open that deck's card list.
+- **Saving** — one `DeckRepository.importCards` call, each answer as the review shows it, plain text as every import writes. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the home and deck screens open that deck's screen.
 - Nothing is written before "카드 n개 추가": not the deck, not a card.
 
 #### Photo

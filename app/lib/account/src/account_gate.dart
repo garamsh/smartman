@@ -5,20 +5,14 @@ import 'account_state.dart';
 import 'providers.dart';
 import 'sign_in_screen.dart';
 
-/// Builds the app the gate opens while an account is signed in; the
-/// composition site overrides it, so this domain does not depend on the
-/// domains behind it.
-final signedInHomeProvider = Provider<Widget Function()>(
-  (ref) => throw UnimplementedError(
-    'signedInHomeProvider is overridden at the composition site',
-  ),
-);
-
-/// The app's root: the sign-in screen until an account is signed in, then the
-/// app. It shows whichever state the account is in now, so a restored session
-/// opens the app without waiting on the network.
+/// The app's root: the sign-in screen until an account is signed in, then
+/// [signedIn]. It shows whichever state the account is in now, so a restored
+/// session opens the app without waiting on the network.
 class AccountGate extends ConsumerWidget {
-  const AccountGate({super.key});
+  const AccountGate({super.key, required this.signedIn});
+
+  /// The app the gate opens while an account is signed in.
+  final Widget signedIn;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +23,7 @@ class AccountGate extends ConsumerWidget {
       }
     });
     return switch (ref.watch(accountStateProvider)) {
-      SignedIn() => ref.watch(signedInHomeProvider)(),
+      SignedIn() => signedIn,
       SignedOut() || AccountUnavailable() => const SignInScreen(),
     };
   }

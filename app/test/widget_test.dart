@@ -8,10 +8,10 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart'
-    show DeckListScreen, deckRepositoryProvider;
+import 'package:smartman/deck/deck.dart' show deckRepositoryProvider;
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
+import 'package:smartman/home/home.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/sharing/sharing.dart';
@@ -80,7 +80,7 @@ void main() {
 
   /// The brightness the deck list is drawn in.
   Brightness brightness(WidgetTester tester) =>
-      Theme.of(tester.element(find.byType(DeckListScreen))).brightness;
+      Theme.of(tester.element(find.byType(HomeScreen))).brightness;
 
   // Unmounting the scope cancels drift's stream queries, whose cleanup timer
   // must fire before the test body ends; disposing sync cancels the run a

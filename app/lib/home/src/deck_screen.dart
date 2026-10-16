@@ -2,36 +2,32 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
-import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
+import '../../design/bottom_actions.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'bottom_actions.dart';
-import 'card_editor_screen.dart';
-import 'content.dart';
-import 'failure_message.dart';
-import 'model.dart';
-import 'name_sheet.dart';
-import 'providers.dart';
-import 'split_card.dart';
+import '../../photo_import/photo_import.dart';
+import '../../sharing/sharing.dart';
+import '../../study/study.dart';
 
 /// A deck's cards, searchable, under the action that studies them; opens a
 /// card for editing and the deck for renaming or deleting.
-class CardListScreen extends ConsumerStatefulWidget {
-  const CardListScreen({super.key, required this.deck});
+class DeckScreen extends ConsumerStatefulWidget {
+  const DeckScreen({super.key, required this.deck});
 
   final Deck deck;
 
   @override
-  ConsumerState<CardListScreen> createState() => _CardListScreenState();
+  ConsumerState<DeckScreen> createState() => _DeckScreenState();
 }
 
 enum _DeckAction { rename, publish, unpublish, delete }
 
-class _CardListScreenState extends ConsumerState<CardListScreen> {
+class _DeckScreenState extends ConsumerState<DeckScreen> {
   late String _name = widget.deck.name;
   String _query = '';
 
@@ -41,7 +37,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
     final colors = AppColors.of(context);
     final cards = ref.watch(cardsProvider(widget.deck.id));
     final photoImport = ref.watch(photoImportProvider);
-    final sharing = ref.watch(deckSharingProvider);
+    final sharing = ref.watch(sharingServiceProvider);
     final online = switch (ref.watch(onlineProvider)) {
       AsyncData(:final value) => value,
       _ => false,
@@ -111,9 +107,9 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
               ],
             ),
             const SizedBox(height: AppSpace.s16),
-            ref.watch(todayProvider)(
-              deck,
-              (context, count) => Column(
+            TodayCounter(
+              decks: deck,
+              builder: (context, count) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: AppSpace.s20,
                 children: [
@@ -263,14 +259,13 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
     );
     if (deck == null || deck.id == widget.deck.id || !mounted) return;
     await navigator.pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
+      MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
     );
   }
 
   void _study() => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) =>
-          ref.read(studyScreenProvider)(DeckSelection(widget.deck.id)),
+      builder: (_) => StudyScreen(decks: DeckSelection(widget.deck.id)),
     ),
   );
 
@@ -323,38 +318,6 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
   }
 }
 
-/// A card as two columns, front and back, split by a thin divider; read-only
-/// without [onTap]. On its own it is a row on its rounded surface; [grouped]
-/// it is one row of a group that draws the surface.
-class CardSplitRow extends StatelessWidget {
-  const CardSplitRow({
-    super.key,
-    required this.front,
-    required this.back,
-    this.onTap,
-    this.grouped = false,
-  });
-
-  final String front;
-  final String back;
-  final VoidCallback? onTap;
-  final bool grouped;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final content = SplitCard(
-      centred: false,
-      front: (context, _) => Text(front, style: AppType.label),
-      back: (context, _) =>
-          Text(back, style: AppType.secondary.copyWith(color: colors.ink2)),
-    );
-    final onTap = this.onTap;
-    if (!grouped) return AppRowSurface(onTap: onTap, child: content);
-    return onTap == null ? content : InkWell(onTap: onTap, child: content);
-  }
-}
-
 /// One count of the deck screen, on a white pill.
 class _StatPill extends StatelessWidget {
   const _StatPill(this.text);
@@ -376,14 +339,3 @@ class _StatPill extends StatelessWidget {
     ),
   );
 }
-
-/// One line of text for a card side; a block this version cannot show is
-/// named by its type.
-String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
-    .map(
-      (block) => switch (block) {
-        TextContent(:final text) => text,
-        UnsupportedContent(:final type) => l10n.unsupportedContent(type),
-      },
-    )
-    .join(' ');

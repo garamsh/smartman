@@ -22,3 +22,4 @@ export 'src/photo.dart' show JpegPhoto;
 export 'src/photo_import_screen.dart' show PhotoImportScreen;
 export 'src/photo_source.dart'
     show CameraSession, DevicePhotoSource, PhotoSource;
+export 'src/providers.dart' show photoImportProvider;

@@ -17,6 +17,7 @@ export 'src/model.dart'
         PublicDeckSummary,
         ReportOutcome,
         ReportReason;
+export 'src/providers.dart' show onlineProvider, sharingServiceProvider;
 export 'src/reachability.dart' show DeviceReachability, Reachability;
 export 'src/server.dart' show SharingServer;
 export 'src/sharing_service.dart'

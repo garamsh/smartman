@@ -6,9 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart' show DeckListScreen;
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
+import 'package:smartman/home/home.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
@@ -57,7 +57,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     final sync = ProviderScope.containerOf(
-      tester.element(find.byType(DeckListScreen)),
+      tester.element(find.byType(HomeScreen)),
     ).read(syncControllerProvider);
 
     await tapAndSettle(tester, 'Create by hand');

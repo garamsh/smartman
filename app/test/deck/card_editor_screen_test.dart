@@ -2,12 +2,11 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_editor_screen.dart';
 import 'package:smartman/deck/src/card_preview.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
 
-import 'deck_screens.dart';
+import '../home/deck_screens.dart';
 
 /// The text of the preview's two halves, question then answer.
 List<String?> _preview(WidgetTester tester) => [
