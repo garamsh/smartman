@@ -23,12 +23,13 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - `sync_state` holds at most one row: the owning account's id, and per table the pull cursor, the highest server `revision` applied. No row means no account owns the database.
 - Schema v5 adds `visibility`, `published_at` and `description` to `decks` and `origin_deck_id` to `cards`, and lets `source` be `shared`. The v4 to v5 migration leaves every deck private and rebuilds `cards` for its check, keeping every row ([`sharing.md`](sharing.md)).
 - Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
+- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored.
 
 ### Target local schema and sync (not built yet)
 
 [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides what follows. None of it is built: each bullet holds once its implementation issue merges. Until then the decisions above describe the app.
 
-- **Ids.** Ids stay `TEXT` on the device, always in canonical lowercase uuid form, since the server's `uuid` returns them that way ([`server.md`](server.md)). The app creates new ids with `uuid`'s `v7()`, and the web creates them with the `uuid` npm package's `v7()` in place of `crypto.randomUUID()`.
+- **Ids.** The app creates new ids with `uuid`'s `v7()`, and the web creates them with the `uuid` npm package's `v7()` in place of `crypto.randomUUID()`.
 - **Schema v6, time.** Schema v6 stores every `DateTime` column as ISO-8601 text in UTC (drift's `store_date_time_values_as_text`). Every write truncates to the millisecond, so text order is time order, and the precision matches what the web sends.
   - The v5 to v6 migration rebuilds each synced table with `TableMigration`, converting each column from Unix seconds. It keeps every row and its `dirty` flag, with foreign keys off, as the earlier rebuilds did.
   - Its migration test starts from v5 rows that are unsynced and tombstoned, and reads them back unchanged.
