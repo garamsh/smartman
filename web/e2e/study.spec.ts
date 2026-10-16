@@ -488,3 +488,76 @@ test("the account avatar stays a 56 px circle beside an email too long for one l
   if (!cardBox || !emailBox) throw new Error("the card and the email are visible above");
   expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
 });
+
+test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
+  test.use({ timezoneId: "UTC" });
+
+  test("the streak counts the server's earlier study days with today's answer", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!supabaseUrl || !supabaseKey || !baseURL) throw new Error("skipped above");
+    const email = `web-streak-${randomUUID()}@example.com`;
+    const password = "web-streak-password";
+    await page.goto("/login");
+    const userId = await signUpInBrowser(context, baseURL, email, password);
+
+    // The phone has synced one card, answered 24 and 48 hours ago: once on each of the two study
+    // days before today.
+    const phone = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+    expect((await phone.auth.signInWithPassword({ email, password })).error).toBeNull();
+    const deckId = randomUUID();
+    const cardId = randomUUID();
+    const now = Date.now();
+    const iso = (at: number) => new Date(at).toISOString();
+    const side = (text: string) => [{ type: "text", payload: { text } }];
+    expect(
+      (
+        await phone.from("decks").insert({
+          id: deckId,
+          user_id: userId,
+          name: "Streak",
+          created_at: iso(now),
+          updated_at: iso(now),
+        })
+      ).error,
+    ).toBeNull();
+    expect(
+      (
+        await phone.from("cards").insert({
+          id: cardId,
+          user_id: userId,
+          deck_id: deckId,
+          front: side("lundi"),
+          back: side("Monday"),
+          card_key: "lundi",
+          source: "manual",
+          created_at: iso(now - 3 * 86_400_000),
+          updated_at: iso(now),
+        })
+      ).error,
+    ).toBeNull();
+    expect(
+      (
+        await phone.from("reviews").insert(
+          [1, 2].map((days) => ({
+            id: randomUUID(),
+            user_id: userId,
+            card_id: cardId,
+            rating: "good",
+            reviewed_at: iso(now - days * 86_400_000),
+            duration_ms: 1_000,
+            updated_at: iso(now - days * 86_400_000),
+          })),
+        )
+      ).error,
+    ).toBeNull();
+
+    await page.goto(`/study?decks=${deckId}`);
+    await expect(page.getByRole("group", { name: "문제", exact: true })).toHaveText("lundi");
+    await page.keyboard.press("k");
+    const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
+    await expect(completion.getByText("연속 3일", { exact: true })).toBeVisible();
+  });
+});

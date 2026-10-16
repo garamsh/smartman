@@ -214,6 +214,27 @@ describe("the study page", () => {
       expect(screen.getByRole("link", { name: "그만하기" })).toHaveAttribute("href", "/");
     });
 
+    it("reads the streak before today in one request and counts today's answer with it", async () => {
+      seedDeck(postgrest, "d1", ["un"]);
+      // Yesterday and the day before hold an answer; the day before that does not.
+      postgrest.seed(
+        "reviews",
+        reviewRow("r-1", "d1-0", start - day, 1_000),
+        reviewRow("r-2", "d1-0", start - 2 * day, 1_000),
+        reviewRow("r-4", "d1-0", start - 4 * day, 1_000),
+      );
+      await open("d1");
+      await userEvent.setup().keyboard("k");
+
+      expect(completionLine()).toMatch(/연속 3일$/);
+      expect(
+        postgrest.requests.filter((request) => request === "POST rpc/study_streak_before"),
+      ).toHaveLength(1);
+      await waitFor(() => {
+        expect(postgrest.rows.reviews).toHaveLength(4);
+      });
+    });
+
     it("goes on as practice in the same screen on 계속 학습, over the cards answered today, writing nothing", async () => {
       seedToday();
       await open("d1");
