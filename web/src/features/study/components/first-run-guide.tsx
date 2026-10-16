@@ -1,6 +1,6 @@
 import { ArrowUp, Eye, MoveHorizontal } from "lucide-react";
 
-import { Mascot } from "@/components/brand";
+import { Mascot } from "@/design/brand";
 
 /** The three lines on how to study, each after its icon. */
 const lines = [

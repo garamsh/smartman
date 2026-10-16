@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/supabase/server";
 
 /** What the sign-out form shows after a failed attempt. */
 export type SignOutState = { error: string | null };

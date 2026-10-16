@@ -1,4 +1,4 @@
-import { Mascot } from "@/components/brand";
+import { Mascot } from "@/design/brand";
 
 /**
  * The home page of a user with no deck, as the phone's first run draws it: the mascot, the

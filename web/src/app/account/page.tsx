@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { Mascot } from "@/components/brand";
-import { LegalLinks } from "@/components/legal-links";
+import { Mascot } from "@/design/brand";
+import { LegalLinks } from "@/features/legal";
 
 import { Profile } from "./_components/profile";
 import { ProfileSkeleton } from "./_components/profile-skeleton";

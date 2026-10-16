@@ -1,4 +1,4 @@
-import type { Content } from "@/lib/card-content";
+import type { Content } from "./card-content";
 
 /** A deck's id, as the phone created it. */
 export type DeckId = string & { readonly brand: "DeckId" };

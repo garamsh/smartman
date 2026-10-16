@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { ThemeChoice } from "@/components/theme-choice";
-import { AccountAvatar, getSession, SignOutForm } from "@/features/auth";
+import { ThemeChoice } from "@/design/theme-choice";
+import { AccountAvatar, getSession, SignOutForm } from "@/features/account";
 
 /**
  * Who is signed in, read from the session on the server, the theme the web is drawn in, and the

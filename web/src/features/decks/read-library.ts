@@ -1,12 +1,12 @@
 import "server-only";
 
-import { requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
-import { selectAll } from "@/lib/supabase/select-all";
-import { field, parseTime } from "@/lib/supabase/row";
-import { createClient } from "@/lib/supabase/server";
-import { readUserId } from "@/lib/supabase/session";
+import { requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
+import { selectAll } from "@/supabase/select-all";
+import { field, parseTime } from "@/supabase/row";
+import { createClient } from "@/supabase/server";
+import { readUserId } from "@/supabase/session";
 
-import { parseContent } from "@/lib/card-content";
+import { parseContent } from "./card-content";
 import type { Card, CardEntry, CardId, Deck, DeckId, Library } from "./library";
 
 /** Why the library could not be read: a server failure, or a row this version cannot read. */

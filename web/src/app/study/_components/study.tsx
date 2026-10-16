@@ -1,6 +1,12 @@
 import { notFound } from "next/navigation";
 
-import { type DeckId, type LibraryFailure, ReadFailure, readLibrary } from "@/features/decks";
+import {
+  type DeckId,
+  describeContent,
+  type LibraryFailure,
+  ReadFailure,
+  readLibrary,
+} from "@/features/decks";
 import {
   type CardStates,
   readCardStates,
@@ -32,7 +38,11 @@ export async function Study({
   if ("failure" in today) return <Failure failure={today.failure} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
-  const { cards } = read.library;
+  // Each side's text for the client, which cannot import decks' entry point.
+  const cards = read.library.cards.map((card) => ({
+    ...card,
+    text: { front: describeContent(card.front), back: describeContent(card.back) },
+  }));
   const { day, answers, streakBefore, answeredBefore } = today.today;
   const queue = selectQueue(cards, states.states, day);
   const before: CardStates = {};

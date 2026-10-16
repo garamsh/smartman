@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/supabase/server";
 
 /**
  * Where Google sign-in returns through Supabase Auth: exchanges the code for a session

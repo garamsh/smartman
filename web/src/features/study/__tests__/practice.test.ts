@@ -1,17 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import type { Card, CardId, DeckId } from "@/features/decks";
+import type { CardId, DeckId } from "@/features/decks";
 
-import { type SessionPlan, StudySession } from "../session";
+import { type SessionPlan, type StudyCard, StudySession } from "../session";
 
 const start = Date.UTC(2026, 0, 15, 9);
 
-const card = (front: string): Card => ({
+const card = (front: string): StudyCard => ({
   id: front as CardId,
   deckId: "d1" as DeckId,
   front: [{ kind: "text", text: front }],
   back: [{ kind: "text", text: `${front} back` }],
   createdAt: start,
+  text: { front, back: `${front} back` },
 });
 
 /** A session over [fronts], each new, seeded at [seed]. */

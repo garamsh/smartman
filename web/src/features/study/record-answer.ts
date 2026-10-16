@@ -1,10 +1,10 @@
 "use server";
 
 import type { CardId } from "@/features/decks";
-import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
-import { field } from "@/lib/supabase/row";
-import { createClient } from "@/lib/supabase/server";
-import { readUserId } from "@/lib/supabase/session";
+import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
+import { field } from "@/supabase/row";
+import { createClient } from "@/supabase/server";
+import { readUserId } from "@/supabase/session";
 
 import {
   type RecordedAnswer,

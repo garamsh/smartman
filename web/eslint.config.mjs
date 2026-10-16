@@ -18,7 +18,7 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },
-  // A feature is reached only through index.ts and actions.ts; src/lib/ sits below every feature.
+  // A feature is reached only through index.ts and actions.ts; the foundations sit below every feature.
   {
     rules: {
       "no-restricted-imports": [
@@ -36,7 +36,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["src/lib/**", "src/components/**", "src/env.ts"],
+    files: ["src/design/**", "src/supabase/**", "src/env.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -45,7 +45,7 @@ const eslintConfig = defineConfig([
             {
               regex: "^@/(features|app)/",
               message:
-                "src/lib/ and src/components/ import no feature or route (docs/architecture/structure.md).",
+                "src/design/, src/supabase/ and src/env.ts import no feature or route (docs/architecture/structure.md).",
             },
           ],
         },

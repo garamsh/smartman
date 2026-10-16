@@ -1,11 +1,11 @@
 import "server-only";
 
 import type { CardId } from "@/features/decks";
-import { requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
-import { field, parseTime } from "@/lib/supabase/row";
-import { selectAll } from "@/lib/supabase/select-all";
-import { createClient } from "@/lib/supabase/server";
-import { readUserId } from "@/lib/supabase/session";
+import { requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
+import { field, parseTime } from "@/supabase/row";
+import { selectAll } from "@/supabase/select-all";
+import { createClient } from "@/supabase/server";
+import { readUserId } from "@/supabase/session";
 
 import type { CardState, CardStates } from "./queue";
 

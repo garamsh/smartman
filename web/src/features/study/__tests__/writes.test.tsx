@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Card, CardId, DeckId } from "@/features/decks";
+import type { CardId, DeckId } from "@/features/decks";
 import { day, start } from "@/testing/library";
 import { testUser } from "@/testing/mocks/handlers";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -13,6 +13,7 @@ import { signedInCookies } from "@/testing/session";
 import { StudyScreen } from "../components/study-screen";
 import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
 import type { CardState } from "../queue";
+import type { StudyCard } from "../session";
 
 /** A day with no answer stored in it before the session. */
 const noAnswerToday = {
@@ -27,12 +28,13 @@ vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const iso = (time: number) => new Date(time).toISOString();
 
-const card: Card = {
+const card: StudyCard = {
   id: "c1" as CardId,
   deckId: "d1" as DeckId,
   front: [{ kind: "text", text: "chat" }],
   back: [{ kind: "text", text: "cat" }],
   createdAt: start - day,
+  text: { front: "chat", back: "cat" },
 };
 
 /**

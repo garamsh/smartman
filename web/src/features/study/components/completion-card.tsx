@@ -4,7 +4,7 @@ import { Flame } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 
-import { Mascot } from "@/components/brand";
+import { Mascot } from "@/design/brand";
 
 import type { Completion } from "../session";
 

@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonLine } from "@/components/skeleton";
+import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
  * The account page while the session is read: the profile card, the theme choice and the
