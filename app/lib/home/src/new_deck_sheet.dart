@@ -50,9 +50,9 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
     case _NewDeck.photo when photoImport != null:
       await importDeckFromPhoto(context, photoImport);
     case _NewDeck.public when sharing != null:
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()));
     case _NewDeck.photo || _NewDeck.public || null:
       return;
   }

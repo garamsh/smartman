@@ -89,9 +89,7 @@ class _CardAnswerRowState extends State<CardAnswerRow> {
             child: Row(
               spacing: AppSpace.s12,
               children: [
-                Expanded(
-                  child: Text(widget.front, style: AppType.bodyStrong),
-                ),
+                Expanded(child: Text(widget.front, style: AppType.bodyStrong)),
                 if (_shown)
                   Expanded(
                     child: Text(

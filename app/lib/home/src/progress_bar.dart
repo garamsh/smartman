@@ -31,11 +31,9 @@ class ProgressBar extends StatelessWidget {
     final total = progress.total;
     return Semantics(
       container: true,
-      label: AppLocalizations.of(context).progressSemantics(
-        progress.mastered,
-        progress.learning,
-        progress.fresh,
-      ),
+      label: AppLocalizations.of(
+        context,
+      ).progressSemantics(progress.mastered, progress.learning, progress.fresh),
       excludeSemantics: true,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(height),
@@ -58,8 +56,7 @@ class ProgressBar extends StatelessWidget {
                           flex: progress.learning,
                           child: ColoredBox(color: ink.withValues(alpha: 0.45)),
                         ),
-                      if (progress.fresh > 0)
-                        Spacer(flex: progress.fresh),
+                      if (progress.fresh > 0) Spacer(flex: progress.fresh),
                     ],
                   ),
           ),

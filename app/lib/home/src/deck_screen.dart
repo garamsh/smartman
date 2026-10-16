@@ -186,18 +186,19 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   /// its answer hidden until tapped.
   List<Widget> _rows(AppLocalizations l10n, List<Card> cards) {
     final query = (_query ?? '').trim().toLowerCase();
-    final rows = [
-      for (final card in cards)
-        (
-          card: card,
-          front: describeContent(l10n, card.front),
-          back: describeContent(l10n, card.back),
-        ),
-    ].where(
-      (row) =>
-          row.front.toLowerCase().contains(query) ||
-          row.back.toLowerCase().contains(query),
-    );
+    final rows =
+        [
+          for (final card in cards)
+            (
+              card: card,
+              front: describeContent(l10n, card.front),
+              back: describeContent(l10n, card.back),
+            ),
+        ].where(
+          (row) =>
+              row.front.toLowerCase().contains(query) ||
+              row.back.toLowerCase().contains(query),
+        );
     if (rows.isEmpty) {
       return [
         Padding(
@@ -365,9 +366,7 @@ class _DeckTodayCard extends StatelessWidget {
                         message,
                         style: quiet,
                       ),
-                      TodayPending() => const SizedBox(
-                        height: AppSpace.s40,
-                      ),
+                      TodayPending() => const SizedBox(height: AppSpace.s40),
                     },
                     if (count case TodayCounted(backlog: true))
                       Text(l10n.backlogPaused, style: quiet),

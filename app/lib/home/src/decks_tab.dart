@@ -219,7 +219,10 @@ class _DeckProgress extends StatelessWidget {
       spacing: AppSpace.s4,
       children: [
         ExcludeSemantics(child: ProgressBar(progress: progress)),
-        Text(l10n.deckMastered(progress.total, progress.mastered), style: quiet),
+        Text(
+          l10n.deckMastered(progress.total, progress.mastered),
+          style: quiet,
+        ),
       ],
     );
   }

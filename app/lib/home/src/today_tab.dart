@@ -96,7 +96,9 @@ class TodayTab extends StatelessWidget {
                   // The card's height, so it does not jump.
                   OverviewPending() => [
                     const _HeroCard(
-                      children: [SizedBox(height: AppSize.heroSymbol + AppSpace.s40)],
+                      children: [
+                        SizedBox(height: AppSize.heroSymbol + AppSpace.s40),
+                      ],
                     ),
                   ],
                 },
@@ -290,9 +292,7 @@ class _BacklogCard extends StatelessWidget {
                   ),
                   Text(
                     l10n.backlogBody(count.total),
-                    style: AppType.secondary.copyWith(
-                      color: heroQuiet(colors),
-                    ),
+                    style: AppType.secondary.copyWith(color: heroQuiet(colors)),
                   ),
                 ],
               ),
@@ -327,10 +327,8 @@ class _GoalRing extends StatelessWidget {
     const size = AppSize.mascotMedium - AppSpace.s8;
     return Semantics(
       container: true,
-      label: AppLocalizations.of(context).goalRingSemantics(
-        goal.done,
-        goal.goal,
-      ),
+      label: AppLocalizations.of(context)
+          .goalRingSemantics(goal.done, goal.goal),
       excludeSemantics: true,
       child: SizedBox.square(
         dimension: size,
@@ -384,7 +382,13 @@ class _RingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     canvas.drawArc(rect, 0, 2 * pi, false, paint..color = track);
     if (fraction > 0) {
-      canvas.drawArc(rect, -pi / 2, 2 * pi * fraction, false, paint..color = ink);
+      canvas.drawArc(
+        rect,
+        -pi / 2,
+        2 * pi * fraction,
+        false,
+        paint..color = ink,
+      );
     }
   }
 
@@ -492,9 +496,8 @@ class _DoneCard extends StatelessWidget {
                   : l10n.nextReview(
                       next.after == 1
                           ? l10n.forecastTomorrow
-                          : DateFormat.EEEE(
-                              locale,
-                            ).format(overview.days[next.after]),
+                          : DateFormat.EEEE(locale)
+                                .format(overview.days[next.after]),
                       next.cards,
                       overview.minutesFor(next.cards),
                     ),
@@ -673,9 +676,7 @@ class _Forecast extends StatelessWidget {
                           ),
                           Text(
                             labels[index],
-                            style: AppType.micro.copyWith(
-                              color: colors.muted,
-                            ),
+                            style: AppType.micro.copyWith(color: colors.muted),
                           ),
                         ],
                       ),
