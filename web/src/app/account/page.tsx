@@ -7,10 +7,11 @@ import { Mascot } from "@/components/brand";
 import { LegalLinks } from "@/components/legal-links";
 
 import { Profile } from "./_components/profile";
+import { ProfileSkeleton } from "./_components/profile-skeleton";
 
 export const metadata: Metadata = { title: "계정 · smartman" };
 
-/** The signed-in account: who it is, signing out, and the legal links. */
+/** The signed-in account: who it is, the theme, signing out, and the legal links. */
 export default function AccountPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-list flex-col gap-section-gap px-gutter py-6">
@@ -24,7 +25,7 @@ export default function AccountPage() {
         </Link>
         <h1 className="text-title">계정</h1>
       </header>
-      <Suspense fallback={<p className="text-muted">계정을 불러오는 중이에요.</p>}>
+      <Suspense fallback={<ProfileSkeleton />}>
         <Profile />
       </Suspense>
       <footer className="mt-auto flex flex-col items-center gap-2 pt-10">
