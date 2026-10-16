@@ -10,6 +10,7 @@ import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
 
 import { Decks } from "../_components/decks";
+import { Study } from "../study/_components/study";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
@@ -299,17 +300,15 @@ describe("the deck list", () => {
     );
   });
 
-  it("with no card left today says the cards are done and offers 계속 학습 over every deck, whether or not one was answered today", async () => {
+  it("with no card left today says the cards are done and links 계속 학습 to the study page over every deck, which opens on nothing to study or on the completion card", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"), deckRow("d-es", "Spanish"));
     postgrest.seed("cards", cardRow("fr-later", "d-fr", "oiseau"));
     postgrest.seed("card_states", stateRow("fr-later", notDue));
-    // Answered yesterday: the study page says there is nothing to study.
+    // Answered yesterday: nothing was answered today.
     postgrest.seed("reviews", reviewRow("r-yesterday", "fr-later", start - day, 1_000));
 
     for (const answered of ["yesterday", "today"]) {
       if (answered === "today") {
-        // Answered an hour ago: the study page opens on the completion card.
-        cleanup();
         postgrest.seed("reviews", reviewRow("r-today", "fr-later", start - 3_600_000, 1_000));
       }
       await render(Decks, {});
@@ -318,11 +317,20 @@ describe("the deck list", () => {
         screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
         answered,
       ).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "계속 학습" }), answered).toHaveAttribute(
-        "href",
-        "/study?decks=d-fr,d-es",
-      );
       expect(screen.queryByRole("link", { name: "모두 학습" }), answered).not.toBeInTheDocument();
+      const href = screen.getByRole("link", { name: "계속 학습" }).getAttribute("href");
+      expect(href, answered).toBe("/study?decks=d-fr,d-es");
+
+      cleanup();
+      await render(Study, {
+        searchParams: Promise.resolve(Object.fromEntries(new URLSearchParams(href?.split("?")[1]))),
+      });
+      if (answered === "yesterday") {
+        expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
+      } else {
+        expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+      }
+      cleanup();
     }
   });
 
