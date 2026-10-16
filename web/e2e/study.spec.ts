@@ -270,7 +270,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "06c-study-nothing-today");
 
   await page.goto("/account");
-  await expect(page.getByRole("heading", { name: "계정", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "계정", exact: true })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
   await shot(page, "07-account");
