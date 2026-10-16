@@ -6,7 +6,8 @@ import Link from "next/link";
  * The home page's today card, on the brand's navy: what a session over every deck would study
  * now, split into due and new, about how many [minutes] it takes, whether new cards pause for a
  * [backlog] of reviews, and its button, with the symbol faint in the corner; with none, that
- * today's cards are done.
+ * today's cards are done, and 계속 학습, which opens the session on the completion card or on
+ * nothing to study.
  */
 export function TodayHeader({
   decks,
@@ -43,26 +44,24 @@ export function TodayHeader({
           오늘 할 카드를 다 했어요
         </h2>
       ) : (
-        <>
-          <div className="flex flex-col gap-1">
-            <p className="text-section">오늘 할 카드</p>
-            <h2 id="today-title" aria-label={`오늘 할 카드 ${String(total)}장`}>
-              <span className="text-figure">{total}</span> <span className="text-headline">장</span>
-            </h2>
-            <p className="text-secondary">
-              복습 {review} · 새 카드 {fresh} · 약 {minutes}분
-            </p>
-            {backlog && <p className="text-secondary">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>}
-          </div>
-          <Link
-            href={`/study?decks=${decks.map(encodeURIComponent).join(",")}`}
-            className="flex min-h-button items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero"
-          >
-            <Play aria-hidden className="size-small-icon" strokeWidth={2} />
-            모두 학습
-          </Link>
-        </>
+        <div className="flex flex-col gap-1">
+          <p className="text-section">오늘 할 카드</p>
+          <h2 id="today-title" aria-label={`오늘 할 카드 ${String(total)}장`}>
+            <span className="text-figure">{total}</span> <span className="text-headline">장</span>
+          </h2>
+          <p className="text-secondary">
+            복습 {review} · 새 카드 {fresh} · 약 {minutes}분
+          </p>
+          {backlog && <p className="text-secondary">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>}
+        </div>
       )}
+      <Link
+        href={`/study?decks=${decks.map(encodeURIComponent).join(",")}`}
+        className="flex min-h-button items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero"
+      >
+        <Play aria-hidden className="size-small-icon" strokeWidth={2} />
+        {total === 0 ? "계속 학습" : "모두 학습"}
+      </Link>
     </section>
   );
 }

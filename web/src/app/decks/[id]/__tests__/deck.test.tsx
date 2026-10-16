@@ -2,7 +2,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cardRow, day, deckRow, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -63,6 +63,37 @@ describe("the deck page", () => {
       "/study?decks=d-fr",
     );
     expect(rows()).toEqual(["Chat | Chat back", "chien | chien back", "oiseau | oiseau back"]);
+  });
+
+  it("with no card left today still links 학습하기 · 0장 to the study page, whether or not one was answered today", async () => {
+    postgrest.seed("decks", deckRow("d-done", "Done"));
+    postgrest.seed("cards", cardRow("c-done", "d-done", "fini"));
+    postgrest.seed(
+      "card_states",
+      stateRow("c-done", {
+        stability: 9,
+        difficulty: 5,
+        lastReview: start - day,
+        due: start + day,
+      }),
+    );
+    // Answered yesterday: the study page says there is nothing to study.
+    postgrest.seed("reviews", reviewRow("r-yesterday", "c-done", start - day, 1_000));
+
+    for (const answered of ["yesterday", "today"]) {
+      if (answered === "today") {
+        // Answered an hour ago: the study page opens on the completion card.
+        cleanup();
+        postgrest.seed("reviews", reviewRow("r-today", "c-done", start - 3_600_000, 1_000));
+      }
+      await open("d-done");
+
+      expect(pills(), answered).toEqual(["카드 1", "복습 0", "새 카드 0"]);
+      expect(screen.getByRole("link", { name: "학습하기 · 0장" }), answered).toHaveAttribute(
+        "href",
+        "/study?decks=d-done",
+      );
+    }
   });
 
   it("marks a deck its owner published with 공개 beside its name", async () => {

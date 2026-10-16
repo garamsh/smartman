@@ -299,6 +299,33 @@ describe("the deck list", () => {
     );
   });
 
+  it("with no card left today says the cards are done and offers 계속 학습 over every deck, whether or not one was answered today", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"), deckRow("d-es", "Spanish"));
+    postgrest.seed("cards", cardRow("fr-later", "d-fr", "oiseau"));
+    postgrest.seed("card_states", stateRow("fr-later", notDue));
+    // Answered yesterday: the study page says there is nothing to study.
+    postgrest.seed("reviews", reviewRow("r-yesterday", "fr-later", start - day, 1_000));
+
+    for (const answered of ["yesterday", "today"]) {
+      if (answered === "today") {
+        // Answered an hour ago: the study page opens on the completion card.
+        cleanup();
+        postgrest.seed("reviews", reviewRow("r-today", "fr-later", start - 3_600_000, 1_000));
+      }
+      await render(Decks, {});
+
+      expect(
+        screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
+        answered,
+      ).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "계속 학습" }), answered).toHaveAttribute(
+        "href",
+        "/study?decks=d-fr,d-es",
+      );
+      expect(screen.queryByRole("link", { name: "모두 학습" }), answered).not.toBeInTheDocument();
+    }
+  });
+
   it("shows the first-run invitation in place of the today card and the list when there is no deck", async () => {
     const title = "첫 덱을 만들어 볼까요?";
     const pointer =

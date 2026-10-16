@@ -59,11 +59,7 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
           <p className="text-secondary text-muted">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
         )}
       </div>
-      <StudyLink
-        decks={[deck.id]}
-        cards={today.review + today.fresh}
-        label={`학습하기 · ${String(today.review + today.fresh)}장`}
-      />
+      <StudyLink decks={[deck.id]} label={`학습하기 · ${String(today.review + today.fresh)}장`} />
       <CardList cards={cards} />
     </>
   );
