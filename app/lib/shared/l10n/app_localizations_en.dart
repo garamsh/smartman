@@ -187,13 +187,33 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get toggleAnswer => 'change the answer';
-
-  @override
   String get showWholeCard => 'show the whole card';
 
   @override
-  String get answerChanged => 'Changed';
+  String get changeToKnow => 'Change to Know';
+
+  @override
+  String get changeToDontKnow => 'Change to Don\'t know';
+
+  @override
+  String get changingToKnow => 'Change to Know';
+
+  @override
+  String get changingToDontKnow => 'Change to Don\'t know';
+
+  @override
+  String get backToCurrent => 'Current card';
+
+  @override
+  String get guideReveal =>
+      'Try to recall it first, then tap the card to see the answer';
+
+  @override
+  String get guideSwipe => 'Swipe right if you know it, left if you don\'t';
+
+  @override
+  String get guideEarlier =>
+      'Pull down to see earlier cards and change their answers';
 
   @override
   String get answerNotSaved =>
@@ -763,12 +783,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String statNew(int count) {
     return '$count new';
   }
-
-  @override
-  String get swipeDontKnowHint => 'Don\'t know';
-
-  @override
-  String get swipeKnowHint => 'Know';
 
   @override
   String consentNotice(String terms, String privacy) {

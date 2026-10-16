@@ -5,14 +5,11 @@ import '../../shared/theme.dart';
 /// The sizes and timings of the study screen, in one place; its colours are
 /// the app theme's [AppColors].
 abstract final class StudyStyle {
-  /// Space between a card and the screen's left and right edges.
+  /// Space between the current card and the screen's left and right edges.
   static const cardMargin = AppSpace.gutter;
   static const cardRadius = AppRadius.card;
   static const previousRadius = AppRadius.previous;
   static const cardPadding = AppSpace.s16;
-
-  /// Space between two content blocks, and inside a block's placeholder.
-  static const blockGap = AppSpace.s8;
 
   /// The current card's height before its content grows it.
   static const currentMinHeight = 200.0;
@@ -24,41 +21,75 @@ abstract final class StudyStyle {
   /// screen height.
   static const currentCenterFraction = 0.57;
 
-  /// The least space kept below the current card, which holds the hint row
-  /// under it.
-  static const currentBottomGap = AppSpace.s16 + hintGap + AppSize.smallIcon;
+  /// The least space kept below the answer buttons.
+  static const currentBottomGap = AppSpace.s16;
+
+  /// Space between the current card and the answer buttons under it.
+  static const answerGap = AppSpace.s20;
+
+  /// The answer buttons' height.
+  static const answerHeight = AppSize.tapTarget;
+
+  /// The answer buttons' row under the current card, with the space above
+  /// it: each button's tap target is padded to Material's least interactive
+  /// size.
+  static const answerRow = answerGap + kMinInteractiveDimension;
 
   /// A card half narrower than this, in logical pixels at text scale 1, puts
   /// the answer under the question.
   static const minHalfWidth = 140.0;
 
-  static const previousHeight = 150.0;
+  /// A previous card's height, and its space from the screen's edges.
+  static const previousHeight = 120.0;
+  static const previousMargin = AppSpace.s24;
 
-  /// How far each previous card overlaps the one above it.
-  static const previousOverlap = 30.0;
+  /// A previous card's line around it.
+  static const previousLine = 1.5;
+
+  /// The space each previous card takes in the column, as a fraction of the
+  /// column's height: wide enough that the view at rest shows one previous
+  /// card, and scrolled back three cards.
+  static const previousSlotFraction = 0.36;
 
   /// Space between the nearest previous card and the current card.
   static const previousGap = AppSpace.s12;
   static const previousLines = 2;
 
-  /// How much each step away from the current card shrinks a previous card,
-  /// down to [depthScaleFloor].
-  static const depthScaleStep = 0.04;
-  static const depthScaleFloor = 0.8;
+  /// A previous card's scale at rest, and away from the centre while the
+  /// column is scrolled back; the centred one is at full size.
+  static const previousRestScale = 0.94;
+  static const previousSideScale = 0.9;
 
-  /// How many steps away a previous card reaches its greyest and blurriest.
-  static const depthSteps = 5;
-  static const depthMaxBlur = 1.2;
+  /// A previous card's opacity away from the centre while the column is
+  /// scrolled back.
+  static const previousSideOpacity = 0.72;
 
-  static const dotSize = AppSize.dot;
+  /// The grade chip on a previous card's top edge: its height, its icon and
+  /// how far it stands in from the card's right edge.
+  static const chipHeight = AppSpace.s24;
+  static const chipIcon = AppSpace.s12;
+  static const chipInset = AppSpace.s16;
+
   static const topBarHeight = 56.0;
   static const progressHeight = AppSize.progress;
 
   /// How far the divider between a card's halves stops short of its edges.
   static const dividerInset = AppSpace.s28;
 
-  /// Space between the current card and the hint row under it.
-  static const hintGap = AppSpace.s12;
+  /// How far a previous card's divider stops short of its edges.
+  static const previousDividerInset = AppSpace.s20;
+
+  /// The eye in the hidden answer's half.
+  static const hiddenAnswerIcon = AppSpace.s24;
+
+  /// The fade under the top bar, over cards scrolled beneath it.
+  static const topFade = AppSpace.s40;
+
+  /// The fade above "지금 카드로", over the cards behind it.
+  static const bottomFade = AppSpace.s40;
+
+  /// The first-run guide's icon tile.
+  static const guideTile = AppSpace.s32;
 
   /// The drag after which the answer chip and tint appear.
   static const dragFeedbackDistance = 40.0;
@@ -72,6 +103,9 @@ abstract final class StudyStyle {
 
   /// The card's tilt, in radians, per logical pixel of drag.
   static const tiltPerPixel = 0.0006;
+
+  /// How far a previous card follows a drag toward the answer it already has.
+  static const sameAnswerResistance = 0.25;
 
   static const flyDuration = Duration(milliseconds: 200);
   static const settleDuration = Duration(milliseconds: 300);
@@ -90,13 +124,4 @@ abstract final class StudyStyle {
   /// The current card's shadow, in the theme's [AppColors.shadow].
   static List<BoxShadow> currentShadow(AppColors colors) =>
       AppShadow.raised(colors);
-
-  /// A previous card's shadow, in the theme's [AppColors.shadow].
-  static List<BoxShadow> previousShadow(AppColors colors) => [
-    BoxShadow(
-      color: colors.shadow.withValues(alpha: 0.06),
-      blurRadius: 8,
-      offset: const Offset(0, 2),
-    ),
-  ];
 }

@@ -65,3 +65,41 @@ describe("the text the login, account and empty home pages draw", () => {
     }
   });
 });
+
+/** The text the study screen draws on its grades and answer buttons, by where it appears. */
+const studyPairs: [string, string, string][] = [
+  ["a 안다 card's front", "ink", "know-card"],
+  ["a 안다 card's back", "ink-2", "know-card"],
+  ["a 모른다 card's front", "ink", "dont-know-card"],
+  ["a 모른다 card's back", "ink-2", "dont-know-card"],
+  ["the 안다 chip's word", "on-know", "know"],
+  ["the 모른다 chip's word", "on-dont-know-text", "dont-know-text"],
+  ["the 안다 button's word", "on-know-tint", "tint-green"],
+  ["the 모른다 button's word", "on-dont-know-tint", "tint-red"],
+];
+
+/** The marks the study screen draws, at 3:1 against what is around them. */
+const studyMarks: [string, string, string][] = [
+  ["the 안다 chip on its card", "know", "know-card"],
+  ["the 안다 chip on the ground", "know", "ground"],
+  ["the 모른다 chip on its card", "dont-know-text", "dont-know-card"],
+  ["the 모른다 chip on the ground", "dont-know-text", "ground"],
+  ["the streak's flame on the completion card", "streak", "surface"],
+];
+
+describe("the study screen's grades, answer buttons and streak", () => {
+  it.each(["light", "dark"] as const)(
+    "meet WCAG AA, 4.5:1 for text and 3:1 for marks, in the %s theme",
+    (theme) => {
+      const set = themes[theme];
+      for (const [where, text, ground] of studyPairs) {
+        const ratio = contrast(set.get(text) ?? "#000000", set.get(ground) ?? "#000000");
+        expect({ where, aa: ratio >= 4.5 }).toEqual({ where, aa: true });
+      }
+      for (const [where, mark, ground] of studyMarks) {
+        const ratio = contrast(set.get(mark) ?? "#000000", set.get(ground) ?? "#000000");
+        expect({ where, aa: ratio >= 3 }).toEqual({ where, aa: true });
+      }
+    },
+  );
+});

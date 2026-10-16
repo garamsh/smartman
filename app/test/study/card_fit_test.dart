@@ -100,7 +100,15 @@ void main() {
             ),
           ),
         );
-        final card = tester.getRect(find.byType(CurrentCard));
+        // The card's face, without the answer buttons under it.
+        final card = tester.getRect(
+          find
+              .descendant(
+                of: find.byType(CurrentCard),
+                matching: find.byType(GestureDetector),
+              )
+              .first,
+        );
         expect(card.width, _phoneWidth - 2 * StudyStyle.cardMargin);
         final text = find.text(front);
         final paragraph = tester.renderObject<RenderParagraph>(text);

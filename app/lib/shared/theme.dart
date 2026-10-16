@@ -95,7 +95,10 @@ abstract final class AppSize {
   static const mascotLarge = 128.0;
 
   /// The mascot's circle on the study completion card.
-  static const mascotMedium = 112.0;
+  static const mascotMedium = 84.0;
+
+  /// The mascot over the first study session's guide.
+  static const mascotGuide = 64.0;
 
   /// The mascot in the account screen's footer.
   static const mascotSmall = 28.0;
@@ -105,9 +108,6 @@ abstract final class AppSize {
 
   /// The study progress bar's thickness.
   static const progress = 8.0;
-
-  /// An answer's dot on a previous card.
-  static const dot = 8.0;
 }
 
 /// The app's type scale, all Pretendard, with explicit line heights.
@@ -379,16 +379,21 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.brand,
     required this.know,
     required this.onKnow,
-    required this.knowDot,
     required this.dontKnow,
     required this.dontKnowText,
     required this.onDontKnowText,
-    required this.depth,
     required this.shadow,
     required this.tintBlue,
     required this.tintAmber,
     required this.tintGreen,
     required this.tintRed,
+    required this.knowCard,
+    required this.knowLine,
+    required this.onKnowTint,
+    required this.dontKnowCard,
+    required this.dontKnowLine,
+    required this.onDontKnowTint,
+    required this.streak,
   });
 
   /// Light tokens: navy ink on white surfaces over a pale blue-grey ground.
@@ -408,16 +413,21 @@ final class AppColors extends ThemeExtension<AppColors> {
     brand: Color(0xFF1F2A44),
     know: Color(0xFF1D8054),
     onKnow: Color(0xFFFFFFFF),
-    knowDot: Color(0xFF2BA16A),
     dontKnow: Color(0xFFE2574A),
     dontKnowText: Color(0xFFC2402F),
     onDontKnowText: Color(0xFFFFFFFF),
-    depth: Color(0xFFF4F6FA),
     shadow: Color(0xFF1F2A44),
     tintBlue: Color(0xFFE8ECF5),
     tintAmber: Color(0xFFFFF1D6),
     tintGreen: Color(0xFFE3F4EC),
     tintRed: Color(0xFFFCE8E6),
+    knowCard: Color(0xFFEAF6EF),
+    knowLine: Color(0xFF9ED3B6),
+    onKnowTint: Color(0xFF1D6B47),
+    dontKnowCard: Color(0xFFFCEEEC),
+    dontKnowLine: Color(0xFFEBB3AA),
+    onDontKnowTint: Color(0xFFB03A2B),
+    streak: Color(0xFFC26A0A),
   );
 
   /// Dark tokens: pale ink on navy surfaces, the primary fill inverted, and
@@ -438,16 +448,21 @@ final class AppColors extends ThemeExtension<AppColors> {
     brand: Color(0xFF1F2A44),
     know: Color(0xFF5ED39A),
     onKnow: Color(0xFF0E1424),
-    knowDot: Color(0xFF5ED39A),
     dontKnow: Color(0xFFFF8577),
     dontKnowText: Color(0xFFFF8577),
     onDontKnowText: Color(0xFF0E1424),
-    depth: Color(0xFF0E1424),
     shadow: Color(0xFF000000),
     tintBlue: Color(0xFF2A3560),
     tintAmber: Color(0xFF4A3B1E),
     tintGreen: Color(0xFF1E3F33),
     tintRed: Color(0xFF4A2624),
+    knowCard: Color(0xFF17302A),
+    knowLine: Color(0xFF2E6B50),
+    onKnowTint: Color(0xFF5ED39A),
+    dontKnowCard: Color(0xFF3A1F24),
+    dontKnowLine: Color(0xFF7A3A36),
+    onDontKnowTint: Color(0xFFFF8577),
+    streak: Color(0xFFF5A623),
   );
 
   /// The screen's background, under every surface.
@@ -493,18 +508,12 @@ final class AppColors extends ThemeExtension<AppColors> {
   final Color know;
   final Color onKnow;
 
-  /// A "Know" answer's dot.
-  final Color knowDot;
-
-  /// "Don't know", as a dot or a tint; never as text.
+  /// "Don't know", as the tint over a dragged card; never as text.
   final Color dontKnow;
 
   /// "Don't know" and destruction, as text on [surface] and as a fill under [onDontKnowText].
   final Color dontKnowText;
   final Color onDontKnowText;
-
-  /// The colour a previous card fades toward, a step per card of depth.
-  final Color depth;
 
   /// The colour of every shadow, before its opacity.
   final Color shadow;
@@ -520,6 +529,23 @@ final class AppColors extends ThemeExtension<AppColors> {
 
   /// The fourth deck tile tint.
   final Color tintRed;
+
+  /// A previous card answered "Know": its fill and its line.
+  final Color knowCard;
+  final Color knowLine;
+
+  /// "Know" as text on [tintGreen], the answer button's fill.
+  final Color onKnowTint;
+
+  /// A previous card answered "Don't know": its fill and its line.
+  final Color dontKnowCard;
+  final Color dontKnowLine;
+
+  /// "Don't know" as text on [tintRed], the answer button's fill.
+  final Color onDontKnowTint;
+
+  /// The completion card's streak flame.
+  final Color streak;
 
   /// The four tints a deck's initial tile is drawn on, in order.
   List<Color> get deckTints => [tintBlue, tintAmber, tintGreen, tintRed];
@@ -546,16 +572,21 @@ final class AppColors extends ThemeExtension<AppColors> {
     Color? brand,
     Color? know,
     Color? onKnow,
-    Color? knowDot,
     Color? dontKnow,
     Color? dontKnowText,
     Color? onDontKnowText,
-    Color? depth,
     Color? shadow,
     Color? tintBlue,
     Color? tintAmber,
     Color? tintGreen,
     Color? tintRed,
+    Color? knowCard,
+    Color? knowLine,
+    Color? onKnowTint,
+    Color? dontKnowCard,
+    Color? dontKnowLine,
+    Color? onDontKnowTint,
+    Color? streak,
   }) => AppColors(
     ground: ground ?? this.ground,
     surface: surface ?? this.surface,
@@ -572,16 +603,21 @@ final class AppColors extends ThemeExtension<AppColors> {
     brand: brand ?? this.brand,
     know: know ?? this.know,
     onKnow: onKnow ?? this.onKnow,
-    knowDot: knowDot ?? this.knowDot,
     dontKnow: dontKnow ?? this.dontKnow,
     dontKnowText: dontKnowText ?? this.dontKnowText,
     onDontKnowText: onDontKnowText ?? this.onDontKnowText,
-    depth: depth ?? this.depth,
     shadow: shadow ?? this.shadow,
     tintBlue: tintBlue ?? this.tintBlue,
     tintAmber: tintAmber ?? this.tintAmber,
     tintGreen: tintGreen ?? this.tintGreen,
     tintRed: tintRed ?? this.tintRed,
+    knowCard: knowCard ?? this.knowCard,
+    knowLine: knowLine ?? this.knowLine,
+    onKnowTint: onKnowTint ?? this.onKnowTint,
+    dontKnowCard: dontKnowCard ?? this.dontKnowCard,
+    dontKnowLine: dontKnowLine ?? this.dontKnowLine,
+    onDontKnowTint: onDontKnowTint ?? this.onDontKnowTint,
+    streak: streak ?? this.streak,
   );
 
   @override
@@ -604,16 +640,21 @@ final class AppColors extends ThemeExtension<AppColors> {
       brand: mix(brand, other.brand),
       know: mix(know, other.know),
       onKnow: mix(onKnow, other.onKnow),
-      knowDot: mix(knowDot, other.knowDot),
       dontKnow: mix(dontKnow, other.dontKnow),
       dontKnowText: mix(dontKnowText, other.dontKnowText),
       onDontKnowText: mix(onDontKnowText, other.onDontKnowText),
-      depth: mix(depth, other.depth),
       shadow: mix(shadow, other.shadow),
       tintBlue: mix(tintBlue, other.tintBlue),
       tintAmber: mix(tintAmber, other.tintAmber),
       tintGreen: mix(tintGreen, other.tintGreen),
       tintRed: mix(tintRed, other.tintRed),
+      knowCard: mix(knowCard, other.knowCard),
+      knowLine: mix(knowLine, other.knowLine),
+      onKnowTint: mix(onKnowTint, other.onKnowTint),
+      dontKnowCard: mix(dontKnowCard, other.dontKnowCard),
+      dontKnowLine: mix(dontKnowLine, other.dontKnowLine),
+      onDontKnowTint: mix(onDontKnowTint, other.onDontKnowTint),
+      streak: mix(streak, other.streak),
     );
   }
 }

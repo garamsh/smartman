@@ -367,23 +367,59 @@ abstract class AppLocalizations {
     String changed,
   );
 
-  /// Accessibility hint of tapping a card answered earlier: it changes the answer.
-  ///
-  /// In ko, this message translates to:
-  /// **'답 바꾸기'**
-  String get toggleAnswer;
-
   /// Accessibility hint of long-pressing a card answered earlier: it opens the whole card.
   ///
   /// In ko, this message translates to:
   /// **'카드 전체 보기'**
   String get showWholeCard;
 
-  /// Small label on a card answered earlier whose answer differs from the one first given.
+  /// Screen-reader action on a card answered earlier as Don't know: changes its answer to Know.
   ///
   /// In ko, this message translates to:
-  /// **'수정됨'**
-  String get answerChanged;
+  /// **'안다로 바꾸기'**
+  String get changeToKnow;
+
+  /// Screen-reader action on a card answered earlier as Know: changes its answer to Don't know.
+  ///
+  /// In ko, this message translates to:
+  /// **'모른다로 바꾸기'**
+  String get changeToDontKnow;
+
+  /// Shown behind a card answered earlier while it is dragged right, toward Know.
+  ///
+  /// In ko, this message translates to:
+  /// **'안다로 바꿔요'**
+  String get changingToKnow;
+
+  /// Shown behind a card answered earlier while it is dragged left, toward Don't know.
+  ///
+  /// In ko, this message translates to:
+  /// **'모른다로 바꿔요'**
+  String get changingToDontKnow;
+
+  /// Button shown while the study screen is scrolled back to earlier cards: returns to the current card.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 카드로'**
+  String get backToCurrent;
+
+  /// First study session's guide, first line: recall first, then tap the card to see the answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'먼저 떠올려 보고, 카드를 탭해 답을 확인해요'**
+  String get guideReveal;
+
+  /// First study session's guide, second line: swipe right when you know it, left when you don't.
+  ///
+  /// In ko, this message translates to:
+  /// **'알면 오른쪽, 모르면 왼쪽으로 밀어요'**
+  String get guideSwipe;
+
+  /// First study session's guide, third line: pull down to see earlier cards and change their answers.
+  ///
+  /// In ko, this message translates to:
+  /// **'아래로 내리면 지난 카드를 보고 답을 바꿀 수 있어요'**
+  String get guideEarlier;
 
   /// Shown when an answer could not be written to the local database.
   ///
@@ -1278,18 +1314,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'새 카드 {count}'**
   String statNew(int count);
-
-  /// Hint under the study card, beside a left chevron: swiping left answers Don't know.
-  ///
-  /// In ko, this message translates to:
-  /// **'모른다'**
-  String get swipeDontKnowHint;
-
-  /// Hint under the study card, beside a right chevron: swiping right answers Know.
-  ///
-  /// In ko, this message translates to:
-  /// **'안다'**
-  String get swipeKnowHint;
 
   /// Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.
   ///

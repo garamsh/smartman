@@ -62,12 +62,12 @@ const onlyGoogle = <T>(tokens: Map<string, T>) => new Map([...tokens].filter(isG
 
 describe("the web theme's colour tokens", () => {
   it("are the light tokens of app/lib/shared/theme.dart", () => {
-    expect(dartColors("light").size).toBe(25);
+    expect(dartColors("light").size).toBe(30);
     expect(withoutGoogle(cssColors(lightCss))).toEqual(dartColors("light"));
   });
 
   it("are the dark tokens of app/lib/shared/theme.dart, for the system's dark mode and for 다크", () => {
-    expect(dartColors("dark").size).toBe(25);
+    expect(dartColors("dark").size).toBe(30);
     expect(withoutGoogle(cssColors(systemDarkCss))).toEqual(dartColors("dark"));
     expect(withoutGoogle(cssColors(chosenDarkCss))).toEqual(dartColors("dark"));
   });

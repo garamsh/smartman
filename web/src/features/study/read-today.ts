@@ -24,10 +24,15 @@ export type TodayAnswer = {
 /**
  * Today's study day for the signed-in user: the day, with the new cards it has left, and every
  * answer stored in it, across every deck, oldest first. With [streak], also how many study days
- * in a row before today hold an answer. The day is read in the zone the browser names in its
- * cookie, or `fallbackTimeZone` without one.
+ * in a row before today hold an answer, and whether any day before today holds one. The day is
+ * read in the zone the browser names in its cookie, or `fallbackTimeZone` without one.
  */
-export type Today = { day: StudyDay; answers: TodayAnswer[]; streakBefore: number };
+export type Today = {
+  day: StudyDay;
+  answers: TodayAnswer[];
+  streakBefore: number;
+  answeredBefore: boolean;
+};
 
 /** How many card ids one request filters on, so its URL stays short. */
 const idsPerRequest = 100;
@@ -51,7 +56,7 @@ export async function readToday(
       .eq("user_id", session.userId)
       .is("deleted_at", null);
 
-  const [read, streakBefore] = await Promise.all([
+  const [read, before] = await Promise.all([
     selectAll((from, to, counted) =>
       reviews("id, card_id, rating, reviewed_at, duration_ms", counted)
         .gte("reviewed_at", new Date(start).toISOString())
@@ -59,10 +64,12 @@ export async function readToday(
         .range(from, to)
         .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
     ),
-    options.streak ? readStreakBefore(supabase, session.userId, start, timeZone) : 0,
+    options.streak
+      ? readStreakBefore(supabase, session.userId, start, timeZone)
+      : { streak: 0, answered: false },
   ]);
   if ("failure" in read) return read;
-  if (typeof streakBefore !== "number") return streakBefore;
+  if ("failure" in before) return before;
   const answers: TodayAnswer[] = [];
   for (const row of read.rows) {
     const answer = parseAnswer(row);
@@ -101,20 +108,26 @@ export async function readToday(
     }
   }
   return {
-    today: { day: studyDay(now, firstAnswers.values(), timeZone), answers, streakBefore },
+    today: {
+      day: studyDay(now, firstAnswers.values(), timeZone),
+      answers,
+      streakBefore: before.streak,
+      answeredBefore: before.answered,
+    },
   };
 }
 
 /**
  * How many study days in a row end the day before [start] with an answer, read a page of the
- * latest answers at a time until a day without one, or the first answer, decides it.
+ * latest answers at a time until a day without one, or the first answer, decides it; and
+ * whether any answer is stored before [start].
  */
 async function readStreakBefore(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   start: number,
   timeZone: string,
-): Promise<number | { failure: ServerFailure | "unreadable" }> {
+): Promise<{ streak: number; answered: boolean } | { failure: ServerFailure | "unreadable" }> {
   let count = 0;
   let expected = studyDayStart(start - 1000, timeZone);
   for (let from = 0; ; from += pageSize) {
@@ -128,6 +141,7 @@ async function readStreakBefore(
       .range(from, from + pageSize - 1)
       .abortSignal(AbortSignal.timeout(requestTimeoutMs));
     if (error) return { failure: classifyFailure(error, status) };
+    const answered = from > 0 || data.length > 0;
     for (const row of data) {
       const at = parseTime(field(row, "reviewed_at"));
       if (at === null) return { failure: "unreadable" };
@@ -136,10 +150,10 @@ async function readStreakBefore(
         count += 1;
         expected = studyDayStart(day - 1000, timeZone);
       } else if (day < expected) {
-        return count;
+        return { streak: count, answered };
       }
     }
-    if (data.length < pageSize) return count;
+    if (data.length < pageSize) return { streak: count, answered };
   }
 }
 

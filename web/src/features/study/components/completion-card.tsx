@@ -43,7 +43,7 @@ export function CompletionCard({
         </span>
         <b className="text-ink">{minutes}분</b>
         <span className="flex items-center gap-1">
-          <Flame aria-hidden className="size-small-icon text-ink-2" strokeWidth={2} />
+          <Flame aria-hidden className="size-small-icon text-streak" strokeWidth={2} />
           <span className="sr-only">연속 </span>
           <b className="text-ink">{completion.streak}일</b>
         </span>
@@ -59,7 +59,7 @@ export function CompletionCard({
         </button>
         <Link
           href="/"
-          className="flex min-h-button items-center justify-center rounded-button px-6 text-label text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="flex min-h-tap-target items-center justify-center rounded-button px-6 text-label text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           그만하기
         </Link>

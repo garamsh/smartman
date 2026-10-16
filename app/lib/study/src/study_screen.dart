@@ -5,10 +5,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
-import '../../shared/ui/mascot.dart';
+import 'completion_card.dart';
 import 'current_card.dart';
 import 'failure.dart';
+import 'first_run_guide.dart';
 import 'failure_message.dart';
 import 'providers.dart';
 import 'session.dart';
@@ -152,7 +152,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       ),
       SessionComplete(:final completion, :final previous) => (
         previous,
-        _CompletionCard(
+        CompletionCard(
           key: const ValueKey('completion'),
           completion: completion,
           onPractice: _session.practice,
@@ -175,73 +175,30 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       ),
       child: current,
     );
-    return SessionScroll(
+    final scroll = SessionScroll(
       cards: previous,
-      onToggle: _session.toggle,
+      onRedecide: _session.redecide,
       currentCenter: currentCenter,
       // The completion card may grow past a card's cap, up to the space below
       // the top bar, so its actions are not scrolled out of reach.
       currentMaxHeight: state is SessionStudying
           ? currentMaxHeight
           : double.infinity,
-      // The hints hang below the card, outside its box, so the card alone is
-      // placed as ADR 0023 places it.
-      current: state is SessionStudying
-          ? Stack(
-              clipBehavior: Clip.none,
-              children: [
-                switcher,
-                const Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: FractionalTranslation(
-                    translation: Offset(0, 1),
-                    child: Padding(
-                      padding: EdgeInsets.only(top: StudyStyle.hintGap),
-                      child: _SwipeHints(),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : switcher,
+      // The answer buttons hang under the card, which alone is placed as ADR
+      // 0023 places it.
+      footer: state is SessionStudying ? StudyStyle.answerRow : 0,
+      current: switcher,
     );
-  }
-}
-
-/// Under the current card: a left chevron with "모른다" and "안다" with a right
-/// chevron, saying which way answers which. A screen reader reaches both
-/// answers as the card's actions, so it skips these.
-class _SwipeHints extends StatelessWidget {
-  const _SwipeHints();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final style = AppType.section.copyWith(color: colors.muted);
-    return ExcludeSemantics(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
-        child: Row(
-          children: [
-            Icon(
-              LucideIcons.chevronLeft,
-              size: AppSize.smallIcon,
-              color: colors.dontKnowText,
-            ),
-            Text(l10n.swipeDontKnowHint, style: style),
-            const Spacer(),
-            Text(l10n.swipeKnowHint, style: style),
-            Icon(
-              LucideIcons.chevronRight,
-              size: AppSize.smallIcon,
-              color: colors.know,
-            ),
-          ],
-        ),
-      ),
+    // The first session's guide takes the space above the card, which no
+    // previous card holds yet. The column keeps its key as the guide leaves,
+    // so the first answer's transition runs.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (state is SessionStudying && state.firstRun)
+          const Flexible(child: SingleChildScrollView(child: FirstRunGuide())),
+        Expanded(key: const ValueKey('session'), child: scroll),
+      ],
     );
   }
 }
@@ -319,145 +276,6 @@ class _TopBar extends StatelessWidget {
                   ),
                 ),
               ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The completion card in the current card's place once no card is left
-/// today: the mascot, the heading, today's answers, time and streak, and the
-/// choice to go on as practice or to stop.
-class _CompletionCard extends StatelessWidget {
-  const _CompletionCard({
-    super.key,
-    required this.completion,
-    required this.onPractice,
-  });
-
-  final Completion completion;
-  final VoidCallback onPractice;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final minutes = (completion.timeSpent.inSeconds / 60).ceil();
-    final line = AppType.secondary.copyWith(color: colors.ink2);
-    TextSpan count(String value, Color color) => TextSpan(
-      text: value,
-      style: TextStyle(color: color, fontWeight: FontWeight.w700),
-    );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
-        boxShadow: AppShadow.raised(colors),
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: StudyStyle.currentMinHeight,
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.s20,
-            AppSpace.s28,
-            AppSpace.s20,
-            AppSpace.s20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: AppSpace.s12,
-            children: [
-              Center(
-                child: Mascot(
-                  size: AppSize.mascotMedium,
-                  fill: colors.brandTint,
-                ),
-              ),
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.studyComplete,
-                  textAlign: TextAlign.center,
-                  style: AppType.title,
-                ),
-              ),
-              Semantics(
-                label: l10n.completionSemantics(
-                  completion.knowCount,
-                  completion.dontKnowCount,
-                  minutes,
-                  completion.streak,
-                ),
-                child: ExcludeSemantics(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: AppSpace.s16,
-                    runSpacing: AppSpace.s4,
-                    children: [
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            count('${completion.knowCount}', colors.know),
-                            TextSpan(text: ' ${l10n.know}'),
-                          ],
-                        ),
-                        style: line,
-                      ),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            count(
-                              '${completion.dontKnowCount}',
-                              colors.dontKnowText,
-                            ),
-                            TextSpan(text: ' ${l10n.dontKnow}'),
-                          ],
-                        ),
-                        style: line,
-                      ),
-                      Text.rich(
-                        count(l10n.completionMinutes(minutes), colors.ink),
-                        style: line,
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: AppSpace.s4,
-                        children: [
-                          Icon(
-                            LucideIcons.flame,
-                            size: AppSize.smallIcon,
-                            color: colors.ink2,
-                          ),
-                          Text.rich(
-                            count(
-                              l10n.completionStreak(completion.streak),
-                              colors.ink,
-                            ),
-                            style: line,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpace.s4),
-              AppButton(
-                label: l10n.keepStudying,
-                size: AppButtonSize.cta,
-                onPressed: onPractice,
-              ),
-              AppButton(
-                label: l10n.stopStudying,
-                variant: AppButtonVariant.text,
-                onPressed: () => Navigator.of(context).pop(),
-              ),
             ],
           ),
         ),
