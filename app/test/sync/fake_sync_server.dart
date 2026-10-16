@@ -9,8 +9,10 @@ typedef _Stored<R> = ({R row, UserId owner, int revision});
 
 /// Stands in for the Supabase tables at the network boundary, with the rules
 /// the server enforces: one revision sequence stamped on every write, rows
-/// kept per account, foreign keys between a user's rows, and reviews that
-/// change only their rating and edit time, and only to a later edit.
+/// kept per account, foreign keys between a user's rows that refuse a whole
+/// request, and reviews that change only their rating and edit time, and only
+/// to a later edit. Its watermark is the sequence's last value; set
+/// [purgedBelow] and remove rows to stand in for a purge.
 ///
 /// [account] is the session's account, whose rows a pull returns. Set
 /// [failure] to fail every request with it, or [stall] to leave every request
@@ -25,7 +27,13 @@ class FakeSyncServer implements SyncServer {
   /// Runs before each push request is answered, with its table's name.
   Future<void> Function(String table)? beforePush;
 
+  /// The horizon [horizon] returns.
+  int purgedBelow = 0;
+
   var _revision = 0;
+
+  /// The last revision stamped.
+  int get revision => _revision;
   final decks = <String, _Stored<DeckRow>>{};
   final cards = <String, _Stored<CardRow>>{};
   final reviews = <String, _Stored<ReviewRow>>{};
@@ -38,6 +46,12 @@ class FakeSyncServer implements SyncServer {
     if (stall) await Completer<void>().future;
     if (failure case final failure?) throw failure;
     requests.add(request);
+  }
+
+  @override
+  Future<Horizon> horizon() async {
+    await _answer('horizon');
+    return (horizon: purgedBelow, watermark: _revision);
   }
 
   List<Pulled<R>> _pull<R>(
@@ -134,7 +148,9 @@ class FakeSyncServer implements SyncServer {
 
   void _parent<R>(Map<String, _Stored<R>> table, String id, UserId owner) {
     if (table[id]?.owner != owner) {
-      throw SyncFailed(FormatException('no parent $id for $owner'));
+      throw SyncFailed(
+        MissingServerParent(FormatException('no parent $id for $owner')),
+      );
     }
   }
 
@@ -158,6 +174,8 @@ class FakeSyncServer implements SyncServer {
     _own(owner);
     for (final row in rows) {
       _parent(decks, row.deckId, owner);
+    }
+    for (final row in rows) {
       cards[row.id] = _stamp(row.copyWith(dirty: false), owner);
     }
   }
@@ -169,6 +187,8 @@ class FakeSyncServer implements SyncServer {
     _own(owner);
     for (final row in rows) {
       _parent(cards, row.cardId, owner);
+    }
+    for (final row in rows) {
       final stored = reviews[row.id];
       if (stored == null) {
         reviews[row.id] = _stamp(row.copyWith(dirty: false), owner);
@@ -188,6 +208,8 @@ class FakeSyncServer implements SyncServer {
     _own(owner);
     for (final row in rows) {
       _parent(cards, row.cardId, owner);
+    }
+    for (final row in rows) {
       cardStates[row.cardId] = _stamp(row.copyWith(dirty: false), owner);
     }
   }

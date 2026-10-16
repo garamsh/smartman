@@ -17,6 +17,27 @@ typedef PageApplied = ({
   Set<String> reviewedCards,
 });
 
+/// One of the four synced tables.
+enum SyncedTable {
+  decks('decks', 'id', 'decks_revision'),
+  cards('cards', 'id', 'cards_revision'),
+  reviews('reviews', 'id', 'reviews_revision'),
+  cardStates('card_states', 'card_id', 'card_states_revision');
+
+  const SyncedTable(this._name, this._key, this._cursor);
+
+  final String _name;
+
+  /// The column a row is identified by.
+  final String _key;
+
+  /// The table's pull cursor in `sync_state`.
+  final String _cursor;
+}
+
+/// The most ids one statement binds.
+const _idsPerStatement = 500;
+
 /// Reads and writes what sync keeps in the local database: the owner, the
 /// pull cursors, the dirty flags, and the rows pulls bring.
 ///
@@ -81,7 +102,8 @@ class SyncStore {
       _db.cardStates,
     ]) {
       final query = _db.customSelect(
-        'SELECT 1 FROM ${table.entityName} WHERE dirty = 1 LIMIT 1',
+        // The term repeats the partial index's, which SQLite needs to use it.
+        'SELECT 1 FROM ${table.entityName} WHERE "dirty" LIMIT 1',
         readsFrom: {table},
       );
       if (await query.getSingleOrNull() != null) return true;
@@ -194,6 +216,87 @@ class SyncStore {
     );
     return await query.getSingleOrNull() != null;
   }
+
+  /// Moves [table]'s cursor up to [revision], leaving one already above it.
+  Future<void> raiseCursor(SyncedTable table, int revision) => _guard(
+    () => _db.customUpdate(
+      'UPDATE sync_state SET ${table._cursor} = max(${table._cursor}, ?)',
+      variables: [Variable.withInt(revision)],
+      updates: {_db.syncState},
+    ),
+  );
+
+  /// Deletes each synced row of [table] whose key is not in [pulled]: the
+  /// rows a rebuild found the server no longer holds. An unsynced row stays.
+  Future<void> forgetUnpulled(SyncedTable table, Set<String> pulled) => _guard(
+    () => _db.transaction(() async {
+      final synced = await _db
+          .customSelect(
+            'SELECT ${table._key} AS k FROM ${table._name} WHERE NOT "dirty"',
+            readsFrom: {_tableOf(table)},
+          )
+          .get();
+      await _delete(table, [
+        for (final row in synced)
+          if (!pulled.contains(row.read<String>('k'))) row.read<String>('k'),
+      ]);
+    }),
+  );
+
+  /// Deletes the rows of [table] keyed by [keys], with what cascades from
+  /// them.
+  Future<void> drop(SyncedTable table, List<String> keys) =>
+      _guard(() => _db.transaction(() => _delete(table, keys)));
+
+  Future<void> _delete(SyncedTable table, List<String> keys) async {
+    for (var start = 0; start < keys.length; start += _idsPerStatement) {
+      final chunk = keys.skip(start).take(_idsPerStatement).toList();
+      await _db.customUpdate(
+        'DELETE FROM ${table._name} WHERE ${table._key} IN '
+        '(${List.filled(chunk.length, '?').join(', ')})',
+        variables: [for (final key in chunk) Variable.withString(key)],
+        updates: {_tableOf(table)},
+        updateKind: UpdateKind.delete,
+      );
+    }
+  }
+
+  /// Purges the local tombstones once nothing is unsynced: a card state
+  /// tombstone is deleted, and a card or deck tombstone loses its content in
+  /// place, a card its sides and key, a deck its name and description, made
+  /// private. The rows stay, so a review that arrives later still finds its
+  /// card, and nothing cascades to a review. Nothing is marked unsynced, since
+  /// the server strips its own copy.
+  Future<void> purge() => _guard(
+    () => _db.transaction(() async {
+      if (await hasUnsynced()) return;
+      await _db.customUpdate(
+        'DELETE FROM card_states WHERE deleted_at IS NOT NULL',
+        updates: {_db.cardStates},
+        updateKind: UpdateKind.delete,
+      );
+      await _db.customUpdate(
+        "UPDATE cards SET front = '[]', back = '[]', card_key = '' "
+        "WHERE deleted_at IS NOT NULL "
+        "AND (front <> '[]' OR back <> '[]' OR card_key <> '')",
+        updates: {_db.cards},
+      );
+      await _db.customUpdate(
+        "UPDATE decks SET name = '', description = NULL, "
+        "visibility = 'private' WHERE deleted_at IS NOT NULL "
+        "AND (name <> '' OR description IS NOT NULL "
+        "OR visibility <> 'private')",
+        updates: {_db.decks},
+      );
+    }),
+  );
+
+  TableInfo<Table, dynamic> _tableOf(SyncedTable table) => switch (table) {
+    SyncedTable.decks => _db.decks,
+    SyncedTable.cards => _db.cards,
+    SyncedTable.reviews => _db.reviews,
+    SyncedTable.cardStates => _db.cardStates,
+  };
 
   /// Folds each of [cards]' reviews through the engine from a new card and
   /// stores the state it reaches, unsynced, where it differs from the stored

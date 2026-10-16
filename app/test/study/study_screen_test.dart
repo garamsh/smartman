@@ -74,7 +74,7 @@ class _StalledRepository implements StudyRepository {
   Future<List<StoredAnswer>> answersSince(DateTime since) async => [];
 
   @override
-  Future<List<DateTime>> answerTimes() async => [];
+  Future<DateTime?> latestAnswerBefore(DateTime end) async => null;
 }
 
 /// Schedules as [_InstantScheduler] does, and keeps every answer it is asked

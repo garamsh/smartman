@@ -83,57 +83,67 @@ class StudyRepository {
     }
   }
 
+  // The reads by time below are written in SQL: drift compares text times
+  // through julianday(), which no index on reviewed_at serves. Each repeats
+  // the partial index's term, `deleted_at IS NULL`, so SQLite can use it.
+
   /// When the user first answered each card whose first answer, not
-  /// deleted, is at or after [since], across every deck.
-  Future<List<DateTime>> firstAnswersSince(DateTime since) async {
-    try {
-      final first = _db.reviews.reviewedAt.min();
-      final query = _db.selectOnly(_db.reviews)
-        ..addColumns([first])
-        ..where(_db.reviews.deletedAt.isNull())
-        ..groupBy([
-          _db.reviews.cardId,
-        ], having: first.isBiggerOrEqualValue(since));
-      return [for (final row in await query.get()) row.read(first)!];
-    } on Exception catch (cause, stackTrace) {
-      Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
-    }
-  }
+  /// deleted, is at or after [since], across every deck. Only the cards
+  /// answered since then are grouped.
+  Future<List<DateTime>> firstAnswersSince(DateTime since) => _read(() async {
+    final rows = await _db
+        .customSelect(
+          'SELECT min(reviewed_at) AS first FROM reviews '
+          'WHERE deleted_at IS NULL AND card_id IN ('
+          'SELECT card_id FROM reviews '
+          'WHERE deleted_at IS NULL AND reviewed_at >= ?1) '
+          'GROUP BY card_id HAVING min(reviewed_at) >= ?1',
+          variables: [Variable<DateTime>(storedTime(since))],
+          readsFrom: {_db.reviews},
+        )
+        .get();
+    return [for (final row in rows) row.read<DateTime>('first')];
+  });
 
   /// Every answer not deleted given at or after [since], oldest first.
-  Future<List<StoredAnswer>> answersSince(DateTime since) async {
-    try {
-      final query = _db.select(_db.reviews)
-        ..where(
-          (row) =>
-              row.deletedAt.isNull() &
-              row.reviewedAt.isBiggerOrEqualValue(since),
+  Future<List<StoredAnswer>> answersSince(DateTime since) => _read(() async {
+    final rows = await _db
+        .customSelect(
+          'SELECT * FROM reviews WHERE deleted_at IS NULL AND reviewed_at >= ? '
+          'ORDER BY reviewed_at',
+          variables: [Variable<DateTime>(storedTime(since))],
+          readsFrom: {_db.reviews},
         )
-        ..orderBy([(row) => OrderingTerm.asc(row.reviewedAt)]);
-      return [
-        for (final row in await query.get())
-          (
-            card: CardId(row.cardId),
-            answer: answerOf(row.rating),
-            at: row.reviewedAt,
-            duration: Duration(milliseconds: row.durationMs),
-          ),
-      ];
-    } on Exception catch (cause, stackTrace) {
-      Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
-    }
-  }
+        .map((row) => _db.reviews.map(row.data))
+        .get();
+    return [
+      for (final row in rows)
+        (
+          card: CardId(row.cardId),
+          answer: answerOf(row.rating),
+          at: row.reviewedAt,
+          duration: Duration(milliseconds: row.durationMs),
+        ),
+    ];
+  });
 
-  /// The time of every answer not deleted, newest first.
-  Future<List<DateTime>> answerTimes() async {
+  /// The time of the latest answer not deleted given before [end], or null
+  /// when there is none: one probe of the index on `reviewed_at`.
+  Future<DateTime?> latestAnswerBefore(DateTime end) => _read(() async {
+    final row = await _db
+        .customSelect(
+          'SELECT max(reviewed_at) AS latest FROM reviews '
+          'WHERE deleted_at IS NULL AND reviewed_at < ?',
+          variables: [Variable<DateTime>(storedTime(end))],
+          readsFrom: {_db.reviews},
+        )
+        .getSingle();
+    return row.readNullable<DateTime>('latest');
+  });
+
+  Future<T> _read<T>(Future<T> Function() read) async {
     try {
-      final query = _db.selectOnly(_db.reviews)
-        ..addColumns([_db.reviews.reviewedAt])
-        ..where(_db.reviews.deletedAt.isNull())
-        ..orderBy([OrderingTerm.desc(_db.reviews.reviewedAt)]);
-      return [
-        for (final row in await query.get()) row.read(_db.reviews.reviewedAt)!,
-      ];
+      return await read();
     } on Exception catch (cause, stackTrace) {
       Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
     }

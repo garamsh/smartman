@@ -22,6 +22,20 @@ final class SupabaseSyncServer implements SyncServer {
   /// How long one request may take before it counts as offline.
   final Duration timeout;
 
+  /// Reads `sync_horizon()`, which returns one row.
+  @override
+  Future<Horizon> horizon() => _request(() async {
+    final rows = await _client.rpc<List<dynamic>>('sync_horizon');
+    if (rows case [final Map<String, dynamic> row]) {
+      final fields = _Fields(row);
+      return (
+        horizon: fields.integer('horizon'),
+        watermark: fields.integer('watermark'),
+      );
+    }
+    throw FormatException('expected one horizon row, found $rows');
+  });
+
   @override
   Future<List<Pulled<DeckRow>>> pullDecks(UserId owner, int after, int limit) =>
       _pull('decks', owner, after, limit, _decodeDeck);
@@ -196,6 +210,8 @@ SyncFailure classifyPostgrestError(PostgrestException error) =>
       '502' ||
       '503' ||
       '504' => SyncOffline(error),
+      // A foreign key refused the row: the server no longer holds its parent.
+      '23503' => SyncFailed(MissingServerParent(error)),
       _ => SyncFailed(error),
     };
 

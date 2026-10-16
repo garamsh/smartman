@@ -218,9 +218,18 @@ class StudySession extends ChangeNotifier {
   /// The cards those answers are to, each once, in the order first answered.
   var _answeredToday = const <Card>[];
 
-  /// The time of every stored answer when the session opened, for the
-  /// streak.
+  /// When the study day the session opened in started.
+  late DateTime _openedDay;
+
+  /// The time of every stored answer given since [_openedDay], in any deck,
+  /// for the streak.
   var _storedTimes = const <DateTime>[];
+
+  /// How many study days in a row before [_openedDay] hold a stored answer.
+  var _daysBefore = 0;
+
+  /// Whether any answer was stored, in any deck, when the session opened.
+  var _anyStored = false;
 
   bool _practicing = false;
   var _pass = _Pass.all;
@@ -260,7 +269,7 @@ class StudySession extends ChangeNotifier {
         _queue.first,
         previous,
         progress,
-        firstRun: _storedTimes.isEmpty && _answers.isEmpty,
+        firstRun: !_anyStored && _answers.isEmpty,
       );
     }
     if (_practiceSet.isEmpty) return const SessionEmpty();
@@ -304,7 +313,9 @@ class StudySession extends ChangeNotifier {
           ..._storedTimes,
         ],
         _clock(),
-        _offsetAt,
+        since: _openedDay,
+        daysBefore: _daysBefore,
+        offsetAt: _offsetAt,
       ),
     );
   }
@@ -452,15 +463,25 @@ class StudySession extends ChangeNotifier {
         offsetAt: _offsetAt,
       );
       final byId = {for (final card in read) card.id: card};
+      final storedSince = await _repository.answersSince(start);
       _storedToday = [
-        for (final stored in await _repository.answersSince(start))
+        for (final stored in storedSince)
           if (byId.containsKey(stored.card)) stored,
       ];
       _answeredToday = [
         for (final id in {for (final stored in _storedToday) stored.card})
           byId[id]!,
       ];
-      _storedTimes = await _repository.answerTimes();
+      _openedDay = start;
+      _storedTimes = [for (final stored in storedSince) stored.at];
+      _daysBefore = await studyDaysBefore(
+        start,
+        _repository.latestAnswerBefore,
+        _offsetAt,
+      );
+      _anyStored =
+          storedSince.isNotEmpty ||
+          await _repository.latestAnswerBefore(start) != null;
       _before.addAll(states);
       _queue.addAll(orderQueue(selectQueue(read, states, day), _random));
       _total = _queue.length;

@@ -20,6 +20,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - Every synced id, and every column that references one, is `uuid`: `decks.id`, `cards.id`, `cards.deck_id`, `cards.origin_deck_id`, `reviews.id`, `reviews.card_id`, `card_states.card_id`, `deck_reports.deck_id` and `deck_imports.deck_id`. No id column has a default, so a row sent without an id is refused. `extraction_usage.id` is an identity ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md)).
 - Migration `20261016180000_uuid_keys.sql` cast those columns from `text` in place, so every row kept its id. It first raises, changing nothing, unless every value is in canonical lowercase form, the only form Postgres returns unchanged, so the phone, which keeps ids as text, holds the same id the server returns ([`sync.md`](sync.md)). In one transaction it dropped the five foreign keys and the two policies that name those columns, cast them, and recreated the keys, the policies, `list_public_decks` and `record_deck_import`.
 - PostgREST sends a uuid as the same JSON string a text id was, so app and web versions released before the conversion keep working.
+- The app creates new ids as version 7; rows created before keep their version 4 ids, and nothing reads the version ([`sync.md`](sync.md)).
 - Every row carries `user_id`, referencing `auth.users` with `on delete cascade`, so deleting an account deletes its rows. It defaults to the caller's `auth.uid()`.
 - A card's `front` and `back` are `jsonb` arrays of blocks, in the encoding the app stores ([`deck.md`](deck.md)); a value that is not an array is refused.
 - `cards.source` and `reviews.rating` take the local tables' values: `manual`, `import` or `shared`, and `again` or `good`. Migration `20261015180000_public_decks.sql` widened the source check to `shared` in one statement, changing no row ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
@@ -42,7 +43,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 ### Sync columns
 
-- `updated_at` — the device's edit time, set by the client; #24 orders concurrent edits by it.
+- `updated_at` — the device's edit time, set by the client; #24 orders concurrent edits by it. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` are the client's. The app's sync sends them at millisecond precision, as stored in schema v6, and so does the web.
 - `deleted_at` — a tombstone, null while the row is live. Sync never deletes a row.
 - `revision` — set on every insert and update by a trigger, from the one sequence `private.revision` shared by all four tables. Whatever the client sends is overwritten. Each table is indexed on `(user_id, revision)`, the pull cursor.
 - Before drawing, the trigger takes a transaction-level advisory lock keyed by a 64-bit hash of the row's `user_id`, held until commit. One user's writing transactions therefore run one after another, so for each user a later commit holds the higher revision, and a pull by revision cannot pass a row that commits later. Different users never wait on each other, except on a hash collision ([ADR 0010](adr/0010-server-schema-and-row-level-security.md)).
@@ -104,13 +105,20 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - **Index names** are `{table}_[{predicate}_]{columns}`. The predicate is `live` (`deleted_at is null`), `tombstone` (`deleted_at is not null`) or `public` (visibly public).
 - Indexes are created with plain `create index` in a migration.
 
+### Horizon and watermark
+
+- `private.sync_horizon` holds one row: the revision the last tombstone purge purged below, 0 until a purge runs ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §3).
+- `public.sync_horizon()` returns one row to the caller: `horizon`, that revision, and `watermark`, the last value of `private.revision` read after taking the caller's revision lock, the advisory lock the revision trigger takes ([ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md)).
+  - Each of the caller's writes draws its revision under that lock and holds it to commit, so every revision of the caller's rows at or below the watermark is committed when it is read, and every later one is above it. A sync run reads it before pulling and raises each completed table's cursor to it ([`sync.md`](sync.md)).
+  - It is `security definer`, `volatile`, since it takes a lock, and sets `search_path = ''`. `execute` is revoked from `public` and `anon` and granted to `authenticated`.
+- Migration `20261017120000_sync_horizon.sql` added the table, holding 0, and the function, changing no row.
+
 ### Target data model (not built yet)
 
 [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been applied. Until then the decisions above describe the database.
 
-- **Key versions.** New ids are version 7; rows created before that keep their version 4 ids ([`sync.md`](sync.md)).
-- **Time.** Every time column is `timestamptz`, as today. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` stay the client's, at millisecond precision. `revision` stays the server's.
-- **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`. `public.sync_horizon()` returns the horizon to `authenticated` ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
+- **Key versions.** The web's new ids are version 7, as the app's are ([`sync.md`](sync.md)).
+- **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`, which `sync_horizon()` returns ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
   - Study history survives deletion (the owner's decision, issue #93). A card tombstone that reviews reference keeps its row, stripped of `front`, `back` and `card_key`, so its reviews stay in the streak and the statistics. One that no review references is deleted, and so is every card state tombstone.
   - A deck tombstone is deleted once no card row references it. Until then it keeps its row, stripped of its name and description and made private.
   - Only account deletion removes reviews and the kept rows.
@@ -142,6 +150,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
   - `uuid_keys_test.sql` — every synced id and every reference to one is `uuid` with no default, with `extraction_usage.id` as control; the five foreign keys are back; `list_public_decks` returns `uuid` ids and `record_deck_import` takes one, executable by `authenticated` and not `anon`; and a report takes the lock its deck's id took as text, with the third report's hide as control;
   - `checks_policies_test.sql` — each of the five checks refuses what it names, with an accepted row beside each as control, tombstones included, and all five are validated; `decks`, `cards` and `profiles` have one policy per command, the select policy testing the owner first, with an insert policy as the pattern's control;
+  - `sync_horizon_test.sql` — the horizon is 0 until one is stored and then the stored one; the watermark is the sequence's last value, at or above the caller's latest row and below a row written after the call; the call takes the caller's revision lock, with another user's lock before its call as control; and the function runs as its owner, volatile, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `study_streak_test.sql` — on the instants `queue.test.ts` counts: the 04:00 boundary in UTC and in Seoul, a day across Los Angeles's change of offset at both ends, and a gap, each with a control; only the caller's live answers count; an unknown zone raises; and the function runs as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
@@ -161,7 +170,8 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
-- Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, and issue #113 the advisor lints read after #112.
+- [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why `sync_horizon()` returns a watermark read under the caller's lock beside the horizon.
+- Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, issue #106 the horizon and the watermark, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions

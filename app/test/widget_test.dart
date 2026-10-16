@@ -8,7 +8,8 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart' show DeckListScreen;
+import 'package:smartman/deck/deck.dart'
+    show DeckListScreen, deckRepositoryProvider;
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/main.dart';
@@ -131,6 +132,36 @@ void main() {
     expect(find.text('Create from photo'), findsOneWidget);
     await unmountApp(tester);
   });
+
+  testWidgets(
+    'the composed app gives every new row a version 7 uuid in canonical lowercase form',
+    (tester) async {
+      final version7 = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+      );
+      await pumpApp(tester);
+      await createDeckAndOpen(tester, 'French');
+      await addCard(tester, 'chat', 'cat');
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AccountGate, skipOffstage: false)),
+      );
+      final decks = container.read(deckRepositoryProvider);
+
+      final ids = (await tester.runAsync(() async {
+        final deck = (await decks.watchDecks().first).single;
+        final card = (await decks.listCards(deck.id)).single;
+        return [
+          deck.id.value,
+          card.id.value,
+          container.read(studyRepositoryProvider).newReviewId().value,
+        ];
+      }))!;
+
+      expect(ids, everyElement(matches(version7)));
+      expect(ids.toSet(), hasLength(3));
+      await unmountApp(tester);
+    },
+  );
 
   testWidgets('sharing is offered only with a sharing server', (tester) async {
     await pumpApp(tester);
