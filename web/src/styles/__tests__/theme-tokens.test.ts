@@ -5,7 +5,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = path.join(import.meta.dirname, "../../../..");
-const themeDart = readFileSync(path.join(root, "app/lib/shared/theme.dart"), "utf8");
+const themeDart = readFileSync(path.join(root, "app/lib/design/theme.dart"), "utf8");
+const googleButtonDart = readFileSync(
+  path.join(root, "app/lib/account/src/google_button.dart"),
+  "utf8",
+);
 const globalsCss = readFileSync(path.join(root, "web/src/styles/globals.css"), "utf8");
 
 /** A Dart name in kebab case, as the web's tokens spell it: `deckTitle` is `deck-title`. */
@@ -61,24 +65,24 @@ const withoutGoogle = <T>(tokens: Map<string, T>) =>
 const onlyGoogle = <T>(tokens: Map<string, T>) => new Map([...tokens].filter(isGoogle));
 
 describe("the web theme's colour tokens", () => {
-  it("are the light tokens of app/lib/shared/theme.dart", () => {
+  it("are the light tokens of app/lib/design/theme.dart", () => {
     expect(dartColors("light").size).toBe(30);
     expect(withoutGoogle(cssColors(lightCss))).toEqual(dartColors("light"));
   });
 
-  it("are the dark tokens of app/lib/shared/theme.dart, for the system's dark mode and for 다크", () => {
+  it("are the dark tokens of app/lib/design/theme.dart, for the system's dark mode and for 다크", () => {
     expect(dartColors("dark").size).toBe(30);
     expect(withoutGoogle(cssColors(systemDarkCss))).toEqual(dartColors("dark"));
     expect(withoutGoogle(cssColors(chosenDarkCss))).toEqual(dartColors("dark"));
   });
 });
 
-/** The body of `static const [set] = GoogleButtonStyle._(…);` in theme.dart. */
+/** The body of `static const [set] = GoogleButtonStyle._(…);` in google_button.dart. */
 function dartGoogleStyle(set: "light" | "dark"): string {
   const body = new RegExp(`static const ${set} = GoogleButtonStyle\\._\\(([^;]*)\\);`).exec(
-    themeDart,
+    googleButtonDart,
   )?.[1];
-  if (body === undefined) throw new Error(`theme.dart has no GoogleButtonStyle.${set}`);
+  if (body === undefined) throw new Error(`google_button.dart has no GoogleButtonStyle.${set}`);
   return body;
 }
 
@@ -93,7 +97,7 @@ function dartGoogleColors(set: "light" | "dark"): Map<string, string> {
 
 describe("the web's Google button tokens", () => {
   it("are GoogleButtonStyle's light colours, the guidelines' white button", () => {
-    // Control: theme.dart's light button is the guidelines' fill, stroke and label.
+    // Control: google_button.dart's light button is the guidelines' fill, stroke and label.
     expect(dartGoogleColors("light")).toEqual(
       new Map([
         ["google-fill", "#ffffff"],
@@ -111,7 +115,8 @@ describe("the web's Google button tokens", () => {
   });
 
   it("are GoogleButtonStyle's label, mark and Android and web spacing", () => {
-    const body = /final class GoogleButtonStyle \{([\s\S]*?)\n\}/.exec(themeDart)?.[1] ?? "";
+    const body =
+      /final class GoogleButtonStyle \{([\s\S]*?)\n\}/.exec(googleButtonDart)?.[1] ?? "";
     const label = /labelStyle = TextStyle\(([^)]*)\)/.exec(body)?.[1] ?? "";
     const spacing = /_ => \(start: ([\d.]+), gap: ([\d.]+), end: ([\d.]+)\)/.exec(body);
     // Control: both sides are read.
@@ -149,7 +154,7 @@ function dartRadii(): Map<string, number> {
 }
 
 describe("the web theme's radius tokens", () => {
-  it("are the radii of app/lib/shared/theme.dart's AppRadius", () => {
+  it("are the radii of app/lib/design/theme.dart's AppRadius", () => {
     const radii = new Map(
       [...lightCss.matchAll(/--radius-([\w-]+):\s*([\d.]+)px;/g)].map(([, name, value]) => [
         String(name),
@@ -216,7 +221,7 @@ function cssType(): Map<string, TypeStyle> {
 }
 
 describe("the web theme's type tokens", () => {
-  it("are the styles of app/lib/shared/theme.dart's AppType: size, line height, weight and tracking", () => {
+  it("are the styles of app/lib/design/theme.dart's AppType: size, line height, weight and tracking", () => {
     // Control: both sides read every style, the question's tracking among them.
     expect(dartType().size).toBe(14);
     expect(dartType().get("question")).toEqual({
@@ -251,7 +256,7 @@ const cssSpacing = new Map(
 const namedGaps = ["gutter", "row-gap", "section-gap"];
 
 describe("the web theme's spacing tokens", () => {
-  it("make every step of app/lib/shared/theme.dart's AppSpace a whole number of the 4 px unit", () => {
+  it("make every step of app/lib/design/theme.dart's AppSpace a whole number of the 4 px unit", () => {
     const steps = dartNumbers(dartClass("AppSpace"));
     // Control: the steps and the named gaps are read.
     expect(steps.get("s40")).toBe(40);
@@ -275,7 +280,7 @@ describe("the web theme's spacing tokens", () => {
 });
 
 describe("the web theme's size tokens", () => {
-  it("are the sizes of app/lib/shared/theme.dart's AppSize under the same names", () => {
+  it("are the sizes of app/lib/design/theme.dart's AppSize under the same names", () => {
     const sizes = new Map(
       [...dartNumbers(dartClass("AppSize"))].map(([name, value]) => [kebab(name), value]),
     );

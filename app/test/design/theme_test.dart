@@ -77,7 +77,7 @@ void main() {
     expect(darkTheme.textTheme.bodyMedium?.fontFamily, appFontFamily);
   });
 
-  test('no colour is written outside the theme file', () {
+  test('no colour is written outside the theme file and Google\'s button', () {
     final colour = RegExp(r'Color\(0x|\bColors\.');
     final sources = {
       for (final entity in Directory('lib').listSync(recursive: true))
@@ -87,12 +87,17 @@ void main() {
             !entity.path.startsWith('lib/study/src/rust/'))
           entity.path: entity.readAsStringSync(),
     };
-    // Control: the scan reads the theme file, where every colour is written.
-    expect(colour.hasMatch(sources['lib/shared/theme.dart'] ?? ''), isTrue);
+    // Controls: the scan reads the theme file, where every colour is written,
+    // and Google's button, whose colours are Google's.
+    expect(colour.hasMatch(sources['lib/design/theme.dart'] ?? ''), isTrue);
+    expect(colour.hasMatch(sources[_googleButton] ?? ''), isTrue);
 
     expect([
       for (final MapEntry(key: path, value: source) in sources.entries)
-        if (path != 'lib/shared/theme.dart' && colour.hasMatch(source)) path,
+        if (path != 'lib/design/theme.dart' &&
+            path != _googleButton &&
+            colour.hasMatch(source))
+          path,
     ], isEmpty);
   });
 
@@ -118,18 +123,19 @@ void main() {
     );
   });
 
-  test('no spacing or font-size literal is written outside the theme and its components', () {
+  test('no spacing or font-size literal is written outside the theme, its components and Google\'s button', () {
     final sources = _appSources();
-    // Control: the scan reads the screens, which build their insets.
+    // Controls: the scan reads the screens, which build their insets, and
+    // Google's button, whose sizes are Google's.
     expect(
       sources['lib/deck/src/deck_list_screen.dart'],
       contains('EdgeInsets'),
     );
+    expect(styleLiterals(sources[_googleButton] ?? ''), isNotEmpty);
 
     expect([
       for (final MapEntry(key: path, value: source) in sources.entries)
-        if (path != 'lib/shared/theme.dart' &&
-            !path.startsWith('lib/shared/ui/'))
+        if (!path.startsWith('lib/design/') && path != _googleButton)
           for (final literal in styleLiterals(source)) '$path: $literal',
     ], isEmpty);
   });
@@ -139,15 +145,11 @@ void main() {
     final sources = _appSources();
     // Control: the app sheet opens the platform's sheet, so the expression
     // finds what it is meant to.
-    expect(
-      modal.hasMatch(sources['lib/shared/ui/app_sheet.dart'] ?? ''),
-      isTrue,
-    );
+    expect(modal.hasMatch(sources['lib/design/app_sheet.dart'] ?? ''), isTrue);
 
     expect([
       for (final MapEntry(key: path, value: source) in sources.entries)
-        if (path != 'lib/shared/ui/app_sheet.dart' && modal.hasMatch(source))
-          path,
+        if (path != 'lib/design/app_sheet.dart' && modal.hasMatch(source)) path,
     ], isEmpty);
   });
 
@@ -224,6 +226,11 @@ void main() {
   }
 }
 
+/// Google's sign-in button, drawn to Google's branding guidelines rather than
+/// to the tokens: the one file beside the theme and the components that
+/// writes colours and sizes.
+const _googleButton = 'lib/account/src/google_button.dart';
+
 /// Every Dart source under `lib/` keyed by its path under `app/`, leaving out
 /// generated code.
 Map<String, String> _appSources() => {
@@ -232,7 +239,7 @@ Map<String, String> _appSources() => {
         entity.path.endsWith('.dart') &&
         !entity.path.endsWith('.g.dart') &&
         !entity.path.startsWith('lib/study/src/rust/') &&
-        !entity.path.startsWith('lib/shared/l10n/'))
+        !entity.path.startsWith('lib/l10n/'))
       entity.path: entity.readAsStringSync(),
 };
 
