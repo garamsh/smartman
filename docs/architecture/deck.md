@@ -23,7 +23,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Model
 
 - A deck has an id, a name, creation and update times, a visibility, and an optional description. The visibility is `PrivateDeck`, the default, or `PublicDeck` with its publish time ([`sharing.md`](sharing.md)).
-- A card belongs to one deck and has a front, a back, a card key, a source, and creation and update times. Ids are UUID v4 strings.
+- A card belongs to one deck and has a front, a back, a card key, a source, and creation and update times. Ids are UUID v4 strings. [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) makes new ones version 7, which is not built yet ([`sync.md`](sync.md)).
 - `source` is `manual`, `import` or `shared`. The editor writes `manual`, photo import `import`, and a copy of another user's public deck `shared`, with the copied deck's id as `originDeckId`, null on every other card.
 - Front and back are each an ordered list of content blocks. A block is `text`, or `UnsupportedContent` for a stored type this version does not know.
 
