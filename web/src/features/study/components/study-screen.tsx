@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { v7 } from "uuid";
 
 import type { Answer, AnswerWrite } from "../answer-write";
 import { loadEngine } from "../engine";
@@ -84,7 +85,7 @@ const touchStep = 48;
  * control.
  */
 export function StudyScreen({ plan }: { plan: SessionPlan }) {
-  const [session] = useState(() => new StudySession(plan, Date.now, () => crypto.randomUUID()));
+  const [session] = useState(() => new StudySession(plan, Date.now, () => v7()));
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
   const [revealed, setRevealed] = useState(false);
