@@ -35,3 +35,14 @@ final class SyncFailed extends SyncFailure {
   @override
   String toString() => 'SyncFailed: $cause';
 }
+
+/// The server refused a pushed row because it does not hold the row's parent,
+/// which a delete made elsewhere and purged since removed.
+final class MissingServerParent implements Exception {
+  const MissingServerParent(this.cause);
+
+  final Exception cause;
+
+  @override
+  String toString() => 'MissingServerParent: $cause';
+}
