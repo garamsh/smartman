@@ -70,7 +70,7 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
 
 ### Storage
 
-- The `reviews` and `card_states` tables in `app/lib/shared/database.dart` belong to this domain. `card_states` holds each reviewed card's stability, difficulty, last review and due time; a new card has no row. Schema v2 added it ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
+- The `reviews` and `card_states` tables in `app/lib/database/database.dart` belong to this domain. `card_states` holds each reviewed card's stability, difficulty, last review and due time; a new card has no row. Schema v2 added it ([ADR 0005](adr/0005-study-queue-and-card-state.md)).
 - Every answer of the day's cards writes one `reviews` row (`good` for "Know", `again` for "Don't know", with its time, duration on screen and fuzz factor, which the answer draws from the session's `Random`). Schema v3 added `fuzz_factor`, checked to `[0, 1)`; a row written before it holds null, as its review was not fuzzed ([ADR 0012](adr/0012-fuzz-review-intervals.md)).
 - Each write, after an answer or a toggle, replays the card's answers in this session as they stand, from its state when the session opened, one engine review per answer with that answer's fuzz factor. It then rewrites those `reviews` rows, keeping their ids, times and factors, and the card's `card_states` row, in one transaction ([ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md)). Each row it writes takes the write's time as `updated_at` and is left unsynced; sync pushes it, the server keeping a review's rating by the later `updated_at` ([`sync.md`](sync.md)).
 - Schema v4 added `updated_at`, `deleted_at` and `dirty` to both tables. Reads leave out a card state with `deleted_at` set.
