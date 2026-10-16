@@ -58,7 +58,6 @@ void main() {
       ProviderScope(
         overrides: [
           accountServiceProvider.overrideWithValue(account),
-          legalLinksProvider.overrideWithValue(const LegalLinks()),
           appVersionProvider.overrideWithValue('1.0.0'),
           accountDataProvider.overrideWithValue(controller),
           syncControllerProvider.overrideWithValue(controller),

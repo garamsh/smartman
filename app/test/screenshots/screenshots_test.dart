@@ -157,7 +157,6 @@ void main() {
           FakeExtractionClient(),
           FakeSharingServer(),
           FakeReachability(),
-          const LegalLinks(),
           '1.0.0',
         ),
       );
@@ -279,10 +278,6 @@ void main() {
       await tester.ensureVisible(find.text(ko.termsOfService));
       await tester.pumpAndSettle();
       await shot(tester, '18b-account-footer');
-      await tap(tester, find.text(ko.termsOfService));
-      await shot(tester, '18c-coming-soon');
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
       server.failure = const SyncOffline('no route to host');
       await tester.tap(find.text(ko.signOut));
       await tester.pump();

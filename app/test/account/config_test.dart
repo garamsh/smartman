@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/src/config.dart';
-import 'package:smartman/account/src/legal.dart';
 
 void main() {
   const valid = {
@@ -72,45 +71,5 @@ void main() {
             .map((key, value) => MapEntry(key, value is String ? value : ''));
 
     expect(problemsOf(values), isEmpty);
-    // The legal links may be empty, and parse when they are.
-    expect(() => LegalLinks.parse(values), returnsNormally);
-  });
-
-  test('an empty legal link is no link, and an https one is its URL', () {
-    final links = LegalLinks.parse({
-      AccountConfigKey.termsUrl: 'https://example.test/terms',
-      AccountConfigKey.privacyUrl: ' ',
-    });
-
-    expect(links.terms, Uri.parse('https://example.test/terms'));
-    expect(links.privacy, isNull);
-    expect(LegalLinks.parse(const {}).terms, isNull);
-  });
-
-  test('a legal link that is not https is refused, naming its key', () {
-    List<String> legalProblems(Map<String, String> values) {
-      try {
-        LegalLinks.parse(values);
-      } on InvalidAccountConfig catch (error) {
-        return error.problems;
-      }
-      return const [];
-    }
-
-    expect(
-      legalProblems({
-        AccountConfigKey.termsUrl: 'http://example.test/terms',
-        AccountConfigKey.privacyUrl: 'example.test/privacy',
-      }),
-      ['TERMS_URL is malformed', 'PRIVACY_URL is malformed'],
-    );
-    // Control: the same links over https are accepted.
-    expect(
-      legalProblems({
-        AccountConfigKey.termsUrl: 'https://example.test/terms',
-        AccountConfigKey.privacyUrl: 'https://example.test/privacy',
-      }),
-      isEmpty,
-    );
   });
 }

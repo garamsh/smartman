@@ -712,9 +712,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get privacyPolicy => '개인정보 처리방침';
 
   @override
-  String get comingSoonBody => '아직 준비 중이에요. 곧 열어 드릴게요.';
-
-  @override
   String get linkNotOpened => '링크를 열지 못했어요. 다시 시도해 주세요.';
 
   @override

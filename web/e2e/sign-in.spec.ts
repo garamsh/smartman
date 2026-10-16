@@ -48,6 +48,26 @@ test.describe("signed out", () => {
     expect(url.searchParams.get("redirect_to")).toBe(`${origin}/auth/callback`);
   });
 
+  for (const [path, title, last, anchor] of [
+    ["/terms", "이용약관", "시행일", "effective"],
+    ["/privacy", "개인정보 처리방침", "시행일과 변경", "changes"],
+  ] as const) {
+    test(`${path} shows ${title} without a session, its contents leading to each section`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+
+      await expect(page).toHaveURL(new RegExp(`${path}$`));
+      await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
+      const toc = page.getByRole("navigation", { name: "목차", exact: true });
+      await toc.getByRole("link", { name: last, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`${path}#${anchor}$`));
+      await expect(
+        page.getByRole("heading", { level: 2, name: last, exact: true }),
+      ).toBeInViewport();
+    });
+  }
+
   test("the theme follows the system's dark mode", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/login");

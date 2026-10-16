@@ -513,8 +513,6 @@
   "@termsOfService": {"description": "Link to the terms of service."},
   "privacyPolicy": "개인정보 처리방침",
   "@privacyPolicy": {"description": "Link to the privacy policy."},
-  "comingSoonBody": "아직 준비 중이에요. 곧 열어 드릴게요.",
-  "@comingSoonBody": {"description": "Body of the page a link opens before its document exists."},
   "linkNotOpened": "링크를 열지 못했어요. 다시 시도해 주세요.",
   "@linkNotOpened": {"description": "Shown when the terms or privacy link could not be opened."},
   "appVersion": "버전 {version}",

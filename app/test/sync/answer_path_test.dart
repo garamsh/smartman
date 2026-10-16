@@ -52,7 +52,6 @@ void main() {
         null,
         null,
         FakeReachability(),
-        const LegalLinks(),
         '1.0.0',
       ),
     );

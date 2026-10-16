@@ -2,7 +2,5 @@
   "SUPABASE_URL": "https://jaxltcczmioxrineznfu.supabase.co",
   "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_aSPjtKB-HGhIqeu5TGPoRw_qzHjjF9G",
   "GOOGLE_WEB_CLIENT_ID": "201216613268-19kds4mvj04nn4rf4amtl91h715js5il.apps.googleusercontent.com",
-  "GOOGLE_IOS_CLIENT_ID": "201216613268-0kgom9mhkgnqqi92bd10slg8o50a73sv.apps.googleusercontent.com",
-  "TERMS_URL": "",
-  "PRIVACY_URL": ""
+  "GOOGLE_IOS_CLIENT_ID": "201216613268-0kgom9mhkgnqqi92bd10slg8o50a73sv.apps.googleusercontent.com"
 }

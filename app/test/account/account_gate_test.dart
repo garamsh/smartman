@@ -104,7 +104,6 @@ void main() {
         _NoExtraction(),
         null,
         FakeReachability(),
-        const LegalLinks(),
         '1.0.0',
       ),
     );

@@ -1321,12 +1321,6 @@ abstract class AppLocalizations {
   /// **'개인정보 처리방침'**
   String get privacyPolicy;
 
-  /// Body of the page a link opens before its document exists.
-  ///
-  /// In ko, this message translates to:
-  /// **'아직 준비 중이에요. 곧 열어 드릴게요.'**
-  String get comingSoonBody;
-
   /// Shown when the terms or privacy link could not be opened.
   ///
   /// In ko, this message translates to:

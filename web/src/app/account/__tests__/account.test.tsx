@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
@@ -10,6 +10,7 @@ import { signedInCookies } from "@/testing/session";
 
 import { AccountLink } from "../../_components/account-link";
 import { Profile } from "../_components/profile";
+import AccountPage from "../page";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
@@ -41,6 +42,17 @@ describe("the account page", () => {
     setRequestCookies([]);
 
     expect(await redirectTarget(render(Profile, {}))).toBe("/login");
+  });
+
+  it("links to the terms and the privacy policy at its foot", async () => {
+    await render(AccountPage, {});
+
+    const links = within(screen.getByRole("navigation", { name: "약관" }));
+    expect(links.getByRole("link", { name: "이용약관" })).toHaveAttribute("href", "/terms");
+    expect(links.getByRole("link", { name: "개인정보 처리방침" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
   });
 });
 
