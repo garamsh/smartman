@@ -5,6 +5,12 @@ import { type CardStates, orderQueue, reinsert, type SelectedQueue } from "./que
 import { type Random, seededRandom } from "./random";
 
 /**
+ * A card of the session: `decks`' card with each side as the one line of text `decks` describes
+ * it as, which the server adds, since a client module cannot import `decks`' entry point.
+ */
+export type StudyCard = Card & { text: { front: string; back: string } };
+
+/**
  * What a study page opens with, built on the server: the cards the queue rules selected for
  * today, in the order selected, whether they are a backlog, each one's stored state, the start
  * time, which also seeds the session's random source, and what today already holds. Times are
@@ -12,13 +18,13 @@ import { type Random, seededRandom } from "./random";
  */
 export type SessionPlan = {
   startedAt: number;
-  queue: SelectedQueue<Card>;
+  queue: SelectedQueue<StudyCard>;
   before: CardStates;
   today: {
     /** The answers stored today for the decks' cards before the session opened. */
     answers: { answer: Answer; durationMs: number }[];
     /** The cards those answers are to, each once, in the order first answered. */
-    cards: Card[];
+    cards: StudyCard[];
     /** Whether an answer is stored today in any deck. */
     answeredAnyDeck: boolean;
     /** Study days in a row before today holding an answer. */
@@ -32,7 +38,7 @@ export type SessionPlan = {
 export type PreviousAnswer = {
   /** Where the answer stands among the session's answers, first at 0; what `toggle` takes. */
   position: number;
-  card: Card;
+  card: StudyCard;
   answer: Answer;
   /** Whether the answer differs from the one first given. */
   changed: boolean;
@@ -65,7 +71,7 @@ export type SessionView = {
 } & (
   | {
       kind: "studying";
-      current: Card;
+      current: StudyCard;
       /** Whether the user has no answer stored or given yet, so the first-run guide shows. */
       firstRun: boolean;
     }
@@ -77,7 +83,7 @@ export type SessionView = {
  * An answer given in this session. A written answer holds the review that records it; a
  * practice answer holds the pass it was given in and is never written.
  */
-type Answered = { card: Card; answer: Answer; first: Answer } & (
+type Answered = { card: StudyCard; answer: Answer; first: Answer } & (
   { review: SessionReview; pass: null } | { review: null; pass: number }
 );
 
@@ -93,7 +99,7 @@ type Pass = "all" | "missed";
  */
 export class StudySession {
   private readonly random: Random;
-  private readonly queue: Card[];
+  private readonly queue: StudyCard[];
   private readonly total: number;
   private readonly answers: Answered[] = [];
   private shownAt: number;
@@ -101,9 +107,9 @@ export class StudySession {
   private pass: Pass = "all";
   /** Counts the passes started, so a toggle can tell whether its answer is in the one under way. */
   private passNumber = 0;
-  private readonly practiceQueue: Card[] = [];
+  private readonly practiceQueue: StudyCard[] = [];
   /** The cards answered "모른다" in the pass over all, oldest first. */
-  private missed: Card[] = [];
+  private missed: StudyCard[] = [];
   private snapshot: SessionView;
 
   constructor(
@@ -215,7 +221,7 @@ export class StudySession {
   }
 
   /** Every card answered today: before the session opened, then in it. */
-  private practiceSet(): Card[] {
+  private practiceSet(): StudyCard[] {
     const seen = new Set<CardId>();
     return [...this.plan.today.cards, ...this.written().map((answered) => answered.card)].filter(
       (card) => {
@@ -248,7 +254,7 @@ export class StudySession {
     this.snapshot = this.build();
   }
 
-  private togglePractice(card: Card, answer: Answer): void {
+  private togglePractice(card: StudyCard, answer: Answer): void {
     if (this.pass === "missed") {
       this.toggleQueued(this.practiceQueue, card, answer, this.clock());
       return;
@@ -258,7 +264,7 @@ export class StudySession {
   }
 
   /** Puts [card] back into [queue] for a toggle to "모른다", or takes its re-show out for "안다". */
-  private toggleQueued(queue: Card[], card: Card, answer: Answer, now: number): void {
+  private toggleQueued(queue: StudyCard[], card: StudyCard, answer: Answer, now: number): void {
     const waiting = queue.findIndex((queued) => queued.id === card.id);
     if (answer === "dontKnow" && waiting === -1) {
       if (queue.length === 0) this.shownAt = now;

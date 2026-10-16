@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
-import { themeScript } from "@/lib/theme";
-import { timeZoneScript } from "@/lib/time-zone";
+import { themeScript } from "@/design/theme";
+import { timeZoneScript } from "@/features/study";
 
 import "@/styles/globals.css";
 

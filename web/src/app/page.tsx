@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { BrandMark } from "@/components/brand";
+import { BrandMark } from "@/design/brand";
 
 import { AccountLink } from "./_components/account-link";
 import { Decks } from "./_components/decks";

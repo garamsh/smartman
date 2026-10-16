@@ -89,8 +89,6 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
 The code at `52c982aa501f26c5ca196f29b92f485b29f2f10e` still differs from the rules above in these places. Each is moved by a follow-up issue, and the entry is removed in the same pull request.
 
 - `app/lib/home/` does not exist. The home screen is `deck`'s `DeckListScreen` and the deck's page `deck`'s `CardListScreen`, and `deck` hosts other domains' screens through `studyScreenProvider`, `todayProvider`, `photoImportProvider`, `accountScreenProvider`, `accountAvatarProvider` and `deckSharingProvider`; `account` hosts the shell through `signedInHomeProvider` and `sync`'s view through `syncStatusProvider`.
-- `web/src/lib/` holds the card content blocks, the theme store, the study day's time zone and the Supabase adapter; `web/src/components/` holds the brand, the skeleton, the theme choice and the legal documents' layout and links. `web/src/features/auth/` is not yet renamed `account`, `web/src/app/terms/` and `web/src/app/privacy/` are not yet in `(legal)`, and `web/src/__tests__/structure.test.ts` does not exist.
-- `web/eslint.config.mjs` names `src/lib/`, `src/components/` and `src/env.ts` as the folders below every feature.
 
 ## Rationale
 

@@ -3,12 +3,12 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import type { CardId } from "@/features/decks";
-import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
-import { field, parseTime } from "@/lib/supabase/row";
-import { selectAll } from "@/lib/supabase/select-all";
-import { createClient } from "@/lib/supabase/server";
-import { readUserId } from "@/lib/supabase/session";
-import { parseTimeZone, timeZoneCookie } from "@/lib/time-zone";
+import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
+import { field, parseTime } from "@/supabase/row";
+import { selectAll } from "@/supabase/select-all";
+import { createClient } from "@/supabase/server";
+import { readUserId } from "@/supabase/session";
+import { parseTimeZone, timeZoneCookie } from "./time-zone";
 
 import type { Answer } from "./answer-write";
 import { type StudyDay, studyDay, studyDayStart } from "./queue";

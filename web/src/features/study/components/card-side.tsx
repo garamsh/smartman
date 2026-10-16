@@ -1,4 +1,4 @@
-import type { Content } from "@/lib/card-content";
+import type { Content } from "@/features/decks";
 
 /**
  * Every block of a card side, in the question's or the answer's size: text as written, a block

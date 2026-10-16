@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { themeStorageKey } from "@/lib/theme";
+import { themeStorageKey } from "@/design/theme";
 
 import { ThemeChoice } from "../theme-choice";
 

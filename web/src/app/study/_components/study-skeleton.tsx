@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonLine } from "@/components/skeleton";
+import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
  * The study page while its cards are read: the header with the progress bar, the current card
