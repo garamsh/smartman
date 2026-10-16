@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +40,7 @@ final class TodayOverview extends TodayOverviewRead {
     required this.streak,
     required this.forecast,
     required this.days,
+    required this.load,
   });
 
   final TodayCounted count;
@@ -47,6 +50,14 @@ final class TodayOverview extends TodayOverviewRead {
 
   /// The calendar date each day of [forecast] starts on, at midnight UTC.
   final List<DateTime> days;
+
+  /// The reviews an average day asks for at the cards' current intervals,
+  /// rounded up, at least one: the pace a backlog's catch-up is projected at.
+  final int load;
+
+  /// In a backlog, the overdue reviews left at the start of each day of
+  /// [forecast] when the user clears [load] of them a day ([catchUp]).
+  List<int> get backlogLeft => catchUp(count.total, load);
 
   /// The first later day with a card due: how many days after today, and how
   /// many cards; null when none of the forecast's days has one.
@@ -132,6 +143,7 @@ class _TodayOverviewReaderState extends ConsumerState<TodayOverviewReader> {
         load: today.count.total,
         offsetAt: zone,
       ),
+      load: max(1, dailyLoad(today.states.values).ceil()),
       days: [
         for (final day in days)
           if (day.toUtc().add(zone(day)) case final wall)

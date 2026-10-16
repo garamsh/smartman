@@ -1590,6 +1590,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{count}장 학습 · 약 {minutes}분'**
   String backlogStudy(int count, int minutes);
+
+  /// Heading of the backlog's catch-up chart: the daily pace and the days it takes.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 {perDay}장씩 하면 {days}일이면 따라잡아요'**
+  String catchUpTitle(int perDay, int days);
+
+  /// Under the catch-up chart: what its bars show.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 {perDay}장씩 했을 때 남는 밀린 복습이에요'**
+  String catchUpNote(int perDay);
+
+  /// What a screen reader reads for the catch-up chart, before each day and its count.
+  ///
+  /// In ko, this message translates to:
+  /// **'밀린 복습 예상: {days}'**
+  String catchUpSemantics(String days);
 }
 
 class _AppLocalizationsDelegate

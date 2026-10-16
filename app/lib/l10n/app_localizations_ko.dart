@@ -879,4 +879,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String backlogStudy(int count, int minutes) {
     return '$count장 학습 · 약 $minutes분';
   }
+
+  @override
+  String catchUpTitle(int perDay, int days) {
+    return '하루 $perDay장씩 하면 $days일이면 따라잡아요';
+  }
+
+  @override
+  String catchUpNote(int perDay) {
+    return '하루 $perDay장씩 했을 때 남는 밀린 복습이에요';
+  }
+
+  @override
+  String catchUpSemantics(String days) {
+    return '밀린 복습 예상: $days';
+  }
 }

@@ -247,5 +247,8 @@
   "noNextReview": "No reviews in the next 7 days",
   "backlogTitle": "Pick up where you left off",
   "backlogBody": "{count} overdue reviews, most urgent first. New cards wait for now.",
-  "backlogStudy": "Study {count} · about {minutes} min"
+  "backlogStudy": "Study {count} · about {minutes} min",
+  "catchUpTitle": "At {perDay} a day you catch up in {days} days",
+  "catchUpNote": "The overdue reviews left at {perDay} a day",
+  "catchUpSemantics": "Overdue reviews expected: {days}"
 }

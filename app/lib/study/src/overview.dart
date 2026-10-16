@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../../deck/deck.dart';
 import 'model.dart';
 import 'queue.dart';
@@ -117,3 +119,10 @@ final class DailyGoal {
   /// Whether every card of the goal is done, and there was one.
   bool get reached => goal > 0 && done == goal;
 }
+
+/// The overdue reviews left at the start of each of the [forecastDays] study
+/// days from today, when [backlog] are overdue today and the user clears
+/// [perDay] of them a day: the catch-up a backlog card projects.
+List<int> catchUp(int backlog, int perDay) => [
+  for (var day = 0; day < forecastDays; day++) max(0, backlog - day * perDay),
+];

@@ -15,8 +15,8 @@ import '../../sync/sync.dart';
 import 'hero.dart';
 
 /// The 오늘 tab over [decks]: the today card, the next seven days, and the
-/// decks that hold cards for today; in a backlog, the backlog card in place of
-/// the today card; once today's cards are done, the done card, the seven days
+/// decks that hold cards for today; in a backlog, the backlog card and the
+/// catch-up at an average day's load; once today's cards are done, the done card, the seven days
 /// and 계속 학습.
 class TodayTab extends StatelessWidget {
   const TodayTab({super.key, required this.decks});
@@ -63,8 +63,7 @@ class TodayTab extends StatelessWidget {
                       onStudy: () => _study(context, all),
                     ),
                     const SizedBox(height: AppSpace.s12),
-                    _Forecast(overview: overview),
-                    _TodayDecks(decks: decks),
+                    _CatchUp(overview: overview),
                   ],
                   TodayOverview() => [
                     _TodayCard(
@@ -578,6 +577,20 @@ class _RestingMascot extends StatelessWidget {
   }
 }
 
+/// The labels of the seven days of [overview]: 오늘, 내일, then the weekday.
+List<String> _dayLabels(BuildContext context, TodayOverview overview) {
+  final l10n = AppLocalizations.of(context);
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  return [
+    for (final (index, day) in overview.days.indexed)
+      switch (index) {
+        0 => l10n.forecastToday,
+        1 => l10n.forecastTomorrow,
+        _ => DateFormat.E(locale).format(day),
+      },
+  ];
+}
+
 /// The next seven study days on a card: the cards due on each as a bar,
 /// today's in ink, with tomorrow's count and the week's beside the heading.
 class _Forecast extends StatelessWidget {
@@ -589,22 +602,86 @@ class _Forecast extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final locale = Localizations.localeOf(context).toLanguageTag();
     final counts = overview.forecast;
     final week = counts.fold(0, (sum, count) => sum + count);
-    final most = counts.fold(1, max);
     final done = overview.count.total == 0;
-    final labels = [
-      for (final (index, day) in overview.days.indexed)
-        switch (index) {
-          0 => l10n.forecastToday,
-          1 => l10n.forecastTomorrow,
-          _ => DateFormat.E(locale).format(day),
-        },
-    ];
-    // On the done card the next day with cards stands out; otherwise today.
-    final emphasised = done ? (overview.nextReview?.after ?? -1) : 0;
-    const barHeight = AppSpace.s40;
+    final labels = _dayLabels(context, overview);
+    return _ChartCard(
+      title: l10n.forecastTitle,
+      trailing: done
+          ? l10n.forecastWeek(week)
+          : l10n.forecastSummary(counts[1], week),
+      chart: _DayBars(
+        counts: counts,
+        labels: labels,
+        // On the done card the next day with cards stands out; otherwise
+        // today.
+        emphasised: done ? (overview.nextReview?.after ?? -1) : 0,
+        ink: colors.ink,
+        semantics: [
+          for (final (index, count) in counts.indexed)
+            l10n.forecastDay(labels[index], count),
+        ].join(', '),
+      ),
+    );
+  }
+}
+
+/// In a backlog: the overdue reviews left at the start of each of the next
+/// seven days at an average day's load, in the streak's amber, and how many
+/// days that takes.
+class _CatchUp extends StatelessWidget {
+  const _CatchUp({required this.overview});
+
+  final TodayOverview overview;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final counts = overview.backlogLeft;
+    final labels = _dayLabels(context, overview);
+    final days = (overview.count.total / overview.load).ceil();
+    return _ChartCard(
+      title: l10n.catchUpTitle(overview.load, days),
+      chart: _DayBars(
+        counts: counts,
+        labels: labels,
+        emphasised: null,
+        ink: colors.streak,
+        semantics: l10n.catchUpSemantics(
+          [
+            for (final (index, count) in counts.indexed)
+              l10n.forecastDay(labels[index], count),
+          ].join(', '),
+        ),
+      ),
+      note: l10n.catchUpNote(overview.load),
+    );
+  }
+}
+
+/// A chart on the surface: its [title], an optional [trailing] line beside
+/// it, the [chart], and an optional [note] under it.
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({
+    required this.title,
+    required this.chart,
+    this.trailing,
+    this.note,
+  });
+
+  final String title;
+  final Widget chart;
+  final String? trailing;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final quiet = AppType.caption.copyWith(color: colors.muted);
+    final trailing = this.trailing;
+    final note = this.note;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -623,69 +700,87 @@ class _Forecast extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     header: true,
-                    child: Text(l10n.forecastTitle, style: AppType.label),
+                    child: Text(title, style: AppType.label),
                   ),
                 ),
-                Text(
-                  done
-                      ? l10n.forecastWeek(week)
-                      : l10n.forecastSummary(counts[1], week),
-                  style: AppType.caption.copyWith(color: colors.muted),
-                ),
+                if (trailing != null) Text(trailing, style: quiet),
               ],
             ),
-            Semantics(
-              container: true,
-              label: [
-                for (final (index, count) in counts.indexed)
-                  l10n.forecastDay(labels[index], count),
-              ].join(', '),
-              excludeSemantics: true,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                spacing: AppSpace.s8,
+            chart,
+            if (note != null) Text(note, style: quiet),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A bar for each of [counts], its count above it and its label under it,
+/// the [emphasised] one in [ink] and the others a quieter shade of it, or all
+/// in [ink] when none is; read as [semantics].
+class _DayBars extends StatelessWidget {
+  const _DayBars({
+    required this.counts,
+    required this.labels,
+    required this.emphasised,
+    required this.ink,
+    required this.semantics,
+  });
+
+  final List<int> counts;
+  final List<String> labels;
+  final int? emphasised;
+  final Color ink;
+  final String semantics;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final most = counts.fold(1, max);
+    const barHeight = AppSpace.s40;
+    return Semantics(
+      container: true,
+      label: semantics,
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        spacing: AppSpace.s8,
+        children: [
+          for (final (index, count) in counts.indexed)
+            Expanded(
+              child: Column(
+                spacing: AppSpace.s4,
                 children: [
-                  for (final (index, count) in counts.indexed)
-                    Expanded(
-                      child: Column(
-                        spacing: AppSpace.s4,
-                        children: [
-                          Text(
-                            '$count',
-                            style: AppType.micro.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: colors.ink2,
-                            ),
-                          ),
-                          Container(
-                            height: max(
-                              AppSpace.s4,
-                              (count / most * barHeight).roundToDouble(),
-                            ),
-                            constraints: const BoxConstraints(
-                              maxWidth: AppSpace.s24 - 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: index == emphasised
-                                  ? colors.ink
-                                  : colors.ink.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(
-                                AppSpace.s8 - 2,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            labels[index],
-                            style: AppType.micro.copyWith(color: colors.muted),
-                          ),
-                        ],
-                      ),
+                  Text(
+                    '$count',
+                    style: AppType.micro.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.ink2,
                     ),
+                  ),
+                  Container(
+                    height: max(
+                      AppSpace.s4,
+                      (count / most * barHeight).roundToDouble(),
+                    ),
+                    constraints: const BoxConstraints(
+                      maxWidth: AppSpace.s24 - 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: emphasised == null || index == emphasised
+                          ? ink
+                          : ink.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(AppSpace.s8 - 2),
+                    ),
+                  ),
+                  Text(
+                    labels[index],
+                    style: AppType.micro.copyWith(color: colors.muted),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

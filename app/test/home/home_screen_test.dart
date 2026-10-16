@@ -349,6 +349,20 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Study all'), findsNothing);
+        // Seven reviews after 30-day intervals ask for a quarter of a card
+        // a day, so the catch-up runs at one a day.
+        expect(find.text('At 1 a day you catch up in 7 days'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            'Overdue reviews expected: Today 7, Tomorrow 6, Sat 5, Sun 4, '
+            'Mon 3, Tue 2, Wed 1',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('The overdue reviews left at 1 a day'),
+          findsOneWidget,
+        );
         // Seven cards at 10 s each, about 2 minutes.
         await list.tap('Study 7 · about 2 min');
         expect(list.session, list.ids.values.toSet());

@@ -183,4 +183,12 @@ void main() {
       expect((empty.done, empty.goal, empty.reached), (0, 0, false));
     });
   });
+
+  group('catch-up', () {
+    test('a backlog falls by the pace each day, to zero and not below', () {
+      expect(catchUp(84, 30), [84, 54, 24, 0, 0, 0, 0]);
+      // Control: a pace of one keeps a backlog of seven on every day.
+      expect(catchUp(7, 1), [7, 6, 5, 4, 3, 2, 1]);
+    });
+  });
 }

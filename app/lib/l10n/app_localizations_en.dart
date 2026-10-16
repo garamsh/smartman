@@ -968,4 +968,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String backlogStudy(int count, int minutes) {
     return 'Study $count · about $minutes min';
   }
+
+  @override
+  String catchUpTitle(int perDay, int days) {
+    return 'At $perDay a day you catch up in $days days';
+  }
+
+  @override
+  String catchUpNote(int perDay) {
+    return 'The overdue reviews left at $perDay a day';
+  }
+
+  @override
+  String catchUpSemantics(String days) {
+    return 'Overdue reviews expected: $days';
+  }
 }

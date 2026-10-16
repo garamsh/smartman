@@ -593,5 +593,11 @@
   "backlogBody": "밀린 복습 {count}장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.",
   "@backlogBody": {"description": "Under the backlog heading: how many reviews are overdue, in what order, and that new cards pause.", "placeholders": {"count": {"type": "int"}}},
   "backlogStudy": "{count}장 학습 · 약 {minutes}분",
-  "@backlogStudy": {"description": "The backlog card's button: how many cards and their minutes.", "placeholders": {"count": {"type": "int"}, "minutes": {"type": "int"}}}
+  "@backlogStudy": {"description": "The backlog card's button: how many cards and their minutes.", "placeholders": {"count": {"type": "int"}, "minutes": {"type": "int"}}},
+  "catchUpTitle": "하루 {perDay}장씩 하면 {days}일이면 따라잡아요",
+  "@catchUpTitle": {"description": "Heading of the backlog's catch-up chart: the daily pace and the days it takes.", "placeholders": {"perDay": {"type": "int"}, "days": {"type": "int"}}},
+  "catchUpNote": "하루 {perDay}장씩 했을 때 남는 밀린 복습이에요",
+  "@catchUpNote": {"description": "Under the catch-up chart: what its bars show.", "placeholders": {"perDay": {"type": "int"}}},
+  "catchUpSemantics": "밀린 복습 예상: {days}",
+  "@catchUpSemantics": {"description": "What a screen reader reads for the catch-up chart, before each day and its count.", "placeholders": {"days": {"type": "String"}}}
 }
