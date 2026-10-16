@@ -8,10 +8,10 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 - The domain lives in `app/lib/sync/`; its public surface is `app/lib/sync/sync.dart`, with internals under `app/lib/sync/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - The surface exports what the composition site constructs and overrides with:
-  - `SyncServer`, the seam to the server, with `Pulled`; `SupabaseSyncServer`, its PostgREST implementation; and `connectSyncServer`, which picks the server for the account's connection;
+  - `SyncServer`, the seam to the server, with `Pulled` and `Horizon`; `SupabaseSyncServer`, its PostgREST implementation; and `connectSyncServer`, which picks the server for the account's connection;
   - `SyncStore`, `Synchronizer` and `SyncController`, and `syncControllerProvider`;
   - the status: `SyncStatus`, `SyncIdle`, `Syncing`, `Synced`, `SyncInterrupted`;
-  - the failures: `SyncFailure`, `SyncOffline`, `SyncRejected`, `SyncFailed`;
+  - the failures: `SyncFailure`, `SyncOffline`, `SyncRejected`, `SyncFailed`, and `MissingServerParent`, the cause of a `SyncFailed` refusing a row whose parent the server does not hold;
   - `SyncStatusView`.
 - The domain reads and writes the shared database directly. It uses `account`'s surface for the session (`AccountService`, `SignedIn`'s `UserId`, and the `SupabaseClient` of `AccountConnection`) and `study`'s for the fold (`Scheduler.fold`).
 - `deck` and `study` do not import `sync`. `account` reaches it through `accountDataProvider` and `syncStatusProvider`, which the composition site overrides with the `SyncController` and `SyncStatusView` ([`account.md`](account.md)).
@@ -22,44 +22,58 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - Schema v4 gives `decks`, `cards`, `reviews` and `card_states` the columns `updated_at`, `deleted_at` (a tombstone) and `dirty` (not yet pushed). `dirty` defaults to set, so every local insert is unsynced; the v3 to v4 migration leaves every existing row unsynced, and dates a review's `updated_at` by its `reviewed_at` and a card state's by its `last_review`.
 - `sync_state` holds at most one row: the owning account's id, and per table the pull cursor, the highest server `revision` applied. No row means no account owns the database.
 - Schema v5 adds `visibility`, `published_at` and `description` to `decks` and `origin_deck_id` to `cards`, and lets `source` be `shared`. The v4 to v5 migration leaves every deck private and rebuilds `cards` for its check, keeping every row ([`sharing.md`](sharing.md)).
-- Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
-- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored.
-
-### Target local schema and sync (not built yet)
-
-[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides what follows. None of it is built: each bullet holds once its implementation issue merges. Until then the decisions above describe the app.
-
-- **Ids.** The app creates new ids with `uuid`'s `v7()`, and the web creates them with the `uuid` npm package's `v7()` in place of `crypto.randomUUID()`.
-- **Schema v6, time.** Schema v6 stores every `DateTime` column as ISO-8601 text in UTC (drift's `store_date_time_values_as_text`). Every write truncates to the millisecond, so text order is time order, and the precision matches what the web sends.
-  - The v5 to v6 migration rebuilds each synced table with `TableMigration`, converting each column from Unix seconds. It keeps every row and its `dirty` flag, with foreign keys off, as the earlier rebuilds did.
-  - Its migration test starts from v5 rows that are unsynced and tombstoned, and reads them back unchanged.
-- **Schema v6, indexes:**
+- Schema v6 stores every `DateTime` column as ISO-8601 text in UTC (drift's `store_date_time_values_as_text`, in `app/build.yaml`). Every column writes through `StoredTime` (`app/lib/database/database.dart`), which converts to UTC and truncates to the millisecond, so every value has one length and one zone, its text order is its time order, and its precision is the web's ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §2).
+  - The v5 to v6 migration rebuilds `decks`, `cards`, `reviews` and `card_states` with `TableMigration`, converting each time column from Unix seconds. It keeps every row and its `dirty` flag, with foreign keys off, as the earlier rebuilds did.
+  - Its migration test starts from v5 rows that are unsynced and tombstoned, and reads them back unchanged, times included.
+- Schema v6 indexes:
   - `cards_deck_id_created_at` on `(deck_id, created_at)`;
   - `cards_deck_id_card_key`, rebuilt as partial where `deleted_at IS NULL`;
   - `reviews_card_id_reviewed_at` on `(card_id, reviewed_at)`, which also covers the cascade from `cards`;
   - `reviews_live_reviewed_at` on `reviewed_at` where `deleted_at IS NULL`;
-  - one `{table}_unsynced` index per synced table, partial on `"dirty"`.
+  - one `{table}_unsynced` index per synced table, partial on `dirty`.
   - Each partial index is declared with `TableIndex.sql`. A query reaches it only by repeating its term, so the check for unsynced rows reads `WHERE "dirty"`, not `dirty = 1`.
-- **Study reads.** `StudyRepository.firstAnswersSince` groups only the cards answered since the day began, found through `reviews_live_reviewed_at`. The streak is read one probe of that index per study day, in place of reading every answer's time (`answerTimes`) ([`study.md`](study.md)).
+  - drift's own comparison of two times is written through `julianday()`, which no index serves, so the reads by time are written in SQL comparing the text ([`study.md`](study.md)).
 - **No new local checks.** A check added on the device would have to hold for every stored row, or the table rebuild aborts and the database no longer opens. The server's checks are the authority, and a row they refuse fails the run as `SyncFailed`, as any constraint does.
-- **Horizon.** A run first reads `sync_horizon()`. If a table's cursor is above zero but below the horizon, the device may have missed purged tombstones, so it rebuilds:
-  - it pulls that table from revision 0, merging as usual;
-  - it deletes each synced local row the pull did not return;
-  - it then pushes as usual.
-  - A pushed row refused for a parent the server no longer holds (`23503`) is deleted locally, since a delete elsewhere wins.
-- **Local purge.** After a run that leaves no row unsynced, the device purges its tombstones as the server does. A tombstoned card that no review references is deleted, with its state, and so is a tombstoned deck that no card references. A tombstoned card or deck that is still referenced is stripped of its content in place, so no foreign key cascades to a review. The streak and the statistics read reviews whether or not their card is live ([`server.md`](server.md)).
+- Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
+- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`.
+
+### Target sync (not built yet)
+
+[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides what follows. None of it is built: each bullet holds once its implementation issue merges.
+
+- **Ids on the web.** The web creates new ids with the `uuid` npm package's `v7()` in place of `crypto.randomUUID()`.
 - **Order.** The server's purge job is turned on only after the app release that reads the horizon has shipped ([`server.md`](server.md)). Its first mark is taken that day, so its first purge comes 90 days later. A device still on an older release then misses a delete only if it also stayed unsynced through those 90 days.
 
 ### A run
 
 - A run, for the signed-in account:
   1. claims the database: with no owner, its rows become the account's; with another owner, every synced row, the owner and the cursors are deleted first, so another account's rows are never pushed;
-  2. pulls the account's own `decks`, `cards`, `reviews`, then `card_states`, each in pages of 500 rows above its cursor, lowest revision first, applying each page and moving the cursor in one drift transaction; a pull filters on `user_id`, since the session may also read other users' public decks and cards ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md));
-  3. recomputes the state of every card a pulled review was added to or changed the rating of;
-  4. pushes the unsynced rows of each table in the same order, 500 per request, then clears `dirty` on each row still as it was pushed; a row edited during the push stays unsynced.
+  2. reads `sync_horizon()`: the horizon, below which tombstones may have been purged, and the watermark, a revision at or below which none of the account's rows is still uncommitted ([`server.md`](server.md), [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md));
+  3. pulls the account's own `decks`, `cards`, `reviews`, then `card_states`, each in pages of 500 rows above its cursor, lowest revision first, applying each page and moving the cursor in one drift transaction; a pull filters on `user_id`, since the session may also read other users' public decks and cards ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md));
+  4. recomputes the state of every card a pulled review was added to or changed the rating of;
+  5. pushes the unsynced rows of each table in the same order, 500 per request, then clears `dirty` on each row still as it was pushed; a row edited during the push stays unsynced;
+  6. purges the local tombstones, when nothing is left unsynced.
 - Pull comes before push, so a local row that loses its merge is never sent.
 - A pulled row whose parent is not yet on the device ends its page there, below the cursor; the pull starts over, up to three passes, and a parent still missing then fails the run as `SyncFailed`.
 - Each pushed row carries `user_id`, the run's account; a session belonging to another account is refused by row-level security.
+
+### Horizon and watermark
+
+- A table whose pull completes has its cursor raised to the watermark the run read, so a table no one writes keeps up with the horizon ([ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md)).
+- A table whose cursor is above zero but below the horizon may have passed a purged tombstone, so the run rebuilds it ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §3):
+  - it pulls that table from revision 0, merging as usual;
+  - once that pull completes, it deletes each synced local row the pull did not return, with what cascades from it; an unsynced row stays and is pushed.
+  - With the watermark stored, only a device that has not completed a pull since the horizon's mark was taken, about 90 days earlier, rebuilds.
+- A push refused for a parent the server no longer holds (`23503`) is sent again one row at a time. Each row refused so is deleted locally, with what cascades from it, since a delete elsewhere wins, and the rest are pushed.
+
+### Local purge
+
+- After a run that leaves no row unsynced, the device purges its tombstones ([ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md)):
+  - every card state tombstone is deleted;
+  - every card tombstone is stripped in place, its `front` and `back` made `[]` and its `card_key` `''`;
+  - every deck tombstone is stripped in place, its `name` made `''` and its `description` null, and made private.
+- A card or deck tombstone is never deleted on the device, so a review pulled later still finds its card, and no foreign key cascades to a review. The strip is not marked unsynced; the server strips its own copy ([`server.md`](server.md)).
+- The streak and the statistics read reviews whether or not their card is live ([`study.md`](study.md)).
 
 ### Conflicts
 
@@ -88,7 +102,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - `SyncRejected` — the session or a row-level security policy refused the request;
   - `SyncFailed` — the server answered with a row sync cannot read or a constraint it refused, or the local database failed.
 - A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the account screen shows while signed in, one line read out as it changes: "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
-- `SupabaseSyncServer` maps PostgREST's error codes: `42501`, `PGRST301`, `PGRST302`, 401 and 403 to `SyncRejected`; `PGRST000` to `PGRST002` and 500, 502, 503 and 504 to `SyncOffline`; any other to `SyncFailed`.
+- `SupabaseSyncServer` maps PostgREST's error codes: `42501`, `PGRST301`, `PGRST302`, 401 and 403 to `SyncRejected`; `PGRST000` to `PGRST002` and 500, 502, 503 and 504 to `SyncOffline`; `23503` to `SyncFailed` with `MissingServerParent`; any other to `SyncFailed`.
 
 ### The web app as a writer
 
@@ -101,7 +115,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 ### Tests
 
 - `app/test/sync/merge_test.dart` — each conflict rule, with a control.
-- `app/test/sync/synchronizer_test.dart` — push, pull, the conflict rules end to end, the state fold and ownership, over two in-memory databases and a substituted server (`app/test/sync/fake_sync_server.dart`) with the server's revision, ownership and review rules.
+- `app/test/sync/synchronizer_test.dart` — push, pull, the conflict rules end to end, the state fold and ownership; a table no one writes kept at the watermark against one below the horizon rebuilt, a rebuild keeping unsynced rows, a push refused for a missing parent, and the local purge, with a review that reaches a device after it purged its card's tombstone. It runs over in-memory databases and a substituted server (`app/test/sync/fake_sync_server.dart`) with the server's revision, ownership, foreign key and review rules and a horizon a test sets.
 - `app/test/sync/sync_controller_test.dart` — when runs start, retry, `push` and `clear`.
 - `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes.
 - `app/test/sync/sync_status_test.dart` — each status on the account screen, the retry, and the tap target and contrast guidelines in both themes.
@@ -113,7 +127,8 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md) records the protocol, the conflict policy, ownership, when sync runs, and why `sync` imports `supabase_flutter`.
 - [ADR 0010](adr/0010-server-schema-and-row-level-security.md) records the server schema sync runs against.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why pulls filter by owner and how deck visibility syncs.
-- [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target local schema, the horizon and the local purge; issue #93 records the owner's direction.
+- [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records schema v6, its indexes, the horizon and the local purge; issue #93 records the owner's direction.
+- [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why a completed pull raises the cursor to the watermark, and why the device strips its tombstones rather than delete them; issue #106 records their implementation.
 - Issue #24 records the decisions made by the PM, issue #29 the synced deck and card columns of schema v5, and issue #45 those for the web app as a writer.
 
 ## Open questions
