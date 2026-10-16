@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
 
+import { streak, studyDayStart } from "@/features/study";
+
 import { bearerUser, supabaseUrl, testUser } from "./handlers";
 
 type Row = Record<string, unknown>;
@@ -77,7 +79,8 @@ type Held = { release: () => void; released: Promise<void> };
  * user's public deck and its cards; the request's filters decide whether it is returned. It applies the
  * filters the app sends, its order by one column, the paging of `offset` and `limit` with the
  * count `Prefer: count=exact` asks for, the server's revision on every write, an upsert's
- * `resolution`, and the reviews' column grant.
+ * `resolution`, and the reviews' column grant. It answers `study_streak_before` from the seeded
+ * reviews with the web's own `streak`, as the server counts the same days.
  */
 export class FakePostgrest {
   readonly rows: Record<Table, Row[]> = { decks: [], cards: [], reviews: [], card_states: [] };
@@ -132,6 +135,26 @@ export class FakePostgrest {
   }
 
   readonly handlers = [
+    http.post(`${supabaseUrl}/rest/v1/rpc/study_streak_before`, async ({ request }) => {
+      const refused = await this.gate("reviews");
+      if (refused) return refused;
+      const user = bearerUser(request.headers.get("authorization"));
+      if (!user) {
+        return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
+      }
+      this.requests.push("POST rpc/study_streak_before");
+      const { time_zone: timeZone, before } = (await request.json()) as {
+        time_zone: string;
+        before: string;
+      };
+      const start = studyDayStart(Date.parse(before), timeZone);
+      const answers = this.rows.reviews
+        .filter((row) => row.user_id === user.id && row.deleted_at == null)
+        .map((row) => Date.parse(String(row.reviewed_at)))
+        .filter((at) => at < start);
+      // The day holding [start] has no answer here, so the count starts from the day before it.
+      return HttpResponse.json(streak(answers, start, timeZone));
+    }),
     http.get(`${supabaseUrl}/rest/v1/:table`, async ({ request, params }) => {
       const { table } = params;
       if (!isTable(table)) return HttpResponse.json({}, { status: 404 });

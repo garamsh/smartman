@@ -112,9 +112,15 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - A deck tombstone is deleted once no card row references it. Until then it keeps its row, stripped of its name and description and made private.
   - Only account deletion removes reviews and the kept rows.
 - **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
-- **Streak.** `public.study_streak_before(time_zone, before)`, `security invoker`, returns how many study days in a row before `before` hold an answer, with days from 04:00 to 04:00 in the zone named. It reads one backward probe of `reviews_live_user_id_reviewed_at` per day, and the web's `readToday` calls it in place of paging through the answers ([`web.md`](web.md)).
 - **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count.
 - **Watching.** After each pushed migration, the PM reads Supabase's Security and Performance Advisors, and monthly reads `supabase inspect db outliers` and `index-stats`. Each lint is fixed or recorded in an issue.
+
+### Streak
+
+- `public.study_streak_before(time_zone, before)` returns how many study days in a row before the one holding `before` hold one of the caller's live answers, with days from 04:00 to 04:00 in the zone named, as `web/src/features/study/queue.ts` counts them ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §4). The web's `readToday` calls it ([`web.md`](web.md)).
+- It walks back one day at a time from local 04:00 to local 04:00, so a day across a change of offset keeps both ends, and stops at the first day without an answer. Each day is one backward probe of `reviews_live_user_id_reviewed_at` for its latest answer.
+- It is `security invoker`, so row-level security decides what it reads, `stable`, and sets `search_path = ''`. `execute` is revoked from `public` and `anon` and granted to `authenticated`. A zone Postgres does not know raises `22023`.
+- Migration `20261017090000_study_streak.sql` added it, changing no row.
 
 ### Tests
 
@@ -133,6 +139,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
   - `uuid_keys_test.sql` — every synced id and every reference to one is `uuid` with no default, with `extraction_usage.id` as control; the five foreign keys are back; `list_public_decks` returns `uuid` ids and `record_deck_import` takes one, executable by `authenticated` and not `anon`; and a report takes the lock its deck's id took as text, with the third report's hide as control;
   - `checks_policies_test.sql` — each of the five checks refuses what it names, with an accepted row beside each as control, tombstones included, and all five are validated; `decks`, `cards` and `profiles` have one policy per command, the select policy testing the owner first, with an insert policy as the pattern's control;
+  - `study_streak_test.sql` — on the instants `queue.test.ts` counts: the 04:00 boundary in UTC and in Seoul, a day across Los Angeles's change of offset at both ends, and a gap, each with a control; only the caller's live answers count; an unknown zone raises; and the function runs as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
 - `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts a throwaway stack of its own with only Postgres, which applies the migrations, runs the tests and prints their count ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)). Where Docker does not, it prints that the tests were skipped and why.
@@ -151,7 +158,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
-- Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, and issue #113 the advisor lints read after #112.
+- Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
