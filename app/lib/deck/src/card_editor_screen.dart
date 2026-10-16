@@ -2,11 +2,11 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
-import '../../shared/ui/app_sheet.dart';
-import '../../shared/ui/app_text_field.dart';
+import '../../design/app_button.dart';
+import '../../design/app_sheet.dart';
+import '../../design/app_text_field.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'bottom_actions.dart';
 import 'card_list_screen.dart';
 import 'card_preview.dart';

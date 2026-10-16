@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
 import 'account_state.dart';
 import 'providers.dart';
 

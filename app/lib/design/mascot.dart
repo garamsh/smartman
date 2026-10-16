@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
+import 'theme.dart';
 
 /// The brand's mascot, decorative and hidden from screen readers: the symbol
 /// navy on a light theme and white on a dark one, centred in a circle of

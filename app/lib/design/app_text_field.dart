@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme.dart';
+import 'theme.dart';
 
 /// The app's text field: its [label] above it, a [hint] inside, an
 /// [errorText] below, and a counter below when [maxLength] limits it. The

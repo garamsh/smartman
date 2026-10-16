@@ -18,12 +18,12 @@ import 'package:smartman/account/src/account_service.dart';
 import 'package:smartman/account/src/google_button.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/shared/theme.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
-import 'package:smartman/shared/ui/app_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../sharing/fakes.dart';

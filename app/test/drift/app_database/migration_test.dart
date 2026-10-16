@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/shared/database.dart';
+import 'package:smartman/database/database.dart';
 
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;

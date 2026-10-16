@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
 import 'study_style.dart';
 

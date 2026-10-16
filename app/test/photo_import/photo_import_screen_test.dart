@@ -4,13 +4,13 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_chip.dart';
+import 'package:smartman/design/app_list_row.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
-import 'package:smartman/shared/database.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
-import 'package:smartman/shared/ui/app_chip.dart';
-import 'package:smartman/shared/ui/app_list_row.dart';
 
 import 'fakes.dart';
 

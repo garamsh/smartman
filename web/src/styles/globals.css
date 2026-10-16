@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* The tokens of app/lib/shared/theme.dart (docs/architecture/design.md), light first. */
+/* The tokens of app/lib/design/theme.dart (docs/architecture/design.md), light first. */
 @theme {
   --color-ground: #f4f6fa;
   --color-surface: #ffffff;
@@ -33,7 +33,7 @@
   --color-on-dont-know-tint: #b03a2b;
   --color-streak: #c26a0a;
 
-  /* Google's button (GoogleButtonStyle in theme.dart): its guidelines' colours, not the brand's. */
+  /* Google's button (GoogleButtonStyle in app/lib/account/src/google_button.dart): its guidelines' colours, not the brand's. */
   --color-google-fill: #ffffff;
   --color-google-stroke: #747775;
   --color-google-label: #1f1f1f;

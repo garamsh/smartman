@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/card_text.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
+import 'card_text.dart';
 import 'content.dart';
 
 /// A card side's content blocks, in order, each through its block widget.

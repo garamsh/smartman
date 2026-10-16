@@ -48,7 +48,7 @@ void main() {
       isEmpty,
     );
 
-    final korean = _strings('lib/shared/l10n/app_ko.arb');
+    final korean = _strings('lib/l10n/app_ko.arb');
     // Control: the scan reads the template's strings, not an empty file.
     expect(korean, containsPair('signOut', '로그아웃'));
 
@@ -59,12 +59,9 @@ void main() {
   });
 
   test('no English string has an exclamation mark', () {
-    final english = _strings('lib/shared/l10n/app_en.arb');
+    final english = _strings('lib/l10n/app_en.arb');
     // Control: the scan reads every key the Korean template has.
-    expect(
-      english.keys.toSet(),
-      _strings('lib/shared/l10n/app_ko.arb').keys.toSet(),
-    );
+    expect(english.keys.toSet(), _strings('lib/l10n/app_ko.arb').keys.toSet());
 
     expect({
       for (final MapEntry(:key, :value) in english.entries)

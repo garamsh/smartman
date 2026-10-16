@@ -10,12 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'account/account.dart';
+import 'database/database.dart';
 import 'deck/deck.dart';
+import 'design/theme.dart';
+import 'design/theme_choice.dart';
+import 'l10n/app_localizations.dart';
 import 'photo_import/photo_import.dart';
-import 'shared/database.dart';
-import 'shared/l10n/app_localizations.dart';
 import 'sharing/sharing.dart';
-import 'shared/theme.dart';
 import 'study/study.dart';
 import 'sync/sync.dart';
 

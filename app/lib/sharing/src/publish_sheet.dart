@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
-import '../../shared/ui/app_sheet.dart';
-import '../../shared/ui/app_text_field.dart';
+import '../../design/app_button.dart';
+import '../../design/app_sheet.dart';
+import '../../design/app_text_field.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'model.dart';

@@ -1,5 +1,5 @@
 import '../../account/account.dart';
-import '../../shared/database.dart';
+import '../../database/database.dart';
 import 'failure.dart';
 import 'server.dart';
 import 'supabase_sync_server.dart';

@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../account/account.dart';
-import '../../shared/database.dart';
+import '../../database/database.dart';
 import '../../study/study.dart';
 import 'failure.dart';
 import 'merge.dart';

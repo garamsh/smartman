@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
 
 /// The sizes and timings of the study screen, in one place; its colours are
 /// the app theme's [AppColors].

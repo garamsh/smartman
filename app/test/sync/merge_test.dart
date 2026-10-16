@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smartman/shared/database.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/sync/src/merge.dart';
 
 final _t0 = DateTime.utc(2026, 10, 15, 9);

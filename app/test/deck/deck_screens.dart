@@ -2,11 +2,11 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/shared/database.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
-import 'package:smartman/shared/ui/app_text_field.dart';
+import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 
 /// A deck named "French" in an in-memory database, shown by the deck screens
 /// with stand-ins for what the composition site provides.

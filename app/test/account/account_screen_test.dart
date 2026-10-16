@@ -6,10 +6,11 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/account/src/legal.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
-import 'package:smartman/shared/ui/app_button.dart';
-import 'package:smartman/shared/ui/app_list_row.dart';
+import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/app_list_row.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/design/theme_choice.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 
 import 'fake_account_data.dart';
 import 'fake_account_service.dart';

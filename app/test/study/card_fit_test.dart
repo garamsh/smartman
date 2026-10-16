@@ -6,9 +6,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
-import 'package:smartman/shared/ui/card_text.dart';
+import 'package:smartman/deck/src/card_text.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/study_style.dart';
 

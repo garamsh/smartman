@@ -1,4 +1,4 @@
-import '../../shared/database.dart';
+import '../../database/database.dart';
 import 'failure.dart';
 import 'model.dart';
 import 'rust/api/engine.dart';

@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
+import '../../database/database.dart';
 import '../../deck/deck.dart';
-import '../../shared/database.dart';
 import 'failure.dart';
 import 'model.dart';
 

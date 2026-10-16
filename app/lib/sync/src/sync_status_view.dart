@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
+import '../../design/app_button.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'providers.dart';
 import 'status.dart';
