@@ -365,10 +365,11 @@ test("each page that waits on the server shows its skeleton, still under reduced
       })
     ).error,
   ).toBeNull();
+  const cardId = randomUUID();
   expect(
     (
       await phone.from("cards").insert({
-        id: randomUUID(),
+        id: cardId,
         user_id: userId,
         deck_id: deckId,
         front: [{ type: "text", payload: { text: "chat" } }],
@@ -377,6 +378,22 @@ test("each page that waits on the server shows its skeleton, still under reduced
         source: "manual",
         created_at: now,
         updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  // An answer stored days ago, so this is not the user's first session: the first-run guide,
+  // which no skeleton can foresee, stays off the study page.
+  const daysAgo = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  expect(
+    (
+      await phone.from("reviews").insert({
+        id: randomUUID(),
+        user_id: userId,
+        card_id: cardId,
+        rating: "good",
+        reviewed_at: daysAgo,
+        duration_ms: 1000,
+        updated_at: daysAgo,
       })
     ).error,
   ).toBeNull();

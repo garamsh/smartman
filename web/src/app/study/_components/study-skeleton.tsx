@@ -13,20 +13,18 @@ export function StudySkeleton() {
           <span className="h-progress flex-1 rounded-full bg-hairline" />
           <span className="hidden min-h-button w-24 rounded-button border border-outline bg-surface lg:block" />
         </div>
-        <div className="mx-auto flex w-full max-w-study flex-col gap-3 pt-6">
-          <div className="grid min-h-52 grid-cols-[1fr_auto_1fr] rounded-card bg-surface shadow-raised lg:min-h-75">
-            <span className="flex items-center justify-center p-6">
-              <SkeletonLine text="text-question" width="w-1/2" />
-            </span>
-            <span className="my-7 w-px bg-hairline" />
-            <span className="flex items-center justify-center p-6">
-              <SkeletonLine text="text-answer" width="w-1/3" />
-            </span>
-          </div>
-          <div className="flex gap-3">
-            <span className="min-h-cta flex-1 rounded-button bg-tint-red" />
-            <span className="min-h-cta flex-1 rounded-button bg-tint-green" />
-          </div>
+        <div className="mx-auto mt-6 grid min-h-52 w-full max-w-study grid-cols-[1fr_auto_1fr] rounded-card bg-surface shadow-raised lg:min-h-75">
+          <span className="flex items-center justify-center p-6">
+            <SkeletonLine text="text-question" width="w-1/2" />
+          </span>
+          <span className="my-7 w-px bg-hairline" />
+          <span className="flex items-center justify-center p-6">
+            <SkeletonLine text="text-answer" width="w-1/3" />
+          </span>
+        </div>
+        <div className="mx-auto -mt-3 flex w-full max-w-study gap-3">
+          <span className="min-h-cta flex-1 rounded-button bg-tint-red" />
+          <span className="min-h-cta flex-1 rounded-button bg-tint-green" />
         </div>
       </Skeleton>
     </main>
