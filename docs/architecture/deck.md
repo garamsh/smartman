@@ -10,8 +10,8 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The surface exports:
   - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`, `DeckVisibility` with `PrivateDeck` and `PublicDeck`, and `DeckSelection`, a set of decks that cannot be empty;
   - content: `Content`, `TextContent`, `UnsupportedContent`, and `decodeContent`, which reads the stored encoding;
-  - `CardKey`, `describeContent`, the one line of text a card side shows, and `CardSplitRow`, a card as a split row;
-  - `DeckRow`, a deck on a row, and `CardEditorScreen`, the card editor;
+  - `CardKey`, `describeContent`, the one line of text a card side shows, `CardSplitRow`, a card as a split row, and `CardAnswerRow`, a card's question with its answer hidden until a tap;
+  - `DeckRow`, a deck on a row, `DeckTile`, its initial on a tinted tile, and `CardEditorScreen`, the card editor;
   - the split card, drawn one way for every screen: `SplitCard`, which lays out a card's two halves divided by a line, side by side or, when a half would be too narrow at the text scale, stacked, each side centred or at the top left and, on the study card, scrolling inside its half once capped; and `ContentView`, which renders a side's content blocks, with an unsupported block as a labelled placeholder, fitting text through `CardText` in `app/lib/deck/src/card_text.dart`. The study screen's cards, the card preview and `CardSplitRow` draw through them ([ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md));
   - `DeckRepository` and its save results;
   - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, `mergeBack`, and `ImportSource` with `FromPhoto` and `FromPublicDeck`;
@@ -78,8 +78,9 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Row
 
-- `DeckRow` draws a deck on a rounded surface: the name's first letter on a 44 px tile in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one; its name and "카드 n장"; a "공개" chip when it is public; what its caller shows of today; and a chevron. In selection mode a check in place of the tile shows whether the deck is selected, and the chevron goes.
-- Its caller passes the card count as a value, what to show of today as a widget, and the callbacks that open the deck and select it; the home screen is that caller ([`home.md`](home.md)).
+- `DeckRow` draws a deck on a rounded surface: the name's first letter on a 44 px tile (`DeckTile`) in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one, hidden from screen readers beside the name; its name, a "공개" chip when it is public, and what its caller shows of today; and under them what its caller shows of its progress, or "카드 n장" without it. In selection mode a check in place of the tile shows whether the deck is selected.
+- Its caller passes the card count as a value, what to show of today and of its progress as widgets, and the callbacks that open the deck and select it; the 덱 tab is that caller ([`home.md`](home.md)).
+- `CardAnswerRow` draws a card's question on a rounded row with its answer hidden behind a bar until a tap, which a second tap undoes; a long-press, or the screen reader's "카드 편집", calls back to edit it. It is read as "{front}, 답 가려짐" or "{front}, 답 {back}" ([ADR 0036](adr/0036-organise-the-app-in-today-decks-and-record-tabs-and-define-the-daily-goal-forecast-and-card-progress.md)).
 
 ### Card editor
 
@@ -91,7 +92,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - State and injection use Riverpod. `deckRepositoryProvider` has no implementation of its own; the composition site, `app/lib/main.dart`, overrides it with the repository it constructs.
 - The domain imports no other domain. The home and deck screens that show its decks beside other domains' widgets are `home/`'s ([`home.md`](home.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)).
-- The repository receives its clock and id generator, so tests fix both. It also streams each deck's card count, which the home screen shows.
+- The repository receives its clock and id generator, so tests fix both. It also streams each deck's card count, which the 덱 tab shows.
 
 ## Rationale
 
