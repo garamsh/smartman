@@ -16,6 +16,7 @@ import 'failure_message.dart';
 import 'model.dart';
 import 'name_sheet.dart';
 import 'providers.dart';
+import 'split_card.dart';
 
 /// A deck's cards, searchable, under the action that studies them; opens a
 /// card for editing and the deck for renaming or deleting.
@@ -345,28 +346,11 @@ class CardSplitRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final content = IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpace.s16),
-              child: Text(front, style: AppType.label),
-            ),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpace.s16),
-              child: Text(
-                back,
-                style: AppType.secondary.copyWith(color: colors.ink2),
-              ),
-            ),
-          ),
-        ],
-      ),
+    final content = SplitCard(
+      centred: false,
+      front: (context, _) => Text(front, style: AppType.label),
+      back: (context, _) =>
+          Text(back, style: AppType.secondary.copyWith(color: colors.ink2)),
     );
     final onTap = this.onTap;
     if (!grouped) return AppRowSurface(onTap: onTap, child: content);

@@ -163,49 +163,63 @@ void main() {
     ('light', AppColors.light),
     ('dark', AppColors.dark),
   ]) {
-    test('$name text tokens meet WCAG AA, and dots and tints 3:1', () {
-      // Text, at 4.5:1: the pairs the screens draw text in, including the
-      // answer chips over a dragged card, which no semantics node reaches.
-      for (final (text, ground) in [
-        (colors.ink, colors.surface),
-        (colors.ink, colors.ground),
-        (colors.ink, colors.raised),
-        (colors.ink2, colors.surface),
-        (colors.ink2, colors.ground),
-        (colors.muted, colors.surface),
-        (colors.muted, colors.ground),
-        (colors.muted, colors.raised),
-        (colors.muted, colors.depth),
-        (colors.onPrimary, colors.ink),
-        (colors.ink, colors.brandTint),
-        (colors.onHero, colors.hero),
-        (colors.brand, colors.onHero),
-        (colors.know, colors.surface),
-        (colors.know, colors.ground),
-        (colors.onKnow, colors.know),
-        (colors.onDontKnowText, colors.dontKnowText),
-        (colors.dontKnowText, colors.surface),
-        (colors.dontKnowText, colors.ground),
-        for (final tint in colors.deckTints) (colors.ink, tint),
-      ]) {
-        expect(
-          contrast(text, ground),
-          greaterThanOrEqualTo(4.5),
-          reason: '$text on $ground',
-        );
-      }
-      // Non-text, at 3:1: the answer dots on a previous card, which fades
-      // from the surface toward the ground.
-      for (final dot in [colors.knowDot, colors.dontKnow]) {
-        for (final ground in [colors.surface, colors.depth]) {
+    test(
+      '$name text tokens meet WCAG AA, and grade chips and the streak 3:1',
+      () {
+        // Text, at 4.5:1: the pairs the screens draw text in, including the
+        // answer chips over a dragged card, which no semantics node reaches.
+        for (final (text, ground) in [
+          (colors.ink, colors.surface),
+          (colors.ink, colors.ground),
+          (colors.ink, colors.raised),
+          (colors.ink2, colors.surface),
+          (colors.ink2, colors.ground),
+          (colors.muted, colors.surface),
+          (colors.muted, colors.ground),
+          (colors.muted, colors.raised),
+          (colors.onPrimary, colors.ink),
+          (colors.ink, colors.brandTint),
+          (colors.onHero, colors.hero),
+          (colors.brand, colors.onHero),
+          (colors.know, colors.surface),
+          (colors.know, colors.ground),
+          (colors.onKnow, colors.know),
+          (colors.onDontKnowText, colors.dontKnowText),
+          (colors.dontKnowText, colors.surface),
+          (colors.dontKnowText, colors.ground),
+          for (final tint in colors.deckTints) (colors.ink, tint),
+          // A previous card's sides on its grade's fill, the grade chip's
+          // word on the chip, and the answer buttons' words on their tints.
+          for (final card in [colors.knowCard, colors.dontKnowCard]) ...[
+            (colors.ink, card),
+            (colors.ink2, card),
+          ],
+          (colors.onKnowTint, colors.tintGreen),
+          (colors.onDontKnowTint, colors.tintRed),
+        ]) {
           expect(
-            contrast(dot, ground),
-            greaterThanOrEqualTo(3),
-            reason: '$dot on $ground',
+            contrast(text, ground),
+            greaterThanOrEqualTo(4.5),
+            reason: '$text on $ground',
           );
         }
-      }
-    });
+        // Non-text, at 3:1: each grade's chip on its card's fill and on the
+        // ground, and the streak flame on the completion card.
+        for (final (mark, ground) in [
+          (colors.know, colors.knowCard),
+          (colors.know, colors.ground),
+          (colors.dontKnowText, colors.dontKnowCard),
+          (colors.dontKnowText, colors.ground),
+          (colors.streak, colors.surface),
+        ]) {
+          expect(
+            contrast(mark, ground),
+            greaterThanOrEqualTo(3),
+            reason: '$mark on $ground',
+          );
+        }
+      },
+    );
   }
 }
 

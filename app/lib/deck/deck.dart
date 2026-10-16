@@ -17,6 +17,7 @@ export 'src/card_key.dart' show CardKey;
 export 'src/card_list_screen.dart' show CardSplitRow, describeContent;
 export 'src/content.dart'
     show Content, TextContent, UnsupportedContent, decodeContent, plainText;
+export 'src/content_view.dart' show ContentView;
 export 'src/deck_list_screen.dart' show DeckListScreen;
 export 'src/deck_repository.dart'
     show CardSaved, DeckRepository, DuplicateFront, SaveCardResult;
@@ -50,3 +51,4 @@ export 'src/providers.dart'
         TodayPending,
         TodayUnavailable,
         todayProvider;
+export 'src/split_card.dart' show SideBuilder, SplitCard;

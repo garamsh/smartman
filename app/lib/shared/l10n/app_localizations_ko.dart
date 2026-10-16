@@ -179,13 +179,31 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get toggleAnswer => '답 바꾸기';
-
-  @override
   String get showWholeCard => '카드 전체 보기';
 
   @override
-  String get answerChanged => '수정됨';
+  String get changeToKnow => '안다로 바꾸기';
+
+  @override
+  String get changeToDontKnow => '모른다로 바꾸기';
+
+  @override
+  String get changingToKnow => '안다로 바꿔요';
+
+  @override
+  String get changingToDontKnow => '모른다로 바꿔요';
+
+  @override
+  String get backToCurrent => '지금 카드로';
+
+  @override
+  String get guideReveal => '먼저 떠올려 보고, 카드를 탭해 답을 확인해요';
+
+  @override
+  String get guideSwipe => '알면 오른쪽, 모르면 왼쪽으로 밀어요';
+
+  @override
+  String get guideEarlier => '아래로 내리면 지난 카드를 보고 답을 바꿀 수 있어요';
 
   @override
   String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
@@ -689,12 +707,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String statNew(int count) {
     return '새 카드 $count';
   }
-
-  @override
-  String get swipeDontKnowHint => '모른다';
-
-  @override
-  String get swipeKnowHint => '안다';
 
   @override
   String consentNotice(String terms, String privacy) {

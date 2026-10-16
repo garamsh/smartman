@@ -304,4 +304,72 @@ void main() {
     expect(rewritten.fuzzFactor, factor);
     expect(failures, isEmpty);
   });
+
+  test('re-deciding an answer to the other one reschedules its card by the same replay, and to the one it has changes nothing', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final created = DateTime.utc(2026, 10, 1, 9);
+    var now = DateTime.utc(2026, 10, 14, 9);
+    var ids = 0;
+    final cards = DeckRepository(
+      db,
+      clock: () => created,
+      newId: () => 'id${ids++}',
+    );
+    final repository = StudyRepository(db, newId: () => 'review${ids++}');
+    final deck = await cards.createDeck('French');
+    final added = <CardId>[];
+    for (final word in ['chat', 'chien']) {
+      final saved = await cards.addCard(
+        deck.id,
+        front: [TextContent(word)],
+        back: [TextContent(word)],
+      );
+      added.add(switch (saved) {
+        CardSaved(:final card) => card.id,
+        DuplicateFront() => fail('the deck held no duplicate'),
+      });
+    }
+
+    final failures = <Object>[];
+    final session = StudySession(
+      decks: DeckSelection(deck.id),
+      cards: cards,
+      repository: repository,
+      scheduler: scheduler,
+      clock: () => now,
+      random: FirstDraw(),
+      onFailure: failures.add,
+    );
+    addTearDown(session.dispose);
+    await untilLoaded(session);
+
+    final times = <DateTime>[];
+    for (final _ in added) {
+      now = now.add(const Duration(minutes: 1));
+      times.add(now);
+      session.answer(Answer.know);
+    }
+    await session.settled;
+    final card = (session.state as SessionComplete).previous.first.card.id;
+    final stored = (await repository.statesOf([card]))[card];
+    _expectStored(stored, await _engine(null, [(Answer.know, times[0])]));
+
+    // To the answer it already has: nothing is rewritten.
+    session.redecide(0, Answer.know);
+    await session.settled;
+    expect((await repository.statesOf([card]))[card], stored);
+
+    session.redecide(0, Answer.dontKnow);
+    await session.settled;
+    _expectStored(
+      (await repository.statesOf([card]))[card],
+      await _engine(null, [(Answer.dontKnow, times[0])]),
+    );
+    final review = await (db.select(
+      db.reviews,
+    )..where((review) => review.cardId.equals(card.value))).getSingle();
+    expect(review.rating, 'again');
+    expect(failures, isEmpty);
+  });
 }
