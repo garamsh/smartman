@@ -1,6 +1,6 @@
 # ADR 0011: Draw every screen from one shared light and dark theme with a bundled IBM Plex Sans KR, and show study's counts in deck screens through one builder provider
 
-> Status: accepted; its "Sizes and timings may stay as constants beside the screen that uses them" superseded by ADR-0021 for spacing, type, radii, heights and shadows; its font and colour values superseded by ADR-0027
+> Status: accepted; its "Sizes and timings may stay as constants beside the screen that uses them" superseded by ADR-0021 for spacing, type, radii, heights and shadows; its font and colour values superseded by ADR-0027; its "Counts", `deck`'s `TodayCount`, `todayProvider` and `studyScreenProvider`, superseded by ADR-0039
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

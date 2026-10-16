@@ -1,6 +1,6 @@
 # ADR 0021: Draw every screen from one type, spacing, radius and height scale in the theme file, and build every button, field, row and modal from a shared component layer in `app/lib/shared/ui/`
 
-> Status: accepted; its type values, field radius and height, and `study` button variant superseded by ADR-0027
+> Status: accepted; its type values, field radius and height, and `study` button variant superseded by ADR-0027; its folders `app/lib/shared/ui/` and `app/lib/shared/theme.dart` superseded by ADR-0039
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

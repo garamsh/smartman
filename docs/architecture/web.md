@@ -11,7 +11,8 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
   - typescript-eslint 8.71.2 accepts TypeScript below 6.1;
   - eslint-config-next 16.4.1 brings React, import and jsx-a11y lint plugins that accept ESLint 9 at most;
   - `@types/node` follows `web/.nvmrc`, which the PM moves with the Dockerfile's base image.
-- Its features live under `web/src/features/` ([`structure.md`](structure.md)): `auth`, `decks` and `study`.
+- `web/src/` holds the closed list of top-level folders [`structure.md`](structure.md) names ([ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)): the routes in `app/`, with the legal documents in a `(legal)` route group; the features `account`, `decks`, `study` and `legal` under `features/`; the foundations `design/` (the brand's marks, the skeleton, the theme choice and its store) and `supabase/` (the Supabase adapter); `styles/`, `testing/` and `__tests__/`; and `env.ts` and `proxy.ts`.
+- Not yet moved ([`structure.md`](structure.md) §Not yet moved): the features are still `auth`, `decks` and `study`; `web/src/lib/` holds the card content blocks, the theme store, the study day's time zone and the Supabase adapter, `web/src/components/` the brand, the skeleton, the theme choice and the legal documents' layout and links, and `/terms` and `/privacy` sit outside a route group. The paths below name where each file is now.
 - Every user-facing string is Korean, in 해요체, written where it is rendered; the root layout declares `lang="ko"`.
 - Icons are `lucide-react`'s, pinned exactly like every package ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
 

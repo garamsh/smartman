@@ -1,6 +1,6 @@
 # ADR 0024: Write every Korean string in 해요체, give a sheet a cancel only when it confirms an irreversible action, and draw Google sign-in as Google's branded button
 
-> Status: accepted; its Apple slot's label "Apple로 로그인 (준비 중)" superseded by ADR-0027
+> Status: accepted; its Apple slot's label "Apple로 로그인 (준비 중)" superseded by ADR-0027; its Google button colours in `app/lib/shared/theme.dart` superseded by ADR-0039
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

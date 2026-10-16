@@ -1,6 +1,6 @@
 # ADR 0019: Build the web app on Next.js in `web/`, portable between Vercel and a container, with Google sign-in through Supabase Auth's cookie session
 
-> Status: accepted; its image context of `web/` and the fonts alone superseded by ADR-0022
+> Status: accepted; its image context of `web/` and the fonts alone superseded by ADR-0022; its `web/src/lib/` below every feature and `web/src/lib/supabase/` superseded by ADR-0039
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
