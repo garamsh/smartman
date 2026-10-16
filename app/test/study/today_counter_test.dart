@@ -57,6 +57,17 @@ class _UnreadableStates implements StudyRepository {
 
   @override
   Future<Duration?> medianReviewDuration() => throw UnimplementedError();
+
+  @override
+  Future<List<DateTime>> firstAnswersSince(DateTime since) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<StoredAnswer>> answersSince(DateTime since) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<DateTime>> answerTimes() => throw UnimplementedError();
 }
 
 final _now = DateTime.utc(2026, 10, 14, 9);
@@ -162,6 +173,7 @@ Future<GlobalKey<NavigatorState>> _pump(
         studyRepositoryProvider.overrideWithValue(study ?? decks.study),
         schedulerProvider.overrideWithValue(_InstantScheduler()),
         studyClockProvider.overrideWithValue(() => _now),
+        studyZoneProvider.overrideWithValue((_) => Duration.zero),
         studyRandomProvider.overrideWithValue((_) => FirstDraw()),
       ],
       child: MaterialApp(
@@ -230,6 +242,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('0/5'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'new cards first answered today in another deck leave the count only the new cards the day has left',
+    (tester) async {
+      final decks = await _seed(tester);
+      await tester.runAsync(() async {
+        final other = (await decks.cards.createDeck('other')).id;
+        for (var index = 0; index < 18; index++) {
+          await decks.add(other, 'other $index');
+        }
+        final answered = await decks.cards.listCards(other);
+        for (final card in answered) {
+          // First answered at 05:00 UTC today, due again in a week.
+          final at = DateTime.utc(2026, 10, 14, 5);
+          await decks.review(
+            card.id,
+            CardState(
+              stability: 7,
+              difficulty: 5,
+              lastReview: at,
+              due: at.add(const Duration(days: 7)),
+            ),
+            [const Duration(seconds: 10)],
+          );
+        }
+      });
+      await _pump(tester, decks);
+
+      expect(find.text('2 due, 2 new, 10 s a card'), findsOneWidget);
+
+      await tester.tap(find.text('Study all'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0/4'), findsOneWidget);
     },
   );
 

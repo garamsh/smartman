@@ -94,7 +94,7 @@ abstract final class AppSize {
   /// The mascot's circle on the empty home screen.
   static const mascotLarge = 128.0;
 
-  /// The mascot's circle on the study summary.
+  /// The mascot's circle on the study completion card.
   static const mascotMedium = 112.0;
 
   /// The mascot in the account screen's footer.
@@ -149,7 +149,7 @@ abstract final class AppType {
     letterSpacing: -0.8,
   );
 
-  /// A sheet's title and a summary's heading: 18/26, bold.
+  /// A sheet's title: 18/26, bold.
   static const headline = TextStyle(
     fontFamily: appFontFamily,
     fontSize: 18,
@@ -343,8 +343,8 @@ abstract final class AppShadow {
     ),
   ];
 
-  /// The current study card and the summary: a close, tight layer under a
-  /// wide, soft one.
+  /// The current study card and the completion card: a close, tight layer
+  /// under a wide, soft one.
   static List<BoxShadow> raised(AppColors colors) => [
     BoxShadow(
       color: colors.shadow.withValues(alpha: 0.06),

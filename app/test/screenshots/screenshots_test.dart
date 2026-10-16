@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -255,15 +256,43 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '14-whole-card-sheet');
       await dismissSheet(tester);
+      // Back to the end of the view, where the current card rests.
+      await tester.dragFrom(current, const Offset(0, -800));
+      await tester.pumpAndSettle();
+      for (
+        var tries = 0;
+        tries < 10 && find.text(ko.studyComplete).evaluate().isEmpty;
+        tries++
+      ) {
+        await tester.dragFrom(current, const Offset(400, 0));
+        await tester.pumpAndSettle();
+      }
+      await shot(tester, '15-study-complete');
+      await tap(tester, find.text(ko.keepStudying));
+      await tester.dragFrom(current, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+      await shot(tester, '15b-study-practice');
       await tap(tester, find.byTooltip(ko.close));
-      // The engine schedules the answers off the test's clock; the summary
-      // names the next review once it has.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(seconds: 1)),
+
+      // The empty deck has nothing to study today.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Navigator).first),
+      );
+      final decks = (await tester.runAsync(
+        () => container.read(deckRepositoryProvider).watchDecks().first,
+      ))!;
+      final empty = decks.firstWhere((deck) => deck.name == '일본어 N3 한자');
+      unawaited(
+        Navigator.of(tester.element(find.byType(Navigator).first)).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                container.read(studyScreenProvider)(DeckSelection(empty.id)),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
-      await shot(tester, '15-study-summary');
-      await tap(tester, find.text(ko.backToDecks));
+      await shot(tester, '15c-study-nothing-today');
+      await tap(tester, find.byTooltip(ko.close));
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 

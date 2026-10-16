@@ -54,6 +54,14 @@ final class CardState {
       'lastReview: $lastReview, due: $due)';
 }
 
+/// An answer as stored, read back for the study day's counts.
+typedef StoredAnswer = ({
+  CardId card,
+  Answer answer,
+  DateTime at,
+  Duration duration,
+});
+
 /// One answer to a card, as stored.
 final class Review {
   const Review({

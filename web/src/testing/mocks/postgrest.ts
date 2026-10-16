@@ -43,6 +43,8 @@ function passes(row: Row, column: string, filter: string): boolean {
     }
     case "lt":
       return typeof value === "string" && Date.parse(value) < Date.parse(operand);
+    case "gte":
+      return typeof value === "string" && Date.parse(value) >= Date.parse(operand);
     default:
       throw new Error(`the fake PostgREST does not know the filter ${column}=${filter}`);
   }

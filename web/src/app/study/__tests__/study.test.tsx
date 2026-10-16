@@ -2,7 +2,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cardRow, day, seedDeck, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, seedDeck, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -12,6 +12,8 @@ import { signedInCookies } from "@/testing/session";
 import { Study } from "../_components/study";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
+
+const hour = 3_600_000;
 
 /** Opens the study page over [decks] at [at], as the browser would with `?decks=`. */
 async function open(decks: string, at = start) {
@@ -112,7 +114,7 @@ describe("the study page", () => {
         "21",
       );
       expect([...shown].sort()).toEqual(["due", ...news.slice(0, 20)].sort());
-      expect(screen.getByRole("heading", { name: "오늘 할 카드를 마쳤어요" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "오늘 학습 완료" })).toBeInTheDocument();
     });
   });
 
@@ -133,41 +135,6 @@ describe("the study page", () => {
         expect(postgrest.rows.card_states).toHaveLength(1);
       });
       expect(postgrest.rows.reviews).toHaveLength(1);
-    });
-
-    it("names the next review in the summary once every answer is saved", async () => {
-      seedDeck(postgrest, "d1", ["un", "deux"]);
-      await open("d1");
-      const user = userEvent.setup();
-      await user.keyboard("k");
-      await waitFor(() => {
-        expect(postgrest.rows.card_states).toHaveLength(1);
-      });
-      const release = postgrest.hold("reviews");
-
-      await user.keyboard("k");
-
-      // Control: the summary is up while the second write waits, without the next review.
-      expect(screen.getByRole("heading", { name: "오늘 할 카드를 마쳤어요" })).toBeInTheDocument();
-      expect(screen.queryByText(/^다음 복습은/)).not.toBeInTheDocument();
-      act(release);
-      await waitFor(() => {
-        expect(postgrest.rows.card_states).toHaveLength(2);
-      });
-      // The earliest stored due day, counted in calendar days from today in this time zone.
-      const midnight = (time: number) => {
-        const date = new Date(time);
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-      };
-      const due = Math.min(...postgrest.rows.card_states.map((row) => Date.parse(String(row.due))));
-      const days = Math.round((midnight(due) - midnight(start)) / day);
-      // A new card answered 안다 is next due days later, as the engine schedules it.
-      expect(days).toBeGreaterThan(1);
-      expect(
-        await screen.findByText(
-          `다음 복습은 ${String(days)}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.`,
-        ),
-      ).toBeInTheDocument();
     });
 
     it("says a write failed, keeps its answer, and sends it again on 다시 시도", async () => {
@@ -191,6 +158,127 @@ describe("the study page", () => {
       });
       expect(postgrest.rows.reviews).toHaveLength(2);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("today", () => {
+    /** Seeds "d1" with "un" and "deux", new, and "trois", answered 모른다 this morning. */
+    function seedToday() {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      postgrest.seed("cards", cardRow("trois", "d1", "trois"));
+      postgrest.seed(
+        "card_states",
+        stateRow("trois", {
+          stability: 1,
+          difficulty: 5,
+          lastReview: start - hour,
+          due: start + 2 * day,
+        }),
+      );
+      postgrest.seed(
+        "reviews",
+        { ...reviewRow("r-today", "trois", start - hour, 90_000), rating: "again" },
+        reviewRow("r-yesterday", "trois", start - day, 1_000),
+      );
+    }
+
+    /** The completion card's line of counts, as read: its paragraph's text. */
+    const completionLine = () =>
+      screen.getByRole("region", { name: "오늘 학습 완료" }).querySelector("p")?.textContent;
+
+    it("shows the completion card in the current card's place, below the stack, once no card is left", async () => {
+      seedToday();
+      await open("d1");
+      const user = userEvent.setup();
+      await user.keyboard("k");
+      await user.keyboard("k");
+
+      expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+      const completion = screen.getByRole("region", { name: "오늘 학습 완료" });
+      const previous = screen.getByRole("region", { name: "이전 답" });
+      expect(previous.compareDocumentPosition(completion)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(stack()).toHaveLength(2);
+      // This morning's 모른다 and the session's two 안다; 90 s and the session's time, rounded
+      // up; yesterday and today in a row.
+      expect(completionLine()).toBe("2 안다1 모른다2분연속 2일");
+      expect(screen.getByRole("button", { name: "계속 학습" })).toHaveFocus();
+      expect(screen.getByRole("link", { name: "그만하기" })).toHaveAttribute("href", "/");
+    });
+
+    it("goes on as practice in the same screen on 계속 학습, over the cards answered today, writing nothing", async () => {
+      seedToday();
+      await open("d1");
+      const user = userEvent.setup();
+      await user.keyboard("k");
+      await user.keyboard("j");
+      await user.keyboard("k");
+      await waitFor(() => {
+        expect(postgrest.rows.reviews).toHaveLength(5);
+      });
+      const requests = postgrest.requests.length;
+      const rows = structuredClone(postgrest.rows);
+      const progress = screen.getByRole("progressbar", { name: "진행" });
+      const total = progress.getAttribute("aria-valuetext");
+
+      await user.click(screen.getByRole("button", { name: "계속 학습" }));
+      const practised = await answerAll("j", 3);
+      await user.keyboard("z");
+      await answerAll("k", 4);
+
+      expect([...practised].sort()).toEqual(["deux", "trois", "un"]);
+      expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
+      expect(screen.getByRole("progressbar", { name: "진행" })).toBe(progress);
+      expect(progress.getAttribute("aria-valuetext")).toBe(total);
+      expect(stack()).toHaveLength(3 + 3 + 4);
+      // Nothing reached the server: no request, and every row as it was.
+      expect(postgrest.requests).toHaveLength(requests);
+      expect(postgrest.rows).toEqual(rows);
+
+      // Control: a written answer toggled now is written, behind any write practice queued, so
+      // once its rating lands every earlier write has too.
+      const [written] = within(screen.getByRole("region", { name: "이전 답" })).getAllByRole(
+        "button",
+      );
+      if (!written) throw new Error("no answer in the stack");
+      // Later than the answer, so the server keeps the toggle as the later edit.
+      vi.setSystemTime(start + 60_000);
+      await user.click(written);
+      const toggled = (review: Record<string, unknown>) =>
+        rows.reviews.some((row) => row.id === review.id && row.rating !== review.rating);
+      await waitFor(() => {
+        expect(postgrest.rows.reviews.filter(toggled)).toHaveLength(1);
+      });
+      expect(postgrest.rows.reviews.map((row) => row.id).sort()).toEqual(
+        rows.reviews.map((row) => row.id).sort(),
+      );
+    });
+
+    it("says there is nothing to study when no card is left and none was answered today", async () => {
+      postgrest.seed("decks", deckRow("d1", "d1"));
+      postgrest.seed("cards", cardRow("later", "d1", "later"));
+      postgrest.seed(
+        "card_states",
+        stateRow("later", {
+          stability: 9,
+          difficulty: 5,
+          lastReview: start - day,
+          due: start + day,
+        }),
+      );
+      postgrest.seed("reviews", reviewRow("r-yesterday", "later", start - day, 1_000));
+
+      await open("d1");
+
+      expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+
+      // Control: the same card answered this morning opens on the completion card.
+      cleanup();
+      postgrest.seed("reviews", reviewRow("r-today", "later", start - hour, 1_000));
+      await open("d1");
+      expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+      expect(screen.queryByText("오늘은 학습할 카드가 없어요")).not.toBeInTheDocument();
     });
   });
 
@@ -238,19 +326,20 @@ describe("the study page", () => {
       expect(stack()[1]).toMatch(/답: 안다. 수정됨$/);
     });
 
-    it("ends the session on Esc", async () => {
+    it("leaves for the deck list on Esc", async () => {
       const user = userEvent.setup();
+      const close = screen.getByRole("link", { name: "끝내기" });
+      const followed = vi.fn();
+      close.addEventListener("click", (event) => {
+        event.preventDefault();
+        followed();
+      });
       await user.keyboard("k");
 
       await user.keyboard("{Escape}");
 
-      expect(screen.getByRole("heading", { name: "오늘 할 카드를 마쳤어요" })).toBeInTheDocument();
-      expect(
-        within(screen.getByRole("list", { name: "결과" }))
-          .getAllByRole("listitem")
-          .map((tile) => tile.textContent),
-      ).toEqual(["1학습한 카드", "1안다", "0모른다"]);
-      expect(screen.queryByRole("region", { name: "이전 답" })).not.toBeInTheDocument();
+      expect(close).toHaveAttribute("href", "/");
+      expect(followed).toHaveBeenCalledOnce();
     });
 
     it("lists every shortcut on ?, and closes the list on Esc without ending the session", async () => {
@@ -280,7 +369,9 @@ describe("the study page", () => {
       const controls = Object.fromEntries(
         ["답 보기", "안다", "모른다", "마지막 답 바꾸기", "끝내기", "단축키"].map((name) => [
           name,
-          screen.getByRole("button", { name }).getAttribute("aria-keyshortcuts"),
+          screen
+            .getByRole(name === "끝내기" ? "link" : "button", { name })
+            .getAttribute("aria-keyshortcuts"),
         ]),
       );
 

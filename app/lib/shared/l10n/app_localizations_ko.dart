@@ -188,13 +188,34 @@ class AppLocalizationsKo extends AppLocalizations {
   String get answerChanged => '수정됨';
 
   @override
-  String get sessionSummaryTitle => '오늘 할 카드를 마쳤어요';
-
-  @override
-  String get nothingToStudy => '지금 학습할 카드가 없어요.';
-
-  @override
   String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
+
+  @override
+  String get studyComplete => '오늘 학습 완료';
+
+  @override
+  String get nothingToStudyToday => '오늘은 학습할 카드가 없어요';
+
+  @override
+  String completionMinutes(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String completionStreak(int days) {
+    return '$days일';
+  }
+
+  @override
+  String completionSemantics(int know, int dontKnow, int minutes, int days) {
+    return '안다 $know, 모른다 $dontKnow, $minutes분, $days일 연속';
+  }
+
+  @override
+  String get keepStudying => '계속 학습';
+
+  @override
+  String get stopStudying => '그만하기';
 
   @override
   String get schedulingFailure => '이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.';
@@ -674,31 +695,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get swipeKnowHint => '안다';
-
-  @override
-  String get nextReviewToday => '다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.';
-
-  @override
-  String get nextReviewTomorrow => '다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.';
-
-  @override
-  String nextReviewInDays(int days) {
-    return '다음 복습은 $days일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.';
-  }
-
-  @override
-  String get summaryStudied => '학습한 카드';
-
-  @override
-  String get timeSpentLabel => '걸린 시간';
-
-  @override
-  String timeSpentValue(int minutes, int seconds) {
-    return '$minutes분 $seconds초';
-  }
-
-  @override
-  String get backToDecks => '덱으로 돌아가기';
 
   @override
   String consentNotice(String terms, String privacy) {

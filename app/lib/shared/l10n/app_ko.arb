@@ -127,12 +127,31 @@
   "@showWholeCard": {"description": "Accessibility hint of long-pressing a card answered earlier: it opens the whole card."},
   "answerChanged": "수정됨",
   "@answerChanged": {"description": "Small label on a card answered earlier whose answer differs from the one first given."},
-  "sessionSummaryTitle": "오늘 할 카드를 마쳤어요",
-  "@sessionSummaryTitle": {"description": "Heading of the end-of-session summary."},
-  "nothingToStudy": "지금 학습할 카드가 없어요.",
-  "@nothingToStudy": {"description": "Shown in the summary when the deck had nothing due and no new card."},
   "answerNotSaved": "답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.",
   "@answerNotSaved": {"description": "Shown when an answer could not be written to the local database."},
+  "studyComplete": "오늘 학습 완료",
+  "@studyComplete": {"description": "Heading of the completion card, shown in the current card's place once no card is left today."},
+  "nothingToStudyToday": "오늘은 학습할 카드가 없어요",
+  "@nothingToStudyToday": {"description": "The study screen when no card is left today and none of its decks' cards was answered today."},
+  "completionMinutes": "{minutes}분",
+  "@completionMinutes": {
+    "description": "The completion card's time on screen today, in whole minutes rounded up.",
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "completionStreak": "{days}일",
+  "@completionStreak": {
+    "description": "The completion card's streak, after a flame icon: study days in a row.",
+    "placeholders": {"days": {"type": "int"}}
+  },
+  "completionSemantics": "안다 {know}, 모른다 {dontKnow}, {minutes}분, {days}일 연속",
+  "@completionSemantics": {
+    "description": "What a screen reader reads for the completion card's line of counts.",
+    "placeholders": {"know": {"type": "int"}, "dontKnow": {"type": "int"}, "minutes": {"type": "int"}, "days": {"type": "int"}}
+  },
+  "keepStudying": "계속 학습",
+  "@keepStudying": {"description": "The completion card's primary button: goes on as practice over the cards answered today."},
+  "stopStudying": "그만하기",
+  "@stopStudying": {"description": "The completion card's quiet button: closes the study screen."},
   "schedulingFailure": "이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.",
   "@schedulingFailure": {"description": "Shown when the scheduling engine refused a review."},
   "account": "계정",
@@ -484,26 +503,6 @@
   "@swipeDontKnowHint": {"description": "Hint under the study card, beside a left chevron: swiping left answers Don't know."},
   "swipeKnowHint": "안다",
   "@swipeKnowHint": {"description": "Hint under the study card, beside a right chevron: swiping right answers Know."},
-  "nextReviewToday": "다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.",
-  "@nextReviewToday": {"description": "Summary line when the first answered card is due again later today."},
-  "nextReviewTomorrow": "다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.",
-  "@nextReviewTomorrow": {"description": "Summary line when the first answered card is due again tomorrow."},
-  "nextReviewInDays": "다음 복습은 {days}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.",
-  "@nextReviewInDays": {
-    "description": "Summary line when the first answered card is due again in two or more days.",
-    "placeholders": {"days": {"type": "int"}}
-  },
-  "summaryStudied": "학습한 카드",
-  "@summaryStudied": {"description": "Summary tile label under the number of distinct cards answered."},
-  "timeSpentLabel": "걸린 시간",
-  "@timeSpentLabel": {"description": "Summary row label: time from the first card to the end of the session."},
-  "timeSpentValue": "{minutes}분 {seconds}초",
-  "@timeSpentValue": {
-    "description": "Summary row value: the time spent.",
-    "placeholders": {"minutes": {"type": "int"}, "seconds": {"type": "int"}}
-  },
-  "backToDecks": "덱으로 돌아가기",
-  "@backToDecks": {"description": "Summary button that closes the session."},
   "consentNotice": "계속하면 {terms}과 {privacy}에 동의하는 것으로 봐요.",
   "@consentNotice": {
     "description": "Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.",

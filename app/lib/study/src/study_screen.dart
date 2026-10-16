@@ -15,8 +15,9 @@ import 'session.dart';
 import 'session_scroll.dart';
 import 'study_style.dart';
 
-/// Studies the cards of [decks] in one session, one card at a time, answered
-/// by swiping, below every card answered so far; then shows a summary.
+/// Studies the cards of [decks] left today in one session, one card at a time,
+/// answered by swiping, below every card answered so far; then shows the
+/// completion card, from which practice goes on in the same screen.
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.decks});
 
@@ -43,6 +44,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       clock: clock,
       random: ref.read(studyRandomProvider)(clock()),
       onFailure: _report,
+      offsetAt: ref.read(studyZoneProvider),
     );
   }
 
@@ -74,37 +76,31 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       listenable: _session,
       builder: (context, _) {
         final state = _session.state;
-        return PopScope(
-          canPop: state is! SessionStudying,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _session.leave();
-          },
-          child: Scaffold(
-            body: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _TopBar(
-                    progress: switch (state) {
-                      SessionStudying(:final progress) ||
-                      SessionFinished(:final progress) => progress,
-                      _ => null,
-                    },
-                    onClose: () => Navigator.of(context).maybePop(),
+        return Scaffold(
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _TopBar(
+                  progress: switch (state) {
+                    SessionStudying(:final progress) ||
+                    SessionComplete(:final progress) => progress,
+                    _ => null,
+                  },
+                  onClose: () => Navigator.of(context).maybePop(),
+                ),
+                Expanded(
+                  child: _body(
+                    context,
+                    state,
+                    currentCenter:
+                        screenHeight * StudyStyle.currentCenterFraction -
+                        bodyTop,
+                    currentMaxHeight:
+                        screenHeight * StudyStyle.currentMaxHeightFraction,
                   ),
-                  Expanded(
-                    child: _body(
-                      context,
-                      state,
-                      currentCenter:
-                          screenHeight * StudyStyle.currentCenterFraction -
-                          bodyTop,
-                      currentMaxHeight:
-                          screenHeight * StudyStyle.currentMaxHeightFraction,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -141,12 +137,25 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           onAnswer: _session.answer,
         ),
       ),
-      SessionFinished(:final summary, :final previous) => (
+      SessionEmpty() => (
+        null,
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.s20),
+            child: Text(
+              l10n.nothingToStudyToday,
+              textAlign: TextAlign.center,
+              style: AppType.body.copyWith(color: AppColors.of(context).muted),
+            ),
+          ),
+        ),
+      ),
+      SessionComplete(:final completion, :final previous) => (
         previous,
-        _Summary(
-          key: const ValueKey('summary'),
-          summary: summary,
-          now: ref.read(studyClockProvider)(),
+        _CompletionCard(
+          key: const ValueKey('completion'),
+          completion: completion,
+          onPractice: _session.practice,
         ),
       ),
     };
@@ -170,8 +179,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       cards: previous,
       onToggle: _session.toggle,
       currentCenter: currentCenter,
-      // The summary may grow past a card's cap, up to the space below the
-      // top bar, so its action is not scrolled out of reach.
+      // The completion card may grow past a card's cap, up to the space below
+      // the top bar, so its actions are not scrolled out of reach.
       currentMaxHeight: state is SessionStudying
           ? currentMaxHeight
           : double.infinity,
@@ -318,23 +327,29 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// The finished session in the current card's place: the mascot, when the
-/// next review is, the session's counts, its time, and the way back.
-class _Summary extends StatelessWidget {
-  const _Summary({super.key, required this.summary, required this.now});
+/// The completion card in the current card's place once no card is left
+/// today: the mascot, the heading, today's answers, time and streak, and the
+/// choice to go on as practice or to stop.
+class _CompletionCard extends StatelessWidget {
+  const _CompletionCard({
+    super.key,
+    required this.completion,
+    required this.onPractice,
+  });
 
-  final SessionSummary summary;
-
-  /// The time the summary is shown at, from which the next review is told.
-  final DateTime now;
+  final Completion completion;
+  final VoidCallback onPractice;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final time = summary.timeSpent;
-    final muted = AppType.secondary.copyWith(color: colors.muted);
-    final next = summary.nextReview;
+    final minutes = (completion.timeSpent.inSeconds / 60).ceil();
+    final line = AppType.secondary.copyWith(color: colors.ink2);
+    TextSpan count(String value, Color color) => TextSpan(
+      text: value,
+      style: TextStyle(color: color, fontWeight: FontWeight.w700),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -346,10 +361,16 @@ class _Summary extends StatelessWidget {
           minHeight: StudyStyle.currentMinHeight,
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpace.s24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.s20,
+            AppSpace.s28,
+            AppSpace.s20,
+            AppSpace.s20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpace.s12,
             children: [
               Center(
                 child: Mascot(
@@ -357,139 +378,85 @@ class _Summary extends StatelessWidget {
                   fill: colors.brandTint,
                 ),
               ),
-              const SizedBox(height: AppSpace.s16),
               Semantics(
                 header: true,
                 child: Text(
-                  l10n.sessionSummaryTitle,
+                  l10n.studyComplete,
                   textAlign: TextAlign.center,
                   style: AppType.title,
                 ),
               ),
-              const SizedBox(height: AppSpace.s8),
-              if (summary.cardsStudied == 0)
-                Text(
-                  l10n.nothingToStudy,
-                  textAlign: TextAlign.center,
-                  style: muted,
-                )
-              else if (next != null)
-                Text(
-                  _nextReview(l10n, next),
-                  textAlign: TextAlign.center,
-                  style: muted,
+              Semantics(
+                label: l10n.completionSemantics(
+                  completion.knowCount,
+                  completion.dontKnowCount,
+                  minutes,
+                  completion.streak,
                 ),
-              const SizedBox(height: AppSpace.s24),
-              Row(
-                spacing: AppSpace.s8,
-                children: [
-                  Expanded(
-                    child: _Tile(
-                      count: summary.cardsStudied,
-                      label: l10n.summaryStudied,
-                      color: colors.ink,
-                    ),
-                  ),
-                  Expanded(
-                    child: _Tile(
-                      count: summary.knowCount,
-                      label: l10n.know,
-                      color: colors.know,
-                    ),
-                  ),
-                  Expanded(
-                    child: _Tile(
-                      count: summary.dontKnowCount,
-                      label: l10n.dontKnow,
-                      color: colors.dontKnowText,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpace.s8),
-              MergeSemantics(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.ground,
-                    borderRadius: BorderRadius.circular(AppRadius.row),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpace.s16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(l10n.timeSpentLabel, style: muted),
+                child: ExcludeSemantics(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpace.s16,
+                    runSpacing: AppSpace.s4,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            count('${completion.knowCount}', colors.know),
+                            TextSpan(text: ' ${l10n.know}'),
+                          ],
                         ),
-                        Text(
-                          l10n.timeSpentValue(
-                            time.inMinutes,
-                            time.inSeconds.remainder(60),
+                        style: line,
+                      ),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            count(
+                              '${completion.dontKnowCount}',
+                              colors.dontKnowText,
+                            ),
+                            TextSpan(text: ' ${l10n.dontKnow}'),
+                          ],
+                        ),
+                        style: line,
+                      ),
+                      Text.rich(
+                        count(l10n.completionMinutes(minutes), colors.ink),
+                        style: line,
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: AppSpace.s4,
+                        children: [
+                          Icon(
+                            LucideIcons.flame,
+                            size: AppSize.smallIcon,
+                            color: colors.ink2,
                           ),
-                          style: AppType.bodyStrong,
-                        ),
-                      ],
-                    ),
+                          Text.rich(
+                            count(
+                              l10n.completionStreak(completion.streak),
+                              colors.ink,
+                            ),
+                            style: line,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpace.s24),
+              const SizedBox(height: AppSpace.s4),
               AppButton(
-                label: l10n.backToDecks,
+                label: l10n.keepStudying,
                 size: AppButtonSize.cta,
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: onPractice,
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// When [next] is, told by calendar day from [now]: today, tomorrow, or in
-  /// so many days.
-  String _nextReview(AppLocalizations l10n, DateTime next) {
-    final days = DateUtils.dateOnly(next.toLocal())
-        .difference(DateUtils.dateOnly(now.toLocal()))
-        .inDays;
-    return switch (days) {
-      <= 0 => l10n.nextReviewToday,
-      1 => l10n.nextReviewTomorrow,
-      _ => l10n.nextReviewInDays(days),
-    };
-  }
-}
-
-/// One count of the summary over its label, on the ground; the count in the
-/// colour of what it counts.
-class _Tile extends StatelessWidget {
-  const _Tile({required this.count, required this.label, required this.color});
-
-  final int count;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return MergeSemantics(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.ground,
-          borderRadius: BorderRadius.circular(AppRadius.row),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpace.s8,
-            vertical: AppSpace.s16,
-          ),
-          child: Column(
-            spacing: AppSpace.s4,
-            children: [
-              Text('$count', style: AppType.title.copyWith(color: color)),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: AppType.caption.copyWith(color: colors.muted),
+              AppButton(
+                label: l10n.stopStudying,
+                variant: AppButtonVariant.text,
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),

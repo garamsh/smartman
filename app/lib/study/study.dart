@@ -7,7 +7,9 @@ export 'src/providers.dart'
         schedulerProvider,
         studyClockProvider,
         studyRandomProvider,
-        studyRepositoryProvider;
+        studyRepositoryProvider,
+        studyZoneProvider;
+export 'src/queue.dart' show localOffsetAt;
 export 'src/scheduler.dart' show Scheduler;
 export 'src/study_repository.dart' show StudyRepository;
 export 'src/study_screen.dart' show StudyScreen;

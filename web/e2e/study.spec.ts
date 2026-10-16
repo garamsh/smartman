@@ -159,14 +159,14 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(answer).toHaveText(backs.get(second) ?? "");
   await shot(page, "05-study-stack");
   await page.keyboard.press("k");
-  await expect(
-    page.getByRole("heading", { name: "오늘 할 카드를 마쳤어요", exact: true }),
-  ).toBeVisible();
-  // Shown once both writes are saved: a new card answered 안다 is next due days from now.
-  await expect(
-    page.getByText(/^다음 복습은 \d+일 뒤예요\. 잊을 때쯤 다시 보여 드릴게요\.$/),
-  ).toBeVisible();
-  await shot(page, "06-summary");
+  // No card is left today: the completion card takes the current card's place, below the stack.
+  const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
+  await expect(completion).toBeVisible();
+  await expect(question).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "이전 답" }).getByRole("button")).toHaveCount(2);
+  await expect(completion.getByText("2 안다", { exact: true })).toBeVisible();
+  await expect(completion.getByText("연속 1일", { exact: true })).toBeVisible();
+  await shot(page, "06-study-complete");
 
   // The writes ran after the screen changed; each state is written after its review.
   await expect
@@ -193,6 +193,81 @@ test("a signed-in user studies two cards, and the server holds their reviews and
     // A new card answered 안다 is next due days from now, as the engine schedules it.
     expect(Date.parse(String(state.due))).toBeGreaterThan(Date.now() + 86_400_000);
   }
+
+  // 계속 학습 goes on as practice on the same page, over the two cards, and writes nothing.
+  const studyUrl = page.url();
+  const posts = browserLog.filter((line) => line.startsWith("POST ")).length;
+  await completion.getByRole("button", { name: "계속 학습", exact: true }).click();
+  await expect(question).toHaveText(/^(chat|chien)$/);
+  expect(page.url()).toBe(studyUrl);
+  await page.keyboard.press("j");
+  await expect(question).toHaveText(/^(chat|chien)$/);
+  await shot(page, "07-study-practice");
+  await page.keyboard.press("k");
+  await page.keyboard.press("z");
+  await expect(page.getByRole("region", { name: "이전 답" }).getByRole("button")).toHaveCount(4);
+  expect(page.url()).toBe(studyUrl);
+  expect(browserLog.filter((line) => line.startsWith("POST ")).length).toBe(posts);
+  const practisedReviews = await phone
+    .from("reviews")
+    .select("card_id, rating, fuzz_factor, revision");
+  expect(practisedReviews.data).toEqual(reviews.data);
+  const practisedStates = await phone
+    .from("card_states")
+    .select("card_id, stability, due, revision");
+  expect(practisedStates.data).toEqual(states.data);
+
+  // Esc leaves for the deck list.
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(`${baseURL}/`);
+
+  // A deck whose one card is due next week, and was not answered today, has nothing to study.
+  const laterDeck = randomUUID();
+  const laterCard = randomUUID();
+  const nextWeek = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  expect(
+    (
+      await phone.from("decks").insert({
+        id: laterDeck,
+        user_id: userId,
+        name: "Later",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await phone.from("cards").insert({
+        id: laterCard,
+        user_id: userId,
+        deck_id: laterDeck,
+        front: side("plus tard"),
+        back: side("later"),
+        card_key: "plus tard",
+        source: "manual",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await phone.from("card_states").insert({
+        user_id: userId,
+        card_id: laterCard,
+        stability: 7,
+        difficulty: 5,
+        last_review: now,
+        due: nextWeek,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  await page.goto(`/study?decks=${laterDeck}`);
+  await expect(page.getByText("오늘은 학습할 카드가 없어요", { exact: true })).toBeVisible();
+  await expect(completion).toHaveCount(0);
+  await shot(page, "07b-study-nothing-today");
 
   await page.goto("/account");
   await expect(page.getByRole("heading", { name: "계정", exact: true })).toBeVisible();

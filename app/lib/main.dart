@@ -123,6 +123,7 @@ Widget composeApp(
       studyRepositoryProvider.overrideWithValue(studyRepository),
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),
+      studyZoneProvider.overrideWithValue(localOffsetAt),
       studyRandomProvider.overrideWithValue(
         (start) => Random(start.microsecondsSinceEpoch),
       ),

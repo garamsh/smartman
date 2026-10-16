@@ -11,7 +11,7 @@ import { type SessionPlan, StudySession } from "../session";
 import { WriteQueue } from "../write-queue";
 import { CardSide } from "./card-side";
 import { PreviousAnswers } from "./previous-answers";
-import { SessionSummary } from "./session-summary";
+import { CompletionCard } from "./completion-card";
 import { ShortcutHelp } from "./shortcut-help";
 
 const button =
@@ -45,7 +45,7 @@ function shortcut(
   answered: boolean,
 ): "help" | "leave" | "reveal" | "know" | "dontKnow" | "toggleLast" | null {
   if (event.key === "?") return "help";
-  if (event.key === "Escape") return studying ? "leave" : null;
+  if (event.key === "Escape") return "leave";
   if (event.key === " ") return studying ? "reveal" : null;
   // Letters by their physical key, so they work whatever the keyboard's input language.
   if (event.key === "ArrowRight" || event.code === "KeyK") return studying ? "know" : null;
@@ -56,9 +56,11 @@ function shortcut(
 
 /**
  * The study screen: the current card split into question and answer, the progress bar, and the
- * stack of answers given, any of which a click toggles. Every action shows at once; its write
- * runs behind it, and a write that fails is shown with a retry while its answer stays in the
- * stack. Each action has a keyboard shortcut, listed by "단축키", and a visible control.
+ * stack of answers given, any of which a click toggles. Once no card is left today the
+ * completion card takes the current card's place, and practice goes on from it in the same
+ * screen. Every action shows at once; its write runs behind it, and a write that fails is shown
+ * with a retry while its answer stays in the stack. Each action has a keyboard shortcut, listed
+ * by "단축키", and a visible control.
  */
 export function StudyScreen({ plan }: { plan: SessionPlan }) {
   const [session] = useState(() => new StudySession(plan, Date.now, () => crypto.randomUUID()));
@@ -67,6 +69,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
   const [revealed, setRevealed] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const helpButton = useRef<HTMLButtonElement>(null);
+  const closeLink = useRef<HTMLAnchorElement>(null);
   const status = useSyncExternalStore(writes.subscribe, writes.getStatus, writes.getStatus);
 
   function apply(write: AnswerWrite | null) {
@@ -85,7 +88,10 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
     apply(session.toggleLast());
   }
   function leave() {
-    session.leave();
+    closeLink.current?.click();
+  }
+  function practice() {
+    session.practice();
     setView(session.view());
   }
   function closeHelp() {
@@ -157,30 +163,19 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
     };
   }, [unsaved]);
 
-  const studying = view.kind === "studying";
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-study flex-col gap-4 px-gutter py-6">
       <header className="flex items-center gap-4">
-        {studying ? (
-          <button
-            type="button"
-            onClick={leave}
-            aria-label="끝내기"
-            aria-keyshortcuts="Escape"
-            title="끝내기 (Esc)"
-            className="flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            <X aria-hidden className="size-6" strokeWidth={2} />
-          </button>
-        ) : (
-          <Link
-            href="/"
-            aria-label="덱으로"
-            className="flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            <X aria-hidden className="size-6" strokeWidth={2} />
-          </Link>
-        )}
+        <Link
+          ref={closeLink}
+          href="/"
+          aria-label="끝내기"
+          aria-keyshortcuts="Escape"
+          title="끝내기 (Esc)"
+          className="flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          <X aria-hidden className="size-6" strokeWidth={2} />
+        </Link>
         <div className="flex flex-1 items-center gap-3">
           <div
             role="progressbar"
@@ -286,8 +281,10 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             </button>
           </div>
         </>
+      ) : view.kind === "complete" ? (
+        <CompletionCard completion={view.completion} onPractice={practice} />
       ) : (
-        <SessionSummary summary={view.summary} total={view.total} nextReview={status.nextReview} />
+        <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
       )}
 
       {view.previous.length > 0 && (

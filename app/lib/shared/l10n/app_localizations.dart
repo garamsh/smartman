@@ -385,23 +385,53 @@ abstract class AppLocalizations {
   /// **'수정됨'**
   String get answerChanged;
 
-  /// Heading of the end-of-session summary.
-  ///
-  /// In ko, this message translates to:
-  /// **'오늘 할 카드를 마쳤어요'**
-  String get sessionSummaryTitle;
-
-  /// Shown in the summary when the deck had nothing due and no new card.
-  ///
-  /// In ko, this message translates to:
-  /// **'지금 학습할 카드가 없어요.'**
-  String get nothingToStudy;
-
   /// Shown when an answer could not be written to the local database.
   ///
   /// In ko, this message translates to:
   /// **'답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.'**
   String get answerNotSaved;
+
+  /// Heading of the completion card, shown in the current card's place once no card is left today.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 학습 완료'**
+  String get studyComplete;
+
+  /// The study screen when no card is left today and none of its decks' cards was answered today.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘은 학습할 카드가 없어요'**
+  String get nothingToStudyToday;
+
+  /// The completion card's time on screen today, in whole minutes rounded up.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분'**
+  String completionMinutes(int minutes);
+
+  /// The completion card's streak, after a flame icon: study days in a row.
+  ///
+  /// In ko, this message translates to:
+  /// **'{days}일'**
+  String completionStreak(int days);
+
+  /// What a screen reader reads for the completion card's line of counts.
+  ///
+  /// In ko, this message translates to:
+  /// **'안다 {know}, 모른다 {dontKnow}, {minutes}분, {days}일 연속'**
+  String completionSemantics(int know, int dontKnow, int minutes, int days);
+
+  /// The completion card's primary button: goes on as practice over the cards answered today.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속 학습'**
+  String get keepStudying;
+
+  /// The completion card's quiet button: closes the study screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'그만하기'**
+  String get stopStudying;
 
   /// Shown when the scheduling engine refused a review.
   ///
@@ -1260,48 +1290,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'안다'**
   String get swipeKnowHint;
-
-  /// Summary line when the first answered card is due again later today.
-  ///
-  /// In ko, this message translates to:
-  /// **'다음 복습은 오늘이에요. 잊을 때쯤 다시 보여 드릴게요.'**
-  String get nextReviewToday;
-
-  /// Summary line when the first answered card is due again tomorrow.
-  ///
-  /// In ko, this message translates to:
-  /// **'다음 복습은 내일이에요. 잊을 때쯤 다시 보여 드릴게요.'**
-  String get nextReviewTomorrow;
-
-  /// Summary line when the first answered card is due again in two or more days.
-  ///
-  /// In ko, this message translates to:
-  /// **'다음 복습은 {days}일 뒤예요. 잊을 때쯤 다시 보여 드릴게요.'**
-  String nextReviewInDays(int days);
-
-  /// Summary tile label under the number of distinct cards answered.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습한 카드'**
-  String get summaryStudied;
-
-  /// Summary row label: time from the first card to the end of the session.
-  ///
-  /// In ko, this message translates to:
-  /// **'걸린 시간'**
-  String get timeSpentLabel;
-
-  /// Summary row value: the time spent.
-  ///
-  /// In ko, this message translates to:
-  /// **'{minutes}분 {seconds}초'**
-  String timeSpentValue(int minutes, int seconds);
-
-  /// Summary button that closes the session.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱으로 돌아가기'**
-  String get backToDecks;
 
   /// Sign-in screen note under the buttons; terms and privacy are the links termsOfService and privacyPolicy.
   ///

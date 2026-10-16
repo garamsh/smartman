@@ -196,14 +196,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get answerChanged => 'Changed';
 
   @override
-  String get sessionSummaryTitle => 'You\'ve finished today\'s cards';
-
-  @override
-  String get nothingToStudy => 'Nothing to study right now.';
-
-  @override
   String get answerNotSaved =>
       'Couldn\'t save your answer on this device. This card\'s schedule did not change.';
+
+  @override
+  String get studyComplete => 'Done for today';
+
+  @override
+  String get nothingToStudyToday => 'No cards to study today';
+
+  @override
+  String completionMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String completionStreak(int days) {
+    return '$days d';
+  }
+
+  @override
+  String completionSemantics(int know, int dontKnow, int minutes, int days) {
+    return 'Know $know, don\'t know $dontKnow, $minutes min, $days-day streak';
+  }
+
+  @override
+  String get keepStudying => 'Keep studying';
+
+  @override
+  String get stopStudying => 'Stop';
 
   @override
   String get schedulingFailure =>
@@ -748,33 +769,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get swipeKnowHint => 'Know';
-
-  @override
-  String get nextReviewToday =>
-      'Your next review is today. We\'ll show these again just before you forget.';
-
-  @override
-  String get nextReviewTomorrow =>
-      'Your next review is tomorrow. We\'ll show these again just before you forget.';
-
-  @override
-  String nextReviewInDays(int days) {
-    return 'Your next review is in $days days. We\'ll show these again just before you forget.';
-  }
-
-  @override
-  String get summaryStudied => 'Studied';
-
-  @override
-  String get timeSpentLabel => 'Time spent';
-
-  @override
-  String timeSpentValue(int minutes, int seconds) {
-    return '$minutes min $seconds s';
-  }
-
-  @override
-  String get backToDecks => 'Back to decks';
 
   @override
   String consentNotice(String terms, String privacy) {

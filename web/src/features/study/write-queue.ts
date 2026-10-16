@@ -1,13 +1,7 @@
-import type { CardId } from "@/features/decks";
-
 import { type AnswerWrite, type SaveResult, writeFailureMessages } from "./answer-write";
 
-/**
- * Where a session's writes stand: how many wait, why the first of them failed, if it did, and
- * when the first card written is due again, once every write is saved. Times are milliseconds
- * since the epoch.
- */
-export type WriteStatus = { pending: number; failure: string | null; nextReview: number | null };
+/** Where a session's writes stand: how many wait, and why the first of them failed, if it did. */
+export type WriteStatus = { pending: number; failure: string | null };
 
 /**
  * Sends a session's writes to the server one at a time, in the order given, without the screen
@@ -19,9 +13,7 @@ export class WriteQueue {
   private readonly writes: AnswerWrite[] = [];
   private failure: string | null = null;
   private running = false;
-  /** Each card's due time in the state its latest saved write stored. */
-  private readonly due = new Map<CardId, number>();
-  private status: WriteStatus = { pending: 0, failure: null, nextReview: null };
+  private status: WriteStatus = { pending: 0, failure: null };
   private readonly listeners = new Set<() => void>();
 
   constructor(private readonly save: (write: AnswerWrite) => Promise<SaveResult>) {}
@@ -61,7 +53,6 @@ export class WriteQueue {
         (): SaveResult => ({ saved: false, message: writeFailureMessages.unreachable }),
       );
       if (result.saved) {
-        this.due.set(next.cardId, result.state.due);
         this.writes.shift();
         this.changed();
       } else {
@@ -73,12 +64,7 @@ export class WriteQueue {
   }
 
   private changed(): void {
-    const settled = this.writes.length === 0 && this.due.size > 0;
-    this.status = {
-      pending: this.writes.length,
-      failure: this.failure,
-      nextReview: settled ? Math.min(...this.due.values()) : null,
-    };
+    this.status = { pending: this.writes.length, failure: this.failure };
     for (const listener of this.listeners) listener();
   }
 }
