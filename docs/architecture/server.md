@@ -54,6 +54,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - Row-level security is on for all four tables, with one policy per command allowing only rows where `user_id = auth.uid()`. The `reviews` delete policy exists but no client holds the privilege it would narrow.
 - `decks` and `cards` also have a select policy letting any signed-in user read a visibly public deck and its live cards. Writes stay the owner's, since no write policy names another user's rows. A pull therefore filters on its account's `user_id` ([`sync.md`](sync.md)).
 - The privileges are granted in the migration, not left to the project's default privileges.
+- `record_deck_import` runs as `security definer` and `authenticated` may execute it, which the Security Advisor reports as lint `0029_authenticated_security_definer_function_executable`. That is intended: it writes `deck_imports` and `import_count`, which no client may write, and [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §7 lists it among the `security definer` functions, granted to the one role that calls it (issue #113).
 - The app does not use the service role.
 
 ### Extraction usage
@@ -143,7 +144,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
-- Issue #104 records the uuid conversion.
+- Issue #104 records the uuid conversion, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
