@@ -78,9 +78,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: const AccountAvatar(size: AppSize.smallAvatar),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const AccountScreen(
-                          syncStatus: SyncStatusView(),
-                        ),
+                        builder: (_) =>
+                            const AccountScreen(syncStatus: SyncStatusView()),
                       ),
                     ),
                   ),
@@ -193,13 +192,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _study(DeckSelection decks) => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)),
-  );
+  void _study(DeckSelection decks) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)));
 
-  void _open(Deck deck) => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)));
+  void _open(Deck deck) => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)));
 
   /// Opens photo import for a new deck, then the deck it saved into.
   Future<void> _importPhoto(Widget Function(DeckId? deck) photoImport) async {

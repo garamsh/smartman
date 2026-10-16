@@ -76,7 +76,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The screens follow the principles and the theme of [`design.md`](design.md). Widget tests check each screen against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in the light and the dark theme.
 - An empty deck name or card side is refused with a message on its field.
 
-### Deck row
+### Row
 
 - `DeckRow` draws a deck on a rounded surface: the name's first letter on a 44 px tile in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one; its name and "카드 n장"; a "공개" chip when it is public; what its caller shows of today; and a chevron. In selection mode a check in place of the tile shows whether the deck is selected, and the chevron goes.
 - Its caller passes the card count as a value, what to show of today as a widget, and the callbacks that open the deck and select it; the home screen is that caller ([`home.md`](home.md)).
