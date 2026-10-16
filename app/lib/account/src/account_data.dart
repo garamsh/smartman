@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The signed-in account's data on this device, which sign-out sends to the
@@ -29,13 +28,5 @@ final class AccountDataNotCleared implements Exception {
 final accountDataProvider = Provider<AccountData>(
   (ref) => throw UnimplementedError(
     'accountDataProvider is overridden at the composition site',
-  ),
-);
-
-/// Builds the sync status the account screen shows while signed in; the
-/// composition site overrides it with the sync domain's.
-final syncStatusProvider = Provider<Widget Function()>(
-  (ref) => throw UnimplementedError(
-    'syncStatusProvider is overridden at the composition site',
   ),
 );

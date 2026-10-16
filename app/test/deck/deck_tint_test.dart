@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/deck_list_screen.dart';
+import 'package:smartman/deck/src/deck_row.dart';
 
 void main() {
   test('a deck takes the same tint every time, and four decks spread over the four', () {

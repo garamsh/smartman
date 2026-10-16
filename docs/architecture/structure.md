@@ -5,8 +5,7 @@ The structural rules of the app and the web app: what the unit is, what may refe
 ## Current decisions
 
 The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)), `photo_import` ([`ai-extraction.md`](ai-extraction.md)) and `sharing` ([`sharing.md`](sharing.md)).
-- `sync` depends on `account` and `study` through their surfaces, and `account` reaches `sync` through `accountDataProvider`, a seam that breaks a behavioural cycle. `photo_import` and `sharing` depend on `deck`, and `sharing` on `account`, through their surfaces ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)). The composition site is `app/lib/main.dart`.
-- Where the code still differs from the rules below, §Not yet moved lists it.
+- `sync` depends on `account` and `study` through their surfaces, and `account` reaches `sync` through `accountDataProvider`, a seam that breaks a behavioural cycle. `photo_import` and `sharing` depend on `deck`, and `sharing` on `account`, through their surfaces ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)). `home/` composes the domains on screen ([`home.md`](home.md)). The composition site is `app/lib/main.dart`.
 
 ### Top-level folders
 
@@ -56,7 +55,9 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
   - an entry under `app/lib/` outside the closed list;
   - an import from a foundation into a domain or `home/`, and an import of `home/` from anywhere but `main.dart`;
   - an import into a domain's `src/` from outside that domain;
-  - a foundation file whose importers outside its folder all sit in one domain or all in `home/`.
+  - a foundation file whose importers outside its folder all sit in one domain or all in `home/`;
+  - a domain file that names a screen another domain's surface exports, a name ending in `Screen`;
+  - a file in `home/` that declares a provider or imports the database, a read of its own.
   A class inside a foundation file that serves one domain is not visible to it; review holds that.
 - **The app theme is a foundation.** `app/lib/design/theme.dart` holds every colour token, the type, spacing, radius, height and shadow scales and the light and dark themes, and `app/lib/design/theme_choice.dart` the user's choice between them; no other file under `app/lib/` writes a colour ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md), [`design.md`](design.md)).
 - **The components are a foundation.** `app/lib/design/` holds the buttons, fields, rows, chips, section labels, sheets and the mascot every screen builds from, one file per component. They import only Flutter, the theme and the strings, and a domain imports the file it uses ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md), [`design.md`](design.md)).
@@ -83,12 +84,6 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
 - **A client module takes a sibling feature's values from the server.** A client module cannot import a feature's `index.ts` that carries server-only code (stack-nextjs §13), so the server component rendering it passes in what it needs, such as a card side described as text.
 - **The structural rules are checked by a test and by ESLint.** `web/src/__tests__/structure.test.ts` fails on an entry under `web/src/` outside the closed list. `web/eslint.config.mjs` fails on an import of `@/features/<name>/` other than its `index` or `actions`, and on an import of `@/features/` or `@/app/` from a foundation.
 - **The web app has no single composition site.** Next.js calls each route, Route Handler, Server Action and the proxy as an entry point of its own, per request. Each constructs the Supabase client it needs through `web/src/supabase/`, the one place that constructs one.
-
-### Not yet moved
-
-The code at `52c982aa501f26c5ca196f29b92f485b29f2f10e` still differs from the rules above in these places. Each is moved by a follow-up issue, and the entry is removed in the same pull request.
-
-- `app/lib/home/` does not exist. The home screen is `deck`'s `DeckListScreen` and the deck's page `deck`'s `CardListScreen`, and `deck` hosts other domains' screens through `studyScreenProvider`, `todayProvider`, `photoImportProvider`, `accountScreenProvider`, `accountAvatarProvider` and `deckSharingProvider`; `account` hosts the shell through `signedInHomeProvider` and `sync`'s view through `syncStatusProvider`.
 
 ## Rationale
 

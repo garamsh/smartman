@@ -6,14 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/home/home.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/sharing/sharing.dart';
 
+import '../home/home_data.dart';
 import 'fakes.dart';
 
-/// The deck list over an in-memory database, with sharing through a
-/// substituted server and network state, and stand-ins for the rest of what
-/// the composition site provides.
+/// The home screen over an in-memory database, with sharing through a
+/// substituted server and network state, and study over the same database.
 class SharingApp {
   SharingApp._(this.tester, this.db, this.decks, this.server, this.network)
     : _semantics = tester.ensureSemantics();
@@ -76,20 +77,8 @@ class SharingApp {
       ProviderScope(
         overrides: [
           deckRepositoryProvider.overrideWithValue(decks),
-          deckSharingProvider.overrideWithValue(sharing),
-          studyScreenProvider.overrideWithValue(
-            (decks) => const Scaffold(body: Text('session')),
-          ),
-          todayProvider.overrideWithValue(
-            (decks, builder) => Builder(
-              builder: (context) =>
-                  builder(context, const TodayCounted(review: 0, fresh: 0)),
-            ),
-          ),
-          accountScreenProvider.overrideWithValue(Scaffold.new),
-          accountAvatarProvider.overrideWithValue(
-            () => const SizedBox.square(dimension: 32),
-          ),
+          sharingServiceProvider.overrideWithValue(sharing),
+          ...homeOverrides(db),
         ],
         child: MaterialApp(
           theme: lightTheme,
@@ -98,7 +87,7 @@ class SharingApp {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const DeckListScreen(),
+          home: const HomeScreen(),
         ),
       ),
     );

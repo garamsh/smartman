@@ -7,9 +7,13 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
+import 'package:smartman/photo_import/photo_import.dart';
+import 'package:smartman/study/study.dart';
+
+import 'home_data.dart';
 
 /// A deck named "French" in an in-memory database, shown by the deck screens
-/// with stand-ins for what the composition site provides.
+/// with study over the same database and a stand-in for photo import.
 class DeckScreens {
   DeckScreens._(this.tester, this.repository, this.deck, this.navigator);
 
@@ -18,8 +22,9 @@ class DeckScreens {
   final Deck deck;
   final GlobalKey<NavigatorState> navigator;
 
-  /// The decks of every study session opened.
-  final sessions = <Set<DeckId>>[];
+  /// The decks of the study session open on top.
+  Set<DeckId> get session =>
+      tester.widget<StudyScreen>(find.byType(StudyScreen)).decks.ids;
 
   /// The deck of every photo import opened.
   final photoImports = <DeckId?>[];
@@ -55,12 +60,19 @@ class DeckScreens {
   }
 
   /// Opens the screens over the deck holding a card for each of [cards],
-  /// front to back. [today] is every today count; [photoImport] enables the
-  /// photo buttons.
+  /// front to back. The cards whose fronts are in [due] fall due today after
+  /// an interval of [dueDays] days, those in [later] tomorrow, and the rest
+  /// are new. [unreadable] makes the deck's cards unreadable to the count, and
+  /// [stalled] holds the count unread; [photoImport] enables the photo
+  /// buttons.
   static Future<DeckScreens> open(
     WidgetTester tester, {
     Map<String, String> cards = const {},
-    TodayCount today = const TodayCounted(review: 0, fresh: 0),
+    Set<String> due = const {},
+    int dueDays = 1,
+    Set<String> later = const {},
+    bool unreadable = false,
+    bool stalled = false,
     bool photoImport = false,
     ThemeMode themeMode = ThemeMode.light,
   }) async {
@@ -68,7 +80,7 @@ class DeckScreens {
     addTearDown(db.close);
     var ids = 0;
     var tick = 0;
-    final repository = DeckRepository(
+    final repository = UnreadableDecks(
       db,
       clock: () => DateTime.utc(2026, 10, 15).add(Duration(seconds: tick++)),
       newId: () => 'id${ids++}',
@@ -76,14 +88,24 @@ class DeckScreens {
     final deck = (await tester.runAsync(() async {
       final deck = await repository.createDeck('French');
       for (final MapEntry(key: front, value: back) in cards.entries) {
-        await repository.addCard(
+        final saved = await repository.addCard(
           deck.id,
           front: [TextContent(front)],
           back: [TextContent(back)],
         );
+        final card = switch (saved) {
+          CardSaved(:final card) => card.id,
+          DuplicateFront() => fail('the deck held no duplicate'),
+        };
+        if (due.contains(front)) {
+          await storeState(db, card, due: homeNow, days: dueDays);
+        } else if (later.contains(front)) {
+          await storeState(db, card, due: homeNow.add(const Duration(days: 1)));
+        }
       }
       return deck;
     }))!;
+    if (unreadable) repository.unreadable.add(deck.id);
     final screens = DeckScreens._(
       tester,
       repository,
@@ -94,14 +116,7 @@ class DeckScreens {
       ProviderScope(
         overrides: [
           deckRepositoryProvider.overrideWithValue(repository),
-          studyScreenProvider.overrideWithValue((decks) {
-            screens.sessions.add(decks.ids);
-            return const Scaffold(body: Text('session'));
-          }),
-          todayProvider.overrideWithValue(
-            (decks, builder) =>
-                Builder(builder: (context) => builder(context, today)),
-          ),
+          ...homeOverrides(db, stalled: stalled),
           if (photoImport)
             photoImportProvider.overrideWithValue((deck) {
               screens.photoImports.add(deck);

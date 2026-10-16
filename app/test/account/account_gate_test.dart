@@ -17,9 +17,9 @@ import 'package:smartman/account/account.dart';
 import 'package:smartman/account/src/account_service.dart';
 import 'package:smartman/account/src/google_button.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
-import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
+import 'package:smartman/home/home.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
@@ -176,7 +176,7 @@ void main() {
       expect(find.text('Apple로 계속하기 · 준비 중'), findsOneWidget);
       // Besides Google's button, only the links to the terms answer a tap.
       expect(enabledButtons(tester), ['Google로 계속하기', '이용약관', '개인정보 처리방침']);
-      expect(find.byType(DeckListScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsNothing);
       expect(find.byTooltip('계정'), findsNothing);
       await unmountApp(tester);
     },
@@ -189,7 +189,7 @@ void main() {
     await tapAndSettle(tester, find.text('Continue with Google'));
 
     expect(account.state, isA<SignedIn>());
-    expect(find.byType(DeckListScreen), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(SignInScreen), findsNothing);
     await unmountApp(tester);
   });
@@ -230,7 +230,7 @@ void main() {
     expect(account.state, isA<SignedOut>());
     expect(find.byType(SignInScreen), findsOneWidget);
     expect(find.byType(AccountScreen), findsNothing);
-    expect(find.byType(DeckListScreen), findsNothing);
+    expect(find.byType(HomeScreen), findsNothing);
     await unmountApp(tester);
   });
 
@@ -275,7 +275,7 @@ void main() {
       expect(account.state, isA<SignedOut>());
       expect(find.byType(SignInScreen), findsOneWidget);
       expect(find.byType(AccountScreen), findsNothing);
-      expect(find.byType(DeckListScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsNothing);
       expect(await deviceRows(tester), 0);
       await unmountApp(tester);
     },
@@ -340,7 +340,7 @@ void main() {
           'Terms of Service',
           'Privacy Policy',
         ]);
-        expect(find.byType(DeckListScreen), findsNothing);
+        expect(find.byType(HomeScreen), findsNothing);
         expect(find.byType(StudyScreen), findsNothing);
         expect(find.byType(AccountScreen), findsNothing);
         expect(find.byType(PhotoImportScreen), findsNothing);
@@ -390,7 +390,7 @@ void main() {
           server: server,
         );
 
-        expect(find.byType(DeckListScreen), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
         expect(find.byType(SignInScreen), findsNothing);
         // The app opened while the session's refresh was still unanswered.
         expect(requests, ['/auth/v1/token']);
@@ -401,7 +401,7 @@ void main() {
         await pumpApp(tester, await offlineAccount(null), server: server);
 
         expect(find.byType(SignInScreen), findsOneWidget);
-        expect(find.byType(DeckListScreen), findsNothing);
+        expect(find.byType(HomeScreen), findsNothing);
         await unmountApp(tester);
         auth.dispose();
       },
@@ -424,7 +424,7 @@ void main() {
       expect(find.text('이 앱의 로그인 설정에 문제가 있어 로그인할 수 없어요.'), findsOneWidget);
       expect(enabledButtons(tester), ['이용약관', '개인정보 처리방침']);
       expect(find.text('Google로 계속하기'), findsNothing);
-      expect(find.byType(DeckListScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsNothing);
       await unmountApp(tester);
     },
   );

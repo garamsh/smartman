@@ -20,8 +20,9 @@ Current architecture of the system and the decisions behind it. This file is the
 
 ## Index
 
-- `structure.md` — the structural rules of the app and the web app: the closed lists of top-level folders, the domain and the feature as units, what may reference what, the foundations below them, the shell above them, the seam rule, the composition site, and what is not yet moved.
-- `deck.md` — the `deck` domain: decks, cards, content blocks, the card key, and the duplicate rule.
+- `structure.md` — the structural rules of the app and the web app: the closed lists of top-level folders, the domain and the feature as units, what may reference what, the foundations below them, the shell above them, the seam rule, and the composition site.
+- `home.md` — the app's `home/` shell: the home screen with the today card and the deck rows, the selection, the deck screen, and how they compose the domains.
+- `deck.md` — the `deck` domain: decks, cards, content blocks, the card key, the duplicate rule, the deck row and the card editor.
 - `engine.md` — the scheduling engine: FSRS-6 in the pure Rust crate `engine/`, its public surface, its reference values, and its WebAssembly build in `engine-wasm/` for the web app.
 - `account.md` — the `account` domain: the gate that requires sign-in, Google sign-in through Supabase Auth, the session, deleting the account, and the configuration it reads from `app/config/`.
 - `design.md` — the app's design language: the principles every screen follows, where each is applied today, the voice every string is written in, the brand and where its marks appear, the shared light and dark theme with its tokens, the shared components every screen builds from, and the launcher icons and splash.

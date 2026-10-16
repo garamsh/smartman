@@ -35,7 +35,7 @@ final class CopyIntoDeck extends CopyTarget {
 ///
 /// Every server call throws a [SharingFailure] on an expected failure, and
 /// every local write a [DeckFailure].
-class SharingService implements DeckSharing {
+class SharingService {
   SharingService({
     required this.server,
     required this.decks,
@@ -54,17 +54,19 @@ class SharingService implements DeckSharing {
   /// How many cards a preview shows.
   static const previewLimit = 20;
 
-  @override
+  /// Whether the device is online now, kept current. Publishing needs the
+  /// network, so the deck menu disables it while offline.
   Stream<bool> watchOnline() => reachability.watchOnline();
 
-  @override
+  /// The screen that browses other users' public decks.
   Widget browseScreen() => BrowseScreen(sharing: this);
 
-  @override
+  /// Asks for what publishing [deck] needs and publishes it, reporting a
+  /// failure to the user itself.
   Future<void> publish(BuildContext context, Deck deck) =>
       showPublishSheet(context, sharing: this, deck: deck);
 
-  @override
+  /// Makes [deck] private again, reporting a failure to the user itself.
   Future<void> unpublish(BuildContext context, Deck deck) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);

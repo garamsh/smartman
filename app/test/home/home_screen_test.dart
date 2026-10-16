@@ -7,10 +7,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/home/src/home_screen.dart';
 import 'package:smartman/l10n/app_localizations.dart';
+import 'package:smartman/photo_import/photo_import.dart';
+import 'package:smartman/study/study.dart';
 
-/// A deck list over decks named "Alpha", "Beta" and "Gamma", whose study
-/// screen and today counts record the decks they were given.
+import 'home_data.dart';
+
+/// The home screen over decks named "Alpha", "Beta" and "Gamma".
 class _List {
   _List(this.tester, this.repository, this.ids)
     : _semantics = tester.ensureSemantics();
@@ -22,11 +26,9 @@ class _List {
   /// Each deck's id by name.
   final Map<String, DeckId> ids;
 
-  /// The decks of every study session opened.
-  final sessions = <Set<DeckId>>[];
-
-  /// Every selection a today count was built for.
-  final counted = <Set<DeckId>>[];
+  /// The decks of the study session open on top.
+  Set<DeckId> get session =>
+      tester.widget<StudyScreen>(find.byType(StudyScreen)).decks.ids;
 
   Future<void> longPress(String deck) async {
     await tester.longPress(find.text(deck));
@@ -54,19 +56,26 @@ class _List {
   }
 }
 
-/// Opens the deck list. [today] gives the count of a selection by the names
-/// of its decks, joined by "+"; a selection it leaves out counts nothing.
-/// [photoImport] stands in for the photo import screen when given.
+/// Opens the home screen, with in each deck named in [fresh] that many new
+/// cards, in each named in [due] that many cards due today after an interval
+/// of [dueDays] days, and in each named in [later] that many due tomorrow.
+/// [pace] is the time the user's answers took; [unreadable] names the decks
+/// whose cards cannot be read. [photoImport] stands in for the photo import
+/// screen when given.
 Future<_List> _open(
   WidgetTester tester, {
-  Map<String, TodayCount> today = const {},
+  Map<String, int> fresh = const {},
+  Map<String, int> due = const {},
+  int dueDays = 1,
+  Map<String, int> later = const {},
+  Duration? pace,
+  Set<String> unreadable = const {},
   Widget Function(DeckId? deck)? photoImport,
-  Map<String, int> cards = const {},
 }) async {
   final db = AppDatabase(NativeDatabase.memory());
   addTearDown(db.close);
   var ids = 0;
-  final repository = DeckRepository(
+  final repository = UnreadableDecks(
     db,
     clock: () => DateTime.utc(2026, 10, 15),
     newId: () => 'deck${ids++}',
@@ -76,45 +85,42 @@ Future<_List> _open(
       for (final name in ['Alpha', 'Beta', 'Gamma'])
         name: (await repository.createDeck(name)).id,
     };
-    for (final MapEntry(key: name, value: count) in cards.entries) {
+    Future<CardId> add(String deck, String front) async =>
+        switch (await repository.addCard(
+          created[deck]!,
+          front: [TextContent(front)],
+          back: [TextContent(front)],
+        )) {
+          CardSaved(:final card) => card.id,
+          DuplicateFront() => fail('the deck held no duplicate'),
+        };
+    for (final MapEntry(key: name, value: count) in fresh.entries) {
       for (var i = 0; i < count; i++) {
-        await repository.addCard(
-          created[name]!,
-          front: [TextContent('$name $i')],
-          back: [TextContent('$i')],
-        );
+        await add(name, '$name new $i');
+      }
+    }
+    for (final MapEntry(key: name, value: count) in due.entries) {
+      for (var i = 0; i < count; i++) {
+        final card = await add(name, '$name due $i');
+        await storeState(db, card, due: homeNow, days: dueDays);
+        if (pace != null) await storeAnswers(db, card, 20, pace);
+      }
+    }
+    for (final MapEntry(key: name, value: count) in later.entries) {
+      for (var i = 0; i < count; i++) {
+        final card = await add(name, '$name later $i');
+        await storeState(db, card, due: homeNow.add(const Duration(days: 1)));
       }
     }
     return created;
   }))!;
+  repository.unreadable.addAll([for (final name in unreadable) created[name]!]);
   final list = _List(tester, repository, created);
-  final names = {
-    for (final MapEntry(:key, :value) in created.entries) value: key,
-  };
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         deckRepositoryProvider.overrideWithValue(repository),
-        studyScreenProvider.overrideWithValue((decks) {
-          list.sessions.add(decks.ids);
-          return const Scaffold(body: Text('session'));
-        }),
-        todayProvider.overrideWithValue((decks, builder) {
-          list.counted.add(decks.ids);
-          final key = ([
-            for (final id in decks.ids) names[id]!,
-          ]..sort()).join('+');
-          return Builder(
-            builder: (context) => builder(
-              context,
-              today[key] ?? const TodayCounted(review: 0, fresh: 0),
-            ),
-          );
-        }),
-        accountScreenProvider.overrideWithValue(Scaffold.new),
-        accountAvatarProvider.overrideWithValue(
-          () => const SizedBox.square(dimension: 32),
-        ),
+        ...homeOverrides(db),
         if (photoImport != null)
           photoImportProvider.overrideWithValue(photoImport),
       ],
@@ -123,7 +129,7 @@ Future<_List> _open(
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const DeckListScreen(),
+        home: const HomeScreen(),
       ),
     ),
   );
@@ -137,19 +143,19 @@ void main() {
   testWidgets(
     'each row shows its deck name, card count and chevron, and a today chip only when the deck has cards for today',
     (tester) async {
+      const unreadable =
+          "Couldn't read or write the device's storage. Please try again.";
       final list = await _open(
         tester,
-        cards: {'Alpha': 2, 'Beta': 1},
-        today: {
-          'Alpha': const TodayCounted(review: 1, fresh: 2),
-          'Beta': const TodayCounted(review: 0, fresh: 0),
-          'Gamma': const TodayUnavailable('Could not count'),
-        },
+        fresh: {'Alpha': 2},
+        due: {'Alpha': 1},
+        later: {'Beta': 1},
+        unreadable: {'Gamma'},
       );
 
       Finder inRow(String deck, Finder finder) =>
           find.descendant(of: list.row(deck), matching: finder);
-      expect(inRow('Alpha', find.text('2 cards')), findsOneWidget);
+      expect(inRow('Alpha', find.text('3 cards')), findsOneWidget);
       expect(inRow('Alpha', find.text('Today 3')), findsOneWidget);
       expect(
         inRow('Alpha', find.byIcon(LucideIcons.chevronRight)),
@@ -159,7 +165,7 @@ void main() {
       expect(inRow('Beta', find.textContaining('Today')), findsNothing);
       expect(inRow('Gamma', find.text('0 cards')), findsOneWidget);
       expect(inRow('Gamma', find.textContaining('Today')), findsNothing);
-      expect(inRow('Gamma', find.byTooltip('Could not count')), findsOneWidget);
+      expect(inRow('Gamma', find.byTooltip(unreadable)), findsOneWidget);
       expect(find.text('My decks 3'), findsOneWidget);
       expect(find.text('Long-press to select several decks'), findsOneWidget);
       await list.close();
@@ -171,23 +177,18 @@ void main() {
     (tester) async {
       final list = await _open(
         tester,
-        today: {
-          'Alpha+Beta+Gamma': const TodayCounted(
-            review: 4,
-            fresh: 3,
-            perCard: Duration(seconds: 25),
-          ),
-        },
+        fresh: {'Alpha': 2, 'Gamma': 1},
+        due: {'Alpha': 1, 'Beta': 3},
+        pace: const Duration(seconds: 25),
       );
 
-      expect(list.counted, contains(equals(list.ids.values.toSet())));
       expect(find.bySemanticsLabel('7 cards for today'), findsOneWidget);
       // Seven cards at 25 s each take 175 s, about 3 minutes.
       expect(find.text('4 to review · 3 new · about 3 min'), findsOneWidget);
 
       await list.tap('Study all');
 
-      expect(list.sessions, [list.ids.values.toSet()]);
+      expect(list.session, list.ids.values.toSet());
       await list.close();
     },
   );
@@ -196,24 +197,31 @@ void main() {
     'in a backlog the header says new cards wait, and not otherwise',
     (tester) async {
       const paused = 'New cards wait until you catch up on your reviews.';
+      // Seven reviews due after 30-day intervals are far more than three
+      // days' load, so the new card waits.
       var list = await _open(
         tester,
-        today: {'Alpha+Beta+Gamma': const TodayCounted.backlog(review: 40)},
+        fresh: {'Gamma': 1},
+        due: {'Alpha': 4, 'Beta': 3},
+        dueDays: 30,
       );
 
-      expect(find.bySemanticsLabel('40 cards for today'), findsOneWidget);
-      // 40 cards at 10 s each, about 7 minutes.
-      expect(find.text('40 to review · 0 new · about 7 min'), findsOneWidget);
+      expect(find.bySemanticsLabel('7 cards for today'), findsOneWidget);
+      // Seven cards at 10 s each, about 2 minutes.
+      expect(find.text('7 to review · 0 new · about 2 min'), findsOneWidget);
       expect(find.text(paused), findsOneWidget);
       await list.close();
 
-      // Control: the same header with new cards taken has no such sentence.
+      // Control: the same reviews after one-day intervals are within three
+      // days' load, so the header takes the new card and has no such
+      // sentence.
       list = await _open(
         tester,
-        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 40, fresh: 0)},
+        fresh: {'Gamma': 1},
+        due: {'Alpha': 4, 'Beta': 3},
       );
 
-      expect(find.text('40 to review · 0 new · about 7 min'), findsOneWidget);
+      expect(find.text('7 to review · 1 new · about 2 min'), findsOneWidget);
       expect(find.text(paused), findsNothing);
       await list.close();
     },
@@ -222,23 +230,17 @@ void main() {
   testWidgets(
     'with nothing to study the today card says it is done, and Keep studying opens a session over every deck',
     (tester) async {
-      var list = await _open(
-        tester,
-        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 0, fresh: 0)},
-      );
+      var list = await _open(tester, later: {'Alpha': 1});
 
       expect(find.text("You've done today's cards"), findsOneWidget);
       expect(find.text('Study all'), findsNothing);
       expect(find.bySemanticsLabel(RegExp('for today')), findsNothing);
       await list.tap('Keep studying');
-      expect(list.sessions, [list.ids.values.toSet()]);
+      expect(list.session, list.ids.values.toSet());
       await list.close();
 
       // Control: one card to study shows the count and Study all.
-      list = await _open(
-        tester,
-        today: {'Alpha+Beta+Gamma': const TodayCounted(review: 1, fresh: 0)},
-      );
+      list = await _open(tester, due: {'Alpha': 1});
       expect(find.text("You've done today's cards"), findsNothing);
       expect(find.text('Keep studying'), findsNothing);
       expect(find.text('Study all'), findsOneWidget);
@@ -247,12 +249,14 @@ void main() {
   );
 
   testWidgets('a header count that cannot be read says why', (tester) async {
-    final list = await _open(
-      tester,
-      today: {'Alpha+Beta+Gamma': const TodayUnavailable('Storage failed')},
-    );
+    final list = await _open(tester, unreadable: {'Beta'});
 
-    expect(find.text('Storage failed'), findsOneWidget);
+    expect(
+      find.text(
+        "Couldn't read or write the device's storage. Please try again.",
+      ),
+      findsOneWidget,
+    );
     expect(find.bySemanticsLabel(RegExp('for today')), findsNothing);
     await list.close();
   });
@@ -312,7 +316,7 @@ void main() {
     await list.tap('Create from photo');
     await list.tap('saved');
 
-    expect(find.byType(DeckListScreen), findsNothing);
+    expect(find.byType(HomeScreen), findsNothing);
     expect(find.text('Beta'), findsOneWidget);
     expect(find.text('Add card'), findsOneWidget);
     await list.close();
@@ -336,7 +340,7 @@ void main() {
     await list.tap('Create from photo');
     await list.tap('left');
 
-    expect(find.byType(DeckListScreen), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.text('Add card'), findsNothing);
     await list.close();
   });
@@ -390,10 +394,7 @@ void main() {
 
     await list.tap('Study (2)');
 
-    expect(find.text('session'), findsOneWidget);
-    expect(list.sessions, [
-      {list.ids['Alpha'], list.ids['Gamma']},
-    ]);
+    expect(list.session, {list.ids['Alpha'], list.ids['Gamma']});
     await list.close();
   });
 

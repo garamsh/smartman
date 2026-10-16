@@ -3,21 +3,65 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../deck/deck.dart'
-    show
-        DeckFailure,
-        DeckSelection,
-        TodayBuilder,
-        TodayCount,
-        TodayCounted,
-        TodayPending,
-        TodayUnavailable,
-        deckRepositoryProvider,
-        describeFailure;
+    show DeckFailure, DeckSelection, deckRepositoryProvider, describeFailure;
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'providers.dart';
 import 'queue.dart';
+
+/// What a session over a selection would study now.
+sealed class TodayCount {
+  const TodayCount();
+}
+
+/// The count is being read.
+final class TodayPending extends TodayCount {
+  const TodayPending();
+}
+
+/// [review] cards are due and [fresh] cards are new, and the user takes
+/// [perCard] over one card.
+final class TodayCounted extends TodayCount {
+  const TodayCounted({
+    required this.review,
+    required this.fresh,
+    this.perCard = defaultPerCard,
+  }) : backlog = false;
+
+  /// So many reviews are due that new cards pause until they are done.
+  const TodayCounted.backlog({
+    required this.review,
+    this.perCard = defaultPerCard,
+  }) : fresh = 0,
+       backlog = true;
+
+  final int review;
+  final int fresh;
+  final Duration perCard;
+
+  /// The time one card is taken to need while the user's own pace is unknown.
+  static const defaultPerCard = Duration(seconds: 10);
+
+  /// Whether new cards pause for a backlog of reviews.
+  final bool backlog;
+
+  /// The size of the session: every due card and every new one.
+  int get total => review + fresh;
+
+  /// The whole minutes the session takes at [perCard], rounded up.
+  int get minutes => (total * perCard.inMilliseconds / 60000).ceil();
+}
+
+/// The count could not be read; [message] says why, for the user.
+final class TodayUnavailable extends TodayCount {
+  const TodayUnavailable(this.message);
+
+  final String message;
+}
+
+/// Builds what the caller shows of a [TodayCount].
+typedef TodayBuilder = Widget Function(BuildContext context, TodayCount count);
 
 /// Counts the due and new cards left today for a session over [decks], by
 /// the rules that build its queue, whether new cards pause for a backlog, and

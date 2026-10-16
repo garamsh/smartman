@@ -5,7 +5,7 @@ export const deckTints = ["bg-tint-blue", "bg-tint-amber", "bg-tint-green", "bg-
 
 /**
  * Which tint a deck's tile takes: the sum of its id's UTF-16 code units, modulo the tints. The
- * app computes the same (`deckTintIndex` in app/lib/deck/src/deck_list_screen.dart).
+ * app computes the same (`deckTintIndex` in app/lib/deck/src/deck_row.dart).
  */
 export function deckTintIndex(deck: DeckId): number {
   let sum = 0;

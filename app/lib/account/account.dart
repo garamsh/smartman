@@ -4,12 +4,8 @@ library;
 
 export 'src/account_avatar.dart' show AccountAvatar;
 export 'src/account_data.dart'
-    show
-        AccountData,
-        AccountDataNotCleared,
-        accountDataProvider,
-        syncStatusProvider;
-export 'src/account_gate.dart' show AccountGate, signedInHomeProvider;
+    show AccountData, AccountDataNotCleared, accountDataProvider;
+export 'src/account_gate.dart' show AccountGate;
 export 'src/account_screen.dart' show AccountScreen;
 export 'src/account_service.dart'
     show AccountConnection, AccountService, connectAccount;
