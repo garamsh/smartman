@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
+import { themeScript } from "@/lib/theme";
+
 import "@/styles/globals.css";
 
 // src/styles/fonts links to app/assets/fonts, so the app and the web share one copy.
@@ -35,7 +37,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ko" className={`${pretendard.variable} antialiased`}>
+    // The script sets data-theme on <html> before React hydrates it.
+    <html lang="ko" className={`${pretendard.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="bg-ground font-sans text-ink">{children}</body>
     </html>
   );

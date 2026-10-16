@@ -45,17 +45,94 @@ function cssColors(block: string): Map<string, string> {
 }
 
 const lightCss = /@theme \{([^}]*)\}/.exec(globalsCss)?.[1] ?? "";
-const darkCss = /prefers-color-scheme: dark\)\s*\{\s*:root \{([^}]*)\}/.exec(globalsCss)?.[1] ?? "";
+/** The dark set the system's dark mode applies while the user's choice is the system's. */
+const systemDarkCss =
+  /prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\) \{([^}]*)\}/.exec(
+    globalsCss,
+  )?.[1] ?? "";
+/** The dark set the user's "다크" applies, whatever the system's mode. */
+const chosenDarkCss =
+  /:root\[data-theme="dark"\] \{([^}]*--color[^}]*)\}/.exec(globalsCss)?.[1] ?? "";
+
+/** Google's button colours are GoogleButtonStyle's, not AppColors'; they are compared below. */
+const isGoogle = ([name]: [string, unknown]) => name.startsWith("google");
+const withoutGoogle = <T>(tokens: Map<string, T>) =>
+  new Map([...tokens].filter((entry) => !isGoogle(entry)));
+const onlyGoogle = <T>(tokens: Map<string, T>) => new Map([...tokens].filter(isGoogle));
 
 describe("the web theme's colour tokens", () => {
   it("are the light tokens of app/lib/shared/theme.dart", () => {
     expect(dartColors("light").size).toBe(25);
-    expect(cssColors(lightCss)).toEqual(dartColors("light"));
+    expect(withoutGoogle(cssColors(lightCss))).toEqual(dartColors("light"));
   });
 
-  it("are the dark tokens of app/lib/shared/theme.dart under prefers-color-scheme: dark", () => {
+  it("are the dark tokens of app/lib/shared/theme.dart, for the system's dark mode and for 다크", () => {
     expect(dartColors("dark").size).toBe(25);
-    expect(cssColors(darkCss)).toEqual(dartColors("dark"));
+    expect(withoutGoogle(cssColors(systemDarkCss))).toEqual(dartColors("dark"));
+    expect(withoutGoogle(cssColors(chosenDarkCss))).toEqual(dartColors("dark"));
+  });
+});
+
+/** The body of `static const [set] = GoogleButtonStyle._(…);` in theme.dart. */
+function dartGoogleStyle(set: "light" | "dark"): string {
+  const body = new RegExp(`static const ${set} = GoogleButtonStyle\\._\\(([^;]*)\\);`).exec(
+    themeDart,
+  )?.[1];
+  if (body === undefined) throw new Error(`theme.dart has no GoogleButtonStyle.${set}`);
+  return body;
+}
+
+/** GoogleButtonStyle's colours of one theme, as the web's `google-*` tokens name them. */
+function dartGoogleColors(set: "light" | "dark"): Map<string, string> {
+  return new Map(
+    [...dartGoogleStyle(set).matchAll(/(fill|stroke|label): Color\(0xFF([0-9A-Fa-f]{6})\)/g)].map(
+      ([, name, hex]) => [`google-${String(name)}`, `#${String(hex).toLowerCase()}`],
+    ),
+  );
+}
+
+describe("the web's Google button tokens", () => {
+  it("are GoogleButtonStyle's light colours, the guidelines' white button", () => {
+    // Control: theme.dart's light button is the guidelines' fill, stroke and label.
+    expect(dartGoogleColors("light")).toEqual(
+      new Map([
+        ["google-fill", "#ffffff"],
+        ["google-stroke", "#747775"],
+        ["google-label", "#1f1f1f"],
+      ]),
+    );
+    expect(onlyGoogle(cssColors(lightCss))).toEqual(dartGoogleColors("light"));
+  });
+
+  it("are GoogleButtonStyle's dark colours in either dark set", () => {
+    expect(dartGoogleColors("dark").size).toBe(3);
+    expect(onlyGoogle(cssColors(systemDarkCss))).toEqual(dartGoogleColors("dark"));
+    expect(onlyGoogle(cssColors(chosenDarkCss))).toEqual(dartGoogleColors("dark"));
+  });
+
+  it("are GoogleButtonStyle's label, mark and Android and web spacing", () => {
+    const body = /final class GoogleButtonStyle \{([\s\S]*?)\n\}/.exec(themeDart)?.[1] ?? "";
+    const label = /labelStyle = TextStyle\(([^)]*)\)/.exec(body)?.[1] ?? "";
+    const spacing = /_ => \(start: ([\d.]+), gap: ([\d.]+), end: ([\d.]+)\)/.exec(body);
+    // Control: both sides are read.
+    expect(Number(/markSize = ([\d.]+);/.exec(body)?.[1])).toBe(20);
+    expect(spacing).not.toBeNull();
+
+    expect(cssType().get("google")).toEqual({
+      size: Number(/fontSize: ([\d.]+)/.exec(label)?.[1]),
+      lineHeight: 20,
+      weight: Number(/fontWeight: FontWeight\.w(\d+)/.exec(label)?.[1]),
+      letterSpacing: 0,
+    });
+    expect(/height: 20 \/ 14/.test(label)).toBe(true);
+    expect(onlyGoogle(cssSpacing)).toEqual(
+      new Map([
+        ["google-mark", Number(/markSize = ([\d.]+);/.exec(body)?.[1])],
+        ["google-start", Number(spacing?.[1])],
+        ["google-gap", Number(spacing?.[2])],
+        ["google-end", Number(spacing?.[3])],
+      ]),
+    );
   });
 });
 
@@ -148,7 +225,7 @@ describe("the web theme's type tokens", () => {
       weight: 800,
       letterSpacing: -0.6,
     });
-    expect(cssType()).toEqual(dartType());
+    expect(withoutGoogle(cssType())).toEqual(dartType());
   });
 });
 
@@ -202,10 +279,10 @@ describe("the web theme's size tokens", () => {
     const sizes = new Map(
       [...dartNumbers(dartClass("AppSize"))].map(([name, value]) => [kebab(name), value]),
     );
-    const web = [...cssSpacing].filter(([name]) => !namedGaps.includes(name));
+    const web = [...withoutGoogle(cssSpacing)].filter(([name]) => !namedGaps.includes(name));
     // Control: both sides read their sizes, the button's height among them.
     expect(sizes.get("button")).toBe(52);
-    expect(web.length).toBe(14);
+    expect(web.length).toBe(16);
 
     for (const [name, value] of web) {
       expect({ name, value }).toEqual({ name, value: sizes.get(name) });

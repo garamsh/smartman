@@ -1,4 +1,22 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+/** The ground's colour in each theme, the body's background (globals.css). */
+const ground = { light: "rgb(244, 246, 250)", dark: "rgb(14, 20, 36)" };
+
+/**
+ * Records the body's background at the moment the parser inserts the body, before anything in
+ * it can be painted, in the session storage's `firstBodyBackground`.
+ */
+async function recordFirstBodyBackground(page: Page) {
+  await page.addInitScript(() => {
+    new MutationObserver((_, observer) => {
+      const body = document.querySelector("body");
+      if (!body) return;
+      sessionStorage.setItem("firstBodyBackground", getComputedStyle(body).backgroundColor);
+      observer.disconnect();
+    }).observe(document, { childList: true, subtree: true });
+  });
+}
 
 test.describe("signed out", () => {
   test("opening the app lands on /login, which offers Google sign-in", async ({ page }) => {
@@ -6,6 +24,11 @@ test.describe("signed out", () => {
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "smartman", exact: true })).toBeVisible();
+    await expect(
+      page.getByText("계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 봐요.", {
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Google로 로그인", exact: true })).toBeEnabled();
   });
 
@@ -28,10 +51,73 @@ test.describe("signed out", () => {
   test("the theme follows the system's dark mode", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/login");
-    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(244, 246, 250)");
+    await expect(page.locator("body")).toHaveCSS("background-color", ground.light);
 
     await page.emulateMedia({ colorScheme: "dark" });
-    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(14, 20, 36)");
+    await expect(page.locator("body")).toHaveCSS("background-color", ground.dark);
+  });
+
+  test("Google's button takes the guidelines' light colours and G mark in light, and the dark in dark", async ({
+    page,
+  }) => {
+    const button = page.getByRole("button", { name: "Google로 로그인", exact: true });
+    const guidelines = {
+      light: { fill: "rgb(255, 255, 255)", stroke: "rgb(116, 119, 117)", label: "rgb(31, 31, 31)" },
+      dark: { fill: "rgb(19, 19, 20)", stroke: "rgb(142, 145, 143)", label: "rgb(227, 227, 227)" },
+    };
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto("/login");
+
+      await expect(button).toHaveCSS("background-color", guidelines[theme].fill);
+      await expect(button).toHaveCSS("border-top-color", guidelines[theme].stroke);
+      await expect(button).toHaveCSS("border-top-width", "1px");
+      await expect(button).toHaveCSS("color", guidelines[theme].label);
+      await expect(button).toHaveCSS("font-size", "14px");
+      await expect(button).toHaveCSS("padding-left", "12px");
+      await expect(button).toHaveCSS("column-gap", "10px");
+      const mark = button.locator(`img[src="/google/g-mark-${theme}.png"]`);
+      await expect(mark).toBeVisible();
+      await expect(button.locator("img:visible")).toHaveCount(1);
+      expect(await mark.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(80);
+      expect(await mark.boundingBox()).toMatchObject({ width: 20, height: 20 });
+    }
+  });
+
+  test("a stored theme choice draws every page's first paint in it, whatever the system's", async ({
+    page,
+  }) => {
+    await recordFirstBodyBackground(page);
+    const body = page.locator("body");
+    const firstPaint = () => page.evaluate(() => sessionStorage.getItem("firstBodyBackground"));
+    await page.goto("/login");
+
+    // The system's dark mode, with each choice stored.
+    await page.emulateMedia({ colorScheme: "dark" });
+    const expected = { system: ground.dark, light: ground.light, dark: ground.dark };
+    for (const choice of ["system", "light", "dark"] as const) {
+      await page.evaluate((stored) => {
+        if (stored === "system") localStorage.removeItem("smartman.theme");
+        else localStorage.setItem("smartman.theme", stored);
+      }, choice);
+      await page.reload();
+
+      expect({ choice, firstPaint: await firstPaint() }).toEqual({
+        choice,
+        firstPaint: expected[choice],
+      });
+      await expect(body).toHaveCSS("background-color", expected[choice]);
+    }
+
+    // Control: 다크 stays dark under the system's light mode, and 시스템 follows it.
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.reload();
+    expect(await firstPaint()).toBe(ground.dark);
+    await page.evaluate(() => {
+      localStorage.removeItem("smartman.theme");
+    });
+    await page.reload();
+    expect(await firstPaint()).toBe(ground.light);
   });
 
   test("the icons and the manifest are served without a session", async ({ request }) => {
