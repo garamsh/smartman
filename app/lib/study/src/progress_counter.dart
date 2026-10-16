@@ -2,13 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../deck/deck.dart' show DeckSelection, deckRepositoryProvider;
+import '../../deck/deck.dart'
+    show DeckFailure, DeckSelection, deckRepositoryProvider;
+import 'failure.dart';
 import 'overview.dart';
 import 'providers.dart';
 import 'queue.dart';
 
 /// Builds what the caller shows of a selection's [DeckProgress], null while it
-/// is read or when it cannot be.
+/// is read or when a domain failure stops the read.
 typedef ProgressBuilder = Widget Function(
   BuildContext context,
   DeckProgress? progress,
@@ -63,6 +65,16 @@ class _ProgressCounterState extends ConsumerState<ProgressCounter> {
   @override
   Widget build(BuildContext context) => FutureBuilder(
     future: _progress,
-    builder: (context, progress) => widget.builder(context, progress.data),
+    builder: (context, progress) => widget.builder(context, switch (progress) {
+      // A failed read is a domain failure the [TodayCounter] beside every
+      // progress reports from the same read; anything else is rethrown.
+      AsyncSnapshot(hasError: true, :final error?)
+          when error is! DeckFailure && error is! StudyFailure =>
+        Error.throwWithStackTrace(
+          error,
+          progress.stackTrace ?? StackTrace.empty,
+        ),
+      AsyncSnapshot(:final data) => data,
+    }),
   );
 }
