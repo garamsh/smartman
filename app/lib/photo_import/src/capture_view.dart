@@ -2,11 +2,11 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_chip.dart';
-import '../../shared/ui/app_list_row.dart';
-import '../../shared/ui/app_sheet.dart';
+import '../../design/app_chip.dart';
+import '../../design/app_list_row.dart';
+import '../../design/app_sheet.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'detail_level.dart';
 import 'failure.dart';
 import 'failure_message.dart';

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
+import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
 import 'capture_view.dart';
 import 'detail_level.dart';

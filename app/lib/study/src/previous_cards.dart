@@ -7,10 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_section_label.dart';
-import '../../shared/ui/app_sheet.dart';
+import '../../design/app_section_label.dart';
+import '../../design/app_sheet.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
 import 'session.dart';
 import 'study_style.dart';

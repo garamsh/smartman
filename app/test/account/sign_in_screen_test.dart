@@ -7,8 +7,8 @@ import 'package:smartman/account/account.dart';
 import 'package:smartman/account/src/google_button.dart';
 import 'package:smartman/account/src/legal.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 
 import 'fake_account_service.dart';
 

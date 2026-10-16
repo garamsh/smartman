@@ -1,4 +1,4 @@
-import '../../shared/database.dart';
+import '../../database/database.dart';
 
 /// Which copy of a row a merge keeps: the device's, or the server's.
 enum Kept { local, remote }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_list_screen.dart';
-import 'package:smartman/shared/ui/app_text_field.dart';
+import 'package:smartman/design/app_text_field.dart';
 
 import 'deck_screens.dart';
 

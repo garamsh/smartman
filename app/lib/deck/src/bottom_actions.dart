@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
 
 /// A screen's bottom bar: a [secondary] action, and a [primary] one beside it
 /// when the screen has one to offer.

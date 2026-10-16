@@ -13,7 +13,7 @@ import '../../deck/deck.dart'
         TodayUnavailable,
         deckRepositoryProvider,
         describeFailure;
-import '../../shared/l10n/app_localizations.dart';
+import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'providers.dart';

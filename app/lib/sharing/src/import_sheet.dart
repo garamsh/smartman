@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../deck/deck.dart';
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
-import '../../shared/ui/app_section_label.dart';
-import '../../shared/ui/app_sheet.dart';
+import '../../design/app_button.dart';
+import '../../design/app_section_label.dart';
+import '../../design/app_sheet.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'model.dart';
 import 'sharing_service.dart';
 

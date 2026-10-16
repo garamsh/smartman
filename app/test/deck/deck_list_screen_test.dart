@@ -4,10 +4,10 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/shared/database.dart';
-import 'package:smartman/shared/l10n/app_localizations.dart';
-import 'package:smartman/shared/theme.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 
 /// A deck list over decks named "Alpha", "Beta" and "Gamma", whose study
 /// screen and today counts record the decks they were given.

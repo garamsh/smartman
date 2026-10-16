@@ -1,5 +1,5 @@
 import '../../account/account.dart';
-import '../../shared/database.dart';
+import '../../database/database.dart';
 
 /// A row as the server holds it, with the revision the server stamped on it.
 typedef Pulled<R> = ({R row, int revision});

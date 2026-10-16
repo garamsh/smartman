@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../shared/l10n/app_localizations.dart';
-import '../../shared/theme.dart';
-import '../../shared/ui/app_button.dart';
+import '../../design/app_button.dart';
+import '../../design/theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'account_state.dart';
 import 'failure.dart';
 import 'failure_message.dart';

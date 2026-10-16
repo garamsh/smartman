@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/theme.dart';
-import '../../shared/ui/card_text.dart';
+import '../../design/theme.dart';
+import 'card_text.dart';
 import 'split_card.dart';
 
 /// A card as the study screen shows it with its answer revealed: the question

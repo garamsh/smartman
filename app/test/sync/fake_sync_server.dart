@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:smartman/account/account.dart';
-import 'package:smartman/shared/database.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/sync/sync.dart';
 
 /// A stored row, the account it belongs to, and its revision.

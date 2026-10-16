@@ -15,7 +15,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 ### Tables
 
-- `public` holds `decks`, `cards`, `reviews` and `card_states`, mirroring the app's local tables (`app/lib/shared/database.dart`). Their ids are created on the device.
+- `public` holds `decks`, `cards`, `reviews` and `card_states`, mirroring the app's local tables (`app/lib/database/database.dart`). Their ids are created on the device.
 - `decks`, `cards` and `reviews` have `id` as primary key; `card_states` has `(user_id, card_id)`.
 - Every synced id, and every column that references one, is `uuid`: `decks.id`, `cards.id`, `cards.deck_id`, `cards.origin_deck_id`, `reviews.id`, `reviews.card_id`, `card_states.card_id`, `deck_reports.deck_id` and `deck_imports.deck_id`. No id column has a default, so a row sent without an id is refused. `extraction_usage.id` is an identity ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md)).
 - Migration `20261016180000_uuid_keys.sql` cast those columns from `text` in place, so every row kept its id. It first raises, changing nothing, unless every value is in canonical lowercase form, the only form Postgres returns unchanged, so the phone, which keeps ids as text, holds the same id the server returns ([`sync.md`](sync.md)). In one transaction it dropped the five foreign keys and the two policies that name those columns, cast them, and recreated the keys, the policies, `list_public_decks` and `record_deck_import`.

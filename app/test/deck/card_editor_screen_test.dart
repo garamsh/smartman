@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_editor_screen.dart';
 import 'package:smartman/deck/src/card_preview.dart';
-import 'package:smartman/shared/ui/app_button.dart';
-import 'package:smartman/shared/ui/app_text_field.dart';
+import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/app_text_field.dart';
 
 import 'deck_screens.dart';
 

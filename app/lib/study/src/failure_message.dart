@@ -1,4 +1,4 @@
-import '../../shared/l10n/app_localizations.dart';
+import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 
 /// The message a user reads for [failure].

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../shared/theme.dart';
+import '../../design/theme.dart';
 
 /// Builds one side of a [SplitCard], given the width its text is laid out in.
 typedef SideBuilder = Widget Function(BuildContext context, double textWidth);
