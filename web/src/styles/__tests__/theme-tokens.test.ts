@@ -115,8 +115,7 @@ describe("the web's Google button tokens", () => {
   });
 
   it("are GoogleButtonStyle's label, mark and Android and web spacing", () => {
-    const body =
-      /final class GoogleButtonStyle \{([\s\S]*?)\n\}/.exec(googleButtonDart)?.[1] ?? "";
+    const body = /final class GoogleButtonStyle \{([\s\S]*?)\n\}/.exec(googleButtonDart)?.[1] ?? "";
     const label = /labelStyle = TextStyle\(([^)]*)\)/.exec(body)?.[1] ?? "";
     const spacing = /_ => \(start: ([\d.]+), gap: ([\d.]+), end: ([\d.]+)\)/.exec(body);
     // Control: both sides are read.
