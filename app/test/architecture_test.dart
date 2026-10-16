@@ -288,7 +288,7 @@ void main() {
         'study/study.dart': "import 'package:smartman/deck/deck.dart';",
         'main.dart': "import 'deck/deck.dart';",
         'deck/deck.dart': "export 'src/model.dart';",
-        'deck/src/card_list_screen.dart': "import 'model.dart';",
+        'deck/src/deck_row.dart': "import 'model.dart';",
       }),
       isEmpty,
     );

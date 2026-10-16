@@ -129,10 +129,7 @@ void main() {
     // two exceptions do write sizes, Google's button its guidelines' and
     // CardText the fitted sizes of the AppType styles it is given; and a
     // literal planted beside CardText, in the same domain, is still found.
-    expect(
-      sources['lib/deck/src/deck_list_screen.dart'],
-      contains('EdgeInsets'),
-    );
+    expect(sources['lib/home/src/home_screen.dart'], contains('EdgeInsets'));
     expect(styleLiterals(sources[_googleButton] ?? ''), isNotEmpty);
     expect(styleLiterals(sources[_cardText] ?? ''), isNotEmpty);
     expect(
