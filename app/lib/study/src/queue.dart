@@ -4,8 +4,12 @@ import '../../deck/deck.dart';
 import 'model.dart';
 import 'study_repository.dart';
 
-/// How many never-reviewed cards one session takes, across all its decks.
+/// How many never-reviewed cards a study day takes, across all the user's
+/// decks.
 const newCardLimit = 20;
+
+/// The local hour a study day starts at.
+const studyDayStartHour = 4;
 
 /// The fewest other cards shown before a "Don't know" card comes back.
 const reshowGapMin = 3;
@@ -34,9 +38,78 @@ const backlogDays = 3;
 /// How many consecutive cards of a backlog's order are shuffled together.
 const backlogBucketSize = 10;
 
+/// The offset from UTC of the device's time zone at [instant].
+typedef UtcOffsetAt = Duration Function(DateTime instant);
+
+/// The offset of the time zone the device is in now.
+Duration localOffsetAt(DateTime instant) => instant.toLocal().timeZoneOffset;
+
+/// When the study day holding [now] started: the latest [studyDayStartHour]
+/// o'clock at or before it, in the time zone [offsetAt] gives.
+DateTime studyDayStart(DateTime now, [UtcOffsetAt offsetAt = localOffsetAt]) {
+  final wall = now.toUtc().add(offsetAt(now));
+  final date = DateTime.utc(wall.year, wall.month, wall.day);
+  return wall.hour < studyDayStartHour
+      ? _startOn(DateTime.utc(date.year, date.month, date.day - 1), offsetAt)
+      : _startOn(date, offsetAt);
+}
+
+/// The [studyDayStartHour] o'clock of the calendar [date] in the time zone
+/// [offsetAt] gives, read again at the instant it names so that a change of
+/// offset between [date]'s midnight and then is applied.
+DateTime _startOn(DateTime date, UtcOffsetAt offsetAt) {
+  final wall = DateTime.utc(date.year, date.month, date.day, studyDayStartHour);
+  return wall.subtract(offsetAt(wall.subtract(offsetAt(wall))));
+}
+
+/// Today's study day as the queue reads it.
+final class StudyDay {
+  const StudyDay({
+    required this.start,
+    required this.end,
+    required this.newCardsLeft,
+  });
+
+  /// The study day holding [now], in which the user first answered a card
+  /// at each of [firstAnswers], across every deck.
+  factory StudyDay.at(
+    DateTime now, {
+    required Iterable<DateTime> firstAnswers,
+    UtcOffsetAt offsetAt = localOffsetAt,
+  }) {
+    final start = studyDayStart(now, offsetAt);
+    final wall = start.toUtc().add(offsetAt(start));
+    final end = _startOn(
+      DateTime.utc(wall.year, wall.month, wall.day + 1),
+      offsetAt,
+    );
+    final taken = firstAnswers
+        .where((answer) => !answer.isBefore(start) && answer.isBefore(end))
+        .length;
+    return StudyDay(
+      start: start,
+      end: end,
+      newCardsLeft: max(0, newCardLimit - taken),
+    );
+  }
+
+  final DateTime start;
+
+  /// When the next study day starts.
+  final DateTime end;
+
+  /// How many new cards the day still takes: [newCardLimit] less the cards
+  /// first answered in it, never below zero.
+  final int newCardsLeft;
+
+  /// Whether a card due at [due] is due by the end of this day.
+  bool holds(DateTime due) => due.isBefore(end);
+}
+
 /// The cards a session studies, as [selectQueue] selects them.
 final class SelectedQueue {
-  /// Every due card, then up to [newCardLimit] new ones, oldest first.
+  /// Every due card, then as many new ones as the day has left, oldest
+  /// first.
   const SelectedQueue.current(this.cards) : backlog = false;
 
   /// Every due card, earliest due first, and no new card.
@@ -61,18 +134,18 @@ double dailyLoad(Iterable<CardState> states) {
   return load;
 }
 
-/// The cards a session starting at [now] studies, from [cards] and the stored
-/// [states] of those reviewed.
+/// The cards a session in [day] studies, from [cards] and the stored [states]
+/// of those reviewed. A card is due when it falls due before [day] ends.
 ///
 /// The cards are in backlog when more than [backlogDays] of [dailyLoad] are
-/// due at or before [now]. In backlog the session takes every due card,
-/// earliest due first, ties in the order read, and no new card. Otherwise it
-/// takes every due card, then up to [newCardLimit] cards with no state,
-/// oldest first by creation time.
+/// due. In backlog the session takes every due card, earliest due first, ties
+/// in the order read, and no new card. Otherwise it takes every due card, then
+/// as many cards with no state as [day] has left, oldest first by creation
+/// time.
 SelectedQueue selectQueue(
   List<Card> cards,
   Map<CardId, CardState> states,
-  DateTime now,
+  StudyDay day,
 ) {
   final due = <({int position, Card card, DateTime due})>[];
   final fresh = <({int position, Card card})>[];
@@ -84,7 +157,7 @@ SelectedQueue selectQueue(
       continue;
     }
     reviewed.add(state);
-    if (!state.due.isAfter(now)) {
+    if (day.holds(state.due)) {
       due.add((position: position, card: card, due: state.due));
     }
   }
@@ -102,7 +175,7 @@ SelectedQueue selectQueue(
   });
   return SelectedQueue.current([
     for (final entry in due) entry.card,
-    for (final entry in fresh.take(newCardLimit)) entry.card,
+    for (final entry in fresh.take(day.newCardsLeft)) entry.card,
   ]);
 }
 
@@ -137,4 +210,25 @@ List<Card> orderQueue(SelectedQueue queue, Random random) {
 void reinsert(List<Card> queue, Card card, Random random) {
   final gap = reshowGapMin + random.nextInt(reshowGapMax - reshowGapMin + 1);
   queue.insert(min(gap, queue.length), card);
+}
+
+/// How many study days in a row hold one of [answers]: counted back from the
+/// day holding [now] when it holds one, otherwise from the day before, so a
+/// day not yet studied breaks nothing until it ends.
+int streak(
+  Iterable<DateTime> answers,
+  DateTime now, [
+  UtcOffsetAt offsetAt = localOffsetAt,
+]) {
+  final days = {for (final answer in answers) studyDayStart(answer, offsetAt)};
+  DateTime before(DateTime day) =>
+      studyDayStart(day.subtract(const Duration(seconds: 1)), offsetAt);
+  var day = studyDayStart(now, offsetAt);
+  if (!days.contains(day)) day = before(day);
+  var count = 0;
+  while (days.contains(day)) {
+    count++;
+    day = before(day);
+  }
+  return count;
 }

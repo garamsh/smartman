@@ -5,8 +5,11 @@ import type { Random } from "./random";
 // The queue rules of study.md, in one place: which cards a session studies, in what order, and
 // when a "Don't know" comes back. The counts the deck screens show come from the same rules.
 
-/** How many never-reviewed cards one session takes, across all its decks. */
+/** How many never-reviewed cards a study day takes, across all the user's decks. */
 export const newCardLimit = 20;
+
+/** The local hour a study day starts at. */
+export const studyDayStartHour = 4;
 
 /** The fewest other cards shown before a "Don't know" card comes back. */
 export const reshowGapMin = 3;
@@ -37,15 +40,108 @@ export type CardState = {
 /** The stored state of each reviewed card; a card never reviewed has none. */
 export type CardStates = Partial<Record<CardId, CardState>>;
 
+/** Today's study day as the queue reads it. Times are milliseconds since the epoch. */
+export type StudyDay = {
+  start: number;
+  /** When the next study day starts. */
+  end: number;
+  /** How many new cards the day still takes: [newCardLimit] less those first answered in it. */
+  newCardsLeft: number;
+};
+
+const formats = new Map<string, Intl.DateTimeFormat>();
+
+/** The wall-clock time in [timeZone] at [instant], as if it were UTC. */
+function wallClock(instant: number, timeZone: string): number {
+  let format = formats.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+    });
+    formats.set(timeZone, format);
+  }
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(format.formatToParts(instant).find((entry) => entry.type === type)?.value);
+  return Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  );
+}
+
+/** The offset from UTC of [timeZone] at [instant], in milliseconds, to the second. */
+function offsetAt(instant: number, timeZone: string): number {
+  return wallClock(instant, timeZone) - Math.floor(instant / 1000) * 1000;
+}
+
 /**
- * What a session over some cards would study now. In a backlog, `fresh` is 0: new cards pause
+ * The [studyDayStartHour] o'clock of the calendar date [year]-[month]-[date] in [timeZone], read
+ * again at the instant it names so that a change of offset since that date's midnight applies.
+ * Out-of-range dates roll over as `Date.UTC` rolls them.
+ */
+function startOn(year: number, month: number, date: number, timeZone: string): number {
+  const wall = Date.UTC(year, month, date, studyDayStartHour);
+  return wall - offsetAt(wall - offsetAt(wall, timeZone), timeZone);
+}
+
+/** When the study day holding [now] started: the latest 04:00 at or before it in [timeZone]. */
+export function studyDayStart(now: number, timeZone: string): number {
+  const wall = new Date(wallClock(now, timeZone));
+  const back = wall.getUTCHours() < studyDayStartHour ? 1 : 0;
+  return startOn(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() - back, timeZone);
+}
+
+/**
+ * The study day holding [now] in [timeZone], in which the user first answered a card at each
+ * of [firstAnswers], across every deck.
+ */
+export function studyDay(now: number, firstAnswers: Iterable<number>, timeZone: string): StudyDay {
+  const start = studyDayStart(now, timeZone);
+  const wall = new Date(wallClock(start, timeZone));
+  const end = startOn(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() + 1, timeZone);
+  let taken = 0;
+  for (const answer of firstAnswers) if (answer >= start && answer < end) taken += 1;
+  return { start, end, newCardsLeft: Math.max(0, newCardLimit - taken) };
+}
+
+/**
+ * How many study days in a row in [timeZone] hold one of [answers]: counted back from the day
+ * holding [now] when it holds one, otherwise from the day before, so a day not yet studied
+ * breaks nothing until it ends.
+ */
+export function streak(answers: Iterable<number>, now: number, timeZone: string): number {
+  const days = new Set<number>();
+  for (const answer of answers) days.add(studyDayStart(answer, timeZone));
+  const before = (day: number) => studyDayStart(day - 1000, timeZone);
+  let day = studyDayStart(now, timeZone);
+  if (!days.has(day)) day = before(day);
+  let count = 0;
+  while (days.has(day)) {
+    count += 1;
+    day = before(day);
+  }
+  return count;
+}
+
+/**
+ * What a session over some cards would study today. In a backlog, `fresh` is 0: new cards pause
  * until the reviews are done.
  */
 export type TodayCount = { review: number; fresh: number; backlog: boolean };
 
 /**
  * The cards a session studies. In a backlog: every due card, earliest due first, and no new
- * card. Otherwise: every due card, then up to [newCardLimit] new ones, oldest first.
+ * card. Otherwise: every due card, then as many new ones as the day has left, oldest first.
  */
 export type SelectedQueue<C> = { cards: C[]; backlog: boolean };
 
@@ -62,16 +158,16 @@ export function dailyLoad(states: Iterable<CardState>): number {
 }
 
 /**
- * The cards a session starting at [now] studies, from [cards] and their stored [states]. They
- * are in backlog when more than [backlogDays] of `dailyLoad` are due at or before [now]: the
- * session then takes every due card, earliest due first, ties in the order given, and no new
- * card. Otherwise it takes every due card, then up to [newCardLimit] cards with no state,
- * oldest first by creation time, ties in the order given.
+ * The cards a session in [day] studies, from [cards] and their stored [states]; a card is due
+ * when it falls due before [day] ends. They are in backlog when more than [backlogDays] of
+ * `dailyLoad` are due: the session then takes every due card, earliest due first, ties in the
+ * order given, and no new card. Otherwise it takes every due card, then as many cards with no
+ * state as [day] has left, oldest first by creation time, ties in the order given.
  */
 export function selectQueue<C extends Queueable>(
   cards: readonly C[],
   states: CardStates,
-  now: number,
+  day: StudyDay,
 ): SelectedQueue<C> {
   const due: { card: C; due: number }[] = [];
   const fresh: C[] = [];
@@ -83,7 +179,7 @@ export function selectQueue<C extends Queueable>(
       continue;
     }
     reviewed.push(state);
-    if (state.due <= now) due.push({ card, due: state.due });
+    if (state.due < day.end) due.push({ card, due: state.due });
   }
   // Array.prototype.sort is stable, so equal times keep the order given.
   if (due.length > backlogDays * dailyLoad(reviewed)) {
@@ -92,18 +188,18 @@ export function selectQueue<C extends Queueable>(
   }
   fresh.sort((a, b) => a.createdAt - b.createdAt);
   return {
-    cards: [...due.map((entry) => entry.card), ...fresh.slice(0, newCardLimit)],
+    cards: [...due.map((entry) => entry.card), ...fresh.slice(0, day.newCardsLeft)],
     backlog: false,
   };
 }
 
-/** How many due and new cards a session over [cards] starting at [now] would study. */
+/** How many due and new cards are left in [day] for a session over [cards]. */
 export function countToday(
   cards: readonly Queueable[],
   states: CardStates,
-  now: number,
+  day: StudyDay,
 ): TodayCount {
-  const queue = selectQueue(cards, states, now);
+  const queue = selectQueue(cards, states, day);
   const review = queue.cards.filter((card) => states[card.id]).length;
   return { review, fresh: queue.cards.length - review, backlog: queue.backlog };
 }

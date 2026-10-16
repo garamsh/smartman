@@ -142,7 +142,7 @@ void main() {
       session.answer(answer);
     }
     await session.settled;
-    final finished = session.state as SessionFinished;
+    final finished = session.state as SessionComplete;
     expect(
       [for (final card in finished.previous) card.card.id],
       [due, added[1], added[2], added[3], due],

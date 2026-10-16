@@ -19,7 +19,7 @@ import 'failure_message.dart';
 import 'providers.dart';
 import 'queue.dart';
 
-/// Counts the due and new cards a session over [decks] would study now, by
+/// Counts the due and new cards left today for a session over [decks], by
 /// the rules that build its queue, whether new cards pause for a backlog, and
 /// the user's pace, and shows the count through [builder].
 ///
@@ -45,10 +45,19 @@ class _TodayCounterState extends ConsumerState<TodayCounter> {
       ref.read(deckRepositoryProvider),
       ref.read(studyRepositoryProvider),
     );
-    final queue = selectQueue(cards, states, ref.read(studyClockProvider)());
+    final repository = ref.read(studyRepositoryProvider);
+    final now = ref.read(studyClockProvider)();
+    final zone = ref.read(studyZoneProvider);
+    final day = StudyDay.at(
+      now,
+      firstAnswers: await repository.firstAnswersSince(
+        studyDayStart(now, zone),
+      ),
+      offsetAt: zone,
+    );
+    final queue = selectQueue(cards, states, day);
     final pace =
-        await ref.read(studyRepositoryProvider).medianReviewDuration() ??
-        TodayCounted.defaultPerCard;
+        await repository.medianReviewDuration() ?? TodayCounted.defaultPerCard;
     if (queue.backlog) {
       return TodayCounted.backlog(review: queue.cards.length, perCard: pace);
     }

@@ -66,13 +66,13 @@ Future<StudySession> _open(List<String> names) async {
   return session;
 }
 
-/// The front of the card on screen, or null once the session has finished.
+/// The front of the card on screen, or null once no card is left.
 String? _current(StudySession session) => switch (session.state) {
   SessionStudying(:final current) => plainText(current.front),
   _ => null,
 };
 
-/// Answers "Know" until the session finishes, and returns the fronts shown.
+/// Answers "Know" until no card is left, and returns the fronts shown.
 List<String> _knowToTheEnd(StudySession session) {
   final shown = <String>[];
   for (
@@ -135,57 +135,45 @@ void main() {
     session.toggle(0);
 
     expect(_knowToTheEnd(session), ['a']);
-    expect(session.state, isA<SessionFinished>());
+    expect(session.state, isA<SessionComplete>());
   });
 
-  test("after the queue empties, a toggle that puts a card back reopens the session, and one that does not leaves it finished", () async {
+  test("after the queue empties, a toggle that puts a card back takes the completion card away, and one that does not leaves it", () async {
     final session = await _open(['a']);
     session.answer(Answer.dontKnow);
     session.answer(Answer.know);
-    expect(session.state, isA<SessionFinished>());
+    expect(session.state, isA<SessionComplete>());
 
     // The first answer is followed by the re-show, so nothing is put back.
     session.toggle(0);
-    expect(session.state, isA<SessionFinished>());
+    expect(session.state, isA<SessionComplete>());
 
     // Control: the last answer toggled to Don't know reopens the session.
     session.toggle(1);
     expect(_current(session), 'a');
   });
 
-  test('the summary counts the answers as they stand after toggles', () async {
-    final session = await _open(['a', 'b']);
-    session.answer(Answer.know);
-    session.answer(Answer.dontKnow);
-    session.answer(Answer.know);
-    final before = (session.state as SessionFinished).summary;
-    expect((before.knowCount, before.dontKnowCount), (2, 1));
+  test(
+    "the completion card counts today's answers as they stand after toggles",
+    () async {
+      final session = await _open(['a', 'b']);
+      session.answer(Answer.know);
+      session.answer(Answer.dontKnow);
+      session.answer(Answer.know);
+      final before = (session.state as SessionComplete).completion;
+      expect((before.knowCount, before.dontKnowCount), (2, 1));
 
-    session.toggle(1);
+      session.toggle(1);
 
-    final after = (session.state as SessionFinished).summary;
-    expect(
-      (after.cardsStudied, after.knowCount, after.dontKnowCount),
-      (2, 3, 0),
-    );
-    expect(
-      [
-        for (final card in (session.state as SessionFinished).previous)
-          card.changed,
-      ],
-      [false, true, false],
-    );
-  });
-
-  test('after leaving, an answer cannot be toggled', () async {
-    final session = await _open(['a', 'b']);
-    session.answer(Answer.know);
-    session.leave();
-
-    session.toggle(0);
-
-    final finished = session.state as SessionFinished;
-    expect(finished.previous, isEmpty);
-    expect(finished.summary.knowCount, 1);
-  });
+      final after = (session.state as SessionComplete).completion;
+      expect((after.knowCount, after.dontKnowCount), (3, 0));
+      expect(
+        [
+          for (final card in (session.state as SessionComplete).previous)
+            card.changed,
+        ],
+        [false, true, false],
+      );
+    },
+  );
 }

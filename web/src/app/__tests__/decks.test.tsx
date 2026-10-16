@@ -61,6 +61,35 @@ describe("the deck list", () => {
     expect(row("French")).toHaveAttribute("href", "/decks/d-fr");
   });
 
+  it("counts the new cards left today across every deck, in the time zone the browser's cookie names", async () => {
+    postgrest.seed("decks", deckRow("d-a", "Alpha"), deckRow("d-b", "Beta"));
+    postgrest.seed(
+      "cards",
+      ...Array.from({ length: 25 }, (_, index) =>
+        cardRow(`a${String(index)}`, "d-a", `alpha ${String(index)}`),
+      ),
+      cardRow("b-answered", "d-b", "beta"),
+    );
+    // Beta's card was first answered at 15:00 UTC the day before: 00:00 in Seoul, the day
+    // before that study day; 07:00 in Los Angeles, inside the study day there.
+    const answeredAt = start - 18 * 3_600_000;
+    postgrest.seed("card_states", stateRow("b-answered", { ...notDue, lastReview: answeredAt }));
+    postgrest.seed("reviews", reviewRow("r1", "b-answered", answeredAt, 1_000));
+
+    // Without the cookie the day is read in Seoul.
+    await render(Decks, {});
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 20장" })).toBeInTheDocument();
+    cleanup();
+
+    setRequestCookies([
+      ...(await signedInCookies()),
+      { name: "smartman-tz", value: "America/Los_Angeles" },
+    ]);
+    await render(Decks, {});
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 19장" })).toBeInTheDocument();
+    expect(rowNames()).toEqual(["Alpha, 카드 25장, 오늘 19", "Beta, 카드 1장"]);
+  });
+
   it("says in the header that new cards wait while more than three days of reviews are due", async () => {
     const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
     postgrest.seed("decks", deckRow("d-fr", "French"));

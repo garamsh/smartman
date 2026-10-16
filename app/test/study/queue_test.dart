@@ -14,6 +14,12 @@ import 'fixtures.dart';
 
 final _now = DateTime.utc(2026, 10, 14, 9);
 
+/// UTC as the device's time zone.
+Duration _utc(DateTime _) => Duration.zero;
+
+/// The study day holding [_now] in UTC, with no new card answered in it.
+final _today = StudyDay.at(_now, firstAnswers: const [], offsetAt: _utc);
+
 List<String> _names(List<Card> cards) => [
   for (final card in cards) card.id.value,
 ];
@@ -76,6 +82,61 @@ class _Decks {
     );
   }
 
+  /// Adds a new card to [deck] and answers it for the first time [at], so
+  /// it is next due a week later.
+  Future<void> firstAnswer(String deck, String front, DateTime at) async {
+    final saved = await cards.addCard(
+      ids[deck]!,
+      front: [TextContent(front)],
+      back: [TextContent(front)],
+    );
+    final card = switch (saved) {
+      CardSaved(:final card) => card,
+      DuplicateFront() => fail('the deck held no duplicate'),
+    };
+    await study.record(
+      card.id,
+      [
+        Review(
+          id: study.newReviewId(),
+          cardId: card.id,
+          answer: Answer.know,
+          reviewedAt: at,
+          duration: Duration.zero,
+          fuzzFactor: FuzzFactor.draw(FirstDraw()),
+        ),
+      ],
+      CardState(
+        stability: 7,
+        difficulty: 5,
+        lastReview: at,
+        due: at.add(const Duration(days: 7)),
+      ),
+      at: at,
+    );
+  }
+
+  /// The study day holding [now] in the time zone [offsetAt] gives, from the
+  /// first answers stored across every deck.
+  Future<StudyDay> day(DateTime now, UtcOffsetAt offsetAt) async => StudyDay.at(
+    now,
+    firstAnswers: await study.firstAnswersSince(studyDayStart(now, offsetAt)),
+    offsetAt: offsetAt,
+  );
+
+  /// The fronts of the cards a session over [decks] would study in [day].
+  Future<List<String>> queueIn(List<String> decks, StudyDay day) async {
+    final (read, states) = await readCards(
+      DeckSelection.of([for (final deck in decks) ids[deck]!])!,
+      cards,
+      study,
+    );
+    return [
+      for (final card in selectQueue(read, states, day).cards)
+        plainText(card.front),
+    ];
+  }
+
   /// The fronts of the cards a session over [decks] would study now.
   Future<List<String>> queue(List<String> decks) async {
     final (read, states) = await readCards(
@@ -84,7 +145,7 @@ class _Decks {
       study,
     );
     return [
-      for (final card in selectQueue(read, states, _now).cards)
+      for (final card in selectQueue(read, states, _today).cards)
         plainText(card.front),
     ];
   }
@@ -107,7 +168,7 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   group('membership', () {
-    test('a session over several decks takes every due card in them and the 20 oldest new cards across them', () async {
+    test('a session over several decks takes every card due by the end of the study day in them and the 20 oldest new cards across them', () async {
       expect(newCardLimit, 20);
       final decks = await _Decks.open();
       // Created alternately, so the oldest twenty new cards are the first
@@ -125,8 +186,13 @@ void main() {
         );
         await decks.add(
           deck,
-          '$deck later',
-          due: _now.add(const Duration(minutes: 1)),
+          '$deck later today',
+          due: DateTime.utc(2026, 10, 15, 3, 59),
+        );
+        await decks.add(
+          deck,
+          '$deck tomorrow',
+          due: DateTime.utc(2026, 10, 15, 4),
         );
       }
 
@@ -135,8 +201,10 @@ void main() {
         unorderedEquals([
           'a due',
           'a overdue',
+          'a later today',
           'b due',
           'b overdue',
+          'b later today',
           for (var index = 0; index < 10; index++) ...[
             'a new $index',
             'b new $index',
@@ -150,6 +218,7 @@ void main() {
         unorderedEquals([
           'a due',
           'a overdue',
+          'a later today',
           for (var index = 0; index < 15; index++) 'a new $index',
         ]),
       );
@@ -186,7 +255,7 @@ void main() {
     final selected = selectQueue(
       [...due, ...fresh],
       {for (final card in due) card.id: _dueAfter(_now, days: 1)},
-      _now,
+      _today,
     );
 
     test('the same seed gives the same order, and different seeds different orders, of the same cards', () {
@@ -271,8 +340,8 @@ void main() {
       final (over, overStates) = reviewed(12, due: 10);
 
       expect(dailyLoad(atStates.values), 3);
-      final current = selectQueue([...atThreshold, ...fresh], atStates, _now);
-      final paused = selectQueue([...over, ...fresh], overStates, _now);
+      final current = selectQueue([...atThreshold, ...fresh], atStates, _today);
+      final paused = selectQueue([...over, ...fresh], overStates, _today);
 
       expect(current.backlog, isFalse);
       expect(
@@ -313,7 +382,7 @@ void main() {
       final selected = selectQueue(
         [...latestFirst, tied, ...fresh],
         states,
-        _now,
+        _today,
       );
 
       expect(selected.backlog, isTrue);
@@ -328,7 +397,7 @@ void main() {
 
     test('in backlog each run of ten keeps its place in the order and is shuffled within', () {
       expect(backlogBucketSize, 10);
-      final selected = selectQueue(latestFirst, overdueStates, _now);
+      final selected = selectQueue(latestFirst, overdueStates, _today);
       final runs = [
         for (var start = 0; start < 30; start += 10)
           earliestFirst.sublist(start, start + 10).toSet(),
@@ -354,7 +423,7 @@ void main() {
       final states = {
         for (final card in overdue) card.id: _dueAfter(_now, days: 1),
       };
-      final selected = selectQueue([...overdue, ...fresh], states, _now);
+      final selected = selectQueue([...overdue, ...fresh], states, _today);
 
       expect(selected.backlog, isFalse);
       expect(selected.cards, hasLength(32));
@@ -368,6 +437,178 @@ void main() {
         isNotEmpty,
       );
       expect(firsts, containsAll(['new0', 'new1']));
+    });
+  });
+
+  group('study day', () {
+    /// Seoul, nine hours ahead of UTC all year.
+    Duration seoul(DateTime _) => const Duration(hours: 9);
+
+    /// Los Angeles in October, seven hours behind UTC.
+    Duration losAngeles(DateTime _) => const Duration(hours: -7);
+
+    test(
+      'a study day starts at 04:00 local time: 03:59 belongs to the day before',
+      () {
+        expect(studyDayStartHour, 4);
+        // 03:59 and 04:00 on 15 October in Seoul.
+        final before = DateTime.utc(2026, 10, 14, 18, 59);
+        final at = DateTime.utc(2026, 10, 14, 19);
+
+        expect(studyDayStart(before, seoul), DateTime.utc(2026, 10, 13, 19));
+        expect(studyDayStart(at, seoul), at);
+        // Control: in UTC both instants fall in the day that began at 04:00
+        // UTC on the 14th.
+        expect(studyDayStart(before, _utc), DateTime.utc(2026, 10, 14, 4));
+        expect(studyDayStart(at, _utc), DateTime.utc(2026, 10, 14, 4));
+      },
+    );
+
+    test(
+      'a day across a change of offset runs from 04:00 to 04:00 local time',
+      () {
+        // Clocks go back from UTC-7 to UTC-8 at 09:00 UTC on 1 November.
+        Duration pacific(DateTime instant) =>
+            instant.isBefore(DateTime.utc(2026, 11, 1, 9))
+            ? const Duration(hours: -7)
+            : const Duration(hours: -8);
+        // 02:00 PST on 1 November, still in the day of 31 October.
+        final day = StudyDay.at(
+          DateTime.utc(2026, 11, 1, 10),
+          firstAnswers: const [],
+          offsetAt: pacific,
+        );
+
+        expect(day.start, DateTime.utc(2026, 10, 31, 11), reason: '04:00 PDT');
+        expect(day.end, DateTime.utc(2026, 11, 1, 12), reason: '04:00 PST');
+      },
+    );
+
+    test('the day takes 20 new cards less those first answered in it across every deck, counting 04:00 and not 03:59', () async {
+      expect(newCardLimit, 20);
+      final decks = await _Decks.open();
+      for (var index = 0; index < 30; index++) {
+        await decks.add('a', 'a new $index');
+      }
+      // Seoul, 11:00 on 15 October; the day began at 19:00 UTC on the 14th.
+      final now = DateTime.utc(2026, 10, 15, 2);
+      await decks.firstAnswer(
+        'a',
+        'a at 04:00',
+        DateTime.utc(2026, 10, 14, 19),
+      );
+      await decks.firstAnswer('b', 'b at 09:00', DateTime.utc(2026, 10, 15));
+      await decks.firstAnswer(
+        'b',
+        'b at 03:59',
+        DateTime.utc(2026, 10, 14, 18, 59),
+      );
+
+      final day = await decks.day(now, seoul);
+      expect(day.newCardsLeft, 18);
+      // Deck b's answer counts against deck a's new cards.
+      final queue = await decks.queueIn(['a'], day);
+      expect(queue, hasLength(18));
+      expect(queue, everyElement(startsWith('a new')));
+    });
+
+    test('the same answers count against the day in one time zone and not in another', () async {
+      final decks = await _Decks.open();
+      // 03:30 on 15 October in Seoul, 11:30 on 14 October in Los Angeles.
+      final at = DateTime.utc(2026, 10, 14, 18, 30);
+      await decks.firstAnswer('a', 'a answered', at);
+      // 11:00 in Seoul, 19:00 the day before in Los Angeles.
+      final now = DateTime.utc(2026, 10, 15, 2);
+
+      expect((await decks.day(now, seoul)).newCardsLeft, 20);
+      expect((await decks.day(now, losAngeles)).newCardsLeft, 19);
+    });
+
+    test('an unused quota is not carried to the next day, and new cards answered the day before do not count', () async {
+      final decks = await _Decks.open();
+      for (var index = 0; index < 50; index++) {
+        await decks.add('a', 'a new $index');
+      }
+      final yesterday = DateTime.utc(2026, 10, 13, 9);
+      for (var index = 0; index < 5; index++) {
+        await decks.firstAnswer('b', 'b $index', yesterday);
+      }
+
+      final day = await decks.day(_now, _utc);
+      expect(day.newCardsLeft, 20);
+      expect(await decks.queueIn(['a'], day), hasLength(20));
+      // The day itself counts only its own first answers, whatever it is given.
+      final given = StudyDay.at(
+        _now,
+        firstAnswers: List.filled(5, yesterday),
+        offsetAt: _utc,
+      );
+      expect(given.newCardsLeft, 20);
+    });
+
+    test('the cards left never go below zero once more than 20 new cards were answered', () async {
+      final decks = await _Decks.open();
+      await decks.add('a', 'a new');
+      final morning = DateTime.utc(2026, 10, 14, 5);
+      for (var index = 0; index < 25; index++) {
+        await decks.firstAnswer('b', 'b $index', morning);
+      }
+
+      final day = await decks.day(_now, _utc);
+      expect(day.newCardsLeft, 0);
+      expect(await decks.queueIn(['a'], day), isEmpty);
+      // Control: with 19 answered, one new card is left.
+      final fewer = StudyDay.at(
+        _now,
+        firstAnswers: List.filled(19, morning),
+        offsetAt: _utc,
+      );
+      expect(fewer.newCardsLeft, 1);
+      expect(await decks.queueIn(['a'], fewer), ['a new']);
+    });
+
+    test('a backlog still pauses new cards while the day has some left', () {
+      // Ten cards due every four days, all due: ten against a load of 2.5.
+      final cards = [
+        for (var index = 0; index < 10; index++)
+          textCard('due$index', createdAt: _now),
+      ];
+      final fresh = textCard('new', createdAt: _now);
+      final states = {
+        for (final card in cards) card.id: _dueAfter(_now, days: 4),
+      };
+
+      expect(_today.newCardsLeft, 20);
+      final paused = selectQueue([...cards, fresh], states, _today);
+      expect(paused.backlog, isTrue);
+      expect(_names(paused.cards), isNot(contains('new')));
+      // Control: with two of them due the day takes the new card.
+      final current = selectQueue(
+        [...cards, fresh],
+        {
+          for (final (index, card) in cards.indexed)
+            card.id: _dueAfter(
+              index < 2 ? _now : _now.add(const Duration(days: 2)),
+              days: 4,
+            ),
+        },
+        _today,
+      );
+      expect(_names(current.cards), contains('new'));
+    });
+
+    test('the streak counts study days in a row back from today, or from yesterday while today has no answer', () {
+      DateTime day(int date, [int hour = 12]) =>
+          DateTime.utc(2026, 10, date, hour);
+      final answers = [day(14), day(13), day(12, 5), day(10)];
+
+      expect(streak(answers, day(14, 20), _utc), 3);
+      // Today not yet studied: the run up to yesterday still stands.
+      expect(streak(answers.skip(1), day(14, 20), _utc), 2);
+      // An answer at 03:00 belongs to the day before.
+      expect(streak([day(14), day(14, 3), day(12)], day(14, 20), _utc), 3);
+      // Control: a day with no answer ends the run.
+      expect(streak(answers, day(16), _utc), 0);
     });
   });
 }

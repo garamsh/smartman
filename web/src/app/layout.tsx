@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
 import { themeScript } from "@/lib/theme";
+import { timeZoneScript } from "@/lib/time-zone";
 
 import "@/styles/globals.css";
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ko" className={`${pretendard.variable} antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: timeZoneScript }} />
       </head>
       <body className="bg-ground font-sans text-ink">{children}</body>
     </html>

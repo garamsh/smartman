@@ -66,6 +66,15 @@ class _StalledRepository implements StudyRepository {
 
   @override
   Future<Duration?> medianReviewDuration() async => null;
+
+  @override
+  Future<List<DateTime>> firstAnswersSince(DateTime since) async => [];
+
+  @override
+  Future<List<StoredAnswer>> answersSince(DateTime since) async => [];
+
+  @override
+  Future<List<DateTime>> answerTimes() async => [];
 }
 
 /// A phone in portrait: 390 by 844 logical pixels.
@@ -180,6 +189,7 @@ Future<_Study> _open(
         studyRepositoryProvider.overrideWithValue(studyRepository),
         schedulerProvider.overrideWithValue(_InstantScheduler()),
         studyClockProvider.overrideWithValue(() => study.now),
+        studyZoneProvider.overrideWithValue((_) => Duration.zero),
         studyRandomProvider.overrideWithValue((_) => FirstDraw()),
       ],
       child: MaterialApp(
@@ -210,35 +220,6 @@ Future<_Study> _open(
   );
   await tester.pumpAndSettle();
   return study;
-}
-
-/// The count on the summary's tile labelled [label].
-String? _tile(WidgetTester tester, String label) {
-  final tile = find.ancestor(
-    of: find.text(label).last,
-    matching: find.byType(MergeSemantics),
-  );
-  return tester
-      .widgetList<Text>(
-        find.descendant(of: tile.first, matching: find.byType(Text)),
-      )
-      .first
-      .data;
-}
-
-/// Lets the session's writes run until the summary names the next review,
-/// which it does once the engine has scheduled every answer, then settles the
-/// frame that shows it.
-Future<void> _untilNextReview(WidgetTester tester) async {
-  final line = find.textContaining('Your next review');
-  for (var tries = 0; tries < 100 && line.evaluate().isEmpty; tries++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 10)),
-    );
-    await tester.pump();
-  }
-  expect(line, findsOneWidget);
-  await tester.pumpAndSettle();
 }
 
 /// The previous card whose front reads [front].
@@ -1020,7 +1001,7 @@ void main() {
   );
 
   testWidgets(
-    'the summary takes the card\'s place and counts cards, answers and time',
+    'once no card is left the completion card takes the current card\'s place, below the stack, with today\'s answers, time and streak',
     (tester) async {
       final study = await _open(tester, ['a', 'b']);
 
@@ -1029,52 +1010,85 @@ void main() {
       expect(study.current, 'a front');
       await study.know(elapsed: const Duration(seconds: 45));
 
-      await _untilNextReview(tester);
-      expect(find.text("You've finished today's cards"), findsOneWidget);
-      // Every answer was scheduled a day out.
+      expect(find.text('Done for today'), findsOneWidget);
+      expect(_currentCard, findsNothing);
       expect(
-        find.text(
-          "Your next review is tomorrow. We'll show these again just before you forget.",
-        ),
+        find.bySemanticsLabel("Know 2, don't know 1, 2 min, 1-day streak"),
         findsOneWidget,
       );
-      expect(_tile(tester, 'Studied'), '2');
-      expect(_tile(tester, 'Know'), '2');
-      expect(_tile(tester, "Don't know"), '1');
-      expect(find.text('Time spent'), findsOneWidget);
-      expect(find.text('1 min 5 s'), findsOneWidget);
       expect(find.text('2/2'), findsOneWidget);
+      // The stack stays above the completion card.
+      expect(
+        tester.getRect(_previous('a front').last).bottom,
+        lessThan(tester.getRect(find.text('Done for today')).top),
+      );
+      expect(find.text('Keep studying'), findsOneWidget);
+      expect(find.text('Stop'), findsOneWidget);
 
-      // The stack stays, and toggling its last answer studies the card again.
+      // Toggling the last answer studies the card again.
       await tester.tap(
         find.byWidget(tester.widgetList(_previous('a front')).last),
       );
       await tester.pumpAndSettle();
-      expect(find.text("You've finished today's cards"), findsNothing);
+      expect(find.text('Done for today'), findsNothing);
       expect(study.current, 'a front');
     },
   );
 
-  testWidgets('a deck with nothing due and no new card opens on the summary', (
-    tester,
-  ) async {
-    final study = await _open(
-      tester,
-      ['later'],
-      states: {'later': dueTomorrow},
-    );
+  testWidgets(
+    'keep studying goes on as practice in the same screen and route, and stop closes it',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b']);
+      await study.know();
+      await study.know();
+      final screen = tester.state(find.byType(StudyScreen));
+      final route = ModalRoute.of(tester.element(find.byType(StudyScreen)));
 
-    // The card exists and was left out because it is not due.
-    final stored = await tester.runAsync(
-      () => study.db.select(study.db.cardStates).get(),
-    );
-    expect(stored, hasLength(1));
-    expect(find.text("You've finished today's cards"), findsOneWidget);
-    expect(find.text('Nothing to study right now.'), findsOneWidget);
-    expect(_tile(tester, 'Studied'), '0');
-    expect(find.textContaining('Your next review'), findsNothing);
-    expect(study.current, isNull);
-  });
+      await tester.tap(find.text('Keep studying'));
+      await tester.pumpAndSettle();
+
+      expect(study.current, 'a front');
+      expect(tester.state(find.byType(StudyScreen)), same(screen));
+      expect(
+        ModalRoute.of(tester.element(find.byType(StudyScreen))),
+        same(route),
+      );
+      expect(route!.isCurrent, isTrue);
+      expect(find.text('2/2'), findsOneWidget);
+      await study.know();
+      expect(study.current, 'b front');
+      await study.know();
+      expect(study.current, 'a front', reason: 'every card again');
+
+      // Control: the completion card's other choice closes the screen.
+      final other = await _open(tester, ['c']);
+      await other.know();
+      await tester.tap(find.text('Stop'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StudyScreen), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a deck with no card left today and none answered today says there is nothing to study',
+    (tester) async {
+      final study = await _open(
+        tester,
+        ['later'],
+        states: {'later': dueTomorrow},
+      );
+
+      // The card exists and was left out because it is not due today.
+      final stored = await tester.runAsync(
+        () => study.db.select(study.db.cardStates).get(),
+      );
+      expect(stored, hasLength(1));
+      expect(find.text('No cards to study today'), findsOneWidget);
+      expect(find.text('Done for today'), findsNothing);
+      expect(find.text('Keep studying'), findsNothing);
+      expect(study.current, isNull);
+    },
+  );
 
   testWidgets('an answer the storage fails to write is reported to the user', (
     tester,
@@ -1131,11 +1145,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(BottomSheet), findsNothing);
 
-        await tester.tap(find.byTooltip('Close'));
-        await tester.pumpAndSettle();
-        expect(find.text("You've finished today's cards"), findsOneWidget);
-        // The summary is checked as it ends up, with its next review shown.
-        await _untilNextReview(tester);
+        await study.know();
+        await study.know();
+        expect(find.text('Done for today'), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -1151,7 +1163,7 @@ void main() {
     ),
   ]) {
     testWidgets(
-      '$name mid-session shows the summary without the stack, and tap targets carry labels',
+      '$name mid-session closes the screen, and the answers given are still written',
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c']);
         await study.know();
@@ -1161,22 +1173,21 @@ void main() {
         await leave(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text("You've finished today's cards"), findsOneWidget);
-        expect(_tile(tester, 'Studied'), '1');
-        expect(_previous('a front'), findsNothing);
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-
-        await tester.tap(find.text('Back to decks'));
-        await tester.pumpAndSettle();
         expect(find.byType(StudyScreen), findsNothing);
+        expect(find.text('Done for today'), findsNothing);
+        final reviews = await tester.runAsync(
+          () => study.db.select(study.db.reviews).get(),
+        );
+        expect(reviews, hasLength(1));
       },
     );
   }
 }
 
+/// Due at 05:00 UTC tomorrow, an hour after the next study day starts.
 final dueTomorrow = CardState(
   stability: 3,
   difficulty: 5,
   lastReview: DateTime.utc(2026, 10, 12),
-  due: DateTime.utc(2026, 10, 15),
+  due: DateTime.utc(2026, 10, 15, 5),
 );

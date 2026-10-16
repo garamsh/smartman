@@ -14,6 +14,9 @@ import { StudyScreen } from "../components/study-screen";
 import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
 import type { CardState } from "../queue";
 
+/** A day with no answer stored in it before the session. */
+const noAnswerToday = { answers: [], cards: [], answeredAnyDeck: false, streakBefore: 0 };
+
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const iso = (time: number) => new Date(time).toISOString();
@@ -93,6 +96,7 @@ describe("a study session's writes", () => {
           startedAt: start,
           queue: { cards: [card], backlog: false },
           before: { [card.id]: before },
+          today: noAnswerToday,
         }}
       />,
     );
@@ -128,7 +132,12 @@ describe("a study session's writes", () => {
   it("schedules a new card's first answer from no state", async () => {
     render(
       <StudyScreen
-        plan={{ startedAt: start, queue: { cards: [card], backlog: false }, before: {} }}
+        plan={{
+          startedAt: start,
+          queue: { cards: [card], backlog: false },
+          before: {},
+          today: noAnswerToday,
+        }}
       />,
     );
 
@@ -161,6 +170,7 @@ describe("a study session's writes", () => {
           startedAt: start,
           queue: { cards: [card], backlog: false },
           before: { [card.id]: before },
+          today: noAnswerToday,
         }}
       />,
     );

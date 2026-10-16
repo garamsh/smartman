@@ -83,6 +83,62 @@ class StudyRepository {
     }
   }
 
+  /// When the user first answered each card whose first answer, not
+  /// deleted, is at or after [since], across every deck.
+  Future<List<DateTime>> firstAnswersSince(DateTime since) async {
+    try {
+      final first = _db.reviews.reviewedAt.min();
+      final query = _db.selectOnly(_db.reviews)
+        ..addColumns([first])
+        ..where(_db.reviews.deletedAt.isNull())
+        ..groupBy([
+          _db.reviews.cardId,
+        ], having: first.isBiggerOrEqualValue(since));
+      return [for (final row in await query.get()) row.read(first)!];
+    } on Exception catch (cause, stackTrace) {
+      Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
+    }
+  }
+
+  /// Every answer not deleted given at or after [since], oldest first.
+  Future<List<StoredAnswer>> answersSince(DateTime since) async {
+    try {
+      final query = _db.select(_db.reviews)
+        ..where(
+          (row) =>
+              row.deletedAt.isNull() &
+              row.reviewedAt.isBiggerOrEqualValue(since),
+        )
+        ..orderBy([(row) => OrderingTerm.asc(row.reviewedAt)]);
+      return [
+        for (final row in await query.get())
+          (
+            card: CardId(row.cardId),
+            answer: answerOf(row.rating),
+            at: row.reviewedAt,
+            duration: Duration(milliseconds: row.durationMs),
+          ),
+      ];
+    } on Exception catch (cause, stackTrace) {
+      Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
+    }
+  }
+
+  /// The time of every answer not deleted, newest first.
+  Future<List<DateTime>> answerTimes() async {
+    try {
+      final query = _db.selectOnly(_db.reviews)
+        ..addColumns([_db.reviews.reviewedAt])
+        ..where(_db.reviews.deletedAt.isNull())
+        ..orderBy([OrderingTerm.desc(_db.reviews.reviewedAt)]);
+      return [
+        for (final row in await query.get()) row.read(_db.reviews.reviewedAt)!,
+      ];
+    } on Exception catch (cause, stackTrace) {
+      Error.throwWithStackTrace(StudyStorageFailure(cause), stackTrace);
+    }
+  }
+
   /// The median time the user took over their last [paceWindow] reviews, or
   /// null while they have fewer than [paceMinimum].
   Future<Duration?> medianReviewDuration() async {
