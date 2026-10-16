@@ -73,19 +73,24 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 - A card's deck, and a review's or card state's card, belong to the row's own user. Composite foreign keys enforce it: `cards (user_id, deck_id)` references `decks (user_id, id)`, and `reviews` and `card_states` reference `cards (user_id, id)`, each with `on delete cascade`.
 
+### Indexes
+
+- Each index serves a named query, and a new query names its index or why it has none ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) lists them). Migration `20261016150000_server_indexes.sql` added these, changing no row:
+  - `reviews_live_user_id_reviewed_at` on `(user_id, reviewed_at)` where `deleted_at is null`, for the pace and a study day's reviews;
+  - `cards_deck_id_created_at_id` on `(deck_id, created_at, id)`, for the composite foreign key's cascade, a study selection's cards, the public preview and the public listing's card count. It is not partial, so the cascade finds tombstones. It replaced `cards_user_id_deck_id`, which the migration dropped;
+  - `deck_reports_reporter_id`, `user_blocks_blocked_id` and `deck_imports_user_id`, for the account-deletion cascade;
+  - `decks_tombstone_revision`, `cards_tombstone_revision` and `card_states_tombstone_revision` on `revision` where `deleted_at is not null`, for the purge.
+- **Index names** are `{table}_[{predicate}_]{columns}`. The predicate is `live` (`deleted_at is null`), `tombstone` (`deleted_at is not null`) or `public` (visibly public).
+- Indexes are created with plain `create index` in a migration.
+
 ### Target data model (not built yet)
 
-[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built: each bullet holds once the migration that its implementation issue adds has been pushed. Until then the decisions above describe the database.
+[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been pushed. Until then the decisions above describe the database.
 
 - **Keys.** Every id column holds `uuid`: `decks.id`, `cards.id`, `cards.deck_id`, `cards.origin_deck_id`, `reviews.id`, `reviews.card_id`, `card_states.card_id`, `deck_reports.deck_id` and `deck_imports.deck_id`. Clients still create every synced id. New ids are version 7; rows created before that keep their version 4 ids. No id column has a default. `extraction_usage.id` stays an identity.
 - **Conversion.** One transaction drops the five foreign keys and the two policies that name a converted column, casts each column with `USING col::uuid`, and recreates them. It runs only after a check finds every value in canonical lowercase form. `list_public_decks` returns `uuid` ids, and `record_deck_import` takes a `uuid`. PostgREST sends a uuid as the same JSON string, so app and web versions already released keep working.
 - **Time.** Every time column is `timestamptz`, as today. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` stay the client's, at millisecond precision. `revision` stays the server's.
-- **Indexes.** Each index serves a named query (ADR 0034 lists them):
-  - `reviews_live_user_id_reviewed_at` on `(user_id, reviewed_at)` where `deleted_at is null`;
-  - `cards_deck_id_created_at_id` on `(deck_id, created_at, id)`, replacing `cards_user_id_deck_id`;
-  - `deck_reports_reporter_id`, `user_blocks_blocked_id` and `deck_imports_user_id`, for the account-deletion cascade;
-  - `decks_tombstone_revision`, `cards_tombstone_revision` and `card_states_tombstone_revision` on `revision` where `deleted_at is not null`, for the purge.
-- **Index names** are `{table}_[{predicate}_]{columns}`. The predicate is `live` (`deleted_at is null`), `tombstone` (`deleted_at is not null`) or `public` (visibly public). Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
+- **Constraint names.** Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
 - **Checks.** Five new checks are added `not valid` and then validated:
   - `decks_name_check`: `deleted_at is not null or name <> ''`;
   - `cards_card_key_check`: `deleted_at is not null or card_key <> ''`;
@@ -99,7 +104,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - **Policies.** Each of `decks`, `cards` and `profiles` gets one select policy in place of today's two permissive ones. It tests the owner's rule first and ORs in the public rule, so a read of one's own rows never evaluates the public rule's subquery. Every policy names `to authenticated` and reads `(select auth.uid())`.
 - **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
 - **Streak.** `public.study_streak_before(time_zone, before)`, `security invoker`, returns how many study days in a row before `before` hold an answer, with days from 04:00 to 04:00 in the zone named. It reads one backward probe of `reviews_live_user_id_reviewed_at` per day, and the web's `readToday` calls it in place of paging through the answers ([`web.md`](web.md)).
-- **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count served by `cards_deck_id_created_at_id`.
+- **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count.
 - **Watching.** After each pushed migration, the PM reads Supabase's Security and Performance Advisors, and monthly reads `supabase inspect db outliers` and `index-stats`. Each lint is fixed or recorded in an issue.
 
 ### Tests
@@ -117,6 +122,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `deck_imports_test.sql` — a second copy by the same user adds nothing while another user's adds one, the owner's adds nothing, a count kept from before is added to, and clients reach no row;
   - `deck_reports_test.sql` — reports are insert-only by their reporter, once per deck, and the third distinct reporter hides the deck;
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
+  - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
 - `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts a throwaway stack of its own with only Postgres, which applies the migrations, runs the tests and prints their count ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)). Where Docker does not, it prints that the tests were skipped and why.
 - The throwaway stack is named `smartman_test_<port>` and publishes its database on the first port in 54400–54499 that the run reserves under `${TMPDIR:-/tmp}/smartman-test-db/` and that nothing listens on. Concurrent runs, from several checkouts on one host, each get their own, and none touches the `smartman` stack or its rows.
