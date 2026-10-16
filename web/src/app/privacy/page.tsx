@@ -1,12 +1,254 @@
 import type { Metadata } from "next";
 
-import { ComingSoon } from "@/components/coming-soon";
-import { legalDocuments } from "@/components/legal-links";
+import { LegalDocument, type LegalSection } from "@/components/legal-document";
 
 export const metadata: Metadata = { title: "개인정보 처리방침 · smartman" };
 
-/** The privacy policy, or, until it is published, that it is coming. */
+const contact = "sauce@garam.sh";
+
+const sections: readonly LegalSection[] = [
+  {
+    id: "items",
+    heading: "수집하는 개인정보 항목과 수집 방법",
+    body: (
+      <>
+        <p>smartman은 서비스에 꼭 필요한 정보만 받아요.</p>
+        <ul>
+          <li>
+            로그인: Google 로그인을 하면 Google이 전달하는 이메일 주소와 Google 계정 식별자, 그리고
+            로그인할 때 이용에 동의한 기본 프로필 정보(이름, 프로필 사진 주소)를 받아요. 비밀번호는
+            받지 않아요.
+          </li>
+          <li>
+            직접 만든 내용: 덱의 이름, 카드의 앞면과 뒷면, 덱을 공개할 때 적는 설명과 표시 이름,
+            신고할 때 고른 사유, 차단한 사용자예요.
+          </li>
+          <li>
+            학습 기록: 카드마다 &ldquo;안다&rdquo; 또는 &ldquo;모른다&rdquo;로 답한 기록, 답한 시각,
+            카드를 본 시간, 그리고 다음 복습일을 계산한 카드별 학습 상태예요.
+          </li>
+          <li>
+            이용 기록: 사진으로 카드를 만든 시각, 공개 덱을 가져온 기록, 그리고 사진 추출을 요청할
+            때마다 남는 한 줄의 기록(계정 식별자, 사용한 모델, 처리 시간, 처리한 토큰 수,
+            결과)이에요.
+          </li>
+          <li>
+            사진: 사진으로 카드를 만들 때 고른 사진을 보내요. 사진은 카드를 만드는 데만 쓰고
+            저장하지 않아요.
+          </li>
+        </ul>
+        <p>
+          이 정보는 앱과 웹에서 직접 입력하거나, Google 로그인을 하거나, 서비스를 이용하는 동안
+          만들어져 받게 돼요.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "purposes",
+    heading: "개인정보의 이용 목적",
+    body: (
+      <ul>
+        <li>계정을 만들고 로그인한 사람을 확인해요.</li>
+        <li>덱, 카드와 학습 기록을 저장하고 여러 기기에서 같게 맞춰요.</li>
+        <li>학습 기록으로 카드마다 다음 복습일을 계산해요.</li>
+        <li>공개한 덱을 다른 이용자에게 보여 주고, 신고와 차단을 처리해요.</li>
+        <li>사진에서 카드를 찾아 만들고, 하루 이용 한도를 적용해요.</li>
+        <li>요청 기록으로 서비스가 제대로 동작하는지 확인해요.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "retention",
+    heading: "보유 기간과 파기",
+    body: (
+      <>
+        <p>개인정보는 계정이 있는 동안 보관하고, 계정을 삭제하면 지체 없이 파기해요.</p>
+        <ul>
+          <li>
+            앱의 계정 화면에서 &ldquo;계정 삭제&rdquo;를 하면 서버의 계정과 그 계정의 덱, 카드, 학습
+            기록, 표시 이름, 신고, 차단, 이용 기록이 모두 삭제되고, 그 기기에 있는 데이터도
+            지워져요. 되돌릴 수 없어요.
+          </li>
+          <li>
+            덱이나 카드를 지우면 다른 기기에도 지운 사실이 전해지도록 삭제 표시를 한 채 서버에 남겨
+            두고, 계정을 삭제할 때 함께 파기해요.
+          </li>
+          <li>
+            다른 이용자가 내 공개 덱을 가져가 만든 덱은 그 이용자의 것이라 내 계정을 삭제해도
+            남아요. 덱이 가져가진 횟수도 그대로 남아요.
+          </li>
+          <li>사진은 카드를 찾은 뒤 바로 버려지고, 서버나 디스크에 저장되지 않아요.</li>
+          <li>
+            사진 추출 요청 기록은 서버 함수의 로그에 남고, 그 보관 기간은 Supabase의 로그 보관
+            정책을 따라요.
+          </li>
+        </ul>
+        <p>파기는 데이터베이스에서 해당 정보를 삭제하는 방법으로 해요.</p>
+      </>
+    ),
+  },
+  {
+    id: "third-parties",
+    heading: "개인정보의 제3자 제공",
+    body: (
+      <>
+        <p>smartman은 개인정보를 제3자에게 제공하지 않아요.</p>
+        <p>
+          덱을 공개하면 그 덱의 이름, 설명, 카드와 내 표시 이름이 로그인한 모든 이용자에게 보여요.
+          이것은 이용자가 직접 고른 공개이고, 언제든 &ldquo;비공개로 전환&rdquo;할 수 있어요.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "processors",
+    heading: "개인정보 처리의 위탁",
+    body: (
+      <>
+        <p>서비스를 운영하려고 다음 회사에 개인정보 처리를 맡기고 있어요.</p>
+        <ul>
+          <li>Supabase: 계정과 로그인, 데이터베이스 저장, 서버 함수 실행</li>
+          <li>Vercel: 웹 앱 운영</li>
+          <li>OpenRouter: 사진 추출 요청을 AI 모델 제공자에게 전달</li>
+          <li>AI 모델 제공자: OpenRouter를 거쳐 받은 사진에서 카드 내용 읽기</li>
+          <li>Google: Google 계정으로 로그인</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "overseas",
+    heading: "개인정보의 국외 이전",
+    body: (
+      <>
+        <p>
+          위 회사들은 국외에서 개인정보를 처리해요. 정보는 서비스를 이용할 때마다 암호화된
+          네트워크(HTTPS)로 전송돼요.
+        </p>
+        <ul>
+          <li>
+            Supabase(supabase.com): 일본(도쿄 리전)에 저장해요. 계정 정보, 직접 만든 내용, 학습
+            기록, 이용 기록을 계정과 로그인, 저장과 동기화를 위해 옮기고, 계정을 삭제할 때까지
+            보관해요.
+          </li>
+          <li>
+            Vercel(vercel.com): 웹 앱의 서버 기능은 일본(도쿄 리전)에서 실행되고, 요청은 Vercel의
+            네트워크를 거쳐요. 웹을 쓰는 동안 로그인 세션과 화면에 보이는 덱, 카드, 학습 기록이 웹
+            화면을 보여 주기 위해 지나가고, 따로 보관하지 않아요.
+          </li>
+          <li>
+            OpenRouter(openrouter.ai)와 AI 모델 제공자: 사진으로 카드를 만들 때 그 사진을 카드
+            추출을 위해 보내요. smartman은 보관을 요청하지 않아요. 모델 제공자와 그 국가는 운영자가
+            쓰는 모델에 따라 정해지고, 바뀌면 이 방침에서 알려 드려요.
+          </li>
+          <li>
+            Google(google.com): Google 로그인을 할 때 이메일 주소와 기본 프로필 정보가 로그인을 위해
+            오가요. 보관은 Google의 정책을 따라요.
+          </li>
+        </ul>
+        <p>
+          국외 이전을 원하지 않으면 서비스 이용을 멈추고 계정을 삭제할 수 있어요. 사진으로 카드를
+          만들지 않으면 사진은 OpenRouter와 모델 제공자에게 가지 않아요.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "rights",
+    heading: "이용자의 권리와 행사 방법",
+    body: (
+      <>
+        <p>
+          이용자는 언제든 자신의 개인정보를 열람하고, 고치고, 삭제하고, 처리를 멈추라고 요구할 수
+          있어요.
+        </p>
+        <ul>
+          <li>앱에서 덱과 카드를 고치거나 지울 수 있어요.</li>
+          <li>공개한 덱은 &ldquo;비공개로 전환&rdquo;으로 다시 나만 볼 수 있게 할 수 있어요.</li>
+          <li>앱의 계정 화면에서 &ldquo;계정 삭제&rdquo;로 계정과 모든 데이터를 지울 수 있어요.</li>
+          <li>
+            그 밖의 요청은 <a href={`mailto:${contact}`}>{contact}</a>로 보내 주세요. 법령이 정한
+            기간 안에 답해 드려요.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "cookies",
+    heading: "자동으로 수집되는 정보와 쿠키",
+    body: (
+      <>
+        <p>smartman은 광고나 분석을 위한 쿠키와 추적 도구를 쓰지 않아요.</p>
+        <ul>
+          <li>
+            웹: 로그인을 유지하려고 Supabase의 세션 쿠키(이름이 &ldquo;sb-&rdquo;로 시작해요)를
+            저장해요. 고른 화면 테마는 이 브라우저의 저장소에 &ldquo;smartman.theme&rdquo;으로
+            저장해요.
+          </li>
+          <li>
+            앱: 로그인 세션, 덱과 카드, 학습 기록을 기기에 저장해요. 고른 화면 테마와 &ldquo;카드에
+            담을 내용&rdquo;도 그 기기에 저장해요.
+          </li>
+        </ul>
+        <p>
+          브라우저에서 쿠키를 막으면 웹에 로그인할 수 없어요. 로그아웃하면 이 브라우저의 세션이
+          끝나요.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "security",
+    heading: "개인정보의 안전성 확보 조치",
+    body: (
+      <ul>
+        <li>앱, 웹과 서버 사이의 모든 통신은 HTTPS로 암호화돼요.</li>
+        <li>
+          데이터베이스는 행 단위 보안을 써서, 로그인한 이용자가 자기 데이터와 공개된 덱만 읽을 수
+          있어요.
+        </li>
+        <li>관리자 권한의 키는 서버 함수 안에만 두고, 앱과 웹에는 넣지 않아요.</li>
+        <li>사진은 저장하지 않고, 요청 기록에는 사진이나 카드 내용을 남기지 않아요.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "contact",
+    heading: "개인정보 보호 문의처",
+    body: (
+      <p>
+        개인정보에 관한 문의, 불만과 피해 구제 요청은 smartman 운영자에게{" "}
+        <a href={`mailto:${contact}`}>{contact}</a>로 보내 주세요.
+      </p>
+    ),
+  },
+  {
+    id: "changes",
+    heading: "시행일과 변경",
+    body: (
+      <>
+        <p>이 개인정보 처리방침은 2026년 10월 16일부터 시행해요.</p>
+        <p>내용이 바뀌면 시행하기 전에 이 페이지에서 바뀐 내용과 시행일을 알려 드려요.</p>
+      </>
+    ),
+  },
+];
+
+/** The privacy policy: what smartman collects, why, where it goes, and the user's rights. */
 export default function PrivacyPage() {
-  const [, privacy] = legalDocuments;
-  return <ComingSoon title={privacy.title} url={privacy.url} />;
+  return (
+    <LegalDocument
+      title="개인정보 처리방침"
+      effectiveDate="2026년 10월 16일"
+      intro={
+        <p>
+          smartman 운영자(이하 &ldquo;운영자&rdquo;)는 「개인정보 보호법」에 따라 이용자의
+          개인정보를 보호하고, 그 처리에 관한 사항을 이렇게 알려 드려요.
+        </p>
+      }
+      sections={sections}
+    />
+  );
 }

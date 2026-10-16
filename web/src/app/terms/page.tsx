@@ -1,12 +1,196 @@
 import type { Metadata } from "next";
 
-import { ComingSoon } from "@/components/coming-soon";
-import { legalDocuments } from "@/components/legal-links";
+import { LegalDocument, type LegalSection } from "@/components/legal-document";
 
 export const metadata: Metadata = { title: "이용약관 · smartman" };
 
-/** The terms of service, or, until they are published, that they are coming. */
+const contact = "sauce@garam.sh";
+
+const sections: readonly LegalSection[] = [
+  {
+    id: "service",
+    heading: "서비스",
+    body: (
+      <>
+        <p>
+          smartman은 암기 카드를 만들고 복습하는 서비스예요. 휴대폰 앱과 웹(smartman.garam.sh)으로
+          제공해요.
+        </p>
+        <ul>
+          <li>덱과 카드를 만들고, 직접 입력하거나 단어장 사진에서 카드를 만들 수 있어요.</li>
+          <li>답한 기록으로 카드마다 다음 복습일을 정해 보여 줘요.</li>
+          <li>덱을 공개하고, 다른 이용자가 공개한 덱을 보고 가져올 수 있어요.</li>
+          <li>로그인한 기기와 웹에서 같은 덱과 기록을 볼 수 있어요.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "account",
+    heading: "계정과 로그인",
+    body: (
+      <ul>
+        <li>서비스는 Google 계정으로 로그인해야 쓸 수 있어요.</li>
+        <li>
+          계정은 본인의 Google 계정으로 만들고, 다른 사람의 계정을 쓰거나 계정을 넘겨서는 안 돼요.
+        </li>
+        <li>
+          로그인한 기기와 계정은 이용자가 관리해요. 공용 기기에서는 쓰고 나서 로그아웃해 주세요.
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "content",
+    heading: "이용자의 콘텐츠와 이용 허락",
+    body: (
+      <ul>
+        <li>이용자가 만든 덱, 카드와 설명의 권리는 이용자에게 있어요.</li>
+        <li>
+          운영자는 이 콘텐츠를 저장하고, 이용자의 기기 사이에서 맞추고, 화면에 보여 주는 데 필요한
+          범위에서만 써요.
+        </li>
+        <li>
+          덱을 공개하면 공개한 동안 그 덱의 이름, 설명, 카드와 표시 이름을 로그인한 다른 이용자에게
+          보여 주고, 다른 이용자가 그 카드를 자기 덱으로 가져가 쓸 수 있도록 운영자와 다른
+          이용자에게 허락하는 것으로 봐요. 이 허락은 무상이고, 서비스 안에서만 적용돼요.
+        </li>
+        <li>
+          덱을 비공개로 바꾸거나 지우면 더는 다른 이용자에게 보이지 않아요. 그 전에 다른 이용자가
+          가져간 카드는 그 이용자의 덱에 남아요.
+        </li>
+        <li>공개하는 콘텐츠에 필요한 권리는 이용자가 갖추고 있어야 해요.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "sharing",
+    heading: "공개 공유, 신고와 차단, 금지 콘텐츠",
+    body: (
+      <>
+        <p>다음과 같은 콘텐츠는 공개해서는 안 돼요.</p>
+        <ul>
+          <li>다른 사람의 저작권이나 그 밖의 권리를 침해하는 내용</li>
+          <li>음란하거나 폭력적이거나 혐오를 부추기는 내용</li>
+          <li>다른 사람의 개인정보나 명예를 해치는 내용</li>
+          <li>광고, 스팸, 법령을 어기는 내용</li>
+        </ul>
+        <p>
+          다른 이용자의 공개 덱이 이런 내용을 담고 있으면 &ldquo;신고하기&rdquo;로 알릴 수 있어요.
+          서로 다른 이용자 세 명이 신고한 덱은 자동으로 숨겨지고, 운영자가 확인한 뒤 다시 보이게 할
+          수 있어요. 운영자는 이 약관을 어긴 덱을 숨기거나 공개를 멈출 수 있어요.
+        </p>
+        <p>&ldquo;이 사용자 차단&rdquo;을 하면 그 사용자의 공개 덱이 내 목록에 보이지 않아요.</p>
+      </>
+    ),
+  },
+  {
+    id: "ai",
+    heading: "AI로 만든 카드",
+    body: (
+      <ul>
+        <li>사진으로 카드를 만들면 AI 모델이 사진을 읽어 카드 후보를 만들어요.</li>
+        <li>
+          AI가 만든 카드는 틀리거나 빠진 내용이 있을 수 있어요. 추가하기 전에 확인하고 고치는 것은
+          이용자의 몫이에요.
+        </li>
+        <li>사진으로 카드를 만드는 것은 하루 이용 횟수가 정해져 있어요.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "changes",
+    heading: "서비스의 변경과 중단",
+    body: (
+      <ul>
+        <li>운영자는 서비스를 더 낫게 하려고 기능을 바꾸거나 더하거나 뺄 수 있어요.</li>
+        <li>점검, 장애, 외부 서비스의 문제 같은 사정으로 서비스가 잠시 멈출 수 있어요.</li>
+        <li>
+          서비스를 끝내야 할 때는 미리 서비스 안이나 이 페이지에서 알리고, 이용자가 계정을 삭제할 수
+          있는 시간을 드려요.
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "deletion",
+    heading: "계정 삭제",
+    body: (
+      <ul>
+        <li>이용자는 언제든 앱의 계정 화면에서 &ldquo;계정 삭제&rdquo;로 이용을 끝낼 수 있어요.</li>
+        <li>
+          계정을 삭제하면 서버와 그 기기에 있는 덱, 카드와 학습 기록이 모두 지워지고 되돌릴 수
+          없어요. 다른 이용자가 이미 가져간 카드와 Google 계정은 남아요.
+        </li>
+        <li>
+          운영자는 이용자가 이 약관을 크게 어기면 그 이용자의 공개 덱을 숨기거나 이용을 제한할 수
+          있어요.
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "liability",
+    heading: "면책과 책임의 제한",
+    body: (
+      <ul>
+        <li>
+          운영자는 천재지변, 이용자의 기기나 네트워크 문제, 이용자의 잘못처럼 운영자가 어쩔 수 없는
+          사정으로 생긴 손해에는 책임을 지지 않아요.
+        </li>
+        <li>다른 이용자가 공개한 콘텐츠와 AI가 만든 카드 내용이 정확하다고 보증하지 않아요.</li>
+        <li>
+          다만 운영자의 고의나 중대한 과실로 생긴 손해, 그리고 법령이 책임을 면할 수 없다고 정한
+          손해는 이 조항과 관계없이 법령에 따라 책임져요.
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "law",
+    heading: "준거법과 관할",
+    body: (
+      <p>
+        이 약관은 대한민국 법에 따라 해석해요. 서비스 이용으로 생긴 분쟁은 「민사소송법」에 따른
+        관할 법원에서 다퉈요.
+      </p>
+    ),
+  },
+  {
+    id: "contact",
+    heading: "문의처",
+    body: (
+      <p>
+        서비스와 이 약관에 관한 문의는 smartman 운영자에게{" "}
+        <a href={`mailto:${contact}`}>{contact}</a>로 보내 주세요.
+      </p>
+    ),
+  },
+  {
+    id: "effective",
+    heading: "시행일",
+    body: (
+      <>
+        <p>이 약관은 2026년 10월 16일부터 시행해요.</p>
+        <p>약관이 바뀌면 시행하기 전에 이 페이지에서 바뀐 내용과 시행일을 알려 드려요.</p>
+      </>
+    ),
+  },
+];
+
+/** The terms of service: what smartman offers, and what the user and the operator agree to. */
 export default function TermsPage() {
-  const [terms] = legalDocuments;
-  return <ComingSoon title={terms.title} url={terms.url} />;
+  return (
+    <LegalDocument
+      title="이용약관"
+      effectiveDate="2026년 10월 16일"
+      intro={
+        <p>
+          이 약관은 smartman 운영자(이하 &ldquo;운영자&rdquo;)가 제공하는 smartman 서비스를 이용하는
+          조건을 정해요. 서비스에 로그인하면 이 약관에 동의하는 것으로 봐요.
+        </p>
+      }
+      sections={sections}
+    />
+  );
 }
