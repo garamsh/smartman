@@ -67,7 +67,8 @@ class _UnreadableStates implements StudyRepository {
       throw UnimplementedError();
 
   @override
-  Future<List<DateTime>> answerTimes() => throw UnimplementedError();
+  Future<DateTime?> latestAnswerBefore(DateTime end) =>
+      throw UnimplementedError();
 }
 
 final _now = DateTime.utc(2026, 10, 14, 9);

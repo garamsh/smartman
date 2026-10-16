@@ -13,6 +13,9 @@ final class UnavailableSyncServer implements SyncServer {
   Never _refuse() => throw const SyncRejected(NoSyncServer());
 
   @override
+  Future<Horizon> horizon() async => _refuse();
+
+  @override
   Future<List<Pulled<DeckRow>>> pullDecks(
     UserId owner,
     int after,

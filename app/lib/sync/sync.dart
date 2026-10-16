@@ -4,9 +4,14 @@ library;
 
 export 'src/connect.dart' show connectSyncServer;
 export 'src/failure.dart'
-    show SyncFailed, SyncFailure, SyncOffline, SyncRejected;
+    show
+        MissingServerParent,
+        SyncFailed,
+        SyncFailure,
+        SyncOffline,
+        SyncRejected;
 export 'src/providers.dart' show syncControllerProvider;
-export 'src/server.dart' show Pulled, SyncServer;
+export 'src/server.dart' show Horizon, Pulled, SyncServer;
 export 'src/status.dart'
     show SyncIdle, SyncInterrupted, SyncStatus, Synced, Syncing;
 export 'src/supabase_sync_server.dart' show SupabaseSyncServer;

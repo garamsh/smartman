@@ -10,6 +10,7 @@ import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
+import 'generated/schema_v6.dart' as v6;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -318,6 +319,273 @@ void main() {
         expect(await db.select(db.cardStates).get(), hasLength(1));
       },
     );
+  });
+
+  test('every row survives the upgrade from 5 to 6 with its dirty flag, tombstones included, each time as UTC text at the millisecond', () async {
+    // Schema v5 holds a date as seconds since the epoch, v6 as UTC text.
+    const created = 1790812800; // 2026-10-01 00:00:00 UTC
+    const edited = created + 3661;
+    const deleted = created + 86399;
+    String text(int seconds) => DateTime.fromMillisecondsSinceEpoch(
+      seconds * 1000,
+      isUtc: true,
+    ).toIso8601String();
+    expect(text(edited), '2026-10-01T01:01:01.000Z');
+    await verifier.testWithDataIntegrity(
+      oldVersion: 5,
+      newVersion: 6,
+      createOld: v5.DatabaseAtV5.new,
+      createNew: v6.DatabaseAtV6.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insertAll(old.decks, [
+          v5.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'public',
+            publishedAt: edited,
+            description: 'verbs',
+            createdAt: created,
+            updatedAt: edited,
+            dirty: 1,
+          ),
+          v5.DecksData(
+            id: 'gone',
+            name: 'Old',
+            visibility: 'private',
+            createdAt: created,
+            updatedAt: deleted,
+            deletedAt: deleted,
+            dirty: 0,
+          ),
+        ]);
+        batch.insertAll(old.cards, [
+          v5.CardsData(
+            id: 'card',
+            deckId: 'deck',
+            front: '[{"type":"text","text":"chat"}]',
+            back: '[]',
+            cardKey: 'chat',
+            source: 'shared',
+            originDeckId: 'origin',
+            createdAt: created,
+            updatedAt: edited,
+            dirty: 1,
+          ),
+          v5.CardsData(
+            id: 'removed',
+            deckId: 'gone',
+            front: '[]',
+            back: '[]',
+            cardKey: 'chien',
+            source: 'manual',
+            createdAt: created,
+            updatedAt: deleted,
+            deletedAt: deleted,
+            dirty: 0,
+          ),
+        ]);
+        batch.insertAll(old.reviews, [
+          v5.ReviewsData(
+            id: 'review',
+            cardId: 'card',
+            rating: 'good',
+            reviewedAt: edited,
+            durationMs: 1200,
+            fuzzFactor: 0.25,
+            updatedAt: edited,
+            dirty: 1,
+          ),
+          v5.ReviewsData(
+            id: 'kept',
+            cardId: 'removed',
+            rating: 'again',
+            reviewedAt: created,
+            durationMs: 900,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        ]);
+        batch.insertAll(old.cardStates, [
+          v5.CardStatesData(
+            cardId: 'card',
+            stability: 2.3065,
+            difficulty: 2.118,
+            lastReview: edited,
+            due: edited + 86400,
+            updatedAt: edited,
+            dirty: 1,
+          ),
+          v5.CardStatesData(
+            cardId: 'removed',
+            stability: 0.212,
+            difficulty: 6.4133,
+            lastReview: created,
+            due: created + 600,
+            updatedAt: deleted,
+            deletedAt: deleted,
+            dirty: 0,
+          ),
+        ]);
+      },
+      validateItems: (db) async {
+        expect(
+          await (db.select(
+            db.decks,
+          )..orderBy([(row) => OrderingTerm.asc(row.id)])).get(),
+          [
+            v6.DecksData(
+              id: 'deck',
+              name: 'French',
+              visibility: 'public',
+              publishedAt: text(edited),
+              description: 'verbs',
+              createdAt: text(created),
+              updatedAt: text(edited),
+              dirty: 1,
+            ),
+            v6.DecksData(
+              id: 'gone',
+              name: 'Old',
+              visibility: 'private',
+              createdAt: text(created),
+              updatedAt: text(deleted),
+              deletedAt: text(deleted),
+              dirty: 0,
+            ),
+          ],
+        );
+        expect(
+          await (db.select(
+            db.cards,
+          )..orderBy([(row) => OrderingTerm.asc(row.id)])).get(),
+          [
+            v6.CardsData(
+              id: 'card',
+              deckId: 'deck',
+              front: '[{"type":"text","text":"chat"}]',
+              back: '[]',
+              cardKey: 'chat',
+              source: 'shared',
+              originDeckId: 'origin',
+              createdAt: text(created),
+              updatedAt: text(edited),
+              dirty: 1,
+            ),
+            v6.CardsData(
+              id: 'removed',
+              deckId: 'gone',
+              front: '[]',
+              back: '[]',
+              cardKey: 'chien',
+              source: 'manual',
+              createdAt: text(created),
+              updatedAt: text(deleted),
+              deletedAt: text(deleted),
+              dirty: 0,
+            ),
+          ],
+        );
+        expect(
+          await (db.select(
+            db.reviews,
+          )..orderBy([(row) => OrderingTerm.asc(row.id)])).get(),
+          [
+            v6.ReviewsData(
+              id: 'kept',
+              cardId: 'removed',
+              rating: 'again',
+              reviewedAt: text(created),
+              durationMs: 900,
+              updatedAt: text(created),
+              dirty: 0,
+            ),
+            v6.ReviewsData(
+              id: 'review',
+              cardId: 'card',
+              rating: 'good',
+              reviewedAt: text(edited),
+              durationMs: 1200,
+              fuzzFactor: 0.25,
+              updatedAt: text(edited),
+              dirty: 1,
+            ),
+          ],
+        );
+        expect(
+          await (db.select(
+            db.cardStates,
+          )..orderBy([(row) => OrderingTerm.asc(row.cardId)])).get(),
+          [
+            v6.CardStatesData(
+              cardId: 'card',
+              stability: 2.3065,
+              difficulty: 2.118,
+              lastReview: text(edited),
+              due: text(edited + 86400),
+              updatedAt: text(edited),
+              dirty: 1,
+            ),
+            v6.CardStatesData(
+              cardId: 'removed',
+              stability: 0.212,
+              difficulty: 6.4133,
+              lastReview: text(created),
+              due: text(created + 600),
+              updatedAt: text(deleted),
+              deletedAt: text(deleted),
+              dirty: 0,
+            ),
+          ],
+        );
+        expect(
+          await db.customSelect('PRAGMA foreign_key_check').get(),
+          isEmpty,
+        );
+      },
+    );
+  });
+
+  test('the database reads a migrated time back as the instant it stored, and writes every time in UTC at the millisecond', () async {
+    final schema = await verifier.schemaAt(5);
+    final old = v5.DatabaseAtV5(schema.newConnection());
+    const created = 1790812800;
+    await old
+        .into(old.decks)
+        .insert(
+          const v5.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: created,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+    await old.close();
+    final db = AppDatabase(schema.newConnection());
+    addTearDown(db.close);
+
+    final deck = await db.select(db.decks).getSingle();
+    expect(deck.createdAt, DateTime.utc(2026, 10, 1));
+    expect(deck.createdAt.isUtc, isTrue);
+
+    // A local time with microseconds is stored as its UTC instant, truncated.
+    final local = DateTime(2026, 10, 2, 9, 30, 15, 123, 456);
+    await (db.update(db.decks)..where((row) => row.id.equals('deck'))).write(
+      DecksCompanion(updatedAt: Value(local)),
+    );
+    final stored = await db
+        .customSelect("SELECT updated_at FROM decks WHERE id = 'deck'")
+        .getSingle();
+    expect(
+      stored.read<String>('updated_at'),
+      DateTime.fromMillisecondsSinceEpoch(
+        local.millisecondsSinceEpoch,
+        isUtc: true,
+      ).toIso8601String(),
+    );
+    expect(stored.read<String>('updated_at'), endsWith('.123Z'));
   });
 
   test('a card row takes the source shared with its origin, and refuses an unknown source', () async {

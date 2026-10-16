@@ -597,18 +597,101 @@ void main() {
       expect(_names(current.cards), contains('new'));
     });
 
-    test('the streak counts study days in a row back from today, or from yesterday while today has no answer', () {
+    test('the streak walks the stored answers back one study day at a time from the day before, then counts the session\'s days', () async {
+      final decks = await _Decks.open();
       DateTime day(int date, [int hour = 12]) =>
           DateTime.utc(2026, 10, date, hour);
-      final answers = [day(14), day(13), day(12, 5), day(10)];
+      for (final (index, at) in [day(13), day(12, 5), day(10)].indexed) {
+        await decks.firstAnswer('a', 'stored $index', at);
+      }
+      final today = studyDayStart(day(14, 20), _utc);
 
-      expect(streak(answers, day(14, 20), _utc), 3);
+      final before = await studyDaysBefore(
+        today,
+        decks.study.latestAnswerBefore,
+        _utc,
+      );
+
+      expect(before, 2);
+      int count(List<DateTime> answers, DateTime now) => streak(
+        answers,
+        now,
+        since: today,
+        daysBefore: before,
+        offsetAt: _utc,
+      );
+      expect(count([day(14)], day(14, 20)), 3);
       // Today not yet studied: the run up to yesterday still stands.
-      expect(streak(answers.skip(1), day(14, 20), _utc), 2);
-      // An answer at 03:00 belongs to the day before.
-      expect(streak([day(14), day(14, 3), day(12)], day(14, 20), _utc), 3);
-      // Control: a day with no answer ends the run.
-      expect(streak(answers, day(16), _utc), 0);
+      expect(count(const [], day(14, 20)), 2);
+      // A session past 04:00 the next day counts both of its days.
+      expect(count([day(14), day(15, 5)], day(15, 6)), 4);
+      // Control: a day of the session without an answer ends the run there.
+      expect(count([day(15, 5)], day(15, 6)), 1);
+      // Control: a day with no answer before today ends the walk.
+      expect(
+        await studyDaysBefore(
+          studyDayStart(day(16), _utc),
+          decks.study.latestAnswerBefore,
+          _utc,
+        ),
+        0,
+      );
+    });
+
+    test('the walk counts 03:59 for the day before and 04:00 for its own day, in Seoul and across a change of offset', () async {
+      Future<int> daysBefore(
+        DateTime answer,
+        DateTime now,
+        UtcOffsetAt offsetAt,
+      ) async {
+        final decks = await _Decks.open();
+        await decks.firstAnswer('a', 'answered', answer);
+        return studyDaysBefore(
+          studyDayStart(now, offsetAt),
+          decks.study.latestAnswerBefore,
+          offsetAt,
+        );
+      }
+
+      // 11:00 on 15 October in Seoul; 03:59 and 04:00 that morning.
+      final seoulNow = DateTime.utc(2026, 10, 15, 2);
+      expect(
+        await daysBefore(DateTime.utc(2026, 10, 14, 18, 59), seoulNow, seoul),
+        1,
+      );
+      expect(
+        await daysBefore(DateTime.utc(2026, 10, 14, 19), seoulNow, seoul),
+        0,
+      );
+      // Clocks go back from UTC-7 to UTC-8 at 09:00 UTC on 1 November, so
+      // 31 October runs 25 hours, from 11:00 UTC to 12:00 UTC the next day.
+      Duration pacific(DateTime instant) =>
+          instant.isBefore(DateTime.utc(2026, 11, 1, 9))
+          ? const Duration(hours: -7)
+          : const Duration(hours: -8);
+      final pacificNow = DateTime.utc(2026, 11, 1, 20);
+      // 03:30 PST on 1 November, past a fixed 24 hours, is in 31 October.
+      expect(
+        await daysBefore(
+          DateTime.utc(2026, 11, 1, 11, 30),
+          pacificNow,
+          pacific,
+        ),
+        1,
+      );
+      // 04:00 PDT on 31 October starts it; 03:59 PDT is in 30 October.
+      expect(
+        await daysBefore(DateTime.utc(2026, 10, 31, 11), pacificNow, pacific),
+        1,
+      );
+      expect(
+        await daysBefore(
+          DateTime.utc(2026, 10, 31, 10, 59),
+          pacificNow,
+          pacific,
+        ),
+        0,
+      );
     });
   });
 }

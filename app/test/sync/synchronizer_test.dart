@@ -4,6 +4,7 @@ import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/study/study.dart';
+import 'package:smartman/sync/sync.dart';
 
 import 'device.dart';
 import 'fake_sync_server.dart';
@@ -292,6 +293,180 @@ void main() {
         expect(cards, hasLength(2), reason: device.name);
         expect(cards.map((card) => card.cardKey.value).toSet(), {'chat'});
       }
+    });
+  });
+
+  group('horizon', () {
+    /// A synced deck row the server does not hold, as a tombstone purged on
+    /// the server leaves on a device that never pulled it.
+    Future<void> strayDeck(Device device) => device.db
+        .into(device.db.decks)
+        .insert(
+          DecksCompanion.insert(
+            id: 'stray',
+            name: 'Purged elsewhere',
+            createdAt: device.now,
+            updatedAt: device.now,
+            dirty: const Value(false),
+          ),
+        );
+
+    Future<List<String>> deckIds(Device device) async => [
+      for (final row in await device.db.select(device.db.decks).get()) row.id,
+    ];
+
+    test('a table no one writes keeps its cursor at the watermark, so it is not rebuilt as the horizon passes its rows', () async {
+      final deck = await a.deck.createDeck('French');
+      await a.sync(_ada);
+      await b.sync(_ada);
+      // Other tables move the sequence on; no deck is written again.
+      for (final front in ['un', 'deux', 'trois']) {
+        await addCard(b, deck, front);
+        await b.sync(_ada);
+      }
+      await a.sync(_ada);
+      final deckRevision = server.decks[deck.id.value]!.revision;
+      expect((await a.store.cursors()).decksRevision, server.revision);
+      expect(server.revision, greaterThan(deckRevision));
+      server.purgedBelow = server.revision;
+      await strayDeck(a);
+
+      await a.sync(_ada);
+
+      expect(await deckIds(a), containsAll(['stray', deck.id.value]));
+      // Control: a cursor below the horizon rebuilds the table.
+      await a.db
+          .update(a.db.syncState)
+          .write(SyncStateCompanion(decksRevision: Value(deckRevision)));
+      await a.sync(_ada);
+      expect(await deckIds(a), [deck.id.value]);
+    });
+
+    test('a device the horizon passed rebuilds: rows purged elsewhere go, unsynced ones are pushed', () async {
+      final kept = await a.deck.createDeck('Kept');
+      final purged = await a.deck.createDeck('Purged');
+      await a.sync(_ada);
+      await b.sync(_ada);
+      b.now = b.now.add(const Duration(days: 100));
+      final offline = await b.deck.createDeck('Made offline');
+      await a.deck.deleteDeck(purged.id);
+      await a.sync(_ada);
+      // The purge deletes the tombstone and stores the horizon above it.
+      server.decks.remove(purged.id.value);
+      server.purgedBelow = server.revision;
+
+      await b.sync(_ada);
+
+      expect(await b.deckNames(), unorderedEquals(['Kept', 'Made offline']));
+      expect(
+        await deckIds(b),
+        unorderedEquals([kept.id.value, offline.id.value]),
+      );
+      expect(server.decks.keys, contains(offline.id.value));
+      expect(
+        (await b.store.cursors()).decksRevision,
+        greaterThanOrEqualTo(server.purgedBelow),
+      );
+    });
+
+    test('a pushed row whose parent the server no longer holds is deleted, and the rest of its request is pushed', () async {
+      final gone = await a.deck.createDeck('Gone');
+      final live = await a.deck.createDeck('Live');
+      await a.sync(_ada);
+      a.now = a.now.add(const Duration(minutes: 1));
+      await addCard(a, gone, 'chat');
+      final pushed = await addCard(a, live, 'chien');
+      // The deck is gone from the server, as a purge elsewhere leaves it.
+      server.decks.remove(gone.id.value);
+
+      await a.sync(_ada);
+
+      expect(server.cards.keys, [pushed.id.value]);
+      expect(
+        [for (final row in await a.db.select(a.db.cards).get()) row.id],
+        [pushed.id.value],
+      );
+      expect(await a.store.hasUnsynced(), isFalse);
+    });
+  });
+
+  group('local purge', () {
+    test('after a run that leaves nothing unsynced, tombstones lose their content in place and card state tombstones go', () async {
+      final deck = await a.deck.createDeck('French');
+      final studied = await addCard(a, deck, 'chat');
+      final unstudied = await addCard(a, deck, 'chien');
+      await a.answer(studied.id, 'good');
+      await a.sync(_ada);
+      await a.db
+          .update(a.db.cardStates)
+          .write(CardStatesCompanion(deletedAt: Value(a.now)));
+      a.now = a.now.add(const Duration(minutes: 1));
+      await a.deck.deleteDeck(deck.id);
+
+      await a.sync(_ada);
+
+      final cards = await a.db.select(a.db.cards).get();
+      expect(
+        {for (final row in cards) row.id},
+        {studied.id.value, unstudied.id.value},
+      );
+      for (final row in cards) {
+        expect(
+          [row.front, row.back, row.cardKey, row.deletedAt, row.dirty],
+          ['[]', '[]', '', isNotNull, false],
+        );
+      }
+      final stored = await a.db.select(a.db.decks).getSingle();
+      expect(
+        [stored.name, stored.description, stored.visibility, stored.dirty],
+        ['', null, 'private', false],
+      );
+      expect(await a.db.select(a.db.reviews).get(), hasLength(1));
+      expect(await a.db.select(a.db.cardStates).get(), isEmpty);
+      // The server's copies keep their content until its own purge.
+      expect(server.decks[deck.id.value]!.row.name, 'French');
+    });
+
+    test('waits while a row is unsynced', () async {
+      final deck = await a.deck.createDeck('French');
+      await addCard(a, deck, 'chat');
+      await a.sync(_ada);
+      await a.deck.deleteDeck(deck.id);
+      server.failure = SyncOffline(Exception('offline'));
+      await expectLater(a.sync(_ada), throwsA(isA<SyncOffline>()));
+      server.failure = null;
+      await a.store.purge();
+
+      expect((await a.db.select(a.db.decks).getSingle()).name, 'French');
+      // Control: once the tombstone is pushed, the purge strips it.
+      await a.sync(_ada);
+      expect((await a.db.select(a.db.decks).getSingle()).name, '');
+    });
+
+    test('a review pushed after another device purged its card\'s tombstone reaches that device', () async {
+      final z = Device('z', server, scheduler);
+      addTearDown(z.close);
+      final deck = await a.deck.createDeck('French');
+      final card = await addCard(a, deck, 'chat');
+      await a.sync(_ada);
+      await b.sync(_ada);
+      // A studies offline; B deletes the card; Z pulls the tombstone and
+      // purges it.
+      a.now = a.now.add(const Duration(minutes: 1));
+      await a.answer(card.id, 'good');
+      b.now = b.now.add(const Duration(minutes: 2));
+      await b.deck.deleteCard(card.id);
+      await b.sync(_ada);
+      await z.sync(_ada);
+      expect(await z.db.select(z.db.reviews).get(), isEmpty);
+      expect((await z.db.select(z.db.cards).getSingle()).cardKey, '');
+
+      await a.sync(_ada);
+      await z.sync(_ada);
+
+      final review = await z.db.select(z.db.reviews).getSingle();
+      expect(review.cardId, card.id.value);
+      expect(await z.store.hasUnsynced(), isFalse);
     });
   });
 

@@ -39,17 +39,15 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     requiredDuringInsert: false,
     defaultValue: const Constant('private'),
   );
-  static const VerificationMeta _publishedAtMeta = const VerificationMeta(
-    'publishedAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> publishedAt = GeneratedColumn<DateTime>(
-    'published_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> publishedAt =
+      GeneratedColumn<DateTime>(
+        'published_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      ).withConverter<DateTime?>($DecksTable.$converterpublishedAtn);
   static const VerificationMeta _descriptionMeta = const VerificationMeta(
     'description',
   );
@@ -61,39 +59,33 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> createdAt =
+      GeneratedColumn<DateTime>(
+        'created_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($DecksTable.$convertercreatedAt);
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
-    'deletedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> updatedAt =
+      GeneratedColumn<DateTime>(
+        'updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($DecksTable.$converterupdatedAt);
   @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-    'deleted_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> deletedAt =
+      GeneratedColumn<DateTime>(
+        'deleted_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      ).withConverter<DateTime?>($DecksTable.$converterdeletedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -150,15 +142,6 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         visibility.isAcceptableOrUnknown(data['visibility']!, _visibilityMeta),
       );
     }
-    if (data.containsKey('published_at')) {
-      context.handle(
-        _publishedAtMeta,
-        publishedAt.isAcceptableOrUnknown(
-          data['published_at']!,
-          _publishedAtMeta,
-        ),
-      );
-    }
     if (data.containsKey('description')) {
       context.handle(
         _descriptionMeta,
@@ -166,28 +149,6 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
           data['description']!,
           _descriptionMeta,
         ),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('deleted_at')) {
-      context.handle(
-        _deletedAtMeta,
-        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
       );
     }
     if (data.containsKey('dirty')) {
@@ -217,25 +178,33 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         DriftSqlType.string,
         data['${effectivePrefix}visibility'],
       )!,
-      publishedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}published_at'],
+      publishedAt: $DecksTable.$converterpublishedAtn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}published_at'],
+        ),
       ),
       description: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      deletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deleted_at'],
+      createdAt: $DecksTable.$convertercreatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}created_at'],
+        )!,
+      ),
+      updatedAt: $DecksTable.$converterupdatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}updated_at'],
+        )!,
+      ),
+      deletedAt: $DecksTable.$converterdeletedAtn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}deleted_at'],
+        ),
       ),
       dirty: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -248,6 +217,19 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
   $DecksTable createAlias(String alias) {
     return $DecksTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, DateTime> $converterpublishedAt =
+      const StoredTime();
+  static TypeConverter<DateTime?, DateTime?> $converterpublishedAtn =
+      NullAwareTypeConverter.wrap($converterpublishedAt);
+  static TypeConverter<DateTime, DateTime> $convertercreatedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterupdatedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterdeletedAt =
+      const StoredTime();
+  static TypeConverter<DateTime?, DateTime?> $converterdeletedAtn =
+      NullAwareTypeConverter.wrap($converterdeletedAt);
 }
 
 class DeckRow extends DataClass implements Insertable<DeckRow> {
@@ -281,15 +263,27 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     map['name'] = Variable<String>(name);
     map['visibility'] = Variable<String>(visibility);
     if (!nullToAbsent || publishedAt != null) {
-      map['published_at'] = Variable<DateTime>(publishedAt);
+      map['published_at'] = Variable<DateTime>(
+        $DecksTable.$converterpublishedAtn.toSql(publishedAt),
+      );
     }
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['created_at'] = Variable<DateTime>(
+        $DecksTable.$convertercreatedAt.toSql(createdAt),
+      );
+    }
+    {
+      map['updated_at'] = Variable<DateTime>(
+        $DecksTable.$converterupdatedAt.toSql(updatedAt),
+      );
+    }
     if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt);
+      map['deleted_at'] = Variable<DateTime>(
+        $DecksTable.$converterdeletedAtn.toSql(deletedAt),
+      );
     }
     map['dirty'] = Variable<bool>(dirty);
     return map;
@@ -535,19 +529,27 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       map['visibility'] = Variable<String>(visibility.value);
     }
     if (publishedAt.present) {
-      map['published_at'] = Variable<DateTime>(publishedAt.value);
+      map['published_at'] = Variable<DateTime>(
+        $DecksTable.$converterpublishedAtn.toSql(publishedAt.value),
+      );
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<DateTime>(
+        $DecksTable.$convertercreatedAt.toSql(createdAt.value),
+      );
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<DateTime>(
+        $DecksTable.$converterupdatedAt.toSql(updatedAt.value),
+      );
     }
     if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+      map['deleted_at'] = Variable<DateTime>(
+        $DecksTable.$converterdeletedAtn.toSql(deletedAt.value),
+      );
     }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
@@ -653,39 +655,33 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> createdAt =
+      GeneratedColumn<DateTime>(
+        'created_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($CardsTable.$convertercreatedAt);
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
-    'deletedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> updatedAt =
+      GeneratedColumn<DateTime>(
+        'updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($CardsTable.$converterupdatedAt);
   @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-    'deleted_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> deletedAt =
+      GeneratedColumn<DateTime>(
+        'deleted_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      ).withConverter<DateTime?>($CardsTable.$converterdeletedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -779,28 +775,6 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
         ),
       );
     }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('deleted_at')) {
-      context.handle(
-        _deletedAtMeta,
-        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
-      );
-    }
     if (data.containsKey('dirty')) {
       context.handle(
         _dirtyMeta,
@@ -844,17 +818,23 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
         DriftSqlType.string,
         data['${effectivePrefix}origin_deck_id'],
       ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      deletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deleted_at'],
+      createdAt: $CardsTable.$convertercreatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}created_at'],
+        )!,
+      ),
+      updatedAt: $CardsTable.$converterupdatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}updated_at'],
+        )!,
+      ),
+      deletedAt: $CardsTable.$converterdeletedAtn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}deleted_at'],
+        ),
       ),
       dirty: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -867,6 +847,15 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
   $CardsTable createAlias(String alias) {
     return $CardsTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, DateTime> $convertercreatedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterupdatedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterdeletedAt =
+      const StoredTime();
+  static TypeConverter<DateTime?, DateTime?> $converterdeletedAtn =
+      NullAwareTypeConverter.wrap($converterdeletedAt);
 }
 
 class CardRow extends DataClass implements Insertable<CardRow> {
@@ -908,10 +897,20 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     if (!nullToAbsent || originDeckId != null) {
       map['origin_deck_id'] = Variable<String>(originDeckId);
     }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['created_at'] = Variable<DateTime>(
+        $CardsTable.$convertercreatedAt.toSql(createdAt),
+      );
+    }
+    {
+      map['updated_at'] = Variable<DateTime>(
+        $CardsTable.$converterupdatedAt.toSql(updatedAt),
+      );
+    }
     if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt);
+      map['deleted_at'] = Variable<DateTime>(
+        $CardsTable.$converterdeletedAtn.toSql(deletedAt),
+      );
     }
     map['dirty'] = Variable<bool>(dirty);
     return map;
@@ -1199,13 +1198,19 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       map['origin_deck_id'] = Variable<String>(originDeckId.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<DateTime>(
+        $CardsTable.$convertercreatedAt.toSql(createdAt.value),
+      );
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<DateTime>(
+        $CardsTable.$converterupdatedAt.toSql(updatedAt.value),
+      );
     }
     if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+      map['deleted_at'] = Variable<DateTime>(
+        $CardsTable.$converterdeletedAtn.toSql(deletedAt.value),
+      );
     }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
@@ -1272,17 +1277,15 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _reviewedAtMeta = const VerificationMeta(
-    'reviewedAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> reviewedAt = GeneratedColumn<DateTime>(
-    'reviewed_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> reviewedAt =
+      GeneratedColumn<DateTime>(
+        'reviewed_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($ReviewsTable.$converterreviewedAt);
   static const VerificationMeta _durationMsMeta = const VerificationMeta(
     'durationMs',
   );
@@ -1306,28 +1309,24 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
-    'deletedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> updatedAt =
+      GeneratedColumn<DateTime>(
+        'updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($ReviewsTable.$converterupdatedAt);
   @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-    'deleted_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> deletedAt =
+      GeneratedColumn<DateTime>(
+        'deleted_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      ).withConverter<DateTime?>($ReviewsTable.$converterdeletedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -1386,14 +1385,6 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     } else if (isInserting) {
       context.missing(_ratingMeta);
     }
-    if (data.containsKey('reviewed_at')) {
-      context.handle(
-        _reviewedAtMeta,
-        reviewedAt.isAcceptableOrUnknown(data['reviewed_at']!, _reviewedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_reviewedAtMeta);
-    }
     if (data.containsKey('duration_ms')) {
       context.handle(
         _durationMsMeta,
@@ -1406,20 +1397,6 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
       context.handle(
         _fuzzFactorMeta,
         fuzzFactor.isAcceptableOrUnknown(data['fuzz_factor']!, _fuzzFactorMeta),
-      );
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('deleted_at')) {
-      context.handle(
-        _deletedAtMeta,
-        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
       );
     }
     if (data.containsKey('dirty')) {
@@ -1449,10 +1426,12 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         DriftSqlType.string,
         data['${effectivePrefix}rating'],
       )!,
-      reviewedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}reviewed_at'],
-      )!,
+      reviewedAt: $ReviewsTable.$converterreviewedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}reviewed_at'],
+        )!,
+      ),
       durationMs: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}duration_ms'],
@@ -1461,13 +1440,17 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         DriftSqlType.double,
         data['${effectivePrefix}fuzz_factor'],
       ),
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      deletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deleted_at'],
+      updatedAt: $ReviewsTable.$converterupdatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}updated_at'],
+        )!,
+      ),
+      deletedAt: $ReviewsTable.$converterdeletedAtn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}deleted_at'],
+        ),
       ),
       dirty: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -1480,6 +1463,15 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
   $ReviewsTable createAlias(String alias) {
     return $ReviewsTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, DateTime> $converterreviewedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterupdatedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterdeletedAt =
+      const StoredTime();
+  static TypeConverter<DateTime?, DateTime?> $converterdeletedAtn =
+      NullAwareTypeConverter.wrap($converterdeletedAt);
 }
 
 class ReviewRow extends DataClass implements Insertable<ReviewRow> {
@@ -1512,14 +1504,24 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     map['id'] = Variable<String>(id);
     map['card_id'] = Variable<String>(cardId);
     map['rating'] = Variable<String>(rating);
-    map['reviewed_at'] = Variable<DateTime>(reviewedAt);
+    {
+      map['reviewed_at'] = Variable<DateTime>(
+        $ReviewsTable.$converterreviewedAt.toSql(reviewedAt),
+      );
+    }
     map['duration_ms'] = Variable<int>(durationMs);
     if (!nullToAbsent || fuzzFactor != null) {
       map['fuzz_factor'] = Variable<double>(fuzzFactor);
     }
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['updated_at'] = Variable<DateTime>(
+        $ReviewsTable.$converterupdatedAt.toSql(updatedAt),
+      );
+    }
     if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt);
+      map['deleted_at'] = Variable<DateTime>(
+        $ReviewsTable.$converterdeletedAtn.toSql(deletedAt),
+      );
     }
     map['dirty'] = Variable<bool>(dirty);
     return map;
@@ -1765,7 +1767,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       map['rating'] = Variable<String>(rating.value);
     }
     if (reviewedAt.present) {
-      map['reviewed_at'] = Variable<DateTime>(reviewedAt.value);
+      map['reviewed_at'] = Variable<DateTime>(
+        $ReviewsTable.$converterreviewedAt.toSql(reviewedAt.value),
+      );
     }
     if (durationMs.present) {
       map['duration_ms'] = Variable<int>(durationMs.value);
@@ -1774,10 +1778,14 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       map['fuzz_factor'] = Variable<double>(fuzzFactor.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<DateTime>(
+        $ReviewsTable.$converterupdatedAt.toSql(updatedAt.value),
+      );
     }
     if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+      map['deleted_at'] = Variable<DateTime>(
+        $ReviewsTable.$converterdeletedAtn.toSql(deletedAt.value),
+      );
     }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
@@ -1846,48 +1854,42 @@ class $CardStatesTable extends CardStates
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _lastReviewMeta = const VerificationMeta(
-    'lastReview',
-  );
   @override
-  late final GeneratedColumn<DateTime> lastReview = GeneratedColumn<DateTime>(
-    'last_review',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _dueMeta = const VerificationMeta('due');
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> lastReview =
+      GeneratedColumn<DateTime>(
+        'last_review',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($CardStatesTable.$converterlastReview);
   @override
-  late final GeneratedColumn<DateTime> due = GeneratedColumn<DateTime>(
-    'due',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> due =
+      GeneratedColumn<DateTime>(
+        'due',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($CardStatesTable.$converterdue);
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
-    'deletedAt',
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> updatedAt =
+      GeneratedColumn<DateTime>(
+        'updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($CardStatesTable.$converterupdatedAt);
   @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-    'deleted_at',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
+  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> deletedAt =
+      GeneratedColumn<DateTime>(
+        'deleted_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      ).withConverter<DateTime?>($CardStatesTable.$converterdeletedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -1948,36 +1950,6 @@ class $CardStatesTable extends CardStates
     } else if (isInserting) {
       context.missing(_difficultyMeta);
     }
-    if (data.containsKey('last_review')) {
-      context.handle(
-        _lastReviewMeta,
-        lastReview.isAcceptableOrUnknown(data['last_review']!, _lastReviewMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_lastReviewMeta);
-    }
-    if (data.containsKey('due')) {
-      context.handle(
-        _dueMeta,
-        due.isAcceptableOrUnknown(data['due']!, _dueMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_dueMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('deleted_at')) {
-      context.handle(
-        _deletedAtMeta,
-        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
-      );
-    }
     if (data.containsKey('dirty')) {
       context.handle(
         _dirtyMeta,
@@ -2005,21 +1977,29 @@ class $CardStatesTable extends CardStates
         DriftSqlType.double,
         data['${effectivePrefix}difficulty'],
       )!,
-      lastReview: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}last_review'],
-      )!,
-      due: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}due'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      deletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}deleted_at'],
+      lastReview: $CardStatesTable.$converterlastReview.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}last_review'],
+        )!,
+      ),
+      due: $CardStatesTable.$converterdue.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}due'],
+        )!,
+      ),
+      updatedAt: $CardStatesTable.$converterupdatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}updated_at'],
+        )!,
+      ),
+      deletedAt: $CardStatesTable.$converterdeletedAtn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}deleted_at'],
+        ),
       ),
       dirty: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -2032,6 +2012,16 @@ class $CardStatesTable extends CardStates
   $CardStatesTable createAlias(String alias) {
     return $CardStatesTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, DateTime> $converterlastReview =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterdue = const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterupdatedAt =
+      const StoredTime();
+  static TypeConverter<DateTime, DateTime> $converterdeletedAt =
+      const StoredTime();
+  static TypeConverter<DateTime?, DateTime?> $converterdeletedAtn =
+      NullAwareTypeConverter.wrap($converterdeletedAt);
 }
 
 class CardStateRow extends DataClass implements Insertable<CardStateRow> {
@@ -2059,11 +2049,25 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     map['card_id'] = Variable<String>(cardId);
     map['stability'] = Variable<double>(stability);
     map['difficulty'] = Variable<double>(difficulty);
-    map['last_review'] = Variable<DateTime>(lastReview);
-    map['due'] = Variable<DateTime>(due);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['last_review'] = Variable<DateTime>(
+        $CardStatesTable.$converterlastReview.toSql(lastReview),
+      );
+    }
+    {
+      map['due'] = Variable<DateTime>(
+        $CardStatesTable.$converterdue.toSql(due),
+      );
+    }
+    {
+      map['updated_at'] = Variable<DateTime>(
+        $CardStatesTable.$converterupdatedAt.toSql(updatedAt),
+      );
+    }
     if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt);
+      map['deleted_at'] = Variable<DateTime>(
+        $CardStatesTable.$converterdeletedAtn.toSql(deletedAt),
+      );
     }
     map['dirty'] = Variable<bool>(dirty);
     return map;
@@ -2289,16 +2293,24 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
       map['difficulty'] = Variable<double>(difficulty.value);
     }
     if (lastReview.present) {
-      map['last_review'] = Variable<DateTime>(lastReview.value);
+      map['last_review'] = Variable<DateTime>(
+        $CardStatesTable.$converterlastReview.toSql(lastReview.value),
+      );
     }
     if (due.present) {
-      map['due'] = Variable<DateTime>(due.value);
+      map['due'] = Variable<DateTime>(
+        $CardStatesTable.$converterdue.toSql(due.value),
+      );
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<DateTime>(
+        $CardStatesTable.$converterupdatedAt.toSql(updatedAt.value),
+      );
     }
     if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+      map['deleted_at'] = Variable<DateTime>(
+        $CardStatesTable.$converterdeletedAtn.toSql(deletedAt.value),
+      );
     }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
@@ -2755,9 +2767,37 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ReviewsTable reviews = $ReviewsTable(this);
   late final $CardStatesTable cardStates = $CardStatesTable(this);
   late final $SyncStateTable syncState = $SyncStateTable(this);
+  late final Index decksUnsynced = Index(
+    'decks_unsynced',
+    'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
+  );
   late final Index cardsDeckIdCardKey = Index(
     'cards_deck_id_card_key',
-    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key)',
+    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key) WHERE deleted_at IS NULL',
+  );
+  late final Index cardsDeckIdCreatedAt = Index(
+    'cards_deck_id_created_at',
+    'CREATE INDEX cards_deck_id_created_at ON cards (deck_id, created_at)',
+  );
+  late final Index cardsUnsynced = Index(
+    'cards_unsynced',
+    'CREATE INDEX cards_unsynced ON cards (id) WHERE dirty',
+  );
+  late final Index reviewsCardIdReviewedAt = Index(
+    'reviews_card_id_reviewed_at',
+    'CREATE INDEX reviews_card_id_reviewed_at ON reviews (card_id, reviewed_at)',
+  );
+  late final Index reviewsLiveReviewedAt = Index(
+    'reviews_live_reviewed_at',
+    'CREATE INDEX reviews_live_reviewed_at ON reviews (reviewed_at) WHERE deleted_at IS NULL',
+  );
+  late final Index reviewsUnsynced = Index(
+    'reviews_unsynced',
+    'CREATE INDEX reviews_unsynced ON reviews (id) WHERE dirty',
+  );
+  late final Index cardStatesUnsynced = Index(
+    'card_states_unsynced',
+    'CREATE INDEX card_states_unsynced ON card_states (card_id) WHERE dirty',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2769,7 +2809,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reviews,
     cardStates,
     syncState,
+    decksUnsynced,
     cardsDeckIdCardKey,
+    cardsDeckIdCreatedAt,
+    cardsUnsynced,
+    reviewsCardIdReviewedAt,
+    reviewsLiveReviewedAt,
+    reviewsUnsynced,
+    cardStatesUnsynced,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2795,6 +2842,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       result: [TableUpdate('card_states', kind: UpdateKind.delete)],
     ),
   ]);
+  @override
+  DriftDatabaseOptions get options =>
+      const DriftDatabaseOptions(storeDateTimeAsText: true);
 }
 
 typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
@@ -2869,9 +2919,10 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get publishedAt => $composableBuilder(
+  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime>
+  get publishedAt => $composableBuilder(
     column: $table.publishedAt,
-    builder: (column) => ColumnFilters(column),
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<String> get description => $composableBuilder(
@@ -2879,20 +2930,23 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get createdAt =>
+      $composableBuilder(
+        column: $table.createdAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
+      $composableBuilder(
+        column: $table.updatedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime> get deletedAt =>
+      $composableBuilder(
+        column: $table.deletedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<bool> get dirty => $composableBuilder(
     column: $table.dirty,
@@ -3000,23 +3054,24 @@ class $$DecksTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get publishedAt => $composableBuilder(
-    column: $table.publishedAt,
-    builder: (column) => column,
-  );
+  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get publishedAt =>
+      $composableBuilder(
+        column: $table.publishedAt,
+        builder: (column) => column,
+      );
 
   GeneratedColumn<String> get description => $composableBuilder(
     column: $table.description,
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get deletedAt =>
+  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get dirty =>
@@ -3297,20 +3352,23 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get createdAt =>
+      $composableBuilder(
+        column: $table.createdAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
+      $composableBuilder(
+        column: $table.updatedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime> get deletedAt =>
+      $composableBuilder(
+        column: $table.deletedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<bool> get dirty => $composableBuilder(
     column: $table.dirty,
@@ -3503,13 +3561,13 @@ class $$CardsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get deletedAt =>
+  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get dirty =>
@@ -3853,10 +3911,11 @@ class $$ReviewsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get reviewedAt => $composableBuilder(
-    column: $table.reviewedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get reviewedAt =>
+      $composableBuilder(
+        column: $table.reviewedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<int> get durationMs => $composableBuilder(
     column: $table.durationMs,
@@ -3868,15 +3927,17 @@ class $$ReviewsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
+      $composableBuilder(
+        column: $table.updatedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime> get deletedAt =>
+      $composableBuilder(
+        column: $table.deletedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<bool> get dirty => $composableBuilder(
     column: $table.dirty,
@@ -3995,10 +4056,11 @@ class $$ReviewsTableAnnotationComposer
   GeneratedColumn<String> get rating =>
       $composableBuilder(column: $table.rating, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get reviewedAt => $composableBuilder(
-    column: $table.reviewedAt,
-    builder: (column) => column,
-  );
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get reviewedAt =>
+      $composableBuilder(
+        column: $table.reviewedAt,
+        builder: (column) => column,
+      );
 
   GeneratedColumn<int> get durationMs => $composableBuilder(
     column: $table.durationMs,
@@ -4010,10 +4072,10 @@ class $$ReviewsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get deletedAt =>
+  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get dirty =>
@@ -4247,25 +4309,29 @@ class $$CardStatesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get lastReview => $composableBuilder(
-    column: $table.lastReview,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get lastReview =>
+      $composableBuilder(
+        column: $table.lastReview,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get due => $composableBuilder(
-    column: $table.due,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get due =>
+      $composableBuilder(
+        column: $table.due,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
+      $composableBuilder(
+        column: $table.updatedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnFilters(column),
-  );
+  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime> get deletedAt =>
+      $composableBuilder(
+        column: $table.deletedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
 
   ColumnFilters<bool> get dirty => $composableBuilder(
     column: $table.dirty,
@@ -4381,18 +4447,19 @@ class $$CardStatesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get lastReview => $composableBuilder(
-    column: $table.lastReview,
-    builder: (column) => column,
-  );
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get lastReview =>
+      $composableBuilder(
+        column: $table.lastReview,
+        builder: (column) => column,
+      );
 
-  GeneratedColumn<DateTime> get due =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get due =>
       $composableBuilder(column: $table.due, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get deletedAt =>
+  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get dirty =>

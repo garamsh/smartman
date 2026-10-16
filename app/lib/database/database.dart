@@ -4,8 +4,28 @@ import 'database.steps.dart';
 
 part 'database.g.dart';
 
+/// [time] as every time column stores it: in UTC, truncated to the
+/// millisecond, so every stored value has one length and one zone and its text
+/// order is its time order.
+DateTime storedTime(DateTime time) => DateTime.fromMillisecondsSinceEpoch(
+  time.millisecondsSinceEpoch,
+  isUtc: true,
+);
+
+/// Writes every time column through [storedTime].
+final class StoredTime extends TypeConverter<DateTime, DateTime> {
+  const StoredTime();
+
+  @override
+  DateTime fromSql(DateTime fromDb) => fromDb;
+
+  @override
+  DateTime toSql(DateTime value) => storedTime(value);
+}
+
 /// Decks, each a named collection of cards, with whether it is published.
 @DataClassName('DeckRow')
+@TableIndex.sql('CREATE INDEX decks_unsynced ON decks (id) WHERE "dirty"')
 class Decks extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -15,11 +35,13 @@ class Decks extends Table {
 
   /// When the deck was last published; null while it never was, or once it
   /// was made private again.
-  DateTimeColumn get publishedAt => dateTime().nullable()();
+  DateTimeColumn get publishedAt =>
+      dateTime().nullable().map(const StoredTime())();
   TextColumn get description => text().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
+  DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
+  DateTimeColumn get deletedAt =>
+      dateTime().nullable().map(const StoredTime())();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
@@ -29,7 +51,12 @@ class Decks extends Table {
 /// Cards; `front` and `back` hold encoded content blocks, `cardKey` the
 /// normalized front the duplicate check looks up.
 @DataClassName('CardRow')
-@TableIndex(name: 'cards_deck_id_card_key', columns: {#deckId, #cardKey})
+@TableIndex.sql(
+  'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key) '
+  'WHERE deleted_at IS NULL',
+)
+@TableIndex(name: 'cards_deck_id_created_at', columns: {#deckId, #createdAt})
+@TableIndex.sql('CREATE INDEX cards_unsynced ON cards (id) WHERE "dirty"')
 class Cards extends Table {
   TextColumn get id => text()();
   TextColumn get deckId =>
@@ -43,9 +70,10 @@ class Cards extends Table {
 
   /// The public deck a copied card came from; null for any other card.
   TextColumn get originDeckId => text().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
+  DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
+  DateTimeColumn get deletedAt =>
+      dateTime().nullable().map(const StoredTime())();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
@@ -54,13 +82,22 @@ class Cards extends Table {
 
 /// Reviews of a card, written by the study domain.
 @DataClassName('ReviewRow')
+@TableIndex(
+  name: 'reviews_card_id_reviewed_at',
+  columns: {#cardId, #reviewedAt},
+)
+@TableIndex.sql(
+  'CREATE INDEX reviews_live_reviewed_at ON reviews (reviewed_at) '
+  'WHERE deleted_at IS NULL',
+)
+@TableIndex.sql('CREATE INDEX reviews_unsynced ON reviews (id) WHERE "dirty"')
 class Reviews extends Table {
   TextColumn get id => text()();
   TextColumn get cardId =>
       text().references(Cards, #id, onDelete: KeyAction.cascade)();
   TextColumn get rating =>
       text().check(const CustomExpression("rating IN ('again', 'good')"))();
-  DateTimeColumn get reviewedAt => dateTime()();
+  DateTimeColumn get reviewedAt => dateTime().map(const StoredTime())();
   IntColumn get durationMs => integer()();
 
   /// The fuzz factor the review was scheduled with; null for a review written
@@ -68,8 +105,9 @@ class Reviews extends Table {
   RealColumn get fuzzFactor => real().nullable().check(
     const CustomExpression('fuzz_factor >= 0 AND fuzz_factor < 1'),
   )();
-  DateTimeColumn get updatedAt => dateTime()();
-  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
+  DateTimeColumn get deletedAt =>
+      dateTime().nullable().map(const StoredTime())();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
@@ -79,15 +117,19 @@ class Reviews extends Table {
 /// A reviewed card's scheduling state, owned by the study domain. A card that
 /// was never reviewed has no row.
 @DataClassName('CardStateRow')
+@TableIndex.sql(
+  'CREATE INDEX card_states_unsynced ON card_states (card_id) WHERE "dirty"',
+)
 class CardStates extends Table {
   TextColumn get cardId =>
       text().references(Cards, #id, onDelete: KeyAction.cascade)();
   RealColumn get stability => real()();
   RealColumn get difficulty => real()();
-  DateTimeColumn get lastReview => dateTime()();
-  DateTimeColumn get due => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
-  DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get lastReview => dateTime().map(const StoredTime())();
+  DateTimeColumn get due => dateTime().map(const StoredTime())();
+  DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
+  DateTimeColumn get deletedAt =>
+      dateTime().nullable().map(const StoredTime())();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
@@ -116,7 +158,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -173,6 +215,75 @@ class AppDatabase extends _$AppDatabase {
         await m.alterTable(
           TableMigration(schema.cards, newColumns: [schema.cards.originDeckId]),
         );
+      },
+      // Every time column moves from Unix seconds to UTC text at the
+      // millisecond. Each table is rebuilt with its rows and dirty flags, and
+      // foreign keys are off during migrations, so no review cascades.
+      from5To6: (m, schema) async {
+        for (final (table, columns)
+            in <(TableInfo<Table, dynamic>, List<GeneratedColumn<Object>>)>[
+              (
+                schema.decks,
+                [
+                  schema.decks.publishedAt,
+                  schema.decks.createdAt,
+                  schema.decks.updatedAt,
+                  schema.decks.deletedAt,
+                ],
+              ),
+              (
+                schema.cards,
+                [
+                  schema.cards.createdAt,
+                  schema.cards.updatedAt,
+                  schema.cards.deletedAt,
+                ],
+              ),
+              (
+                schema.reviews,
+                [
+                  schema.reviews.reviewedAt,
+                  schema.reviews.updatedAt,
+                  schema.reviews.deletedAt,
+                ],
+              ),
+              (
+                schema.cardStates,
+                [
+                  schema.cardStates.lastReview,
+                  schema.cardStates.due,
+                  schema.cardStates.updatedAt,
+                  schema.cardStates.deletedAt,
+                ],
+              ),
+            ]) {
+          await m.alterTable(
+            TableMigration(
+              table,
+              columnTransformer: {
+                for (final column in columns)
+                  column: CustomExpression<String>(
+                    "strftime('%Y-%m-%dT%H:%M:%fZ', "
+                    "${column.escapedNameFor(SqlDialect.sqlite)}, 'unixepoch')",
+                  ),
+              },
+            ),
+          );
+        }
+        // The rebuild restored the v5 index, which v6 makes partial.
+        await m.drop(schema.cardsDeckIdCardKey);
+        for (final index in [
+          schema.decksUnsynced,
+          schema.cardsDeckIdCardKey,
+          schema.cardsDeckIdCreatedAt,
+          schema.cardsUnsynced,
+          schema.reviewsCardIdReviewedAt,
+          schema.reviewsLiveReviewedAt,
+          schema.reviewsUnsynced,
+          schema.cardStatesUnsynced,
+        ]) {
+          await m.create(index);
+        }
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

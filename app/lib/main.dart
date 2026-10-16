@@ -81,9 +81,9 @@ Widget composeApp(
   final deckRepository = DeckRepository(
     database,
     clock: DateTime.now,
-    newId: uuid.v4,
+    newId: uuid.v7,
   );
-  final studyRepository = StudyRepository(database, newId: uuid.v4);
+  final studyRepository = StudyRepository(database, newId: uuid.v7);
   final syncStore = SyncStore(database, scheduler, clock: DateTime.now);
   final sync = SyncController(
     account: account,
