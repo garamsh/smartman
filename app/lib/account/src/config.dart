@@ -5,12 +5,6 @@ abstract final class AccountConfigKey {
   static const supabasePublishableKey = 'SUPABASE_PUBLISHABLE_KEY';
   static const googleWebClientId = 'GOOGLE_WEB_CLIENT_ID';
   static const googleIosClientId = 'GOOGLE_IOS_CLIENT_ID';
-
-  /// Where the terms of service are published; empty until they are.
-  static const termsUrl = 'TERMS_URL';
-
-  /// Where the privacy policy is published; empty until it is.
-  static const privacyUrl = 'PRIVACY_URL';
 }
 
 /// The values the build received through `--dart-define-from-file`; a key
@@ -27,10 +21,6 @@ Map<String, String> accountDefines() => const {
   ),
   AccountConfigKey.googleIosClientId: String.fromEnvironment(
     AccountConfigKey.googleIosClientId,
-  ),
-  AccountConfigKey.termsUrl: String.fromEnvironment(AccountConfigKey.termsUrl),
-  AccountConfigKey.privacyUrl: String.fromEnvironment(
-    AccountConfigKey.privacyUrl,
   ),
 };
 

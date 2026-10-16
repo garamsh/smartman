@@ -203,7 +203,6 @@
   "consentNotice": "By continuing, you agree to the {terms} and the {privacy}.",
   "termsOfService": "Terms of Service",
   "privacyPolicy": "Privacy Policy",
-  "comingSoonBody": "This isn't ready yet. It will open here soon.",
   "linkNotOpened": "Couldn't open the link. Please try again.",
   "appVersion": "Version {version}",
   "todayDone": "You've done today's cards"

@@ -9,7 +9,6 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart' show DeckListScreen;
-import 'package:smartman/account/src/legal.dart' show ComingSoonScreen;
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/shared/theme.dart';
@@ -72,7 +71,6 @@ void main() {
         extraction,
         sharing,
         FakeReachability(),
-        const LegalLinks(),
         '1.0.0',
       ),
     );
@@ -447,10 +445,6 @@ void main() {
         await meetsGuidelines();
         await tester.ensureVisible(find.text('Terms of Service'));
         await tester.pumpAndSettle();
-        await meetsGuidelines();
-        await tester.tap(find.text('Terms of Service'));
-        await tester.pumpAndSettle();
-        expect(find.byType(ComingSoonScreen), findsOneWidget);
         await meetsGuidelines();
         await unmountApp(tester);
       },

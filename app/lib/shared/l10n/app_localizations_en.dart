@@ -788,9 +788,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicy => 'Privacy Policy';
 
   @override
-  String get comingSoonBody => 'This isn\'t ready yet. It will open here soon.';
-
-  @override
   String get linkNotOpened => 'Couldn\'t open the link. Please try again.';
 
   @override

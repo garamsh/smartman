@@ -16,7 +16,6 @@ export 'src/account_service.dart'
 export 'src/account_state.dart'
     show AccountState, AccountUnavailable, SignedIn, SignedOut, UserId;
 export 'src/config.dart' show accountDefines;
-export 'src/legal.dart' show LegalLinks, legalLinksProvider;
 export 'src/failure.dart'
     show AccountFailure, AccountMisconfigured, AccountOffline, AccountRejected;
 export 'src/providers.dart' show accountServiceProvider, appVersionProvider;

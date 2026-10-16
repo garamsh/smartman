@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:smartman/account/account.dart';
+import 'package:smartman/account/src/legal.dart';
 import 'package:smartman/shared/l10n/app_localizations.dart';
 import 'package:smartman/shared/theme.dart';
 import 'package:smartman/shared/ui/app_button.dart';
@@ -22,6 +23,7 @@ void main() {
     Locale locale = const Locale('en'),
     AccountData? data,
     String? themeMode,
+    LinkOpener? opener,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
@@ -36,11 +38,11 @@ void main() {
       ProviderScope(
         overrides: [
           accountServiceProvider.overrideWithValue(service),
-          legalLinksProvider.overrideWithValue(const LegalLinks()),
           appVersionProvider.overrideWithValue('1.0.0'),
           accountDataProvider.overrideWithValue(data ?? FakeAccountData()),
           syncStatusProvider.overrideWithValue(() => const Text('sync status')),
           themeStorageProvider.overrideWithValue(storage),
+          if (opener != null) linkOpenerProvider.overrideWithValue(opener),
         ],
         child: Consumer(
           builder: (context, ref, _) => MaterialApp(
@@ -508,6 +510,36 @@ void main() {
         tester.getTopLeft(find.text('Version 1.0.0')).dy,
         greaterThan(tester.getBottomLeft(find.text('Delete account')).dy),
       );
+    },
+  );
+
+  testWidgets(
+    "the foot's links open the terms and the privacy policy on the web outside the app",
+    (tester) async {
+      final opened = <Uri>[];
+      await pumpScreen(
+        tester,
+        FakeAccountService(
+          const SignedIn(userId: _ada, email: 'grace@example.com'),
+        ),
+        opener: (uri) async {
+          opened.add(uri);
+          return true;
+        },
+      );
+
+      await tester.ensureVisible(find.text('Terms of Service'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Terms of Service'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Privacy Policy'));
+      await tester.pumpAndSettle();
+
+      expect(opened, [
+        Uri.parse('https://smartman.garam.sh/terms'),
+        Uri.parse('https://smartman.garam.sh/privacy'),
+      ]);
+      expect(find.byType(SnackBar), findsNothing);
     },
   );
 }

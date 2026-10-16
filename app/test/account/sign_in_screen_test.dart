@@ -21,14 +21,12 @@ void main() {
     AccountService service, {
     Locale locale = const Locale('en'),
     ThemeMode themeMode = ThemeMode.light,
-    LegalLinks legal = const LegalLinks(),
     LinkOpener? opener,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           accountServiceProvider.overrideWithValue(service),
-          legalLinksProvider.overrideWithValue(legal),
           if (opener != null) linkOpenerProvider.overrideWithValue(opener),
         ],
         child: MaterialApp(
@@ -231,7 +229,7 @@ void main() {
   });
 
   testWidgets(
-    'the terms the user agrees to are named under the buttons, and a link without a document opens the coming-soon page',
+    'the terms the user agrees to are named under the buttons, and each link opens its document on the web outside the app',
     (tester) async {
       final opened = <Uri>[];
       await pumpScreen(
@@ -250,46 +248,34 @@ void main() {
         findsOneWidget,
       );
       await tapAndSettle(tester, 'Terms of Service');
-
-      expect(find.byType(ComingSoonScreen), findsOneWidget);
-      expect(find.widgetWithText(AppBar, 'Terms of Service'), findsOneWidget);
-      expect(
-        find.text("This isn't ready yet. It will open here soon."),
-        findsOneWidget,
-      );
-      expect(opened, isEmpty);
-    },
-  );
-
-  testWidgets(
-    'a link with a document opens it outside the app, and one that does not open says so',
-    (tester) async {
-      final privacy = Uri.parse('https://example.test/privacy');
-      final opened = <Uri>[];
-      var opens = true;
-      await pumpScreen(
-        tester,
-        FakeAccountService(),
-        legal: LegalLinks(privacy: privacy),
-        opener: (uri) async {
-          opened.add(uri);
-          return opens;
-        },
-      );
-
       await tapAndSettle(tester, 'Privacy Policy');
-      expect(opened, [privacy]);
-      // Control: an opened link says nothing and leaves the screen.
+
+      expect(opened, [
+        Uri.parse('https://smartman.garam.sh/terms'),
+        Uri.parse('https://smartman.garam.sh/privacy'),
+      ]);
+      // An opened link says nothing and leaves the screen.
       expect(find.byType(SnackBar), findsNothing);
-      expect(find.byType(ComingSoonScreen), findsNothing);
-
-      opens = false;
-      await tapAndSettle(tester, 'Privacy Policy');
-      expect(opened, [privacy, privacy]);
-      expect(
-        find.text("Couldn't open the link. Please try again."),
-        findsOneWidget,
-      );
+      expect(find.byType(SignInScreen), findsOneWidget);
     },
   );
+
+  testWidgets('a link that does not open says so', (tester) async {
+    final opened = <Uri>[];
+    await pumpScreen(
+      tester,
+      FakeAccountService(),
+      opener: (uri) async {
+        opened.add(uri);
+        return false;
+      },
+    );
+
+    await tapAndSettle(tester, 'Privacy Policy');
+    expect(opened, [Uri.parse('https://smartman.garam.sh/privacy')]);
+    expect(
+      find.text("Couldn't open the link. Please try again."),
+      findsOneWidget,
+    );
+  });
 }
