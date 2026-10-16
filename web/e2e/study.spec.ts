@@ -202,7 +202,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   expect(page.url()).toBe(studyUrl);
   await page.keyboard.press("j");
   await expect(question).toHaveText(/^(chat|chien)$/);
-  await shot(page, "07-study-practice");
+  await shot(page, "06b-study-practice");
   await page.keyboard.press("k");
   await page.keyboard.press("z");
   await expect(page.getByRole("region", { name: "이전 답" }).getByRole("button")).toHaveCount(4);
@@ -267,7 +267,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await page.goto(`/study?decks=${laterDeck}`);
   await expect(page.getByText("오늘은 학습할 카드가 없어요", { exact: true })).toBeVisible();
   await expect(completion).toHaveCount(0);
-  await shot(page, "07b-study-nothing-today");
+  await shot(page, "06c-study-nothing-today");
 
   await page.goto("/account");
   await expect(page.getByRole("heading", { name: "계정", exact: true })).toBeVisible();

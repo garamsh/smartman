@@ -49,7 +49,7 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
   - any other toggle leaves the queue unchanged.
 - On an answer the card flies off, the answered card rises into the stack and the next card emerges from below. Under the platform's reduce-motion setting, these become a 150 ms cross-fade.
 - Closing the screen, by the close button or by going back, leaves it at any point; the writes already queued still run. There is no summary ([ADR 0033](adr/0033-count-cards-left-per-study-day-from-04-00-and-continue-as-unrecorded-practice.md)).
-- With no card left today and no card of the decks answered today, the screen shows "오늘은 학습할 카드가 없어요" below the top bar, and nothing else.
+- With no card left today and no card of the decks answered today, the screen shows "오늘은 학습할 카드가 없어요" below the top bar, which holds the close button alone, and nothing else.
 - Once no card is left, the completion card takes the current card's place under the stack, and may grow past a card's cap so its buttons stay in reach: the mascot in a brand-tint circle, "오늘 학습 완료", one line of today's answers over the decks, the answers stored before the session and the session's own as they stand ("n 안다" in green, "n 모른다" in red), their minutes on screen rounded up and the streak after a flame icon, read as one sentence, then "계속 학습" (primary) and "그만하기" (text), which closes the screen.
   - The streak is the study days in a row with a stored answer, across every deck, counted back from today when today has one, otherwise from yesterday.
   - The stack stays toggleable; a toggle that puts a card back takes the completion card away until the card is answered.

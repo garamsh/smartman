@@ -270,6 +270,7 @@ describe("the study page", () => {
       await open("d1");
 
       expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
+      expect(screen.queryByRole("progressbar", { name: "진행" })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
       expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
 

@@ -177,25 +177,29 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           <X aria-hidden className="size-6" strokeWidth={2} />
         </Link>
         <div className="flex flex-1 items-center gap-3">
-          <div
-            role="progressbar"
-            aria-label="진행"
-            aria-valuemin={0}
-            aria-valuemax={view.total}
-            aria-valuenow={view.answered}
-            aria-valuetext={`${String(view.total)}장 중 ${String(view.answered)}장 답함`}
-            className="h-progress flex-1 overflow-hidden rounded-full bg-hairline"
-          >
-            <div
-              className="h-full rounded-full bg-ink transition-[width]"
-              style={{
-                width: `${String(view.total === 0 ? 0 : (100 * view.answered) / view.total)}%`,
-              }}
-            />
-          </div>
-          <span aria-hidden className="text-secondary font-bold text-ink tabular-nums">
-            {view.answered}/{view.total}
-          </span>
+          {view.kind !== "empty" && (
+            <>
+              <div
+                role="progressbar"
+                aria-label="진행"
+                aria-valuemin={0}
+                aria-valuemax={view.total}
+                aria-valuenow={view.answered}
+                aria-valuetext={`${String(view.total)}장 중 ${String(view.answered)}장 답함`}
+                className="h-progress flex-1 overflow-hidden rounded-full bg-hairline"
+              >
+                <div
+                  className="h-full rounded-full bg-ink transition-[width]"
+                  style={{
+                    width: `${String(view.total === 0 ? 0 : (100 * view.answered) / view.total)}%`,
+                  }}
+                />
+              </div>
+              <span aria-hidden className="text-secondary font-bold text-ink tabular-nums">
+                {view.answered}/{view.total}
+              </span>
+            </>
+          )}
         </div>
         <button
           ref={helpButton}
