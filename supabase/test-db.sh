@@ -14,46 +14,13 @@ if ! docker info >/dev/null 2>&1; then
   exit 0
 fi
 
-# A port is this run's once mkdir creates its directory, which is atomic between concurrent runs,
-# and nothing on the host listens on it.
-reservations="${TMPDIR:-/tmp}/smartman-test-db"
-mkdir -p "$reservations"
-port=""
-for candidate in $(seq 54400 54499); do
-  if mkdir "$reservations/$candidate" 2>/dev/null; then
-    if (exec 3<>"/dev/tcp/127.0.0.1/$candidate") 2>/dev/null; then
-      rmdir "$reservations/$candidate"
-    else
-      port=$candidate
-      break
-    fi
-  fi
-done
-if [ -z "$port" ]; then
-  echo "found no free database port in 54400-54499 for the test stack; reservations are under $reservations" >&2
-  exit 1
-fi
+stack="the test stack"
+. supabase/test-stack.sh
+reserve port 54400 54499 || exit 1
 
 export SUPABASE_PROJECT_ID="smartman_test_$port" SUPABASE_DB_PORT="$port"
 
-# Stop prunes containers, volumes and networks, and Docker refuses a prune while another stack's
-# stop is pruning, so a failed stop is retried. A stack left behind fails the run.
-stop_stack() {
-  local status=$? attempt stopped
-  for attempt in 1 2 3 4 5 6 7 8 9 10; do
-    if stopped=$(supabase stop --no-backup 2>&1); then
-      rmdir "$reservations/$port"
-      exit "$status"
-    fi
-    sleep 2
-  done
-  echo "$stopped" >&2
-  echo "could not stop the test stack $SUPABASE_PROJECT_ID after $attempt attempts; remove it with: supabase stop --no-backup --project-id $SUPABASE_PROJECT_ID" >&2
-  rmdir "$reservations/$port"
-  [ "$status" -ne 0 ] || status=1
-  exit "$status"
-}
-trap stop_stack EXIT
+trap 'stop_stack $?' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
