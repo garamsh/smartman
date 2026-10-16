@@ -1,3 +1,8 @@
+// Each request to the stack carries its own bound, the request timeout the
+// app treats as offline, so the file sets no bound over a test's sum of them.
+@Timeout.none
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +13,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../sync/bounded_auth.dart';
 import '../sync/device.dart';
 import 'fakes.dart';
 
@@ -72,17 +78,17 @@ void main() {
     const options = AuthClientOptions(authFlowType: AuthFlowType.implicit);
     final client = SupabaseClient(url!, key!, authOptions: options);
     final email = '$name-${DateTime.now().microsecondsSinceEpoch}@example.com';
-    final response = await client.auth.signUp(
-      email: email,
-      password: 'sharing-password',
-    );
+    final server = SupabaseSharingServer(client);
+    // Signing up is bounded as each sharing request is.
+    await signUpWithinBound(client, email, 'sharing-password', server.timeout);
+    expect(client.auth.currentUser?.email, email);
     final device = Device(name, SupabaseSyncServer(client), scheduler);
     final user = _User(
-      UserId(response.user!.id),
+      UserId(client.auth.currentUser!.id),
       client,
       device,
       SharingService(
-        server: SupabaseSharingServer(client),
+        server: server,
         decks: device.deck,
         reachability: FakeReachability(),
         clock: () => device.now,
