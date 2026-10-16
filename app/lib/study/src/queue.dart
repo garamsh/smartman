@@ -212,23 +212,48 @@ void reinsert(List<Card> queue, Card card, Random random) {
   queue.insert(min(gap, queue.length), card);
 }
 
-/// How many study days in a row hold one of [answers]: counted back from the
-/// day holding [now] when it holds one, otherwise from the day before, so a
-/// day not yet studied breaks nothing until it ends.
+/// How many study days in a row hold an answer: counted back from the day
+/// holding [now] when it holds one, otherwise from the day before, so a day
+/// not yet studied breaks nothing until it ends. [answers] are the answers
+/// given at or after [since], the start of a study day, and [daysBefore] how
+/// many days in a row before [since] hold one.
 int streak(
   Iterable<DateTime> answers,
-  DateTime now, [
+  DateTime now, {
+  required DateTime since,
+  required int daysBefore,
   UtcOffsetAt offsetAt = localOffsetAt,
-]) {
+}) {
   final days = {for (final answer in answers) studyDayStart(answer, offsetAt)};
-  DateTime before(DateTime day) =>
-      studyDayStart(day.subtract(const Duration(seconds: 1)), offsetAt);
   var day = studyDayStart(now, offsetAt);
-  if (!days.contains(day)) day = before(day);
+  if (!days.contains(day)) day = _dayBefore(day, offsetAt);
   var count = 0;
-  while (days.contains(day)) {
+  while (!day.isBefore(since) && days.contains(day)) {
     count++;
-    day = before(day);
+    day = _dayBefore(day, offsetAt);
   }
-  return count;
+  return day.isBefore(since) ? count + daysBefore : count;
 }
+
+/// How many study days in a row before the one starting at [dayStart] hold
+/// an answer. Each day is one read through [latestBefore] of the latest
+/// answer before the day ends; the walk stops at the first day without one.
+Future<int> studyDaysBefore(
+  DateTime dayStart,
+  Future<DateTime?> Function(DateTime end) latestBefore, [
+  UtcOffsetAt offsetAt = localOffsetAt,
+]) async {
+  var end = dayStart;
+  var count = 0;
+  while (true) {
+    final start = _dayBefore(end, offsetAt);
+    final latest = await latestBefore(end);
+    if (latest == null || latest.isBefore(start)) return count;
+    count++;
+    end = start;
+  }
+}
+
+/// The start of the study day before the one starting at [dayStart].
+DateTime _dayBefore(DateTime dayStart, UtcOffsetAt offsetAt) =>
+    studyDayStart(dayStart.subtract(const Duration(seconds: 1)), offsetAt);
