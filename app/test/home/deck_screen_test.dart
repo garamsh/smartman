@@ -93,20 +93,43 @@ void main() {
   testWidgets(
     'with nothing to study today, or no count yet or none readable, Study still opens a session over the deck',
     (tester) async {
-      for (final (today, open) in [
+      const unreadable =
+          "Couldn't read or write the device's storage. Please try again.";
+      for (final (today, open, counted, failed) in [
         (
           'nothing to study',
           () =>
               DeckScreens.open(tester, cards: cards, later: cards.keys.toSet()),
+          true,
+          false,
         ),
-        ('no count yet', () => DeckScreens.open(tester, stalled: true)),
+        (
+          'no count yet',
+          () => DeckScreens.open(tester, stalled: true),
+          false,
+          false,
+        ),
         (
           'no count readable',
           () => DeckScreens.open(tester, cards: cards, unreadable: true),
+          false,
+          true,
         ),
       ]) {
         final screens = await open();
         await screens.push((deck) => DeckScreen(deck: deck));
+        // The count is in the state the case names: read as zero, pending,
+        // or failed.
+        expect(
+          find.text('0 to review'),
+          counted ? findsOneWidget : findsNothing,
+          reason: today,
+        );
+        expect(
+          find.text(unreadable),
+          failed ? findsOneWidget : findsNothing,
+          reason: today,
+        );
 
         await screens.tap(find.text('Study · 0'));
 
