@@ -76,7 +76,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The screens follow the principles and the theme of [`design.md`](design.md). Widget tests check each screen against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in the light and the dark theme.
 - An empty deck name or card side is refused with a message on its field.
 
-### Deck list and selection
+### The deck list and the selection
 
 - The deck list's top bar holds the horizontal lockup, 30 high and read as the app's name, as its heading; at its right, with sharing, a "둘러보기" icon button that opens the browse screen, then the account button, the account's initial in a 32 px circle ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
 - Below it, the today card for a selection of every deck, on the brand's navy (the raised surface in the dark theme) with the symbol faint in its corner: "오늘 할 카드", the count large with "장", "복습 x · 새 카드 y · 약 m분", in a backlog "밀린 복습을 마칠 때까지 새 카드는 쉬어요." ([`study.md`](study.md)), and a white "모두 학습" with a play icon, which opens one study session over every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)). The minutes are the count times the time one card takes, which `study` reads from the user's latest reviews ([`study.md`](study.md)), rounded up.

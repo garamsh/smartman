@@ -7,7 +7,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Context
 
-- Issue #80: the owner's feedback on production (`0540a8c`, 2026-10-16) found the web's first screen plain, no theme setting, and a Google button that did not follow Google's guidelines. The owner later added that each page shows a sentence while it waits.
+- Issue #80: the owner's feedback on production (`0540a8c8633ce7be6ada77ee408a99ae4f9026cd`, 2026-10-16) found the web's first screen plain, no theme setting, and a Google button that did not follow Google's guidelines. The owner later added that each page shows a sentence while it waits.
 - **Theme.** The web followed `prefers-color-scheme` alone. The phone offers 시스템 / 라이트 / 다크 and stores the choice on the device ([`design.md`](../design.md)). On the web the choice has to reach the first paint of a server-rendered page, or the page flashes the other theme while it loads. Alternatives considered:
   - A cookie the root layout reads on the server. `next.config.ts` sets `cacheComponents`, under which a layout that reads `cookies()` must sit inside `<Suspense>` or `next build` fails (stack-nextjs.md §4), and the root layout renders `<html>` itself. Every page would also become dynamic, `/login` and the legal pages included, which now prerender.
   - `next-themes`, the package most Next.js apps use for this. It adds a dependency, with its own pin to move, for an inline script of one line and a store the app already has.
