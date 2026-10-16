@@ -11,14 +11,13 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`, `DeckVisibility` with `PrivateDeck` and `PublicDeck`, and `DeckSelection`, a set of decks that cannot be empty;
   - content: `Content`, `TextContent`, `UnsupportedContent`, and `decodeContent`, which reads the stored encoding;
   - `CardKey`, `describeContent`, the one line of text a card side shows, and `CardSplitRow`, a card as a split row;
+  - `DeckRow`, a deck on a row, and `CardEditorScreen`, the card editor;
   - the split card, drawn one way for every screen: `SplitCard`, which lays out a card's two halves divided by a line, side by side or, when a half would be too narrow at the text scale, stacked, each side centred or at the top left and, on the study card, scrolling inside its half once capped; and `ContentView`, which renders a side's content blocks, with an unsupported block as a labelled placeholder, fitting text through `CardText` in `app/lib/deck/src/card_text.dart`. The study screen's cards, the card preview and `CardSplitRow` draw through them ([ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md));
   - `DeckRepository` and its save results;
   - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, `mergeBack`, and `ImportSource` with `FromPhoto` and `FromPublicDeck`;
-  - `showNameSheet`, the sheet that asks for a deck's name, which photo import uses to name a new deck;
-  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, and `describeFailure`, the message a user reads for one;
-  - `TodayCount`, with `TodayPending`, `TodayCounted`, which carries the time one card takes and the minutes the session takes, and `TodayUnavailable`, and `TodayBuilder`;
-  - `DeckSharing` and `deckSharingProvider`;
-  - `deckRepositoryProvider`, `studyScreenProvider`, `todayProvider`, `accountScreenProvider`, `accountAvatarProvider`, `photoImportProvider` and `DeckListScreen`.
+  - `showNameSheet`, the sheet that asks for a deck's name, which `home/` and photo import use to name a deck;
+  - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, `describeFailure`, the message a user reads for one, `describeProviderError`, the same for an error a provider holds, and `reportingFailure`, which shows an action's failure in a snack bar;
+  - `deckRepositoryProvider`, and the reads kept current over it: `decksProvider`, `cardCountsProvider`, `deckProvider` and `cardsProvider`.
 - The `study` domain reads a deck's cards through `DeckRepository.listCards`, oldest first.
 
 ### Model
@@ -77,30 +76,10 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - The screens follow the principles and the theme of [`design.md`](design.md). Widget tests check each screen against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in the light and the dark theme.
 - An empty deck name or card side is refused with a message on its field.
 
-### The deck list and the selection
+### Deck row
 
-- The deck list's top bar holds the horizontal lockup, 30 high and read as the app's name, as its heading; at its right, with sharing, a "둘러보기" icon button that opens the browse screen, then the account button, the account's initial in a 32 px circle ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
-- Below it, the today card for a selection of every deck, on the brand's navy (the raised surface in the dark theme) with the symbol faint in its corner: "오늘 할 카드", the count large with "장", "복습 x · 새 카드 y · 약 m분", in a backlog "밀린 복습을 마칠 때까지 새 카드는 쉬어요." ([`study.md`](study.md)), and a white "모두 학습" with a play icon, which opens one study session over every deck ([ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)). The minutes are the count times the time one card takes, which `study` reads from the user's latest reviews ([`study.md`](study.md)), rounded up.
-- With no card left today, the today card reads "오늘 할 카드를 다 했어요" in place of the count and shows a white "계속 학습" in place of "모두 학습", which opens the same session; the study screen then opens on the completion card or on nothing to study ([`study.md`](study.md), [ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md)).
-- "내 덱 n" labels the decks, with the hint "길게 눌러 여러 덱 선택".
-- Each deck is a row on a rounded surface: the name's first letter on a 44 px tile in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one; its name and "카드 n장"; a "공개" chip when it is public; a brand-tint "오늘 n" chip when a session over it would study n > 0 cards now; and a chevron. A count that cannot be read shows an icon whose tooltip says why.
-- The bottom bar holds "새 덱", and "사진으로 만들기" when photo import exists. A photo import that saved opens the deck it saved into.
-- Before the first deck, the list is the first-run home in place of the today card, the rows and the bottom bar: the mascot in a white circle, "첫 덱을 만들어 볼까요?", one line on how to start, then "사진으로 만들기" when photo import exists, "직접 만들기", which opens the new-deck sheet, and "공개 덱 둘러보기" with sharing.
-- The new-deck sheet is titled "새 덱 만들기" with "이름은 나중에도 바꿀 수 있어요." under it, a "덱 이름" field, and "만들기".
-- A tap opens a deck; a long-press enters selection mode with that deck selected.
-- In selection mode:
-  - a tap, or a long-press, adds or removes a deck;
-  - the app bar shows how many decks are selected, a clear action that leaves the mode, and "학습 (n)", which opens one study session over the selected decks;
-  - a deck deleted while selected leaves the selection, and "학습 (n)" is disabled while the selection is empty;
-  - each deck's row exposes whether it is selected to screen readers.
-
-### Card list
-
-- The card list has a back button and a deck menu that renames or deletes the deck; deleting returns to the deck list. With sharing, the menu also offers "공개하기" or "비공개로 전환", disabled with a one-line reason while offline, and a public deck shows a "공개" chip beside its name.
-- Below the deck name, at 26/800, three white pills, "카드 n", "복습 x" and "새 카드 y", in a backlog the same sentence as the today card, and the primary "학습하기 · n장" with a play icon, where n is the size of the session it opens. It opens the session whatever the count, 0 included, and while the count is pending or cannot be read ([ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md)).
-- A 48 px search field keeps the cards whose front or back text holds the search, ignoring case.
-- The cards are one white rounded group, a row each with one-pixel separators: front and back in two columns split by a thin divider, the back in the quieter ink; a tap opens it in the editor.
-- The bottom bar holds "카드 추가", and "사진으로 추가" when photo import exists, both secondary. A photo import that saved into another deck replaces this list with that deck's; one into this deck returns here.
+- `DeckRow` draws a deck on a rounded surface: the name's first letter on a 44 px tile in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one; its name and "카드 n장"; a "공개" chip when it is public; what its caller shows of today; and a chevron. In selection mode a check in place of the tile shows whether the deck is selected, and the chevron goes.
+- Its caller passes the card count as a value, what to show of today as a widget, and the callbacks that open the deck and select it; the home screen is that caller ([`home.md`](home.md)).
 
 ### Card editor
 
@@ -111,23 +90,17 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### State and composition
 
 - State and injection use Riverpod. `deckRepositoryProvider` has no implementation of its own; the composition site, `app/lib/main.dart`, overrides it with the repository it constructs.
-- `studyScreenProvider` builds the screen that studies a `DeckSelection` in one session. The card list's "Study" button opens it for its own deck, and selection mode for the selected decks. It has no implementation of its own either: the composition site overrides it with the `study` domain's screen, so this domain does not depend on `study` ([ADR 0005](adr/0005-study-queue-and-card-state.md), [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md)).
-- `todayProvider` builds a widget that counts the cards left today for a session over a `DeckSelection` and shows the count, a `TodayCount`, through a builder this domain supplies. The header card, each row's chip and the card list's line and study button are such builders. The composition site overrides it with the `study` domain's `TodayCounter`, which reads the count and describes a failure ([ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md), [`study.md`](study.md)).
-- `photoImportProvider` builds the photo import screen, for a deck or for a new one; the screen pops with the `Deck` it saved into. Null hides both photo buttons. The composition site overrides it with the `photo_import` domain's `PhotoImportScreen` ([`ai-extraction.md`](ai-extraction.md)), so this domain does not depend on that one.
-- `deckSharingProvider` holds the `DeckSharing` the screens use to browse, publish and unpublish, and to know whether the device is online; null hides those entries. The composition site overrides it with the `sharing` domain's `SharingService` ([`sharing.md`](sharing.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)), so this domain does not depend on that one.
-- The deck list's account button shows the widget `accountAvatarProvider` builds and opens the screen `accountScreenProvider` builds. The composition site overrides both with the `account` domain's, as it does `studyScreenProvider` ([`account.md`](account.md)).
-- The repository receives its clock and id generator, so tests fix both. It also streams each deck's card count, which the deck list shows.
+- The domain imports no other domain. The home and deck screens that show its decks beside other domains' widgets are `home/`'s ([`home.md`](home.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)).
+- The repository receives its clock and id generator, so tests fix both. It also streams each deck's card count, which the home screen shows.
 
 ## Rationale
 
 - [ADR 0002](adr/0002-domain-public-surface-and-shared-database.md): why the surface is one library file and why the tables live in a shared database below the domains.
-- [ADR 0005](adr/0005-study-queue-and-card-state.md): why the study entry point is a provider the composition site overrides.
-- [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why the entry point takes a `DeckSelection`.
-- [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md): why the counts reach this domain through one builder provider rather than a function or a widget per place.
-- [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md): why sharing reaches this domain's screens through one provider, and why a copy is an import.
-- [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md): the v2 deck screens, the today card's minutes, and the deck tile's tint.
-- [ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md): why every study button stays enabled at zero cards left, and the done today card offers "계속 학습".
-- Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM. Issue #19 records the selection mode and the header card, issue #22 the current screens, and issue #30 the import save and its duplicate options.
+- [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md): why a study session takes a `DeckSelection`.
+- [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md): why the screens that show other domains beside the decks are `home/`'s, and why this domain declares no provider for another domain's screen.
+- [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md): why a copy of a public deck is an import.
+- [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md): the v2 deck row, the card editor, and the deck tile's tint.
+- Issue #4 records the model, the libraries, the normalization order, and the duplicate rule as decided by the PM. Issue #22 records the current screens, and issue #30 the import save and its duplicate options.
 - [ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md): why a delete is a tombstone and every write leaves its row unsynced.
 
 ## Open questions

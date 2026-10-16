@@ -11,17 +11,17 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 1. **One primary action per screen.** It is the most prominent element and sits in thumb reach, at the bottom. Secondary actions are quieter or live in a menu.
    - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "계속 학습" is the one primary fill, with "그만하기" a quiet text button below it.
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
-   - Deck list and card list: the bottom bar holds the screen's add action; rename and delete sit in the card list's menu.
+   - Home screen and deck screen: the bottom bar, `BottomActions`, holds the screen's add action; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
    - Study: no deck name and no hint text, but for the first session's guide of three lines; the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
-   - Card list: the rows show front and back with no column headings; the deck name is the only title.
+   - Deck screen: the rows show front and back with no column headings; the deck name is the only title.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
    - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다"; a vertical drag scrolls the stack and the current card together; a horizontal drag on the centred previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기".
-   - Deck list: a long-press selects decks; the rows expose their selected state, and selection mode has visible controls.
+   - Home screen: a long-press selects decks; the rows expose their selected state, and selection mode has visible controls.
    - Every sheet: a drag or a tap outside dismisses it, and Android's back does the same.
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
    - Study: the next card is on screen before the answer's write finishes.
@@ -32,17 +32,17 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation sheet. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account.
    - Study: any answer of the session is corrected by a drag on the centred card, or its action, with no confirmation.
    - Card editor: a duplicate front opens a sheet that offers to add anyway or open the existing card, and is dismissed to do neither; nothing is overwritten.
-   - Card list, card editor, account and preview: deleting a deck, deleting a card, signing out with unsynced changes, deleting the account, and blocking a user are confirmed through `showAppConfirm`, which states the consequence in one sentence above a cancel and, last, a red final button.
+   - Deck screen, card editor, account and preview: deleting a deck, deleting a card, signing out with unsynced changes, deleting the account, and blocking a user are confirmed through `showAppConfirm`, which states the consequence in one sentence above a cancel and, last, a red final button.
 6. **One visual language.** Theme tokens only; the split card, question left and answer right, each half's content centred across and down and shrunk toward a floor until its widest word fits, so a word never breaks inside itself while the floor fits, wherever a card appears; rounded surfaces on the ground colour; 44 pt minimum targets.
    - Study, card editor, duplicate sheet and photo review: the same split card, each half centred; `deck`'s `SplitCard` lays out the halves for the study cards, the card preview and the card rows ([`deck.md`](deck.md)).
-   - Deck list and card list: rows on rounded surfaces over the ground.
+   - Home screen and deck screen: rows on rounded surfaces over the ground.
    - Every screen and sheet: the tokens below and the components that use them.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
    - Study: an answered card flies off and rises into the stack while the next emerges from below; under reduce motion they cross-fade. The current card moves with the stack as it scrolls, the card at the centre grows as the others shrink and dim, and an answer given while scrolled back returns the view to its end; a re-decided card springs back into place, at once under reduce motion.
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences, in the voice below.
-   - Deck list and card list: an empty list says how to start, and a search with no match says to try other words.
-   - Deck list and card list: in a backlog, one sentence says new cards wait until the reviews are caught up ([`study.md`](study.md)).
+   - Home screen and deck screen: an empty list says how to start, and a search with no match says to try other words.
+   - Home screen and deck screen: in a backlog, one sentence says new cards wait until the reviews are caught up ([`study.md`](study.md)).
    - Study: with no card left and none answered today, one sentence says there is nothing to study today.
    - Every screen: a storage failure says what failed and to try again.
    - Browse: offline, it says the public decks appear once connected; the deck menu says why publishing is disabled.
@@ -125,6 +125,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - **`showAppConfirm`** — every irreversible action: a sheet that states the consequence in one sentence, with a cancel and, last, a red final button. It is the one sheet with a cancel.
 - **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the deck rows, the browse rows, the photo import deck chooser and the account screen's sign-out and deletion. A destructive row, the deletion, draws its title and leading icon in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the photo review rows, the skeleton rows and the account screen's theme control. On a sheet a row takes the ground colour.
 - **`AppSectionLabel`** — a label over a group of rows, read as a heading: "내 덱 n", "이미 있는 카드 n개", "화면", "계정", the import sheet's duplicate options, and the answer in the whole-card sheet.
+- **`BottomActions`** — a screen's bottom bar: a secondary action, and a primary one beside it when the screen offers one: the home screen, the deck screen and the card editor.
 - **`AppChip`** — a fully rounded label, or a button when it has an action: the brand-tint "오늘 n" chip, the "공개" chip, the camera's deck chip, and the duplicate option chip.
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
 - **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15, a previous card's front 18 and back 16 to 12) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card, the previous cards and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).

@@ -14,7 +14,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - the failures: `SyncFailure`, `SyncOffline`, `SyncRejected`, `SyncFailed`, and `MissingServerParent`, the cause of a `SyncFailed` refusing a row whose parent the server does not hold;
   - `SyncStatusView`.
 - The domain reads and writes the shared database directly. It uses `account`'s surface for the session (`AccountService`, `SignedIn`'s `UserId`, and the `SupabaseClient` of `AccountConnection`) and `study`'s for the fold (`Scheduler.fold`).
-- `deck` and `study` do not import `sync`. `account` reaches it through `accountDataProvider` and `syncStatusProvider`, which the composition site overrides with the `SyncController` and `SyncStatusView` ([`account.md`](account.md)).
+- `deck` and `study` do not import `sync`. `account` reaches it through `accountDataProvider`, which the composition site overrides with the `SyncController` ([`account.md`](account.md)). `home/` passes `SyncStatusView` to the account screen as the status it shows ([`home.md`](home.md)).
 - With `account` and `sharing`, it is one of the domains that import `supabase_flutter`, for PostgREST only ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
 
 ### Local schema
@@ -129,6 +129,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why pulls filter by owner and how deck visibility syncs.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records schema v6, its indexes, the horizon and the local purge; issue #93 records the owner's direction.
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why a completed pull raises the cursor to the watermark, and why the device strips its tombstones rather than delete them; issue #106 records their implementation.
+- [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` hands the status view to the account screen.
 - Issue #24 records the decisions made by the PM, issue #29 the synced deck and card columns of schema v5, and issue #45 those for the web app as a writer.
 
 ## Open questions
