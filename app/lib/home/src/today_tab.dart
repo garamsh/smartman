@@ -415,8 +415,8 @@ class _StreakChip extends StatelessWidget {
   );
 }
 
-/// A small rounded label after an icon: on the navy card its faint white, on
-/// the done card the surface.
+/// A small rounded label after an icon: on the navy card an outline in its
+/// faint white, on the done card the surface.
 class _Pill extends StatelessWidget {
   const _Pill({required this.onHero, required this.icon, required this.label});
 
@@ -429,8 +429,11 @@ class _Pill extends StatelessWidget {
     final colors = AppColors.of(context);
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: onHero ? heroTrack(colors) : colors.surface,
-        shape: const StadiumBorder(),
+        // On the navy the pill is an outline, so its flame sits on the navy.
+        color: onHero ? null : colors.surface,
+        shape: StadiumBorder(
+          side: onHero ? BorderSide(color: heroTrack(colors)) : BorderSide.none,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -769,7 +772,7 @@ class _DayBars extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: emphasised == null || index == emphasised
                           ? ink
-                          : ink.withValues(alpha: 0.3),
+                          : quietBar(ink),
                       borderRadius: BorderRadius.circular(AppSpace.s8 - 2),
                     ),
                   ),
