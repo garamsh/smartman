@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
+import '../../design/bottom_actions.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'bottom_actions.dart';
-import 'card_list_screen.dart';
+import 'card_list.dart';
 import 'card_preview.dart';
 import 'content.dart';
 import 'deck_repository.dart';

@@ -62,7 +62,6 @@ void main() {
           appVersionProvider.overrideWithValue('1.0.0'),
           accountDataProvider.overrideWithValue(controller),
           syncControllerProvider.overrideWithValue(controller),
-          syncStatusProvider.overrideWithValue(SyncStatusView.new),
           themeStorageProvider.overrideWithValue(storage),
         ],
         child: MaterialApp(
@@ -72,7 +71,7 @@ void main() {
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const AccountScreen(),
+          home: const AccountScreen(syncStatus: SyncStatusView()),
         ),
       ),
     );

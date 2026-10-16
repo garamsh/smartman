@@ -14,6 +14,7 @@ import 'database/database.dart';
 import 'deck/deck.dart';
 import 'design/theme.dart';
 import 'design/theme_choice.dart';
+import 'home/home.dart';
 import 'l10n/app_localizations.dart';
 import 'photo_import/photo_import.dart';
 import 'sharing/sharing.dart';
@@ -101,7 +102,7 @@ Widget composeApp(
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
-      deckSharingProvider.overrideWithValue(
+      sharingServiceProvider.overrideWithValue(
         sharing == null
             ? null
             : SharingService(
@@ -128,22 +129,10 @@ Widget composeApp(
       studyRandomProvider.overrideWithValue(
         (start) => Random(start.microsecondsSinceEpoch),
       ),
-      studyScreenProvider.overrideWithValue(
-        (decks) => StudyScreen(decks: decks),
-      ),
-      todayProvider.overrideWithValue(
-        (decks, builder) => TodayCounter(decks: decks, builder: builder),
-      ),
       accountServiceProvider.overrideWithValue(account),
       appVersionProvider.overrideWithValue(version),
-      accountScreenProvider.overrideWithValue(AccountScreen.new),
-      accountAvatarProvider.overrideWithValue(
-        () => const AccountAvatar(size: AppSize.smallAvatar),
-      ),
-      signedInHomeProvider.overrideWithValue(DeckListScreen.new),
       accountDataProvider.overrideWithValue(sync),
       syncControllerProvider.overrideWithValue(sync),
-      syncStatusProvider.overrideWithValue(SyncStatusView.new),
       themeStorageProvider.overrideWithValue(preferences),
     ],
     child: const SmartmanApp(),
@@ -164,7 +153,7 @@ class SmartmanApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const AccountGate(),
+      home: const AccountGate(signedIn: HomeScreen()),
     );
   }
 }

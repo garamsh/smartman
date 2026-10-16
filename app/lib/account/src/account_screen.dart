@@ -18,10 +18,13 @@ import 'failure_message.dart';
 import 'legal.dart';
 import 'providers.dart';
 
-/// Shows the signed-in account, signs it out and deletes it; and the theme
-/// the app is drawn in.
+/// Shows the signed-in account with [syncStatus] under its email, signs it
+/// out and deletes it; and the theme the app is drawn in.
 class AccountScreen extends ConsumerStatefulWidget {
-  const AccountScreen({super.key});
+  const AccountScreen({super.key, required this.syncStatus});
+
+  /// Where sync stands, as its caller draws it.
+  final Widget syncStatus;
 
   @override
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
@@ -49,7 +52,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         children: [
           // The gate leaves this screen once no account is signed in.
           if (state case SignedIn(:final email)) ...[
-            _ProfileCard(email: email),
+            _ProfileCard(email: email, syncStatus: widget.syncStatus),
             const SizedBox(height: AppSpace.sectionGap),
           ],
           AppSectionLabel(l10n.displaySection),
@@ -183,13 +186,14 @@ class _Progress extends StatelessWidget {
 
 /// The signed-in account on a card: an avatar with the email's initial, the
 /// email, and where sync stands.
-class _ProfileCard extends ConsumerWidget {
-  const _ProfileCard({required this.email});
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.email, required this.syncStatus});
 
   final String? email;
+  final Widget syncStatus;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     return DecoratedBox(
@@ -209,7 +213,7 @@ class _ProfileCard extends ConsumerWidget {
                 spacing: AppSpace.s4,
                 children: [
                   Text(email ?? l10n.signedIn, style: AppType.bodyStrong),
-                  ref.watch(syncStatusProvider)(),
+                  syncStatus,
                 ],
               ),
             ),

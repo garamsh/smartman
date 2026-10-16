@@ -60,6 +60,55 @@ List<String> singleUnitFoundations(Map<String, String> sources) {
   ];
 }
 
+/// The screens each domain's surface exports, by name: the names ending in
+/// `Screen` in the `show` lists of `<domain>/<domain>.dart`.
+Map<String, String> exportedScreens(Map<String, String> sources) => {
+  for (final MapEntry(key: file, value: source) in sources.entries)
+    if (_domainOf(file) case final domain? when file == '$domain/$domain.dart')
+      for (final shown in _shown.allMatches(source))
+        for (final name in shown.group(1)!.split(','))
+          if (_screenName.hasMatch(name.trim())) name.trim(): domain,
+};
+
+/// The domain files that name a screen another domain exports: a domain
+/// imports no screen of another domain, which `home/` composes instead.
+List<String> foreignScreens(Map<String, String> sources) {
+  final screens = exportedScreens(sources);
+  return [
+    for (final MapEntry(key: file, value: source) in sources.entries)
+      if (_domainOf(file) case final domain?)
+        for (final MapEntry(key: screen, value: owner) in screens.entries)
+          if (owner != domain &&
+              RegExp('\\b$screen\\b').hasMatch(_withoutComments(source)))
+            '$file names $screen, a screen of $owner',
+  ];
+}
+
+/// The files in `home/` that hold a read of their own: a provider declared
+/// there, or an import of the database. `home/` composes what the domains
+/// read.
+List<String> homeReads(Map<String, String> sources) => [
+  for (final MapEntry(key: file, value: source) in sources.entries)
+    if (_unitOf(file) == 'home') ...[
+      for (final declared in _provider.allMatches(source))
+        '$file declares ${declared.group(1)}, a provider',
+      for (final target in importedPaths(file, source))
+        if (_unitOf(target) == 'database') '$file imports $target',
+    ],
+];
+
+final _shown = RegExp(r'^\s*export\s[^;]*?\bshow\b([^;]*);', multiLine: true);
+
+final _screenName = RegExp(r'^[A-Z]\w*Screen$');
+
+final _provider = RegExp(
+  r'^\s*final\s+(\w+)\s*=\s*\w*Provider\b',
+  multiLine: true,
+);
+
+String _withoutComments(String source) =>
+    source.replaceAll(RegExp(r'//.*$', multiLine: true), '');
+
 final _directive = RegExp(
   r'''^\s*(?:import|export)\s+['"]([^'"]+)['"]''',
   multiLine: true,
@@ -148,9 +197,20 @@ void main() {
     ];
     expect(paths, contains('design/theme.dart'));
 
+    expect(exportedScreens(sources), containsPair('StudyScreen', 'study'));
+    expect(
+      importedPaths(
+        'home/src/home_screen.dart',
+        sources['home/src/home_screen.dart']!,
+      ),
+      contains('study/study.dart'),
+    );
+
     expect(unlistedEntries(paths), isEmpty);
     expect(importViolations(sources), isEmpty);
     expect(singleUnitFoundations(sources), isEmpty);
+    expect(foreignScreens(sources), isEmpty);
+    expect(homeReads(sources), isEmpty);
   });
 
   test(
@@ -257,6 +317,65 @@ void main() {
         'design/theme_choice.dart': '',
         'design/theme.dart': "import 'theme_choice.dart';",
         'main.dart': "import 'design/theme_choice.dart';",
+      }),
+      isEmpty,
+    );
+  });
+
+  test("a domain naming another domain's screen is refused, and naming its own screen or another's widget is not", () {
+    const surfaces = {
+      'study/study.dart': "export 'src/study_screen.dart' show StudyScreen;",
+      'deck/deck.dart': '''
+export 'src/card_editor_screen.dart'
+    show
+        CardEditorScreen;
+export 'src/deck_row.dart' show DeckRow;''',
+    };
+    expect(
+      foreignScreens({
+        ...surfaces,
+        'deck/src/model.dart': 'Widget open() => StudyScreen(decks: d);',
+        'study/src/session.dart': 'final screen = CardEditorScreen.new;',
+      }),
+      [
+        'deck/src/model.dart names StudyScreen, a screen of study',
+        'study/src/session.dart names CardEditorScreen, a screen of deck',
+      ],
+    );
+    expect(
+      foreignScreens({
+        ...surfaces,
+        'study/src/study_screen.dart': 'class StudyScreen {}',
+        'study/src/session.dart': '''
+// Opened from the deck's CardEditorScreen.
+final row = DeckRow.new;''',
+        'home/src/deck_screen.dart': 'final a = StudyScreen.new;',
+      }),
+      isEmpty,
+    );
+  });
+
+  test('home declaring a provider or importing the database is refused, and reading through a domain is not', () {
+    expect(
+      homeReads({
+        'home/src/home_screen.dart': '''
+import '../../database/database.dart';
+final countsProvider = StreamProvider.autoDispose<int>((ref) => s);''',
+      }),
+      [
+        'home/src/home_screen.dart declares countsProvider, a provider',
+        'home/src/home_screen.dart imports database/database.dart',
+      ],
+    );
+    expect(
+      homeReads({
+        'home/src/home_screen.dart': '''
+import '../../deck/deck.dart';
+import '../../design/theme.dart';
+final decks = ref.watch(decksProvider);''',
+        'deck/src/providers.dart': '''
+import '../../database/database.dart';
+final decksProvider = StreamProvider.autoDispose<int>((ref) => s);''',
       }),
       isEmpty,
     );

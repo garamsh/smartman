@@ -2,30 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../account/account.dart';
+import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
-import '../../design/app_list_row.dart';
 import '../../design/app_section_label.dart';
+import '../../design/bottom_actions.dart';
 import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'bottom_actions.dart';
-import 'card_list_screen.dart';
-import 'failure_message.dart';
-import 'model.dart';
-import 'name_sheet.dart';
-import 'providers.dart';
+import '../../photo_import/photo_import.dart';
+import '../../sharing/sharing.dart';
+import '../../study/study.dart';
+import '../../sync/sync.dart';
+import 'deck_screen.dart';
 
 /// Lists decks under today's count and creates them. A long-press enters a
 /// selection mode that studies several decks in one session.
-class DeckListScreen extends ConsumerStatefulWidget {
-  const DeckListScreen({super.key});
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  ConsumerState<DeckListScreen> createState() => _DeckListScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _DeckListScreenState extends ConsumerState<DeckListScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// The decks selected, or null outside selection mode.
   Set<DeckId>? _selected;
 
@@ -35,7 +36,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     final decks = ref.watch(decksProvider);
     final counts = ref.watch(cardCountsProvider);
     final photoImport = ref.watch(photoImportProvider);
-    final sharing = ref.watch(deckSharingProvider);
+    final sharing = ref.watch(sharingServiceProvider);
     // A deck deleted while selected drops out of the selection.
     final selected = switch ((_selected, decks)) {
       (final selected?, AsyncData(:final value)) => {
@@ -74,10 +75,12 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                   padding: const EdgeInsets.only(right: AppSpace.s12),
                   child: IconButton(
                     tooltip: l10n.account,
-                    icon: ref.watch(accountAvatarProvider)(),
+                    icon: const AccountAvatar(size: AppSize.smallAvatar),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => ref.read(accountScreenProvider)(),
+                        builder: (_) => const AccountScreen(
+                          syncStatus: SyncStatusView(),
+                        ),
                       ),
                     ),
                   ),
@@ -105,9 +108,9 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                   children: [
                     if (DeckSelection.of([for (final d in decks) d.id])
                         case final all?)
-                      ref.watch(todayProvider)(
-                        all,
-                        (context, count) => _TodayCard(
+                      TodayCounter(
+                        decks: all,
+                        builder: (context, count) => _TodayCard(
                           count: count,
                           onStudy: () => _study(all),
                         ),
@@ -118,11 +121,16 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
                       showHint: selected == null,
                     ),
                     for (final deck in decks)
-                      _DeckRow(
+                      DeckRow(
                         deck: deck,
                         cardCount: counts[deck.id] ?? 0,
                         selected: selected?.contains(deck.id),
                         onSelect: () => _toggle(deck.id),
+                        onOpen: () => _open(deck),
+                        today: TodayCounter(
+                          decks: DeckSelection(deck.id),
+                          builder: (context, count) => _TodayChip(count: count),
+                        ),
                       ),
                   ],
                 ),
@@ -160,7 +168,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     );
   }
 
-  void _browse(DeckSharing sharing) => Navigator.of(context)
+  void _browse(SharingService sharing) => Navigator.of(context)
       .push(MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()));
 
   AppBar _selectionBar(AppLocalizations l10n, Set<DeckId> selected) {
@@ -186,10 +194,12 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
   }
 
   void _study(DeckSelection decks) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => ref.read(studyScreenProvider)(decks),
-    ),
+    MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)),
   );
+
+  void _open(Deck deck) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)));
 
   /// Opens photo import for a new deck, then the deck it saved into.
   Future<void> _importPhoto(Widget Function(DeckId? deck) photoImport) async {
@@ -199,7 +209,7 @@ class _DeckListScreenState extends ConsumerState<DeckListScreen> {
     );
     if (deck == null || !mounted) return;
     await navigator.push(
-      MaterialPageRoute<void>(builder: (_) => CardListScreen(deck: deck)),
+      MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
     );
   }
 
@@ -447,98 +457,6 @@ class _DecksLabel extends StatelessWidget {
     );
   }
 }
-
-class _DeckRow extends ConsumerWidget {
-  const _DeckRow({
-    required this.deck,
-    required this.cardCount,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final Deck deck;
-  final int cardCount;
-
-  /// Whether the deck is selected, or null outside selection mode.
-  final bool? selected;
-
-  /// Enters selection mode with this deck, or toggles it once there.
-  final VoidCallback onSelect;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final selected = this.selected;
-    return AppListRow(
-      title: deck.name,
-      subtitle: l10n.cardCount(cardCount),
-      selected: selected,
-      leading: selected == null
-          ? _DeckTile(deck: deck)
-          : SizedBox.square(
-              dimension: AppSize.deckTile,
-              child: Icon(
-                selected ? LucideIcons.circleCheck : LucideIcons.circle,
-                color: selected ? colors.ink : colors.muted,
-              ),
-            ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: AppSpace.s8,
-        children: [
-          if (deck.visibility is PublicDeck) AppChip(label: l10n.publicChip),
-          ref.watch(todayProvider)(
-            DeckSelection(deck.id),
-            (context, count) => _TodayChip(count: count),
-          ),
-          if (selected == null)
-            Icon(LucideIcons.chevronRight, color: colors.muted),
-        ],
-      ),
-      onTap: selected == null
-          ? () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => CardListScreen(deck: deck),
-              ),
-            )
-          : onSelect,
-      onLongPress: onSelect,
-    );
-  }
-}
-
-/// The deck name's first letter on a rounded tile, in one of the four tints,
-/// the same one for a deck every time.
-class _DeckTile extends StatelessWidget {
-  const _DeckTile({required this.deck});
-
-  final Deck deck;
-
-  @override
-  Widget build(BuildContext context) {
-    final tints = AppColors.of(context).deckTints;
-    final name = deck.name.trim();
-    return Container(
-      width: AppSize.deckTile,
-      height: AppSize.deckTile,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: tints[deckTintIndex(deck.id, tints.length)],
-        borderRadius: BorderRadius.circular(AppRadius.field),
-      ),
-      child: Text(
-        name.isEmpty ? '' : name.characters.first.toUpperCase(),
-        style: AppType.headline,
-      ),
-    );
-  }
-}
-
-/// Which of [count] tints a deck's tile takes: the sum of its id's UTF-16
-/// code units, modulo [count]. The web app computes the same.
-int deckTintIndex(DeckId deck, int count) =>
-    deck.value.codeUnits.fold(0, (sum, unit) => sum + unit) % count;
 
 /// A brand-tint "오늘 n" when a session over the deck would study any card
 /// now.

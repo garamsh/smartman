@@ -16,6 +16,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/theme_choice.dart';
+import 'package:smartman/home/home.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -24,6 +25,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
+import '../home/home_data.dart';
 import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import '../sharing/sharing_service_test.dart' show publicCard, publicDeck;
@@ -297,8 +299,7 @@ void main() {
       unawaited(
         Navigator.of(tester.element(find.byType(Navigator).first)).push(
           MaterialPageRoute<void>(
-            builder: (_) =>
-                container.read(studyScreenProvider)(DeckSelection(empty.id)),
+            builder: (_) => StudyScreen(decks: DeckSelection(empty.id)),
           ),
         ),
       );
@@ -470,18 +471,8 @@ void main() {
         ProviderScope(
           overrides: [
             deckRepositoryProvider.overrideWithValue(repository),
-            deckSharingProvider.overrideWithValue(sharing),
-            studyScreenProvider.overrideWithValue((decks) => const Scaffold()),
-            todayProvider.overrideWithValue(
-              (decks, builder) => Builder(
-                builder: (context) =>
-                    builder(context, const TodayCounted(review: 0, fresh: 1)),
-              ),
-            ),
-            accountScreenProvider.overrideWithValue(Scaffold.new),
-            accountAvatarProvider.overrideWithValue(
-              () => const SizedBox.square(dimension: 32),
-            ),
+            sharingServiceProvider.overrideWithValue(sharing),
+            ...homeOverrides(db),
           ],
           child: MaterialApp(
             theme: lightTheme,
@@ -489,7 +480,7 @@ void main() {
             themeMode: ThemeMode.values.byName(mode),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const DeckListScreen(),
+            home: const HomeScreen(),
           ),
         ),
       );
