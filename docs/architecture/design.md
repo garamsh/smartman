@@ -58,7 +58,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 - The theme, its tokens, the user's theme choice and the shared components are the app's foundation `app/lib/design/` ([`structure.md`](structure.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)): `design/theme.dart` the tokens and the themes, `design/theme_choice.dart` the choice, and one file per component beside them, with their tests under `app/test/design/`. It imports no domain and holds nothing one domain alone uses.
 - `GoogleButtonStyle` is Google's, not the design system's, and only `account` draws it, so it is in `account/src/google_button.dart`; the colour check lists that file as its one exception beside the theme, and the size check as its one exception beside the theme and the components.
-- `CardText` serves `deck` alone, which draws every card, so it is in `deck/src/card_text.dart` ([`deck.md`](deck.md)).
+- `CardText` serves `deck` alone, which draws every card, so it is in `deck/src/card_text.dart` ([`deck.md`](deck.md)); the size check lists it beside Google's button, as it sets the fitted size of the `AppType` style it is given.
 - On the web, the brand's marks, the skeleton and the theme choice with its store are the foundation `web/src/design/` ([`web.md`](web.md)).
 
 ### Theme
@@ -86,7 +86,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 ### Tokens
 
-`app/lib/design/theme.dart` holds every token beside the colours ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md)). No other file under `app/lib/`, except the components in `app/lib/design/` and Google's button, writes a spacing or font-size number.
+`app/lib/design/theme.dart` holds every token beside the colours ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md)). No other file under `app/lib/`, except the components in `app/lib/design/`, Google's button and `CardText`, writes a spacing or font-size number; `CardText` scales the `AppType` style it is given.
 
 - **Type**, `AppType`, all Pretendard, and the theme's `TextTheme` built from it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)):
 
@@ -134,7 +134,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 ### Checks
 
 - Each screen and each sheet is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/account/account_screen_test.dart`, `app/test/account/sign_in_screen_test.dart`, `app/test/study/study_screen_test.dart`, `app/test/photo_import/photo_import_screen_test.dart`, the sharing screens' tests under `app/test/sharing/` and, for each component, `app/test/design/`.
-- `app/test/design/theme_test.dart` fails on a colour outside the theme and Google's button, on a spacing or font-size literal outside the theme, the components and Google's button, and on a dialog, or a sheet opened other than through `showAppSheet`.
+- `app/test/design/theme_test.dart` fails on a colour outside the theme and Google's button, on a spacing or font-size literal outside the theme, the components, Google's button and `CardText`, and on a dialog, or a sheet opened other than through `showAppSheet`.
 - `app/test/l10n/voice_test.dart` fails on a Korean string ending a sentence in 합쇼체 and on an English string with an exclamation mark, with controls that the check finds each ending and passes 해요체.
 - The sheet rule is checked where each sheet is tested: the duplicate sheet in `app/test/deck/card_editor_screen_test.dart` and the report sheet in `app/test/sharing/public_deck_screen_test.dart` have no cancel; the card delete confirmation in the former, the account deletion confirmation in `app/test/account/account_screen_test.dart`, and `showAppConfirm` in `app/test/design/app_sheet_test.dart`, put cancel above delete.
 - `app/test/launcher_assets_test.dart` fails when a launcher icon or a splash image is missing, is not the size its catalogue names, or does not draw its source scaled to that size, and when a splash ground is not its colour; a control tells the light icon from the dark one.
