@@ -361,3 +361,7 @@ Each step is one pull request and, on the server, one migration that the PM push
 - Users search public decks with one- or two-syllable words often enough that the scan shows in the outliers before 20,000 decks.
 - A query reaches production without an index or a stated reason, and the Performance Advisor finds it before a reviewer does.
 - Two devices' clocks disagree by enough that last-writer-wins keeps the older edit often enough for users to report it. That would argue for a server-set conflict time after all.
+
+## Errata
+
+- 2026-10-16: §1 "Conversion" says "`hide_reported_deck` hashes `new.deck_id::text`". It hashes `new.deck_id` with no cast (`supabase/migrations/20261015180000_public_decks.sql` line 119 at `b4958d25d79c43fd935ec764c34e1816846804b8`). `hashtextextended` takes only text, so once the column is `uuid` every report insert failed with `function hashtextextended(uuid, integer) does not exist`, measured on a local stack in issue #104's pull request. The decision stands: the conversion's migration recreates the function hashing `new.deck_id::text`, which is the same text, so the lock key is unchanged.

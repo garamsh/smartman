@@ -22,12 +22,13 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000000e1', 'reviews@example.com'),
   ('00000000-0000-4000-8000-0000000000f1', 'states@example.com');
 insert into public.decks (id, user_id, name, created_at, updated_at, revision)
-  select 'deck-' || u, u::uuid, 'D', now(), now(), 0
+  select ('d' || substr(u, 2))::uuid, u::uuid, 'D', now(), now(), 0
   from unnest(array['00000000-0000-4000-8000-0000000000d1', '00000000-0000-4000-8000-0000000000c1',
     '00000000-0000-4000-8000-0000000000e1', '00000000-0000-4000-8000-0000000000f1']) as u;
 insert into public.cards
   (id, user_id, deck_id, front, back, card_key, source, created_at, updated_at, revision)
-  select 'card-' || user_id, user_id, id, '[]', '[]', 'k', 'manual', now(), now(), 0 from public.decks;
+  select ('c' || substr(user_id::text, 2))::uuid, user_id, id, '[]', '[]', 'k', 'manual', now(), now(), 0
+  from public.decks;
 reset session_replication_role;
 
 select is(
@@ -36,23 +37,23 @@ select is(
   'the setup took no advisory lock');
 
 insert into public.decks (id, user_id, name, created_at, updated_at)
-  values ('deck-new', '00000000-0000-4000-8000-0000000000d1', 'N', now(), now());
+  values ('d0000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-0000000000d1', 'N', now(), now());
 select ok(pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000d1'),
   'inserting a deck takes its user''s lock');
 select ok(not pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000c1'),
   'another user''s lock is not taken by that insert');
 
 insert into public.cards (id, user_id, deck_id, front, back, card_key, source, created_at, updated_at)
-  values ('card-new', '00000000-0000-4000-8000-0000000000c1',
-    'deck-00000000-0000-4000-8000-0000000000c1', '[]', '[]', 'n', 'manual', now(), now());
+  values ('c0000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-0000000000c1',
+    'd0000000-0000-4000-8000-0000000000c1', '[]', '[]', 'n', 'manual', now(), now());
 select ok(pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000c1'),
   'inserting a card takes its user''s lock');
 select ok(not pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000e1'),
   'another user''s lock is not taken by that insert');
 
 insert into public.reviews (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at)
-  values ('review-new', '00000000-0000-4000-8000-0000000000e1',
-    'card-00000000-0000-4000-8000-0000000000e1', 'good', now(), 0, now());
+  values ('e0000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-0000000000e1',
+    'c0000000-0000-4000-8000-0000000000e1', 'good', now(), 0, now());
 select ok(pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000e1'),
   'inserting a review takes its user''s lock');
 select ok(not pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000f1'),
@@ -60,7 +61,7 @@ select ok(not pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000f1'
 
 insert into public.card_states (user_id, card_id, stability, difficulty, last_review, due, updated_at)
   values ('00000000-0000-4000-8000-0000000000f1',
-    'card-00000000-0000-4000-8000-0000000000f1', 1, 5, now(), now(), now());
+    'c0000000-0000-4000-8000-0000000000f1', 1, 5, now(), now(), now());
 select ok(pg_temp.holds_revision_lock('00000000-0000-4000-8000-0000000000f1'),
   'inserting a card state takes its user''s lock');
 

@@ -12,8 +12,11 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 ### Tables
 
-- `public` holds `decks`, `cards`, `reviews` and `card_states`, mirroring the app's local tables (`app/lib/shared/database.dart`) with the same text ids, created on the device.
+- `public` holds `decks`, `cards`, `reviews` and `card_states`, mirroring the app's local tables (`app/lib/shared/database.dart`). Their ids are created on the device.
 - `decks`, `cards` and `reviews` have `id` as primary key; `card_states` has `(user_id, card_id)`.
+- Every synced id, and every column that references one, is `uuid`: `decks.id`, `cards.id`, `cards.deck_id`, `cards.origin_deck_id`, `reviews.id`, `reviews.card_id`, `card_states.card_id`, `deck_reports.deck_id` and `deck_imports.deck_id`. No id column has a default, so a row sent without an id is refused. `extraction_usage.id` is an identity ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md)).
+- Migration `20261016180000_uuid_keys.sql` cast those columns from `text` in place, so every row kept its id. It first raises, changing nothing, unless every value is in canonical lowercase form, the only form Postgres returns unchanged, so the phone, which keeps ids as text, holds the same id the server returns ([`sync.md`](sync.md)). In one transaction it dropped the five foreign keys and the two policies that name those columns, cast them, and recreated the keys, the policies, `list_public_decks` and `record_deck_import`.
+- PostgREST sends a uuid as the same JSON string a text id was, so app and web versions released before the conversion keep working.
 - Every row carries `user_id`, referencing `auth.users` with `on delete cascade`, so deleting an account deletes its rows. It defaults to the caller's `auth.uid()`.
 - A card's `front` and `back` are `jsonb` arrays of blocks, in the encoding the app stores ([`deck.md`](deck.md)); a value that is not an array is refused.
 - `cards.source` and `reviews.rating` take the local tables' values: `manual`, `import` or `shared`, and `again` or `good`. Migration `20261015180000_public_decks.sql` widened the source check to `shared` in one statement, changing no row ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
@@ -26,10 +29,10 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - `decks.hidden` and `decks.import_count` are the server's: clients read them and cannot write them.
 - `public.profiles` holds one display name per user, 2 to 20 characters with no surrounding whitespace. Users insert and update their own; anyone signed in reads the name of a user with a visible public deck.
 - `public.deck_reports` holds one report per reporter and deck, with a reason: `inappropriate`, `spam`, `copyright` or `other`. A user inserts a report only as itself, on a visible public deck of another user, and reads none back.
-- A trigger hides a deck once three distinct users reported it, under an advisory lock on the deck seeded with 2, so concurrent reports are counted one after another. The project's owner unhides it in the dashboard.
+- A trigger hides a deck once three distinct users reported it, under an advisory lock on the deck seeded with 2, so concurrent reports are counted one after another. The lock's key hashes the deck's id as text, so the key a deck took before the ids were `uuid` is the key it takes now. The project's owner unhides it in the dashboard.
 - `public.user_blocks` holds a user's blocks; users select, insert and delete their own.
-- `list_public_decks(search, sort, page_size, page_offset)` runs as the caller and lists visible public decks not of a user the caller blocked, whose name or description holds the search ignoring case, newest first or most copied first, with the owner's display name and live card count.
-- `record_deck_import(deck_id)` runs as its owner: it returns false for a deck that is not visibly public, and otherwise true. A caller's first copy of a deck it does not own inserts a row in `public.deck_imports` and adds one to `import_count`; a later copy by that caller, or a copy by the owner, changes neither (issue #67).
+- `list_public_decks(search, sort, page_size, page_offset)` runs as the caller and lists visible public decks not of a user the caller blocked, whose name or description holds the search ignoring case, newest first or most copied first, with the owner's display name and live card count. It returns each deck's id as `uuid`.
+- `record_deck_import(deck_id uuid)` runs as its owner: it returns false for a deck that is not visibly public, and otherwise true. A caller's first copy of a deck it does not own inserts a row in `public.deck_imports` and adds one to `import_count`; a later copy by that caller, or a copy by the owner, changes neither (issue #67).
 - `public.deck_imports` holds one row per deck and user who copied it, keyed by the two, so concurrent copies by one user insert one row and add one between them. Clients hold no privilege on it, and row-level security is on with no policy. Removing a row, with its deck or its account, leaves `import_count` as it is.
 - Copies made before `deck_imports` existed were not recorded per user, so their counts stay as they were and later copies add to them. Migration `20261016090000_deck_imports.sql` is additive: it creates the table and replaces the function with the same signature, changing no row.
 - A deck is visibly public when it is public, not hidden and not deleted.
@@ -51,6 +54,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - Row-level security is on for all four tables, with one policy per command allowing only rows where `user_id = auth.uid()`. The `reviews` delete policy exists but no client holds the privilege it would narrow.
 - `decks` and `cards` also have a select policy letting any signed-in user read a visibly public deck and its live cards. Writes stay the owner's, since no write policy names another user's rows. A pull therefore filters on its account's `user_id` ([`sync.md`](sync.md)).
 - The privileges are granted in the migration, not left to the project's default privileges.
+- `record_deck_import` runs as `security definer` and `authenticated` may execute it, which the Security Advisor reports as lint `0029_authenticated_security_definer_function_executable`. That is intended: it writes `deck_imports` and `import_count`, which no client may write, and [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §7 lists it among the `security definer` functions, granted to the one role that calls it (issue #113).
 - The app does not use the service role.
 
 ### Extraction usage
@@ -87,8 +91,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been pushed. Until then the decisions above describe the database.
 
-- **Keys.** Every id column holds `uuid`: `decks.id`, `cards.id`, `cards.deck_id`, `cards.origin_deck_id`, `reviews.id`, `reviews.card_id`, `card_states.card_id`, `deck_reports.deck_id` and `deck_imports.deck_id`. Clients still create every synced id. New ids are version 7; rows created before that keep their version 4 ids. No id column has a default. `extraction_usage.id` stays an identity.
-- **Conversion.** One transaction drops the five foreign keys and the two policies that name a converted column, casts each column with `USING col::uuid`, and recreates them. It runs only after a check finds every value in canonical lowercase form. `list_public_decks` returns `uuid` ids, and `record_deck_import` takes a `uuid`. PostgREST sends a uuid as the same JSON string, so app and web versions already released keep working.
+- **Key versions.** New ids are version 7; rows created before that keep their version 4 ids ([`sync.md`](sync.md)).
 - **Time.** Every time column is `timestamptz`, as today. `updated_at`, `created_at`, `reviewed_at` and `deleted_at` stay the client's, at millisecond precision. `revision` stays the server's.
 - **Constraint names.** Constraints keep Postgres's default names (`_pkey`, `_key`, `_fkey`, `_check`), and a constraint added later is given its name explicitly in that form.
 - **Checks.** Five new checks are added `not valid` and then validated:
@@ -122,6 +125,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `deck_imports_test.sql` — a second copy by the same user adds nothing while another user's adds one, the owner's adds nothing, a count kept from before is added to, and clients reach no row;
   - `deck_reports_test.sql` — reports are insert-only by their reporter, once per deck, and the third distinct reporter hides the deck;
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
+  - `uuid_keys_test.sql` — every synced id and every reference to one is `uuid` with no default, with `extraction_usage.id` as control; the five foreign keys are back; `list_public_decks` returns `uuid` ids and `record_deck_import` takes one, executable by `authenticated` and not `anon`; and a report takes the lock its deck's id took as text, with the third report's hide as control;
   - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
 - `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts a throwaway stack of its own with only Postgres, which applies the migrations, runs the tests and prints their count ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)). Where Docker does not, it prints that the tests were skipped and why.
@@ -140,6 +144,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md) records why an account is deleted through the admin API, so that the cascade removes its rows.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
+- Issue #104 records the uuid conversion, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
