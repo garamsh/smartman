@@ -137,6 +137,38 @@ describe("a study session's writes", () => {
     });
   });
 
+  it("writes each answer's review under a version 7 id in canonical lowercase form, stamped with the answer's time", async () => {
+    // Version nibble 7 and variant 10xx (RFC 9562), lowercase, hyphenated.
+    const v7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    // Controls: the form refuses a v4 id, as crypto.randomUUID() makes, and an upper-case v7.
+    expect("1b4e28ba-2fa1-4d2a-883f-0016d3cca427").not.toMatch(v7);
+    expect("0195F2E8-4C00-7ABC-8DEF-0123456789AB").not.toMatch(v7);
+    expect("0195f2e8-4c00-7abc-8def-0123456789ab").toMatch(v7);
+
+    render(
+      <StudyScreen
+        plan={{
+          startedAt: start,
+          queue: { cards: [card], backlog: false },
+          before: {},
+          today: noAnswerToday,
+        }}
+      />,
+    );
+    vi.setSystemTime(start + 4000);
+    await userEvent.setup().keyboard("k");
+
+    await waitFor(() => {
+      expect(postgrest.rows.reviews).toHaveLength(1);
+    });
+    const id = postgrest.rows.reviews[0]?.id;
+    expect(id).toMatch(v7);
+    // Its first 48 bits are the milliseconds the answer was given at.
+    expect(String(id).replaceAll("-", "").slice(0, 12)).toBe(
+      (start + 4000).toString(16).padStart(12, "0"),
+    );
+  });
+
   it("schedules a new card's first answer from no state", async () => {
     render(
       <StudyScreen
