@@ -35,13 +35,12 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - drift's own comparison of two times is written through `julianday()`, which no index serves, so the reads by time are written in SQL comparing the text ([`study.md`](study.md)).
 - **No new local checks.** A check added on the device would have to hold for every stored row, or the table rebuild aborts and the database no longer opens. The server's checks are the authority, and a row they refuse fails the run as `SyncFailed`, as any constraint does.
 - Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
-- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`.
+- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`. The web creates its new ids, each answer's review, with the `uuid` npm package's `v7()`, pinned exactly in `web/package.json` ([`web.md`](web.md)).
 
 ### Target sync (not built yet)
 
 [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides what follows. None of it is built: each bullet holds once its implementation issue merges.
 
-- **Ids on the web.** The web creates new ids with the `uuid` npm package's `v7()` in place of `crypto.randomUUID()`.
 - **Order.** The server's purge job is turned on only after the app release that reads the horizon has shipped ([`server.md`](server.md)). Its first mark is taken that day, so its first purge comes 90 days later. A device still on an older release then misses a delete only if it also stayed unsynced through those 90 days.
 
 ### A run
