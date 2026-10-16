@@ -31,6 +31,38 @@ describe("SignInButton", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("is Google's button: the light and the dark theme's G mark before the label", () => {
+    render(<SignInButton />);
+
+    const button = screen.getByRole("button", { name: "Google로 로그인" });
+    // The marks are decorative, so the label alone names the button; they are found by source.
+    const marks = Array.from(button.querySelectorAll("img"), (img) => ({
+      src: img.getAttribute("src"),
+      alt: img.getAttribute("alt"),
+    }));
+    expect(marks).toEqual([
+      { src: "/google/g-mark-light.png", alt: "" },
+      { src: "/google/g-mark-dark.png", alt: "" },
+    ]);
+    expect(button.lastChild).toHaveTextContent("Google로 로그인");
+  });
+
+  it("shows progress in the button, which cannot be pressed twice, while sign-in starts", async () => {
+    signInWithOAuth.mockReturnValue(new Promise(() => undefined));
+    render(<SignInButton />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Google로 로그인" }));
+
+    const button = screen.getByRole("button", { name: "Google로 로그인" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    // Progress takes the mark's place inside the pressed button.
+    expect(button.querySelector("img")).toBeNull();
+    expect(button.querySelector("svg")).not.toBeNull();
+    await userEvent.click(button);
+    expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the reason when Supabase returns an error", async () => {
     signInWithOAuth.mockResolvedValue({ data: {}, error: new AuthError("no provider") });
     render(<SignInButton />);

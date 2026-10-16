@@ -1,9 +1,9 @@
-import { DeckList, ReadFailure, readDeckList, TodayHeader } from "@/features/decks";
+import { DeckList, EmptyHome, ReadFailure, readDeckList, TodayHeader } from "@/features/decks";
 import { countToday, readCardStates, readPace, sessionMinutes } from "@/features/study";
 
 /**
  * Every deck with what a session over it would study now and how long it would take at the
- * user's pace, read on the server.
+ * user's pace, read on the server; with no deck, the first-run invitation.
  */
 export async function Decks() {
   const [read, states, pace] = await Promise.all([readDeckList(), readCardStates(), readPace()]);
@@ -12,6 +12,7 @@ export async function Decks() {
   if ("failure" in pace) return <ReadFailure failure={pace.failure} />;
 
   const { decks, cards } = read.library;
+  if (decks.length === 0) return <EmptyHome />;
   const all = countToday(cards, states.states, states.readAt);
   const rows = decks.map((deck) => {
     const own = cards.filter((card) => card.deckId === deck.id);

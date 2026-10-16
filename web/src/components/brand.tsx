@@ -1,10 +1,11 @@
 import Image from "next/image";
 
 /** The brand's mark in its light-ground and dark-ground files under public/brand/. */
-type Mark = "lockup" | "symbol";
+type Mark = "lockup" | "stacked" | "symbol";
 
 const sizes: Record<Mark, { width: number; height: number }> = {
   lockup: { width: 667, height: 200 },
+  stacked: { width: 403, height: 320 },
   symbol: { width: 200, height: 200 },
 };
 

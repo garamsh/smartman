@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, type Page, test } from "@playwright/test";
+import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
@@ -30,6 +30,33 @@ async function shot(page: Page, name: string) {
   await page.emulateMedia({ colorScheme: null });
 }
 
+/**
+ * Signs up a new user with a password and gives [context] the session cookies a browser holds
+ * after signing in, written by @supabase/ssr itself.
+ */
+async function signUpInBrowser(
+  context: BrowserContext,
+  baseURL: string,
+  email: string,
+  password: string,
+) {
+  if (!supabaseUrl || !supabaseKey) throw new Error("skipped above");
+  const cookies = new Map<string, string>();
+  const browserSession = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll: () => [...cookies].map(([name, value]) => ({ name, value })),
+      setAll: (written) => {
+        for (const { name, value } of written) cookies.set(name, value);
+      },
+    },
+  });
+  const signUp = await browserSession.auth.signUp({ email, password });
+  expect(signUp.error).toBeNull();
+  expect(cookies.size).toBeGreaterThan(0);
+  await context.addCookies([...cookies].map(([name, value]) => ({ name, value, url: baseURL })));
+  return signUp.data.user?.id;
+}
+
 // What the browser reported, printed when the test fails: the write runs out of sight.
 const browserLog: string[] = [];
 test.afterEach(({}, testInfo) => {
@@ -57,21 +84,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   const email = `web-study-${randomUUID()}@example.com`;
   const password = "web-study-password";
 
-  // The session cookies a browser holds after signing in, written by @supabase/ssr itself.
-  const cookies = new Map<string, string>();
-  const browserSession = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      getAll: () => [...cookies].map(([name, value]) => ({ name, value })),
-      setAll: (written) => {
-        for (const { name, value } of written) cookies.set(name, value);
-      },
-    },
-  });
-  const signUp = await browserSession.auth.signUp({ email, password });
-  expect(signUp.error).toBeNull();
-  const userId = signUp.data.user?.id;
-  expect(cookies.size).toBeGreaterThan(0);
-  await context.addCookies([...cookies].map(([name, value]) => ({ name, value, url: baseURL })));
+  await page.goto("/login");
+  await shot(page, "00-login");
+  const userId = await signUpInBrowser(context, baseURL, email, password);
 
   // The phone's sync has pushed a deck with one new card.
   const phone = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
@@ -184,4 +199,151 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
   await shot(page, "07-account");
+});
+
+test("a user with no deck is invited to make one, and the theme they choose survives a reload", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("skipped above");
+  await signUpInBrowser(context, baseURL, `web-empty-${randomUUID()}@example.com`, "web-empty-pw");
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "첫 덱을 만들어 볼까요?", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "모두 학습" })).toHaveCount(0);
+  await shot(page, "08-empty-home");
+
+  await page.goto("/account");
+  const group = page.getByRole("radiogroup", { name: "화면", exact: true });
+  const body = page.locator("body");
+  await expect(group.getByRole("radio", { name: "시스템", exact: true })).toBeChecked();
+  // The system's dark mode, so 라이트 differs from it and 다크 from the default's light.
+  await page.emulateMedia({ colorScheme: "dark" });
+  const ground = { light: "rgb(244, 246, 250)", dark: "rgb(14, 20, 36)" };
+  for (const [choice, label, colour] of [
+    ["light", "라이트", ground.light],
+    ["dark", "다크", ground.dark],
+    ["system", "시스템", ground.dark],
+  ] as const) {
+    await group.getByText(label, { exact: true }).click();
+    await expect(body).toHaveCSS("background-color", colour);
+
+    await page.reload();
+
+    await expect(group.getByRole("radio", { name: label, exact: true })).toBeChecked();
+    await expect(body).toHaveCSS("background-color", colour);
+    if (screenshots) {
+      await page.screenshot({
+        path: `${screenshots}/choice/web-09-account-${choice}.png`,
+        fullPage: true,
+      });
+    }
+  }
+  await page.emulateMedia({ colorScheme: null });
+});
+
+test("each page that waits on the server shows its skeleton, still under reduced motion, where its content then lands", async ({
+  browser,
+  context,
+  baseURL,
+}) => {
+  if (!supabaseUrl || !supabaseKey || !baseURL) throw new Error("skipped above");
+  const email = `web-skeleton-${randomUUID()}@example.com`;
+  const password = "web-skeleton-pw";
+  const userId = await signUpInBrowser(context, baseURL, email, password);
+  const phone = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  expect((await phone.auth.signInWithPassword({ email, password })).error).toBeNull();
+  const deckId = randomUUID();
+  const now = new Date().toISOString();
+  expect(
+    (
+      await phone.from("decks").insert({
+        id: deckId,
+        user_id: userId,
+        name: "French",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await phone.from("cards").insert({
+        id: randomUUID(),
+        user_id: userId,
+        deck_id: deckId,
+        front: [{ type: "text", payload: { text: "chat" } }],
+        back: [{ type: "text", payload: { text: "cat" } }],
+        card_key: "chat",
+        source: "manual",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+
+  // Without scripts React never swaps the streamed content in, so the fallback stays on screen.
+  const still = await browser.newContext({ javaScriptEnabled: false });
+  await still.addCookies(await context.cookies());
+  const skeletonPage = await still.newPage();
+  const livePage = await context.newPage();
+  const pages = [
+    { path: "/", name: "home", status: "덱을 불러오는 중이에요.", content: "section", held: 0 },
+    {
+      path: `/decks/${deckId}`,
+      name: "deck",
+      status: "덱을 불러오는 중이에요.",
+      content: "h1",
+      held: 1,
+    },
+    {
+      path: `/study?decks=${deckId}`,
+      name: "study",
+      status: "카드를 불러오는 중이에요.",
+      content: '[aria-label="현재 카드"]',
+      held: 1,
+    },
+    {
+      path: "/account",
+      name: "account",
+      status: "계정을 불러오는 중이에요.",
+      content: '[aria-label="프로필"]',
+      held: 0,
+    },
+  ];
+  // Each page names its first block of content and the placeholder that holds its place.
+  for (const { path, name, status, content, held: placeholder } of pages) {
+    await skeletonPage.emulateMedia({ reducedMotion: "no-preference" });
+    await skeletonPage.goto(path);
+    const busy = skeletonPage.locator('[aria-busy="true"]');
+    await expect(busy).toBeVisible();
+    await expect(skeletonPage.getByRole("status")).toHaveText(status);
+    const placeholders = busy.locator('> [aria-hidden="true"]');
+    await expect(placeholders).toHaveCSS("animation-name", "skeleton");
+    if (screenshots) {
+      for (const colorScheme of ["light", "dark"] as const) {
+        await skeletonPage.emulateMedia({ colorScheme });
+        await skeletonPage.screenshot({
+          path: `${screenshots}/${colorScheme}/web-10-skeleton-${name}.png`,
+          fullPage: true,
+        });
+      }
+      await skeletonPage.emulateMedia({ colorScheme: null });
+    }
+
+    await skeletonPage.emulateMedia({ reducedMotion: "reduce" });
+    await expect(placeholders).toHaveCSS("animation-name", "none");
+
+    // The first block of content takes the place its placeholder held.
+    const held = await placeholders.locator("> *").nth(placeholder).boundingBox();
+    await livePage.goto(path);
+    const block = livePage.locator(content).first();
+    await expect(block).toBeVisible();
+    const landed = await block.boundingBox();
+    expect({ name, top: landed?.y }).toEqual({ name, top: held?.y });
+  }
+  await still.close();
 });

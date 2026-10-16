@@ -270,14 +270,29 @@ describe("the deck list", () => {
     );
   });
 
-  it("shows how to start when there is no deck", async () => {
+  it("shows the first-run invitation in place of the today card and the list when there is no deck", async () => {
+    const title = "첫 덱을 만들어 볼까요?";
+    const pointer =
+      "덱은 휴대폰 앱에서 만들어요. 단어장 사진을 찍거나 직접 입력하면 여기에도 보여요.";
+    // Control: a user with one deck sees the list and no invitation.
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    await render(Decks, {});
+    expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
+    cleanup();
+
+    postgrest = new FakePostgrest();
+    server.use(...postgrest.handlers);
     await render(Decks, {});
 
+    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(screen.getByText(pointer)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^내 덱/ })).not.toBeInTheDocument();
     expect(
-      screen.getByText("아직 덱이 없어요. 휴대폰 앱에서 덱을 만들면 여기에 나타나요."),
-    ).toBeInTheDocument();
-    // With nothing to study, the today card says it is done and offers no session.
-    expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "모두 학습" })).not.toBeInTheDocument();
+      screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
+    ).not.toBeInTheDocument();
+    // The web creates nothing and has no public-deck browsing, so the invitation offers no action.
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

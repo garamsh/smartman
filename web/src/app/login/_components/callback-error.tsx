@@ -12,7 +12,7 @@ export async function CallbackError({
   const { error } = await searchParams;
   if (error !== "cancelled" && error !== "failed") return null;
   return (
-    <p role="alert" className="text-sm text-dont-know-text">
+    <p role="alert" className="text-caption text-dont-know-text">
       {callbackErrors[error]}
     </p>
   );

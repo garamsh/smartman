@@ -1,0 +1,67 @@
+// @vitest-environment node
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+const globalsCss = readFileSync(path.join(import.meta.dirname, "../globals.css"), "utf8");
+
+/** The `--color-*` tokens of a CSS block, by name. */
+function colours(block: string): Map<string, string> {
+  return new Map(
+    [...block.matchAll(/--color-([\w-]+):\s*(#[0-9a-f]{6});/g)].map(([, name, hex]) => [
+      String(name),
+      String(hex),
+    ]),
+  );
+}
+
+const themes = {
+  light: colours(/@theme \{([^}]*)\}/.exec(globalsCss)?.[1] ?? ""),
+  dark: colours(/:root\[data-theme="dark"\] \{([^}]*--color[^}]*)\}/.exec(globalsCss)?.[1] ?? ""),
+};
+
+/** WCAG 2.2's relative luminance of #rrggbb. */
+function luminance(hex: string): number {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((at) => {
+    const channel = parseInt(hex.slice(at, at + 2), 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG 2.2's contrast ratio between two colours. */
+function contrast(a: string, b: string): number {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
+}
+
+/** The text and its ground on the login, account and empty home pages, by where they appear. */
+const pairs: [string, string, string][] = [
+  ["the welcome sentence on the panel", "ink-2", "ground"],
+  ["the consent line on the surface", "muted", "surface"],
+  ["the legal links on the surface", "ink-2", "surface"],
+  ["a sign-in error on the surface", "dont-know-text", "surface"],
+  ["Google's label on its fill", "google-label", "google-fill"],
+  ["an unchecked theme on its track", "ink-2", "ground"],
+  ["the checked theme on its segment", "ink", "raised"],
+  ["the empty home's sentence on the ground", "muted", "ground"],
+  ["the empty home's title on the ground", "ink", "ground"],
+];
+
+describe("the text the login, account and empty home pages draw", () => {
+  it("is measured on a pair known to fail", () => {
+    // Control: black on white is 21:1, and #777 on white falls short.
+    expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
+    expect(contrast("#777777", "#ffffff")).toBeLessThan(4.5);
+  });
+
+  it.each(["light", "dark"] as const)("meets WCAG AA, 4.5:1, in the %s theme", (theme) => {
+    const set = themes[theme];
+    expect(set.size).toBeGreaterThan(25);
+    for (const [where, text, ground] of pairs) {
+      const ratio = contrast(set.get(text) ?? "", set.get(ground) ?? "");
+      expect({ where, aa: ratio >= 4.5 }).toEqual({ where, aa: true });
+    }
+  });
+});

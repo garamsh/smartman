@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 
+import { ThemeChoice } from "@/components/theme-choice";
 import { AccountAvatar, getSession, SignOutForm } from "@/features/auth";
 
-/** Who is signed in, read from the session on the server, and the account's actions. */
+/**
+ * Who is signed in, read from the session on the server, the theme the web is drawn in, and the
+ * account's actions.
+ */
 export async function Profile() {
   const session = await getSession();
   switch (session.kind) {
@@ -15,6 +19,12 @@ export async function Profile() {
           >
             <AccountAvatar email={session.email} size="large" />
             <p className="min-w-0 text-body-strong break-all">{session.email}</p>
+          </section>
+          <section aria-labelledby="display-section" className="flex flex-col gap-3">
+            <h2 id="display-section" className="text-section text-ink-2">
+              화면
+            </h2>
+            <ThemeChoice labelledBy="display-section" />
           </section>
           <section aria-labelledby="account-section" className="flex flex-col gap-3">
             <h2 id="account-section" className="text-section text-ink-2">
