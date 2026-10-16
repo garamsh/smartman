@@ -425,10 +425,14 @@ describe("the study page", () => {
       await userEvent.setup().keyboard("k");
       expect(guide()).not.toBeInTheDocument();
 
-      // Control: a user with an answer stored before today sees none.
+      // Control: a user whose one answer is stored before today, and none today, sees none.
       cleanup();
+      postgrest = new FakePostgrest();
+      server.use(...postgrest.handlers);
+      seedDeck(postgrest, "d1", ["un", "deux"]);
       postgrest.seed("cards", cardRow("old", "d1", "old"));
       postgrest.seed("reviews", reviewRow("r-old", "old", start - 3 * day, 1_000));
+      expect(postgrest.rows.reviews).toHaveLength(1);
       await open("d1");
       expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
       expect(guide()).not.toBeInTheDocument();
