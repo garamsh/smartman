@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import type { CardId } from "@/features/decks";
 import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/lib/supabase/failure";
 import { field, parseTime } from "@/lib/supabase/row";
-import { pageSize, selectAll } from "@/lib/supabase/select-all";
+import { selectAll } from "@/lib/supabase/select-all";
 import { createClient } from "@/lib/supabase/server";
 import { readUserId } from "@/lib/supabase/session";
 import { parseTimeZone, timeZoneCookie } from "@/lib/time-zone";
@@ -118,9 +118,9 @@ export async function readToday(
 }
 
 /**
- * How many study days in a row end the day before [start] with an answer, read a page of the
- * latest answers at a time until a day without one, or the first answer, decides it; and
- * whether any answer is stored before [start].
+ * How many study days in a row end the day before [start] with an answer, which the server's
+ * `study_streak_before` counts in one request; and whether any answer is stored before [start],
+ * read beside it as at most one of them.
  */
 async function readStreakBefore(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -128,33 +128,27 @@ async function readStreakBefore(
   start: number,
   timeZone: string,
 ): Promise<{ streak: number; answered: boolean } | { failure: ServerFailure | "unreadable" }> {
-  let count = 0;
-  let expected = studyDayStart(start - 1000, timeZone);
-  for (let from = 0; ; from += pageSize) {
-    const { data, error, status } = await supabase
+  const before = new Date(start).toISOString();
+  const [counted, latest] = await Promise.all([
+    supabase
+      .rpc("study_streak_before", { time_zone: timeZone, before })
+      .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
+    supabase
       .from("reviews")
-      .select("reviewed_at")
+      .select("id")
       .eq("user_id", userId)
       .is("deleted_at", null)
-      .lt("reviewed_at", new Date(start).toISOString())
-      .order("reviewed_at", { ascending: false })
-      .range(from, from + pageSize - 1)
-      .abortSignal(AbortSignal.timeout(requestTimeoutMs));
-    if (error) return { failure: classifyFailure(error, status) };
-    const answered = from > 0 || data.length > 0;
-    for (const row of data) {
-      const at = parseTime(field(row, "reviewed_at"));
-      if (at === null) return { failure: "unreadable" };
-      const day = studyDayStart(at, timeZone);
-      if (day === expected) {
-        count += 1;
-        expected = studyDayStart(day - 1000, timeZone);
-      } else if (day < expected) {
-        return { streak: count, answered };
-      }
-    }
-    if (data.length < pageSize) return { streak: count, answered };
+      .lt("reviewed_at", before)
+      .limit(1)
+      .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
+  ]);
+  if (counted.error) return { failure: classifyFailure(counted.error, counted.status) };
+  if (latest.error) return { failure: classifyFailure(latest.error, latest.status) };
+  const streak: unknown = counted.data;
+  if (typeof streak !== "number" || !Number.isInteger(streak) || streak < 0) {
+    return { failure: "unreadable" };
   }
+  return { streak, answered: latest.data.length > 0 };
 }
 
 function parseAnswer(row: unknown): TodayAnswer | null {
