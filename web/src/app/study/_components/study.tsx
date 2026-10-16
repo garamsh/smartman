@@ -33,7 +33,7 @@ export async function Study({
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
   const { cards } = read.library;
-  const { day, answers, streakBefore } = today.today;
+  const { day, answers, streakBefore, answeredBefore } = today.today;
   const queue = selectQueue(cards, states.states, day);
   const before: CardStates = {};
   for (const card of queue.cards) {
@@ -56,6 +56,7 @@ export async function Study({
           cards: answeredCards,
           answeredAnyDeck: answers.length > 0,
           streakBefore,
+          answeredBefore,
         },
       }}
     />

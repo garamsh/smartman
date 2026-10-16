@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
+import '../../shared/theme.dart';
 import '../../shared/ui/card_text.dart';
-import 'study_style.dart';
+import 'content.dart';
 
 /// A card side's content blocks, in order, each through its block widget.
 ///
@@ -62,7 +62,7 @@ class ContentView extends StatelessWidget {
       crossAxisAlignment: fit == null
           ? CrossAxisAlignment.start
           : CrossAxisAlignment.center,
-      spacing: StudyStyle.blockGap,
+      spacing: _blockGap,
       children: [
         for (final block in blocks)
           switch (block) {
@@ -96,6 +96,9 @@ class ContentView extends StatelessWidget {
   };
 }
 
+/// Space between two content blocks, and inside a block's placeholder.
+const _blockGap = AppSpace.s8;
+
 /// The labelled placeholder for a block this version cannot show.
 class _UnsupportedBlock extends StatelessWidget {
   const _UnsupportedBlock({required this.label});
@@ -108,12 +111,12 @@ class _UnsupportedBlock extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: theme.colorScheme.outline),
-        borderRadius: BorderRadius.circular(StudyStyle.blockGap),
+        borderRadius: BorderRadius.circular(_blockGap),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(StudyStyle.blockGap),
+        padding: const EdgeInsets.all(_blockGap),
         child: Row(
-          spacing: StudyStyle.blockGap,
+          spacing: _blockGap,
           children: [
             Icon(
               LucideIcons.circleQuestionMark,

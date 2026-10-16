@@ -1,6 +1,6 @@
 # ADR 0007: Answer by swiping a split card, keep every session answer in a toggleable stack, and reschedule a toggle by replaying the card's session answers
 
-> Status: accepted; its study screen colour constants superseded by ADR-0011; its fixed placement of the current card and its single-scroll narrow layout superseded by ADR-0023; its close button and back ending the session on the summary superseded by ADR-0033
+> Status: accepted; its study screen colour constants superseded by ADR-0011; its fixed placement of the current card and its single-scroll narrow layout superseded by ADR-0023; its close button and back ending the session on the summary superseded by ADR-0033; its stack of every answer above the current card, its dots, its greying and blur by depth and its toggle by tap superseded by ADR-0035
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

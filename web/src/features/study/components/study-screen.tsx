@@ -1,17 +1,19 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { Answer, AnswerWrite } from "../answer-write";
 import { loadEngine } from "../engine";
 import { saveAnswer } from "../save-answer";
-import { type SessionPlan, StudySession } from "../session";
+import { type PreviousAnswer, type SessionPlan, StudySession } from "../session";
 import { WriteQueue } from "../write-queue";
+import { AnswerList } from "./answer-list";
 import { CardSide } from "./card-side";
-import { PreviousAnswers } from "./previous-answers";
 import { CompletionCard } from "./completion-card";
+import { FirstRunGuide } from "./first-run-guide";
+import { GradedCard, type Standing } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
 
 const button =
@@ -38,35 +40,56 @@ function isForeign(event: KeyboardEvent): boolean {
   );
 }
 
-/** What a key press asks of the study screen, or null when it asks nothing it can do now. */
+/**
+ * What a key press asks of the study screen, or null when it asks nothing it can do now. While
+ * an earlier card is centred, → and ← change its answer rather than answer the current card.
+ */
 function shortcut(
   event: KeyboardEvent,
   studying: boolean,
+  browsing: boolean,
   answered: boolean,
-): "help" | "leave" | "reveal" | "know" | "dontKnow" | "toggleLast" | null {
+): "help" | "leave" | "reveal" | "know" | "dontKnow" | "toggleLast" | "earlier" | "later" | null {
   if (event.key === "?") return "help";
   if (event.key === "Escape") return "leave";
-  if (event.key === " ") return studying ? "reveal" : null;
+  if (event.key === "ArrowUp") return answered ? "earlier" : null;
+  if (event.key === "ArrowDown") return browsing ? "later" : null;
+  if (event.key === " ") return studying && !browsing ? "reveal" : null;
   // Letters by their physical key, so they work whatever the keyboard's input language.
-  if (event.key === "ArrowRight" || event.code === "KeyK") return studying ? "know" : null;
-  if (event.key === "ArrowLeft" || event.code === "KeyJ") return studying ? "dontKnow" : null;
+  if (event.key === "ArrowRight" || event.code === "KeyK") {
+    return studying || browsing ? "know" : null;
+  }
+  if (event.key === "ArrowLeft" || event.code === "KeyJ") {
+    return studying || browsing ? "dontKnow" : null;
+  }
   if (event.code === "KeyZ") return answered ? "toggleLast" : null;
   return null;
 }
 
+/** How far a wheel turns, in pixels, before it moves one card. */
+const wheelStep = 60;
+
+/** How far a touch drags, in pixels, before it moves one card. */
+const touchStep = 48;
+
 /**
- * The study screen: the current card split into question and answer, the progress bar, and the
- * stack of answers given, any of which a click toggles. Once no card is left today the
- * completion card takes the current card's place, and practice goes on from it in the same
- * screen. Every action shows at once; its write runs behind it, and a write that fails is shown
- * with a retry while its answer stays in the stack. Each action has a keyboard shortcut, listed
- * by "단축키", and a visible control.
+ * The study screen: the progress bar, and the previous card above the current card split into
+ * question and answer, with the two answer buttons under it. ↑, the wheel or a downward drag
+ * reaches earlier cards, three at a time with the centred one emphasised, whose answer → and ←
+ * or its button change; "지금 카드로" returns. On a wide screen this session's answers are
+ * listed beside, each a button that changes it. Once no card is left today the completion card
+ * takes the current card's place, and practice goes on from it in the same screen. Every action
+ * shows at once; its write runs behind it, and a write that fails is shown with a retry while
+ * its answer stays. Each action has a keyboard shortcut, listed by "단축키", and a visible
+ * control.
  */
 export function StudyScreen({ plan }: { plan: SessionPlan }) {
   const [session] = useState(() => new StudySession(plan, Date.now, () => crypto.randomUUID()));
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
   const [revealed, setRevealed] = useState(false);
+  /** The position of the earlier card centred, or null at rest on the current card. */
+  const [centred, setCentred] = useState<number | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const helpButton = useRef<HTMLButtonElement>(null);
   const closeLink = useRef<HTMLAnchorElement>(null);
@@ -83,6 +106,19 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
   }
   function toggle(position: number) {
     apply(session.toggle(position));
+  }
+  function redecide(position: number, choice: Answer) {
+    apply(session.redecide(position, choice));
+  }
+  /** Moves the centre one card earlier, or from rest to the newest previous card. */
+  function earlier() {
+    const newest = view.previous.length - 1;
+    if (newest < 0) return;
+    setCentred((at) => (at === null ? newest : Math.max(0, at - 1)));
+  }
+  /** Moves the centre one card later, back to rest past the newest previous card. */
+  function later() {
+    setCentred((at) => (at === null || at >= view.previous.length - 1 ? null : at + 1));
   }
   function toggleLast() {
     apply(session.toggleLast());
@@ -111,7 +147,12 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
         }
         return;
       }
-      const action = shortcut(event, view.kind === "studying", view.previous.length > 0);
+      const action = shortcut(
+        event,
+        view.kind === "studying",
+        centred !== null,
+        view.previous.length > 0,
+      );
       if (!action) return;
       event.preventDefault();
       switch (action) {
@@ -126,10 +167,17 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           break;
         case "know":
         case "dontKnow":
-          answer(action);
+          if (centred === null) answer(action);
+          else redecide(centred, action);
           break;
         case "toggleLast":
           toggleLast();
+          break;
+        case "earlier":
+          earlier();
+          break;
+        case "later":
+          later();
           break;
       }
     };
@@ -163,8 +211,34 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
     };
   }, [unsaved]);
 
+  // A wheel's or a touch's travel, gathered until it moves a card.
+  const travel = useRef(0);
+  const touchY = useRef<number | null>(null);
+  function scrollBy(delta: number, step: number) {
+    travel.current += delta;
+    if (Math.abs(travel.current) < step) return;
+    if (travel.current < 0) earlier();
+    else later();
+    travel.current = 0;
+  }
+
+  const newest = view.previous.at(-1);
+  const current: ReactNode =
+    view.kind === "studying" ? (
+      <CurrentCard
+        front={view.current.front}
+        back={view.current.back}
+        revealed={revealed}
+        onReveal={() => {
+          setRevealed((shown) => !shown);
+        }}
+      />
+    ) : view.kind === "complete" ? (
+      <CompletionCard completion={view.completion} onPractice={practice} />
+    ) : null;
+
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-study flex-col gap-4 px-gutter py-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-6 px-gutter py-6">
       <header className="flex items-center gap-4">
         <Link
           ref={closeLink}
@@ -172,9 +246,9 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           aria-label="끝내기"
           aria-keyshortcuts="Escape"
           title="끝내기 (Esc)"
-          className="flex size-tap-target items-center justify-center rounded-full text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="flex size-tap-target shrink-0 items-center justify-center rounded-full text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
-          <X aria-hidden className="size-6" strokeWidth={2} />
+          <X aria-hidden className="size-5" strokeWidth={2.2} />
         </Link>
         <div className="flex flex-1 items-center gap-3">
           {view.kind !== "empty" && (
@@ -189,7 +263,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
                 className="h-progress flex-1 overflow-hidden rounded-full bg-hairline"
               >
                 <div
-                  className="h-full rounded-full bg-ink transition-[width]"
+                  className="h-full rounded-full bg-ink motion-safe:transition-[width]"
                   style={{
                     width: `${String(view.total === 0 ? 0 : (100 * view.answered) / view.total)}%`,
                   }}
@@ -208,7 +282,7 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             setHelpOpen(true);
           }}
           aria-keyshortcuts="?"
-          className={quiet}
+          className={`${quiet} hidden lg:flex`}
         >
           단축키 <Hint>?</Hint>
         </button>
@@ -229,74 +303,65 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
         </div>
       )}
 
-      <PreviousAnswers answers={view.previous} onToggle={toggle} />
-
-      {view.kind === "studying" ? (
-        <>
-          <section
-            aria-label="현재 카드"
-            className="grid min-h-52 grid-cols-1 rounded-card bg-surface shadow-raised sm:grid-cols-[1fr_auto_1fr]"
-          >
-            <div aria-label="문제" role="group" className="flex items-center justify-center p-6">
-              <CardSide blocks={view.current.front} size="question" />
-            </div>
-            <span aria-hidden className="mx-7 h-px bg-hairline sm:mx-0 sm:my-7 sm:h-auto sm:w-px" />
-            <div aria-label="답" role="group" className="flex items-center justify-center p-6">
-              {revealed ? (
-                <CardSide blocks={view.current.back} size="answer" />
-              ) : (
-                <p className="text-muted">답이 가려져 있어요.</p>
+      <div className="flex flex-wrap items-start justify-center gap-7">
+        <section
+          aria-label="카드"
+          onWheel={(event) => {
+            scrollBy(event.deltaY, wheelStep);
+          }}
+          onTouchStart={(event) => {
+            touchY.current = event.touches[0]?.clientY ?? null;
+          }}
+          onTouchEnd={(event) => {
+            const from = touchY.current;
+            const to = event.changedTouches[0]?.clientY;
+            touchY.current = null;
+            // A drag down brings earlier cards, as on the phone.
+            if (from !== null && to !== undefined) scrollBy(from - to, touchStep);
+          }}
+          className="flex min-w-0 flex-[999_1_520px] flex-col items-center gap-7 pt-6"
+        >
+          {view.kind === "empty" ? (
+            <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
+          ) : centred === null ? (
+            <>
+              {view.kind === "studying" && view.firstRun && <FirstRunGuide />}
+              {newest && (
+                <GradedCard
+                  answer={newest}
+                  standing="rest"
+                  onRedecide={(choice) => {
+                    redecide(newest.position, choice);
+                  }}
+                />
               )}
-            </div>
-          </section>
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                answer("dontKnow");
+              <div className="flex w-full max-w-study flex-col gap-3">
+                {current}
+                {view.kind === "studying" && <AnswerButtons onAnswer={answer} />}
+              </div>
+            </>
+          ) : (
+            <Browsing
+              previous={view.previous}
+              centred={centred}
+              current={current}
+              onRedecide={redecide}
+              onReturn={() => {
+                setCentred(null);
               }}
-              aria-keyshortcuts="ArrowLeft J"
-              className={quiet}
-            >
-              <ChevronLeft aria-hidden className="size-5 text-dont-know-text" strokeWidth={2} />
-              모른다 <Hint>← J</Hint>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRevealed((shown) => !shown);
-              }}
-              aria-keyshortcuts="Space"
-              aria-pressed={revealed}
-              className={quiet}
-            >
-              답 보기 <Hint>Space</Hint>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                answer("know");
-              }}
-              aria-keyshortcuts="ArrowRight K"
-              className={quiet}
-            >
-              안다 <Hint>→ K</Hint>
-              <ChevronRight aria-hidden className="size-5 text-know" strokeWidth={2} />
-            </button>
-          </div>
-        </>
-      ) : view.kind === "complete" ? (
-        <CompletionCard completion={view.completion} onPractice={practice} />
-      ) : (
-        <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
-      )}
+            />
+          )}
+        </section>
+
+        {view.previous.length > 0 && <AnswerList answers={view.previous} onToggle={toggle} />}
+      </div>
 
       {view.previous.length > 0 && (
         <button
           type="button"
           onClick={toggleLast}
           aria-keyshortcuts="Z"
-          className={`${quiet} self-center`}
+          className={`${quiet} hidden self-center lg:flex`}
         >
           마지막 답 바꾸기 <Hint>Z</Hint>
         </button>
@@ -304,5 +369,145 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
 
       {helpOpen && <ShortcutHelp onClose={closeHelp} />}
     </main>
+  );
+}
+
+/**
+ * The card under study: the question on one half and the answer on the other, hidden behind an
+ * eye until shown. The answer's half is the control that shows and hides it.
+ */
+function CurrentCard({
+  front,
+  back,
+  revealed,
+  onReveal,
+}: {
+  front: PreviousAnswer["card"]["front"];
+  back: PreviousAnswer["card"]["back"];
+  revealed: boolean;
+  onReveal: () => void;
+}) {
+  return (
+    <section
+      aria-label="현재 카드"
+      className="grid min-h-52 grid-cols-[1fr_auto_1fr] rounded-card bg-surface shadow-raised lg:min-h-75"
+    >
+      <div aria-label="문제" role="group" className="flex items-center justify-center p-6">
+        <CardSide blocks={front} size="question" />
+      </div>
+      <span aria-hidden className="my-7 w-px bg-hairline" />
+      <div aria-label="답" role="group" className="flex">
+        <button
+          type="button"
+          onClick={onReveal}
+          aria-label="답 보기"
+          aria-keyshortcuts="Space"
+          aria-pressed={revealed}
+          className="flex flex-1 flex-col items-center justify-center gap-2 rounded-r-card p-6 text-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+        >
+          {revealed ? (
+            <CardSide blocks={back} size="answer" />
+          ) : (
+            <>
+              <Eye aria-hidden className="size-6" strokeWidth={2} />
+              <span aria-hidden className="hidden text-label lg:inline">
+                답 보기 <Hint>Space</Hint>
+              </span>
+            </>
+          )}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** "모른다" and "안다" under the current card, each with its keys. */
+function AnswerButtons({ onAnswer }: { onAnswer: (answer: Answer) => void }) {
+  const answerButton = `${button} min-h-cta flex-1 text-body-strong`;
+  return (
+    <div className="flex gap-3">
+      <button
+        type="button"
+        onClick={() => {
+          onAnswer("dontKnow");
+        }}
+        aria-keyshortcuts="ArrowLeft J"
+        className={`${answerButton} bg-tint-red text-on-dont-know-tint`}
+      >
+        <ChevronLeft aria-hidden className="size-small-icon" strokeWidth={2.4} />
+        모른다 <Hint>← J</Hint>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          onAnswer("know");
+        }}
+        aria-keyshortcuts="ArrowRight K"
+        className={`${answerButton} bg-tint-green text-on-know-tint`}
+      >
+        안다 <Hint>→ K</Hint>
+        <ChevronRight aria-hidden className="size-small-icon" strokeWidth={2.4} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Earlier cards, three at a time: the card before the centred one, the centred one at full size
+ * with the change to its other answer, and the card after it, or the current card past the
+ * newest; then "지금 카드로", which returns to rest.
+ */
+function Browsing({
+  previous,
+  centred,
+  current,
+  onRedecide,
+  onReturn,
+}: {
+  previous: PreviousAnswer[];
+  centred: number;
+  current: ReactNode;
+  onRedecide: (position: number, answer: Answer) => void;
+  onReturn: () => void;
+}) {
+  const card = (at: number, standing: Standing) => {
+    const answer = previous[at];
+    return answer ? (
+      <GradedCard
+        key={answer.position}
+        answer={answer}
+        standing={standing}
+        onRedecide={(choice) => {
+          onRedecide(answer.position, choice);
+        }}
+      />
+    ) : null;
+  };
+  const after =
+    centred < previous.length - 1 ? (
+      card(centred + 1, "side")
+    ) : (
+      <div
+        inert
+        className="w-full max-w-study scale-90 opacity-70 motion-safe:transition-[transform,opacity] motion-safe:duration-300"
+      >
+        {current}
+      </div>
+    );
+  return (
+    <>
+      {card(centred - 1, "side")}
+      {card(centred, "centred")}
+      {after}
+      <button
+        type="button"
+        onClick={onReturn}
+        aria-keyshortcuts="ArrowDown"
+        className={`${button} min-h-cta bg-ink text-on-primary shadow-raised`}
+      >
+        <ChevronDown aria-hidden className="size-small-icon" strokeWidth={2.4} />
+        지금 카드로
+      </button>
+    </>
   );
 }

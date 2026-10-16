@@ -42,13 +42,22 @@ final class StatesUnreadable extends SessionLoadFailed {
 /// [current] is on screen, below every card answered so far in [previous].
 /// Practice shows the same way.
 final class SessionStudying extends SessionState {
-  const SessionStudying(this.current, this.previous, this.progress);
+  const SessionStudying(
+    this.current,
+    this.previous,
+    this.progress, {
+    this.firstRun = false,
+  });
 
   final Card current;
 
   /// Oldest first.
   final List<PreviousCard> previous;
   final SessionProgress progress;
+
+  /// Whether the user has no answer stored or given yet, so the first-run
+  /// guide shows.
+  final bool firstRun;
 }
 
 /// No card is left today: the completion card takes the current card's
@@ -247,7 +256,12 @@ class StudySession extends ChangeNotifier {
       return SessionStudying(_practiceQueue.first, previous, progress);
     }
     if (_queue.isNotEmpty) {
-      return SessionStudying(_queue.first, previous, progress);
+      return SessionStudying(
+        _queue.first,
+        previous,
+        progress,
+        firstRun: _storedTimes.isEmpty && _answers.isEmpty,
+      );
     }
     if (_practiceSet.isEmpty) return const SessionEmpty();
     return SessionComplete(_completion(), previous, progress);
@@ -395,6 +409,13 @@ class StudySession extends ChangeNotifier {
     if (!_practicing) _toggleQueued(_queue, card, answered.answer, isLast);
     notifyListeners();
     _write(card.id);
+  }
+
+  /// Changes the answer at [position] to [answer], as [toggle] does; an
+  /// answer that already stands as [answer] is left as it is.
+  void redecide(int position, Answer answer) {
+    if (!_loaded || _answers[position].answer == answer) return;
+    toggle(position);
   }
 
   void _togglePractice(Card card, Answer answer) {

@@ -20,7 +20,13 @@ function session(fronts: string[], seed = start): StudySession {
     startedAt: seed,
     queue: { cards: fronts.map(card), backlog: false },
     before: {},
-    today: { answers: [], cards: [], answeredAnyDeck: false, streakBefore: 0 },
+    today: {
+      answers: [],
+      cards: [],
+      answeredAnyDeck: false,
+      streakBefore: 0,
+      answeredBefore: false,
+    },
   };
   let id = 0;
   return new StudySession(

@@ -11,6 +11,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - the model: `Deck`, `Card`, `DeckId`, `CardId`, `CardSource`, `DeckVisibility` with `PrivateDeck` and `PublicDeck`, and `DeckSelection`, a set of decks that cannot be empty;
   - content: `Content`, `TextContent`, `UnsupportedContent`, and `decodeContent`, which reads the stored encoding;
   - `CardKey`, `describeContent`, the one line of text a card side shows, and `CardSplitRow`, a card as a split row;
+  - the split card, drawn one way for every screen: `SplitCard`, which lays out a card's two halves divided by a line, side by side or, when a half would be too narrow at the text scale, stacked, each side centred or at the top left and, on the study card, scrolling inside its half once capped; and `ContentView`, which renders a side's content blocks, with an unsupported block as a labelled placeholder. The study screen's cards, the card preview and `CardSplitRow` draw through them ([ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md));
   - `DeckRepository` and its save results;
   - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, `mergeBack`, and `ImportSource` with `FromPhoto` and `FromPublicDeck`;
   - `showNameSheet`, the sheet that asks for a deck's name, which photo import uses to name a new deck;

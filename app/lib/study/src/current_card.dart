@@ -2,16 +2,17 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../shared/l10n/app_localizations.dart';
 import '../../shared/theme.dart';
-import 'content_view.dart';
 import 'rust/api/engine.dart';
 import 'study_style.dart';
 
 /// The card under study: the question on one half and, once tapped, the
-/// answer on the other. Dragged right it answers "Know", left "Don't know".
+/// answer on the other, with the answer buttons under it. Dragged right, or
+/// by its "안다" button, it answers "Know"; left, or by "모른다", "Don't know".
 class CurrentCard extends StatefulWidget {
   const CurrentCard({super.key, required this.card, required this.onAnswer});
 
@@ -85,10 +86,11 @@ class _CurrentCardState extends State<CurrentCard>
   /// Answers from a screen reader's action, which can reach the card while it
   /// is scrolled out of view: the card is brought into view first.
   Future<void> _answerFromAction(Answer answer) async {
-    await Scrollable.ensureVisible(
-      context,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-    );
+    // The card sits at the end of its column.
+    final position = Scrollable.maybeOf(context)?.position;
+    if (position != null && position.hasContentDimensions) {
+      position.jumpTo(position.maxScrollExtent);
+    }
     if (mounted) await _commit(answer);
   }
 
@@ -101,39 +103,121 @@ class _CurrentCardState extends State<CurrentCard>
     final l10n = AppLocalizations.of(context);
     final front = describeContent(l10n, widget.card.front);
     final back = describeContent(l10n, widget.card.back);
-    return Semantics(
-      container: true,
-      button: true,
-      label: _revealed
-          ? l10n.currentCardRevealedSemantics(front, back)
-          : l10n.currentCardSemantics(front),
-      onTapHint: _revealed ? l10n.hideAnswer : l10n.showAnswer,
-      onTap: _toggleRevealed,
-      customSemanticsActions: {
-        CustomSemanticsAction(label: l10n.know): () =>
-            _answerFromAction(Answer.know),
-        CustomSemanticsAction(label: l10n.dontKnow): () =>
-            _answerFromAction(Answer.dontKnow),
-      },
-      excludeSemantics: true,
-      child: GestureDetector(
-        // The card follows the finger from where it touched down.
-        dragStartBehavior: DragStartBehavior.down,
-        onTap: _toggleRevealed,
-        onHorizontalDragUpdate: _onDragUpdate,
-        onHorizontalDragEnd: _onDragEnd,
-        onHorizontalDragCancel: _springBack,
-        child: AnimatedBuilder(
-          animation: _drag,
-          builder: (context, child) => Transform.translate(
-            offset: Offset(_drag.value, 0),
-            child: Transform.rotate(
-              angle: _drag.value * StudyStyle.tiltPerPixel,
-              child: _DragFeedback(offset: _drag.value, child: child!),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Flexible(
+          child: Semantics(
+            container: true,
+            button: true,
+            label: _revealed
+                ? l10n.currentCardRevealedSemantics(front, back)
+                : l10n.currentCardSemantics(front),
+            onTapHint: _revealed ? l10n.hideAnswer : l10n.showAnswer,
+            onTap: _toggleRevealed,
+            customSemanticsActions: {
+              CustomSemanticsAction(label: l10n.know): () =>
+                  _answerFromAction(Answer.know),
+              CustomSemanticsAction(label: l10n.dontKnow): () =>
+                  _answerFromAction(Answer.dontKnow),
+            },
+            excludeSemantics: true,
+            child: GestureDetector(
+              // The card follows the finger from where it touched down.
+              dragStartBehavior: DragStartBehavior.down,
+              onTap: _toggleRevealed,
+              onHorizontalDragUpdate: _onDragUpdate,
+              onHorizontalDragEnd: _onDragEnd,
+              onHorizontalDragCancel: _springBack,
+              child: AnimatedBuilder(
+                animation: _drag,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(_drag.value, 0),
+                  child: Transform.rotate(
+                    angle: _drag.value * StudyStyle.tiltPerPixel,
+                    child: _DragFeedback(offset: _drag.value, child: child!),
+                  ),
+                ),
+                child: _CardFace(card: widget.card, revealed: _revealed),
+              ),
             ),
           ),
-          child: _CardFace(card: widget.card, revealed: _revealed),
         ),
+        const SizedBox(height: StudyStyle.answerGap),
+        _AnswerButtons(onAnswer: _commit),
+      ],
+    );
+  }
+}
+
+/// "모른다" after a left chevron and "안다" before a right chevron, under the
+/// card: the answers without a drag.
+class _AnswerButtons extends StatelessWidget {
+  const _AnswerButtons({required this.onAnswer});
+
+  final void Function(Answer answer) onAnswer;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    ButtonStyle style(Color fill, Color text, EdgeInsets padding) =>
+        TextButton.styleFrom(
+          backgroundColor: fill,
+          foregroundColor: text,
+          shape: const StadiumBorder(),
+          minimumSize: const Size(AppSize.tapTarget, StudyStyle.answerHeight),
+          padding: padding,
+          textStyle: AppType.secondary.copyWith(fontWeight: FontWeight.w700),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        spacing: AppSpace.s12,
+        children: [
+          Flexible(
+            child: TextButton(
+              style: style(
+                colors.tintRed,
+                colors.onDontKnowTint,
+                const EdgeInsets.only(left: AppSpace.s8, right: AppSpace.s16),
+              ),
+              onPressed: () => onAnswer(Answer.dontKnow),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: AppSpace.s4,
+                children: [
+                  const Icon(LucideIcons.chevronLeft, size: AppSize.smallIcon),
+                  Flexible(
+                    child: Text(l10n.dontKnow, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Flexible(
+            child: TextButton(
+              style: style(
+                colors.tintGreen,
+                colors.onKnowTint,
+                const EdgeInsets.only(left: AppSpace.s16, right: AppSpace.s8),
+              ),
+              onPressed: () => onAnswer(Answer.know),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: AppSpace.s4,
+                children: [
+                  Flexible(
+                    child: Text(l10n.know, overflow: TextOverflow.ellipsis),
+                  ),
+                  const Icon(LucideIcons.chevronRight, size: AppSize.smallIcon),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -207,7 +291,8 @@ class _DragFeedback extends StatelessWidget {
 
 /// The card itself: the question and the answer side by side, or the answer
 /// under the question when the halves would be too narrow. Either way the two
-/// halves are the same size.
+/// halves are the same size. While the answer is hidden an eye holds its
+/// place.
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.card, required this.revealed});
 
@@ -216,7 +301,6 @@ class _CardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textScaler = MediaQuery.textScalerOf(context);
     final colors = AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -226,89 +310,45 @@ class _CardFace extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final halfWidth =
-                constraints.maxWidth / 2 - StudyStyle.cardPadding * 2;
-            final stacked =
-                halfWidth < textScaler.scale(StudyStyle.minHalfWidth);
-            // The width each half's text is laid out in: a half less its
-            // padding, side by side less the divider.
-            final textWidth = stacked
-                ? constraints.maxWidth - StudyStyle.cardPadding * 2
-                : (constraints.maxWidth - 1) / 2 - StudyStyle.cardPadding * 2;
-            final question = ContentView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: StudyStyle.currentMinHeight,
+          ),
+          child: SplitCard(
+            padding: StudyStyle.cardPadding,
+            dividerInset: StudyStyle.dividerInset,
+            stackBelow: StudyStyle.minHalfWidth,
+            scrolls: true,
+            front: (context, width) => ContentView(
               card.front,
               style: AppType.question,
-              fit: (minFontSize: AppType.questionFloor, width: textWidth),
-            );
-            final answer = Visibility(
-              visible: revealed,
-              maintainSize: true,
-              maintainAnimation: true,
-              maintainState: true,
-              child: ContentView(
-                card.back,
-                style: AppType.answer,
-                fit: (minFontSize: AppType.answerFloor, width: textWidth),
-              ),
-            );
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: StudyStyle.currentMinHeight,
-                maxHeight: constraints.maxHeight,
-              ),
-              child: stacked
-                  ? IntrinsicHeight(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: _Half(question)),
-                          const Divider(
-                            height: 1,
-                            thickness: 1,
-                            indent: StudyStyle.dividerInset,
-                            endIndent: StudyStyle.dividerInset,
-                          ),
-                          Expanded(child: _Half(answer)),
-                        ],
-                      ),
-                    )
-                  : IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: _Half(question)),
-                          const VerticalDivider(
-                            width: 1,
-                            thickness: 1,
-                            indent: StudyStyle.dividerInset,
-                            endIndent: StudyStyle.dividerInset,
-                          ),
-                          Expanded(child: _Half(answer)),
-                        ],
-                      ),
-                    ),
-            );
-          },
+              fit: (minFontSize: AppType.questionFloor, width: width),
+            ),
+            back: (context, width) => Stack(
+              alignment: Alignment.center,
+              children: [
+                Visibility(
+                  visible: revealed,
+                  maintainSize: true,
+                  maintainAnimation: true,
+                  maintainState: true,
+                  child: ContentView(
+                    card.back,
+                    style: AppType.answer,
+                    fit: (minFontSize: AppType.answerFloor, width: width),
+                  ),
+                ),
+                if (!revealed)
+                  Icon(
+                    LucideIcons.eye,
+                    size: StudyStyle.hiddenAnswerIcon,
+                    color: colors.muted,
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-}
-
-/// One half, its content centred vertically while it fits and scrolling from
-/// the top once the card has reached its cap.
-class _Half extends StatelessWidget {
-  const _Half(this.child);
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(StudyStyle.cardPadding),
-      child: SizedBox(width: double.infinity, child: child),
-    ),
-  );
 }

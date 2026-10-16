@@ -232,45 +232,56 @@ void main() {
       await tap(tester, find.byTooltip(ko.close));
 
       await tap(tester, find.text(ko.studyCount(4)));
+      // The first session, with the guide above the card.
       await shot(tester, '12-study-start');
-      // The current card's centre, where StudyStyle places it at rest.
-      final current = Offset(
-        _phone.width / _density / 2,
-        _phone.height / _density * 0.57,
-      );
-      for (final offset in [400.0, -400.0, 400.0, 400.0]) {
-        await tester.dragFrom(current, Offset(offset, 0));
-        await tester.pumpAndSettle();
+      Future<void> answer(String label) =>
+          tap(tester, find.widgetWithText(TextButton, label));
+      for (final label in [ko.know, ko.dontKnow, ko.know, ko.know]) {
+        await answer(label);
       }
+      // At rest: the previous card above the current one.
       await shot(tester, '13-study-session');
-      await tester.dragFrom(current, const Offset(0, 400));
+      await tap(tester, find.bySemanticsLabel(RegExp('^앞면: [a-z]+\$')));
+      await shot(tester, '13a-study-revealed');
+      // The view's centre, where a scroll starts on whatever card is there.
+      final centre = Offset(
+        _phone.width / _density / 2,
+        _phone.height / _density / 2,
+      );
+      await tester.dragFrom(centre, const Offset(0, 300));
       await tester.pumpAndSettle();
+      // Scrolled back: three cards, the centred one emphasised.
       await shot(tester, '13b-study-scrolled-back');
+      final gesture = await tester.startGesture(centre);
+      for (var moved = 0; moved < 8; moved++) {
+        await gesture.moveBy(const Offset(-15, 0));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      // Re-deciding the centred card, its new answer shown behind it.
+      await shot(tester, '13c-study-redecide');
+      await gesture.up();
+      await tester.pumpAndSettle();
       await tester.longPress(
         find
             .bySemanticsLabel(
-              RegExp('^앞면: (ephemeral|meticulous|ubiquitous|resilient)\\.'),
+              RegExp('^앞면: (ephemeral|meticulous|ubiquitous|resilient)\\. '),
             )
             .first,
       );
       await tester.pumpAndSettle();
       await shot(tester, '14-whole-card-sheet');
       await dismissSheet(tester);
-      // Back to the end of the view, where the current card rests.
-      await tester.dragFrom(current, const Offset(0, -800));
-      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.backToCurrent));
       for (
         var tries = 0;
         tries < 10 && find.text(ko.studyComplete).evaluate().isEmpty;
         tries++
       ) {
-        await tester.dragFrom(current, const Offset(400, 0));
-        await tester.pumpAndSettle();
+        await answer(ko.know);
       }
       await shot(tester, '15-study-complete');
       await tap(tester, find.text(ko.keepStudying));
-      await tester.dragFrom(current, const Offset(-400, 0));
-      await tester.pumpAndSettle();
+      await answer(ko.dontKnow);
       await shot(tester, '15b-study-practice');
       await tap(tester, find.byTooltip(ko.close));
 

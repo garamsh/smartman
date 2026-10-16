@@ -15,7 +15,13 @@ import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_
 import type { CardState } from "../queue";
 
 /** A day with no answer stored in it before the session. */
-const noAnswerToday = { answers: [], cards: [], answeredAnyDeck: false, streakBefore: 0 };
+const noAnswerToday = {
+  answers: [],
+  cards: [],
+  answeredAnyDeck: false,
+  streakBefore: 0,
+  answeredBefore: false,
+};
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
@@ -182,7 +188,9 @@ describe("a study session's writes", () => {
     };
     const toggle = async (at: number) => {
       vi.setSystemTime(at);
-      await user.click(within(screen.getByRole("region", { name: "이전 답" })).getByRole("button"));
+      await user.click(
+        within(screen.getByRole("complementary", { name: "이번 학습" })).getByRole("button"),
+      );
       await stateEditedAt(at)();
     };
     const answeredAt = start + 2000;
