@@ -88,16 +88,31 @@ void main() {
     },
   );
 
-  testWidgets('with nothing to study today, Study is disabled', (tester) async {
-    final screens = await DeckScreens.open(tester, cards: cards);
-    await screens.push((deck) => CardListScreen(deck: deck));
+  testWidgets(
+    'with nothing to study today, or no count yet or none readable, Study still opens a session over the deck',
+    (tester) async {
+      for (final today in const [
+        TodayCounted(review: 0, fresh: 0),
+        TodayPending(),
+        TodayUnavailable('Could not count'),
+      ]) {
+        final screens = await DeckScreens.open(
+          tester,
+          cards: cards,
+          today: today,
+        );
+        await screens.push((deck) => CardListScreen(deck: deck));
 
-    final study = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Study · 0'),
-    );
-    expect(study.onPressed, isNull);
-    await screens.close();
-  });
+        await screens.tap(find.text('Study · 0'));
+
+        expect(screens.sessions, [
+          {screens.deck.id},
+        ], reason: '$today');
+        expect(find.text('session'), findsOneWidget);
+        await screens.close();
+      }
+    },
+  );
 
   testWidgets('cards show as front | back rows, and a tap opens one to edit', (
     tester,

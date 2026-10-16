@@ -5,34 +5,14 @@ const look =
   "flex min-h-cta items-center justify-center gap-2 rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 /**
- * The primary button that opens a study session over [decks], named [label]; disabled when the
- * session would have no card to study.
+ * The primary button that opens a study session over [decks], named [label]; with no card left
+ * today the session opens on the completion card or on nothing to study.
  */
-export function StudyLink({
-  decks,
-  cards,
-  label,
-}: {
-  decks: readonly string[];
-  cards: number;
-  label: string;
-}) {
-  const content = (
-    <>
-      <Play aria-hidden className="size-small-icon" strokeWidth={2} />
-      {label}
-    </>
-  );
-  if (cards === 0) {
-    return (
-      <button type="button" disabled className={`${look} opacity-50`}>
-        {content}
-      </button>
-    );
-  }
+export function StudyLink({ decks, label }: { decks: readonly string[]; label: string }) {
   return (
     <Link href={`/study?decks=${decks.map(encodeURIComponent).join(",")}`} className={look}>
-      {content}
+      <Play aria-hidden className="size-small-icon" strokeWidth={2} />
+      {label}
     </Link>
   );
 }

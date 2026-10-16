@@ -207,5 +207,6 @@
   "privacyPolicy": "Privacy Policy",
   "linkNotOpened": "Couldn't open the link. Please try again.",
   "appVersion": "Version {version}",
-  "todayDone": "You've done today's cards"
+  "todayDone": "You've done today's cards",
+  "todayKeepStudying": "Keep studying"
 }

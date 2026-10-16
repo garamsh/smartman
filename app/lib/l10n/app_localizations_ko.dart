@@ -729,4 +729,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get todayDone => '오늘 할 카드를 다 했어요';
+
+  @override
+  String get todayKeepStudying => '계속 학습';
 }

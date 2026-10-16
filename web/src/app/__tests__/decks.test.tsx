@@ -10,6 +10,7 @@ import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
 
 import { Decks } from "../_components/decks";
+import { Study } from "../study/_components/study";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
@@ -297,6 +298,40 @@ describe("the deck list", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
     );
+  });
+
+  it("with no card left today says the cards are done and links 계속 학습 to the study page over every deck, which opens on nothing to study or on the completion card", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"), deckRow("d-es", "Spanish"));
+    postgrest.seed("cards", cardRow("fr-later", "d-fr", "oiseau"));
+    postgrest.seed("card_states", stateRow("fr-later", notDue));
+    // Answered yesterday: nothing was answered today.
+    postgrest.seed("reviews", reviewRow("r-yesterday", "fr-later", start - day, 1_000));
+
+    for (const answered of ["yesterday", "today"]) {
+      if (answered === "today") {
+        postgrest.seed("reviews", reviewRow("r-today", "fr-later", start - 3_600_000, 1_000));
+      }
+      await render(Decks, {});
+
+      expect(
+        screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
+        answered,
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "모두 학습" }), answered).not.toBeInTheDocument();
+      const href = screen.getByRole("link", { name: "계속 학습" }).getAttribute("href");
+      expect(href, answered).toBe("/study?decks=d-fr,d-es");
+
+      cleanup();
+      await render(Study, {
+        searchParams: Promise.resolve(Object.fromEntries(new URLSearchParams(href?.split("?")[1]))),
+      });
+      if (answered === "yesterday") {
+        expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
+      } else {
+        expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+      }
+      cleanup();
+    }
   });
 
   it("shows the first-run invitation in place of the today card and the list when there is no deck", async () => {

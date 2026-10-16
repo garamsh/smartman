@@ -150,10 +150,7 @@ class _CardListScreenState extends ConsumerState<CardListScreen> {
                     }),
                     icon: LucideIcons.play,
                     size: AppButtonSize.cta,
-                    onPressed: switch (count) {
-                      TodayCounted(:final total) when total > 0 => _study,
-                      _ => null,
-                    },
+                    onPressed: _study,
                   ),
                 ],
               ),

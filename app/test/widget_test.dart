@@ -297,6 +297,71 @@ void main() {
     },
   );
 
+  testWidgets(
+    'with no card left and none answered today, Keep studying and Study · 0 open a session with nothing to study',
+    (tester) async {
+      await pumpApp(tester);
+      await createDeckAndOpen(tester, 'French');
+
+      await tester.tap(find.text('Study · 0'));
+      await tester.pumpAndSettle();
+      expect(find.text('No cards to study today'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.text("You've done today's cards"), findsOneWidget);
+      await tester.tap(find.text('Keep studying'));
+      await tester.pumpAndSettle();
+      expect(find.text('No cards to study today'), findsOneWidget);
+      await unmountApp(tester);
+    },
+  );
+
+  testWidgets(
+    'with no card left and one answered today, Keep studying and Study · 0 open the completion card',
+    (tester) async {
+      await pumpApp(tester);
+      await createDeckAndOpen(tester, 'French');
+      await addCard(tester, 'Chat', 'cat');
+      await tester.tap(find.text('Study · 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Know'));
+      await tester.pumpAndSettle();
+      // The deck page reads its count again when the session closes, so wait
+      // until the answer's review row is stored: its write runs on real time,
+      // and its continuations on frames.
+      for (var tries = 0; ; tries++) {
+        final rows = await tester.runAsync(
+          () => executor.runSelect('SELECT COUNT(*) AS n FROM reviews', []),
+        );
+        if (rows!.single['n'] == 1) break;
+        if (tries == 100) fail('the answer was never stored');
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
+      await tester.tap(find.text('Stop'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Study · 0'));
+      await tester.pumpAndSettle();
+      expect(find.text('Done for today'), findsOneWidget);
+      await tester.tap(find.text('Stop'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.text("You've done today's cards"), findsOneWidget);
+      await tester.tap(find.text('Keep studying'));
+      await tester.pumpAndSettle();
+      expect(find.text('Done for today'), findsOneWidget);
+      await unmountApp(tester);
+    },
+  );
+
   testWidgets('the deck list opens the account screen, signed in', (
     tester,
   ) async {
