@@ -519,6 +519,156 @@ test("the account avatar stays a 56 px circle beside an email too long for one l
 test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
   test.use({ timezoneId: "UTC" });
 
+  test("the record page shows the server's answers as retention, recall bands, mastered weeks and study days, read and folded on the server", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!supabaseUrl || !supabaseKey || !baseURL) throw new Error("skipped above");
+    const email = `web-record-${randomUUID()}@example.com`;
+    const password = "web-record-password";
+    await page.goto("/login");
+    const userId = await signUpInBrowser(context, baseURL, email, password);
+
+    // The phone has synced 200 cards studied over the last twelve weeks: four new cards a day,
+    // each reviewed 2, 6, 15 and 35 days after its first answer, one review in nine "모른다".
+    const phone = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+    expect((await phone.auth.signInWithPassword({ email, password })).error).toBeNull();
+    const day = 86_400_000;
+    const now = Date.now();
+    const today = Date.UTC(
+      new Date(now).getUTCFullYear(),
+      new Date(now).getUTCMonth(),
+      new Date(now).getUTCDate(),
+      4,
+    );
+    const iso = (at: number) => new Date(at).toISOString();
+    const deckId = randomUUID();
+    expect(
+      (
+        await phone.from("decks").insert({
+          id: deckId,
+          user_id: userId,
+          name: "Record",
+          created_at: iso(now - 90 * day),
+          updated_at: iso(now - 90 * day),
+        })
+      ).error,
+    ).toBeNull();
+    const cards = Array.from({ length: 200 }, (_, index) => ({
+      id: randomUUID(),
+      first: today - (83 - Math.floor(index / 4)) * day + 6 * 3_600_000 + index * 60_000,
+    })).filter((card) => card.first < now);
+    expect(
+      (
+        await phone.from("cards").insert(
+          cards.map((card, index) => ({
+            id: card.id,
+            user_id: userId,
+            deck_id: deckId,
+            front: [{ type: "text", payload: { text: `word ${String(index)}` } }],
+            back: [{ type: "text", payload: { text: String(index) } }],
+            card_key: `word ${String(index)}`,
+            source: "manual",
+            created_at: iso(now - 90 * day),
+            updated_at: iso(now - 90 * day),
+          })),
+        )
+      ).error,
+    ).toBeNull();
+    const reviews = cards.flatMap((card, index) =>
+      [0, 2, 6, 15, 35]
+        .map((after) => card.first + after * day)
+        .filter((at) => at < now)
+        .map((at, step) => ({
+          id: randomUUID(),
+          user_id: userId,
+          card_id: card.id,
+          rating: (index + step) % 9 === 0 ? "again" : "good",
+          reviewed_at: iso(at),
+          duration_ms: 6_000,
+          updated_at: iso(at),
+        })),
+    );
+    expect((await phone.from("reviews").insert(reviews)).error).toBeNull();
+    expect(
+      (
+        await phone.from("card_states").insert(
+          cards.map((card) => {
+            const last = Math.max(
+              ...reviews
+                .filter((review) => review.card_id === card.id)
+                .map((r) => Date.parse(r.reviewed_at)),
+            );
+            return {
+              user_id: userId,
+              card_id: card.id,
+              stability: 12,
+              difficulty: 5,
+              last_review: iso(last),
+              due: iso(last + 25 * day),
+              updated_at: iso(last),
+            };
+          }),
+        )
+      ).error,
+    ).toBeNull();
+
+    await page.goto("/record");
+    await expect(page.getByRole("heading", { name: "기록", exact: true })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "30일", exact: true })).toBeChecked();
+    await expect(page.getByRole("img", { name: /^복습에서 맞힌 비율, 목표 90%: / })).toBeVisible();
+    await expect(
+      page.getByText(/^목표보다 \d+%p (낮아요|높아요)$|^목표만큼 맞혔어요$/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: new RegExp(`^${String(cards.length)}장 중 단단함 `) }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: /^주별 익힌 카드, 8주 전부터 이번 주까지: / }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: /^최근 12주 동안 \d+일 학습했어요: / }),
+    ).toBeVisible();
+    await page.getByText("7일", { exact: true }).click();
+    await expect(page.getByRole("radio", { name: "7일", exact: true })).toBeChecked();
+
+    // The warm load, against #69's bar of 1 s: the page again, now that the server process has
+    // loaded the engine, timed from navigation to the end of its load.
+    await page.reload();
+    await expect(page.getByRole("img", { name: /^최근 12주/ })).toBeVisible();
+    const warm = await page.evaluate(() => {
+      const [entry] = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+      return entry ? entry.loadEventEnd - entry.startTime : -1;
+    });
+    console.log(
+      `the record page's warm load over ${String(reviews.length)} reviews: ${String(Math.round(warm))} ms`,
+    );
+    expect(warm).toBeGreaterThan(0);
+
+    await page.getByText("30일", { exact: true }).click();
+    await shot(page, "10-record");
+
+    // 오늘's retention card: the last 30 days' figure and gap, linking here.
+    await page.goto("/");
+    const card = page.getByRole("region", { name: "기억률", exact: true });
+    await expect(
+      card.getByRole("img", { name: /^최근 30일 복습에서 맞힌 비율, 목표 90%: / }),
+    ).toBeVisible();
+    await expect(
+      card.getByRole("link", { name: "기록에서 자세히 보기", exact: true }),
+    ).toHaveAttribute("href", "/record");
+    await page.reload();
+    await expect(card).toBeVisible();
+    const todayLoad = await page.evaluate(() => {
+      const [entry] = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+      return entry ? entry.loadEventEnd - entry.startTime : -1;
+    });
+    console.log(`오늘's warm load with the retention card: ${String(Math.round(todayLoad))} ms`);
+    expect(todayLoad).toBeGreaterThan(0);
+    await shot(page, "10b-today-retention");
+  });
+
   test("the streak counts the server's earlier study days with today's answer", async ({
     page,
     context,

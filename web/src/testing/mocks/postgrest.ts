@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 
-import { streak, studyDayStart } from "@/features/study";
+import type { CardId } from "@/features/decks";
+import { recordDays, streak, studyDayStart } from "@/features/study";
 
 import { bearerUser, supabaseUrl, testUser } from "./handlers";
 
@@ -81,7 +82,9 @@ type Held = { release: () => void; released: Promise<void> };
  * count `Prefer: count=exact` asks for, the server's revision on every write, an upsert's
  * `resolution`, and the reviews' column grant. It answers `study_streak_before` from the seeded
  * reviews with the web's own `streak`, as the server counts the same days, and
- * `study_days_before` with the web's own `studyDayStart`, as the server groups the same days.
+ * `study_days_before` with the web's own `studyDayStart`, as the server groups the same days;
+ * `study_record_days` with the web's own `recordDays`, as the server counts the same days; and
+ * `study_record_cards` from the seeded decks, cards, states and reviews, as the server joins them.
  */
 export class FakePostgrest {
   readonly rows: Record<Table, Row[]> = { decks: [], cards: [], reviews: [], card_states: [] };
@@ -201,6 +204,70 @@ export class FakePostgrest {
       }
       const days = [...totals.keys()].sort((a, b) => a - b).slice(-body.days);
       return HttpResponse.json(days.map((day) => totals.get(day)));
+    }),
+    http.post(`${supabaseUrl}/rest/v1/rpc/study_record_days`, async ({ request }) => {
+      const refused = await this.gate("reviews");
+      if (refused) return refused;
+      const user = bearerUser(request.headers.get("authorization"));
+      if (!user) {
+        return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
+      }
+      this.requests.push("POST rpc/study_record_days");
+      const body = (await request.json()) as { time_zone: string; before: string };
+      const before = Date.parse(body.before);
+      const answers = this.rows.reviews
+        .filter((row) => row.user_id === user.id && row.deleted_at == null)
+        .map((row) => ({
+          cardId: String(row.card_id) as CardId,
+          know: row.rating === "good",
+          reviewedAt: Date.parse(String(row.reviewed_at)),
+        }))
+        .filter((answer) => answer.reviewedAt < before);
+      return HttpResponse.json(
+        recordDays(answers, body.time_zone).map((day) => ({
+          day_start: new Date(day.dayStart).toISOString(),
+          cards: day.cards,
+          reviews: day.reviews,
+          known: day.known,
+        })),
+      );
+    }),
+    http.post(`${supabaseUrl}/rest/v1/rpc/study_record_cards`, async ({ request }) => {
+      const refused = await this.gate("reviews");
+      if (refused) return refused;
+      const user = bearerUser(request.headers.get("authorization"));
+      if (!user) {
+        return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
+      }
+      this.requests.push("POST rpc/study_record_cards");
+      const own = (row: Row) => row.user_id === user.id && row.deleted_at == null;
+      const decks = new Set(this.rows.decks.filter(own).map((row) => String(row.id)));
+      const cards = this.rows.cards
+        .filter((row) => own(row) && decks.has(String(row.deck_id)))
+        .map((row) => String(row.id))
+        .sort();
+      const rows = cards.flatMap((card) => {
+        const answers = this.rows.reviews
+          .filter((row) => own(row) && String(row.card_id) === card)
+          .toSorted(
+            (a, b) => Date.parse(String(a.reviewed_at)) - Date.parse(String(b.reviewed_at)),
+          );
+        if (answers.length === 0) return [];
+        const state = this.rows.card_states.find((row) => own(row) && String(row.card_id) === card);
+        return [
+          {
+            card_id: card,
+            stability: state?.stability ?? null,
+            difficulty: state?.difficulty ?? null,
+            last_review: state?.last_review ?? null,
+            due: state?.due ?? null,
+            ratings: answers.map((row) => row.rating),
+            reviewed_at: answers.map((row) => row.reviewed_at),
+            fuzz_factors: answers.map((row) => row.fuzz_factor ?? null),
+          },
+        ];
+      });
+      return HttpResponse.json(rows);
     }),
     http.get(`${supabaseUrl}/rest/v1/:table`, async ({ request, params }) => {
       const { table } = params;

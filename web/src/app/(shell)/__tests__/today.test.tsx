@@ -537,6 +537,55 @@ describe("the 오늘 and 덱 pages", () => {
     expect(clicked).toHaveBeenCalledOnce();
   });
 
+  it("shows the last 30 study days' retention against the 90% target with its gap, linking to the record page, and a sentence without a review", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed(
+      "cards",
+      cardRow("a", "d-fr", "chat"),
+      cardRow("b", "d-fr", "chien"),
+      cardRow("c", "d-fr", "oiseau"),
+    );
+    const answer = (id: string, card: string, ago: number, rating: "good" | "again") => ({
+      ...reviewRow(id, card, start - ago, 4_000),
+      rating,
+    });
+    // First answers alone hold no scheduled review.
+    postgrest.seed(
+      "reviews",
+      answer("a1", "a", 10 * day, "good"),
+      answer("b1", "b", 10 * day, "good"),
+    );
+    await render(Today, {});
+    const card = () => within(screen.getByRole("region", { name: "기억률" }));
+    expect(card().getByText("최근 30일 동안 복습한 카드가 없어요.")).toBeInTheDocument();
+    expect(card().getByRole("link", { name: "기록에서 자세히 보기" })).toHaveAttribute(
+      "href",
+      "/record",
+    );
+    cleanup();
+
+    // a's "안다" and b's "모른다" 5 days back are scheduled; c's "모른다" 45 days back is outside
+    // the 30 days.
+    postgrest.seed(
+      "reviews",
+      answer("a2", "a", 5 * day, "good"),
+      answer("b2", "b", 5 * day, "again"),
+      answer("c0", "c", 60 * day, "good"),
+      answer("c-old", "c", 45 * day, "again"),
+    );
+    await render(Today, {});
+    expect(card().getByText("50%")).toBeInTheDocument();
+    expect(card().getByText("목표 90%")).toBeInTheDocument();
+    expect(card().getByText("목표보다 40%p 낮아요")).toBeInTheDocument();
+    expect(card().getByRole("img").getAttribute("aria-label")).toBe(
+      "최근 30일 복습에서 맞힌 비율, 목표 90%: 1월 10일 50%",
+    );
+    expect(card().getByRole("link", { name: "기록에서 자세히 보기" })).toHaveAttribute(
+      "href",
+      "/record",
+    );
+  });
+
   it("shows the first-run invitation in place of the today card on 오늘 and of the list on 덱 when there is no deck", async () => {
     const title = "첫 덱을 만들어 볼까요?";
     const pointer =

@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // next dev would write web/AGENTS.md; the repository's AGENTS.md is the one contributors read.
   agentRules: false,
+  // The 기록 page runs the engine on the server from its WebAssembly file (ADR 0047), read at
+  // src/features/study/engine-server.ts's wasmPath, which no import names.
+  outputFileTracingIncludes: {
+    "/record": ["./src/features/study/engine-wasm/smartman_engine_wasm_bg.wasm"],
+  },
   experimental: {
     // src/styles/fonts is a link to the app's bundled fonts, and src/features/study/engine-wasm
     // one to the engine's WebAssembly module, both outside this project.

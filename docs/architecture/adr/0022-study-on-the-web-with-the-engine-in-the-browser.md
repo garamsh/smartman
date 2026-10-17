@@ -1,6 +1,6 @@
 # ADR 0022: Study on the web with the engine in the browser, writing each answer in order through a Server Action
 
-> Status: accepted
+> Status: accepted; its engine in the browser alone superseded by ADR-0047
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

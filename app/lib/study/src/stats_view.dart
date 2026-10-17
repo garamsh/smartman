@@ -354,23 +354,25 @@ class _RetentionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: AppSpace.s4,
             children: [
-              SizedBox(
-                height: StatsStyle.retentionHeight,
-                child: _RetentionChart(
-                  points: points,
-                  span: span.length,
-                  targetLabel: l10n.retentionTargetLine(target),
-                ),
+              _RetentionChart(
+                points: points,
+                span: span.length,
+                targetLabel: l10n.retentionTargetLine(target),
               ),
-              Row(
-                children: [
-                  Text(switch (period.days) {
-                    final days? => l10n.retentionDaysAgo(days),
-                    null => _date(context, first, zone),
-                  }, style: quiet),
-                  const Spacer(),
-                  Text(l10n.statsToday, style: quiet),
-                ],
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: StatsStyle.scaleWidth + AppSpace.s8,
+                ),
+                child: Row(
+                  children: [
+                    Text(switch (period.days) {
+                      final days? => l10n.retentionDaysAgo(days),
+                      null => _date(context, first, zone),
+                    }, style: quiet),
+                    const Spacer(),
+                    Text(l10n.statsToday, style: quiet),
+                  ],
+                ),
               ),
             ],
           ),
@@ -382,8 +384,9 @@ class _RetentionCard extends StatelessWidget {
 
 /// A line through each of [points], placed by its day from the first of
 /// [span] days and by its share, over a scale from at most
-/// [StatsStyle.retentionFloor] to 1, with the target dashed across it and
-/// named [targetLabel].
+/// [StatsStyle.retentionFloor] to 1, both ends labelled at its left, with the
+/// target dashed across it and named [targetLabel] in a row above the plot,
+/// where no line passes (issue #155).
 class _RetentionChart extends StatelessWidget {
   const _RetentionChart({
     required this.points,
@@ -397,47 +400,63 @@ class _RetentionChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final lowest = points.map((point) => point.share).reduce(min);
     final floor = min(StatsStyle.retentionFloor, (lowest * 10).floor() / 10);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final height = constraints.maxHeight;
-        final targetY = height * (1 - targetRetention) / (1 - floor);
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _RetentionPainter(
-                  points: points,
-                  span: span,
-                  floor: floor,
-                  grid: colors.hairline,
-                  target: colors.know,
-                  line: colors.ink,
-                  area: colors.brandTint,
-                  ring: colors.surface,
+    final scale = AppType.micro.copyWith(color: colors.muted);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: AppSpace.s4,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            targetLabel,
+            style: AppType.micro.copyWith(
+              color: colors.onKnowTint,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: StatsStyle.retentionHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpace.s8,
+            children: [
+              SizedBox(
+                width: StatsStyle.scaleWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(l10n.retentionPercent(100), style: scale),
+                    Text(
+                      l10n.retentionPercent((floor * 100).round()),
+                      style: scale,
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Positioned(
-              right: 0,
-              bottom: height - targetY + AppSpace.s4,
-              // On the surface, so the line passing under it leaves it legible.
-              child: ColoredBox(
-                color: colors.surface,
-                child: Text(
-                  targetLabel,
-                  style: AppType.micro.copyWith(
-                    color: colors.onKnowTint,
-                    fontWeight: FontWeight.w700,
+              Expanded(
+                child: CustomPaint(
+                  painter: _RetentionPainter(
+                    points: points,
+                    span: span,
+                    floor: floor,
+                    grid: colors.hairline,
+                    target: colors.know,
+                    line: colors.ink,
+                    area: colors.brandTint,
+                    ring: colors.surface,
                   ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
