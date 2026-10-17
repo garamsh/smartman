@@ -76,6 +76,52 @@ Retention? retentionOver(Iterable<DayRetention> days) {
   return reviews == 0 ? null : Retention(reviews: reviews, known: known);
 }
 
+/// A span of study days the retention is shown over.
+enum StatsPeriod {
+  /// The last 7 study days, today's included (7일).
+  week(7),
+
+  /// The last 30 study days, today's included (30일).
+  month(30),
+
+  /// Every study day (전체).
+  all(null);
+
+  const StatsPeriod(this.days);
+
+  /// How many study days the period holds; null for every one.
+  final int? days;
+
+  /// When the period's first study day starts, as of [now] in the time zone
+  /// [offsetAt] gives; null for every study day.
+  DateTime? start(DateTime now, {UtcOffsetAt offsetAt = localOffsetAt}) {
+    final days = this.days;
+    if (days == null) return null;
+    var start = studyDayStart(now, offsetAt);
+    for (var day = 1; day < days; day++) {
+      start = studyDayBefore(start, offsetAt);
+    }
+    return start;
+  }
+}
+
+/// The days of [days] that fall within [period] as of [now], in the time
+/// zone [offsetAt] gives.
+List<DayRetention> retentionIn(
+  List<DayRetention> days,
+  StatsPeriod period,
+  DateTime now, {
+  UtcOffsetAt offsetAt = localOffsetAt,
+}) {
+  final start = period.start(now, offsetAt: offsetAt);
+  return start == null
+      ? days
+      : [
+          for (final day in days)
+            if (!day.day.isBefore(start)) day,
+        ];
+}
+
 /// The probability of recall from which a card's recall is strong (단단함).
 const strongRecall = 0.95;
 
@@ -182,6 +228,13 @@ List<int> masteredByWeek(
   ];
 }
 
+/// How many more cards are mastered at the end of this week than four weeks
+/// before, from [weeks] as [masteredByWeek] gives them; null unless more are.
+int? masteredGain(List<int> weeks) {
+  final gain = weeks.last - weeks[weeks.length - 5];
+  return gain > 0 ? gain : null;
+}
+
 /// How many study days [studyDayCounts] covers: twelve weeks.
 const heatmapDays = 84;
 
@@ -215,6 +268,15 @@ List<StudyDayCount> studyDayCounts(
         ),
   ];
 }
+
+/// How many levels a heatmap cell is drawn at, a day without a card included.
+const heatLevels = 4;
+
+/// The level a study day with [cards] is drawn at, when the busiest day of
+/// the heatmap holds [most]: 0 without a card, then 1 to 3 by which third of
+/// 1 to [most] it falls in.
+int heatLevel(int cards, int most) =>
+    cards <= 0 ? 0 : (3 * cards / most).ceil().clamp(1, heatLevels - 1);
 
 /// The most study days in a row that hold one of [answers], in the time zone
 /// [offsetAt] gives.

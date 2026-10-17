@@ -788,9 +788,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabsLabel => 'Tabs';
 
   @override
-  String get recordComingSoon => 'Your study record will appear here soon.';
-
-  @override
   String get selectDecks => 'Select';
 
   @override
@@ -1003,4 +1000,145 @@ class AppLocalizationsEn extends AppLocalizations {
   String catchUpSemantics(String days) {
     return 'Overdue reviews expected: $days';
   }
+
+  @override
+  String get statsPeriod => 'Period';
+
+  @override
+  String get statsPeriodWeek => '7 days';
+
+  @override
+  String get statsPeriodMonth => '30 days';
+
+  @override
+  String get statsPeriodAll => 'All';
+
+  @override
+  String get retentionTitle => 'Correct in reviews';
+
+  @override
+  String retentionPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get retentionTarget => 'Target';
+
+  @override
+  String retentionBelow(int points) {
+    return '$points pt below target';
+  }
+
+  @override
+  String retentionAbove(int points) {
+    return '$points pt above target';
+  }
+
+  @override
+  String get retentionOnTarget => 'On target';
+
+  @override
+  String retentionTargetLine(int percent) {
+    return 'Target $percent%';
+  }
+
+  @override
+  String retentionDaysAgo(int days) {
+    return '$days days ago';
+  }
+
+  @override
+  String get statsToday => 'Today';
+
+  @override
+  String get retentionEmpty => 'No reviews in this period.';
+
+  @override
+  String retentionSemantics(int target, String days) {
+    return 'Correct in reviews, target $target%: $days';
+  }
+
+  @override
+  String retentionDay(String date, int percent) {
+    return '$date $percent%';
+  }
+
+  @override
+  String get recallTitle => 'Chance you remember now';
+
+  @override
+  String recallMean(int percent) {
+    return 'Average $percent%';
+  }
+
+  @override
+  String get recallStrong => 'Solid';
+
+  @override
+  String get recallFair => 'Fair';
+
+  @override
+  String get recallFading => 'Fading soon';
+
+  @override
+  String statsCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recallSemantics(
+    int total,
+    int strong,
+    int fair,
+    int fading,
+    int mean,
+  ) {
+    return 'Of $total cards: solid $strong, fair $fair, fading soon $fading, average $mean%';
+  }
+
+  @override
+  String get recallEmpty => 'No card reviewed yet.';
+
+  @override
+  String get masteredTitle => 'Mastered cards';
+
+  @override
+  String masteredGain(int count) {
+    return '+$count in 4 weeks';
+  }
+
+  @override
+  String masteredSemantics(String counts) {
+    return 'Mastered cards by week, from 8 weeks ago to this week: $counts';
+  }
+
+  @override
+  String get studyDaysTitle => 'Study days';
+
+  @override
+  String studyDaysStreak(int current, int best) {
+    return '$current-day streak · best $best';
+  }
+
+  @override
+  String studyDaysSemantics(int count, String days) {
+    return 'Studied on $count days in the last 12 weeks: $days';
+  }
+
+  @override
+  String get studyDaysNone => 'No study days in the last 12 weeks';
+
+  @override
+  String studyDay(String date, int count) {
+    return '$date $count';
+  }
+
+  @override
+  String get masteredEmpty => 'No card mastered yet.';
 }

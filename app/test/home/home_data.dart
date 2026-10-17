@@ -19,7 +19,7 @@ final homeNow = DateTime.utc(2026, 10, 15, 9);
 /// What the home screens read beside the decks: a signed-in account, and
 /// study over [db] at [homeNow], whose count never finishes reading when
 /// [stalled]. Counting and opening a session schedule nothing, so the
-/// scheduler is never called.
+/// scheduler only answers the 기록 tab's folds and recall.
 List<Override> homeOverrides(AppDatabase db, {bool stalled = false}) => [
   accountServiceProvider.overrideWithValue(
     FakeAccountService(
@@ -42,7 +42,20 @@ List<Override> homeOverrides(AppDatabase db, {bool stalled = false}) => [
 
 var _reviews = 0;
 
-class _UnusedScheduler extends Fake implements Scheduler {}
+/// Schedules nothing; for the 기록 tab, folds every card into no state and
+/// recalls every stored state at [homeRecall].
+class _UnusedScheduler extends Fake implements Scheduler {
+  @override
+  Future<List<CardState>> history(List<ReviewRow> reviews) async => [];
+
+  @override
+  Future<double> retrievability(CardState state, DateTime at) async =>
+      homeRecall;
+}
+
+/// The probability of recall the home screens' scheduler gives every stored
+/// state.
+const homeRecall = 0.9;
 
 /// A study repository whose first read of the stored states across every
 /// deck, the count's, for the day's new cards, never completes; later reads,

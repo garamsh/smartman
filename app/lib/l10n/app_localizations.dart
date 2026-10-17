@@ -1333,12 +1333,6 @@ abstract class AppLocalizations {
   /// **'탭'**
   String get tabsLabel;
 
-  /// The 기록 tab until its content arrives.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습 기록은 곧 여기에서 볼 수 있어요.'**
-  String get recordComingSoon;
-
   /// The decks tab's action that enters selection mode, to study several decks in one session.
   ///
   /// In ko, this message translates to:
@@ -1644,6 +1638,204 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'밀린 복습 예상: {days}'**
   String catchUpSemantics(String days);
+
+  /// The 기록 tab's period selector, as a screen reader names it.
+  ///
+  /// In ko, this message translates to:
+  /// **'기간'**
+  String get statsPeriod;
+
+  /// The period of the last 7 study days.
+  ///
+  /// In ko, this message translates to:
+  /// **'7일'**
+  String get statsPeriodWeek;
+
+  /// The period of the last 30 study days.
+  ///
+  /// In ko, this message translates to:
+  /// **'30일'**
+  String get statsPeriodMonth;
+
+  /// The period of every study day.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체'**
+  String get statsPeriodAll;
+
+  /// Over the retention figure: the share of scheduled reviews answered 안다.
+  ///
+  /// In ko, this message translates to:
+  /// **'복습에서 맞힌 비율'**
+  String get retentionTitle;
+
+  /// A percentage figure on the 기록 tab.
+  ///
+  /// In ko, this message translates to:
+  /// **'{percent}%'**
+  String retentionPercent(int percent);
+
+  /// Over the target retention beside the figure.
+  ///
+  /// In ko, this message translates to:
+  /// **'목표'**
+  String get retentionTarget;
+
+  /// The chip when retention is below the target, by whole percentage points.
+  ///
+  /// In ko, this message translates to:
+  /// **'목표보다 {points}%p 낮아요'**
+  String retentionBelow(int points);
+
+  /// The chip when retention is above the target, by whole percentage points.
+  ///
+  /// In ko, this message translates to:
+  /// **'목표보다 {points}%p 높아요'**
+  String retentionAbove(int points);
+
+  /// The chip when retention equals the target.
+  ///
+  /// In ko, this message translates to:
+  /// **'목표만큼 맞혔어요'**
+  String get retentionOnTarget;
+
+  /// The label on the chart's dashed target line.
+  ///
+  /// In ko, this message translates to:
+  /// **'목표 {percent}%'**
+  String retentionTargetLine(int percent);
+
+  /// Under the chart's left end: the period's first day.
+  ///
+  /// In ko, this message translates to:
+  /// **'{days}일 전'**
+  String retentionDaysAgo(int days);
+
+  /// Under the chart's right end: today.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘'**
+  String get statsToday;
+
+  /// The retention card when the period holds no scheduled review.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 기간에 복습한 카드가 없어요.'**
+  String get retentionEmpty;
+
+  /// What a screen reader reads for the retention chart, before each day and its share.
+  ///
+  /// In ko, this message translates to:
+  /// **'복습에서 맞힌 비율, 목표 {target}%: {days}'**
+  String retentionSemantics(int target, String days);
+
+  /// One day of the retention chart as a screen reader reads it.
+  ///
+  /// In ko, this message translates to:
+  /// **'{date} {percent}%'**
+  String retentionDay(String date, int percent);
+
+  /// Heading of the recall bands.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 기억하고 있을 확률'**
+  String get recallTitle;
+
+  /// Beside the recall heading: the mean probability of recall.
+  ///
+  /// In ko, this message translates to:
+  /// **'평균 {percent}%'**
+  String recallMean(int percent);
+
+  /// The band of cards recalled with at least 95% probability.
+  ///
+  /// In ko, this message translates to:
+  /// **'단단함'**
+  String get recallStrong;
+
+  /// The band of cards recalled with 80% up to 95% probability.
+  ///
+  /// In ko, this message translates to:
+  /// **'보통'**
+  String get recallFair;
+
+  /// The band of cards recalled with below 80% probability.
+  ///
+  /// In ko, this message translates to:
+  /// **'곧 잊음'**
+  String get recallFading;
+
+  /// A count of cards on the 기록 tab.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}장'**
+  String statsCards(int count);
+
+  /// What a screen reader reads for the recall bar.
+  ///
+  /// In ko, this message translates to:
+  /// **'{total}장 중 단단함 {strong}장, 보통 {fair}장, 곧 잊음 {fading}장, 평균 {mean}%'**
+  String recallSemantics(int total, int strong, int fair, int fading, int mean);
+
+  /// The recall card before any card has a stored review.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 복습한 카드가 없어요.'**
+  String get recallEmpty;
+
+  /// Heading of the mastered cards per week.
+  ///
+  /// In ko, this message translates to:
+  /// **'익힌 카드'**
+  String get masteredTitle;
+
+  /// Beside the mastered heading: how many more cards are mastered than four weeks ago.
+  ///
+  /// In ko, this message translates to:
+  /// **'4주 +{count}장'**
+  String masteredGain(int count);
+
+  /// What a screen reader reads for the mastered bars, before each week's count.
+  ///
+  /// In ko, this message translates to:
+  /// **'주별 익힌 카드, 8주 전부터 이번 주까지: {counts}'**
+  String masteredSemantics(String counts);
+
+  /// Heading of the study-day heatmap.
+  ///
+  /// In ko, this message translates to:
+  /// **'학습한 날'**
+  String get studyDaysTitle;
+
+  /// Beside the heatmap heading: the current and the best streak.
+  ///
+  /// In ko, this message translates to:
+  /// **'{current}일 연속 · 최고 {best}일'**
+  String studyDaysStreak(int current, int best);
+
+  /// What a screen reader reads for the heatmap, before each studied day and its cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'최근 12주 동안 {count}일 학습했어요: {days}'**
+  String studyDaysSemantics(int count, String days);
+
+  /// What a screen reader reads for the heatmap with no studied day.
+  ///
+  /// In ko, this message translates to:
+  /// **'최근 12주 동안 학습한 날이 없어요'**
+  String get studyDaysNone;
+
+  /// One studied day of the heatmap as a screen reader reads it.
+  ///
+  /// In ko, this message translates to:
+  /// **'{date} {count}장'**
+  String studyDay(String date, int count);
+
+  /// The mastered card while no card was mastered in any of the eight weeks.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 익힌 카드가 없어요.'**
+  String get masteredEmpty;
 }
 
 class _AppLocalizationsDelegate

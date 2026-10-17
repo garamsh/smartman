@@ -10,7 +10,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
   - `home_screen.dart` — `HomeScreen`: the three tabs and their bar, or the first-run home before the first deck;
   - `today_tab.dart` — the 오늘 tab: the today, done and backlog cards, the next seven days and today's decks;
   - `decks_tab.dart` — the 덱 tab: the deck rows, their progress and today chips, the search and the selection mode;
-  - `record_tab.dart` — the 기록 tab, a placeholder until issue #90;
+  - `record_tab.dart` — the 기록 tab: its title over `study`'s record;
   - `deck_screen.dart` — `DeckScreen`, a deck's page;
   - `new_deck_sheet.dart` and `option_sheet.dart` — the new-deck sheet and the sheet of options it and "카드 추가" open;
   - `progress_bar.dart` and `hero.dart` — the progress bar, and the navy card's shades and large count.
@@ -22,7 +22,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - It holds no reads and no rules of its own: it declares no provider and imports no database. What a screen shows, it reads through a domain's providers and widgets.
 - The tabs compose:
   - `deck`'s `decksProvider`, `cardCountsProvider`, `DeckRow`, `DeckTile`, `showNameSheet` and `DeckRepository`, for the decks, their rows and a new deck ([`deck.md`](deck.md));
-  - `study`'s `TodayOverviewReader`, for the 오늘 tab's count, goal, streak and forecast; `TodayCounter`, for each deck's count; `ProgressCounter`, for each deck's progress; and `StudyScreen`, which every study button opens ([`study.md`](study.md));
+  - `study`'s `TodayOverviewReader`, for the 오늘 tab's count, goal, streak and forecast; `TodayCounter`, for each deck's count; `ProgressCounter`, for each deck's progress; `StatsView`, the 기록 tab's content, given the tab's title; and `StudyScreen`, which every study button opens ([`study.md`](study.md));
   - `account`'s `AccountAvatar` on the account button, and `AccountScreen`, given `sync`'s `SyncStatusView` as the status it shows ([`account.md`](account.md), [`sync.md`](sync.md));
   - `sharing`'s `sharingServiceProvider`, for the browse screen ([`sharing.md`](sharing.md));
   - `photo_import`'s `photoImportProvider`, for the photo options ([`ai-extraction.md`](ai-extraction.md)).
@@ -59,7 +59,8 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 
 ### The record tab
 
-- "기록" and "학습 기록은 곧 여기에서 볼 수 있어요." until issue #90 fills it.
+- The tab is `study`'s `StatsView` over every deck, given "기록" at 26/800, read as a heading, as the title it shows beside its period selector ([`study.md`](study.md)). There is no Plus badge: gating waits for the subscription issue (issue #90).
+- The tab is built the first time it is shown, not when the tabs open, since its read folds every review through the engine; after that it keeps its state as the other tabs do.
 
 ### The deck screen
 
@@ -82,7 +83,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 
 ### Tests
 
-- `app/test/home/home_screen_test.dart` drives the tabs, the back from another tab, the 오늘 tab's today, done and backlog cards with their counts, goal, status line, streak and forecast, today's decks, and the 덱 tab's rows, search, new-deck sheet and selection; `app/test/home/deck_screen_test.dart` the deck screen, its hidden answers, the "뜻 보기" switch with its default, its reset of a tapped card, its semantics and its pinned row, its search, which follows the switch, and its add-card sheet, at a phone's size. Both run over an in-memory database, with `deck`'s and `study`'s real repositories and study's clock, zone and scheduler substituted (`app/test/home/home_data.dart`, `app/test/home/deck_screens.dart`). The counts come from seeded cards and states; a deck repository that fails to list a deck's cards gives the unreadable count, and a study repository whose pace never arrives the pending one. A study button's session is the `StudyScreen` it pushes, read for its decks.
+- `app/test/home/home_screen_test.dart` drives the tabs, the back from another tab, the 기록 tab built only once shown and showing the record over every deck, the 오늘 tab's today, done and backlog cards with their counts, goal, status line, streak and forecast, today's decks, and the 덱 tab's rows, search, new-deck sheet and selection; `app/test/home/deck_screen_test.dart` the deck screen, its hidden answers, the "뜻 보기" switch with its default, its reset of a tapped card, its semantics and its pinned row, its search, which follows the switch, and its add-card sheet, at a phone's size. Both run over an in-memory database, with `deck`'s and `study`'s real repositories and study's clock, zone and scheduler substituted, the scheduler folding every card into no state and recalling every stored state at 0.9 (`app/test/home/home_data.dart`, `app/test/home/deck_screens.dart`). The counts come from seeded cards and states; a deck repository that fails to list a deck's cards gives the unreadable count, and a study repository whose pace never arrives the pending one. A study button's session is the `StudyScreen` it pushes, read for its decks.
 - The sharing tests drive the 덱 tab and the deck screen through `app/test/sharing/sharing_app.dart` the same way ([`sharing.md`](sharing.md)).
 - `app/test/home/hero_test.dart` checks the shades the navy cards and the charts derive from the tokens: the quiet text at 4.5:1, and the flame, the goal ring and a quiet bar at 3:1, in both themes.
 - `app/test/widget_test.dart` checks every tab, the new-deck sheet and the deck screen with every answer shown by the switch, with one shown by a tap and with the search open against the tap target and contrast guidelines in both themes.
@@ -96,7 +97,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md) records the v2 home and deck screens and the today card's minutes.
 - [ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md) records why every study button stays enabled at zero cards left, and the done today card offers "계속 학습".
 - [ADR 0036](adr/0036-organise-the-app-in-today-decks-and-record-tabs-and-define-the-daily-goal-forecast-and-card-progress.md) records the tabs, the daily goal, the forecast and a card's progress, why the goal needs no stored load, and why the backlog card has no daily portion.
-- Issue #110 records the move of the two screens out of `deck` into the shell; issue #19 records the selection mode and the today card, issue #22 the v2 screens, issue #89 the tabs and the v3 screens, and issue #142 the owner's "뜻 보기" switch with the details the PM settled.
+- Issue #110 records the move of the two screens out of `deck` into the shell; issue #19 records the selection mode and the today card, issue #22 the v2 screens, issue #89 the tabs and the v3 screens, issue #90 the 기록 tab, and issue #142 the owner's "뜻 보기" switch with the details the PM settled.
 
 ## Open questions
 

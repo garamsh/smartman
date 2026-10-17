@@ -26,6 +26,9 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tab = 0;
 
+  /// Whether the 기록 tab was shown: it reads every review, so not before.
+  bool _recordShown = false;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -66,12 +69,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       TodayTab(decks: decks),
                       DecksTab(decks: decks, counts: counts),
-                      const RecordTab(),
+                      if (_recordShown)
+                        RecordTab(decks: decks)
+                      else
+                        const SizedBox.shrink(),
                     ],
                   ),
                   bottomNavigationBar: _TabBar(
                     selected: _tab,
-                    onSelect: (tab) => setState(() => _tab = tab),
+                    onSelect: (tab) => setState(() {
+                      _tab = tab;
+                      _recordShown |= tab == 2;
+                    }),
                   ),
                 ),
               ),
