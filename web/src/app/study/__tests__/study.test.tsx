@@ -346,7 +346,12 @@ describe("the study page", () => {
           clientY: move[1],
         });
       }
-      fireEvent.pointerUp(card, { pointerId: 1, pointerType: "touch", clientX: at[0], clientY: at[1] });
+      fireEvent.pointerUp(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: at[0],
+        clientY: at[1],
+      });
     }
 
     /** The previous card on screen. */
@@ -446,16 +451,20 @@ describe("the study page", () => {
       ]);
       expect(shown()).toEqual([label(third ?? "", "안다")]);
       // Short of 100 and slow, toward 모른다: nothing changes.
-      swipe(previousCard(), [
-        [190, 100],
-        [180, 100],
-        [170, 100],
-        [160, 100],
-        [150, 100],
-        [140, 100],
-        [130, 100],
-        [120, 100],
-      ], 100);
+      swipe(
+        previousCard(),
+        [
+          [190, 100],
+          [180, 100],
+          [170, 100],
+          [160, 100],
+          [150, 100],
+          [140, 100],
+          [130, 100],
+          [120, 100],
+        ],
+        100,
+      );
       expect(shown()).toEqual([label(third ?? "", "안다")]);
       // Control: past 100 toward 모른다, it changes, and the current card stays.
       vi.setSystemTime(start + 60_000);
@@ -475,7 +484,7 @@ describe("the study page", () => {
         [210, 100],
         [250, 100],
       ]);
-      expect(shown()).toEqual([`${label(third ?? "", "안다")}`]);
+      expect(shown()).toEqual([label(third ?? "", "안다")]);
     });
 
     it("shows the answer a swipe would give behind the previous card, and no detail opens when it ends", async () => {
@@ -484,8 +493,18 @@ describe("the study page", () => {
       await answerThree();
       const card = previousCard();
 
-      fireEvent.pointerDown(card, { pointerId: 1, pointerType: "touch", clientX: 200, clientY: 100 });
-      fireEvent.pointerMove(card, { pointerId: 1, pointerType: "touch", clientX: 150, clientY: 100 });
+      fireEvent.pointerDown(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 200,
+        clientY: 100,
+      });
+      fireEvent.pointerMove(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 150,
+        clientY: 100,
+      });
       expect(within(card).getByText("모른다로 바꿔요")).toBeInTheDocument();
       const face = within(card).getByRole("button", { name: "카드 전체 보기" });
       expect(face.style.transform).toContain("translateX(-50px)");

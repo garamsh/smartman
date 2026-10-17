@@ -327,9 +327,8 @@ List<String> _built(WidgetTester tester) => [
             skipOffstage: false,
           )
           .evaluate())
-    RegExp(
-      r'^Front: (.*?)\. Back:',
-    ).firstMatch((element.widget as Semantics).properties.label!)![1]!,
+    RegExp(r'^Front: (.*?)\. Back:')
+        .firstMatch((element.widget as Semantics).properties.label!)![1]!,
   if (_currentCard.evaluate().isNotEmpty) 'current',
 ];
 
@@ -838,10 +837,10 @@ void main() {
       final reviews = await tester.runAsync(
         () => study.db.select(study.db.reviews).get(),
       );
-      expect({for (final review in reviews!) review.cardId: review.rating}, {
-        'id1': 'good',
-        'id2': 'again',
-      });
+      expect(
+        {for (final review in reviews!) review.cardId: review.rating},
+        {'id1': 'good', 'id2': 'again'},
+      );
 
       // Control: a drag on the current card moves it alone, and answers it.
       gesture = await tester.startGesture(tester.getCenter(_face));
@@ -1033,7 +1032,9 @@ void main() {
         await tester.tap(find.widgetWithText(TextButton, 'Know'));
         await tester.pump();
         // Past the answered card's flight, into the next cards' entrance.
-        await tester.pump(reduceMotion ? Duration.zero : StudyStyle.flyDuration);
+        await tester.pump(
+          reduceMotion ? Duration.zero : StudyStyle.flyDuration,
+        );
         await tester.pump(StudyStyle.fadeDuration ~/ 2);
         final rising = find.ancestor(
           of: _previous('b front'),

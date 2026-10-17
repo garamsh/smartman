@@ -281,9 +281,10 @@ void main() {
       final shown = _paragraph(tester, current, '양도하다');
       expect(shown.text.style!.fontSize, AppType.answer.fontSize);
       expect(shown.text.toPlainText(), answer);
-      for (final half in find
-          .descendant(of: current, matching: find.byType(Scrollable))
-          .evaluate()) {
+      for (final half
+          in find
+              .descendant(of: current, matching: find.byType(Scrollable))
+              .evaluate()) {
         expect(
           ((half as StatefulElement).state as ScrollableState)
               .position

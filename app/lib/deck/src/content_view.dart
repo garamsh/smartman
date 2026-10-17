@@ -15,12 +15,7 @@ import 'content.dart';
 /// floor, until it fits that height, and cut with an ellipsis past the lines
 /// that fit there ([fittedToBox]).
 class ContentView extends StatelessWidget {
-  const ContentView(
-    this.blocks, {
-    super.key,
-    this.style,
-    this.fit,
-  });
+  const ContentView(this.blocks, {super.key, this.style, this.fit});
 
   final List<Content> blocks;
   final TextStyle? style;

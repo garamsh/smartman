@@ -158,10 +158,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       transitionBuilder: reduceMotion
           ? AnimatedSwitcher.defaultTransitionBuilder
           : transition,
-      layoutBuilder: (current, previous) => Stack(
-        fit: StackFit.expand,
-        children: [...previous, ?current],
-      ),
+      layoutBuilder: (current, previous) =>
+          Stack(fit: StackFit.expand, children: [...previous, ?current]),
       child: child,
     );
     final newest = previous.lastOrNull;
