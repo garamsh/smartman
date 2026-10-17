@@ -62,6 +62,10 @@ typedef StoredAnswer = ({
   Duration duration,
 });
 
+/// An answer as the study time and the pace read it: when it was given, how
+/// long its card was on screen, and whether it was its card's first answer.
+typedef TimedAnswer = ({DateTime at, Duration duration, bool first});
+
 /// One answer to a card, as stored.
 final class Review {
   const Review({

@@ -32,6 +32,12 @@ describe("the deck list", () => {
 
   /** The row of the deck named [name]: a link named for the deck, its count and its chip. */
   const row = (name: string) => screen.getByRole("link", { name: new RegExp(`^${name}, `) });
+  /** The header's line of counts and minutes. */
+  const counts = () =>
+    screen.getByText(
+      (_, element) => /^복습 \d+ · 새 카드 \d+ · 약 \d+분$/.test(element?.textContent ?? ""),
+      { ignore: "html, body, main, div, section, header" },
+    ).textContent;
   const rowNames = () =>
     within(screen.getByRole("list"))
       .getAllByRole("link")
@@ -155,33 +161,92 @@ describe("the deck list", () => {
     expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
   });
 
-  it("estimates the minutes at the median of the user's latest 200 reviews", async () => {
+  it("estimates the minutes from the user's review and first-answer paces, each answer counted up to 30 s", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"));
-    postgrest.seed("cards", cardRow("fr-a", "d-fr", "un"), cardRow("fr-b", "d-fr", "deux"));
-    // Control: under 20 reviews the pace is 10 s a card, so two cards take about a minute.
     postgrest.seed(
-      "reviews",
-      ...Array.from({ length: 19 }, (_, index) =>
-        reviewRow(`r-few-${String(index)}`, "fr-a", start - day, 90_000),
-      ),
+      "cards",
+      ...["un", "deux", "trois"].map((front) => cardRow(`due-${front}`, "d-fr", front)),
+      ...["quatre", "cinq", "six", "sept"].map((front) => cardRow(`new-${front}`, "d-fr", front)),
     );
+    postgrest.seed(
+      "card_states",
+      ...["un", "deux", "trois"].map((front) => stateRow(`due-${front}`, due)),
+    );
+    // Yesterday, twenty cards first answered in 90 s, which counts 30, and reviewed in 24 s.
+    const history = (reviews: number) =>
+      Array.from({ length: 20 }, (_, index) => [
+        reviewRow(`first-${String(index)}`, `h-${String(index)}`, start - day, 90_000),
+        ...(index < reviews
+          ? [reviewRow(`review-${String(index)}`, `h-${String(index)}`, start - day + 1000, 24_000)]
+          : []),
+      ]).flat();
+    // Control: with 19 reviews the review pace is unknown, 10 s: 3 at 10 s and 4 at 30 s.
+    postgrest.seed("reviews", ...history(19));
     await render(Decks, {});
-    expect(screen.getByText("복습 0 · 새 카드 2 · 약 1분")).toBeInTheDocument();
+    expect(screen.getByText("복습 3 · 새 카드 4 · 약 3분")).toBeInTheDocument();
     cleanup();
 
-    // 200 recent reviews at 90 s and 300 older ones at 1 s, stored between them: the median of
-    // all 500, or of the first 200 stored, would be 1 s.
+    // The twentieth review: 3 at 24 s and 4 at 30 s.
+    postgrest.seed("reviews", ...history(20).slice(-1));
+    await render(Decks, {});
+    expect(screen.getByText("복습 3 · 새 카드 4 · 약 4분")).toBeInTheDocument();
+  });
+
+  it("reads the day's new cards as the day stood when it started, so answering its reviews leaves them", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    const reviews = ["un", "deux", "trois", "quatre"];
     postgrest.seed(
-      "reviews",
-      ...Array.from({ length: 300 }, (_, index) =>
-        reviewRow(`r-old-${String(index)}`, "fr-b", start - 9 * day, 1_000),
-      ),
-      ...Array.from({ length: 181 }, (_, index) =>
-        reviewRow(`r-new-${String(index)}`, "fr-a", start - day, 90_000),
+      "cards",
+      ...reviews.map((front) => cardRow(`due-${front}`, "d-fr", front)),
+      ...Array.from({ length: 10 }, (_, index) =>
+        cardRow(`new-${String(index)}`, "d-fr", `new ${String(index)}`),
       ),
     );
+    postgrest.seed("card_states", ...reviews.map((front) => stateRow(`due-${front}`, due)));
+    // Five study days before today of four cards each answered twice in 25 s, and each due
+    // card's last answer.
+    postgrest.seed(
+      "reviews",
+      ...[1, 2, 3, 4, 5].flatMap((days) =>
+        [0, 1, 2, 3].flatMap((card) => [
+          reviewRow(
+            `h-${String(days)}-${String(card)}`,
+            `h-${String(days)}-${String(card)}`,
+            start - days * day,
+            25_000,
+          ),
+          reviewRow(
+            `h-${String(days)}-${String(card)}-r`,
+            `h-${String(days)}-${String(card)}`,
+            start - days * day + 60_000,
+            25_000,
+          ),
+        ]),
+      ),
+      ...reviews.map((front) => reviewRow(`last-${front}`, `due-${front}`, due.lastReview, 6_000)),
+    );
     await render(Decks, {});
-    expect(screen.getByText("복습 0 · 새 카드 2 · 약 3분")).toBeInTheDocument();
+    const before = /^복습 4 · 새 카드 (\d+) · /.exec(counts() ?? "")?.[1];
+    // The figure is the user's own, short of the ten new cards the deck holds.
+    expect(Number(before)).toBeGreaterThan(0);
+    expect(Number(before)).toBeLessThan(10);
+    cleanup();
+
+    // Each review answered an hour ago, and now due in nine days.
+    postgrest.seed(
+      "reviews",
+      ...reviews.map((front) =>
+        reviewRow(`today-${front}`, `due-${front}`, start - 3_600_000, 6_000),
+      ),
+    );
+    postgrest.rows.card_states = reviews.map((front) =>
+      postgrest.rows.card_states.find((row) => row.card_id === `due-${front}`)
+        ? { ...stateRow(`due-${front}`, notDue), revision: 0 }
+        : {},
+    );
+    await render(Decks, {});
+
+    expect(counts()).toMatch(new RegExp(`^복습 0 · 새 카드 ${String(before)} · `));
   });
 
   it("marks a deck its owner published with 공개, and no other", async () => {
@@ -201,37 +266,40 @@ describe("the deck list", () => {
       ...deckRow("d-other", "Other"),
       user_id: otherUser.id,
     });
-    postgrest.seed("cards", cardRow("fr", "d-fr", "chat"), {
-      ...cardRow("other", "d-other", "maison"),
-      user_id: otherUser.id,
-    });
-    postgrest.seed("card_states", {
-      ...stateRow("other", {
-        stability: 3,
-        difficulty: 5,
-        lastReview: start - 4 * day,
-        due: start - day,
-      }),
-      user_id: otherUser.id,
-    });
+    const fronts = ["un", "deux", "trois"];
+    postgrest.seed(
+      "cards",
+      ...fronts.map((front) => cardRow(`fr-${front}`, "d-fr", front)),
+      ...fronts.map((front) => ({
+        ...cardRow(`other-${front}`, "d-other", front),
+        user_id: otherUser.id,
+      })),
+    );
+    postgrest.seed(
+      "card_states",
+      ...fronts.map((front) => stateRow(`fr-${front}`, due)),
+      ...fronts.map((front) => ({ ...stateRow(`other-${front}`, due), user_id: otherUser.id })),
+    );
+    // The other user's 40 answers of 25 s yesterday: one first answer and 39 reviews.
     postgrest.seed(
       "reviews",
       ...Array.from({ length: 40 }, (_, index) => ({
-        ...reviewRow(`r-other-${String(index)}`, "other", start - day, 600_000),
+        ...reviewRow(`r-other-${String(index)}`, "other-un", start - day + index, 25_000),
         user_id: otherUser.id,
       })),
     );
 
+    // Three reviews at the unknown pace, 10 s each.
     await render(Decks, {});
-    expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
-    expect(screen.getByText("복습 0 · 새 카드 1 · 약 1분")).toBeInTheDocument();
+    expect(rowNames()).toEqual(["French, 카드 3장, 오늘 3"]);
+    expect(screen.getByText("복습 3 · 새 카드 0 · 약 1분")).toBeInTheDocument();
     cleanup();
 
-    // The other user's next request reads theirs, and nothing of the first user's.
+    // The other user's next request reads theirs, and nothing of the first user's: 3 at 25 s.
     setRequestCookies(await signedInCookies(otherUser));
     await render(Decks, {});
-    expect(rowNames()).toEqual(["Other, 카드 1장, 오늘 1"]);
-    expect(screen.getByText("복습 1 · 새 카드 0 · 약 10분")).toBeInTheDocument();
+    expect(rowNames()).toEqual(["Other, 카드 3장, 오늘 3"]);
+    expect(screen.getByText("복습 3 · 새 카드 0 · 약 2분")).toBeInTheDocument();
   });
 
   it("carries no account content: neither the email nor 로그아웃", async () => {

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/study/src/model.dart' show CardState;
 import 'package:smartman/study/study.dart';
 
 import '../account/fake_account_service.dart';
@@ -30,7 +31,7 @@ List<Override> homeOverrides(AppDatabase db, {bool stalled = false}) => [
   ),
   studyRepositoryProvider.overrideWithValue(
     stalled
-        ? _StalledPace(db, newId: () => 'review${_reviews++}')
+        ? _StalledCount(db, newId: () => 'review${_reviews++}')
         : StudyRepository(db, newId: () => 'review${_reviews++}'),
   ),
   schedulerProvider.overrideWithValue(_UnusedScheduler()),
@@ -43,12 +44,18 @@ var _reviews = 0;
 
 class _UnusedScheduler extends Fake implements Scheduler {}
 
-/// A study repository whose read of the user's pace never completes.
-class _StalledPace extends StudyRepository {
-  _StalledPace(super.db, {required super.newId});
+/// A study repository whose first read of the stored states across every
+/// deck, the count's, for the day's new cards, never completes; later reads,
+/// a session's, do.
+class _StalledCount extends StudyRepository {
+  _StalledCount(super.db, {required super.newId});
+
+  var _reads = 0;
 
   @override
-  Future<Duration?> medianReviewDuration() => Completer<Duration?>().future;
+  Future<Map<CardId, CardState>> allStates() => _reads++ == 0
+      ? Completer<Map<CardId, CardState>>().future
+      : super.allStates();
 }
 
 /// Stores a reviewed state for [card] that falls due at [due], after an

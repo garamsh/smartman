@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
+import 'package:smartman/deck/deck.dart' show CardId;
 import 'package:smartman/study/src/study_repository.dart';
 
 void main() {
@@ -61,7 +62,7 @@ void main() {
         );
   }
 
-  test('the first answers since a time are of the cards first answered then, live answers only', () async {
+  test('the answers between two times are the live ones from the first up to the second, each marked when it is its card\'s first live answer', () async {
     await answer('new today', day.add(const Duration(hours: 2)));
     await answer('new today', day.add(const Duration(hours: 3)));
     await answer('answered before', day.subtract(const Duration(days: 1)));
@@ -77,21 +78,38 @@ void main() {
       day.add(const Duration(hours: 5)),
       deleted: true,
     );
+    await answer('at the end', day.add(const Duration(days: 1)));
 
-    final first = await study.firstAnswersSince(day);
+    final between = await study.answersBetween(
+      day,
+      day.add(const Duration(days: 1)),
+    );
 
     expect(
-      first,
-      unorderedEquals([
-        day.add(const Duration(hours: 2)),
-        day.add(const Duration(hours: 4)),
-      ]),
+      [for (final answer in between) (answer.at, answer.first)],
+      [
+        (day.add(const Duration(hours: 1)), false),
+        (day.add(const Duration(hours: 2)), true),
+        (day.add(const Duration(hours: 3)), false),
+        (day.add(const Duration(hours: 4)), true),
+      ],
     );
-    // Control: from a day earlier the card answered before counts too.
-    expect(
-      await study.firstAnswersSince(day.subtract(const Duration(days: 2))),
-      hasLength(3),
-    );
+  });
+
+  test('the latest answers before a time are each named card\'s last live one before it, for those that have one', () async {
+    await answer('a', day.subtract(const Duration(days: 2)));
+    await answer('a', day.subtract(const Duration(days: 1)));
+    await answer('a', day.add(const Duration(hours: 1)));
+    await answer('b', day.subtract(const Duration(hours: 1)), deleted: true);
+    await answer('c', day.subtract(const Duration(hours: 3)));
+
+    final latest = await study.latestAnswersBefore([
+      const CardId('a'),
+      const CardId('b'),
+    ], day);
+
+    expect(latest, {const CardId('a'): day.subtract(const Duration(days: 1))});
+    expect(await study.latestAnswersBefore(const [], day), isEmpty);
   });
 
   test('answers since a time come oldest first to the millisecond, from a time given in any zone', () async {

@@ -56,10 +56,16 @@ class _UnreadableStates implements StudyRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<Duration?> medianReviewDuration() => throw UnimplementedError();
+  Future<Map<CardId, CardState>> allStates() => throw UnimplementedError();
 
   @override
-  Future<List<DateTime>> firstAnswersSince(DateTime since) =>
+  Future<Map<CardId, DateTime>> latestAnswersBefore(
+    List<CardId> cards,
+    DateTime end,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<List<TimedAnswer>> answersBetween(DateTime from, DateTime to) =>
       throw UnimplementedError();
 
   @override
@@ -87,8 +93,8 @@ class _Decks {
     newId: () => 'id${_ids++}',
   );
   late final study = StudyRepository(db, newId: () => 'review${_ids++}');
-  late final DeckId a;
-  late final DeckId b;
+  late DeckId a;
+  late DeckId b;
 
   Future<void> seed() async {
     a = (await cards.createDeck('a')).id;
@@ -192,10 +198,10 @@ Future<GlobalKey<NavigatorState>> _pump(
                   TodayCounted(
                     :final review,
                     :final fresh,
-                    :final perCard,
+                    :final pace,
                     backlog: false,
                   ) =>
-                    '$review due, $fresh new, ${perCard.inSeconds} s a card',
+                    '$review due, $fresh new, ${pace.reviewMs ~/ 1000} s a review, ${pace.firstMs ~/ 1000} s a new card',
                   TodayCounted(:final review, backlog: true) =>
                     '$review due, new cards paused',
                   TodayUnavailable(:final message) => message,
@@ -237,7 +243,10 @@ void main() {
       final decks = await _seed(tester);
       await _pump(tester, decks);
 
-      expect(find.text('2 due, 3 new, 10 s a card'), findsOneWidget);
+      expect(
+        find.text('2 due, 3 new, 10 s a review, 10 s a new card'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Study all'));
       await tester.pumpAndSettle();
@@ -273,7 +282,10 @@ void main() {
       });
       await _pump(tester, decks);
 
-      expect(find.text('2 due, 2 new, 10 s a card'), findsOneWidget);
+      expect(
+        find.text('2 due, 2 new, 10 s a review, 10 s a new card'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Study all'));
       await tester.pumpAndSettle();
@@ -287,7 +299,10 @@ void main() {
   ) async {
     final decks = await _seed(tester);
     final navigator = await _pump(tester, decks);
-    expect(find.text('2 due, 3 new, 10 s a card'), findsOneWidget);
+    expect(
+      find.text('2 due, 3 new, 10 s a review, 10 s a new card'),
+      findsOneWidget,
+    );
 
     navigator.currentState!.push(
       MaterialPageRoute<void>(builder: (_) => const Scaffold()),
@@ -297,66 +312,77 @@ void main() {
     await tester.pumpAndSettle();
     // Control: nothing reads the count while another route covers it.
     expect(
-      find.text('2 due, 3 new, 10 s a card', skipOffstage: false),
+      find.text(
+        '2 due, 3 new, 10 s a review, 10 s a new card',
+        skipOffstage: false,
+      ),
       findsOneWidget,
     );
 
     navigator.currentState!.pop();
     await tester.pumpAndSettle();
 
-    expect(find.text('2 due, 4 new, 10 s a card'), findsOneWidget);
+    expect(
+      find.text('2 due, 4 new, 10 s a review, 10 s a new card'),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
-    "the pace is the median of the user's latest 200 reviews once there are 20",
+    'the count carries the review pace and the first-answer pace of the study days before today, each once 20 answers of its kind are stored',
     (tester) async {
-      final decks = await _seed(tester);
-      // "a later", which stays not yet due through every review below.
-      final card = (await tester.runAsync(
-        () => decks.cards.watchCards(decks.a).first,
-      ))![1];
-      final latest = dueAt(_now.add(const Duration(days: 3)));
-      final old = CardState(
-        stability: latest.stability,
-        difficulty: latest.difficulty,
-        lastReview: DateTime.utc(2026, 1, 1),
-        due: latest.due,
+      final decks = _Decks(AppDatabase(NativeDatabase.memory()));
+      addTearDown(decks.db.close);
+      final yesterday = DateTime.utc(2026, 10, 13, 9);
+      final cards = <CardId>[];
+      await tester.runAsync(() async {
+        decks.a = (await decks.cards.createDeck('a')).id;
+        decks.b = (await decks.cards.createDeck('b')).id;
+        await decks.add(decks.a, 'a new');
+        final history = (await decks.cards.createDeck('history')).id;
+        for (var index = 0; index < 20; index++) {
+          await decks.add(history, 'history $index');
+        }
+        cards.addAll([
+          for (final card in await decks.cards.listCards(history)) card.id,
+        ]);
+        // Each card first answered in 6 s yesterday, then reviewed in 4 s,
+        // and not due again within the week; today holds no answer.
+        for (final (index, card) in cards.indexed) {
+          await decks.review(
+            card,
+            CardState(
+              stability: 7,
+              difficulty: 5,
+              lastReview: yesterday.add(Duration(minutes: 2 * index)),
+              due: _now.add(const Duration(days: 7)),
+            ),
+            [const Duration(seconds: 6), const Duration(seconds: 4)],
+          );
+        }
+      });
+      await _pump(tester, decks);
+
+      expect(
+        find.text('0 due, 1 new, 4 s a review, 6 s a new card'),
+        findsOneWidget,
       );
-      List<Duration> times(int count, int seconds) => [
-        for (var i = 0; i < count; i++) Duration(seconds: seconds),
-      ];
 
-      // The three seeded reviews of no time and 19 recent ones of 8 s.
-      await tester.runAsync(() => decks.review(card.id, latest, times(19, 8)));
+      // Control: with one review fewer, 19, the review pace is unknown.
+      await tester.runAsync(
+        () => decks.db.customStatement(
+          'DELETE FROM reviews WHERE card_id = ? AND duration_ms = 4000',
+          [cards[0].value],
+        ),
+      );
       await _pump(tester, decks);
-      expect(find.text('2 due, 3 new, 8 s a card'), findsOneWidget);
 
-      // 181 more recent ones of 8 s fill the latest 200, and 400 older ones
-      // of 1 s outnumber them over every review.
-      await tester.runAsync(() => decks.review(card.id, old, times(400, 1)));
-      await tester.runAsync(() => decks.review(card.id, latest, times(181, 8)));
-      await _pump(tester, decks);
-      expect(find.text('2 due, 3 new, 8 s a card'), findsOneWidget);
+      expect(
+        find.text('0 due, 1 new, 10 s a review, 6 s a new card'),
+        findsOneWidget,
+      );
     },
   );
-
-  testWidgets('with fewer than 20 reviews the pace is 10 s a card', (
-    tester,
-  ) async {
-    final decks = await _seed(tester);
-    final card = (await tester.runAsync(
-      () => decks.cards.watchCards(decks.a).first,
-    ))![1];
-    // 16 reviews of 8 s and the three seeded ones make 19.
-    await tester.runAsync(
-      () => decks.review(card.id, dueAt(_now.add(const Duration(days: 3))), [
-        for (var i = 0; i < 16; i++) const Duration(seconds: 8),
-      ]),
-    );
-    await _pump(tester, decks);
-
-    expect(find.text('2 due, 3 new, 10 s a card'), findsOneWidget);
-  });
 
   testWidgets(
     'with more than three days of reviews due, the count and the session it opens take no new card',
@@ -365,7 +391,10 @@ void main() {
       final navigator = await _pump(tester, decks);
       // Control: three cards due every three days are one review a day, and
       // two due are not a backlog.
-      expect(find.text('2 due, 3 new, 10 s a card'), findsOneWidget);
+      expect(
+        find.text('2 due, 3 new, 10 s a review, 10 s a new card'),
+        findsOneWidget,
+      );
 
       navigator.currentState!.push(
         MaterialPageRoute<void>(builder: (_) => const Scaffold()),

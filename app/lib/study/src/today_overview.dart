@@ -68,9 +68,8 @@ final class TodayOverview extends TodayOverviewRead {
     return null;
   }
 
-  /// The whole minutes [cards] take at the user's pace, rounded up.
-  int minutesFor(int cards) =>
-      (cards * count.perCard.inMilliseconds / 60000).ceil();
+  /// The whole minutes [cards] reviews take at the user's pace, rounded up.
+  int minutesFor(int cards) => count.pace.minutes(reviews: cards, fresh: 0);
 }
 
 /// Builds what the caller shows of a [TodayOverviewRead].
