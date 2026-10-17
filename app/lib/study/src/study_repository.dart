@@ -188,6 +188,16 @@ class StudyRepository {
     return row.readNullable<DateTime>('latest');
   });
 
+  /// Every review not deleted, oldest first, whether or not its card is
+  /// live.
+  Future<List<ReviewRow>> reviews() => _read(
+    () =>
+        (_db.select(_db.reviews)
+              ..where((row) => row.deletedAt.isNull())
+              ..orderBy([(row) => OrderingTerm.asc(row.reviewedAt)]))
+            .get(),
+  );
+
   Future<T> _read<T>(Future<T> Function() read) async {
     try {
       return await read();

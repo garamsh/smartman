@@ -265,11 +265,11 @@ int streak(
 }) {
   final days = {for (final answer in answers) studyDayStart(answer, offsetAt)};
   var day = studyDayStart(now, offsetAt);
-  if (!days.contains(day)) day = _dayBefore(day, offsetAt);
+  if (!days.contains(day)) day = studyDayBefore(day, offsetAt);
   var count = 0;
   while (!day.isBefore(since) && days.contains(day)) {
     count++;
-    day = _dayBefore(day, offsetAt);
+    day = studyDayBefore(day, offsetAt);
   }
   return day.isBefore(since) ? count + daysBefore : count;
 }
@@ -285,7 +285,7 @@ Future<int> studyDaysBefore(
   var end = dayStart;
   var count = 0;
   while (true) {
-    final start = _dayBefore(end, offsetAt);
+    final start = studyDayBefore(end, offsetAt);
     final latest = await latestBefore(end);
     if (latest == null || latest.isBefore(start)) return count;
     count++;
@@ -294,5 +294,5 @@ Future<int> studyDaysBefore(
 }
 
 /// The start of the study day before the one starting at [dayStart].
-DateTime _dayBefore(DateTime dayStart, UtcOffsetAt offsetAt) =>
+DateTime studyDayBefore(DateTime dayStart, UtcOffsetAt offsetAt) =>
     studyDayStart(dayStart.subtract(const Duration(seconds: 1)), offsetAt);

@@ -18,6 +18,14 @@ class _InstantScheduler implements Scheduler {
       throw UnimplementedError('sessions do not fold');
 
   @override
+  Future<List<CardState>> history(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
+  Future<double> retrievability(CardState state, DateTime at) =>
+      throw UnimplementedError('sessions read no recall');
+
+  @override
   Future<CardState> review(
     CardState? state,
     Answer answer,
