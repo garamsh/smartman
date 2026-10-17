@@ -1,16 +1,28 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show FontLoader;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_text.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
+import 'package:smartman/study/src/model.dart';
+import 'package:smartman/study/src/previous_card.dart';
+import 'package:smartman/study/src/providers.dart';
+import 'package:smartman/study/src/rust/api/engine.dart';
+import 'package:smartman/study/src/scheduler.dart';
+import 'package:smartman/study/src/study_repository.dart';
+import 'package:smartman/study/src/study_screen.dart';
 import 'package:smartman/study/src/study_style.dart';
+
+import 'fixtures.dart';
 
 // Pretendard is loaded here, in a file of its own: a loaded font stays
 // registered for the rest of the file, and the other study tests measure
@@ -43,6 +55,32 @@ double _widest(String text, double size) => text
       )..layout()).width,
     )
     .reduce((a, b) => a > b ? a : b);
+
+/// Schedules every review one day out, at once.
+class _InstantScheduler implements Scheduler {
+  @override
+  Future<CardState?> fold(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
+  Future<CardState> review(
+    CardState? state,
+    Answer answer,
+    DateTime at, {
+    required FuzzFactor fuzz,
+  }) async => CardState(
+    stability: 1,
+    difficulty: 5,
+    lastReview: at,
+    due: at.add(const Duration(days: 1)),
+  );
+}
+
+/// The text of the answer half's paragraph inside [card] that holds [text].
+RenderParagraph _paragraph(WidgetTester tester, Finder card, String text) =>
+    tester.renderObject<RenderParagraph>(
+      find.descendant(of: card, matching: find.textContaining(text)).last,
+    );
 
 void main() {
   setUpAll(() async {
@@ -181,6 +219,101 @@ void main() {
       expect(
         _widest('incomprehensibility', AppType.questionFloor),
         greaterThan(width),
+      );
+    },
+  );
+
+  testWidgets(
+    'a long answer shows whole at the answer size, on the current card and on the previous card, on a 390 by 844 phone at the default text scale',
+    (tester) async {
+      const answer = '(결과·수익 등을) 내다, 산출하다; 양도하다';
+      // An iPhone of that size: its status bar and home indicator.
+      tester.view.physicalSize = const Size(_phoneWidth, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(top: 47, bottom: 34);
+      addTearDown(tester.view.reset);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final decks = DeckRepository(
+        db,
+        clock: () => DateTime.utc(2026, 9, 1),
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(() async {
+        final deck = await decks.createDeck('English');
+        await decks.addCard(
+          deck.id,
+          front: const [TextContent('yield')],
+          back: const [TextContent(answer)],
+        );
+        return deck;
+      }))!;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(decks),
+            studyRepositoryProvider.overrideWithValue(
+              StudyRepository(db, newId: () => 'review${ids++}'),
+            ),
+            schedulerProvider.overrideWithValue(_InstantScheduler()),
+            studyClockProvider.overrideWithValue(
+              () => DateTime.utc(2026, 10, 14, 9),
+            ),
+            studyZoneProvider.overrideWithValue((_) => Duration.zero),
+            studyRandomProvider.overrideWithValue((_) => FirstDraw()),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StudyScreen(decks: DeckSelection(deck.id)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Shown on the current card, it fits its half without scrolling.
+      final current = find.byType(CurrentCard);
+      await tester.tap(current);
+      await tester.pumpAndSettle();
+      final shown = _paragraph(tester, current, '양도하다');
+      expect(shown.text.style!.fontSize, AppType.answer.fontSize);
+      expect(shown.text.toPlainText(), answer);
+      for (final half in find
+          .descendant(of: current, matching: find.byType(Scrollable))
+          .evaluate()) {
+        expect(
+          ((half as StatefulElement).state as ScrollableState)
+              .position
+              .maxScrollExtent,
+          0,
+        );
+      }
+
+      // Answered "모른다", the card is shown again at once, under itself as
+      // the previous card, which shows the answer whole, uncut.
+      await tester.tap(find.widgetWithText(TextButton, '모른다'));
+      await tester.pumpAndSettle();
+      final previous = find.byType(PreviousCardView);
+      expect(previous, findsOneWidget);
+      final kept = _paragraph(tester, previous, '양도하다');
+      expect(kept.text.style!.fontSize, AppType.answer.fontSize);
+      expect(kept.text.toPlainText(), answer);
+      expect(kept.didExceedMaxLines, isFalse);
+      // Control: it wraps, so the room the card gives it is what fits it.
+      expect(
+        kept.size.height,
+        greaterThan(AppType.answer.fontSize! * AppType.answer.height!),
+      );
+      expect(
+        tester.getSize(previous),
+        tester.getSize(
+          find
+              .descendant(of: current, matching: find.byType(GestureDetector))
+              .first,
+        ),
       );
     },
   );

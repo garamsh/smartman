@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
@@ -15,216 +13,41 @@ import 'rust/api/engine.dart';
 import 'session.dart';
 import 'study_style.dart';
 
-/// Every card answered in the session, oldest at the top and newest at the
-/// bottom, as the sliver above the current card in its scroll view, each in
-/// a slot [slot] high. Only the cards near the viewport are built.
-///
-/// While the column is scrolled back, the card nearest its centre is at full
-/// size and opacity and the others smaller and dimmed; that card alone can be
-/// dragged left or right to change its answer.
-///
-/// The list runs oldest first, not reversed, because a list paints its
-/// children in index order and each card must paint over the one above it.
-class PreviousCards extends StatelessWidget {
-  const PreviousCards({
-    super.key,
-    required this.cards,
-    required this.slot,
-    required this.onRedecide,
-  });
-
-  /// Oldest first.
-  final List<PreviousCard> cards;
-  final double slot;
-  final void Function(int position, Answer answer) onRedecide;
-
-  @override
-  Widget build(BuildContext context) => SliverFixedExtentList.builder(
-    itemCount: cards.length,
-    itemExtent: slot,
-    findChildIndexCallback: (key) => switch (key) {
-      ValueKey<int>(:final value) when value < cards.length => value,
-      _ => null,
-    },
-    itemBuilder: (context, index) {
-      final card = cards[index];
-      return _Emphasis(
-        key: ValueKey(card.position),
-        slot: slot,
-        child: _Entrance(
-          rising: index == cards.length - 1,
-          child: _PreviousCardView(
-            card: card,
-            slot: slot,
-            onRedecide: (answer) => onRedecide(card.position, answer),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-/// How far the column is scrolled back from its end, from 0 at the end to 1
-/// half a [slot] or more away, short of where the newest card is centred.
-double scrolledBack(ScrollPosition position, double slot) =>
-    position.hasContentDimensions && position.hasPixels
-    ? ((position.maxScrollExtent - position.pixels) / (slot / 2)).clamp(
-        0.0,
-        1.0,
-      )
-    : 0;
-
-/// How near the box of [context] is to the centre of its scroll view, from 1
-/// centred to 0 a [slot] or more away.
-double _centred(BuildContext context, double slot) {
-  final box = context.findRenderObject();
-  final viewport = Scrollable.maybeOf(context)?.context.findRenderObject();
-  if (box is! RenderBox || viewport is! RenderBox || !box.hasSize) return 0;
-  final centre = box
-      .localToGlobal(box.size.center(Offset.zero), ancestor: viewport)
-      .dy;
-  final distance = (centre - viewport.size.height / 2).abs();
-  return (1 - distance / slot).clamp(0.0, 1.0);
-}
-
-/// Scales and dims a previous card by where it stands, as the column scrolls:
-/// at rest every card is a little smaller than the current card; scrolled
-/// back, the card nearest the centre grows to full size and opacity and the
-/// others shrink and dim. It is painted, not laid out, so a scroll rebuilds
-/// nothing.
-class _Emphasis extends StatelessWidget {
-  const _Emphasis({super.key, required this.slot, required this.child});
-
-  final double slot;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Flow(
-    clipBehavior: Clip.none,
-    delegate: _EmphasisDelegate(
-      position: Scrollable.of(context).position,
-      slotContext: context,
-      slot: slot,
-    ),
-    children: [child],
-  );
-}
-
-class _EmphasisDelegate extends FlowDelegate {
-  _EmphasisDelegate({
-    required this.position,
-    required this.slotContext,
-    required this.slot,
-  }) : super(repaint: position);
-
-  final ScrollPosition position;
-  final BuildContext slotContext;
-  final double slot;
-
-  @override
-  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) =>
-      BoxConstraints.tightFor(
-        width: max(0, constraints.maxWidth - StudyStyle.previousMargin * 2),
-        height: StudyStyle.previousHeight,
-      );
-
-  @override
-  void paintChildren(FlowPaintingContext context) {
-    final child = context.getChildSize(0);
-    if (child == null) return;
-    final back = scrolledBack(position, slot);
-    final centred = _centred(slotContext, slot);
-    final scrolled =
-        StudyStyle.previousSideScale +
-        (1 - StudyStyle.previousSideScale) * centred;
-    final scale =
-        StudyStyle.previousRestScale +
-        (scrolled - StudyStyle.previousRestScale) * back;
-    final opacity =
-        1 - (1 - StudyStyle.previousSideOpacity) * (1 - centred) * back;
-    final dx = (context.size.width - child.width) / 2;
-    final dy = (context.size.height - child.height) / 2;
-    context.paintChild(
-      0,
-      transform: Matrix4.identity()
-        ..translateByDouble(dx + child.width / 2, dy + child.height / 2, 0, 1)
-        ..scaleByDouble(scale, scale, 1, 1)
-        ..translateByDouble(-child.width / 2, -child.height / 2, 0, 1),
-      opacity: opacity,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_EmphasisDelegate oldDelegate) =>
-      oldDelegate.position != position || oldDelegate.slot != slot;
-}
-
-/// Rises the card answered just now into the column, or fades it in under
-/// reduce motion. A card built while [rising] is false, as one scrolled into
-/// view is, appears in place.
-class _Entrance extends StatelessWidget {
-  const _Entrance({required this.rising, required this.child});
-
-  final bool rising;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      return TweenAnimationBuilder<double>(
-        tween: Tween(begin: rising ? 0 : 1, end: 1),
-        duration: StudyStyle.fadeDuration,
-        builder: (context, opacity, child) =>
-            Opacity(opacity: opacity, child: child),
-        child: child,
-      );
-    }
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: rising ? StudyStyle.emergeOffset : 0, end: 0),
-      duration: StudyStyle.settleDuration,
-      curve: Curves.easeOutCubic,
-      builder: (context, offset, child) =>
-          Transform.translate(offset: Offset(0, offset), child: child),
-      child: child,
-    );
-  }
-}
-
 /// The other answer.
 Answer _other(Answer answer) => switch (answer) {
   Answer.know => Answer.dontKnow,
   Answer.dontKnow => Answer.know,
 };
 
-/// A card answered earlier: front and back, both always shown, on its grade's
-/// fill and line, with the grade's chip on its top edge.
+/// The card answered just before the current one: front and back, both
+/// always shown, on its grade's fill and line, with the grade's chip on its
+/// top edge. It fills the height it is given, as the current card does.
 ///
-/// Dragged left or right while it is the card nearest the column's centre, it
-/// shows the answer the drag would give behind it, and released past
-/// [StudyStyle.commitDistance] toward the other answer it changes to that
-/// answer. A screen reader changes it by its action instead.
-class _PreviousCardView extends StatefulWidget {
-  const _PreviousCardView({
+/// Dragged left or right, it shows the answer the drag would give behind it,
+/// and released past [StudyStyle.commitDistance], or flung, toward the other
+/// answer it changes to that answer. A tap opens the whole card in a sheet. A
+/// screen reader changes it by its action instead of a drag.
+class PreviousCardView extends StatefulWidget {
+  const PreviousCardView({
+    super.key,
     required this.card,
-    required this.slot,
     required this.onRedecide,
   });
 
   final PreviousCard card;
-  final double slot;
   final void Function(Answer answer) onRedecide;
 
   @override
-  State<_PreviousCardView> createState() => _PreviousCardViewState();
+  State<PreviousCardView> createState() => _PreviousCardViewState();
 }
 
-class _PreviousCardViewState extends State<_PreviousCardView>
+class _PreviousCardViewState extends State<PreviousCardView>
     with SingleTickerProviderStateMixin {
   /// The card's horizontal offset from its place.
   late final _drag = AnimationController.unbounded(vsync: this);
 
-  /// Whether the drag under way started on the centred card.
-  var _dragging = false;
+  /// How far the finger has moved since the drag began.
+  var _finger = 0.0;
 
   @override
   void dispose() {
@@ -235,28 +58,16 @@ class _PreviousCardViewState extends State<_PreviousCardView>
   /// The answer a drag by [offset] points to.
   Answer _target(double offset) => offset > 0 ? Answer.know : Answer.dontKnow;
 
-  void _onDragStart(DragStartDetails details) {
-    // Only the card the column is centred on, and not the one at rest above
-    // the current card, is re-decided by a drag.
-    final position = Scrollable.of(context).position;
-    _dragging =
-        scrolledBack(position, widget.slot) > 0.5 &&
-        _centred(context, widget.slot) > 0.5;
-  }
-
   void _onDragUpdate(DragUpdateDetails details) {
-    if (!_dragging) return;
-    final next = _drag.value + details.delta.dx;
+    _finger += details.delta.dx;
     // A drag toward the answer the card already has follows the finger only
     // a little, and shows nothing behind it.
-    _drag.value = _target(next) == widget.card.answer
-        ? next * StudyStyle.sameAnswerResistance
-        : next;
+    _drag.value = _target(_finger) == widget.card.answer
+        ? _finger * StudyStyle.sameAnswerResistance
+        : _finger;
   }
 
   void _onDragEnd(DragEndDetails details) {
-    if (!_dragging) return;
-    _dragging = false;
     final offset = _drag.value;
     final velocity = details.velocity.pixelsPerSecond.dx;
     final target = _target(offset);
@@ -273,7 +84,7 @@ class _PreviousCardViewState extends State<_PreviousCardView>
   }
 
   void _springBack() {
-    _dragging = false;
+    _finger = 0;
     if (MediaQuery.disableAnimationsOf(context)) {
       _drag.value = 0;
     } else {
@@ -302,16 +113,17 @@ class _PreviousCardViewState extends State<_PreviousCardView>
         CustomSemanticsAction(label: _changeTo(l10n, other)): () =>
             widget.onRedecide(other),
       },
-      onLongPressHint: l10n.showWholeCard,
-      onLongPress: () => _showWholeCard(context, card.card),
+      button: true,
+      onTapHint: l10n.showWholeCard,
+      onTap: () => _showWholeCard(context, card.card),
       excludeSemantics: true,
       child: GestureDetector(
+        // The card follows the finger from where it touched down.
         dragStartBehavior: DragStartBehavior.down,
-        onHorizontalDragStart: _onDragStart,
+        onTap: () => _showWholeCard(context, card.card),
         onHorizontalDragUpdate: _onDragUpdate,
         onHorizontalDragEnd: _onDragEnd,
         onHorizontalDragCancel: _springBack,
-        onLongPress: () => _showWholeCard(context, card.card),
         child: AnimatedBuilder(
           animation: _drag,
           builder: (context, child) {
@@ -409,7 +221,8 @@ class _Reveal extends StatelessWidget {
 }
 
 /// A previous card's face: its sides on the grade's fill inside the grade's
-/// line, and the grade's chip on its top edge.
+/// line, at the current card's sizes and shrunk as far as their floors to fit
+/// their halves, then cut, and the grade's chip on its top edge.
 class _GradedCard extends StatelessWidget {
   const _GradedCard({required this.card});
 
@@ -432,21 +245,34 @@ class _GradedCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(StudyStyle.previousRadius),
               border: Border.all(color: line, width: StudyStyle.previousLine),
             ),
+            // The card is given its height, so its halves are laid out at
+            // it and each side reads the height its half leaves it.
             child: SplitCard(
               padding: StudyStyle.cardPadding,
-              dividerInset: StudyStyle.previousDividerInset,
+              dividerInset: StudyStyle.dividerInset,
               dividerColor: line,
-              front: (context, width) => ContentView(
-                card.card.front,
-                style: AppType.headline.copyWith(color: colors.ink),
-                maxLines: StudyStyle.previousLines,
-                fit: (minFontSize: AppType.compactFloor, width: width),
+              stackBelow: StudyStyle.minHalfWidth,
+              front: (context, width) => LayoutBuilder(
+                builder: (context, constraints) => ContentView(
+                  card.card.front,
+                  style: AppType.question.copyWith(color: colors.ink),
+                  fit: (
+                    minFontSize: AppType.questionFloor,
+                    width: width,
+                    height: constraints.maxHeight,
+                  ),
+                ),
               ),
-              back: (context, width) => ContentView(
-                card.card.back,
-                style: AppType.body.copyWith(color: colors.ink2),
-                maxLines: StudyStyle.previousLines,
-                fit: (minFontSize: AppType.compactFloor, width: width),
+              back: (context, width) => LayoutBuilder(
+                builder: (context, constraints) => ContentView(
+                  card.card.back,
+                  style: AppType.answer.copyWith(color: colors.ink2),
+                  fit: (
+                    minFontSize: AppType.answerFloor,
+                    width: width,
+                    height: constraints.maxHeight,
+                  ),
+                ),
               ),
             ),
           ),

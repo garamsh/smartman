@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 /// A card side's text, centred, in [style] scaled down as far as
@@ -45,25 +47,6 @@ class CardText extends StatelessWidget {
   }
 }
 
-/// [style] at the size [fittedFontSize] gives [text] in [width], with the
-/// text scale and direction of [context].
-TextStyle fittedStyle(
-  BuildContext context,
-  String text, {
-  required TextStyle style,
-  required double minFontSize,
-  required double width,
-}) => style.copyWith(
-  fontSize: fittedFontSize(
-    text,
-    style: style,
-    minFontSize: minFontSize,
-    width: width,
-    textScaler: MediaQuery.textScalerOf(context),
-    textDirection: Directionality.of(context),
-  ),
-);
-
 /// The largest whole size from [style]'s down to [minFontSize] at which the
 /// widest word of [text] fits [width]; [minFontSize] when none does.
 double fittedFontSize(
@@ -88,6 +71,51 @@ double fittedFontSize(
     }
   }
   return minFontSize;
+}
+
+/// The size and lines that fit [span], in [style], into a box [width] wide
+/// and [height] high: the largest whole size from [fittedFontSize]'s down to
+/// [minFontSize] at which the whole text fits, with as many lines as it takes;
+/// otherwise [minFontSize], with as many lines as fit [height], at least one,
+/// past which the text is cut. [plain] is the span's text, whose widest word
+/// sets the largest size.
+({double fontSize, int maxLines}) fittedToBox(
+  InlineSpan span,
+  String plain, {
+  required TextStyle style,
+  required double minFontSize,
+  required double width,
+  required double height,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
+  final largest = fittedFontSize(
+    plain,
+    style: style,
+    minFontSize: minFontSize,
+    width: width,
+    textScaler: textScaler,
+    textDirection: textDirection,
+  );
+  for (var size = largest; ; size -= 1) {
+    final floor = size <= minFontSize;
+    final fontSize = floor ? minFontSize : size;
+    final painter = TextPainter(
+      text: TextSpan(
+        style: style.copyWith(fontSize: fontSize),
+        children: [span],
+      ),
+      textAlign: TextAlign.center,
+      textDirection: textDirection,
+      textScaler: textScaler,
+    )..layout(maxWidth: width);
+    final fits = painter.height <= height;
+    final lines = fits
+        ? painter.computeLineMetrics().length
+        : max(1, (height / painter.preferredLineHeight).floor());
+    painter.dispose();
+    if (fits || floor) return (fontSize: fontSize, maxLines: max(1, lines));
+  }
 }
 
 double _widestWord(

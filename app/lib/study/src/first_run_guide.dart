@@ -6,9 +6,9 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'study_style.dart';
 
-/// Above the first card of the user's first session: the mascot and three
-/// lines on how to study, tap to reveal, swipe to answer and pull down for
-/// earlier cards.
+/// In the previous card's place before the first answer of the user's first
+/// session: the mascot and two lines on how to study, tap to reveal and swipe
+/// to answer.
 class FirstRunGuide extends StatelessWidget {
   const FirstRunGuide({super.key});
 
@@ -29,7 +29,6 @@ class FirstRunGuide extends StatelessWidget {
           const Center(child: Mascot(size: AppSize.mascotGuide)),
           _Line(icon: LucideIcons.eye, text: l10n.guideReveal),
           _Line(icon: LucideIcons.moveHorizontal, text: l10n.guideSwipe),
-          _Line(icon: LucideIcons.arrowDown, text: l10n.guideEarlier),
         ],
       ),
     );

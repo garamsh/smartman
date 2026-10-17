@@ -12,7 +12,7 @@ import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
-import 'package:smartman/study/src/previous_cards.dart';
+import 'package:smartman/study/src/previous_card.dart';
 import 'package:smartman/study/src/providers.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/scheduler.dart';
@@ -312,53 +312,37 @@ double _halfCenter(WidgetTester tester, Finder text) => tester
     .center
     .dy;
 
-/// The session's one scroll view: the stack and the current card.
-final _sessionScroll = find.ancestor(
-  of: find.byType(PreviousCards),
-  matching: find.byType(Scrollable),
-);
+/// The previous card on screen.
+final _previousCard = find.byType(PreviousCardView);
 
-double _scrollOffset(WidgetTester tester) =>
-    tester.state<ScrollableState>(_sessionScroll).position.pixels;
+/// The fronts of every previous card built, and "current" when the current
+/// card is.
+List<String> _built(WidgetTester tester) => [
+  for (final element
+      in find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                (widget.properties.label?.contains('. Answer: ') ?? false),
+            skipOffstage: false,
+          )
+          .evaluate())
+    RegExp(
+      r'^Front: (.*?)\. Back:',
+    ).firstMatch((element.widget as Semantics).properties.label!)![1]!,
+  if (_currentCard.evaluate().isNotEmpty) 'current',
+];
 
-/// The fronts of the previous cards whose painted box reaches into the view,
-/// oldest first, and "current" when the current card does.
-List<String> _onScreen(WidgetTester tester) {
-  final view = tester.getRect(_sessionScroll);
-  return [
-    for (final element
-        in find
-            .byWidgetPredicate(
-              (widget) =>
-                  widget is Semantics &&
-                  (widget.properties.label?.contains('. Answer: ') ?? false),
-            )
-            .evaluate())
-      if (tester.getRect(find.byWidget(element.widget)).overlaps(view))
-        RegExp(r'^Front: (.*?)\. Back:')
-            .firstMatch((element.widget as Semantics).properties.label!)![1]!,
-    if (_currentCard.evaluate().isNotEmpty &&
-        tester.getRect(_currentCard).overlaps(view))
-      'current',
-  ];
-}
-
-/// Scrolls the column back until the previous card reading [front] rests at
-/// its centre.
-Future<void> _centre(WidgetTester tester, String front) async {
-  final view = tester.getRect(_sessionScroll);
-  for (var tries = 0; tries < 20; tries++) {
-    final card = tester.getRect(_previous(front));
-    final distance = view.center.dy - card.center.dy;
-    if (distance.abs() < 1) return;
-    await tester.dragFrom(
-      Offset(view.center.dx, view.top + 10),
-      Offset(0, distance.clamp(-view.height / 3, view.height / 3)),
-    );
-    await tester.pumpAndSettle();
-  }
-  fail('$front never came to rest at the centre');
-}
+/// The height each card takes on a 390 by 844 screen with no insets: half
+/// the space between the top bar and the answer buttons, less the gaps.
+final _cardHeight =
+    (_phone.height -
+        StudyStyle.topBarHeight -
+        StudyStyle.topGap -
+        StudyStyle.cardGap -
+        StudyStyle.answerRow -
+        StudyStyle.currentBottomGap) /
+    2;
 
 /// Performs the screen reader's custom action [label] on [finder]'s node.
 Future<void> _act(WidgetTester tester, Finder finder, String label) async {
@@ -378,7 +362,7 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   testWidgets(
-    'the screen shows the top bar, the current card at about 57% of its height and the answer buttons under it, and nothing else',
+    'the screen shows the top bar, the current card in the lower of the two card places and the answer buttons under it, and nothing else',
     (tester) async {
       final study = await _open(tester, ['a', 'b'], returning: true);
 
@@ -386,8 +370,17 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
       final card = tester.getRect(_face);
       expect(card.width, _phone.width - 2 * StudyStyle.cardMargin);
-      expect(card.height, closeTo(StudyStyle.currentMinHeight, 0.01));
-      expect(card.center.dy, closeTo(_phone.height * 0.57, 1));
+      expect(card.height, closeTo(_cardHeight, 0.01));
+      expect(
+        card.top,
+        closeTo(
+          StudyStyle.topBarHeight +
+              StudyStyle.topGap +
+              _cardHeight +
+              StudyStyle.cardGap,
+          0.01,
+        ),
+      );
       expect(find.byType(VerticalDivider), findsOneWidget);
       // Every text on screen: the card's sides, of which the back is hidden
       // behind an eye, the count, and the answer buttons. No deck name, hint
@@ -421,7 +414,6 @@ void main() {
           greaterThanOrEqualTo(AppSize.tapTarget),
         );
       }
-      expect(find.text('Current card'), findsNothing);
       expect(study.current, 'a front');
     },
   );
@@ -444,12 +436,11 @@ void main() {
   });
 
   testWidgets(
-    'on the first session a guide of three lines shows above the first card, until the first answer',
+    'on the first session a guide of two lines holds the previous card\'s place, until the first answer',
     (tester) async {
       final guide = [
         'Try to recall it first, then tap the card to see the answer',
         "Swipe right if you know it, left if you don't",
-        'Pull down to see earlier cards and change their answers',
       ];
       final study = await _open(tester, ['a', 'b', 'c']);
 
@@ -460,10 +451,13 @@ void main() {
           lessThan(tester.getRect(_currentCard).top),
         );
       }
+      // The line on pulling down for earlier cards is gone.
+      expect(find.textContaining('earlier cards'), findsNothing);
       await study.know();
       for (final line in guide) {
         expect(find.text(line), findsNothing);
       }
+      expect(_previous('a front'), findsOneWidget);
       await study.know();
       for (final line in guide) {
         expect(find.text(line), findsNothing);
@@ -562,10 +556,10 @@ void main() {
   });
 
   testWidgets(
-    'long content grows the card to its cap and then scrolls inside each half',
+    'long content scrolls inside each half of the current card, which keeps its size whatever its content',
     (tester) async {
       final long = [TextContent(_sentence * 12)];
-      // A few lines at the question's size, short of the cap.
+      // A few lines at the question's size, which fit the card.
       final medium = [
         const TextContent('This line wraps across a few lines here and there.'),
       ];
@@ -576,9 +570,7 @@ void main() {
         returning: true,
       );
 
-      final cap = _phone.height * StudyStyle.currentMaxHeightFraction;
-      expect(tester.getSize(_face).height, closeTo(cap, 1));
-      expect(tester.getCenter(_face).dy, closeTo(_phone.height * 0.57, 1));
+      expect(tester.getSize(_face).height, closeTo(_cardHeight, 0.01));
       final halves = find.descendant(
         of: _currentCard,
         matching: find.byType(Scrollable),
@@ -604,10 +596,12 @@ void main() {
         const Duration(seconds: 1),
       );
       await tester.pumpAndSettle();
-      // Control: one sentence grows the card without reaching the cap.
-      final height = tester.getSize(_face).height;
-      expect(height, greaterThan(StudyStyle.currentMinHeight));
-      expect(height, lessThan(cap));
+      // Control: a few lines fit, at the same size, and scroll nothing.
+      expect(tester.getSize(_face).height, closeTo(_cardHeight, 0.01));
+      for (final half in halves.evaluate()) {
+        final position = (half as StatefulElement).state as ScrollableState;
+        expect(position.position.maxScrollExtent, 0);
+      }
     },
   );
 
@@ -650,9 +644,9 @@ void main() {
   }
 
   testWidgets(
-    'a previous card shows two lines of each side, and its whole content on long-press',
+    'a previous card shrinks long sides as far as their floors, then cuts them, and a tap shows the whole card in a sheet with no action',
     (tester) async {
-      final long = _sentence * 6;
+      final long = _sentence * 12;
       final study = await _open(
         tester,
         ['long', 'b'],
@@ -665,71 +659,93 @@ void main() {
       // The two sides; the grade's chip is the third paragraph.
       final paragraphs = tester
           .renderObjectList<RenderParagraph>(
-            find.descendant(
-              of: find.byType(PreviousCards),
-              matching: find.byType(RichText),
-            ),
+            find.descendant(of: _previousCard, matching: find.byType(RichText)),
           )
           .where((paragraph) => paragraph.maxLines != null)
           .toList();
       expect(paragraphs, hasLength(2));
-      for (final paragraph in paragraphs) {
-        expect(paragraph.maxLines, 2);
+      for (final (paragraph, floor) in [
+        (paragraphs[0], AppType.questionFloor),
+        (paragraphs[1], AppType.answerFloor),
+      ]) {
+        expect(paragraph.text.style!.fontSize, floor);
         expect(paragraph.overflow, TextOverflow.ellipsis);
         expect(paragraph.didExceedMaxLines, isTrue);
+        // Cut to the lines that fit inside its half.
+        expect(
+          paragraph.size.height,
+          lessThanOrEqualTo(
+            tester.getSize(_previousCard).height - 2 * StudyStyle.cardPadding,
+          ),
+        );
       }
 
-      await tester.longPress(_previous('long front $long'));
+      await tester.tap(_previous('long front $long'));
       await tester.pumpAndSettle();
+      final sheet = find.byType(BottomSheet);
       expect(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.text('long front $long'),
-        ),
+        find.descendant(of: sheet, matching: find.text('long front $long')),
         findsOneWidget,
       );
-      expect(study.current, 'b front', reason: 'a long-press changes nothing');
+      expect(
+        find.descendant(of: sheet, matching: find.text(long)),
+        findsOneWidget,
+      );
+      // The answer is changed by a swipe, not from the sheet.
+      expect(
+        find.descendant(of: sheet, matching: find.byType(ButtonStyleButton)),
+        findsNothing,
+      );
+      expect(study.current, 'b front', reason: 'a tap changes nothing');
       expect(
         _label(tester, _previous('long front $long')),
         endsWith('Answer: Know'),
       );
     },
   );
+
   testWidgets(
-    'short text sits vertically centred in each half of the current card and of a previous card',
+    'short text keeps its full size, centred in each half of the current card and of the previous card',
     (tester) async {
-      final study = await _open(tester, ['a', 'b']);
+      // Words narrow enough for each half at full size in the test font.
+      final study = await _open(
+        tester,
+        ['a', 'b'],
+        sides: {
+          'a': ([const TextContent('cat')], [const TextContent('chat')]),
+          'b': ([const TextContent('dog')], [const TextContent('chien')]),
+        },
+      );
       await study.know();
       await tester.tap(_currentCard);
       await tester.pumpAndSettle();
 
-      for (final side in ['b front', 'b back']) {
-        final text = find.descendant(
-          of: _currentCard,
-          matching: find.text(side),
-        );
-        expect(
-          tester.getCenter(text).dy,
-          closeTo(_halfCenter(tester, text), 1),
-          reason: side,
-        );
-      }
-      for (final side in ['a front', 'a back']) {
-        final text = find.descendant(
-          of: find.byType(PreviousCards),
-          matching: find.text(side),
-        );
-        expect(
-          tester.getCenter(text).dy,
-          closeTo(_halfCenter(tester, text), 1),
-          reason: side,
-        );
+      for (final (card, front, back) in [
+        (_currentCard, 'dog', 'chien'),
+        (_previousCard, 'cat', 'chat'),
+      ]) {
+        for (final (side, size) in [
+          (front, AppType.question.fontSize),
+          (back, AppType.answer.fontSize),
+        ]) {
+          final text = find.descendant(of: card, matching: find.text(side));
+          expect(
+            tester.getCenter(text).dy,
+            closeTo(_halfCenter(tester, text), 1),
+            reason: side,
+          );
+          expect(
+            tester.renderObject<RenderParagraph>(text).text.style!.fontSize,
+            size,
+            reason: side,
+          );
+        }
       }
     },
   );
 
   testWidgets(
-    'at rest the view shows exactly the previous card and the current card',
+    'the screen holds exactly the previous card and the current card, the same size, and a vertical drag reaches no earlier card',
     (tester) async {
       final names = ['a', 'b', 'c', 'd', 'e', 'f'];
       final study = await _open(tester, [...names, 'g', 'h']);
@@ -737,200 +753,83 @@ void main() {
         await study.know();
       }
 
-      expect(_onScreen(tester), ['f front', 'current']);
-      // Smaller than the current card, and with its answer shown.
+      expect(_built(tester), ['f front', 'current']);
+      final previous = tester.getRect(_previousCard);
+      final current = tester.getRect(_face);
+      expect(previous.size, current.size);
+      expect(current.height, closeTo(_cardHeight, 0.01));
+      expect(previous.bottom, lessThan(current.top));
       expect(
-        tester.getRect(_previous('f front')).width,
-        lessThan(tester.getRect(_currentCard).width),
-      );
-      expect(
-        find.descendant(
-          of: _previous('f front'),
-          matching: find.text('f back'),
-        ),
+        find.descendant(of: _previousCard, matching: find.text('f back')),
         findsOneWidget,
       );
-      // Control: the older answers are in the column, built above the view.
-      expect(_previous('e front'), findsOneWidget);
-    },
-  );
 
-  testWidgets(
-    'dragged down, the view comes to rest with three cards on screen, the centred one the largest, and a horizontal swipe on the current card still answers',
-    (tester) async {
-      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
-      final study = await _open(tester, [...names, 'g', 'h']);
-      for (final _ in names) {
-        await study.know();
+      // Control: the screen took the answers, which a pull down would once
+      // have reached.
+      for (final dy in [300.0, -300.0]) {
+        await tester.drag(_previousCard, Offset(0, dy));
+        await tester.pumpAndSettle();
+        expect(_built(tester), ['f front', 'current']);
+        expect(tester.getRect(_previousCard), previous);
+        expect(tester.getRect(_face), current);
       }
-      // After every answer the view is back at its end, the card at 57%.
-      final card = _face;
-      expect(tester.getCenter(card).dy, closeTo(_phone.height * 0.57, 1));
-
-      // Past the touch slop the drag is a scroll: the stack and the current
-      // card follow the finger together, and nothing is answered.
-      final gesture = await tester.startGesture(tester.getCenter(card));
-      await gesture.moveBy(const Offset(0, kDragSlopDefault + 1));
-      await tester.pump();
-      // The current card, which recedes about its centre as the view scrolls
-      // back, and the newest previous card.
-      final before = tester.getCenter(_currentCard).dy;
-      final newest = tester.getCenter(_previous('f front')).dy;
-      for (var moved = 0; moved < 10; moved++) {
-        await gesture.moveBy(const Offset(0, 30));
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      expect(tester.getCenter(_currentCard).dy, closeTo(before + 300, 1));
-      expect(
-        tester.getCenter(_previous('f front')).dy,
-        closeTo(newest + 300, 1),
-      );
-      await gesture.up();
-      await tester.pumpAndSettle();
-
-      final view = tester.getRect(_sessionScroll);
-      final visible = _onScreen(tester);
-      expect(visible, hasLength(3));
-      // The middle one rests at the centre, at full size and larger than the
-      // ones around it.
-      final centred = visible[1];
-      expect(centred, isNot('current'));
-      final centredRect = tester.getRect(_previous(centred));
-      expect(centredRect.center.dy, closeTo(view.center.dy, 1));
-      expect(
-        centredRect.width,
-        closeTo(_phone.width - 2 * StudyStyle.previousMargin, 0.5),
-      );
-      expect(
-        tester.getRect(_previous(visible.first)).width,
-        lessThan(centredRect.width),
-      );
-      // The card below it, the current card here, is smaller than at rest.
-      expect(
-        tester
-            .getRect(
-              visible.last == 'current' ? _face : _previous(visible.last),
-            )
-            .width,
-        lessThan(
-          visible.last == 'current'
-              ? _phone.width - 2 * StudyStyle.cardMargin
-              : centredRect.width,
-        ),
-      );
       expect(study.current, 'g front');
-      expect(_dragOffset(tester, _currentCard), 0);
-
-      // "Current card" returns to the end, where a swipe answers.
-      await tester.tap(find.text('Current card'));
-      await tester.pumpAndSettle();
-      expect(tester.getCenter(card).dy, closeTo(_phone.height * 0.57, 1));
-      expect(find.text('Current card'), findsNothing);
-      await study.swipe(200);
-      expect(study.current, 'h front');
-    },
-  );
-  testWidgets(
-    'the view stays at its end through an answer, on the frame the next card appears',
-    (tester) async {
-      final study = await _open(tester, ['a', 'b', 'c', 'd', 'e']);
-      for (final _ in ['a', 'b', 'c']) {
-        await study.know();
-      }
-
-      await tester.timedDrag(
-        _currentCard,
-        const Offset(200, 0),
-        const Duration(seconds: 1),
-      );
-      final next = find.descendant(
-        of: _currentCard,
-        matching: find.text('e front'),
-      );
-      for (var frame = 0; frame < 60 && next.evaluate().isEmpty; frame++) {
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-
-      expect(next, findsOneWidget, reason: 'the next card is on screen');
-      final position = tester.state<ScrollableState>(_sessionScroll).position;
-      expect(position.maxScrollExtent, greaterThan(0));
-      expect(position.pixels, position.maxScrollExtent);
-      await tester.pumpAndSettle();
     },
   );
 
   testWidgets(
-    'an answer given while scrolled back returns the view to its end',
-    (tester) async {
-      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
-      final study = await _open(tester, [...names, 'g', 'h']);
-      for (final _ in names) {
-        await study.know();
-      }
-      await _centre(tester, 'f front');
-      final position = tester.state<ScrollableState>(_sessionScroll).position;
-      expect(position.pixels, lessThan(position.maxScrollExtent));
-      final card = _face;
-      expect(tester.getRect(card).top, lessThan(_phone.height));
-
-      await tester.timedDrag(
-        card,
-        const Offset(200, 0),
-        const Duration(seconds: 1),
-      );
-      await tester.pumpAndSettle();
-
-      expect(study.current, 'h front');
-      expect(tester.getCenter(card).dy, closeTo(_phone.height * 0.57, 1));
-    },
-  );
-  testWidgets(
-    'a horizontal drag on the centred card changes its answer, writes the corrected replay, and leaves the view where it is',
+    'a horizontal drag on the previous card changes its answer and writes the corrected replay, and neither card moves with a drag on the other',
     (tester) async {
       final scheduler = _RecordingScheduler();
-      final names = ['a', 'b', 'c', 'd', 'e', 'f'];
       final study = await _open(tester, [
-        ...names,
-        'g',
-        'h',
+        'a',
+        'b',
+        'c',
+        'd',
       ], scheduler: scheduler);
-      for (final _ in names) {
-        await study.know();
-      }
-      await _centre(tester, 'e front');
-      final offset = _scrollOffset(tester);
+      await study.know();
+      await study.know();
       scheduler.answers.clear();
 
-      // Toward "Know", the answer it has: it barely moves and nothing changes.
-      await tester.timedDrag(
-        _previous('e front'),
-        const Offset(200, 0),
-        const Duration(seconds: 1),
+      // Toward "Know", the answer it has: it follows a quarter as far and
+      // nothing changes.
+      var gesture = await tester.startGesture(tester.getCenter(_previousCard));
+      for (var moved = 0; moved < 10; moved++) {
+        await gesture.moveBy(const Offset(20, 0));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(
+        _dragOffset(tester, _previousCard),
+        closeTo(200 * StudyStyle.sameAnswerResistance, 0.01),
       );
+      expect(find.text("Change to Don't know"), findsNothing);
+      await tester.pump(const Duration(milliseconds: 300));
+      await gesture.up();
       await tester.pumpAndSettle();
-      expect(_label(tester, _previous('e front')), endsWith('Answer: Know'));
+      expect(_label(tester, _previous('b front')), endsWith('Answer: Know'));
       expect(scheduler.answers, isEmpty);
 
-      // Dragged left, it shows what it would become behind it.
-      final gesture = await tester.startGesture(
-        tester.getCenter(_previous('e front')),
-      );
+      // Dragged left, it shows what it would become behind it, and the
+      // current card stays where it is.
+      gesture = await tester.startGesture(tester.getCenter(_previousCard));
       for (var moved = 0; moved < 10; moved++) {
         await gesture.moveBy(const Offset(-15, 0));
         await tester.pump(const Duration(milliseconds: 50));
       }
+      expect(_dragOffset(tester, _previousCard), closeTo(-150, 0.01));
+      expect(_dragOffset(tester, _currentCard), 0);
       expect(find.text("Change to Don't know"), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 300));
       await gesture.up();
       await tester.pumpAndSettle();
 
       expect(
-        _label(tester, _previous('e front')),
+        _label(tester, _previous('b front')),
         endsWith("Answer: Don't know. Changed"),
       );
       expect(find.text("Change to Don't know"), findsNothing);
-      expect(_scrollOffset(tester), offset);
-      expect(study.current, 'g front');
+      expect(_dragOffset(tester, _previousCard), 0);
+      expect(study.current, 'c front');
       // The card's session answers, replayed as they stand, are written.
       expect(scheduler.answers, [Answer.dontKnow]);
       await tester.runAsync(
@@ -939,26 +838,23 @@ void main() {
       final reviews = await tester.runAsync(
         () => study.db.select(study.db.reviews).get(),
       );
-      expect(
-        {for (final review in reviews!) review.cardId: review.rating},
-        {
-          for (final (index, _) in names.indexed)
-            'id${index + 1}': index == 4 ? 'again' : 'good',
-        },
-      );
+      expect({for (final review in reviews!) review.cardId: review.rating}, {
+        'id1': 'good',
+        'id2': 'again',
+      });
 
-      // Control: the card at rest above the current card is not re-decided by
-      // a drag.
-      await tester.tap(find.text('Current card'));
+      // Control: a drag on the current card moves it alone, and answers it.
+      gesture = await tester.startGesture(tester.getCenter(_face));
+      for (var moved = 0; moved < 10; moved++) {
+        await gesture.moveBy(const Offset(15, 0));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(_dragOffset(tester, _currentCard), closeTo(150, 0.01));
+      expect(_dragOffset(tester, _previousCard), 0);
+      await tester.pump(const Duration(milliseconds: 300));
+      await gesture.up();
       await tester.pumpAndSettle();
-      expect(_onScreen(tester), ['f front', 'current']);
-      await tester.timedDrag(
-        _previous('f front'),
-        const Offset(-200, 0),
-        const Duration(seconds: 1),
-      );
-      await tester.pumpAndSettle();
-      expect(_label(tester, _previous('f front')), endsWith('Answer: Know'));
+      expect(_label(tester, _previous('c front')), endsWith('Answer: Know'));
     },
   );
 
@@ -968,13 +864,13 @@ void main() {
       final semantics = tester.ensureSemantics();
       final study = await _open(tester, ['a', 'b', 'c']);
       await study.know();
-      await study.dontKnow();
-
       await _act(tester, _previous('a front'), "Change to Don't know");
       expect(
         _label(tester, _previous('a front')),
         endsWith("Answer: Don't know. Changed"),
       );
+
+      await study.dontKnow();
       await _act(tester, _previous('b front'), 'Change to Know');
       expect(
         _label(tester, _previous('b front')),
@@ -983,41 +879,6 @@ void main() {
       semantics.dispose();
     },
   );
-  testWidgets(
-    'a screen reader answering the card while it is scrolled out of view brings it into view first',
-    (tester) async {
-      final semantics = tester.ensureSemantics();
-      final names = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
-      final study = await _open(tester, [...names, 'k', 'l']);
-      for (final _ in names) {
-        await study.know();
-      }
-      await tester.drag(_currentCard, const Offset(0, 520));
-      await tester.pumpAndSettle();
-      expect(tester.getRect(_currentCard).top, greaterThan(_phone.height));
-
-      final node = tester.getSemantics(_cardNode);
-      node.owner!.performAction(
-        node.id,
-        SemanticsAction.customAction,
-        CustomSemanticsAction.getIdentifier(
-          const CustomSemanticsAction(label: 'Know'),
-        ),
-      );
-      await tester.pump();
-
-      // In view while it flies off.
-      expect(
-        tester.getRect(_currentCard).bottom,
-        lessThanOrEqualTo(_phone.height),
-      );
-      await tester.pumpAndSettle();
-      expect(study.current, 'l front');
-      expect(tester.getCenter(_face).dy, closeTo(_phone.height * 0.57, 1));
-      semantics.dispose();
-    },
-  );
-
   testWidgets('a block this version cannot show renders as its placeholder', (
     tester,
   ) async {
@@ -1045,8 +906,6 @@ void main() {
     'each previous card shows its grade by its colour and by a chip naming it, and its label names it',
     (tester) async {
       final study = await _open(tester, ['a', 'b', 'c']);
-      await study.know();
-      await study.dontKnow();
 
       for (final (name, answer, fill, line, chip) in [
         (
@@ -1064,6 +923,7 @@ void main() {
           AppColors.light.dontKnowText,
         ),
       ]) {
+        await (answer == 'Know' ? study.know() : study.dontKnow());
         final card = _previous('$name front');
         expect(
           _label(tester, card),
@@ -1147,43 +1007,51 @@ void main() {
 
   for (final reduceMotion in [true, false]) {
     testWidgets(
-      '${reduceMotion ? 'with' : 'without'} reduce motion a re-decided card and "Current card" ${reduceMotion ? 'settle at once' : 'move over time'}',
+      '${reduceMotion ? 'with' : 'without'} reduce motion a re-decided card ${reduceMotion ? 'settles at once' : 'springs back over time'}, and the card answered just now ${reduceMotion ? 'fades' : 'rises'} into the previous card\'s place',
       (tester) async {
-        final names = ['a', 'b', 'c', 'd'];
         final study = await _open(tester, [
-          ...names,
-          'e',
+          'a',
+          'b',
+          'c',
         ], disableAnimations: reduceMotion);
-        for (final _ in names) {
-          await study.know();
-        }
-        await _centre(tester, 'c front');
+        await study.know();
 
         await tester.timedDrag(
-          _previous('c front'),
+          _previousCard,
           const Offset(-200, 0),
           const Duration(seconds: 1),
         );
         await tester.pump();
-        final moved = _dragOffset(tester, _previous('c front'));
+        final moved = _dragOffset(tester, _previousCard);
         expect(moved, reduceMotion ? 0 : lessThan(0));
         await tester.pumpAndSettle();
         expect(
-          _label(tester, _previous('c front')),
+          _label(tester, _previous('a front')),
           endsWith("Answer: Don't know. Changed"),
         );
 
-        final end = tester
-            .state<ScrollableState>(_sessionScroll)
-            .position
-            .maxScrollExtent;
-        await tester.tap(find.text('Current card'));
+        await tester.tap(find.widgetWithText(TextButton, 'Know'));
         await tester.pump();
-        await tester.pump();
-        final offset = _scrollOffset(tester);
-        expect(offset, reduceMotion ? end : lessThan(end));
+        // Past the answered card's flight, into the next cards' entrance.
+        await tester.pump(reduceMotion ? Duration.zero : StudyStyle.flyDuration);
+        await tester.pump(StudyStyle.fadeDuration ~/ 2);
+        final rising = find.ancestor(
+          of: _previous('b front'),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Transform && widget.transform.getTranslation().y > 0,
+          ),
+        );
+        expect(rising, reduceMotion ? findsNothing : findsOneWidget);
+        expect(
+          find.ancestor(
+            of: _previous('b front'),
+            matching: find.byType(FadeTransition),
+          ),
+          findsWidgets,
+        );
         await tester.pumpAndSettle();
-        expect(_scrollOffset(tester), end);
+        expect(_built(tester), ['b front', 'current']);
       },
     );
   }
@@ -1243,16 +1111,6 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await act('모른다');
-      await act('안다');
-
-      expect(
-        find.semantics
-            .byLabel('앞면: a front. 뒷면: a back. 답: 모른다')
-            .evaluate()
-            .single,
-        isSemantics(hasLongPressAction: true),
-      );
       String actions(String label) => [
         for (final id
             in find.semantics
@@ -1262,10 +1120,20 @@ void main() {
                     .getSemanticsData()
                     .customSemanticsActionIds ??
                 <int>[])
-          // The long-press hint rides as an action with no label of its own.
+          // The tap hint rides as an action with no label of its own.
           ?CustomSemanticsAction.getAction(id)!.label,
       ].join(', ');
+
+      await act('모른다');
+      expect(
+        find.semantics
+            .byLabel('앞면: a front. 뒷면: a back. 답: 모른다')
+            .evaluate()
+            .single,
+        isSemantics(isButton: true, hasTapAction: true),
+      );
       expect(actions('앞면: a front. 뒷면: a back. 답: 모른다'), '안다로 바꾸기');
+      await act('안다');
       expect(actions('앞면: b front. 뒷면: b back. 답: 안다'), '모른다로 바꾸기');
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(textContrastGuideline));
@@ -1309,7 +1177,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('2/2'), findsOneWidget);
-      // The stack stays above the completion card.
+      // The previous card stays above the completion card.
       expect(
         tester.getRect(_previous('a front').last).bottom,
         lessThan(tester.getRect(find.text('Done for today')).top),
@@ -1426,7 +1294,7 @@ void main() {
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
 
-        await tester.longPress(_previous('b front'));
+        await tester.tap(_previous('b front'));
         await tester.pumpAndSettle();
         expect(find.byType(BottomSheet), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));

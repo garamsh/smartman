@@ -268,35 +268,25 @@ void main() {
       await shot(tester, '13-study-session');
       await tap(tester, find.bySemanticsLabel(RegExp('^앞면: [a-z]+\$')));
       await shot(tester, '13a-study-revealed');
-      // The view's centre, where a scroll starts on whatever card is there.
-      final centre = Offset(
-        _phone.width / _density / 2,
-        _phone.height / _density / 2,
-      );
-      await tester.dragFrom(centre, const Offset(0, 300));
-      await tester.pumpAndSettle();
-      // Scrolled back: three cards, the centred one emphasised.
-      await shot(tester, '13b-study-scrolled-back');
-      final gesture = await tester.startGesture(centre);
+      // The previous card, above the current one.
+      final previous = find
+          .bySemanticsLabel(
+            RegExp('^앞면: (ephemeral|meticulous|ubiquitous|resilient)\\. '),
+          )
+          .first;
+      final gesture = await tester.startGesture(tester.getCenter(previous));
       for (var moved = 0; moved < 8; moved++) {
         await gesture.moveBy(const Offset(-15, 0));
         await tester.pump(const Duration(milliseconds: 50));
       }
-      // Re-deciding the centred card, its new answer shown behind it.
+      // Re-deciding the previous card, its new answer shown behind it.
       await shot(tester, '13c-study-redecide');
       await gesture.up();
       await tester.pumpAndSettle();
-      await tester.longPress(
-        find
-            .bySemanticsLabel(
-              RegExp('^앞면: (ephemeral|meticulous|ubiquitous|resilient)\\. '),
-            )
-            .first,
-      );
+      await tester.tap(previous);
       await tester.pumpAndSettle();
       await shot(tester, '14-whole-card-sheet');
       await dismissSheet(tester);
-      await tap(tester, find.text(ko.backToCurrent));
       for (
         var tries = 0;
         tries < 10 && find.text(ko.studyComplete).evaluate().isEmpty;

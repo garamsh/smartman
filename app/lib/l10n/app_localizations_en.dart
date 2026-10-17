@@ -202,18 +202,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changingToDontKnow => 'Change to Don\'t know';
 
   @override
-  String get backToCurrent => 'Current card';
-
-  @override
   String get guideReveal =>
       'Try to recall it first, then tap the card to see the answer';
 
   @override
   String get guideSwipe => 'Swipe right if you know it, left if you don\'t';
-
-  @override
-  String get guideEarlier =>
-      'Pull down to see earlier cards and change their answers';
 
   @override
   String get answerNotSaved =>

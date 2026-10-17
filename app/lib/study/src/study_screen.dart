@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -12,11 +14,11 @@ import 'failure_message.dart';
 import 'first_run_guide.dart';
 import 'providers.dart';
 import 'session.dart';
-import 'session_scroll.dart';
+import 'previous_card.dart';
 import 'study_style.dart';
 
 /// Studies the cards of [decks] left today in one session, one card at a time,
-/// answered by swiping, below every card answered so far; then shows the
+/// answered by swiping, below the card answered just before it; then shows the
 /// completion card, from which practice goes on in the same screen.
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.decks});
@@ -68,10 +70,6 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // The current card's centre, measured from the top of the screen, is
-    // placed relative to the body below the top bar.
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final bodyTop = MediaQuery.paddingOf(context).top + StudyStyle.topBarHeight;
     return ListenableBuilder(
       listenable: _session,
       builder: (context, _) {
@@ -89,17 +87,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                   },
                   onClose: () => Navigator.of(context).maybePop(),
                 ),
-                Expanded(
-                  child: _body(
-                    context,
-                    state,
-                    currentCenter:
-                        screenHeight * StudyStyle.currentCenterFraction -
-                        bodyTop,
-                    currentMaxHeight:
-                        screenHeight * StudyStyle.currentMaxHeightFraction,
-                  ),
-                ),
+                Expanded(child: _body(context, state)),
               ],
             ),
           ),
@@ -108,12 +96,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     );
   }
 
-  Widget _body(
-    BuildContext context,
-    SessionState state, {
-    required double currentCenter,
-    required double currentMaxHeight,
-  }) {
+  Widget _body(BuildContext context, SessionState state) {
     final l10n = AppLocalizations.of(context);
     final (previous, current) = switch (state) {
       SessionLoading() => (
@@ -152,56 +135,95 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       ),
       SessionComplete(:final completion, :final previous) => (
         previous,
-        CompletionCard(
+        Align(
           key: const ValueKey('completion'),
-          completion: completion,
-          onPractice: _session.practice,
+          alignment: Alignment.topCenter,
+          child: CompletionCard(
+            completion: completion,
+            onPractice: _session.practice,
+          ),
         ),
       ),
     };
     if (previous == null) return current;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final switcher = AnimatedSwitcher(
+    Widget switcher(
+      Widget? child,
+      AnimatedSwitcherTransitionBuilder transition,
+    ) => AnimatedSwitcher(
       duration: reduceMotion
           ? StudyStyle.fadeDuration
           : StudyStyle.settleDuration,
       switchInCurve: Curves.easeOutCubic,
       transitionBuilder: reduceMotion
           ? AnimatedSwitcher.defaultTransitionBuilder
-          : _emerge,
+          : transition,
       layoutBuilder: (current, previous) => Stack(
-        alignment: Alignment.topCenter,
+        fit: StackFit.expand,
         children: [...previous, ?current],
       ),
-      child: current,
+      child: child,
     );
-    final scroll = SessionScroll(
-      cards: previous,
-      onRedecide: _session.redecide,
-      currentCenter: currentCenter,
-      // The completion card may grow past a card's cap, up to the space below
-      // the top bar, so its actions are not scrolled out of reach.
-      currentMaxHeight: state is SessionStudying
-          ? currentMaxHeight
-          : double.infinity,
-      // The answer buttons hang under the card, which alone is placed as ADR
-      // 0023 places it.
-      footer: state is SessionStudying ? StudyStyle.answerRow : 0,
-      current: switcher,
-    );
-    // The first session's guide takes the space above the card, which no
-    // previous card holds yet. The column keeps its key as the guide leaves,
-    // so the first answer's transition runs.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (state is SessionStudying && state.firstRun)
-          const Flexible(child: SingleChildScrollView(child: FirstRunGuide())),
-        Expanded(key: const ValueKey('session'), child: scroll),
-      ],
+    final newest = previous.lastOrNull;
+    // The previous card's place holds, before the first answer, the first
+    // session's guide.
+    final above = newest != null
+        ? PreviousCardView(
+            // A new key for each answer, so the card answered just now rises
+            // in and a change of its answer leaves it in place.
+            key: ValueKey(newest.position),
+            card: newest,
+            onRedecide: (answer) => _session.redecide(newest.position, answer),
+          )
+        : state is SessionStudying && state.firstRun
+        ? const SingleChildScrollView(child: FirstRunGuide())
+        : null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // The two cards share the height between the top bar and the answer
+        // buttons equally, the completion card's place included, so the
+        // previous card keeps its size when the completion card arrives.
+        final card = max(
+          0.0,
+          (constraints.maxHeight -
+                  StudyStyle.topGap -
+                  StudyStyle.cardGap -
+                  StudyStyle.answerRow -
+                  StudyStyle.currentBottomGap) /
+              2,
+        );
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            StudyStyle.cardMargin,
+            StudyStyle.topGap,
+            StudyStyle.cardMargin,
+            StudyStyle.currentBottomGap,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: card, child: switcher(above, _rise)),
+              const SizedBox(height: StudyStyle.cardGap),
+              // The completion card may take the answer buttons' place too,
+              // so its actions stay in reach.
+              Expanded(child: switcher(current, _emerge)),
+            ],
+          ),
+        );
+      },
     );
   }
 }
+
+/// Rises the card answered just now into the previous card's place.
+Widget _rise(Widget child, Animation<double> animation) => AnimatedBuilder(
+  animation: animation,
+  builder: (context, child) => Transform.translate(
+    offset: Offset(0, StudyStyle.emergeOffset * (1 - animation.value)),
+    child: FadeTransition(opacity: animation, child: child),
+  ),
+  child: child,
+);
 
 /// Brings the next card up from slightly below and smaller.
 Widget _emerge(Widget child, Animation<double> animation) => AnimatedBuilder(

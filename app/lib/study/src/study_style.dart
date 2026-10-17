@@ -11,17 +11,16 @@ abstract final class StudyStyle {
   static const previousRadius = AppRadius.previous;
   static const cardPadding = AppSpace.s16;
 
-  /// The current card's height before its content grows it.
-  static const currentMinHeight = 200.0;
+  /// The completion card's least height.
+  static const completionMinHeight = 200.0;
 
-  /// The current card's tallest height, as a fraction of the screen height.
-  static const currentMaxHeightFraction = 0.55;
+  /// Space above the previous card, which its grade chip stands into.
+  static const topGap = AppSpace.s20;
 
-  /// Where the current card's vertical centre sits, as a fraction of the
-  /// screen height.
-  static const currentCenterFraction = 0.57;
+  /// Space between the previous card and the current card.
+  static const cardGap = AppSpace.s16;
 
-  /// The least space kept below the answer buttons.
+  /// The space kept below the answer buttons, or below the completion card.
   static const currentBottomGap = AppSpace.s16;
 
   /// Space between the current card and the answer buttons under it.
@@ -39,30 +38,8 @@ abstract final class StudyStyle {
   /// the answer under the question.
   static const minHalfWidth = 140.0;
 
-  /// A previous card's height, and its space from the screen's edges.
-  static const previousHeight = 120.0;
-  static const previousMargin = AppSpace.s24;
-
   /// A previous card's line around it.
   static const previousLine = 1.5;
-
-  /// The space each previous card takes in the column, as a fraction of the
-  /// column's height: wide enough that the view at rest shows one previous
-  /// card, and scrolled back three cards.
-  static const previousSlotFraction = 0.36;
-
-  /// Space between the nearest previous card and the current card.
-  static const previousGap = AppSpace.s12;
-  static const previousLines = 2;
-
-  /// A previous card's scale at rest, and away from the centre while the
-  /// column is scrolled back; the centred one is at full size.
-  static const previousRestScale = 0.94;
-  static const previousSideScale = 0.9;
-
-  /// A previous card's opacity away from the centre while the column is
-  /// scrolled back.
-  static const previousSideOpacity = 0.72;
 
   /// The grade chip on a previous card's top edge: its height, its icon and
   /// how far it stands in from the card's right edge.
@@ -76,17 +53,8 @@ abstract final class StudyStyle {
   /// How far the divider between a card's halves stops short of its edges.
   static const dividerInset = AppSpace.s28;
 
-  /// How far a previous card's divider stops short of its edges.
-  static const previousDividerInset = AppSpace.s20;
-
   /// The eye in the hidden answer's half.
   static const hiddenAnswerIcon = AppSpace.s24;
-
-  /// The fade under the top bar, over cards scrolled beneath it.
-  static const topFade = AppSpace.s40;
-
-  /// The fade above "지금 카드로", over the cards behind it.
-  static const bottomFade = AppSpace.s40;
 
   /// The first-run guide's icon tile.
   static const guideTile = AppSpace.s32;
