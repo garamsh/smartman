@@ -1,3 +1,4 @@
+export { RecordView } from "./components/record-view";
 export { StudyScreen } from "./components/study-screen";
 export {
   type CardState,
@@ -18,7 +19,9 @@ export {
   statusLine,
   todayStatus,
 } from "./overview";
+export { readRecord } from "./read-record";
 export { readToday } from "./read-today";
+export { recordDays } from "./stats";
 export { sessionMinutes } from "./study-time";
 export type { SessionPlan } from "./session";
 export { timeZoneScript } from "./time-zone";

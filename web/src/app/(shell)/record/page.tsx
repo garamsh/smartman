@@ -1,8 +1,19 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+
+import { RecordContent } from "./_components/record";
+import { RecordSkeleton } from "./_components/record-skeleton";
 
 export const metadata: Metadata = { title: "기록 · smartman" };
 
-/** 기록: the heading alone until #91's Part B fills the page. */
+/** 기록: the retention against its target, the recall bands, the mastered weeks and the study days. */
 export default function RecordPage() {
-  return <h1 className="text-display">기록</h1>;
+  return (
+    <>
+      <h1 className="text-display">기록</h1>
+      <Suspense fallback={<RecordSkeleton />}>
+        <RecordContent />
+      </Suspense>
+    </>
+  );
 }
