@@ -13,7 +13,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - The PM decided on 2026-10-17, on the worker's questions in the dispatch of #141:
   - the stability bound applies to the study time T between consecutive study days, inside the recency-weighted recursion, rather than to a stored figure (which would add synced state) or to the new cards taken the day before (which would drag the figure down after a short day); the recursion starts from a fixed window of study days, so a client holding more history computes the same figure;
   - after the simulation showed that bounding T leaves the day-to-day swing of new cards near the mean figure itself, the time set aside for reviews is the collection's daily load plus the reviews due beyond it spread over k days (candidate G), with the k that keeps the swing near the daily load's alone while new cards still fall on return from a rest.
-- The production read, aggregates only, run read-only by the PM on 2026-10-17 with the two queries recorded in the pull request that adds this ADR: 127 live answers of one user over three study days, all stored before foreground timing existed.
+- The production read, aggregates only, run read-only by the PM on 2026-10-17 with the two queries recorded in pull request #146, which adds this ADR: 127 live answers of one user over three study days, all stored before foreground timing existed.
 
   | Answers | n | p10 | p25 | p50 | p75 | p90 | p95 | p98 | p99 | max | over 30 s | over 60 s | over 120 s |
   |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
