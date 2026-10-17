@@ -1501,11 +1501,35 @@ abstract class AppLocalizations {
   /// **'하루 목표 {goal}장 중 {done}장'**
   String goalRingSemantics(int done, int goal);
 
-  /// On the today card: how much of the day's goal is done.
+  /// On the today card, where the user stands: nothing studied today yet, on a streak of this many days.
   ///
   /// In ko, this message translates to:
-  /// **'하루 목표 {goal}장 중 {done}장 했어요'**
-  String goalLine(int done, int goal);
+  /// **'{days}일째 이어 가는 중이에요'**
+  String statusStreak(int days);
+
+  /// On the today card, where the user stands: nothing studied today yet.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘의 첫 카드를 기다리고 있어요'**
+  String get statusWaiting;
+
+  /// On the today card, where the user stands: three cards or fewer left today.
+  ///
+  /// In ko, this message translates to:
+  /// **'거의 다 왔어요'**
+  String get statusAlmostDone;
+
+  /// On the today card, where the user stands: half of today's goal or more done.
+  ///
+  /// In ko, this message translates to:
+  /// **'절반을 넘었어요'**
+  String get statusPastHalf;
+
+  /// On the today card, where the user stands: some of today's cards done, under half.
+  ///
+  /// In ko, this message translates to:
+  /// **'좋은 출발이에요'**
+  String get statusStarted;
 
   /// On the done card: the day's goal was reached.
   ///

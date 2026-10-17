@@ -905,9 +905,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String goalLine(int done, int goal) {
-    return '$done of today\'s $goal done';
+  String statusStreak(int days) {
+    return 'On a $days-day streak';
   }
+
+  @override
+  String get statusWaiting => 'Waiting for today\'s first card';
+
+  @override
+  String get statusAlmostDone => 'Almost there';
+
+  @override
+  String get statusPastHalf => 'Past the halfway mark';
+
+  @override
+  String get statusStarted => 'Off to a good start';
 
   @override
   String goalReached(int goal) {

@@ -818,9 +818,21 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String goalLine(int done, int goal) {
-    return '하루 목표 $goal장 중 $done장 했어요';
+  String statusStreak(int days) {
+    return '$days일째 이어 가는 중이에요';
   }
+
+  @override
+  String get statusWaiting => '오늘의 첫 카드를 기다리고 있어요';
+
+  @override
+  String get statusAlmostDone => '거의 다 왔어요';
+
+  @override
+  String get statusPastHalf => '절반을 넘었어요';
+
+  @override
+  String get statusStarted => '좋은 출발이에요';
 
   @override
   String goalReached(int goal) {

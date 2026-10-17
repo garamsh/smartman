@@ -219,7 +219,10 @@ void main() {
         // Seven cards at 25 s each take 175 s, about 3 minutes.
         expect(find.text('7 cards · about 3 min'), findsOneWidget);
         expect(find.bySemanticsLabel("0 of today's goal of 7"), findsOneWidget);
-        expect(find.text("0 of today's 7 done"), findsOneWidget);
+        // Nothing done yet, on a 1-day streak: the line waits, and the
+        // numbers stay in the ring alone.
+        expect(_shown("Waiting for today's first card"), findsOneWidget);
+        expect(find.textContaining("of today's 7"), findsNothing);
         // The pace's answers were given the day before, which starts the
         // streak.
         expect(find.text('1-day streak'), findsOneWidget);
@@ -241,7 +244,8 @@ void main() {
         );
 
         expect(find.bySemanticsLabel("1 of today's goal of 3"), findsOneWidget);
-        expect(find.text("1 of today's 3 done"), findsOneWidget);
+        // Two cards left: almost there.
+        expect(_shown('Almost there'), findsOneWidget);
         // Answered today: the streak counts today.
         expect(find.text('1-day streak'), findsOneWidget);
         await list.close();
@@ -686,3 +690,8 @@ void main() {
     );
   });
 }
+
+/// The text on screen that reads [text] once its word joiners are left out.
+Finder _shown(String text) => find.byWidgetPredicate(
+  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
+);
