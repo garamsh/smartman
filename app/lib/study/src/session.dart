@@ -9,6 +9,7 @@ import 'queue.dart';
 import 'rust/api/engine.dart';
 import 'scheduler.dart';
 import 'study_repository.dart';
+import 'study_time.dart';
 
 /// What a session shows.
 sealed class SessionState {
@@ -208,6 +209,14 @@ class StudySession extends ChangeNotifier {
   final _before = <CardId, CardState>{};
   final _answers = <_Answered>[];
   late DateTime _shownAt;
+
+  /// When the app last left the foreground while the card on screen waited,
+  /// or null while it is in the foreground.
+  DateTime? _pausedAt;
+
+  /// The time out of the foreground since the card on screen was shown,
+  /// up to [_pausedAt].
+  var _away = Duration.zero;
   bool _disposed = false;
   Future<void> _writes = Future.value();
 
@@ -339,15 +348,44 @@ class StudySession extends ChangeNotifier {
           cardId: card.id,
           answer: answer,
           reviewedAt: now,
-          duration: now.difference(_shownAt),
+          duration: _onScreen(now),
           fuzzFactor: FuzzFactor.draw(_random),
         ),
       ),
     );
     if (answer == Answer.dontKnow) reinsert(_queue, card, _random);
-    _shownAt = now;
+    _show(now);
     notifyListeners();
     _write(card.id);
+  }
+
+  /// Stops the clock of the card on screen while the app is out of the
+  /// foreground, so an answer's duration counts only the time it was in it.
+  void pause() => _pausedAt ??= _clock();
+
+  /// Starts the clock of the card on screen again as the app comes back to
+  /// the foreground.
+  void resume() {
+    if (_pausedAt case final since?) _away += _clock().difference(since);
+    _pausedAt = null;
+  }
+
+  /// Starts the clock of the next card shown, at [now].
+  void _show(DateTime now) {
+    _shownAt = now;
+    _away = Duration.zero;
+    if (_pausedAt != null) _pausedAt = now;
+  }
+
+  /// The time the card on screen has been shown at [now] with the app in the
+  /// foreground.
+  Duration _onScreen(DateTime now) {
+    final away = switch (_pausedAt) {
+      final since? => _away + now.difference(since),
+      null => _away,
+    };
+    final shown = now.difference(_shownAt) - away;
+    return shown.isNegative ? Duration.zero : shown;
   }
 
   /// Goes on from the completion card as practice: every card answered
@@ -445,7 +483,7 @@ class StudySession extends ChangeNotifier {
     if (!isLast) return;
     final waiting = queue.indexWhere((queued) => queued.id == card.id);
     if (answer == Answer.dontKnow && waiting == -1) {
-      if (queue.isEmpty) _shownAt = _clock();
+      if (queue.isEmpty) _show(_clock());
       reinsert(queue, card, _random);
     } else if (answer == Answer.know && waiting > 0) {
       queue.removeAt(waiting);
@@ -457,11 +495,7 @@ class StudySession extends ChangeNotifier {
       final (read, states) = await readCards(decks, cards, _repository);
       final now = _clock();
       final start = studyDayStart(now, _offsetAt);
-      final day = StudyDay.at(
-        now,
-        firstAnswers: await _repository.firstAnswersSince(start),
-        offsetAt: _offsetAt,
-      );
+      final (day, _) = await readStudyDay(_repository, now, _offsetAt);
       final byId = {for (final card in read) card.id: card};
       final storedSince = await _repository.answersSince(start);
       _storedToday = [
@@ -485,7 +519,7 @@ class StudySession extends ChangeNotifier {
       _before.addAll(states);
       _queue.addAll(orderQueue(selectQueue(read, states, day), _random));
       _total = _queue.length;
-      _shownAt = now;
+      _show(now);
       _loaded = true;
     } on DeckFailure catch (failure) {
       _loadFailure = CardsUnreadable(failure);

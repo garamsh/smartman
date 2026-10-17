@@ -31,6 +31,7 @@ class StudyScreen extends ConsumerStatefulWidget {
 
 class _StudyScreenState extends ConsumerState<StudyScreen> {
   late final StudySession _session;
+  late final AppLifecycleListener _lifecycle;
   late ScaffoldMessengerState _messenger;
   late AppLocalizations _l10n;
 
@@ -48,6 +49,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       onFailure: _report,
       offsetAt: ref.read(studyZoneProvider),
     );
+    // An answer counts only the time the app is resumed.
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) => state == AppLifecycleState.resumed
+          ? _session.resume()
+          : _session.pause(),
+    );
   }
 
   @override
@@ -60,6 +67,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _session.dispose();
     super.dispose();
   }
