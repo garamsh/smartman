@@ -85,7 +85,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Card editor
 
 - The editor has a close button, the title "카드 추가" or "카드 편집", and the deck name on the right; when editing, also a delete button.
-- A live preview shows the card as the study screen shows it with its answer revealed, question left and answer right, each centred in its half and shrunk until its widest word fits, as the study card does, above the multi-line fields "문제" and "답".
+- A live preview shows the card as the study screen's previous card shows it, question left and answer right, each centred in its half and shrunk until its widest word fits, as the study card does, above the multi-line fields "문제" and "답".
 - Adding offers "저장", which saves and closes, and "저장하고 다음 카드", which saves and leaves the editor open and empty with the focus on "문제". Editing offers "저장" alone.
 
 ### State and composition

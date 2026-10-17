@@ -1,6 +1,6 @@
 # ADR 0033: Count the cards left per study day from 04:00, end the day's cards on a completion card, and continue as practice that writes nothing
 
-> Status: accepted; its 20 new cards a day superseded by ADR-0043
+> Status: accepted; its 20 new cards a day superseded by ADR-0043; its practice and its 계속 학습 superseded by ADR-0049
 > Date: 2026-10-16
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
