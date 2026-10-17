@@ -111,19 +111,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
-  String get clearSelection => 'Clear selection';
-
-  @override
-  String decksSelected(int count) {
-    return '$count selected';
-  }
-
-  @override
-  String studySelected(int count) {
-    return 'Study ($count)';
-  }
-
-  @override
   String todayCards(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -787,9 +774,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabsLabel => 'Tabs';
 
   @override
-  String get selectDecks => 'Select';
-
-  @override
   String get searchDecks => 'Search decks';
 
   @override
@@ -1140,4 +1124,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get masteredEmpty => 'No card mastered yet.';
+
+  @override
+  String get newDeckEntryBody => 'Choose how to start a new deck';
 }

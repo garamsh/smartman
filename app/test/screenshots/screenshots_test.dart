@@ -210,7 +210,7 @@ void main() {
       await enter(ko.deckName, '영단어 기본');
       await tap(tester, find.text(ko.create));
       await tap(tester, find.text(ko.tabDecks));
-      await tap(tester, find.text(ko.newDeck));
+      await tap(tester, find.text(ko.newDeckTitle));
       await shot(tester, '03b-new-deck-options');
       await tap(tester, find.text(ko.createManually));
       await enter(ko.deckName, '일본어 N3 한자');
@@ -343,10 +343,6 @@ void main() {
       await tester.pumpAndSettle();
 
       await shot(tester, '16-deck-list');
-      await tap(tester, find.text(ko.selectDecks));
-      await tap(tester, find.text('영단어 기본'));
-      await shot(tester, '17-deck-list-selection');
-      await tap(tester, find.byTooltip(ko.clearSelection));
       await showRecord(tester);
       await shot(tester, '16c-record');
       // Today's cards done: the done card and the next seven days.

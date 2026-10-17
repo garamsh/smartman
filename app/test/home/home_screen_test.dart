@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -30,11 +31,6 @@ class _List {
   Set<DeckId> get session =>
       tester.widget<StudyScreen>(find.byType(StudyScreen)).decks.ids;
 
-  Future<void> longPress(String deck) async {
-    await tester.longPress(find.text(deck));
-    await tester.pumpAndSettle();
-  }
-
   Future<void> tap(String text) async {
     await tester.tap(find.text(text));
     await tester.pumpAndSettle();
@@ -43,12 +39,15 @@ class _List {
   /// Shows the decks tab.
   Future<void> decks() => tap('Decks');
 
+  /// Taps "새 덱 만들기" under the deck rows, which opens the new-deck sheet.
+  Future<void> newDeck() async {
+    await tester.ensureVisible(find.text('Create a deck'));
+    await tap('Create a deck');
+  }
+
   /// The row showing [deck].
   Finder row(String deck) =>
       find.ancestor(of: find.text(deck), matching: find.byType(InkWell)).first;
-
-  bool selected(String deck) =>
-      isSemantics(isSelected: true).matches(tester.getSemantics(row(deck)), {});
 
   /// Unmounts the list. Unmounting cancels drift's stream query, whose
   /// cleanup timer must fire before the test body ends.
@@ -478,13 +477,15 @@ void main() {
     );
 
     testWidgets(
-      'New deck offers making one by hand, which names and creates it, and no photo without photo import',
+      'Create a deck under the rows opens the new-deck sheet, which makes one by hand, and offers no photo without photo import',
       (tester) async {
         final list = await _open(tester);
         await list.decks();
 
-        await list.tap('New deck');
-        expect(find.text('Create a deck'), findsOneWidget);
+        await list.newDeck();
+        // The sheet's title over the entry that opened it.
+        expect(find.text('Create a deck'), findsNWidgets(2));
+        expect(find.text('Create by hand'), findsOneWidget);
         expect(find.text('Create from photo'), findsNothing);
         await list.tap('Create by hand');
         await tester.enterText(find.byType(EditableText).last, 'Delta');
@@ -497,7 +498,7 @@ void main() {
     );
 
     testWidgets(
-      'with photo import, New deck offers a photo, which opens it for a new deck',
+      'with photo import, Create a deck offers a photo, which opens it for a new deck',
       (tester) async {
         final opened = <DeckId?>[];
         final list = await _open(
@@ -509,7 +510,7 @@ void main() {
         );
         await list.decks();
 
-        await list.tap('New deck');
+        await list.newDeck();
         await list.tap('Create from photo');
 
         expect(find.text('photo import'), findsOneWidget);
@@ -542,7 +543,7 @@ void main() {
       expect(list.ids['Beta'], const DeckId('deck1'));
       await list.decks();
 
-      await list.tap('New deck');
+      await list.newDeck();
       await list.tap('Create from photo');
       await list.tap('saved');
 
@@ -568,7 +569,7 @@ void main() {
       );
       await list.decks();
 
-      await list.tap('New deck');
+      await list.newDeck();
       await list.tap('Create from photo');
       await list.tap('left');
 
@@ -578,138 +579,38 @@ void main() {
     });
 
     testWidgets(
-      'Select enters selection mode, and so does a long-press with that deck selected',
-      (tester) async {
-        var list = await _open(tester);
-        await list.decks();
-        await list.tap('Select');
-        expect(find.text('0 selected'), findsOneWidget);
-        expect(list.selected('Alpha'), isFalse);
-        await list.close();
-
-        list = await _open(tester);
-        await list.decks();
-        await list.longPress('Beta');
-
-        expect(find.text('1 selected'), findsOneWidget);
-        expect(find.text('Study (1)'), findsOneWidget);
-        expect(list.selected('Beta'), isTrue);
-        expect(list.selected('Alpha'), isFalse);
-        await list.close();
-      },
-    );
-
-    testWidgets(
-      'in selection mode a tap adds or removes a deck instead of opening it',
+      'the top bar holds the title alone, a long-press opens a deck as a tap does, and Create a deck sits under the rows',
       (tester) async {
         final list = await _open(tester);
         await list.decks();
-        // Control: outside selection mode a tap opens the deck.
-        await list.tap('Alpha');
-        expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+
+        final bar = find.byType(AppBar);
+        expect(
+          find.descendant(of: bar, matching: find.text('My decks 3')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: bar, matching: find.byType(ButtonStyleButton)),
+          findsNothing,
+        );
+        expect(find.text('Select'), findsNothing);
+        expect(find.text('New deck'), findsNothing);
+
+        // With no selection mode, a long-press opens the deck as a tap does.
+        await tester.longPress(find.text('Beta'));
+        await tester.pumpAndSettle();
+        expect(find.byType(DeckScreen), findsOneWidget);
+        expect(find.textContaining('selected'), findsNothing);
         await tester.pageBack();
         await tester.pumpAndSettle();
 
-        await list.tap('Select');
-        await list.tap('Alpha');
-        await list.tap('Gamma');
-        expect(find.text('2 selected'), findsOneWidget);
-        expect(list.selected('Gamma'), isTrue);
-
-        await list.tap('Alpha');
-        expect(find.text('1 selected'), findsOneWidget);
-        expect(find.text('Study (1)'), findsOneWidget);
-        expect(list.selected('Alpha'), isFalse);
-        expect(find.text('No cards yet. Add a card to start.'), findsNothing);
-        await list.close();
-      },
-    );
-
-    testWidgets(
-      'Study (n) starts one session over exactly the selected decks',
-      (tester) async {
-        final list = await _open(tester);
-        await list.decks();
-        await list.tap('Select');
-        await list.tap('Alpha');
-        await list.tap('Gamma');
-
-        await list.tap('Study (2)');
-
-        expect(list.session, {list.ids['Alpha'], list.ids['Gamma']});
-        await list.close();
-      },
-    );
-
-    testWidgets('the clear action leaves selection mode', (tester) async {
-      final list = await _open(tester);
-      await list.decks();
-      await list.tap('Select');
-
-      await tester.tap(find.byTooltip('Clear selection'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('My decks 3'), findsOneWidget);
-      expect(find.textContaining('selected'), findsNothing);
-      await list.tap('Alpha');
-      expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
-      await list.close();
-    });
-
-    testWidgets(
-      'a deck deleted while selected leaves the selection, and an empty selection cannot start',
-      (tester) async {
-        final list = await _open(tester);
-        await list.decks();
-        await list.longPress('Alpha');
-        TextButton start() => tester.widget<TextButton>(
-          find.ancestor(
-            of: find.textContaining('Study ('),
-            matching: find.byType(TextButton),
-          ),
-        );
-        // Control: while the deck remains, the selection can start.
-        expect(start().onPressed, isNotNull);
-
-        await tester.runAsync(
-          () => list.repository.deleteDeck(list.ids['Alpha']!),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text('0 selected'), findsOneWidget);
-        expect(find.text('Study (0)'), findsOneWidget);
-        expect(start().onPressed, isNull);
-        await list.close();
-      },
-    );
-
-    testWidgets(
-      'a screen reader hears whether each deck is selected and how many are',
-      (tester) async {
-        final list = await _open(tester);
-        await list.decks();
-        await list.longPress('Alpha');
-
+        await tester.ensureVisible(find.text('Create a deck'));
         expect(
-          tester.getSemantics(list.row('Alpha')),
-          isSemantics(
-            label: 'Alpha\n0 of 0 mastered',
-            hasSelectedState: true,
-            isSelected: true,
-            hasTapAction: true,
-          ),
+          tester.getRect(find.text('Create a deck')).top,
+          greaterThan(tester.getRect(find.text('Gamma')).bottom),
         );
-        expect(
-          tester.getSemantics(list.row('Beta')),
-          isSemantics(
-            label: 'Beta\n0 of 0 mastered',
-            hasSelectedState: true,
-            isSelected: false,
-            hasTapAction: true,
-          ),
-        );
-        expect(find.semantics.byLabel('1 selected'), findsOne);
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        // Control: without sharing there is no way to public decks beside it.
+        expect(find.text('Browse public decks'), findsNothing);
         await list.close();
       },
     );

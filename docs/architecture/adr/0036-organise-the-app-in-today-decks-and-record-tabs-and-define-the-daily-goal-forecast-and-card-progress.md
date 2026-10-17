@@ -1,6 +1,6 @@
 # ADR 0036: Organise the app in 오늘, 덱 and 기록 tabs, and define the daily goal, the seven-day forecast and a card's progress
 
-> Status: accepted; the today card's goal line superseded by ADR-0046
+> Status: accepted; the today card's goal line superseded by ADR-0046; the 덱 tab's "선택", top-bar "새 덱" and long-press selection superseded by ADR-0050
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

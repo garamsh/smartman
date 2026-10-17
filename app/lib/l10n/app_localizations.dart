@@ -272,24 +272,6 @@ abstract class AppLocalizations {
   /// **'삭제'**
   String get delete;
 
-  /// Label of the button that leaves the deck list's selection mode.
-  ///
-  /// In ko, this message translates to:
-  /// **'선택 해제'**
-  String get clearSelection;
-
-  /// Deck list title in selection mode: how many decks are selected.
-  ///
-  /// In ko, this message translates to:
-  /// **'{count}개 선택됨'**
-  String decksSelected(int count);
-
-  /// Deck list action in selection mode that studies the selected decks in one session, with how many are selected.
-  ///
-  /// In ko, this message translates to:
-  /// **'학습 ({count})'**
-  String studySelected(int count);
-
   /// Deck list header: how many cards a session over every deck would study now.
   ///
   /// In ko, this message translates to:
@@ -1333,12 +1315,6 @@ abstract class AppLocalizations {
   /// **'탭'**
   String get tabsLabel;
 
-  /// The decks tab's action that enters selection mode, to study several decks in one session.
-  ///
-  /// In ko, this message translates to:
-  /// **'선택'**
-  String get selectDecks;
-
   /// The hint in the decks tab's search field, which filters decks by name.
   ///
   /// In ko, this message translates to:
@@ -1836,6 +1812,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'아직 익힌 카드가 없어요.'**
   String get masteredEmpty;
+
+  /// Under 새 덱 만들기 at the foot of the decks tab, which opens the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 덱을 시작할 방법을 골라요'**
+  String get newDeckEntryBody;
 }
 
 class _AppLocalizationsDelegate

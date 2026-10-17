@@ -295,7 +295,7 @@ void main() {
         await tapAndSettle(tester, find.text('Study'));
       },
       'photo import': (tester) async {
-        await tapAndSettle(tester, find.text('New deck'));
+        await tapAndSettle(tester, find.text('Create a deck'));
         await tapAndSettle(tester, find.text('Create from photo'));
       },
       'account': (tester) async {
