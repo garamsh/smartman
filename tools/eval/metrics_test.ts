@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import {
+  covers,
+  entryOf,
   type FieldCounts,
   normalize,
+  type NotesRow,
   percentile,
   recommend,
   type Row,
   score,
+  scoreNotes,
   summarize,
 } from "./metrics.ts";
 
@@ -93,11 +97,13 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
           fields: 2,
         },
       },
+      notes: null,
       latencyMs: 1000,
       costUsd: 0.01,
     },
     {
       score: { precision: 0, recall: 0, f1: 0, fields: NO_FIELDS },
+      notes: null,
       latencyMs: 3000,
       costUsd: 0.03,
     },
@@ -111,9 +117,15 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
   assert.equal(row.p90Ms, 3000);
   assert.ok(Math.abs(row.costPerImageUsd - 0.02) < 1e-12);
   assert.ok(Math.abs(row.spentUsd - 0.04) < 1e-12);
+  assert.equal(row.notes, null, "no notes image ran");
 });
 
-const row = (label: string, f1: number, costPerImageUsd: number): Row => ({
+const row = (
+  label: string,
+  f1: number,
+  costPerImageUsd: number,
+  notes: NotesRow | null = null,
+): Row => ({
   label,
   precision: f1,
   recall: f1,
@@ -121,6 +133,7 @@ const row = (label: string, f1: number, costPerImageUsd: number): Row => ({
   partOfSpeechPrecision: null,
   examplesPrecision: null,
   inventedRate: null,
+  notes,
   p50Ms: 0,
   p90Ms: 0,
   costPerImageUsd,
@@ -222,4 +235,184 @@ Deno.test("an unmatched candidate's fields are not counted", () => {
     meaning: "사과",
   }]);
   assert.deepEqual(r.fields, NO_FIELDS);
+});
+
+// Notes pages: a page teaching four facts at steps 1, 2, 3 and 5, and printing one example.
+const notesTruth = {
+  facts: [
+    { id: "deduction", step: 1 as const, terms: ["연역", "반드시"] },
+    { id: "induction", step: 2 as const, terms: ["귀납", "개연"] },
+    { id: "premise", step: 3 as const, terms: ["전제", "근거"] },
+    { id: "example", step: 5 as const, terms: ["652788"] },
+  ],
+  examples: ["253+4637+647898=652788 -> 연역"],
+};
+const noteCard = (
+  front: string,
+  answer: string,
+  step: 1 | 2 | 3 | 4 | 5 = 1,
+) => ({
+  front,
+  answer,
+  step,
+});
+
+Deno.test("a card covers a fact when its front and answer hold every term after normalization", () => {
+  const fact = notesTruth.facts[1];
+  assert.equal(
+    covers(noteCard("귀납 논증이란?", "결론이 개연적으로 참"), fact),
+    true,
+  );
+  assert.equal(
+    covers(noteCard("Induction", "결론이 개연적으로 참"), fact),
+    false,
+    "a term missing from both sides",
+  );
+  assert.equal(
+    covers(
+      noteCard("Law  of DEMAND", "falls"),
+      { id: "x", step: 1, terms: ["law of demand"] },
+    ),
+    true,
+    "case and whitespace are normalized",
+  );
+});
+
+Deno.test("coverage at a step counts the facts of that step or below covered by cards of that step or below", () => {
+  const notes = scoreNotes([
+    noteCard("연역 논증", "전제가 참이면 결론이 반드시 참", 1),
+    // The premise fact, offered only from step 4.
+    noteCard("전제란?", "결론을 뒷받침하는 근거", 4),
+  ], notesTruth);
+  assert.deepEqual(notes.coverage, [1, 1 / 2, 1 / 3, 2 / 3, 2 / 4]);
+});
+
+Deno.test("an image with no candidates covers nothing and has no counts", () => {
+  const notes = scoreNotes([], notesTruth);
+  assert.deepEqual(notes.coverage, [0, 0, 0, 0, 0]);
+  assert.equal(notes.cards, 0);
+  assert.equal(notes.pairs, 0);
+});
+
+Deno.test("a card covering no fact is unsupported", () => {
+  const notes = scoreNotes([
+    noteCard("연역 논증", "결론이 반드시 참", 1),
+    noteCard("논리학의 아버지는?", "아리스토텔레스", 2),
+  ], notesTruth);
+  assert.equal(notes.cards, 2);
+  assert.equal(notes.unsupported, 1, "control: the first card covers a fact");
+});
+
+Deno.test("an example the page does not print is invented, and one printed with or without its label is not", () => {
+  const notes = scoreNotes([{
+    ...noteCard("연역 논증", "결론이 반드시 참", 1),
+    examples: [
+      "253+4637+647898=652788 -> 연역",
+      "예) 253+4637+647898=652788 -> 연역",
+      "모든 사람은 죽는다 -> 소크라테스는 죽는다",
+    ],
+  }], notesTruth);
+  assert.equal(notes.examples, 3);
+  assert.equal(notes.inventedExamples, 1);
+});
+
+Deno.test("step order counts the pairs of covered facts the returned steps order alike, and their ties", () => {
+  const notes = scoreNotes([
+    noteCard("연역", "결론이 반드시 참", 1),
+    noteCard("귀납", "결론이 개연적으로 참", 3),
+    // Placed above the induction card, though the page puts it at step 3.
+    noteCard("전제", "근거가 되는 문장", 2),
+    noteCard("예", "652788", 3),
+  ], notesTruth);
+  // Pairs: (1,2) alike, (1,3) alike, (1,5) alike, (2,3) reversed, (2,5) tie, (3,5) alike.
+  assert.equal(notes.pairs, 6);
+  assert.equal(notes.concordant, 4);
+  assert.equal(notes.ties, 1);
+});
+
+Deno.test("summarize averages notes coverage over the notes images and pools their counts", () => {
+  const vocabulary = {
+    score: { precision: 1, recall: 1, f1: 1, fields: NO_FIELDS },
+    notes: null,
+    latencyMs: 1000,
+    costUsd: 0.01,
+  };
+  const full = scoreNotes([
+    noteCard("연역", "결론이 반드시 참", 1),
+    noteCard("귀납", "결론이 개연적으로 참", 2),
+    noteCard("전제", "근거가 되는 문장", 3),
+    { ...noteCard("예", "652788", 5), examples: ["652788 -> 연역"] },
+  ], notesTruth);
+  const empty = scoreNotes([], notesTruth);
+  const row = summarize("m", [
+    vocabulary,
+    { score: null, notes: full, latencyMs: 2000, costUsd: 0.02 },
+    { score: null, notes: empty, latencyMs: 3000, costUsd: 0.03 },
+  ]);
+  assert.equal(row.f1, 1, "vocabulary scores average over vocabulary images");
+  assert.deepEqual(row.notes, {
+    coverage: [0.5, 0.5, 0.5, 0.5, 0.5],
+    unsupportedRate: 0,
+    inventedExamplesRate: 0,
+    stepAgreement: 1,
+  });
+  assert.ok(Math.abs(row.costPerImageUsd - 0.02) < 1e-12, "over every image");
+});
+
+const notesRow = (coverage5: number): NotesRow => ({
+  coverage: [null, null, null, null, coverage5],
+  unsupportedRate: null,
+  inventedExamplesRate: null,
+  stepAgreement: null,
+});
+
+Deno.test("with notes results, the recommendation must also be within 5 points of the best coverage at step 5", () => {
+  const rows = [
+    row("best", 0.95, 0.05, notesRow(0.9)),
+    row("cheap but misses notes", 0.95, 0.001, notesRow(0.8)),
+    row("cheap enough", 0.94, 0.01, notesRow(0.86)),
+  ];
+  assert.equal(recommend(rows)?.label, "cheap enough");
+  assert.equal(
+    recommend([row("best", 0.95, 0.05), row("cheap", 0.95, 0.001)])?.label,
+    "cheap",
+    "control: without notes results coverage plays no part",
+  );
+  assert.equal(
+    recommend([
+      row("vocabulary", 0.95, 0.01, notesRow(0.5)),
+      row("notes", 0.5, 0.01, notesRow(0.9)),
+    ]),
+    null,
+    "no configuration within both bounds",
+  );
+});
+
+Deno.test("a returned card without a meaning is matched on a vocabulary page by its answer", () => {
+  const truth = [{ front: "apple", meaning: "사과" }];
+  const asNote = entryOf({
+    kind: "note",
+    front: "apple",
+    answer: "사과",
+    short: "사과",
+    step: 1,
+    back: "사과",
+  });
+  assert.deepEqual(asNote, { front: "apple", meaning: "사과" });
+  assert.equal(score([asNote], truth).f1, 1);
+  const vocabulary = entryOf({
+    kind: "vocabulary",
+    front: "apple",
+    answer: "사과, 능금",
+    short: "사과",
+    step: 1,
+    back: "n. 사과",
+    meaning: "사과",
+    partOfSpeech: "n.",
+  });
+  assert.equal(
+    vocabulary.meaning,
+    "사과",
+    "control: a card's meaning is used over its answer",
+  );
 });

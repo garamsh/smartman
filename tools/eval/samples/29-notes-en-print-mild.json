@@ -1,0 +1,118 @@
+{
+  "image": "29-notes-en-print-mild.jpg",
+  "kind": "notes",
+  "layout": "notes",
+  "languages": {
+    "front": "en",
+    "back": "en"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "facts": [
+    {
+      "id": "demand",
+      "step": 1,
+      "terms": [
+        "demand",
+        "willing and able",
+        "buy"
+      ]
+    },
+    {
+      "id": "law-of-demand",
+      "step": 1,
+      "terms": [
+        "law of demand",
+        "falls"
+      ]
+    },
+    {
+      "id": "shifters",
+      "step": 4,
+      "terms": [
+        "income",
+        "tastes",
+        "expectations"
+      ]
+    },
+    {
+      "id": "normal-good",
+      "step": 3,
+      "terms": [
+        "normal good",
+        "income"
+      ]
+    },
+    {
+      "id": "inferior-good",
+      "step": 3,
+      "terms": [
+        "inferior good",
+        "income"
+      ]
+    },
+    {
+      "id": "supply",
+      "step": 1,
+      "terms": [
+        "supply",
+        "willing and able",
+        "sell"
+      ]
+    },
+    {
+      "id": "law-of-supply",
+      "step": 2,
+      "terms": [
+        "law of supply",
+        "rises"
+      ]
+    },
+    {
+      "id": "equilibrium",
+      "step": 1,
+      "terms": [
+        "equilibrium",
+        "equals"
+      ]
+    },
+    {
+      "id": "shortage",
+      "step": 2,
+      "terms": [
+        "shortage",
+        "below"
+      ]
+    },
+    {
+      "id": "surplus",
+      "step": 2,
+      "terms": [
+        "surplus",
+        "above"
+      ]
+    },
+    {
+      "id": "substitutes-example",
+      "step": 5,
+      "terms": [
+        "tea",
+        "substitutes"
+      ]
+    },
+    {
+      "id": "inferior-example",
+      "step": 5,
+      "terms": [
+        "bus"
+      ]
+    }
+  ],
+  "examples": [
+    "coffee price rises -> demand for tea rises (substitutes)",
+    "income rises -> fewer bus rides (inferior good)"
+  ]
+}
