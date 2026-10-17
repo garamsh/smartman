@@ -1,6 +1,6 @@
 # Server
 
-The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, and the tests that hold them.
+The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, and the tests that hold them.
 
 ## Current decisions
 
@@ -12,6 +12,10 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - Measured: #115's merge `9b98292d2f642e794e5d32d969e3999629c5964b` at 13:55:55Z on 2026-10-16, with `Supabase Preview` running 13:56:27–13:56:35Z; #118's merge `a940deaef30ca376e34cd83631bd4112055cda6a` at 15:41:51Z, with the check 15:42:24–15:42:33Z. A `supabase db push` minutes after #115's merge reported "Remote database is up to date" (issue #117).
   - To confirm a migration reached production: the `Supabase Preview` check succeeded on the merge commit, and `supabase migration list --linked` lists the migration's version in its remote column.
 - **Gate.** A pull request whose migration changes or deletes existing data merges only after the owner approves it, since merging deploys it; the PM asks with the reviewed pull request in hand. An additive migration needs no such approval, but it is deployed as merged, so it must be correct then. Workers make no change to the remote project.
+- **Order.** The integration applies every migration file that the production project's migration history lacks. A file older than the latest applied migration "still runs and the step finishes with a warning" (Supabase's GitHub integration guide, `supabase/supabase` commit `626f0d412a5f88ef260289d4ed2b787f9705d6fc`, committed 2026-10-14, read 2026-10-18). Such a file runs after migrations that sort after it, in an order no local `supabase db reset` follows.
+- **Naming.** A new migration's version, the 14 digits its name starts with, is later than every migration on `main`. A contributor names it from the current UTC time, as `supabase migration new` does, when that is later. Otherwise the contributor uses the latest version on `main` plus one second ([ADR 0048](adr/0048-name-each-new-migration-after-every-migration-on-main-and-check-it-in-make-lint.md)).
+  - `check-migration-order.sh`, run by `make lint`, fails when a migration file that `main` lacks has a version not later than the latest on `main`, or a name not starting with 14 digits. It reads `main` as the first parent of a pull request's merge commit in CI, where the ubuntu job's checkout fetches two commits deep, and as where `HEAD` left `origin/main` locally. It prints the number of new files and the base it compared with.
+  - `check-migration-order.test.sh`, run by `make test`, runs the check on repositories it builds in a temporary directory. It covers a merge commit cloned two commits deep, as CI checks one out, and a branch beside `origin/main`.
 
 ### Tables
 
@@ -188,9 +192,10 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why `sync_horizon()` returns a watermark read under the caller's lock beside the horizon.
 - [ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md) records why the web reads a day's study days through `study_days_before`.
 - [ADR 0047](adr/0047-read-the-web-record-through-two-server-functions-and-fold-it-through-the-engine-on-the-server.md) records why the web's 기록 reads through `study_record_days` and `study_record_cards`, and folds the cards through the engine on the server.
+- [ADR 0048](adr/0048-name-each-new-migration-after-every-migration-on-main-and-check-it-in-make-lint.md) records how the integration treats an older migration, with its source, and why a new migration is named after every one on `main`; issue #149 records the finding.
 - Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, issue #106 the horizon and the watermark, issue #107 the web's version 7 ids, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions
 
-- None.
+- Two pull requests can each pass the migration check against the same `main`. If one merges and then the other, whose migration sorts before it, merges without a new CI run, the second runs out of order. GitHub's "Require branches to be up to date before merging" setting would force that run. That repository setting is the owner's to decide.
