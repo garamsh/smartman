@@ -322,7 +322,7 @@ void main() {
     );
 
     testWidgets(
-      'once today\'s cards are done the done card names the next review and the goal reached, and Keep studying studies every deck',
+      'once today\'s cards are done the done card names the next review and the goal reached, and Study studies every deck',
       (tester) async {
         final list = await _open(tester, answeredToday: {'Alpha': 2});
 
@@ -337,7 +337,7 @@ void main() {
         expect(find.text('1-day streak'), findsOneWidget);
         expect(find.text('This week 2'), findsOneWidget);
 
-        await list.tap('Keep studying');
+        await list.tap('Study');
 
         expect(list.session, list.ids.values.toSet());
         await list.close();

@@ -406,7 +406,7 @@ describe("the 오늘 and 덱 pages", () => {
     );
   });
 
-  it("with no card left today says the cards are done and links 계속 학습 to the study page over every deck, which opens on nothing to study or on the completion card", async () => {
+  it("with no card left today says the cards are done and links 학습하기 to the study page over every deck, which opens on nothing to study or on the completion card", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"), deckRow("d-es", "Spanish"));
     postgrest.seed("cards", cardRow("fr-later", "d-fr", "oiseau"));
     postgrest.seed("card_states", stateRow("fr-later", notDue));
@@ -424,7 +424,7 @@ describe("the 오늘 and 덱 pages", () => {
         answered,
       ).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "모두 학습" }), answered).not.toBeInTheDocument();
-      const href = screen.getByRole("link", { name: "계속 학습" }).getAttribute("href");
+      const href = screen.getByRole("link", { name: "학습하기" }).getAttribute("href");
       expect(href, answered).toBe("/study?decks=d-fr,d-es");
 
       cleanup();

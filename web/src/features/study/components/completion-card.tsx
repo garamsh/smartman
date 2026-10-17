@@ -10,19 +10,22 @@ import type { Completion } from "../session";
 
 /**
  * The completion card in the current card's place once no card is left today: the mascot, the
- * heading, today's answers, time and streak, and the choice to go on as practice or to stop.
- * It takes the focus when it appears, so a keyboard reaches its choice at once.
+ * heading, today's answers, time and streak, and the choice to go on with the new cards past
+ * today's, through [onStudyOn], or to stop; with none left, a line saying so in place of going
+ * on. It takes the focus to its first choice when it appears, so a keyboard reaches it at once.
  */
 export function CompletionCard({
   completion,
-  onPractice,
+  onStudyOn,
 }: {
   completion: Completion;
-  onPractice: () => void;
+  /** Goes on with the new cards past today's; null when none is left. */
+  onStudyOn: (() => void) | null;
 }) {
-  const keepStudying = useRef<HTMLButtonElement>(null);
+  const studyOn = useRef<HTMLButtonElement>(null);
+  const stop = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
-    keepStudying.current?.focus();
+    (studyOn.current ?? stop.current)?.focus();
   }, []);
   const minutes = Math.ceil(completion.timeSpentMs / 60_000);
   return (
@@ -49,15 +52,20 @@ export function CompletionCard({
         </span>
       </p>
       <div className="mt-1 flex w-full flex-col gap-1">
-        <button
-          ref={keepStudying}
-          type="button"
-          onClick={onPractice}
-          className="flex min-h-cta items-center justify-center rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          계속 학습
-        </button>
+        {onStudyOn ? (
+          <button
+            ref={studyOn}
+            type="button"
+            onClick={onStudyOn}
+            className="flex min-h-cta items-center justify-center rounded-button bg-ink px-6 text-label text-on-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            학습하기
+          </button>
+        ) : (
+          <p className="py-2 text-body text-ink-2">더 학습할 카드가 없어요</p>
+        )}
         <Link
+          ref={stop}
           href="/"
           className="flex min-h-tap-target items-center justify-center rounded-button px-6 text-label text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >

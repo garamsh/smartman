@@ -5,6 +5,7 @@ export {
   type CardState,
   type CardStates,
   countToday,
+  newCards,
   selectQueue,
   streak,
   studyDayEnd,

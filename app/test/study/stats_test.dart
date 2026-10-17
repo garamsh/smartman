@@ -236,7 +236,7 @@ void main() {
     late Scheduler scheduler;
     setUpAll(() async => scheduler = await Scheduler.load());
 
-    test('counts every stored answer, a deleted card\'s included, in the retention, the days and the streaks, and only cards in the decks in the bands and the weeks; practice adds nothing', () async {
+    test('counts every stored answer, a deleted card\'s included, in the retention, the days and the streaks, and only cards in the decks in the bands and the weeks', () async {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
       var ids = 0;
@@ -345,26 +345,6 @@ void main() {
         (DateTime.utc(2026, 10, 14, 4), 1, 1),
       ]);
       expect((studied.streak, studied.bestStreak), (2, 2));
-
-      // Read three days on, where a state a written practice answer changed
-      // would show in the bands: at the answer's own time every recall is 1.
-      final later = _now.add(const Duration(days: 3));
-      final unpractised = await read(later);
-      session.practice();
-      for (final answer in [_dontKnow, _know, _know, _dontKnow]) {
-        session.answer(answer);
-      }
-      await session.settled;
-      final practised = await read(later);
-
-      expect(_retention(practised), _retention(unpractised));
-      expect(_studied(practised), _studied(unpractised));
-      expect(
-        (practised.streak, practised.bestStreak),
-        (unpractised.streak, unpractised.bestStreak),
-      );
-      expect(_bands(practised.recall), _bands(unpractised.recall));
-      expect(practised.mastered, unpractised.mastered);
     });
   });
 }

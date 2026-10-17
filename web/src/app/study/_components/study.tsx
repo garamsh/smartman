@@ -7,12 +7,12 @@ import {
   ReadFailure,
   readLibrary,
 } from "@/features/decks";
-import { type CardStates, readToday, selectQueue, StudyScreen } from "@/features/study";
+import { type CardStates, newCards, readToday, selectQueue, StudyScreen } from "@/features/study";
 
 /**
  * Opens a session over the decks [searchParams] names: reads their cards, their states and
- * today's answers on the server and selects the cards left today. Decks that do not exist are
- * left out; with none left, the page is not found.
+ * today's answers on the server and selects the cards left today and the new cards past them.
+ * Decks that do not exist are left out; with none left, the page is not found.
  */
 export async function Study({
   searchParams,
@@ -37,26 +37,25 @@ export async function Study({
   }));
   const { day, answers, states, readAt, pace, streakBefore } = today.today;
   const queue = selectQueue(cards, states, day);
+  const taken = new Set(queue.cards.map((card) => card.id));
+  const more = newCards(cards, states).filter((card) => !taken.has(card.id));
   const before: CardStates = {};
   for (const card of queue.cards) {
     const state = states[card.id];
     if (state) before[card.id] = state;
   }
-  const byId = new Map(cards.map((card) => [card.id, card]));
-  const own = answers.filter((answer) => byId.has(answer.cardId));
-  const answeredCards = [...new Set(own.map((answer) => answer.cardId))].flatMap(
-    (id) => byId.get(id) ?? [],
-  );
+  const ids = new Set(cards.map((card) => card.id));
+  const own = answers.filter((answer) => ids.has(answer.cardId));
   return (
     <StudyScreen
       plan={{
         startedAt: readAt,
         queue,
+        more,
         before,
         pace,
         today: {
           answers: own.map(({ answer, durationMs }) => ({ answer, durationMs })),
-          cards: answeredCards,
           answeredAnyDeck: answers.length > 0,
           streakBefore,
         },

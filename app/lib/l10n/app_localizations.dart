@@ -332,25 +332,19 @@ abstract class AppLocalizations {
   /// **'{total}장 중 {answered}장 답함'**
   String studyProgressSemantics(int answered, int total);
 
-  /// Accessibility label of the current card while its answer is hidden.
+  /// Accessibility label of the current card, which shows its front alone.
   ///
   /// In ko, this message translates to:
   /// **'앞면: {front}'**
   String currentCardSemantics(String front);
 
-  /// Accessibility label of the current card while its answer is shown.
-  ///
-  /// In ko, this message translates to:
-  /// **'앞면: {front}. 뒷면: {back}'**
-  String currentCardRevealedSemantics(String front, String back);
-
-  /// Accessibility hint of tapping the current card while its answer is hidden.
+  /// Accessibility hint of tapping a card in the deck's card list while its answer is hidden.
   ///
   /// In ko, this message translates to:
   /// **'답 보기'**
   String get showAnswer;
 
-  /// Accessibility hint of tapping the current card while its answer is shown.
+  /// Accessibility hint of tapping a card in the deck's card list while its answer is shown.
   ///
   /// In ko, this message translates to:
   /// **'답 가리기'**
@@ -403,11 +397,11 @@ abstract class AppLocalizations {
   /// **'오늘 {cards}장 · 약 {minutes}분'**
   String guideSize(int cards, int minutes);
 
-  /// The session's start guide: tap the card to see the answer.
+  /// The session's start guide, first line, in place of the session's size when it opened with no card left today: today's cards are done.
   ///
   /// In ko, this message translates to:
-  /// **'카드를 누르면 답이 보여요'**
-  String get guideReveal;
+  /// **'오늘 할 카드를 다 했어요'**
+  String get guideDone;
 
   /// The session's start guide: swipe right when you know it, left when you don't.
   ///
@@ -415,10 +409,10 @@ abstract class AppLocalizations {
   /// **'알면 오른쪽, 모르면 왼쪽으로 밀어요'**
   String get guideSwipe;
 
-  /// The session's start guide, in the previous card's place: an answered card comes up here, and a swipe changes its answer.
+  /// The session's start guide, in the previous card's place: an answered card comes up here showing its meaning, and a swipe changes its answer.
   ///
   /// In ko, this message translates to:
-  /// **'답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요'**
+  /// **'답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요'**
   String get guideRise;
 
   /// Shown when an answer could not be written to the local database.
@@ -457,11 +451,17 @@ abstract class AppLocalizations {
   /// **'안다 {know}, 모른다 {dontKnow}, {minutes}분, {days}일 연속'**
   String completionSemantics(int know, int dontKnow, int minutes, int days);
 
-  /// The completion card's primary button: goes on as practice over the cards answered today.
+  /// The completion card's primary button: goes on in the same session with the new cards past today's, each answer recorded.
   ///
   /// In ko, this message translates to:
-  /// **'계속 학습'**
-  String get keepStudying;
+  /// **'학습하기'**
+  String get studyOn;
+
+  /// The completion card's line in place of studyOn when no new card is left past today's.
+  ///
+  /// In ko, this message translates to:
+  /// **'더 학습할 카드가 없어요'**
+  String get noCardsLeft;
 
   /// The completion card's quiet button: closes the study screen.
   ///
@@ -1297,17 +1297,17 @@ abstract class AppLocalizations {
   /// **'버전 {version}'**
   String appVersion(String version);
 
-  /// Today card when no card is due or new now; todayKeepStudying is its button.
+  /// Today card when no card is due or new now; todayStudy is its button.
   ///
   /// In ko, this message translates to:
   /// **'오늘 할 카드를 다 했어요'**
   String get todayDone;
 
-  /// The today card's button when no card is left today: opens the study screen over every deck, on the completion card or on nothing to study.
+  /// The today card's button when no card is left today: opens the study screen over every deck, on the new cards past today's or on nothing to study.
   ///
   /// In ko, this message translates to:
-  /// **'계속 학습'**
-  String get todayKeepStudying;
+  /// **'학습하기'**
+  String get todayStudy;
 
   /// The bottom bar's first tab: today's cards.
   ///

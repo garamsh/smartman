@@ -38,8 +38,7 @@ typedef DayRetention = ({DateTime day, Retention retention});
 ///
 /// A review is scheduled when it is a card's first answer of its study day
 /// and the card has an answer on an earlier one: a card's first answer ever,
-/// and a re-show after "Don't know" on the same day, are left out. Practice
-/// stores no answer, so it is never in [answers].
+/// and a re-show after "Don't know" on the same day, are left out.
 List<DayRetention> retentionByDay(
   Iterable<StoredAnswer> answers, {
   UtcOffsetAt offsetAt = localOffsetAt,

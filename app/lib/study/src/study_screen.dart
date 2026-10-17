@@ -19,7 +19,8 @@ import 'study_style.dart';
 
 /// Studies the cards of [decks] left today in one session, one card at a time,
 /// answered by swiping, below the card answered just before it; then shows the
-/// completion card, from which practice goes on in the same screen.
+/// completion card, from which the new cards past today's go on in the same
+/// session.
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.decks});
 
@@ -141,14 +142,14 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           ),
         ),
       ),
-      SessionComplete(:final completion, :final previous) => (
+      SessionComplete(:final completion, :final previous, :final more) => (
         previous,
         Align(
           key: const ValueKey('completion'),
           alignment: Alignment.topCenter,
           child: CompletionCard(
             completion: completion,
-            onPractice: _session.practice,
+            onStudyOn: more ? _session.studyOn : null,
           ),
         ),
       ),

@@ -8,12 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/previous_card.dart';
 import 'package:smartman/study/src/providers.dart';
+import 'package:smartman/study/src/queue.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/scheduler.dart';
 import 'package:smartman/study/src/study_repository.dart';
@@ -288,14 +290,6 @@ double _dragOffset(WidgetTester tester, Finder card) => tester
     .getTranslation()
     .x;
 
-final _answerVisibility = find.descendant(
-  of: _currentCard,
-  matching: find.byType(Visibility),
-);
-
-bool _answerShown(WidgetTester tester) =>
-    tester.widget<Visibility>(_answerVisibility).visible;
-
 /// The vertical centre of the half of a split card that holds [text].
 double _halfCenter(WidgetTester tester, Finder text) => tester
     .getRect(find.ancestor(of: text, matching: find.byType(Expanded)).first)
@@ -370,21 +364,24 @@ void main() {
           0.01,
         ),
       );
-      expect(find.byType(VerticalDivider), findsOneWidget);
-      // Every text on screen: the card's sides, of which the back is hidden
-      // behind an eye, the count, the answer buttons, and the session's guide
-      // in the previous card's place. No deck name or next card.
+      // Every text on screen: the card's front alone, the count, the answer
+      // buttons, and the session's guide in the previous card's place. No
+      // back, deck name or next card.
       expect(
         {
           for (final element in find.byType(Text).evaluate())
             (element.widget as Text).data?.replaceAll(_wordJoiner, ''),
         },
-        {'a front', 'a back', '0/2', "Don't know", 'Know', ..._guide(2, 1)},
+        {'a front', '0/2', "Don't know", 'Know', ..._guide(2, 1)},
       );
-      expect(_answerShown(tester), isFalse);
+      // No half, divider or eye on the card.
       expect(
-        find.descendant(of: _currentCard, matching: find.byType(Icon)),
-        findsWidgets,
+        find.descendant(of: _face, matching: find.byType(VerticalDivider)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: _face, matching: find.byType(Icon)),
+        findsNothing,
       );
       // The buttons sit under the card, "Don't know" left and "Know" right.
       final buttons = find.byType(TextButton);
@@ -457,7 +454,7 @@ void main() {
     'on a 390 wide phone the guide\'s Korean lines break only between words',
     (tester) async {
       await _open(tester, ['a', 'b', 'c'], locale: const Locale('ko'));
-      const rise = '답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요';
+      const rise = '답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요';
       final paragraph = tester.renderObject<RenderParagraph>(
         find.descendant(of: _guideText(rise), matching: find.byType(RichText)),
       );
@@ -488,47 +485,45 @@ void main() {
   );
 
   testWidgets(
-    'practice shows no guide, though it starts with no answer of the session',
+    'a session opened with no card left today starts on the next new card, under the guide saying today\'s cards are done, until its first answer',
     (tester) async {
-      // Every card answered earlier today and due tomorrow: the session opens
-      // on the completion card with no answer of its own.
-      final answeredToday = CardState(
-        stability: 3,
-        difficulty: 5,
-        lastReview: DateTime.utc(2026, 10, 14, 6),
-        due: DateTime.utc(2026, 10, 15, 5),
-      );
-      await _open(
-        tester,
-        ['a', 'b'],
-        states: {'a': answeredToday, 'b': answeredToday},
-      );
-      expect(find.text('Done for today'), findsOneWidget);
+      // Twenty cards answered today, the first day's new cards, and two more.
+      final (names, states) = _deck(22, today: coldStartNewCards);
+      final study = await _open(tester, names, states: states);
 
-      await tester.tap(find.text('Keep studying'));
-      await tester.pumpAndSettle();
+      expect(find.text('Done for today'), findsNothing);
+      expect(study.current, 'c20 front');
+      expect(find.text('0/2'), findsOneWidget);
+      final guide = [_guideDone, ..._guide(0, 0).skip(1)];
+      for (final line in guide) {
+        expect(_guideText(line), findsOneWidget);
+      }
+      expect(_guideText(_guide(0, 0).first), findsNothing);
+      expect(find.bySemanticsLabel(guide.join('\n')), findsOneWidget);
 
-      expect(_currentCard, findsOneWidget);
-      expect(
-        find.text("Swipe right if you know it, left if you don't"),
-        findsNothing,
-      );
-      expect(find.textContaining('Today '), findsNothing);
+      await study.know();
+      expect(study.current, 'c21 front');
+      for (final line in guide) {
+        expect(_guideText(line), findsNothing);
+      }
     },
   );
 
-  testWidgets('a tap shows the answer half and a second tap hides it', (
-    tester,
-  ) async {
-    await _open(tester, ['a']);
+  testWidgets('a tap on the current card shows no answer', (tester) async {
+    final study = await _open(tester, ['a', 'b']);
 
-    await tester.tap(_currentCard);
-    await tester.pump();
-    expect(_answerShown(tester), isTrue);
+    await tester.tap(_face);
+    await tester.pumpAndSettle();
+    expect(find.text('a front'), findsOneWidget);
+    expect(find.text('a back'), findsNothing);
+    expect(study.current, 'a front', reason: 'a tap answers nothing');
 
-    await tester.tap(_currentCard);
-    await tester.pump();
-    expect(_answerShown(tester), isFalse);
+    // Control: the back shows once answered, on the previous card.
+    await study.know();
+    expect(
+      find.descendant(of: _previousCard, matching: find.text('a back')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -603,7 +598,7 @@ void main() {
   });
 
   testWidgets(
-    'long content scrolls inside each half of the current card, which keeps its size whatever its content',
+    'long content scrolls inside the current card, which keeps its size whatever its content',
     (tester) async {
       final long = [TextContent(_sentence * 12)];
       // A few lines at the question's size, which fit the card.
@@ -617,23 +612,22 @@ void main() {
       );
 
       expect(tester.getSize(_face).height, closeTo(_cardHeight, 0.01));
-      final halves = find.descendant(
+      final scroll = find.descendant(
         of: _currentCard,
         matching: find.byType(Scrollable),
       );
-      expect(halves, findsNWidgets(2));
-      for (final half in halves.evaluate()) {
-        final position = (half as StatefulElement).state as ScrollableState;
-        expect(position.position.maxScrollExtent, greaterThan(0));
-      }
-      // Long text starts at the top of its half, below the padding.
+      expect(scroll, findsOneWidget);
+      ScrollPosition position() =>
+          (tester.state(scroll) as ScrollableState).position;
+      expect(position().maxScrollExtent, greaterThan(0));
+      // Long text starts at the top of the card, below the padding.
       final text = find.descendant(
         of: _currentCard,
         matching: find.text(_sentence * 12),
       );
       expect(
-        tester.getRect(text.first).top,
-        closeTo(tester.getRect(halves.first).top + StudyStyle.cardPadding, 1),
+        tester.getRect(text).top,
+        closeTo(tester.getRect(_face).top + StudyStyle.cardPadding, 1),
       );
 
       await tester.timedDrag(
@@ -644,10 +638,7 @@ void main() {
       await tester.pumpAndSettle();
       // Control: a few lines fit, at the same size, and scroll nothing.
       expect(tester.getSize(_face).height, closeTo(_cardHeight, 0.01));
-      for (final half in halves.evaluate()) {
-        final position = (half as StatefulElement).state as ScrollableState;
-        expect(position.position.maxScrollExtent, 0);
-      }
+      expect(position().maxScrollExtent, 0);
     },
   );
 
@@ -656,34 +647,24 @@ void main() {
     ('a large text scale', _phone, 1.5),
   ]) {
     testWidgets(
-      'on $name the answer sits under the question, each in its centred half',
+      'on $name the current card shows its front alone, centred, with no divider',
       (tester) async {
         await _open(tester, ['a'], size: size, textScale: textScale);
 
-        final divider = find.descendant(
-          of: _currentCard,
-          matching: find.byType(Divider),
-        );
-        expect(divider, findsOneWidget);
-        expect(
-          tester.getCenter(divider).dy,
-          closeTo(tester.getCenter(_face).dy, 1),
-        );
+        for (final divider in [Divider, VerticalDivider]) {
+          expect(
+            find.descendant(of: _face, matching: find.byType(divider)),
+            findsNothing,
+          );
+        }
         final question = find.text('a front');
         expect(
-          tester.getCenter(question).dy,
-          closeTo(_halfCenter(tester, question), 1),
+          tester.getCenter(question).dx,
+          closeTo(tester.getCenter(_face).dx, 1),
         );
         expect(
           tester.getCenter(question).dy,
-          lessThan(tester.getCenter(divider).dy),
-        );
-        expect(
-          find.descendant(
-            of: _currentCard,
-            matching: find.byType(VerticalDivider),
-          ),
-          findsNothing,
+          closeTo(tester.getCenter(_face).dy, 1),
         );
       },
     );
@@ -751,7 +732,7 @@ void main() {
   );
 
   testWidgets(
-    'short text keeps its full size, centred in each half of the current card and of the previous card',
+    'short text keeps its full size, centred on the current card and in each half of the previous card',
     (tester) async {
       // Words narrow enough for each half at full size in the test font.
       final study = await _open(
@@ -763,13 +744,17 @@ void main() {
         },
       );
       await study.know();
-      await tester.tap(_currentCard);
-      await tester.pumpAndSettle();
 
-      for (final (card, front, back) in [
-        (_currentCard, 'dog', 'chien'),
-        (_previousCard, 'cat', 'chat'),
-      ]) {
+      final dog = find.descendant(of: _currentCard, matching: find.text('dog'));
+      expect(
+        tester.getCenter(dog),
+        offsetMoreOrLessEquals(tester.getCenter(_face), epsilon: 1),
+      );
+      expect(
+        tester.renderObject<RenderParagraph>(dog).text.style!.fontSize,
+        AppType.question.fontSize,
+      );
+      for (final (card, front, back) in [(_previousCard, 'cat', 'chat')]) {
         for (final (side, size) in [
           (front, AppType.question.fontSize),
           (back, AppType.answer.fontSize),
@@ -1130,7 +1115,7 @@ void main() {
 
       expect(
         tester.getSemantics(_cardNode),
-        isSemantics(label: '앞면: a front', hasTapAction: true),
+        isSemantics(label: '앞면: a front', hasTapAction: false),
       );
       expect([
         for (final id
@@ -1140,12 +1125,6 @@ void main() {
                 .customSemanticsActionIds!)
           CustomSemanticsAction.getAction(id)!.label,
       ], containsAll(['안다', '모른다']));
-      tester.semantics.tap(find.semantics.byLabel('앞면: a front'));
-      await tester.pump();
-      expect(
-        tester.getSemantics(_cardNode),
-        isSemantics(label: '앞면: a front. 뒷면: a back'),
-      );
 
       Future<void> act(String action) async {
         final node = tester.getSemantics(_cardNode);
@@ -1230,7 +1209,9 @@ void main() {
         tester.getRect(_previous('a front').last).bottom,
         lessThan(tester.getRect(find.text('Done for today')).top),
       );
-      expect(find.text('Keep studying'), findsOneWidget);
+      // No new card is left past today's, so nothing to go on with.
+      expect(find.text('No more cards to study'), findsOneWidget);
+      expect(find.widgetWithText(AppButton, 'Study'), findsNothing);
       expect(find.text('Stop'), findsOneWidget);
 
       // Changing the last answer to "Don't know" studies the card again.
@@ -1243,33 +1224,41 @@ void main() {
   );
 
   testWidgets(
-    'keep studying goes on as practice in the same screen and route, and stop closes it',
+    'Study goes on with the next new cards in the same screen and route, each answer written, and stop closes it',
     (tester) async {
-      final study = await _open(tester, ['a', 'b']);
+      // Eighteen of the first day's twenty new cards answered today: two are
+      // left today, and two more past them.
+      final (names, states) = _deck(22, today: coldStartNewCards - 2);
+      final study = await _open(tester, names, states: states);
       await study.know();
       await study.know();
+      expect(find.text('Done for today'), findsOneWidget);
       final screen = tester.state(find.byType(StudyScreen));
       final route = ModalRoute.of(tester.element(find.byType(StudyScreen)));
 
-      await tester.tap(find.text('Keep studying'));
+      await tester.tap(find.widgetWithText(AppButton, 'Study'));
       await tester.pumpAndSettle();
 
-      expect(study.current, 'a front');
+      expect(study.current, 'c20 front');
       expect(tester.state(find.byType(StudyScreen)), same(screen));
       expect(
         ModalRoute.of(tester.element(find.byType(StudyScreen))),
         same(route),
       );
       expect(route!.isCurrent, isTrue);
-      expect(find.text('2/2'), findsOneWidget);
+      expect(find.text('2/4'), findsOneWidget);
       await study.know();
-      expect(study.current, 'b front');
+      expect(study.current, 'c21 front');
       await study.know();
-      expect(study.current, 'a front', reason: 'every card again');
+      expect(find.text('4/4'), findsOneWidget);
+      expect(find.text('No more cards to study'), findsOneWidget);
+      final reviews = await tester.runAsync(
+        () => study.db.select(study.db.reviews).get(),
+      );
+      // The seeded answers and the session's four.
+      expect(reviews, hasLength(coldStartNewCards - 2 + 4));
 
       // Control: the completion card's other choice closes the screen.
-      final other = await _open(tester, ['c']);
-      await other.know();
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
       expect(find.byType(StudyScreen), findsNothing);
@@ -1292,7 +1281,7 @@ void main() {
       expect(stored, hasLength(1));
       expect(find.text('No cards to study today'), findsOneWidget);
       expect(find.text('Done for today'), findsNothing);
-      expect(find.text('Keep studying'), findsNothing);
+      expect(find.text('Study'), findsNothing);
       expect(study.current, isNull);
     },
   );
@@ -1404,14 +1393,35 @@ Finder _guideText(String line) => find.byWidgetPredicate(
       widget is Text && widget.data?.replaceAll(_wordJoiner, '') == line,
 );
 
+/// The guide's first line, in English, where the session opened with no card
+/// left today.
+const _guideDone = "You've done today's cards";
+
 /// The session guide's lines, in English, for a session of [cards] cards
 /// taking [minutes] minutes.
 List<String> _guide(int cards, int minutes) => [
   'Today $cards cards · about $minutes min',
-  'Tap the card to see the answer',
   "Swipe right if you know it, left if you don't",
-  'Answered cards come up here. Swipe one to change it',
+  'Answered cards come up here with their meaning. Swipe one to change it',
 ];
+
+/// Answered "Know" at 06:00 UTC today, the card's first answer, and due
+/// tomorrow.
+final _answeredToday = CardState(
+  stability: 3,
+  difficulty: 5,
+  lastReview: DateTime.utc(2026, 10, 14, 6),
+  due: DateTime.utc(2026, 10, 15, 5),
+);
+
+/// The fronts of [count] cards, created in this order, and the first [today]
+/// of them answered today.
+(List<String>, Map<String, CardState>) _deck(int count, {required int today}) {
+  final names = [
+    for (var i = 0; i < count; i++) 'c${i.toString().padLeft(2, '0')}',
+  ];
+  return (names, {for (final name in names.take(today)) name: _answeredToday});
+}
 
 final dueTomorrow = CardState(
   stability: 3,

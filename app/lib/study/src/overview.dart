@@ -97,7 +97,7 @@ final class DailyGoal {
   /// [left] to study in it: every card answered within the day or left, each
   /// once, as the load stood when the day started; done are those no longer
   /// left. A card answered "Don't know" and due again today is left, so not
-  /// yet done. Practice records nothing, so it counts toward neither.
+  /// yet done.
   factory DailyGoal.of(
     Iterable<({CardId card, DateTime at})> answers,
     Iterable<CardId> left,

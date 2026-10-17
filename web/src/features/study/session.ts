@@ -13,20 +13,20 @@ export type StudyCard = Card & { text: { front: string; back: string } };
 
 /**
  * What a study page opens with, built on the server: the cards the queue rules selected for
- * today, in the order selected, whether they are a backlog, each one's stored state, the start
- * time, which also seeds the session's random source, the user's pace, and what today already
- * holds. Times are milliseconds since the epoch.
+ * today, in the order selected, whether they are a backlog, the new cards past them, each one's
+ * stored state, the start time, which also seeds the session's random source, the user's pace,
+ * and what today already holds. Times are milliseconds since the epoch.
  */
 export type SessionPlan = {
   startedAt: number;
   queue: SelectedQueue<StudyCard>;
+  /** The new cards past today's, oldest first, which `studyOn` goes on with. */
+  more: StudyCard[];
   before: CardStates;
   pace: Pace;
   today: {
     /** The answers stored today for the decks' cards before the session opened. */
     answers: { answer: Answer; durationMs: number }[];
-    /** The cards those answers are to, each once, in the order first answered. */
-    cards: StudyCard[];
     /** Whether an answer is stored today in any deck. */
     answeredAnyDeck: boolean;
     /** Study days in a row before today holding an answer. */
@@ -65,13 +65,16 @@ export type Completion = {
 };
 
 /**
- * What the screen shows: the current card, practice included; the completion card once no
- * card is left today; or nothing to study when no card is left and none was answered today.
+ * What the screen shows: the current card; the completion card once no card is left today; or
+ * nothing to study when no card is left to take and none was answered today.
  */
 export type SessionView = {
   /** Oldest first. */
   previous: PreviousAnswer[];
-  /** Cards answered at least once, of the cards in the queue when the session opened. */
+  /**
+   * Cards answered at least once, of the cards in the queue when the session opened and those
+   * taken past today's since.
+   */
   answered: number;
   total: number;
 } & (
@@ -79,37 +82,37 @@ export type SessionView = {
       kind: "studying";
       current: StudyCard;
       /**
-       * Before the session's first answer, outside practice, the session's size the guide in the
-       * previous card's place shows; otherwise null, and no guide shows.
+       * Before the session's first answer, the session's size the guide in the previous card's
+       * place shows; otherwise null, and no guide shows.
        */
       guide: SessionSize | null;
     }
-  | { kind: "complete"; completion: Completion }
+  | {
+      kind: "complete";
+      completion: Completion;
+      /** Whether new cards are left past today's, which `studyOn` goes on with. */
+      more: boolean;
+    }
   | { kind: "empty" }
 );
 
-/**
- * An answer given in this session. A written answer holds the review that records it; a
- * practice answer holds the pass it was given in and is never written.
- */
-type Answered = { card: StudyCard; answer: Answer; first: Answer } & (
-  { review: SessionReview; pass: null } | { review: null; pass: number }
-);
-
-/** Which cards a practice pass shows: every card answered today, or those missed in it. */
-type Pass = "all" | "missed";
+/** An answer given in this session and the review that records it. */
+type Answered = { card: StudyCard; answer: Answer; first: Answer; review: SessionReview };
 
 /**
  * One study session, by the queue rules of study.md. It shows the cards left today, then the
- * completion card; from there, `practice` goes on over the cards answered today, writing
- * nothing. Every random choice, the queue's order, each re-show gap, each answer's fuzz factor
- * and the practice order, comes from one source seeded with the start time. An answer or a
- * toggle changes the session at once and returns what to write, if anything.
+ * completion card; from there, `studyOn` goes on with the new cards past today's, oldest first,
+ * each answer recorded as any other. A session that opens with no card left today starts on
+ * those at once. Every random choice, the queue's order, each re-show gap and each answer's
+ * fuzz factor, comes from one source seeded with the start time. An answer or a toggle changes
+ * the session at once and returns what to write, if anything.
  */
 export class StudySession {
   private readonly random: Random;
   private readonly queue: StudyCard[];
-  private readonly total: number;
+  private total: number;
+  /** The new cards past today's, oldest first, not yet taken. */
+  private more: StudyCard[];
   /** The session's size when it opened. */
   private readonly size: SessionSize;
   private readonly answers: Answered[] = [];
@@ -118,13 +121,6 @@ export class StudySession {
   private pausedAt: number | null = null;
   /** The time hidden since the card on screen was shown, up to `pausedAt`. */
   private awayMs = 0;
-  private practicing = false;
-  private pass: Pass = "all";
-  /** Counts the passes started, so a toggle can tell whether its answer is in the one under way. */
-  private passNumber = 0;
-  private readonly practiceQueue: StudyCard[] = [];
-  /** The cards answered "모른다" in the pass over all, oldest first. */
-  private missed: StudyCard[] = [];
   private snapshot: SessionView;
 
   constructor(
@@ -140,6 +136,9 @@ export class StudySession {
       cards: this.total,
       minutes: sessionMinutes(this.total - fresh, fresh, plan.pace),
     };
+    this.more = [...plan.more];
+    // Opening the page with no card left today is the choice to go on.
+    if (this.queue.length === 0) this.takeMore();
     this.shownAt = plan.startedAt;
     this.snapshot = this.build();
   }
@@ -149,15 +148,8 @@ export class StudySession {
     return this.snapshot;
   }
 
-  /**
-   * Answers the card on screen, shows the next, and returns the write that records it; a
-   * practice answer is kept in the session alone, and returns none.
-   */
+  /** Answers the card on screen, shows the next, and returns the write that records it. */
   answer(answer: Answer): AnswerWrite | null {
-    if (this.practicing) {
-      this.answerPractice(answer);
-      return null;
-    }
     const card = this.queue[0];
     if (!card) return null;
     const now = this.clock();
@@ -169,7 +161,7 @@ export class StudySession {
       durationMs: this.onScreen(now),
       fuzzFactor: this.random.nextDouble(),
     };
-    this.answers.push({ card, answer, first: answer, review, pass: null });
+    this.answers.push({ card, answer, first: answer, review });
     if (answer === "dontKnow") reinsert(this.queue, card, this.random);
     this.show(now);
     this.snapshot = this.build();
@@ -204,25 +196,29 @@ export class StudySession {
   }
 
   /**
-   * Goes on from the completion card as practice: every card answered today, shuffled; then
-   * the ones missed in that pass, each put back after a gap until answered right; then all
-   * again, until the user stops.
+   * Goes on from the completion card with the new cards past today's, oldest first; with none
+   * left, does nothing.
    */
-  practice(): void {
-    if (this.snapshot.kind !== "complete") return;
-    this.practicing = true;
-    this.startPass("all");
+  studyOn(): void {
+    if (this.snapshot.kind !== "complete" || this.more.length === 0) return;
+    this.takeMore();
+    this.show(this.clock());
     this.snapshot = this.build();
   }
 
+  /** Moves the new cards past today's into the queue. */
+  private takeMore(): void {
+    this.queue.push(...this.more);
+    this.total += this.more.length;
+    this.more = [];
+  }
+
   /**
-   * Toggles the answer at [position] between "안다" and "모른다". A written answer returns the
-   * write that reschedules its card; before practice, a toggle to "모른다" of a card's last
-   * answer puts the card back as an answer would, unless it is waiting, which takes the
-   * completion card away again, and a toggle to "안다" of a card's last answer removes its
-   * re-show while it waits behind the card on screen. A practice answer is not written: a
-   * toggle of its card's last answer in the pass under way has the same effects on the practice
-   * queue, or in the pass over all adds the card to or removes it from the missed.
+   * Toggles the answer at [position] between "안다" and "모른다" and returns the write that
+   * reschedules its card. A toggle to "모른다" of a card's last answer puts the card back as an
+   * answer would, unless it is waiting, which takes the completion card away again, and a toggle
+   * to "안다" of a card's last answer removes its re-show while it waits behind the card on
+   * screen.
    */
   toggle(position: number): AnswerWrite | null {
     const answered = this.answers[position];
@@ -230,17 +226,10 @@ export class StudySession {
     const { card } = answered;
     const answer: Answer = answered.answer === "know" ? "dontKnow" : "know";
     answered.answer = answer;
-    if (answered.review) answered.review = { ...answered.review, answer };
-    const isLast = !this.answers
-      .slice(position + 1)
-      .some((later) => later.card.id === card.id && later.pass === answered.pass);
+    answered.review = { ...answered.review, answer };
+    const isLast = !this.answers.slice(position + 1).some((later) => later.card.id === card.id);
     const now = this.clock();
-    if (answered.pass !== null) {
-      if (isLast && answered.pass === this.passNumber) this.togglePractice(card, answer);
-      this.snapshot = this.build();
-      return null;
-    }
-    if (!this.practicing && isLast) this.toggleQueued(this.queue, card, answer, now);
+    if (isLast) this.toggleQueued(card, answer, now);
     this.snapshot = this.build();
     return this.write(card.id, { kind: "toggle", reviewId: answered.review.id }, now);
   }
@@ -260,70 +249,20 @@ export class StudySession {
     return this.toggle(this.answers.length - 1);
   }
 
-  /** The written answers of this session, as they stand. */
-  private written(): (Answered & { pass: null })[] {
-    return this.answers.filter((answered): answered is Answered & { pass: null } => {
-      return answered.pass === null;
-    });
-  }
-
-  /** Every card answered today: before the session opened, then in it. */
-  private practiceSet(): StudyCard[] {
-    const seen = new Set<CardId>();
-    return [...this.plan.today.cards, ...this.written().map((answered) => answered.card)].filter(
-      (card) => {
-        if (seen.has(card.id)) return false;
-        seen.add(card.id);
-        return true;
-      },
-    );
-  }
-
-  private startPass(pass: Pass): void {
-    const cards = pass === "all" ? this.practiceSet() : this.missed;
-    this.pass = pass;
-    this.passNumber += 1;
-    this.missed = [];
-    this.practiceQueue.push(...orderQueue({ cards, backlog: false }, this.random));
-  }
-
-  private answerPractice(answer: Answer): void {
-    const card = this.practiceQueue.shift();
-    if (!card) return;
-    this.answers.push({ card, answer, first: answer, review: null, pass: this.passNumber });
-    if (answer === "dontKnow") {
-      if (this.pass === "all") this.missed.push(card);
-      else reinsert(this.practiceQueue, card, this.random);
-    }
-    if (this.practiceQueue.length === 0) {
-      this.startPass(this.pass === "all" && this.missed.length > 0 ? "missed" : "all");
-    }
-    this.snapshot = this.build();
-  }
-
-  private togglePractice(card: StudyCard, answer: Answer): void {
-    if (this.pass === "missed") {
-      this.toggleQueued(this.practiceQueue, card, answer, this.clock());
-      return;
-    }
-    this.missed = this.missed.filter((missed) => missed.id !== card.id);
-    if (answer === "dontKnow") this.missed.push(card);
-  }
-
-  /** Puts [card] back into [queue] for a toggle to "모른다", or takes its re-show out for "안다". */
-  private toggleQueued(queue: StudyCard[], card: StudyCard, answer: Answer, now: number): void {
-    const waiting = queue.findIndex((queued) => queued.id === card.id);
+  /** Puts [card] back into the queue for a toggle to "모른다", or takes its re-show out for "안다". */
+  private toggleQueued(card: StudyCard, answer: Answer, now: number): void {
+    const waiting = this.queue.findIndex((queued) => queued.id === card.id);
     if (answer === "dontKnow" && waiting === -1) {
-      if (queue.length === 0) this.show(now);
-      reinsert(queue, card, this.random);
+      if (this.queue.length === 0) this.show(now);
+      reinsert(this.queue, card, this.random);
     } else if (answer === "know" && waiting > 0) {
-      queue.splice(waiting, 1);
+      this.queue.splice(waiting, 1);
     }
   }
 
   /** The card's written answers in this session as they stand, replayed from its state at the start. */
   private write(cardId: CardId, change: AnswerWrite["change"], editedAt: number): AnswerWrite {
-    const history = this.written()
+    const history = this.answers
       .filter((answered) => answered.card.id === cardId)
       .map((answered) => answered.review);
     const [first, ...rest] = history;
@@ -338,7 +277,7 @@ export class StudySession {
   }
 
   private completion(): Completion {
-    const written = this.written();
+    const written = this.answers;
     const answers = [
       ...this.plan.today.answers,
       ...written.map(({ answer, review }) => ({ answer, durationMs: review.durationMs })),
@@ -359,14 +298,21 @@ export class StudySession {
       answer: answered.answer,
       changed: answered.answer !== answered.first,
     }));
-    const answered = new Set(this.written().map((entry) => entry.card.id)).size;
+    const answered = new Set(this.answers.map((entry) => entry.card.id)).size;
     const counts = { previous, answered, total: this.total };
-    const current = this.practicing ? this.practiceQueue[0] : this.queue[0];
+    const current = this.queue[0];
     if (current) {
-      const guide = !this.practicing && this.answers.length === 0 ? this.size : null;
+      const guide = this.answers.length === 0 ? this.size : null;
       return { ...counts, kind: "studying", current, guide };
     }
-    if (this.practiceSet().length === 0) return { ...counts, kind: "empty" };
-    return { ...counts, kind: "complete", completion: this.completion() };
+    if (this.plan.today.answers.length === 0 && this.answers.length === 0) {
+      return { ...counts, kind: "empty" };
+    }
+    return {
+      ...counts,
+      kind: "complete",
+      completion: this.completion(),
+      more: this.more.length > 0,
+    };
   }
 }

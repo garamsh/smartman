@@ -1,6 +1,6 @@
 # ADR 0023: Scroll the current study card with the stack as one column, and centre each half of a split card vertically
 
-> Status: accepted; its "Gestures" and the bottom gap of its "Placement" superseded by ADR-0035
+> Status: accepted; its "Gestures" and the bottom gap of its "Placement" superseded by ADR-0035; its centring of the current card's halves superseded by ADR-0049
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

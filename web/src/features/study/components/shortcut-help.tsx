@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 
 /** Each keyboard shortcut of the study screen, and what it does. */
 export const shortcuts = [
-  { keys: ["Space"], action: "답 보기" },
   { keys: ["→", "K"], action: "안다" },
   { keys: ["←", "J"], action: "모른다" },
   { keys: ["Z"], action: "마지막 답 바꾸기" },

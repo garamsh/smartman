@@ -162,11 +162,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String currentCardRevealedSemantics(String front, String back) {
-    return 'Front: $front. Back: $back';
-  }
-
-  @override
   String get showAnswer => 'show the answer';
 
   @override
@@ -207,13 +202,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get guideReveal => 'Tap the card to see the answer';
+  String get guideDone => 'You\'ve done today\'s cards';
 
   @override
   String get guideSwipe => 'Swipe right if you know it, left if you don\'t';
 
   @override
-  String get guideRise => 'Answered cards come up here. Swipe one to change it';
+  String get guideRise =>
+      'Answered cards come up here with their meaning. Swipe one to change it';
 
   @override
   String get answerNotSaved =>
@@ -241,7 +237,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get keepStudying => 'Keep studying';
+  String get studyOn => 'Study';
+
+  @override
+  String get noCardsLeft => 'No more cards to study';
 
   @override
   String get stopStudying => 'Stop';
@@ -773,7 +772,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todayDone => 'You\'ve done today\'s cards';
 
   @override
-  String get todayKeepStudying => 'Keep studying';
+  String get todayStudy => 'Study';
 
   @override
   String get tabToday => 'Today';

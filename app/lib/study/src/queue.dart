@@ -187,14 +187,10 @@ SelectedQueue selectQueue(
   StudyDay day,
 ) {
   final due = <({int position, Card card, DateTime due})>[];
-  final fresh = <({int position, Card card})>[];
   final reviewed = <CardState>[];
   for (final (position, card) in cards.indexed) {
     final state = states[card.id];
-    if (state == null) {
-      fresh.add((position: position, card: card));
-      continue;
-    }
+    if (state == null) continue;
     reviewed.add(state);
     if (day.holds(state.due)) {
       due.add((position: position, card: card, due: state.due));
@@ -208,14 +204,25 @@ SelectedQueue selectQueue(
     });
     return SelectedQueue.backlog([for (final entry in due) entry.card]);
   }
+  return SelectedQueue.current([
+    for (final entry in due) entry.card,
+    ...newCards(cards, states).take(day.newCardsLeft),
+  ]);
+}
+
+/// The cards of [cards] with no stored state in [states], oldest first by
+/// creation time, ties in the order read: the order the day's new cards are
+/// taken in, and those past them.
+List<Card> newCards(List<Card> cards, Map<CardId, CardState> states) {
+  final fresh = [
+    for (final (position, card) in cards.indexed)
+      if (!states.containsKey(card.id)) (position: position, card: card),
+  ];
   fresh.sort((a, b) {
     final byAge = a.card.createdAt.compareTo(b.card.createdAt);
     return byAge != 0 ? byAge : a.position.compareTo(b.position);
   });
-  return SelectedQueue.current([
-    for (final entry in due) entry.card,
-    for (final entry in fresh.take(day.newCardsLeft)) entry.card,
-  ]);
+  return [for (final entry in fresh) entry.card];
 }
 
 /// [queue]'s cards in an order drawn from [random].

@@ -64,7 +64,7 @@ export type DailyGoal = { done: number; goal: number };
  * The goal of the study [today] from the recorded [answers] and the cards [left] to study in it:
  * every card answered within the day or left, each once, as the load stood when the day started;
  * done are those no longer left. A card answered "모른다" and due again today is left, so not
- * yet done. Practice records nothing, so it counts toward neither.
+ * yet done.
  */
 export function dailyGoal(
   answers: Iterable<{ cardId: CardId; reviewedAt: number }>,

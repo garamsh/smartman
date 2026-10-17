@@ -2,8 +2,8 @@ import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
  * The study page while its cards are read: the header with the progress bar, the previous card's
- * place, outlined as the session's guide holds it at a session's start, the current card and the
- * two answer buttons, in their sizes.
+ * place, outlined as the session's guide holds it at a session's start, the current card with its
+ * question alone, and the two answer buttons, in their sizes.
  */
 export function StudySkeleton() {
   return (
@@ -15,14 +15,8 @@ export function StudySkeleton() {
           <span className="hidden min-h-button w-24 rounded-button border border-outline bg-surface lg:block" />
         </div>
         <span className="mx-auto mt-6 min-h-52 w-full max-w-study rounded-previous border-[1.5px] border-dashed border-outline lg:min-h-75" />
-        <div className="mx-auto mt-1 grid min-h-52 w-full max-w-study grid-cols-[1fr_auto_1fr] rounded-card bg-surface shadow-raised lg:min-h-75">
-          <span className="flex items-center justify-center p-6">
-            <SkeletonLine text="text-question" width="w-1/2" />
-          </span>
-          <span className="my-7 w-px bg-hairline" />
-          <span className="flex items-center justify-center p-6">
-            <SkeletonLine text="text-answer" width="w-1/3" />
-          </span>
+        <div className="mx-auto mt-1 flex min-h-52 w-full max-w-study items-center justify-center rounded-card bg-surface p-6 shadow-raised lg:min-h-75">
+          <SkeletonLine text="text-question" width="w-1/3" />
         </div>
         <div className="mx-auto -mt-3 flex w-full max-w-study gap-3">
           <span className="min-h-cta flex-1 rounded-button bg-tint-red" />

@@ -154,11 +154,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String currentCardRevealedSemantics(String front, String back) {
-    return '앞면: $front. 뒷면: $back';
-  }
-
-  @override
   String get showAnswer => '답 보기';
 
   @override
@@ -199,13 +194,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get guideReveal => '카드를 누르면 답이 보여요';
+  String get guideDone => '오늘 할 카드를 다 했어요';
 
   @override
   String get guideSwipe => '알면 오른쪽, 모르면 왼쪽으로 밀어요';
 
   @override
-  String get guideRise => '답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요';
+  String get guideRise => '답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요';
 
   @override
   String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
@@ -232,7 +227,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get keepStudying => '계속 학습';
+  String get studyOn => '학습하기';
+
+  @override
+  String get noCardsLeft => '더 학습할 카드가 없어요';
 
   @override
   String get stopStudying => '그만하기';
@@ -699,7 +697,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get todayDone => '오늘 할 카드를 다 했어요';
 
   @override
-  String get todayKeepStudying => '계속 학습';
+  String get todayStudy => '학습하기';
 
   @override
   String get tabToday => '오늘';

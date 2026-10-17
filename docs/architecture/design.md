@@ -9,15 +9,15 @@ The app's design language: the principles every screen follows for usability and
 Every screen is designed to be simple, intuitive and easy to use. A new screen or a change to one follows these, and copies the idiom named under each.
 
 1. **One primary action per screen.** It is the most prominent element and sits in thumb reach, at the bottom. Secondary actions are quieter or live in a menu.
-   - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "계속 학습" is the one primary fill, with "그만하기" a quiet text button below it.
+   - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it.
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
-   - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "계속 학습" as the one navy fill.
+   - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
    - 덱 tab: "새 덱" in the top bar, its ways in a sheet; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, `BottomActions`; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
-   - Study: no deck name and no hint text, but for the session's guide, which holds the previous card's empty place from every session's start until its first answer ([ADR 0044](adr/0044-show-a-guide-with-the-session-s-size-in-the-previous-card-s-place-at-every-session-s-start.md)); the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
+   - Study: no deck name and no hint text, but for the session's guide, which holds the previous card's empty place from every session's start until its first answer ([ADR 0044](adr/0044-show-a-guide-with-the-session-s-size-in-the-previous-card-s-place-at-every-session-s-start.md)); the completion card carries no sentence beyond its heading and one line of counts, and "더 학습할 카드가 없어요" in place of "학습하기" where no new card is left; studying past today's cards is not marked apart ([ADR 0049](adr/0049-study-in-one-flow-that-goes-on-past-today-s-cards-as-recorded-study-with-the-current-card-showing-its-front-alone.md)).
    - Deck screen: each row shows the question, its answer hidden until a tap or the "뜻 보기" switch; the deck name is the only title, and the row above the cards a quiet "카드 n".
    - Tabs: no line explains a long-press or a tab; 기록 has no explanatory paragraph, only each chart's heading, its figures and a line beside the heading.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
@@ -35,8 +35,8 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: any answer of the session is corrected by a drag on the centred card, or its action, with no confirmation.
    - Card editor: a duplicate front opens a sheet that offers to add anyway or open the existing card, and is dismissed to do neither; nothing is overwritten.
    - Deck screen, card editor, account and preview: deleting a deck, deleting a card, signing out with unsynced changes, deleting the account, and blocking a user are confirmed through `showAppConfirm`, which states the consequence in one sentence above a cancel and, last, a red final button.
-6. **One visual language.** Theme tokens only; the split card, question left and answer right, each half's content centred across and down and shrunk toward a floor until its widest word fits, so a word never breaks inside itself while the floor fits, wherever a card appears; rounded surfaces on the ground colour; 44 pt minimum targets.
-   - Study, card editor, duplicate sheet and photo review: the same split card, each half centred; `deck`'s `SplitCard` lays out the halves for the study cards, the card preview and the card rows ([`deck.md`](deck.md)).
+6. **One visual language.** Theme tokens only; the split card, question left and answer right, each half's content centred across and down and shrunk toward a floor until its widest word fits, so a word never breaks inside itself while the floor fits, wherever a card shows both sides, and the study's current card, its front alone, centred and shrunk the same way ([ADR 0049](adr/0049-study-in-one-flow-that-goes-on-past-today-s-cards-as-recorded-study-with-the-current-card-showing-its-front-alone.md)); rounded surfaces on the ground colour; 44 pt minimum targets.
+   - Study's previous card, card editor, duplicate sheet and photo review: the same split card, each half centred; `deck`'s `SplitCard` lays out the halves for the previous card, the card preview and the card rows ([`deck.md`](deck.md)).
    - 덱 tab, 오늘 tab and deck screen: rows on rounded surfaces over the ground; the navy cards over them.
    - Every screen and sheet: the tokens below and the components that use them.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
