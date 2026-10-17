@@ -4,6 +4,8 @@ import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
+import { untilReacted } from "./until-reacted";
+
 // The local stack supabase/test-web.sh starts, whose URL and publishable key the app was built
 // with. Password sign-up and sign-in are enabled on the local stack alone (supabase/config.toml).
 const supabaseUrl = process.env.E2E_SUPABASE_URL;
@@ -162,16 +164,20 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   // Every answer hidden until it is asked for: one click shows that card's, 뜻 보기 them all.
   await expect(page.getByRole("button", { name: "chat, 답 가려짐", exact: true })).toBeVisible();
   await shot(page, "02-deck");
-  await page.getByRole("switch", { name: "뜻 보기" }).click();
-  await expect(page.getByRole("button", { name: "chat, 답 cat", exact: true })).toBeVisible();
+  const answersShown = page.getByRole("button", { name: "chat, 답 cat", exact: true });
+  await untilReacted(
+    () => page.getByRole("switch", { name: "뜻 보기" }).click(),
+    async () => (await answersShown.count()) > 0,
+  );
   await expect(page.getByRole("button", { name: "chien, 답 dog", exact: true })).toBeVisible();
   await shot(page, "02b-deck-answers");
-  // Enter opens the deck's session once the page reacts to keys, which a press shows (#152).
+  // Enter opens the deck's session.
   await page.getByRole("heading", { name: "French", exact: true }).click();
-  await expect(async () => {
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(new RegExp(`/study\\?decks=${deckId}$`), { timeout: 1_000 });
-  }).toPass();
+  const studyPath = new RegExp(`/study\\?decks=${deckId}$`);
+  await untilReacted(
+    () => page.keyboard.press("Enter"),
+    () => Promise.resolve(studyPath.test(page.url())),
+  );
 
   const question = page.getByRole("group", { name: "문제", exact: true });
   const currentCard = page.getByRole("region", { name: "현재 카드", exact: true });
@@ -184,9 +190,11 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   // The current card shows its question alone; its answer shows once answered, above.
   await expect(currentCard).not.toContainText(backs.get(first) ?? "");
   await shot(page, "03-study-question");
-  await page.keyboard.press("k");
   const second = first === "chat" ? "chien" : "chat";
-  await expect(question).toHaveText(second);
+  await untilReacted(
+    () => page.keyboard.press("k"),
+    async () => (await question.textContent()) === second,
+  );
   await expect(
     page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
   ).toHaveCount(1);
@@ -337,7 +345,12 @@ test("a user with no deck is invited to make one, and the theme they choose surv
     ["dark", "다크", ground.dark],
     ["system", "시스템", ground.dark],
   ] as const) {
-    await group.getByText(label, { exact: true }).click();
+    // The root's data-theme, which only the choice's handler sets, names it; the system's names none.
+    await untilReacted(
+      () => group.getByText(label, { exact: true }).click(),
+      async () =>
+        (await page.evaluate(() => document.documentElement.dataset.theme ?? "system")) === choice,
+    );
     await expect(body).toHaveCSS("background-color", colour);
 
     await page.reload();
@@ -607,7 +620,11 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
     await expect(
       page.getByRole("img", { name: /^최근 12주 동안 \d+일 학습했어요: / }),
     ).toBeVisible();
-    await page.getByText("7일", { exact: true }).click();
+    // The retention's axis starts "7일 전" once the selector, which React drives, took the click.
+    await untilReacted(
+      () => page.getByText("7일", { exact: true }).click(),
+      async () => (await page.getByText("7일 전", { exact: true }).count()) > 0,
+    );
     await expect(page.getByRole("radio", { name: "7일", exact: true })).toBeChecked();
 
     // The warm load, against #69's bar of 1 s: the page again, now that the server process has
@@ -748,8 +765,11 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
 
     await page.goto(`/study?decks=${deckId}`);
     await expect(page.getByRole("group", { name: "문제", exact: true })).toHaveText("lundi");
-    await page.keyboard.press("k");
     const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
+    await untilReacted(
+      () => page.keyboard.press("k"),
+      async () => (await completion.count()) > 0,
+    );
     await expect(completion.getByText("연속 3일", { exact: true })).toBeVisible();
   });
 });
