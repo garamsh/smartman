@@ -79,8 +79,10 @@ export type SessionView = {
       kind: "studying";
       current: StudyCard;
       /**
-       * Before the session's first answer, outside practice, the session's size the guide in the
-       * previous card's place shows; otherwise null, and no guide shows.
+       * Before the session's first answer, practice included, the session's size the guide in the
+       * previous card's place shows; otherwise null, and no guide shows. Practice that starts with
+       * no answer of the session's own follows a session that opened with no card left, so its
+       * size holds no card.
        */
       guide: SessionSize | null;
     }
@@ -363,7 +365,7 @@ export class StudySession {
     const counts = { previous, answered, total: this.total };
     const current = this.practicing ? this.practiceQueue[0] : this.queue[0];
     if (current) {
-      const guide = !this.practicing && this.answers.length === 0 ? this.size : null;
+      const guide = this.answers.length === 0 ? this.size : null;
       return { ...counts, kind: "studying", current, guide };
     }
     if (this.practiceSet().length === 0) return { ...counts, kind: "empty" };

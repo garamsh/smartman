@@ -11,8 +11,9 @@ import 'study_style.dart';
 
 /// In the previous card's place from a session's start until its first
 /// answer: a panel with a dashed outline and no fill, so it never reads as a
-/// card, holding the session's [size] and three lines on how to study. It is
-/// read as one block.
+/// card, holding the session's [size], or that today's cards are done where
+/// it holds none, as in practice, and three lines on how to study. It is read
+/// as one block.
 class SessionGuide extends StatelessWidget {
   const SessionGuide({super.key, required this.size});
 
@@ -22,7 +23,9 @@ class SessionGuide extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final heading = l10n.guideSize(size.cards, size.minutes);
+    final heading = size.cards == 0
+        ? l10n.guideDone
+        : l10n.guideSize(size.cards, size.minutes);
     final lines = [
       (LucideIcons.eye, l10n.guideReveal),
       (LucideIcons.moveHorizontal, l10n.guideSwipe),

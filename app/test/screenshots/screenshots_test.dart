@@ -343,6 +343,21 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '15c-study-nothing-today');
       await tap(tester, find.byTooltip(ko.close));
+
+      // The finished deck opens on the completion card; practice from there
+      // starts with no answer of its own, so the guide holds the space above.
+      final english = decks.firstWhere((deck) => deck.name == '영단어 기본');
+      unawaited(
+        Navigator.of(tester.element(find.byType(Navigator).first)).push(
+          MaterialPageRoute<void>(
+            builder: (_) => StudyScreen(decks: DeckSelection(english.id)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.keepStudying));
+      await shot(tester, '15d-study-practice-guide');
+      await tap(tester, find.byTooltip(ko.close));
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 

@@ -199,6 +199,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get guideDone => '오늘 할 카드를 다 했어요';
+
+  @override
   String get guideReveal => '카드를 누르면 답이 보여요';
 
   @override

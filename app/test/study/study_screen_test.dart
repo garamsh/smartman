@@ -487,35 +487,47 @@ void main() {
     },
   );
 
-  testWidgets(
-    'practice shows no guide, though it starts with no answer of the session',
-    (tester) async {
-      // Every card answered earlier today and due tomorrow: the session opens
-      // on the completion card with no answer of its own.
-      final answeredToday = CardState(
-        stability: 3,
-        difficulty: 5,
-        lastReview: DateTime.utc(2026, 10, 14, 6),
-        due: DateTime.utc(2026, 10, 15, 5),
-      );
-      await _open(
-        tester,
-        ['a', 'b'],
-        states: {'a': answeredToday, 'b': answeredToday},
-      );
-      expect(find.text('Done for today'), findsOneWidget);
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+      'in the ${mode.name} theme practice that starts with no answer of the session holds the guide, saying today\'s cards are done, read as one block, until its first answer',
+      (tester) async {
+        // Every card answered earlier today and due tomorrow: the session opens
+        // on the completion card with no answer of its own.
+        final answeredToday = CardState(
+          stability: 3,
+          difficulty: 5,
+          lastReview: DateTime.utc(2026, 10, 14, 6),
+          due: DateTime.utc(2026, 10, 15, 5),
+        );
+        await _open(
+          tester,
+          ['a', 'b'],
+          states: {'a': answeredToday, 'b': answeredToday},
+          themeMode: mode,
+        );
+        expect(find.text('Done for today'), findsOneWidget);
 
-      await tester.tap(find.text('Keep studying'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Keep studying'));
+        await tester.pumpAndSettle();
 
-      expect(_currentCard, findsOneWidget);
-      expect(
-        find.text("Swipe right if you know it, left if you don't"),
-        findsNothing,
-      );
-      expect(find.textContaining('Today '), findsNothing);
-    },
-  );
+        expect(_currentCard, findsOneWidget);
+        final guide = [_guideDone, ..._guide(0, 0).skip(1)];
+        for (final line in guide) {
+          expect(_guideText(line), findsOneWidget);
+        }
+        expect(_guideText(_guide(0, 0).first), findsNothing);
+        expect(find.bySemanticsLabel(guide.join('\n')), findsOneWidget);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+
+        await tester.tap(find.text('Know'));
+        await tester.pumpAndSettle();
+        expect(_currentCard, findsOneWidget);
+        for (final line in guide) {
+          expect(_guideText(line), findsNothing);
+        }
+      },
+    );
+  }
 
   testWidgets('a tap shows the answer half and a second tap hides it', (
     tester,
@@ -1403,6 +1415,10 @@ Finder _guideText(String line) => find.byWidgetPredicate(
   (widget) =>
       widget is Text && widget.data?.replaceAll(_wordJoiner, '') == line,
 );
+
+/// The guide's first line, in English, where the session opened with no card
+/// left.
+const _guideDone = "You've done today's cards";
 
 /// The session guide's lines, in English, for a session of [cards] cards
 /// taking [minutes] minutes.

@@ -50,6 +50,7 @@
   "changingToKnow": "Change to Know",
   "changingToDontKnow": "Change to Don't know",
   "guideSize": "Today {cards} cards · about {minutes} min",
+  "guideDone": "You've done today's cards",
   "guideReveal": "Tap the card to see the answer",
   "guideSwipe": "Swipe right if you know it, left if you don't",
   "guideRise": "Answered cards come up here. Swipe one to change it",

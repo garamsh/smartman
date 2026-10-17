@@ -253,6 +253,8 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await completion.getByRole("button", { name: "계속 학습", exact: true }).click();
   await expect(question).toHaveText(/^(chat|chien)$/);
   expect(page.url()).toBe(studyUrl);
+  // The session's own answers fill the previous card's place, so no guide shows.
+  await expect(guide).toHaveCount(0);
   await page.keyboard.press("j");
   await expect(question).toHaveText(/^(chat|chien)$/);
   await shot(page, "06b-study-practice");
@@ -275,6 +277,19 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   // Esc leaves for the deck list.
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(`${baseURL}/`);
+
+  // Reopened with both cards done, the deck opens on the completion card. Practice from there
+  // starts with no answer of its own, so the guide holds the previous card's place, saying today's
+  // cards are done, until the first answer. The click waits for hydration (#152).
+  await page.goto(studyUrl);
+  await expect(async () => {
+    await completion.getByRole("button", { name: "계속 학습", exact: true }).click();
+    await expect(question).toHaveText(/^(chat|chien)$/, { timeout: 1_000 });
+  }).toPass();
+  await expect(guide.getByText("오늘 할 카드를 다 했어요", { exact: true })).toBeVisible();
+  await shot(page, "06d-study-practice-guide");
+  await page.keyboard.press("k");
+  await expect(guide).toHaveCount(0);
 
   // A deck whose one card is due next week, and was not answered today, has nothing to study.
   const laterDeck = randomUUID();

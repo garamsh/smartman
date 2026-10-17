@@ -403,6 +403,12 @@ abstract class AppLocalizations {
   /// **'오늘 {cards}장 · 약 {minutes}분'**
   String guideSize(int cards, int minutes);
 
+  /// The session's start guide, first line, in place of the session's size when it opened with no card left, as practice that starts with no answer of its own does: today's cards are done.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 할 카드를 다 했어요'**
+  String get guideDone;
+
   /// The session's start guide: tap the card to see the answer.
   ///
   /// In ko, this message translates to:

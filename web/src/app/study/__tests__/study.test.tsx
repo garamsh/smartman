@@ -567,7 +567,7 @@ describe("the study page", () => {
       expect(guide()).not.toBeInTheDocument();
     });
 
-    it("shows no guide in practice, though it starts with no answer of the session", async () => {
+    it("shows the guide in practice that starts with no answer of the session, saying today's cards are done, until its first answer", async () => {
       postgrest.seed("decks", deckRow("d1", "d1"));
       postgrest.seed("cards", cardRow("trois", "d1", "trois"));
       postgrest.seed(
@@ -585,6 +585,15 @@ describe("the study page", () => {
 
       await userEvent.setup().click(screen.getByRole("button", { name: "계속 학습" }));
 
+      expect(screen.getByRole("group", { name: "문제" })).toHaveTextContent("trois");
+      const guide = screen.getByRole("region", { name: "학습 안내" });
+      expect(
+        within(guide).getByText("오늘 할 카드를 다 했어요", { exact: true }),
+      ).toBeInTheDocument();
+      expect(within(guide).queryByText(/오늘 \d+장/)).not.toBeInTheDocument();
+      expect(within(guide).getAllByRole("listitem")).toHaveLength(3);
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "안다" }));
       expect(screen.getByRole("group", { name: "문제" })).toHaveTextContent("trois");
       expect(screen.queryByRole("region", { name: "학습 안내" })).not.toBeInTheDocument();
     });

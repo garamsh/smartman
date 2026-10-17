@@ -56,9 +56,11 @@ final class SessionStudying extends SessionState {
   final List<PreviousCard> previous;
   final SessionProgress progress;
 
-  /// Before the session's first answer, outside practice, the session's size
-  /// the guide in the previous card's place shows; otherwise null, and no
-  /// guide shows.
+  /// Before the session's first answer, practice included, the session's
+  /// size the guide in the previous card's place shows; otherwise null, and
+  /// no guide shows. Practice that starts with no answer of the session's
+  /// own follows a session that opened with no card left, so its size holds
+  /// no card.
   final SessionSize? guide;
 }
 
@@ -288,7 +290,12 @@ class StudySession extends ChangeNotifier {
       _total,
     );
     if (_practicing) {
-      return SessionStudying(_practiceQueue.first, previous, progress);
+      return SessionStudying(
+        _practiceQueue.first,
+        previous,
+        progress,
+        guide: _answers.isEmpty ? _size : null,
+      );
     }
     if (_queue.isNotEmpty) {
       return SessionStudying(

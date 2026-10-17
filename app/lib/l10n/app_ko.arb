@@ -133,6 +133,8 @@
   "@changingToDontKnow": {"description": "Shown behind a card answered earlier while it is dragged left, toward Don't know."},
   "guideSize": "오늘 {cards}장 · 약 {minutes}분",
   "@guideSize": {"description": "The session's start guide, first line: how many cards the session opened with and the minutes they take.", "placeholders": {"cards": {"type": "int"}, "minutes": {"type": "int"}}},
+  "guideDone": "오늘 할 카드를 다 했어요",
+  "@guideDone": {"description": "The session's start guide, first line, in place of the session's size when it opened with no card left, as practice that starts with no answer of its own does: today's cards are done."},
   "guideReveal": "카드를 누르면 답이 보여요",
   "@guideReveal": {"description": "The session's start guide: tap the card to see the answer."},
   "guideSwipe": "알면 오른쪽, 모르면 왼쪽으로 밀어요",

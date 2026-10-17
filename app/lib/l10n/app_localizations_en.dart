@@ -207,6 +207,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get guideDone => 'You\'ve done today\'s cards';
+
+  @override
   String get guideReveal => 'Tap the card to see the answer';
 
   @override
