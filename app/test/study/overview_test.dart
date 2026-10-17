@@ -184,6 +184,36 @@ void main() {
     });
   });
 
+  group('today\'s status', () {
+    TodayStatus status(int done, int goal, {int streak = 0}) => TodayStatus.of(
+      DailyGoal(done: done, goal: goal),
+      streak: streak,
+    );
+
+    test('nothing done yet states a streak of two days or more, and otherwise waits', () {
+      expect(status(0, 10, streak: 2), const StatusStreak(2));
+      expect(status(0, 10, streak: 5), const StatusStreak(5));
+      expect(status(0, 10, streak: 1), isA<StatusWaiting>());
+      expect(status(0, 10), isA<StatusWaiting>());
+      // Nothing done with three left still waits: the first row that holds.
+      expect(status(0, 3, streak: 1), isA<StatusWaiting>());
+    });
+
+    test('three cards or fewer left is almost done, four is not', () {
+      expect(status(7, 10), isA<StatusAlmostDone>());
+      expect(status(9, 10), isA<StatusAlmostDone>());
+      expect(status(6, 10), isA<StatusPastHalf>());
+      // A small goal is almost done after its first card.
+      expect(status(1, 4), isA<StatusAlmostDone>());
+    });
+
+    test('exactly half done is past half, one short of it a good start', () {
+      expect(status(10, 20), isA<StatusPastHalf>());
+      expect(status(9, 20), isA<StatusStarted>());
+      expect(status(1, 20, streak: 4), isA<StatusStarted>());
+    });
+  });
+
   group('catch-up', () {
     test('a backlog falls by the pace each day, to zero and not below', () {
       expect(catchUp(84, 30), [84, 54, 24, 0, 0, 0, 0]);

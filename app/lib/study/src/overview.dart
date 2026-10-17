@@ -120,6 +120,59 @@ final class DailyGoal {
   bool get reached => goal > 0 && done == goal;
 }
 
+/// Where the user stands today, which the today card states in place of the
+/// goal's numbers, which its ring shows. It states where the user is and
+/// never what to tap.
+sealed class TodayStatus {
+  const TodayStatus();
+
+  /// The first status that holds for [goal] with a [streak] of study days:
+  /// nothing done yet with a streak of two days or more; nothing done yet;
+  /// three cards or fewer left; half of the goal or more done; some done.
+  factory TodayStatus.of(DailyGoal goal, {required int streak}) {
+    final left = goal.goal - goal.done;
+    if (goal.done == 0) {
+      return streak >= 2 ? StatusStreak(streak) : const StatusWaiting();
+    }
+    if (left <= 3) return const StatusAlmostDone();
+    if (goal.done * 2 >= goal.goal) return const StatusPastHalf();
+    return const StatusStarted();
+  }
+}
+
+/// Nothing done today yet, on a streak of [days] study days.
+final class StatusStreak extends TodayStatus {
+  const StatusStreak(this.days);
+
+  final int days;
+
+  @override
+  bool operator ==(Object other) => other is StatusStreak && other.days == days;
+
+  @override
+  int get hashCode => days.hashCode;
+}
+
+/// Nothing done today yet.
+final class StatusWaiting extends TodayStatus {
+  const StatusWaiting();
+}
+
+/// Some done, and three cards or fewer left.
+final class StatusAlmostDone extends TodayStatus {
+  const StatusAlmostDone();
+}
+
+/// Half of the goal or more done.
+final class StatusPastHalf extends TodayStatus {
+  const StatusPastHalf();
+}
+
+/// Some done, under half of the goal.
+final class StatusStarted extends TodayStatus {
+  const StatusStarted();
+}
+
 /// The overdue reviews left at the start of each of the [forecastDays] study
 /// days from today, when [backlog] are overdue today and the user clears
 /// [perDay] of them a day: the catch-up a backlog card projects.

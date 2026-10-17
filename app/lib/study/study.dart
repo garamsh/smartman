@@ -9,7 +9,16 @@ export 'src/providers.dart'
         studyRandomProvider,
         studyRepositoryProvider,
         studyZoneProvider;
-export 'src/overview.dart' show DailyGoal, DeckProgress;
+export 'src/overview.dart'
+    show
+        DailyGoal,
+        DeckProgress,
+        StatusAlmostDone,
+        StatusPastHalf,
+        StatusStarted,
+        StatusStreak,
+        StatusWaiting,
+        TodayStatus;
 export 'src/progress_counter.dart' show ProgressBuilder, ProgressCounter;
 export 'src/queue.dart' show localOffsetAt;
 export 'src/scheduler.dart' show Scheduler;

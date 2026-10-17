@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'session.dart';
 import 'study_style.dart';
@@ -73,12 +74,6 @@ class SessionGuide extends StatelessWidget {
     );
   }
 }
-
-/// [text] with a word joiner between the characters of each word, so a line
-/// breaks only at a space: Flutter otherwise breaks Korean between any two
-/// syllables, which can leave one alone on a line.
-String keepWords(String text) =>
-    text.split(' ').map((word) => word.characters.join('\u2060')).join(' ');
 
 /// A dashed outline around its child's box, rounded as the previous card is.
 class _DashedOutline extends CustomPainter {

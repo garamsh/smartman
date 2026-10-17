@@ -9,6 +9,7 @@ import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/mascot.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import '../../study/study.dart';
 import '../../sync/sync.dart';
@@ -175,7 +176,8 @@ class _HeroCard extends StatelessWidget {
 }
 
 /// Today's cards over every deck on the navy card: the count and its minutes
-/// beside the goal ring, the streak and the goal's line, and 모두 학습.
+/// beside the goal ring, the streak and where the user stands today
+/// ([TodayStatus]), and 모두 학습.
 class _TodayCard extends StatelessWidget {
   const _TodayCard({required this.overview, required this.onStudy});
 
@@ -216,7 +218,16 @@ class _TodayCard extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             if (streak > 0) _StreakChip(days: streak, onHero: true),
-            Text(l10n.goalLine(goal.done, goal.goal), style: quiet),
+            Text(
+              keepWords(switch (TodayStatus.of(goal, streak: streak)) {
+                StatusStreak(:final days) => l10n.statusStreak(days),
+                StatusWaiting() => l10n.statusWaiting,
+                StatusAlmostDone() => l10n.statusAlmostDone,
+                StatusPastHalf() => l10n.statusPastHalf,
+                StatusStarted() => l10n.statusStarted,
+              }),
+              style: quiet,
+            ),
           ],
         ),
         AppButton(
