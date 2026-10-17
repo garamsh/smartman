@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { untilReacted } from "./until-reacted";
+
 /** The ground's colour in each theme, the body's background (globals.css). */
 const ground = { light: "rgb(244, 246, 250)", dark: "rgb(14, 20, 36)" };
 
@@ -35,15 +37,22 @@ test.describe("signed out", () => {
   test("Google sign-in leaves for Supabase Auth with this origin's /auth/callback", async ({
     page,
   }) => {
-    const authorize = page.waitForRequest(/\/auth\/v1\/authorize\?/);
+    const authorize = /\/auth\/v1\/authorize\?/;
+    const requested: string[] = [];
+    page.on("request", (request) => {
+      if (authorize.test(request.url())) requested.push(request.url());
+    });
     // The request is stopped here: the real Google consent screen is not part of the test.
-    await page.route(/\/auth\/v1\/authorize\?/, (route) => route.abort());
+    await page.route(authorize, (route) => route.abort());
     await page.goto("/login");
     const origin = new URL(page.url()).origin;
 
-    await page.getByRole("button", { name: "Google로 로그인", exact: true }).click();
+    await untilReacted(
+      () => page.getByRole("button", { name: "Google로 로그인", exact: true }).click(),
+      () => Promise.resolve(requested.length > 0),
+    );
 
-    const url = new URL((await authorize).url());
+    const url = new URL(requested[0] ?? "");
     expect(url.searchParams.get("provider")).toBe("google");
     expect(url.searchParams.get("redirect_to")).toBe(`${origin}/auth/callback`);
   });
