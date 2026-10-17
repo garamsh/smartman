@@ -8,6 +8,7 @@ import '../../design/app_list_row.dart';
 import '../../design/app_section_label.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
 import 'detail_step.dart';
@@ -260,7 +261,8 @@ class _DuplicateChoiceChip extends StatelessWidget {
 }
 
 /// A card side as text that becomes a field on a tap, with [mark] under it
-/// when there is one. Leaving the field keeps its text, or the previous text
+/// when there is one. The text breaks lines only between words, and is read
+/// as written. Leaving the field keeps its text, or the previous text
 /// when it was left empty.
 class _EditableSide extends StatefulWidget {
   const _EditableSide({
@@ -349,7 +351,7 @@ class _EditableSideState extends State<_EditableSide> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.text, style: widget.style),
+                Text(keepWords(widget.text), style: widget.style),
                 if (mark != null) ...[
                   const SizedBox(height: AppSpace.s4),
                   Text(
