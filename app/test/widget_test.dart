@@ -407,12 +407,15 @@ void main() {
         );
         await tester.pump();
       }
+      // On this 600-high test screen the completion card scrolls inside.
+      await tester.ensureVisible(find.text('Stop'));
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('Done for today'), findsOneWidget);
+      await tester.ensureVisible(find.text('Stop'));
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
       await tester.pageBack();

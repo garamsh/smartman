@@ -73,13 +73,13 @@ double fittedFontSize(
   return minFontSize;
 }
 
-/// The size and lines that fit [span], in [style], into a box [width] wide
-/// and [height] high: the largest whole size from [fittedFontSize]'s down to
-/// [minFontSize] at which the whole text fits, with as many lines as it takes;
-/// otherwise [minFontSize], with as many lines as fit [height], at least one,
-/// past which the text is cut. [plain] is the span's text, whose widest word
-/// sets the largest size.
-({double fontSize, int maxLines}) fittedToBox(
+/// [style] at the size, and the lines, that fit [span] into a box [width]
+/// wide and [height] high: the largest whole size from [fittedFontSize]'s down
+/// to [minFontSize] at which the whole text fits, with as many lines as it
+/// takes; otherwise [minFontSize], with as many lines as fit [height], at
+/// least one, past which the text is cut. [plain] is the span's text, whose
+/// widest word sets the largest size.
+({TextStyle style, int maxLines}) fittedToBox(
   InlineSpan span,
   String plain, {
   required TextStyle style,
@@ -99,12 +99,9 @@ double fittedFontSize(
   );
   for (var size = largest; ; size -= 1) {
     final floor = size <= minFontSize;
-    final fontSize = floor ? minFontSize : size;
+    final fitted = style.copyWith(fontSize: floor ? minFontSize : size);
     final painter = TextPainter(
-      text: TextSpan(
-        style: style.copyWith(fontSize: fontSize),
-        children: [span],
-      ),
+      text: TextSpan(style: fitted, children: [span]),
       textAlign: TextAlign.center,
       textDirection: textDirection,
       textScaler: textScaler,
@@ -114,7 +111,7 @@ double fittedFontSize(
         ? painter.computeLineMetrics().length
         : max(1, (height / painter.preferredLineHeight).floor());
     painter.dispose();
-    if (fits || floor) return (fontSize: fontSize, maxLines: max(1, lines));
+    if (fits || floor) return (style: fitted, maxLines: max(1, lines));
   }
 }
 

@@ -163,11 +163,13 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(answer).toHaveText(backs.get(second) ?? "");
   await expect(page.getByRole("region", { name: "학습 안내" })).toHaveCount(0);
   await shot(page, "05-study-stack");
-  // ↑ centres the earlier card, which offers the change to its other answer.
-  await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("button", { name: "모른다로 바꾸기", exact: true })).toBeVisible();
-  await shot(page, "05b-study-earlier");
-  await page.getByRole("button", { name: "지금 카드로", exact: true }).click();
+  // A click on the previous card opens it whole; Esc closes it, and the session goes on.
+  await page.getByRole("button", { name: "카드 전체 보기", exact: true }).click();
+  const detail = page.getByRole("dialog", { name: "카드", exact: true });
+  await expect(detail.getByText(backs.get(first) ?? "", { exact: true })).toBeVisible();
+  await shot(page, "05b-study-detail");
+  await page.keyboard.press("Escape");
+  await expect(detail).toHaveCount(0);
   await expect(question).toHaveText(second);
   // At a phone's width: the same cards with the large answer buttons, and no list beside.
   const desktop = page.viewportSize();
@@ -417,7 +419,7 @@ test("each page that waits on the server shows its skeleton, still under reduced
       name: "study",
       status: "카드를 불러오는 중이에요.",
       content: '[aria-label="현재 카드"]',
-      held: 1,
+      held: 2,
     },
     {
       path: "/account",

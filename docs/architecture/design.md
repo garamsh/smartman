@@ -17,12 +17,12 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
-   - Study: no deck name and no hint text, but for the first session's guide of three lines; the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
+   - Study: no deck name and no hint text, but for the first session's guide of two lines; the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
    - Deck screen: each row shows the question, its answer hidden until a tap; the deck name is the only title.
    - Tabs: no line explains a long-press or a tab; 기록 says only that its record is coming.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
-   - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다"; a vertical drag scrolls the stack and the current card together; a horizontal drag on the centred previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기".
+   - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다"; a horizontal drag on the previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기", and a tap on it opens the whole card; a drag on either card moves that card alone.
    - 덱 tab: "선택" enters selection mode, as a long-press does; the rows expose their selected state, and selection mode has visible controls. Deck screen: a long-press opens a card, and a screen reader reaches the same through the row's "카드 편집" action.
    - Every sheet: a drag or a tap outside dismisses it, and Android's back does the same.
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
@@ -40,7 +40,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - 덱 tab, 오늘 tab and deck screen: rows on rounded surfaces over the ground; the navy cards over them.
    - Every screen and sheet: the tokens below and the components that use them.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
-   - Study: an answered card flies off and rises into the stack while the next emerges from below; under reduce motion they cross-fade. The current card moves with the stack as it scrolls, the card at the centre grows as the others shrink and dim, and an answer given while scrolled back returns the view to its end; a re-decided card springs back into place, at once under reduce motion.
+   - Study: an answered card flies off and rises into the previous card's place while the next emerges from below; under reduce motion they cross-fade. A re-decided card springs back into place, at once under reduce motion.
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences, in the voice below.
    - First-run home and deck screen: an empty list says how to start, and a search with no match, on the 덱 tab or the deck screen, says to try other words.
@@ -130,7 +130,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - **`BottomActions`** — a screen's bottom bar: a secondary action, and a primary one beside it when the screen offers one: the deck screen and the card editor.
 - **`AppChip`** — a fully rounded label, or a button when it has an action: the brand-tint "오늘 n" chip, the "공개" chip, the camera's deck chip, and the duplicate option chip.
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
-- **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15, a previous card's front 18 and back 16 to 12) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card, the previous cards and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)).
+- **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)); the previous card's sides, run together as one paragraph, are scaled the same way and then further, as far as the floor, until they fit their half's height, and cut there ([ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md)).
 
 Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`.
 
@@ -147,6 +147,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the study screen these principles generalize.
 - [ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md) records why the current card scrolls with the stack and why each half of a split card centres its content.
+- [ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md) records why the study screen shows two cards of one size, and why the previous card is re-decided by a swipe and opened on a tap.
 - [ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md) records the study screen's grades by colour and chip, its answer buttons and first-run guide, the change of an answer by a drag on the centred card, the completion card's streak colour, mascot and "그만하기", and the split card drawn once in `deck`.
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme is one file with a token extension, why the font is bundled, and why the choice is stored in `shared_preferences`.
 - [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md) records why the scales sit in the theme file, why the components are a shared layer of their own, and why every modal is a sheet.

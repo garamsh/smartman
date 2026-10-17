@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { v7 } from "uuid";
@@ -11,10 +11,11 @@ import { saveAnswer } from "../save-answer";
 import { type PreviousAnswer, type SessionPlan, StudySession } from "../session";
 import { WriteQueue } from "../write-queue";
 import { AnswerList } from "./answer-list";
+import { CardDetail } from "./card-detail";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
 import { FirstRunGuide } from "./first-run-guide";
-import { GradedCard, type Standing } from "./graded-card";
+import { GradedCard } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
 
 const button =
@@ -41,45 +42,29 @@ function isForeign(event: KeyboardEvent): boolean {
   );
 }
 
-/**
- * What a key press asks of the study screen, or null when it asks nothing it can do now. While
- * an earlier card is centred, → and ← change its answer rather than answer the current card.
- */
+/** What a key press asks of the study screen, or null when it asks nothing it can do now. */
 function shortcut(
   event: KeyboardEvent,
   studying: boolean,
-  browsing: boolean,
   answered: boolean,
-): "help" | "leave" | "reveal" | "know" | "dontKnow" | "toggleLast" | "earlier" | "later" | null {
+): "help" | "leave" | "reveal" | "know" | "dontKnow" | "toggleLast" | null {
   if (event.key === "?") return "help";
   if (event.key === "Escape") return "leave";
-  if (event.key === "ArrowUp") return answered ? "earlier" : null;
-  if (event.key === "ArrowDown") return browsing ? "later" : null;
-  if (event.key === " ") return studying && !browsing ? "reveal" : null;
+  if (event.key === " ") return studying ? "reveal" : null;
   // Letters by their physical key, so they work whatever the keyboard's input language.
-  if (event.key === "ArrowRight" || event.code === "KeyK") {
-    return studying || browsing ? "know" : null;
-  }
-  if (event.key === "ArrowLeft" || event.code === "KeyJ") {
-    return studying || browsing ? "dontKnow" : null;
-  }
+  if (event.key === "ArrowRight" || event.code === "KeyK") return studying ? "know" : null;
+  if (event.key === "ArrowLeft" || event.code === "KeyJ") return studying ? "dontKnow" : null;
   if (event.code === "KeyZ") return answered ? "toggleLast" : null;
   return null;
 }
 
-/** How far a wheel turns, in pixels, before it moves one card. */
-const wheelStep = 60;
-
-/** How far a touch drags, in pixels, before it moves one card. */
-const touchStep = 48;
-
 /**
- * The study screen: the progress bar, and the previous card above the current card split into
- * question and answer, with the two answer buttons under it. ↑, the wheel or a downward drag
- * reaches earlier cards, three at a time with the centred one emphasised, whose answer → and ←
- * or its button change; "지금 카드로" returns. On a wide screen this session's answers are
- * listed beside, each a button that changes it. Once no card is left today the completion card
- * takes the current card's place, and practice goes on from it in the same screen. Every action
+ * The study screen: the progress bar, and two cards of one size, the card answered just before
+ * above the current card split into question and answer, with the two answer buttons under them.
+ * A click on the previous card opens it whole; a touch swipe on it, Z or "마지막 답 바꾸기"
+ * changes its answer. On a wide screen this session's answers are listed beside, each a button
+ * that changes it. Once no card is left today the completion card takes the current card's
+ * place, and practice goes on from it in the same screen. Every action
  * shows at once; its write runs behind it, and a write that fails is shown with a retry while
  * its answer stays. Each action has a keyboard shortcut, listed by "단축키", and a visible
  * control.
@@ -89,9 +74,10 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
   const [revealed, setRevealed] = useState(false);
-  /** The position of the earlier card centred, or null at rest on the current card. */
-  const [centred, setCentred] = useState<number | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  /** Whether the previous card is open whole. */
+  const [detailOpen, setDetailOpen] = useState(false);
+  const previousButton = useRef<HTMLButtonElement>(null);
   const helpButton = useRef<HTMLButtonElement>(null);
   const closeLink = useRef<HTMLAnchorElement>(null);
   const status = useSyncExternalStore(writes.subscribe, writes.getStatus, writes.getStatus);
@@ -111,16 +97,6 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
   function redecide(position: number, choice: Answer) {
     apply(session.redecide(position, choice));
   }
-  /** Moves the centre one card earlier, or from rest to the newest previous card. */
-  function earlier() {
-    const newest = view.previous.length - 1;
-    if (newest < 0) return;
-    setCentred((at) => (at === null ? newest : Math.max(0, at - 1)));
-  }
-  /** Moves the centre one card later, back to rest past the newest previous card. */
-  function later() {
-    setCentred((at) => (at === null || at >= view.previous.length - 1 ? null : at + 1));
-  }
   function toggleLast() {
     apply(session.toggleLast());
   }
@@ -135,6 +111,10 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
     setHelpOpen(false);
     helpButton.current?.focus();
   }
+  function closeDetail() {
+    setDetailOpen(false);
+    previousButton.current?.focus();
+  }
 
   // The handler reads the latest render's functions, so it is registered once.
   const keys = useRef<(event: KeyboardEvent) => void>(() => undefined);
@@ -148,12 +128,14 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
         }
         return;
       }
-      const action = shortcut(
-        event,
-        view.kind === "studying",
-        centred !== null,
-        view.previous.length > 0,
-      );
+      if (detailOpen) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeDetail();
+        }
+        return;
+      }
+      const action = shortcut(event, view.kind === "studying", view.previous.length > 0);
       if (!action) return;
       event.preventDefault();
       switch (action) {
@@ -168,17 +150,10 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           break;
         case "know":
         case "dontKnow":
-          if (centred === null) answer(action);
-          else redecide(centred, action);
+          answer(action);
           break;
         case "toggleLast":
           toggleLast();
-          break;
-        case "earlier":
-          earlier();
-          break;
-        case "later":
-          later();
           break;
       }
     };
@@ -211,17 +186,6 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
       window.removeEventListener("beforeunload", listener);
     };
   }, [unsaved]);
-
-  // A wheel's or a touch's travel, gathered until it moves a card.
-  const travel = useRef(0);
-  const touchY = useRef<number | null>(null);
-  function scrollBy(delta: number, step: number) {
-    travel.current += delta;
-    if (Math.abs(travel.current) < step) return;
-    if (travel.current < 0) earlier();
-    else later();
-    travel.current = 0;
-  }
 
   const newest = view.previous.at(-1);
   const current: ReactNode =
@@ -307,50 +271,40 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
       <div className="flex flex-wrap items-start justify-center gap-7">
         <section
           aria-label="카드"
-          onWheel={(event) => {
-            scrollBy(event.deltaY, wheelStep);
-          }}
-          onTouchStart={(event) => {
-            touchY.current = event.touches[0]?.clientY ?? null;
-          }}
-          onTouchEnd={(event) => {
-            const from = touchY.current;
-            const to = event.changedTouches[0]?.clientY;
-            touchY.current = null;
-            // A drag down brings earlier cards, as on the phone.
-            if (from !== null && to !== undefined) scrollBy(from - to, touchStep);
-          }}
-          className="flex min-w-0 flex-[999_1_520px] flex-col items-center gap-7 pt-6"
+          className="flex min-w-0 flex-[999_1_520px] flex-col items-center gap-3 pt-6"
         >
           {view.kind === "empty" ? (
             <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
-          ) : centred === null ? (
-            <>
-              {view.kind === "studying" && view.firstRun && <FirstRunGuide />}
-              {newest && (
-                <GradedCard
-                  answer={newest}
-                  standing="rest"
-                  onRedecide={(choice) => {
-                    redecide(newest.position, choice);
-                  }}
-                />
-              )}
-              <div className="flex w-full max-w-study flex-col gap-3">
-                {current}
-                {view.kind === "studying" && <AnswerButtons onAnswer={answer} />}
-              </div>
-            </>
           ) : (
-            <Browsing
-              previous={view.previous}
-              centred={centred}
-              current={current}
-              onRedecide={redecide}
-              onReturn={() => {
-                setCentred(null);
-              }}
-            />
+            <>
+              {/* Two rows of one height: the previous card, or before the first answer the
+                  first session's guide, and the current card. */}
+              <div className="grid w-full max-w-study auto-rows-fr gap-7">
+                {newest ? (
+                  <GradedCard
+                    key={newest.position}
+                    answer={newest}
+                    openRef={previousButton}
+                    onOpen={() => {
+                      setDetailOpen(true);
+                    }}
+                    onRedecide={(choice) => {
+                      redecide(newest.position, choice);
+                    }}
+                  />
+                ) : view.kind === "studying" && view.firstRun ? (
+                  <FirstRunGuide />
+                ) : (
+                  <div aria-hidden />
+                )}
+                {current}
+              </div>
+              {view.kind === "studying" && (
+                <div className="w-full max-w-study">
+                  <AnswerButtons onAnswer={answer} />
+                </div>
+              )}
+            </>
           )}
         </section>
 
@@ -362,13 +316,14 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
           type="button"
           onClick={toggleLast}
           aria-keyshortcuts="Z"
-          className={`${quiet} hidden self-center lg:flex`}
+          className={`${quiet} self-center`}
         >
           마지막 답 바꾸기 <Hint>Z</Hint>
         </button>
       )}
 
       {helpOpen && <ShortcutHelp onClose={closeHelp} />}
+      {detailOpen && newest && <CardDetail answer={newest} onClose={closeDetail} />}
     </main>
   );
 }
@@ -450,65 +405,5 @@ function AnswerButtons({ onAnswer }: { onAnswer: (answer: Answer) => void }) {
         <ChevronRight aria-hidden className="size-small-icon" strokeWidth={2.4} />
       </button>
     </div>
-  );
-}
-
-/**
- * Earlier cards, three at a time: the card before the centred one, the centred one at full size
- * with the change to its other answer, and the card after it, or the current card past the
- * newest; then "지금 카드로", which returns to rest.
- */
-function Browsing({
-  previous,
-  centred,
-  current,
-  onRedecide,
-  onReturn,
-}: {
-  previous: PreviousAnswer[];
-  centred: number;
-  current: ReactNode;
-  onRedecide: (position: number, answer: Answer) => void;
-  onReturn: () => void;
-}) {
-  const card = (at: number, standing: Standing) => {
-    const answer = previous[at];
-    return answer ? (
-      <GradedCard
-        key={answer.position}
-        answer={answer}
-        standing={standing}
-        onRedecide={(choice) => {
-          onRedecide(answer.position, choice);
-        }}
-      />
-    ) : null;
-  };
-  const after =
-    centred < previous.length - 1 ? (
-      card(centred + 1, "side")
-    ) : (
-      <div
-        inert
-        className="w-full max-w-study scale-90 opacity-70 motion-safe:transition-[transform,opacity] motion-safe:duration-300"
-      >
-        {current}
-      </div>
-    );
-  return (
-    <>
-      {card(centred - 1, "side")}
-      {card(centred, "centred")}
-      {after}
-      <button
-        type="button"
-        onClick={onReturn}
-        aria-keyshortcuts="ArrowDown"
-        className={`${button} min-h-cta bg-ink text-on-primary shadow-raised`}
-      >
-        <ChevronDown aria-hidden className="size-small-icon" strokeWidth={2.4} />
-        지금 카드로
-      </button>
-    </>
   );
 }

@@ -53,7 +53,7 @@ class ContentView extends StatelessWidget {
       );
       return Text.rich(
         span,
-        style: paragraph.copyWith(fontSize: fitted.fontSize),
+        style: fitted.style,
         maxLines: fitted.maxLines,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
