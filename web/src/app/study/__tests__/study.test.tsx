@@ -330,121 +330,224 @@ describe("the study page", () => {
     const label = (front: string, answer: string) =>
       `앞면: ${front}. 뒷면: ${front} back. 답: ${answer}`;
 
-    it("at rest shows exactly the previous card and the current card", async () => {
+    /** Touches the previous card at (200, 100), moves to each of [moves] [step] ms apart, lifts. */
+    function swipe(card: HTMLElement, moves: [number, number][], step = 1) {
+      const from: [number, number] = [200, 100];
+      const [x, y] = from;
+      fireEvent.pointerDown(card, { pointerId: 1, pointerType: "touch", clientX: x, clientY: y });
+      let at: [number, number] = from;
+      for (const move of moves) {
+        vi.setSystemTime(Date.now() + step);
+        at = move;
+        fireEvent.pointerMove(card, {
+          pointerId: 1,
+          pointerType: "touch",
+          clientX: move[0],
+          clientY: move[1],
+        });
+      }
+      fireEvent.pointerUp(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: at[0],
+        clientY: at[1],
+      });
+    }
+
+    /** The previous card on screen. */
+    const previousCard = () => within(cards()).getByRole("article");
+
+    it("shows exactly the previous card and the current card, in two rows of one height", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
       const [, , third] = await answerThree();
 
       expect(shown()).toEqual([label(third ?? "", "안다")]);
-      expect(within(cards()).getAllByRole("region", { name: "현재 카드" })).toHaveLength(1);
+      const current = within(cards()).getByRole("region", { name: "현재 카드" });
+      // Both in one grid whose rows share the tallest one's height.
+      expect(current.parentElement).toBe(previousCard().parentElement);
+      expect(current.parentElement?.className).toContain("auto-rows-fr");
+      // Both sides at the current card's sizes.
+      expect(within(previousCard()).getByText(third ?? "").parentElement?.className).toContain(
+        "text-question",
+      );
+      expect(
+        within(previousCard()).getByText(`${third ?? ""} back`).parentElement?.className,
+      ).toContain("text-answer");
       // Control: the list beside holds all three.
       expect(stack()).toHaveLength(3);
     });
 
-    it("reaches earlier cards with ↑, the wheel and a downward drag, three at a time with the centred one emphasised, and returns on 지금 카드로", async () => {
+    it("reaches no earlier card with ↑, ↓, the wheel or a vertical drag, and ← and → answer the current card alone", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
-      const [first, second, third] = await answerThree();
+      const [, , third] = await answerThree();
       const user = userEvent.setup();
+      const rest = [label(third ?? "", "안다")];
+      const current = currentFront();
 
       await user.keyboard("{ArrowUp}");
-      // The newest centred, the one before it, and the current card after it.
-      expect(shown()).toEqual([label(second ?? "", "모른다"), label(third ?? "", "안다")]);
-      expect(within(cards()).getByRole("region", { name: "현재 카드" })).toBeInTheDocument();
-
-      fireEvent.wheel(cards(), { deltaY: -100 });
-      expect(shown()).toEqual([
-        label(first ?? "", "안다"),
-        label(second ?? "", "모른다"),
-        label(third ?? "", "안다"),
+      fireEvent.wheel(cards(), { deltaY: -300 });
+      swipe(previousCard(), [
+        [200, 200],
+        [200, 400],
       ]);
-      expect(within(cards()).queryByRole("region", { name: "현재 카드" })).not.toBeInTheDocument();
-      const [before, centred, after] = within(cards()).getAllByRole("article");
-      expect(centred?.className).toContain("scale-100");
-      for (const side of [before, after]) {
-        expect(side?.className).toContain("scale-90");
-        expect(side?.className).toContain("opacity-70");
-      }
-      // The centred card alone offers the change to its other answer.
-      expect(within(cards()).getAllByRole("button", { name: /로 바꾸기/ })).toHaveLength(1);
+      await user.keyboard("{ArrowDown}");
+      expect(shown()).toEqual(rest);
+      expect(currentFront()).toBe(current);
+      expect(screen.queryByRole("button", { name: "지금 카드로" })).not.toBeInTheDocument();
 
-      fireEvent.touchStart(cards(), { touches: [{ clientY: 300 }] });
-      fireEvent.touchEnd(cards(), { changedTouches: [{ clientY: 200 }] });
-      expect(shown()).toEqual([label(second ?? "", "모른다"), label(third ?? "", "안다")]);
-      fireEvent.touchStart(cards(), { touches: [{ clientY: 200 }] });
-      fireEvent.touchEnd(cards(), { changedTouches: [{ clientY: 300 }] });
-      expect(shown()).toHaveLength(3);
-
-      await user.click(screen.getByRole("button", { name: "지금 카드로" }));
-      expect(shown()).toEqual([label(third ?? "", "안다")]);
-      expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
+      await user.keyboard("{ArrowLeft}");
+      expect(currentFront()).not.toBe(current);
+      expect(stack()).toHaveLength(4);
+      expect(shown()).toEqual([label(current, "모른다")]);
+      expect(stack()[2]).toBe(label(third ?? "", "안다"));
     });
 
-    it("changes the centred card's answer with ← and →, or its button, writes the replay, and leaves the current card", async () => {
+    it("opens the previous card whole on a click, and closes it on 닫기 or Esc with the focus back on the card", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
-      const [, second, third] = await answerThree();
+      const [, , third] = await answerThree();
+      const user = userEvent.setup();
+      const open_ = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
+
+      await user.click(open_);
+      let detail = screen.getByRole("dialog", { name: "카드" });
+      expect(within(detail).getByText(third ?? "")).toBeInTheDocument();
+      expect(within(detail).getByText(`${third ?? ""} back`)).toBeInTheDocument();
+      expect(within(detail).getByText("답: 안다")).toBeInTheDocument();
+      expect(within(detail).getByRole("button", { name: "닫기" })).toHaveFocus();
+      // The answer is changed by a swipe or Z, not from here.
+      expect(within(detail).getAllByRole("button")).toHaveLength(1);
+      await user.click(within(detail).getByRole("button", { name: "닫기" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(open_).toHaveFocus();
+
+      await user.click(open_);
+      detail = screen.getByRole("dialog", { name: "카드" });
+      // Keys belong to the dialog while it is open: → answers nothing.
+      const current = currentFront();
+      await user.keyboard("{ArrowRight}");
+      expect(currentFront()).toBe(current);
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(open_).toHaveFocus();
+      expect(shown()).toEqual([label(third ?? "", "안다")]);
+    });
+
+    it("changes the previous card's answer on a touch swipe past 100 or a fling toward the other answer, and writes the replay", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const [, , third] = await answerThree();
       await waitFor(() => {
         expect(postgrest.rows.reviews).toHaveLength(3);
       });
       const current = currentFront();
-      const user = userEvent.setup();
-      await user.keyboard("{ArrowUp}");
 
-      // Toward the answer it has: nothing changes.
-      await user.keyboard("{ArrowRight}");
-      expect(shown()[1]).toBe(label(third ?? "", "안다"));
-
+      // Toward 안다, the answer it has: nothing changes.
+      swipe(previousCard(), [
+        [260, 100],
+        [400, 100],
+      ]);
+      expect(shown()).toEqual([label(third ?? "", "안다")]);
+      // Short of 100 and slow, toward 모른다: nothing changes.
+      swipe(
+        previousCard(),
+        [
+          [190, 100],
+          [180, 100],
+          [170, 100],
+          [160, 100],
+          [150, 100],
+          [140, 100],
+          [130, 100],
+          [120, 100],
+        ],
+        100,
+      );
+      expect(shown()).toEqual([label(third ?? "", "안다")]);
+      // Control: past 100 toward 모른다, it changes, and the current card stays.
       vi.setSystemTime(start + 60_000);
-      await user.keyboard("{ArrowLeft}");
-      expect(shown()[1]).toBe(`${label(third ?? "", "모른다")}. 수정됨`);
+      swipe(previousCard(), [
+        [150, 100],
+        [80, 100],
+      ]);
+      expect(shown()).toEqual([`${label(third ?? "", "모른다")}. 수정됨`]);
+      expect(currentFront()).toBe(current);
       await waitFor(() => {
         expect(postgrest.rows.reviews.filter((row) => row.rating === "again")).toHaveLength(2);
       });
       expect(postgrest.rows.reviews).toHaveLength(3);
 
-      await user.keyboard("{ArrowUp}");
-      await user.click(screen.getByRole("button", { name: "안다로 바꾸기" }));
-      expect(shown()[1]).toBe(`${label(second ?? "", "안다")}. 수정됨`);
-
-      await user.click(screen.getByRole("button", { name: "지금 카드로" }));
-      expect(currentFront()).toBe(current);
-      // Control: at rest, ← answers the current card.
-      await user.keyboard("{ArrowLeft}");
-      expect(currentFront()).not.toBe(current);
-      expect(stack()).toHaveLength(4);
+      // A fling: 40 in a millisecond, toward 안다.
+      swipe(previousCard(), [
+        [210, 100],
+        [250, 100],
+      ]);
+      expect(shown()).toEqual([label(third ?? "", "안다")]);
     });
 
-    it("grades each previous card by its fill, its line and a chip naming the answer", async () => {
+    it("shows the answer a swipe would give behind the previous card, and no detail opens when it ends", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
-      const [first, second] = await answerThree();
-      const user = userEvent.setup();
-      await user.keyboard("{ArrowUp}");
-      await user.keyboard("{ArrowUp}");
+      await answerThree();
+      const card = previousCard();
 
-      for (const [front, answer, fill, line, chip] of [
-        [first, "안다", "bg-know-card", "border-know-line", "bg-know"],
-        [second, "모른다", "bg-dont-know-card", "border-dont-know-line", "bg-dont-know-text"],
+      fireEvent.pointerDown(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 200,
+        clientY: 100,
+      });
+      fireEvent.pointerMove(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 150,
+        clientY: 100,
+      });
+      expect(within(card).getByText("모른다로 바꿔요")).toBeInTheDocument();
+      const face = within(card).getByRole("button", { name: "카드 전체 보기" });
+      expect(face.style.transform).toContain("translateX(-50px)");
+      vi.setSystemTime(Date.now() + 500);
+      fireEvent.pointerUp(card, { pointerId: 1, pointerType: "touch", clientX: 150, clientY: 100 });
+      fireEvent.click(face);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(within(card).queryByText("모른다로 바꿔요")).not.toBeInTheDocument();
+      expect(face.style.transform).toContain("translateX(0px)");
+    });
+
+    it("grades the previous card by its fill, its line and a chip naming the answer", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const user = userEvent.setup();
+
+      for (const [key, answer, fill, line, chip] of [
+        ["k", "안다", "bg-know-card", "border-know-line", "bg-know"],
+        ["j", "모른다", "bg-dont-know-card", "border-dont-know-line", "bg-dont-know-text"],
       ] as const) {
-        const card = within(cards()).getByRole("article", { name: label(front ?? "", answer) });
-        expect(card.className).toContain(fill);
-        expect(card.className).toContain(line);
-        const word = within(card).getByText(answer);
+        const front = currentFront();
+        await user.keyboard(key);
+        expect(previousCard()).toHaveAccessibleName(label(front, answer));
+        const face = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
+        expect(face.className).toContain(fill);
+        expect(face.className).toContain(line);
+        const word = within(previousCard()).getByText(answer);
         expect(word.className).toContain(chip);
         expect(word.querySelector("svg")).not.toBeNull();
       }
     });
 
-    it("shows the first-run guide on the user's first session alone, until the first answer", async () => {
+    it("shows the first-run guide of two lines in the previous card's place on the user's first session alone, until the first answer", async () => {
       const guide = () => screen.queryByRole("region", { name: "학습 안내" });
       seedDeck(postgrest, "d1", ["un", "deux"]);
       await open("d1");
 
       expect(guide()).toBeInTheDocument();
-      expect(within(guide() ?? document.body).getAllByRole("listitem")).toHaveLength(3);
+      expect(within(guide() ?? document.body).getAllByRole("listitem")).toHaveLength(2);
+      expect(screen.queryByText(/지난 카드/)).not.toBeInTheDocument();
       await userEvent.setup().keyboard("k");
       expect(guide()).not.toBeInTheDocument();
+      expect(shown()).toHaveLength(1);
 
       // Control: a user whose one answer is stored before today, and none today, sees none.
       cleanup();
@@ -459,23 +562,15 @@ describe("the study page", () => {
       expect(guide()).not.toBeInTheDocument();
     });
 
-    it("moves the cards only under prefers-reduced-motion: no-preference", async () => {
+    it("springs the previous card back only under prefers-reduced-motion: no-preference", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
       await answerThree();
-      await userEvent.setup().keyboard("{ArrowUp}");
 
-      const moving = [
-        ...within(cards()).getAllByRole("article"),
-        ...cards().querySelectorAll("[inert]"),
-      ];
-      expect(moving).toHaveLength(3);
-      for (const element of moving) {
-        const classes = element.className.split(" ");
-        expect(classes.filter((name) => name.includes("transition"))).toEqual([
-          "motion-safe:transition-[transform,opacity]",
-        ]);
-      }
+      const face = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
+      expect(face.className.split(" ").filter((name) => name.includes("transition"))).toEqual([
+        "motion-safe:transition-transform",
+      ]);
     });
   });
 
@@ -512,7 +607,7 @@ describe("the study page", () => {
       expect(currentFront()).not.toBe(front);
     });
 
-    it("toggles the last answer on Z", async () => {
+    it("toggles the last answer on Z or 마지막 답 바꾸기, shown at every width", async () => {
       const user = userEvent.setup();
       await user.keyboard("k");
       await user.keyboard("j");
@@ -521,6 +616,10 @@ describe("the study page", () => {
 
       expect(stack()[0]).toMatch(/답: 안다$/);
       expect(stack()[1]).toMatch(/답: 안다. 수정됨$/);
+      const toggle = screen.getByRole("button", { name: "마지막 답 바꾸기" });
+      expect(toggle.className.split(" ")).not.toContain("hidden");
+      await user.click(toggle);
+      expect(stack()[1]).toMatch(/답: 모른다$/);
     });
 
     it("leaves for the deck list on Esc", async () => {

@@ -10,8 +10,9 @@ import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
 import 'study_style.dart';
 
-/// The card under study: the question on one half and, once tapped, the
-/// answer on the other, with the answer buttons under it. Dragged right, or
+/// The card under study, filling the height it is given less the answer
+/// buttons under it: the question on one half and, once tapped, the answer on
+/// the other. Dragged right, or
 /// by its "안다" button, it answers "Know"; left, or by "모른다", "Don't know".
 class CurrentCard extends StatefulWidget {
   const CurrentCard({super.key, required this.card, required this.onAnswer});
@@ -83,17 +84,6 @@ class _CurrentCardState extends State<CurrentCard>
     if (mounted) widget.onAnswer(answer);
   }
 
-  /// Answers from a screen reader's action, which can reach the card while it
-  /// is scrolled out of view: the card is brought into view first.
-  Future<void> _answerFromAction(Answer answer) async {
-    // The card sits at the end of its column.
-    final position = Scrollable.maybeOf(context)?.position;
-    if (position != null && position.hasContentDimensions) {
-      position.jumpTo(position.maxScrollExtent);
-    }
-    if (mounted) await _commit(answer);
-  }
-
   void _toggleRevealed() {
     if (!_committed) setState(() => _revealed = !_revealed);
   }
@@ -107,7 +97,7 @@ class _CurrentCardState extends State<CurrentCard>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Flexible(
+        Expanded(
           child: Semantics(
             container: true,
             button: true,
@@ -118,9 +108,9 @@ class _CurrentCardState extends State<CurrentCard>
             onTap: _toggleRevealed,
             customSemanticsActions: {
               CustomSemanticsAction(label: l10n.know): () =>
-                  _answerFromAction(Answer.know),
+                  _commit(Answer.know),
               CustomSemanticsAction(label: l10n.dontKnow): () =>
-                  _answerFromAction(Answer.dontKnow),
+                  _commit(Answer.dontKnow),
             },
             excludeSemantics: true,
             child: GestureDetector(
@@ -310,10 +300,7 @@ class _CardFace extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: StudyStyle.currentMinHeight,
-          ),
+        child: SizedBox.expand(
           child: SplitCard(
             padding: StudyStyle.cardPadding,
             dividerInset: StudyStyle.dividerInset,
@@ -322,7 +309,11 @@ class _CardFace extends StatelessWidget {
             front: (context, width) => ContentView(
               card.front,
               style: AppType.question,
-              fit: (minFontSize: AppType.questionFloor, width: width),
+              fit: (
+                minFontSize: AppType.questionFloor,
+                width: width,
+                height: null,
+              ),
             ),
             back: (context, width) => Stack(
               alignment: Alignment.center,
@@ -335,7 +326,11 @@ class _CardFace extends StatelessWidget {
                   child: ContentView(
                     card.back,
                     style: AppType.answer,
-                    fit: (minFontSize: AppType.answerFloor, width: width),
+                    fit: (
+                      minFontSize: AppType.answerFloor,
+                      width: width,
+                      height: null,
+                    ),
                   ),
                 ),
                 if (!revealed)

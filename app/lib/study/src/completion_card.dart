@@ -39,7 +39,7 @@ class CompletionCard extends StatelessWidget {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          minHeight: StudyStyle.currentMinHeight,
+          minHeight: StudyStyle.completionMinHeight,
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(

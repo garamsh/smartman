@@ -1,4 +1,7 @@
+"use client";
+
 import { Check, X } from "lucide-react";
+import { type PointerEvent, type Ref, useRef, useState } from "react";
 
 import type { Answer } from "../answer-write";
 import type { PreviousAnswer } from "../session";
@@ -42,65 +45,170 @@ export function GradeChip({ answer, className = "" }: { answer: Answer; classNam
   );
 }
 
-/** How a previous card stands: above the current card at rest, centred, or beside the centre. */
-export type Standing = "rest" | "centred" | "side";
+/** The swipe past which a release changes the answer, in pixels, as on the phone. */
+export const commitDistance = 100;
 
-const standings: Record<Standing, string> = {
-  rest: "scale-94",
-  centred: "scale-100 shadow-raised",
-  side: "scale-90 opacity-70",
+/** The release speed, in pixels per millisecond, that changes it whatever the distance. */
+export const commitVelocity = 0.7;
+
+/** How long, in milliseconds, a swipe's last movement counts toward a fling. */
+const flingWindow = 100;
+
+/** How far the card follows a swipe toward the answer it already has. */
+const sameAnswerResistance = 0.25;
+
+/** The card's tilt, in radians, per pixel of swipe, as on the phone. */
+const tiltPerPixel = 0.0006;
+
+/** How far a touch moves before it is read as a swipe or as a scroll. */
+const slop = 8;
+
+/** What a swipe toward an answer shows behind the card, and the side it shows on. */
+const reveals = {
+  know: { text: "안다로 바꿔요", tint: "justify-start bg-tint-green text-on-know-tint" },
+  dontKnow: { text: "모른다로 바꿔요", tint: "justify-end bg-tint-red text-on-dont-know-tint" },
+} as const;
+
+/** A touch under way: where it started, its latest point and time in milliseconds, its speed. */
+type Touch = {
+  id: number;
+  x: number;
+  y: number;
+  lastX: number;
+  lastAt: number;
+  velocity: number;
+  swiping: boolean;
 };
 
 /**
- * A card answered earlier, with both sides shown, on its grade's fill inside its grade's line,
- * and its grade's chip on its top edge. Centred, it offers the change to the other answer, with
- * the key that makes it.
+ * The card answered just before the current one, with both sides shown at the current card's
+ * sizes, on its grade's fill inside its grade's line, and its grade's chip on its top edge. A
+ * click opens the whole card. A horizontal touch swipe follows the finger, shows the answer it
+ * would give behind it, and released past [commitDistance], or flung, toward the other answer
+ * changes to it; a vertical one scrolls the page.
  */
 export function GradedCard({
   answer,
-  standing,
   onRedecide,
+  onOpen,
+  openRef,
 }: {
   answer: PreviousAnswer;
-  standing: Standing;
   onRedecide: (answer: Answer) => void;
+  onOpen: () => void;
+  openRef?: Ref<HTMLButtonElement>;
 }) {
   const grade = grades[answer.answer];
-  const other: Answer = answer.answer === "know" ? "dontKnow" : "know";
+  const [offset, setOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const touch = useRef<Touch | null>(null);
+  /** Whether the click that ends a swipe is to be ignored. */
+  const swiped = useRef(false);
+
+  const target: Answer = offset > 0 ? "know" : "dontKnow";
+  const reveal = offset !== 0 && target !== answer.answer ? reveals[target] : null;
+
+  function onPointerDown(event: PointerEvent) {
+    if (event.pointerType !== "touch") return;
+    touch.current = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      lastX: event.clientX,
+      lastAt: Date.now(),
+      velocity: 0,
+      swiping: false,
+    };
+  }
+  function onPointerMove(event: PointerEvent) {
+    const at = touch.current;
+    if (at?.id !== event.pointerId) return;
+    const dx = event.clientX - at.x;
+    if (!at.swiping) {
+      // Mostly vertical: a scroll, which the page keeps (touch-action: pan-y).
+      if (Math.abs(event.clientY - at.y) > slop && Math.abs(event.clientY - at.y) > Math.abs(dx)) {
+        touch.current = null;
+        return;
+      }
+      if (Math.abs(dx) <= slop) return;
+      at.swiping = true;
+      setDragging(true);
+    }
+    const now = Date.now();
+    const elapsed = now - at.lastAt;
+    if (elapsed > 0) at.velocity = (event.clientX - at.lastX) / elapsed;
+    at.lastX = event.clientX;
+    at.lastAt = now;
+    const toward: Answer = dx > 0 ? "know" : "dontKnow";
+    setOffset(toward === answer.answer ? dx * sameAnswerResistance : dx);
+  }
+  function onPointerEnd(event: PointerEvent, cancelled: boolean) {
+    const at = touch.current;
+    if (at?.id !== event.pointerId) return;
+    touch.current = null;
+    if (!at.swiping) return;
+    swiped.current = true;
+    const dx = event.clientX - at.x;
+    const toward: Answer = dx > 0 ? "know" : "dontKnow";
+    // A finger held still before it lifts flings nothing.
+    const velocity = Date.now() - at.lastAt > flingWindow ? 0 : at.velocity;
+    const committed =
+      !cancelled &&
+      toward !== answer.answer &&
+      (Math.abs(dx) >= commitDistance ||
+        (Math.abs(velocity) >= commitVelocity && Math.sign(velocity) === Math.sign(dx)));
+    setDragging(false);
+    setOffset(0);
+    if (committed) onRedecide(toward);
+  }
+
   return (
     <article
       aria-label={answerLabel(answer)}
-      className={`relative w-full max-w-study rounded-previous border-[1.5px] motion-safe:transition-[transform,opacity] motion-safe:duration-300 ${grade.card} ${standings[standing]}`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={(event) => {
+        onPointerEnd(event, false);
+      }}
+      onPointerCancel={(event) => {
+        onPointerEnd(event, true);
+      }}
+      className="relative flex w-full touch-pan-y"
     >
-      <GradeChip answer={answer.answer} className="absolute -top-3 right-4" />
-      <div className="grid min-h-28 grid-cols-[1fr_auto_1fr]">
-        <p className="flex items-center justify-center p-4 text-center text-headline text-ink">
-          <span className="line-clamp-2 break-words">{answer.card.text.front}</span>
-        </p>
-        <span aria-hidden className={`my-5 w-px ${grade.line}`} />
-        <p className="flex items-center justify-center p-4 text-center text-body text-ink-2">
-          <span className="line-clamp-2 break-words">{answer.card.text.back}</span>
-        </p>
-      </div>
-      {standing === "centred" && (
-        <button
-          type="button"
-          onClick={() => {
-            onRedecide(other);
-          }}
-          aria-keyshortcuts={other === "know" ? "ArrowRight" : "ArrowLeft"}
-          className={`mx-4 mb-4 flex min-h-tap-target w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-button text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-            other === "know"
-              ? "bg-tint-green text-on-know-tint"
-              : "bg-tint-red text-on-dont-know-tint"
-          }`}
+      {reveal && (
+        <div
+          aria-hidden
+          className={`absolute inset-0 flex items-center rounded-previous px-5 text-secondary font-bold ${reveal.tint}`}
         >
-          {other === "know" ? "안다로 바꾸기" : "모른다로 바꾸기"}
-          <kbd aria-hidden className="font-sans text-caption font-normal">
-            {other === "know" ? "→" : "←"}
-          </kbd>
-        </button>
+          {reveal.text}
+        </div>
       )}
+      <button
+        ref={openRef}
+        type="button"
+        aria-label="카드 전체 보기"
+        aria-haspopup="dialog"
+        onClick={() => {
+          if (swiped.current) {
+            swiped.current = false;
+            return;
+          }
+          onOpen();
+        }}
+        style={{
+          transform: `translateX(${String(offset)}px) rotate(${String(offset * tiltPerPixel)}rad)`,
+        }}
+        className={`relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${grade.card} ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
+      >
+        <GradeChip answer={answer.answer} className="absolute -top-3 right-4" />
+        <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
+          <span className="line-clamp-6 break-words">{answer.card.text.front}</span>
+        </span>
+        <span aria-hidden className={`my-7 w-px ${grade.line}`} />
+        <span className="flex items-center justify-center p-4 text-answer text-ink-2 lg:p-6">
+          <span className="line-clamp-6 break-words">{answer.card.text.back}</span>
+        </span>
+      </button>
     </article>
   );
 }

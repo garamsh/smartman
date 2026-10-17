@@ -367,7 +367,7 @@ abstract class AppLocalizations {
     String changed,
   );
 
-  /// Accessibility hint of long-pressing a card answered earlier: it opens the whole card.
+  /// Accessibility hint of tapping the card answered just before the current one: it opens the whole card.
   ///
   /// In ko, this message translates to:
   /// **'카드 전체 보기'**
@@ -397,12 +397,6 @@ abstract class AppLocalizations {
   /// **'모른다로 바꿔요'**
   String get changingToDontKnow;
 
-  /// Button shown while the study screen is scrolled back to earlier cards: returns to the current card.
-  ///
-  /// In ko, this message translates to:
-  /// **'지금 카드로'**
-  String get backToCurrent;
-
   /// First study session's guide, first line: recall first, then tap the card to see the answer.
   ///
   /// In ko, this message translates to:
@@ -414,12 +408,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'알면 오른쪽, 모르면 왼쪽으로 밀어요'**
   String get guideSwipe;
-
-  /// First study session's guide, third line: pull down to see earlier cards and change their answers.
-  ///
-  /// In ko, this message translates to:
-  /// **'아래로 내리면 지난 카드를 보고 답을 바꿀 수 있어요'**
-  String get guideEarlier;
 
   /// Shown when an answer could not be written to the local database.
   ///

@@ -1,17 +1,16 @@
-import { ArrowUp, Eye, MoveHorizontal } from "lucide-react";
+import { Eye, MoveHorizontal } from "lucide-react";
 
 import { Mascot } from "@/design/brand";
 
-/** The three lines on how to study, each after its icon. */
+/** The two lines on how to study, each after its icon. */
 const lines = [
   { Icon: Eye, text: "먼저 떠올려 보고, 카드를 눌러 답을 확인해요" },
   { Icon: MoveHorizontal, text: "알면 오른쪽, 모르면 왼쪽을 눌러요" },
-  { Icon: ArrowUp, text: "위로 올리면 지난 카드를 보고 답을 바꿀 수 있어요" },
 ] as const;
 
 /**
- * Above the first card of the user's first session: the mascot and three lines on how to study,
- * show the answer, answer, and reach earlier cards.
+ * In the previous card's place before the first answer of the user's first session: the mascot
+ * and two lines on how to study, show the answer and answer.
  */
 export function FirstRunGuide() {
   return (
