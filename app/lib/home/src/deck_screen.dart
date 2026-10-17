@@ -4,18 +4,22 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
-import '../../design/app_chip.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/bottom_actions.dart';
 import '../../design/theme.dart';
+import 'hero.dart';
+import 'option_sheet.dart';
+import 'progress_bar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
 import '../../study/study.dart';
 
-/// A deck's cards, searchable, under the action that studies them; opens a
-/// card for editing and the deck for renaming or deleting.
+/// A deck's page: its tile, name and card count, the navy card that studies
+/// it, and its cards, each answer hidden until tapped, searchable from the
+/// top bar; adds a card, opens one for editing, and the deck for renaming or
+/// deleting.
 class DeckScreen extends ConsumerStatefulWidget {
   const DeckScreen({super.key, required this.deck});
 
@@ -29,7 +33,9 @@ enum _DeckAction { rename, publish, unpublish, delete }
 
 class _DeckScreenState extends ConsumerState<DeckScreen> {
   late String _name = widget.deck.name;
-  String _query = '';
+
+  /// The card search, or null while it is closed.
+  String? _query;
 
   @override
   Widget build(BuildContext context) {
@@ -48,10 +54,31 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       _ => widget.deck,
     };
     final public = current.visibility is PublicDeck;
-    final deck = DeckSelection(widget.deck.id);
+    final query = _query;
     return Scaffold(
       appBar: AppBar(
+        title: query == null
+            ? null
+            : AppTextField(
+                hint: l10n.searchCards,
+                prefixIcon: const Icon(LucideIcons.search),
+                height: AppSize.search,
+                autofocus: true,
+                onChanged: (query) => setState(() => _query = query),
+              ),
         actions: [
+          if (query == null)
+            IconButton(
+              tooltip: l10n.searchCardsAction,
+              icon: const Icon(LucideIcons.search),
+              onPressed: () => setState(() => _query = ''),
+            )
+          else
+            IconButton(
+              tooltip: l10n.closeSearch,
+              icon: const Icon(LucideIcons.x),
+              onPressed: () => setState(() => _query = null),
+            ),
           PopupMenuButton<_DeckAction>(
             tooltip: l10n.deckActions,
             icon: const Icon(LucideIcons.ellipsisVertical),
@@ -94,64 +121,32 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
             AppSpace.s16,
           ),
           children: [
-            Wrap(
+            Row(
               spacing: AppSpace.s12,
-              runSpacing: AppSpace.s4,
-              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Semantics(
-                  header: true,
-                  child: Text(_name, style: AppType.deckTitle),
+                DeckTile(deck: current),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(_name, style: AppType.title),
+                      ),
+                      Text(
+                        public
+                            ? l10n.deckSummaryPublic(value.length)
+                            : l10n.deckSummary(value.length),
+                        style: AppType.secondary.copyWith(color: colors.muted),
+                      ),
+                    ],
+                  ),
                 ),
-                if (public) AppChip(label: l10n.publicChip),
               ],
             ),
             const SizedBox(height: AppSpace.s16),
-            TodayCounter(
-              decks: deck,
-              builder: (context, count) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: AppSpace.s20,
-                children: [
-                  Wrap(
-                    spacing: AppSpace.s8,
-                    runSpacing: AppSpace.s8,
-                    children: [
-                      _StatPill(l10n.statCards(value.length)),
-                      if (count case TodayCounted(
-                        :final review,
-                        :final fresh,
-                      )) ...[
-                        _StatPill(l10n.statReview(review)),
-                        _StatPill(l10n.statNew(fresh)),
-                      ],
-                      if (count case TodayUnavailable(:final message))
-                        Text(
-                          message,
-                          style: AppType.secondary.copyWith(
-                            color: colors.muted,
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (count case TodayCounted(backlog: true))
-                    Text(
-                      l10n.backlogPaused,
-                      style: AppType.secondary.copyWith(color: colors.muted),
-                    ),
-                  AppButton(
-                    label: l10n.studyCount(switch (count) {
-                      TodayCounted(:final total) => total,
-                      _ => 0,
-                    }),
-                    icon: LucideIcons.play,
-                    size: AppButtonSize.cta,
-                    onPressed: _study,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpace.sectionGap),
+            _DeckTodayCard(deck: widget.deck.id, onStudy: _study),
+            const SizedBox(height: AppSpace.s12),
             if (value.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
@@ -161,16 +156,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   style: AppType.body.copyWith(color: colors.muted),
                 ),
               )
-            else ...[
-              AppTextField(
-                hint: l10n.searchCards,
-                prefixIcon: const Icon(LucideIcons.search),
-                height: AppSize.search,
-                onChanged: (query) => setState(() => _query = query),
-              ),
-              const SizedBox(height: AppSpace.s12),
-              _rows(l10n, value),
-            ],
+            else
+              ..._rows(l10n, value),
           ],
         ),
         AsyncError(:final error, :final stackTrace) => Center(
@@ -187,25 +174,18 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           icon: LucideIcons.plus,
           variant: AppButtonVariant.secondary,
           size: AppButtonSize.cta,
-          onPressed: () => _open(null),
+          onPressed: photoImport == null
+              ? () => _open(null)
+              : () => _addCard(photoImport),
         ),
-        primary: photoImport == null
-            ? null
-            : AppButton(
-                label: l10n.addFromPhoto,
-                icon: LucideIcons.camera,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.cta,
-                onPressed: () => _importPhoto(photoImport),
-              ),
       ),
     );
   }
 
   /// A row for each card whose front or back holds the search, ignoring case,
-  /// in one rounded group.
-  Widget _rows(AppLocalizations l10n, List<Card> cards) {
-    final query = _query.trim().toLowerCase();
+  /// its answer hidden until tapped.
+  List<Widget> _rows(AppLocalizations l10n, List<Card> cards) {
+    final query = (_query ?? '').trim().toLowerCase();
     final rows =
         [
           for (final card in cards)
@@ -220,34 +200,58 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               row.back.toLowerCase().contains(query),
         );
     if (rows.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
-        child: Text(
-          l10n.noMatches,
-          textAlign: TextAlign.center,
-          style: AppType.body.copyWith(color: AppColors.of(context).muted),
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
+          child: Text(
+            l10n.noMatches,
+            textAlign: TextAlign.center,
+            style: AppType.body.copyWith(color: AppColors.of(context).muted),
+          ),
         ),
-      );
+      ];
     }
-    final colors = AppColors.of(context);
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(AppRadius.row),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (final (i, row) in rows.indexed) ...[
-            if (i > 0) const Divider(height: 1, thickness: 1),
-            CardSplitRow(
-              front: row.front,
-              back: row.back,
-              grouped: true,
-              onTap: () => _open(row.card),
-            ),
-          ],
-        ],
-      ),
+    return [
+      for (final row in rows)
+        CardAnswerRow(
+          key: ValueKey(row.card.id),
+          front: row.front,
+          back: row.back,
+          onEdit: () => _open(row.card),
+        ),
+    ];
+  }
+
+  /// Offers the two ways to add a card: typing it in, or from a photo.
+  Future<void> _addCard(Widget Function(DeckId? deck) photoImport) async {
+    final l10n = AppLocalizations.of(context);
+    final photo = await showOptionSheet(
+      context,
+      title: l10n.newCard,
+      options: [
+        (
+          icon: LucideIcons.pencilLine,
+          title: l10n.addCardManually,
+          body: l10n.addCardManuallyBody,
+          value: false,
+        ),
+        (
+          icon: LucideIcons.camera,
+          title: l10n.addCardPhoto,
+          body: l10n.addCardPhotoBody,
+          value: true,
+        ),
+      ],
     );
+    if (!mounted) return;
+    switch (photo) {
+      case false:
+        await _open(null);
+      case true:
+        await _importPhoto(photoImport);
+      case null:
+        return;
+    }
   }
 
   /// Opens photo import for this deck. When it saved into another deck, that
@@ -269,7 +273,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     ),
   );
 
-  void _open(Card? card) => Navigator.of(context).push(
+  Future<void> _open(Card? card) => Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => CardEditorScreen(
         deck: Deck(
@@ -318,24 +322,88 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 }
 
-/// One count of the deck screen, on a white pill.
-class _StatPill extends StatelessWidget {
-  const _StatPill(this.text);
+/// The deck's navy card: today's count and its minutes, how many cards are
+/// mastered, the progress bar, and the button that studies the deck.
+class _DeckTodayCard extends StatelessWidget {
+  const _DeckTodayCard({required this.deck, required this.onStudy});
 
-  final String text;
+  final DeckId deck;
+  final VoidCallback onStudy;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: ShapeDecoration(
-      color: AppColors.of(context).surface,
-      shape: const StadiumBorder(),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.s16,
-        vertical: AppSpace.s8,
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final quiet = AppType.secondary.copyWith(color: heroQuiet(colors));
+    return Semantics(
+      container: true,
+      label: l10n.todayThisDeck,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.hero,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpace.s20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpace.s12,
+            children: [
+              TodayCounter(
+                decks: DeckSelection(deck),
+                builder: (context, count) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: AppSpace.s4,
+                  children: [
+                    Text(l10n.todayTitle, style: quiet),
+                    switch (count) {
+                      TodayCounted(:final total, :final minutes) => HeroCount(
+                        count: total,
+                        unit: l10n.todayCountMinutes(minutes),
+                        semantics: l10n.todayCards(total),
+                      ),
+                      TodayUnavailable(:final message) => Text(
+                        message,
+                        style: quiet,
+                      ),
+                      TodayPending() => const SizedBox(height: AppSpace.s40),
+                    },
+                    if (count case TodayCounted(backlog: true))
+                      Text(l10n.backlogPaused, style: quiet),
+                  ],
+                ),
+              ),
+              ProgressCounter(
+                decks: DeckSelection(deck),
+                builder: (context, progress) => progress == null
+                    ? const SizedBox(height: AppSpace.s28)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: AppSpace.s8,
+                        children: [
+                          Text(
+                            l10n.masteredOf(progress.mastered, progress.total),
+                            style: quiet,
+                          ),
+                          ProgressBar(
+                            progress: progress,
+                            height: AppSpace.s8,
+                            ink: colors.onHero,
+                            track: heroTrack(colors),
+                          ),
+                        ],
+                      ),
+              ),
+              AppButton(
+                label: l10n.studyDeck,
+                icon: LucideIcons.play,
+                variant: AppButtonVariant.onHero,
+                onPressed: onStudy,
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Text(text, style: AppType.section),
-    ),
-  );
+    );
+  }
 }

@@ -200,8 +200,8 @@ void main() {
     expect(exportedScreens(sources), containsPair('StudyScreen', 'study'));
     expect(
       importedPaths(
-        'home/src/home_screen.dart',
-        sources['home/src/home_screen.dart']!,
+        'home/src/today_tab.dart',
+        sources['home/src/today_tab.dart']!,
       ),
       contains('study/study.dart'),
     );

@@ -62,6 +62,16 @@ DateTime _startOn(DateTime date, UtcOffsetAt offsetAt) {
   return wall.subtract(offsetAt(wall.subtract(offsetAt(wall))));
 }
 
+/// When the study day starting at [dayStart] ends: the start of the next one,
+/// in the time zone [offsetAt] gives.
+DateTime studyDayEnd(
+  DateTime dayStart, [
+  UtcOffsetAt offsetAt = localOffsetAt,
+]) {
+  final wall = dayStart.toUtc().add(offsetAt(dayStart));
+  return _startOn(DateTime.utc(wall.year, wall.month, wall.day + 1), offsetAt);
+}
+
 /// Today's study day as the queue reads it.
 final class StudyDay {
   const StudyDay({
@@ -78,11 +88,7 @@ final class StudyDay {
     UtcOffsetAt offsetAt = localOffsetAt,
   }) {
     final start = studyDayStart(now, offsetAt);
-    final wall = start.toUtc().add(offsetAt(start));
-    final end = _startOn(
-      DateTime.utc(wall.year, wall.month, wall.day + 1),
-      offsetAt,
-    );
+    final end = studyDayEnd(start, offsetAt);
     final taken = firstAnswers
         .where((answer) => !answer.isBefore(start) && answer.isBefore(end))
         .length;

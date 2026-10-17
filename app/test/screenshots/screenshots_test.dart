@@ -187,7 +187,10 @@ void main() {
       await shot(tester, '03-new-deck-sheet');
       await enter(ko.deckName, '영단어 기본');
       await tap(tester, find.text(ko.create));
+      await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text(ko.newDeck));
+      await shot(tester, '03b-new-deck-options');
+      await tap(tester, find.text(ko.createManually));
       await enter(ko.deckName, '일본어 N3 한자');
       await tap(tester, find.text(ko.create));
 
@@ -202,12 +205,15 @@ void main() {
       for (final (index, MapEntry(key: front, value: back))
           in cards.entries.indexed) {
         await tap(tester, find.text(ko.newCard));
+        if (index == 0) await shot(tester, '04b-add-card-sheet');
+        await tap(tester, find.text(ko.addCardManually));
         await enter(ko.cardFront, front);
         await enter(ko.cardBack, back);
         if (index == 0) await shot(tester, '05-card-editor');
         await tap(tester, find.text(ko.save));
       }
       await tap(tester, find.text(ko.newCard));
+      await tap(tester, find.text(ko.addCardManually));
       await enter(ko.cardFront, 'Ephemeral');
       await enter(ko.cardBack, '순간의');
       await tap(tester, find.text(ko.save));
@@ -217,6 +223,13 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.byTooltip(ko.close));
       await shot(tester, '07-card-list');
+      await tap(tester, find.text('ubiquitous'));
+      await shot(tester, '07b-card-answer-shown');
+      await tap(tester, find.byTooltip(ko.searchCardsAction));
+      await tester.enterText(find.byType(EditableText), 'ent');
+      await tester.pumpAndSettle();
+      await shot(tester, '07c-card-search');
+      await tap(tester, find.byTooltip(ko.closeSearch));
 
       await tap(tester, find.byTooltip(ko.deckActions));
       await tap(tester, find.text(ko.rename));
@@ -227,14 +240,23 @@ void main() {
       await shot(tester, '09-delete-deck-confirm');
       await tap(tester, find.text(ko.cancel));
 
-      await tap(tester, find.text('meticulous'));
+      await tester.longPress(find.text('meticulous'));
+      await tester.pumpAndSettle();
       await shot(tester, '10-card-editor-existing');
       await tap(tester, find.byTooltip(ko.deleteCard));
       await shot(tester, '11-delete-card-confirm');
       await tap(tester, find.text(ko.cancel));
       await tap(tester, find.byTooltip(ko.close));
 
-      await tap(tester, find.text(ko.studyCount(4)));
+      // The tabs before any study: four new cards for today.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.tabToday));
+      await shot(tester, '16a-today');
+      await tap(tester, find.text(ko.tabDecks));
+      await tap(tester, find.text('영단어 기본'));
+
+      await tap(tester, find.text(ko.studyDeck));
       // The first session, with the guide above the card.
       await shot(tester, '12-study-start');
       Future<void> answer(String label) =>
@@ -310,10 +332,15 @@ void main() {
       await tester.pumpAndSettle();
 
       await shot(tester, '16-deck-list');
-      await tester.longPress(find.text('영단어 기본'));
-      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.selectDecks));
+      await tap(tester, find.text('영단어 기본'));
       await shot(tester, '17-deck-list-selection');
       await tap(tester, find.byTooltip(ko.clearSelection));
+      await tap(tester, find.text(ko.tabRecord));
+      await shot(tester, '16c-record');
+      // Today's cards done: the done card and the next seven days.
+      await tap(tester, find.text(ko.tabToday));
+      await shot(tester, '16b-today-done');
 
       await tap(tester, find.byTooltip(ko.account));
       await shot(tester, '18-account');
@@ -338,6 +365,57 @@ void main() {
       ProviderScope.containerOf(
         tester.element(find.byType(AccountGate, skipOffstage: false)),
       ).read(syncControllerProvider).dispose();
+      await unmount(tester);
+    });
+
+    testWidgets('the today tab in a backlog in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow.subtract(const Duration(days: 90)),
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        for (final (name, count) in [('영단어 기본', 52), ('토익 빈출', 32)]) {
+          final deck = await repository.createDeck(name);
+          for (var i = 0; i < count; i++) {
+            final saved = await repository.addCard(
+              deck.id,
+              front: [TextContent('$name $i')],
+              back: [TextContent('$i')],
+            );
+            if (saved case CardSaved(:final card)) {
+              // Overdue after a month's interval: far more than three days'
+              // load.
+              await storeState(db, card.id, due: homeNow, days: 30);
+            }
+          }
+        }
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            ...homeOverrides(db),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await shot(tester, '16d-today-backlog');
       await unmount(tester);
     });
 
@@ -486,6 +564,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text('영단어 기본'));
       await tap(tester, find.byTooltip(ko.deckActions));
       await shot(tester, '25-deck-menu-publish');
@@ -504,7 +583,7 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '28-deck-list-public');
 
-      await tap(tester, find.byTooltip(ko.browse));
+      await tap(tester, find.text(ko.browsePublicDecks));
       await shot(tester, '29-browse');
       await tap(tester, find.text('스페인어 동물'));
       await shot(tester, '30-public-deck');

@@ -66,6 +66,7 @@ void main() {
       'French',
     );
     await tapAndSettle(tester, 'Create');
+    await tapAndSettle(tester, 'Decks');
     await tapAndSettle(tester, 'French');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
@@ -76,7 +77,7 @@ void main() {
       await tester.enterText(find.widgetWithText(AppTextField, 'Answer'), back);
       await tapAndSettle(tester, 'Save');
     }
-    await tapAndSettle(tester, 'Study · 2');
+    await tapAndSettle(tester, 'Study');
     // The run that started with the app is still waiting on the server.
     expect(sync.status.value, isA<Syncing>());
     expect(server.requests, isEmpty);
