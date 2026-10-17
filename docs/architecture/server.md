@@ -132,6 +132,13 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - It is `security invoker`, so row-level security decides what it reads, `stable`, and sets `search_path = ''`. `execute` is revoked from `public` and `anon` and granted to `authenticated`. A zone Postgres does not know raises `22023`.
 - Migration `20261017090000_study_streak.sql` added it, changing no row.
 
+### Study days
+
+- `public.study_days_before(time_zone, before, days, cap_ms)` returns the caller's latest `days` study days before `before`, oldest first, each from 04:00 to 04:00 in the zone named, as `web/src/features/study/queue.ts` counts them: its start, and the time and number of the answers that were not their card's first live answer and of those that were, each answer counted up to `cap_ms` ([ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md)). The web's `readToday` calls it with 30 days and 30 s ([`web.md`](web.md)).
+- A day without a live answer is no study day, so it is neither returned nor counted. The function walks back one study day at a time, each step one backward probe of `reviews_live_user_id_reviewed_at`, then reads the window's answers through the same index; whether an answer is its card's first is one probe of `reviews_user_id_card_id`.
+- It is `security invoker`, `stable`, and sets `search_path = ''`. `execute` is revoked from `public` and `anon` and granted to `authenticated`. A zone Postgres does not know raises `22023`.
+- Migration `20261018090000_study_days.sql` added it, changing no row.
+
 ### Tests
 
 - pgTAP tests in `supabase/tests/`, one file per concern, run by `supabase test db`:
@@ -150,6 +157,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `uuid_keys_test.sql` — every synced id and every reference to one is `uuid` with no default, with `extraction_usage.id` as control; the five foreign keys are back; `list_public_decks` returns `uuid` ids and `record_deck_import` takes one, executable by `authenticated` and not `anon`; and a report takes the lock its deck's id took as text, with the third report's hide as control;
   - `checks_policies_test.sql` — each of the five checks refuses what it names, with an accepted row beside each as control, tombstones included, and all five are validated; `decks`, `cards` and `profiles` have one policy per command, the select policy testing the owner first, with an insert policy as the pattern's control;
   - `sync_horizon_test.sql` — the horizon is 0 until one is stored and then the stored one; the watermark is the sequence's last value, at or above the caller's latest row and below a row written after the call; the call takes the caller's revision lock, with another user's lock before its call as control; and the function runs as its owner, volatile, with an empty `search_path`, executable by `authenticated` and not `anon`;
+  - `study_days_test.sql` — the study days before a time, oldest first, rests left out, a review and a first answer apart with a deleted earlier answer read for nothing, a 10-minute answer counted at the cap with a higher cap as control, only the latest so many study days with history before them changing nothing and a longer window reading it as control, the 04:00 boundary in Seoul, answers at or after the time left out, only the caller's answers; an unknown zone raises; and the function runs as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `study_streak_test.sql` — on the instants `queue.test.ts` counts: the 04:00 boundary in UTC and in Seoul, a day across Los Angeles's change of offset at both ends, and a gap, each with a control; only the caller's live answers count; an unknown zone raises; and the function runs as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
@@ -170,6 +178,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records the public deck schema, the column grant on `decks`, and the replaced source check, which the owner approved pushing on 2026-10-15.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records the target data model, its measurements and the alternatives passed over, and the plan that builds it; issue #93 records the owner's direction.
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why `sync_horizon()` returns a watermark read under the caller's lock beside the horizon.
+- [ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md) records why the web reads a day's study days through `study_days_before`.
 - Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, issue #106 the horizon and the watermark, issue #107 the web's version 7 ids, and issue #113 the advisor lints read after #112.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
