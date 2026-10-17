@@ -15,6 +15,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - **Order.** The integration applies every migration file that the production project's migration history lacks. A file older than the latest applied migration "still runs and the step finishes with a warning" (Supabase's GitHub integration guide, `supabase/supabase` commit `626f0d412a5f88ef260289d4ed2b787f9705d6fc`, committed 2026-10-14, read 2026-10-18). Such a file runs after migrations that sort after it, in an order no local `supabase db reset` follows.
 - **Naming.** A new migration's version, the 14 digits its name starts with, is later than every migration on `main`. A contributor names it from the current UTC time, as `supabase migration new` does, when that is later. Otherwise the contributor uses the latest version on `main` plus one second ([ADR 0048](adr/0048-name-each-new-migration-after-every-migration-on-main-and-check-it-in-make-lint.md)).
   - `check-migration-order.sh`, run by `make lint`, fails when a migration file that `main` lacks has a version not later than the latest on `main`, or a name not starting with 14 digits. It reads `main` as the first parent of a pull request's merge commit in CI, where the ubuntu job's checkout fetches two commits deep, and as where `HEAD` left `origin/main` locally. It prints the number of new files and the base it compared with.
+  - Branch protection on `main` requires branches to be up to date: `gh api repos/garamsh/smartman/branches/main/protection`, read 2026-10-18, returns `required_status_checks.strict: true` with the contexts `ci (ubuntu-latest)` and `ci (macos-latest)`. Of two pull requests that each pass the check against the same `main`, the second cannot merge until its branch is updated and the check runs again against the first.
   - `check-migration-order.test.sh`, run by `make test`, runs the check on repositories it builds in a temporary directory. It covers a merge commit cloned two commits deep, as CI checks one out, and a branch beside `origin/main`.
 
 ### Tables
@@ -198,4 +199,4 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 
 ## Open questions
 
-- Two pull requests can each pass the migration check against the same `main`. If one merges and then the other, whose migration sorts before it, merges without a new CI run, the second runs out of order. GitHub's "Require branches to be up to date before merging" setting would force that run. That repository setting is the owner's to decide.
+- None.

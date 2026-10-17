@@ -19,10 +19,9 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Consequences
 
-- A migration runs in production in the order it runs locally, unless two pull requests both pass against the same `main`. If one merges and then the other, which sorts before it, merges without a new CI run, the second still runs out of order. GitHub's "Require branches to be up to date before merging" setting would force that run. It is the owner's choice, and it is recorded under `server.md`'s open questions.
+- A migration runs in production in the order it runs locally. Two pull requests can each pass the check against the same `main`, but branch protection on `main` requires branches to be up to date: `gh api repos/garamsh/smartman/branches/main/protection`, read 2026-10-18, returns `required_status_checks.strict: true` with the contexts `ci (ubuntu-latest)` and `ci (macos-latest)`. So once one merges, GitHub refuses to merge the other until its branch is updated and CI, this check included, runs again on its merge with the new `main`.
 - A name may run further ahead of the clock with each migration made on the same day. The name orders migrations and records nothing else.
 
 ## Signs the decision was wrong
 
-- A migration merged ahead of one that sorts after it, as the open question allows, and production and a local reset disagree on the schema.
 - Migration names run so far ahead of the clock that contributors stop reading them as times.
