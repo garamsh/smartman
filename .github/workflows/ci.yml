@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
 
 permissions: read-all
 
@@ -17,41 +18,94 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      # A pull request runs the whole set unless every changed file is under web/ or is Markdown
+      # outside app/, engine*/ and supabase/; main and the merge queue always run the whole set.
+      - id: changes
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          predicate-quantifier: some-with-excludes
+          list-files: json
+          filters: |
+            changed:
+              - '**'
+            web:
+              - 'web/**'
+            docs:
+              - '**/*.md'
+              - '!web/**'
+              - '!{app,engine*,supabase}/**'
+      # The file names come from the pull request, so they reach the shell through the environment.
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          CHANGED: ${{ steps.changes.outputs.changed_files }}
+          WEB: ${{ steps.changes.outputs.web_files }}
+          DOCS: ${{ steps.changes.outputs.docs_files }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            scope=all
+            echo "selected SCOPE=all: a $EVENT run checks the whole set"
+          else
+            rest=$(jq -nc --argjson changed "$CHANGED" --argjson web "$WEB" --argjson docs "$DOCS" '$changed - $web - $docs')
+            if [ "$rest" != '[]' ]; then
+              scope=all
+              echo "selected SCOPE=all: these changed files are neither under web/ nor Markdown outside app/, engine*/ and supabase/: $rest"
+            elif [ "$WEB" != '[]' ]; then
+              scope=web
+              echo "selected SCOPE=web: every changed file is under web/ ($WEB) or Markdown outside app/, engine*/ and supabase/ ($DOCS)"
+            else
+              scope=docs
+              echo "selected SCOPE=docs: every changed file is Markdown outside web/, app/, engine*/ and supabase/: $DOCS"
+            fi
+          fi
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"
+      - if: steps.scope.outputs.scope == 'all'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - if: steps.scope.outputs.scope == 'all'
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
           flutter-version-file: app/pubspec.yaml
-      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - if: steps.scope.outputs.scope == 'all'
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           rust-src-dir: engine
       # The codegen release is the flutter_rust_bridge crate's in the bridge crate's lock file.
       - id: frb
+        if: steps.scope.outputs.scope == 'all'
         run: echo "version=$(sed -n '/^name = "flutter_rust_bridge"$/{n;s/^version = "\(.*\)"$/\1/p;}' app/rust/Cargo.lock)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - if: steps.scope.outputs.scope == 'all'
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: flutter_rust_bridge_codegen@${{ steps.frb.outputs.version }}
           fallback: cargo-install
       # The wasm-bindgen CLI and its test runner, at the release engine-wasm/Cargo.lock pins.
       - id: wasm-bindgen
+        if: steps.scope.outputs.scope == 'all'
         run: echo "version=$(sed -n '/^name = "wasm-bindgen"$/{n;s/^version = "\(.*\)"$/\1/p;}' engine-wasm/Cargo.lock)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - if: steps.scope.outputs.scope == 'all'
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: wasm-bindgen@${{ steps.wasm-bindgen.outputs.version }}
       # make test runs engine-wasm/'s tests in node, through wasm-bindgen-test-runner.
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - if: steps.scope.outputs.scope != 'docs'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.22.0
       # make test runs the database tests where Docker is; only the ubuntu runner has it.
-      - if: runner.os == 'Linux'
+      - if: runner.os == 'Linux' && steps.scope.outputs.scope != 'docs'
         uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: 2.120.0
       # make lint, format and test run deno over supabase/functions/ and tools/eval/.
-      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - if: steps.scope.outputs.scope == 'all'
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: 2.9.7
-      - run: make ci
+      - env:
+          SCOPE: ${{ steps.scope.outputs.scope }}
+        run: make ci SCOPE="$SCOPE"

@@ -1,5 +1,12 @@
 .PHONY: lint format test build ci
 
+# What make lint, format, test and build run, set on the command line: all (the default), web for a
+# change to web/ and Markdown alone, or docs for Markdown alone. .github/workflows/ci.yml selects it.
+SCOPE := all
+ifeq ($(filter $(SCOPE),all web docs),)
+$(error SCOPE is "$(SCOPE)"; it is all, web or docs)
+endif
+
 # Every Dart file under app/ that git tracks or would track; ignored output such as
 # build/ and .dart_tool/ stays out. Printed beside each count so the coverage reads true.
 DART_SCOPE := git ls-files --cached --others --exclude-standard -- '*.dart'
@@ -31,10 +38,10 @@ lint:
 	./check-section-citations.sh
 	./check-heading-prefixes.sh
 	./check-secrets.sh
+ifeq ($(SCOPE),all)
 	./check-ios-client-id.sh
 	./check-generated.sh
 	./deno.sh lint
-	./web.sh lint
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
 	echo "analyzed $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -45,10 +52,18 @@ lint:
 		echo "clippy checked $$(echo "$$targets" | wc -l | tr -d ' ') cargo targets in $$crate/, selected by cargo --all-targets:"; \
 		echo "$$targets"; \
 	done
+else
+	echo "skipped the iOS URL scheme, generated code, Deno, Dart and Rust lint: SCOPE=$(SCOPE)"
+endif
+ifneq ($(SCOPE),docs)
+	./web.sh lint
+else
+	echo "skipped the web app's lint: SCOPE=$(SCOPE)"
+endif
 
 format:
+ifeq ($(SCOPE),all)
 	./deno.sh format
-	./web.sh format
 	cd app && $(DART_FILES); \
 	dart format --output=none --set-exit-if-changed $$files && \
 	echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -58,8 +73,17 @@ format:
 		rustfmt --edition "$$edition" --check $$files && \
 		echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Rust files in $$crate/, selected by: $(RUST_SCOPE)") || exit 1; \
 	done
+else
+	echo "skipped the Deno, Dart and Rust format checks: SCOPE=$(SCOPE)"
+endif
+ifneq ($(SCOPE),docs)
+	./web.sh format
+else
+	echo "skipped the web app's format check: SCOPE=$(SCOPE)"
+endif
 
 test:
+ifeq ($(SCOPE),all)
 	cd app/rust && cargo build --locked --release && \
 	echo "built the bridge library into app/rust/target/release/, where flutter_rust_bridge loads it under flutter test"
 	cd app && flutter test --reporter expanded $(APP_CONFIG) && \
@@ -70,10 +94,18 @@ test:
 	./supabase/test-db.sh
 	./supabase/test-sync.sh
 	./deno.sh test
+else
+	echo "skipped the app, engine, WebAssembly, database, sync and Deno tests: SCOPE=$(SCOPE)"
+endif
+ifneq ($(SCOPE),docs)
 	./web.sh test
 	./supabase/test-web.sh
+else
+	echo "skipped the web app's tests: SCOPE=$(SCOPE)"
+endif
 
 build:
+ifeq ($(SCOPE),all)
 	cd app && flutter build apk --debug $(APP_CONFIG) && \
 	libs=$$(unzip -Z1 $(APK) 'lib/*/lib$(BRIDGE_LIB).so'); \
 	if [ -z "$$libs" ]; then echo "app/$(APK) holds no lib$(BRIDGE_LIB).so" >&2; exit 1; fi; \
@@ -92,6 +124,13 @@ build:
 	cd engine-wasm && cargo build --locked --release && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
+else
+	echo "skipped the Android, iOS, engine and WebAssembly builds: SCOPE=$(SCOPE)"
+endif
+ifneq ($(SCOPE),docs)
 	./web.sh build
+else
+	echo "skipped the web app's build: SCOPE=$(SCOPE)"
+endif
 
 ci: lint format test build
