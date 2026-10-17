@@ -397,17 +397,29 @@ abstract class AppLocalizations {
   /// **'모른다로 바꿔요'**
   String get changingToDontKnow;
 
-  /// First study session's guide, first line: recall first, then tap the card to see the answer.
+  /// The session's start guide, first line: how many cards the session opened with and the minutes they take.
   ///
   /// In ko, this message translates to:
-  /// **'먼저 떠올려 보고, 카드를 탭해 답을 확인해요'**
+  /// **'오늘 {cards}장 · 약 {minutes}분'**
+  String guideSize(int cards, int minutes);
+
+  /// The session's start guide: tap the card to see the answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드를 누르면 답이 보여요'**
   String get guideReveal;
 
-  /// First study session's guide, second line: swipe right when you know it, left when you don't.
+  /// The session's start guide: swipe right when you know it, left when you don't.
   ///
   /// In ko, this message translates to:
   /// **'알면 오른쪽, 모르면 왼쪽으로 밀어요'**
   String get guideSwipe;
+
+  /// The session's start guide, in the previous card's place: an answered card comes up here, and a swipe changes its answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요'**
+  String get guideRise;
 
   /// Shown when an answer could not be written to the local database.
   ///

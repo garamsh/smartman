@@ -11,6 +11,7 @@ import { signedInCookies } from "@/testing/session";
 
 import { StudyScreen } from "../components/study-screen";
 import { type SessionPlan, type StudyCard, StudySession } from "../session";
+import { unknownPace } from "../study-time";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
@@ -28,12 +29,12 @@ const plan: SessionPlan = {
   startedAt: start,
   queue: { cards: [card("a"), card("b")], backlog: false },
   before: {},
+  pace: unknownPace,
   today: {
     answers: [],
     cards: [],
     answeredAnyDeck: false,
     streakBefore: 0,
-    answeredBefore: false,
   },
 };
 

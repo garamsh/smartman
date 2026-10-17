@@ -174,7 +174,6 @@ Future<_Study> _open(
   StudyRepository Function(AppDatabase db)? repository,
   Scheduler? scheduler,
   Map<String, CardState> states = const {},
-  bool returning = false,
   Size size = _phone,
   double textScale = 1,
   bool disableAnimations = false,
@@ -221,33 +220,6 @@ Future<_Study> _open(
             ),
           ],
           states[name]!,
-          at: DateTime.utc(2026, 9, 1),
-        );
-      }
-    }
-    if (returning) {
-      // An answer stored in another deck, so this is not the user's first
-      // session.
-      final other = await deckRepository.createDeck('Spanish');
-      final saved = await deckRepository.addCard(
-        other.id,
-        front: [const TextContent('seen front')],
-        back: [const TextContent('seen back')],
-      );
-      if (saved case CardSaved(:final card)) {
-        await seeding.record(
-          card.id,
-          [
-            Review(
-              id: seeding.newReviewId(),
-              cardId: card.id,
-              answer: Answer.know,
-              reviewedAt: dueTomorrow.lastReview,
-              duration: Duration.zero,
-              fuzzFactor: FuzzFactor.draw(FirstDraw()),
-            ),
-          ],
-          dueTomorrow,
           at: DateTime.utc(2026, 9, 1),
         );
       }
@@ -381,7 +353,7 @@ void main() {
   testWidgets(
     'the screen shows the top bar, the current card in the lower of the two card places and the answer buttons under it, and nothing else',
     (tester) async {
-      final study = await _open(tester, ['a', 'b'], returning: true);
+      final study = await _open(tester, ['a', 'b']);
 
       expect(find.byTooltip('Close'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
@@ -400,14 +372,14 @@ void main() {
       );
       expect(find.byType(VerticalDivider), findsOneWidget);
       // Every text on screen: the card's sides, of which the back is hidden
-      // behind an eye, the count, and the answer buttons. No deck name, hint
-      // or next card.
+      // behind an eye, the count, the answer buttons, and the session's guide
+      // in the previous card's place. No deck name or next card.
       expect(
         {
           for (final element in find.byType(Text).evaluate())
             (element.widget as Text).data,
         },
-        {'a front', 'a back', '0/2', "Don't know", 'Know'},
+        {'a front', 'a back', '0/2', "Don't know", 'Know', ..._guide(2, 1)},
       );
       expect(_answerShown(tester), isFalse);
       expect(
@@ -453,14 +425,12 @@ void main() {
   });
 
   testWidgets(
-    'on the first session a guide of two lines holds the previous card\'s place, until the first answer',
+    'from a session\'s start until its first answer the guide holds the previous card\'s place, with the session\'s size, read as one block',
     (tester) async {
-      final guide = [
-        'Try to recall it first, then tap the card to see the answer',
-        "Swipe right if you know it, left if you don't",
-      ];
       final study = await _open(tester, ['a', 'b', 'c']);
 
+      // Three new cards at the unknown pace, 10 s each: about a minute.
+      final guide = _guide(3, 1);
       for (final line in guide) {
         expect(find.text(line), findsOneWidget);
         expect(
@@ -468,25 +438,51 @@ void main() {
           lessThan(tester.getRect(_currentCard).top),
         );
       }
-      // The line on pulling down for earlier cards is gone.
-      expect(find.textContaining('earlier cards'), findsNothing);
+      expect(find.bySemanticsLabel(guide.join('\n')), findsOneWidget);
+      expect(find.bySemanticsLabel(guide[1]), findsNothing);
       await study.know();
       for (final line in guide) {
         expect(find.text(line), findsNothing);
       }
       expect(_previous('a front'), findsOneWidget);
-      await study.know();
-      for (final line in guide) {
-        expect(find.text(line), findsNothing);
-      }
-
-      // Control: a user with an answer stored before sees no guide.
-      await _open(tester, ['d'], returning: true);
+      // A "Don't know", which puts its card back, leaves it gone too.
+      await study.dontKnow();
       for (final line in guide) {
         expect(find.text(line), findsNothing);
       }
     },
   );
+
+  testWidgets(
+    'practice shows no guide, though it starts with no answer of the session',
+    (tester) async {
+      // Every card answered earlier today and due tomorrow: the session opens
+      // on the completion card with no answer of its own.
+      final answeredToday = CardState(
+        stability: 3,
+        difficulty: 5,
+        lastReview: DateTime.utc(2026, 10, 14, 6),
+        due: DateTime.utc(2026, 10, 15, 5),
+      );
+      await _open(
+        tester,
+        ['a', 'b'],
+        states: {'a': answeredToday, 'b': answeredToday},
+      );
+      expect(find.text('Done for today'), findsOneWidget);
+
+      await tester.tap(find.text('Keep studying'));
+      await tester.pumpAndSettle();
+
+      expect(_currentCard, findsOneWidget);
+      expect(
+        find.text("Swipe right if you know it, left if you don't"),
+        findsNothing,
+      );
+      expect(find.textContaining('Today '), findsNothing);
+    },
+  );
+
   testWidgets('a tap shows the answer half and a second tap hides it', (
     tester,
   ) async {
@@ -584,7 +580,6 @@ void main() {
         tester,
         ['long', 'medium'],
         sides: {'long': (long, long), 'medium': (medium, medium)},
-        returning: true,
       );
 
       expect(tester.getSize(_face).height, closeTo(_cardHeight, 0.01));
@@ -1304,6 +1299,9 @@ void main() {
           Theme.of(tester.element(_currentCard)).brightness,
           mode == ThemeMode.dark ? Brightness.dark : Brightness.light,
         );
+        // The session's guide in the previous card's place.
+        expect(find.text(_guide(3, 1).first), findsOneWidget);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
         await study.know();
         await study.dontKnow();
         await tester.tap(_currentCard);
@@ -1363,6 +1361,15 @@ void main() {
 }
 
 /// Due at 05:00 UTC tomorrow, an hour after the next study day starts.
+/// The session guide's lines, in English, for a session of [cards] cards
+/// taking [minutes] minutes.
+List<String> _guide(int cards, int minutes) => [
+  'Today $cards cards · about $minutes min',
+  'Tap the card to see the answer',
+  "Swipe right if you know it, left if you don't",
+  'Answered cards come up here. Swipe one to change it',
+];
+
 final dueTomorrow = CardState(
   stability: 3,
   difficulty: 5,

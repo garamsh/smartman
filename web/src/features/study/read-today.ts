@@ -37,8 +37,8 @@ export type TodayAnswer = {
  * Today's study day for the signed-in user: the day, with the new cards it has left, every
  * answer stored in it, across every deck, oldest first, the user's pace, and the stored state of
  * every reviewed card with the time it was read. With [streak], also how many study days in a
- * row before today hold an answer, and whether any day before today holds one. The day is read
- * in the zone the browser names in its cookie, or `fallbackTimeZone` without one.
+ * row before today hold an answer. The day is read in the zone the browser names in its cookie,
+ * or `fallbackTimeZone` without one.
  */
 export type Today = {
   day: StudyDay;
@@ -47,7 +47,6 @@ export type Today = {
   states: CardStates;
   readAt: number;
   streakBefore: number;
-  answeredBefore: boolean;
 };
 
 /** How many card ids one request filters on, so its URL stays short. */
@@ -80,9 +79,7 @@ export async function readToday(
         .range(from, to)
         .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
     ),
-    options.streak
-      ? readStreakBefore(supabase, session.userId, start, timeZone)
-      : { streak: 0, answered: false },
+    options.streak ? readStreakBefore(supabase, start, timeZone) : { streak: 0 },
     readCardStates(),
     readStudyDays(supabase, start, timeZone),
   ]);
@@ -151,7 +148,6 @@ export async function readToday(
       states: states.states,
       readAt: states.readAt,
       streakBefore: before.streak,
-      answeredBefore: before.answered,
     },
   };
 }
@@ -230,36 +226,22 @@ function count(value: unknown): number | null {
 
 /**
  * How many study days in a row end the day before [start] with an answer, which the server's
- * `study_streak_before` counts in one request; and whether any answer is stored before [start],
- * read beside it as at most one of them.
+ * `study_streak_before` counts in one request.
  */
 async function readStreakBefore(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
   start: number,
   timeZone: string,
-): Promise<{ streak: number; answered: boolean } | { failure: ServerFailure | "unreadable" }> {
-  const before = new Date(start).toISOString();
-  const [counted, latest] = await Promise.all([
-    supabase
-      .rpc("study_streak_before", { time_zone: timeZone, before })
-      .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
-    supabase
-      .from("reviews")
-      .select("id")
-      .eq("user_id", userId)
-      .is("deleted_at", null)
-      .lt("reviewed_at", before)
-      .limit(1)
-      .abortSignal(AbortSignal.timeout(requestTimeoutMs)),
-  ]);
+): Promise<{ streak: number } | { failure: ServerFailure | "unreadable" }> {
+  const counted = await supabase
+    .rpc("study_streak_before", { time_zone: timeZone, before: new Date(start).toISOString() })
+    .abortSignal(AbortSignal.timeout(requestTimeoutMs));
   if (counted.error) return { failure: classifyFailure(counted.error, counted.status) };
-  if (latest.error) return { failure: classifyFailure(latest.error, latest.status) };
   const streak: unknown = counted.data;
   if (typeof streak !== "number" || !Number.isInteger(streak) || streak < 0) {
     return { failure: "unreadable" };
   }
-  return { streak, answered: latest.data.length > 0 };
+  return { streak };
 }
 
 function parseAnswer(row: unknown): TodayAnswer | null {

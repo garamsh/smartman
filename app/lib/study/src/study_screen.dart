@@ -11,9 +11,9 @@ import 'completion_card.dart';
 import 'current_card.dart';
 import 'failure.dart';
 import 'failure_message.dart';
-import 'first_run_guide.dart';
 import 'providers.dart';
 import 'session.dart';
+import 'session_guide.dart';
 import 'previous_card.dart';
 import 'study_style.dart';
 
@@ -171,19 +171,19 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       child: child,
     );
     final newest = previous.lastOrNull;
-    // The previous card's place holds, before the first answer, the first
-    // session's guide.
-    final above = newest != null
-        ? PreviousCardView(
-            // A new key for each answer, so the card answered just now rises
-            // in and a change of its answer leaves it in place.
-            key: ValueKey(newest.position),
-            card: newest,
-            onRedecide: (answer) => _session.redecide(newest.position, answer),
-          )
-        : state is SessionStudying && state.firstRun
-        ? const SingleChildScrollView(child: FirstRunGuide())
-        : null;
+    // The previous card's place holds the session's guide while the session
+    // gives one, before its first answer, and otherwise the card answered last.
+    final above = switch (state) {
+      SessionStudying(guide: final size?) => SessionGuide(size: size),
+      _ when newest != null => PreviousCardView(
+        // A new key for each answer, so the card answered just now rises in
+        // and a change of its answer leaves it in place.
+        key: ValueKey(newest.position),
+        card: newest,
+        onRedecide: (answer) => _session.redecide(newest.position, answer),
+      ),
+      _ => null,
+    };
     return LayoutBuilder(
       builder: (context, constraints) {
         // The two cards share the height between the top bar and the answer

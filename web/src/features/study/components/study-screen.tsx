@@ -14,7 +14,7 @@ import { AnswerList } from "./answer-list";
 import { CardDetail } from "./card-detail";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
-import { FirstRunGuide } from "./first-run-guide";
+import { SessionGuide } from "./session-guide";
 import { GradedCard } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
 
@@ -290,10 +290,12 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
             <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
           ) : (
             <>
-              {/* Two rows of one height: the previous card, or before the first answer the
-                  first session's guide, and the current card. */}
+              {/* Two rows of one height: before the session's first answer its guide, otherwise
+                  the previous card; and the current card. */}
               <div className="grid w-full max-w-study auto-rows-fr gap-7">
-                {newest ? (
+                {view.kind === "studying" && view.guide ? (
+                  <SessionGuide size={view.guide} />
+                ) : newest ? (
                   <GradedCard
                     key={newest.position}
                     answer={newest}
@@ -305,8 +307,6 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
                       redecide(newest.position, choice);
                     }}
                   />
-                ) : view.kind === "studying" && view.firstRun ? (
-                  <FirstRunGuide />
                 ) : (
                   <div aria-hidden />
                 )}

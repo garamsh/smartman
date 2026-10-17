@@ -537,29 +537,56 @@ describe("the study page", () => {
       }
     });
 
-    it("shows the first-run guide of two lines in the previous card's place on the user's first session alone, until the first answer", async () => {
+    it("shows the session's guide with its size in the previous card's place from its start until its first answer, for every user", async () => {
       const guide = () => screen.queryByRole("region", { name: "학습 안내" });
       seedDeck(postgrest, "d1", ["un", "deux"]);
+      // A user with an answer stored before today: the guide is not the first session's alone.
+      postgrest.seed("cards", cardRow("old", "d2", "old"));
+      postgrest.seed("reviews", reviewRow("r-old", "old", start - 3 * day, 1_000));
       await open("d1");
 
       expect(guide()).toBeInTheDocument();
-      expect(within(guide() ?? document.body).getAllByRole("listitem")).toHaveLength(2);
-      expect(screen.queryByText(/지난 카드/)).not.toBeInTheDocument();
-      await userEvent.setup().keyboard("k");
+      const shownGuide = guide() ?? document.body;
+      // Two new cards at the unknown pace, 10 s each: about a minute.
+      expect(within(shownGuide).getByText("오늘 2장 · 약 1분")).toBeInTheDocument();
+      expect(
+        within(shownGuide)
+          .getAllByRole("listitem")
+          .map((item) => item.textContent),
+      ).toEqual([
+        "카드를 누르면 답이 보여요",
+        "알면 안다(→), 모르면 모른다(←)를 눌러요",
+        "답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요",
+      ]);
+      const user = userEvent.setup();
+      await user.keyboard("j");
       expect(guide()).not.toBeInTheDocument();
       expect(shown()).toHaveLength(1);
-
-      // Control: a user whose one answer is stored before today, and none today, sees none.
-      cleanup();
-      postgrest = new FakePostgrest();
-      server.use(...postgrest.handlers);
-      seedDeck(postgrest, "d1", ["un", "deux"]);
-      postgrest.seed("cards", cardRow("old", "d1", "old"));
-      postgrest.seed("reviews", reviewRow("r-old", "old", start - 3 * day, 1_000));
-      expect(postgrest.rows.reviews).toHaveLength(1);
-      await open("d1");
-      expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
+      // A "모른다" puts its card back; the guide does not return.
+      await user.keyboard("k");
       expect(guide()).not.toBeInTheDocument();
+    });
+
+    it("shows no guide in practice, though it starts with no answer of the session", async () => {
+      postgrest.seed("decks", deckRow("d1", "d1"));
+      postgrest.seed("cards", cardRow("trois", "d1", "trois"));
+      postgrest.seed(
+        "card_states",
+        stateRow("trois", {
+          stability: 1,
+          difficulty: 5,
+          lastReview: start - hour,
+          due: start + 2 * day,
+        }),
+      );
+      postgrest.seed("reviews", reviewRow("r-today", "trois", start - hour, 6_000));
+      await open("d1");
+      expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "계속 학습" }));
+
+      expect(screen.getByRole("group", { name: "문제" })).toHaveTextContent("trois");
+      expect(screen.queryByRole("region", { name: "학습 안내" })).not.toBeInTheDocument();
     });
 
     it("springs the previous card back only under prefers-reduced-motion: no-preference", async () => {
