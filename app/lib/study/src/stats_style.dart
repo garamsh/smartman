@@ -11,6 +11,9 @@ abstract final class StatsStyle {
   static const retentionDot = 4.5;
   static const retentionDotRing = 2.0;
 
+  /// The width of the scale's labels at the retention chart's left.
+  static const scaleWidth = 36.0;
+
   /// The target line's dashes and gaps.
   static const targetDash = 5.0;
 

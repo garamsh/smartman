@@ -207,6 +207,31 @@ void main() {
   );
 
   testWidgets(
+    'the retention scale labels its top and its floor, and the target is named above the plot, clear of the line (#155)',
+    (tester) async {
+      await _pump(tester, await _seed(_history, recall: _recall));
+
+      // Over 30 days the lowest day is 0%, so the scale runs from 0% to 100%.
+      final plot = find.byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter.runtimeType.toString() == '_RetentionPainter',
+      );
+      expect(plot, findsOneWidget);
+      final rect = tester.getRect(plot);
+      final top = tester.getRect(find.text('100%'));
+      final floor = tester.getRect(find.text('0%'));
+      expect(top.right, lessThanOrEqualTo(rect.left));
+      expect(floor.right, lessThanOrEqualTo(rect.left));
+      expect(floor.top, greaterThan(top.top));
+      expect(
+        tester.getRect(find.text('Target 90%')).bottom,
+        lessThanOrEqualTo(rect.top),
+      );
+    },
+  );
+
+  testWidgets(
     'the retention says so when its period holds no review, and the gap reads above or on target',
     (tester) async {
       await _pump(
@@ -215,7 +240,8 @@ void main() {
           'a': [('good', _at(9, 1)), ('good', _at(10, 1))],
         }),
       );
-      expect(find.text('100%'), findsOneWidget);
+      // The figure, and the scale's top.
+      expect(find.text('100%'), findsNWidgets(2));
       expect(find.text('10 pt above target'), findsOneWidget);
 
       await tester.tap(find.text('7 days'));
