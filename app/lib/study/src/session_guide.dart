@@ -42,7 +42,7 @@ class SessionGuide extends StatelessWidget {
                 spacing: AppSpace.s12,
                 children: [
                   Text(
-                    heading,
+                    keepWords(heading),
                     style: AppType.body.copyWith(
                       color: colors.ink,
                       fontWeight: FontWeight.w700,
@@ -56,7 +56,7 @@ class SessionGuide extends StatelessWidget {
                         Icon(icon, size: AppSize.smallIcon, color: colors.ink2),
                         Expanded(
                           child: Text(
-                            text,
+                            keepWords(text),
                             style: AppType.secondary.copyWith(
                               color: colors.ink2,
                             ),
@@ -73,6 +73,12 @@ class SessionGuide extends StatelessWidget {
     );
   }
 }
+
+/// [text] with a word joiner between the characters of each word, so a line
+/// breaks only at a space: Flutter otherwise breaks Korean between any two
+/// syllables, which can leave one alone on a line.
+String keepWords(String text) =>
+    text.split(' ').map((word) => word.characters.join('\u2060')).join(' ');
 
 /// A dashed outline around its child's box, rounded as the previous card is.
 class _DashedOutline extends CustomPainter {
