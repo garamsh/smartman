@@ -230,6 +230,9 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '07c-card-search');
       await tap(tester, find.byTooltip(ko.closeSearch));
+      await tap(tester, find.byType(Switch));
+      await shot(tester, '07d-card-list-answers-shown');
+      await tap(tester, find.byType(Switch));
 
       await tap(tester, find.byTooltip(ko.deckActions));
       await tap(tester, find.text(ko.rename));

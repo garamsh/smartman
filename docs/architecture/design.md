@@ -18,7 +18,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
    - Study: no deck name and no hint text, but for the first session's guide of two lines; the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
-   - Deck screen: each row shows the question, its answer hidden until a tap; the deck name is the only title.
+   - Deck screen: each row shows the question, its answer hidden until a tap or the "뜻 보기" switch; the deck name is the only title, and the row above the cards a quiet "카드 n".
    - Tabs: no line explains a long-press or a tab; 기록 says only that its record is coming.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
@@ -132,7 +132,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
 - **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)); the previous card's sides, run together as one paragraph, are scaled the same way and then further, as far as the floor, until they fit their half's height, and cut there ([ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md)).
 
-Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`.
+Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `Switch`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes.
 
 ### Checks
 

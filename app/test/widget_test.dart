@@ -562,6 +562,12 @@ void main() {
         await tester.tap(find.byTooltip('Close'));
         await tester.pumpAndSettle();
 
+        // Every answer shown by the switch.
+        await tester.tap(find.byType(Switch));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.tap(find.byType(Switch));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Chat'));
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Search cards'));

@@ -66,7 +66,13 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - The top bar has a back button, "카드 검색", which opens a search field in the bar with "검색 닫기", and the deck menu, which renames or deletes the deck; deleting returns to the tabs. With sharing, the menu also offers "공개하기" or "비공개로 전환", disabled with a one-line reason while offline.
 - Under it, the deck's tile, its name at 22/800, and "카드 n장", with "· 공개" when the deck is published.
 - The navy card, read as "오늘 이 덱": "오늘 할 카드", the count with "장 · 약 m분", in a backlog "밀린 복습을 마칠 때까지 새 카드는 쉬어요.", "n / m 익힘", the progress bar in white on its faint white, and a white "학습하기", which opens a session over the deck whatever the count, 0 included, and while the count is pending or cannot be read ([ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md)).
-- Each card is a `CardAnswerRow`: its question, and its answer hidden behind a bar until a tap shows it and a second hides it; a long-press, or a screen reader's "카드 편집", opens it in the editor ([`deck.md`](deck.md)). The search keeps the cards whose front or back holds it, ignoring case.
+- Above the cards, while the deck has any, a row pinned under the top bar as the list scrolls (issue #142): "카드 n", the number of cards the list shows, read as a heading; and at its right "뜻 보기" and a switch, read together as "뜻 보기" with the switch's state. The label never changes; the switch shows the state.
+- Each card is a `CardAnswerRow`: its question, and its answer hidden behind a bar or shown ([`deck.md`](deck.md)). The deck screen holds what each row shows:
+  - the switch is off each time the screen opens, so every answer is hidden; it is not remembered;
+  - changing the switch sets every card to its state, a card the tap had set apart included;
+  - a tap shows or hides that card alone, until the switch next changes;
+  - the search's results follow the same state.
+- A long-press on a card, or a screen reader's "카드 편집", opens it in the editor. The search keeps the cards whose front or back holds it, ignoring case.
 - The bottom bar holds "카드 추가". With photo import, it opens a sheet with "직접 입력" and "사진"; without, the editor. A photo import that saved into another deck replaces this screen with that deck's; one into this deck returns here.
 
 ### Interface
@@ -76,10 +82,10 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 
 ### Tests
 
-- `app/test/home/home_screen_test.dart` drives the tabs, the back from another tab, the 오늘 tab's today, done and backlog cards with their counts, goal, streak and forecast, today's decks, and the 덱 tab's rows, search, new-deck sheet and selection; `app/test/home/deck_screen_test.dart` the deck screen, its hidden answers, its search and its add-card sheet. Both run over an in-memory database, with `deck`'s and `study`'s real repositories and study's clock, zone and scheduler substituted (`app/test/home/home_data.dart`, `app/test/home/deck_screens.dart`). The counts come from seeded cards and states; a deck repository that fails to list a deck's cards gives the unreadable count, and a study repository whose pace never arrives the pending one. A study button's session is the `StudyScreen` it pushes, read for its decks.
+- `app/test/home/home_screen_test.dart` drives the tabs, the back from another tab, the 오늘 tab's today, done and backlog cards with their counts, goal, streak and forecast, today's decks, and the 덱 tab's rows, search, new-deck sheet and selection; `app/test/home/deck_screen_test.dart` the deck screen, its hidden answers, the "뜻 보기" switch with its default, its reset of a tapped card, its semantics and its pinned row, its search, which follows the switch, and its add-card sheet, at a phone's size. Both run over an in-memory database, with `deck`'s and `study`'s real repositories and study's clock, zone and scheduler substituted (`app/test/home/home_data.dart`, `app/test/home/deck_screens.dart`). The counts come from seeded cards and states; a deck repository that fails to list a deck's cards gives the unreadable count, and a study repository whose pace never arrives the pending one. A study button's session is the `StudyScreen` it pushes, read for its decks.
 - The sharing tests drive the 덱 tab and the deck screen through `app/test/sharing/sharing_app.dart` the same way ([`sharing.md`](sharing.md)).
 - `app/test/home/hero_test.dart` checks the shades the navy cards and the charts derive from the tokens: the quiet text at 4.5:1, and the flame, the goal ring and a quiet bar at 3:1, in both themes.
-- `app/test/widget_test.dart` checks every tab, the new-deck sheet and the deck screen with an answer shown and the search open against the tap target and contrast guidelines in both themes.
+- `app/test/widget_test.dart` checks every tab, the new-deck sheet and the deck screen with every answer shown by the switch, with one shown by a tap and with the search open against the tap target and contrast guidelines in both themes.
 - `app/test/architecture_test.dart` fails on an import of `home/` from anywhere but `main.dart`, on a file in `home/` that declares a provider or imports the database, and on a domain file that names a screen another domain exports ([`structure.md`](structure.md)).
 
 ## Rationale
@@ -89,7 +95,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md) records the v2 home and deck screens and the today card's minutes.
 - [ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md) records why every study button stays enabled at zero cards left, and the done today card offers "계속 학습".
 - [ADR 0036](adr/0036-organise-the-app-in-today-decks-and-record-tabs-and-define-the-daily-goal-forecast-and-card-progress.md) records the tabs, the daily goal, the forecast and a card's progress, why the goal needs no stored load, and why the backlog card has no daily portion.
-- Issue #110 records the move of the two screens out of `deck` into the shell; issue #19 records the selection mode and the today card, issue #22 the v2 screens, and issue #89 the tabs and the v3 screens.
+- Issue #110 records the move of the two screens out of `deck` into the shell; issue #19 records the selection mode and the today card, issue #22 the v2 screens, issue #89 the tabs and the v3 screens, and issue #142 the owner's "뜻 보기" switch with the details the PM settled.
 
 ## Open questions
 

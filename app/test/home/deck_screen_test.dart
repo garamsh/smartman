@@ -16,6 +16,18 @@ List<String> _rowFronts(WidgetTester tester) => [
     row.front,
 ];
 
+/// The deck page's "뜻 보기" switch.
+Switch _switch(WidgetTester tester) =>
+    tester.widget<Switch>(find.byType(Switch));
+
+/// The answer of every card row on screen that shows it, top to bottom.
+List<String> _answers(WidgetTester tester) => [
+  for (final row in tester.widgetList<CardAnswerRow>(
+    find.byType(CardAnswerRow),
+  ))
+    if (row.shown) row.back,
+];
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -148,6 +160,112 @@ void main() {
       await screens.tap(find.text('Chien'));
       expect(find.text('dog'), findsNothing);
       expect(find.byType(CardEditorScreen), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'the Show answers switch is off on opening, on shows every answer and off hides them',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text('Cards 3'), findsOneWidget);
+      expect(_switch(tester).value, isFalse);
+      expect(_answers(tester), isEmpty);
+
+      await screens.tap(find.byType(Switch));
+      expect(_switch(tester).value, isTrue);
+      expect(_answers(tester), ['cat', 'dog', 'DOG']);
+
+      await screens.tap(find.byType(Switch));
+      expect(_switch(tester).value, isFalse);
+      expect(_answers(tester), isEmpty);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a tap after the switch flips only that card, and the switch then sets every card to its state',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+
+      await screens.tap(find.byType(Switch));
+      await screens.tap(find.text('Chien'));
+      expect(_answers(tester), ['cat', 'DOG']);
+
+      // Off hides every answer, the one the tap hid included.
+      await screens.tap(find.byType(Switch));
+      expect(_answers(tester), isEmpty);
+      await screens.tap(find.text('Hund'));
+      expect(_answers(tester), ['DOG']);
+
+      // On shows every answer, the one the tap showed included.
+      await screens.tap(find.byType(Switch));
+      expect(_answers(tester), ['cat', 'dog', 'DOG']);
+      await screens.close();
+    },
+  );
+
+  testWidgets('search results follow the switch', (tester) async {
+    final screens = await DeckScreens.open(tester, cards: cards);
+    await screens.push((deck) => DeckScreen(deck: deck));
+    await screens.tap(find.byType(Switch));
+
+    await screens.tap(find.byTooltip('Search cards'));
+    await screens.enter('Search', 'ch');
+    expect(_rowFronts(tester), ['Chat', 'Chien']);
+    expect(find.text('Cards 2'), findsOneWidget);
+    expect(_answers(tester), ['cat', 'dog']);
+
+    await screens.tap(find.byType(Switch));
+    expect(_answers(tester), isEmpty);
+    await screens.close();
+  });
+
+  testWidgets(
+    'the switch is read as Show answers with its state, and stays pinned while the list scrolls',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final screens = await DeckScreens.open(
+        tester,
+        cards: {for (var i = 0; i < 30; i++) 'word $i': 'answer $i'},
+      );
+      await screens.push((deck) => DeckScreen(deck: deck));
+
+      expect(
+        tester.getSemantics(find.byType(Switch)),
+        isSemantics(
+          label: 'Show answers',
+          hasToggledState: true,
+          isToggled: false,
+        ),
+      );
+      await screens.tap(find.byType(Switch));
+      expect(
+        tester.getSemantics(find.byType(Switch)),
+        isSemantics(
+          label: 'Show answers',
+          hasToggledState: true,
+          isToggled: true,
+        ),
+      );
+
+      final top = tester.getTopLeft(find.text('Cards 30')).dy;
+      expect(find.text('word 0'), findsOneWidget);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      // The list scrolled past its first card and the navy card.
+      expect(find.text('word 0'), findsNothing);
+      expect(find.text('Study'), findsNothing);
+      expect(tester.getTopLeft(find.text('Cards 30')).dy, lessThan(top));
+      expect(
+        tester.getTopLeft(find.text('Cards 30')).dy,
+        greaterThanOrEqualTo(tester.getBottomLeft(find.byType(AppBar)).dy),
+      );
+      await screens.tap(find.byType(Switch));
+      expect(_switch(tester).value, isFalse);
+      semantics.dispose();
       await screens.close();
     },
   );

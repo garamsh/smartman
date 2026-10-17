@@ -787,6 +787,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addCardPhotoBody => '단어장 사진에서 카드를 찾아요';
 
   @override
+  String cardListTitle(int count) {
+    return '카드 $count';
+  }
+
+  @override
+  String get showMeanings => '뜻 보기';
+
+  @override
   String cardAnswerHidden(String front) {
     return '$front, 답 가려짐';
   }

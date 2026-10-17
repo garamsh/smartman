@@ -875,6 +875,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addCardPhotoBody => 'Find cards in a photo of a vocabulary page';
 
   @override
+  String cardListTitle(int count) {
+    return 'Cards $count';
+  }
+
+  @override
+  String get showMeanings => 'Show answers';
+
+  @override
   String cardAnswerHidden(String front) {
     return '$front, answer hidden';
   }

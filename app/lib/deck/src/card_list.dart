@@ -39,27 +39,24 @@ class CardSplitRow extends StatelessWidget {
   }
 }
 
-/// A card's question on its row, with its answer hidden behind a bar until a
-/// tap shows it; a second tap hides it again. A long-press, or a screen
-/// reader's action, opens the card with [onEdit].
-class CardAnswerRow extends StatefulWidget {
+/// A card's question on its row, with its answer behind a bar unless
+/// [shown]; a tap calls [onToggle], whose owner decides what [shown] becomes.
+/// A long-press, or a screen reader's action, opens the card with [onEdit].
+class CardAnswerRow extends StatelessWidget {
   const CardAnswerRow({
     super.key,
     required this.front,
     required this.back,
+    required this.shown,
+    required this.onToggle,
     required this.onEdit,
   });
 
   final String front;
   final String back;
+  final bool shown;
+  final VoidCallback onToggle;
   final VoidCallback onEdit;
-
-  @override
-  State<CardAnswerRow> createState() => _CardAnswerRowState();
-}
-
-class _CardAnswerRowState extends State<CardAnswerRow> {
-  bool _shown = false;
 
   @override
   Widget build(BuildContext context) {
@@ -68,17 +65,17 @@ class _CardAnswerRowState extends State<CardAnswerRow> {
     return Semantics(
       container: true,
       button: true,
-      label: _shown
-          ? l10n.cardAnswerShown(widget.front, widget.back)
-          : l10n.cardAnswerHidden(widget.front),
-      onTapHint: _shown ? l10n.hideAnswer : l10n.showAnswer,
+      label: shown
+          ? l10n.cardAnswerShown(front, back)
+          : l10n.cardAnswerHidden(front),
+      onTapHint: shown ? l10n.hideAnswer : l10n.showAnswer,
       customSemanticsActions: {
-        CustomSemanticsAction(label: l10n.editCard): widget.onEdit,
+        CustomSemanticsAction(label: l10n.editCard): onEdit,
       },
       excludeSemantics: true,
       child: AppRowSurface(
-        onTap: () => setState(() => _shown = !_shown),
-        onLongPress: widget.onEdit,
+        onTap: onToggle,
+        onLongPress: onEdit,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: AppSize.cta + 4),
           child: Padding(
@@ -89,11 +86,11 @@ class _CardAnswerRowState extends State<CardAnswerRow> {
             child: Row(
               spacing: AppSpace.s12,
               children: [
-                Expanded(child: Text(widget.front, style: AppType.bodyStrong)),
-                if (_shown)
+                Expanded(child: Text(front, style: AppType.bodyStrong)),
+                if (shown)
                   Expanded(
                     child: Text(
-                      widget.back,
+                      back,
                       textAlign: TextAlign.end,
                       style: AppType.secondary.copyWith(color: colors.ink2),
                     ),

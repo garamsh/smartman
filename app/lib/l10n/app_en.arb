@@ -226,6 +226,8 @@
   "addCardManuallyBody": "Write the question and the answer",
   "addCardPhoto": "Photo",
   "addCardPhotoBody": "Find cards in a photo of a vocabulary page",
+  "cardListTitle": "Cards {count}",
+  "showMeanings": "Show answers",
   "cardAnswerHidden": "{front}, answer hidden",
   "cardAnswerShown": "{front}, answer {back}",
   "goalRingSemantics": "{done} of today's goal of {goal}",
