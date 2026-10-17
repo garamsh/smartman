@@ -117,13 +117,14 @@ export async function readToday(
     ),
   );
   // The latest answer before today of each card answered today that has one.
-  const lastBefore = new Map<unknown, number>();
+  const lastBefore = new Map<CardId, number>();
   for (const chunk of earlier) {
     if ("failure" in chunk) return chunk;
     for (const row of chunk.rows) {
-      const cardId = field(row, "card_id");
+      const read = field(row, "card_id");
       const reviewedAt = parseTime(field(row, "reviewed_at"));
-      if (reviewedAt === null) return { failure: "unreadable" };
+      if (typeof read !== "string" || reviewedAt === null) return { failure: "unreadable" };
+      const cardId = read as CardId;
       lastBefore.set(cardId, Math.max(lastBefore.get(cardId) ?? reviewedAt, reviewedAt));
     }
   }
@@ -165,21 +166,22 @@ export async function readToday(
 function dueAtStart(
   states: CardStates,
   firstToday: ReadonlyMap<CardId, number>,
-  lastBefore: ReadonlyMap<unknown, number>,
+  lastBefore: ReadonlyMap<CardId, number>,
   start: number,
   timeZone: string,
 ): { due: number; load: number } {
   const end = studyDayEnd(start, timeZone);
+  const answeredToday = new Set<string>(firstToday.keys());
   const standing: CardState[] = [];
   let due = 0;
   for (const [cardId, state] of Object.entries(states)) {
-    if (!state || firstToday.has(cardId as CardId)) continue;
+    if (!state || answeredToday.has(cardId)) continue;
     standing.push(state);
     if (state.due < end) due += 1;
   }
   let load = dailyLoad(standing);
   for (const [cardId, last] of lastBefore) {
-    const first = firstToday.get(cardId as CardId);
+    const first = firstToday.get(cardId);
     if (first === undefined) continue;
     due += 1;
     load += 1 / Math.max((first - last) / 86_400_000, 1);

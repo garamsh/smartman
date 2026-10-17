@@ -250,6 +250,28 @@ describe("the deck list", () => {
     expect(counts()).toMatch(new RegExp(`^복습 0 · 새 카드 ${String(before)} · `));
   });
 
+  it("says a card is unreadable when an earlier answer to a card answered today names it by no string", async () => {
+    const unreadable =
+      "이 앱이 읽을 수 없는 카드가 있어 불러오지 못했어요. 휴대폰 앱에서 카드를 확인해 주세요.";
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("fr", "d-fr", "chat"));
+    postgrest.seed("reviews", reviewRow("today", "fr", start - 3_600_000, 6_000));
+    // Control: an earlier answer naming the card by its id is read.
+    postgrest.seed("reviews", reviewRow("before", "fr", start - 2 * day, 6_000));
+    await render(Decks, {});
+    expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
+    expect(screen.queryByText(unreadable)).not.toBeInTheDocument();
+    cleanup();
+
+    // The same answer with its card id held as a list, which the card filter still matches.
+    postgrest.rows.reviews = postgrest.rows.reviews.map((row) =>
+      row.id === "before" ? { ...row, card_id: ["fr"] } : row,
+    );
+    await render(Decks, {});
+
+    expect(screen.getByText(unreadable)).toBeInTheDocument();
+  });
+
   it("marks a deck its owner published with 공개, and no other", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French", false, "public"), deckRow("d-es", "Spanish"));
     postgrest.seed("cards", cardRow("fr", "d-fr", "chat"), cardRow("es", "d-es", "gato"));
