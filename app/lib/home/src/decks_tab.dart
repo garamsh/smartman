@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
@@ -14,9 +13,9 @@ import 'deck_screen.dart';
 import 'new_deck_sheet.dart';
 import 'progress_bar.dart';
 
-/// The 덱 tab: "내 덱 n" with 새 덱 and 선택, a search by name, a row per deck
-/// with its progress and today's count, and the public decks. 선택 enters a
-/// selection mode that studies several decks in one session.
+/// The 덱 tab: "내 덱 n", a search by name, a row per deck with its progress
+/// and today's count, then "새 덱 만들기", which opens the new-deck sheet, and
+/// the public decks.
 class DecksTab extends ConsumerStatefulWidget {
   const DecksTab({super.key, required this.decks, required this.counts});
 
@@ -28,8 +27,6 @@ class DecksTab extends ConsumerStatefulWidget {
 }
 
 class _DecksTabState extends ConsumerState<DecksTab> {
-  /// The decks selected, or null outside selection mode.
-  Set<DeckId>? _selected;
   String _query = '';
 
   @override
@@ -37,48 +34,23 @@ class _DecksTabState extends ConsumerState<DecksTab> {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final sharing = ref.watch(sharingServiceProvider);
-    // A deck deleted while selected drops out of the selection.
-    final selected = switch (_selected) {
-      final selected? => {
-        for (final deck in widget.decks)
-          if (selected.contains(deck.id)) deck.id,
-      },
-      null => null,
-    };
     final query = _query.trim().toLowerCase();
     final shown = [
       for (final deck in widget.decks)
         if (deck.name.toLowerCase().contains(query)) deck,
     ];
     return Scaffold(
-      appBar: selected == null
-          ? AppBar(
-              toolbarHeight: AppSize.cta + AppSpace.s8,
-              titleSpacing: AppSpace.gutter,
-              title: Semantics(
-                header: true,
-                child: Text(
-                  l10n.myDecks(widget.decks.length),
-                  style: AppType.deckTitle,
-                ),
-              ),
-              actions: [
-                AppButton(
-                  label: l10n.selectDecks,
-                  variant: AppButtonVariant.text,
-                  onPressed: () => setState(() => _selected = {}),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpace.gutter),
-                  child: AppButton(
-                    label: l10n.newDeck,
-                    icon: LucideIcons.plus,
-                    onPressed: () => showNewDeckSheet(context, ref),
-                  ),
-                ),
-              ],
-            )
-          : _selectionBar(l10n, selected),
+      appBar: AppBar(
+        toolbarHeight: AppSize.cta + AppSpace.s8,
+        titleSpacing: AppSpace.gutter,
+        title: Semantics(
+          header: true,
+          child: Text(
+            l10n.myDecks(widget.decks.length),
+            style: AppType.deckTitle,
+          ),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.gutter,
@@ -107,8 +79,6 @@ class _DecksTabState extends ConsumerState<DecksTab> {
             DeckRow(
               deck: deck,
               cardCount: widget.counts[deck.id] ?? 0,
-              selected: selected?.contains(deck.id),
-              onSelect: () => _toggle(deck.id),
               onOpen: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
               ),
@@ -124,9 +94,19 @@ class _DecksTabState extends ConsumerState<DecksTab> {
                 ),
               ),
             ),
-          if (sharing != null && selected == null) ...[
+          const SizedBox(height: AppSpace.s8),
+          _ListEntry(
+            icon: LucideIcons.plus,
+            title: l10n.newDeckTitle,
+            body: l10n.newDeckEntryBody,
+            onTap: () => showNewDeckSheet(context, ref),
+          ),
+          if (sharing != null) ...[
             const SizedBox(height: AppSpace.s8),
-            _BrowseEntry(
+            _ListEntry(
+              icon: LucideIcons.compass,
+              title: l10n.browsePublicDecks,
+              body: l10n.browsePublicDecksBody,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()),
               ),
@@ -136,40 +116,6 @@ class _DecksTabState extends ConsumerState<DecksTab> {
       ),
     );
   }
-
-  AppBar _selectionBar(AppLocalizations l10n, Set<DeckId> selected) {
-    final study = DeckSelection.of(selected);
-    return AppBar(
-      leading: IconButton(
-        tooltip: l10n.clearSelection,
-        icon: const Icon(LucideIcons.x),
-        onPressed: () => setState(() => _selected = null),
-      ),
-      title: Text(l10n.decksSelected(selected.length)),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: AppSpace.s12),
-          child: AppButton(
-            label: l10n.studySelected(selected.length),
-            variant: AppButtonVariant.text,
-            onPressed: study == null
-                ? null
-                : () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => StudyScreen(decks: study),
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Enters selection mode with [deck], or adds or removes it once there.
-  void _toggle(DeckId deck) => setState(() {
-    final selected = _selected ??= {};
-    if (!selected.remove(deck)) selected.add(deck);
-  });
 }
 
 /// A brand-tint "오늘 n" when a session over the deck would study any card
@@ -228,15 +174,23 @@ class _DeckProgress extends StatelessWidget {
   }
 }
 
-/// The way to other users' public decks, on a dashed outline.
-class _BrowseEntry extends StatelessWidget {
-  const _BrowseEntry({required this.onTap});
+/// A way onward under the deck rows, on an outline: making a deck, or other
+/// users' public decks.
+class _ListEntry extends StatelessWidget {
+  const _ListEntry({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.onTap,
+  });
 
+  final IconData icon;
+  final String title;
+  final String body;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final radius = BorderRadius.circular(AppRadius.row);
     return MergeSemantics(
@@ -255,14 +209,14 @@ class _BrowseEntry extends StatelessWidget {
               child: Row(
                 spacing: AppSpace.s12,
                 children: [
-                  Icon(LucideIcons.compass, color: colors.ink),
+                  Icon(icon, color: colors.ink),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(l10n.browsePublicDecks, style: AppType.bodyStrong),
+                        Text(title, style: AppType.bodyStrong),
                         Text(
-                          l10n.browsePublicDecksBody,
+                          body,
                           style: AppType.caption.copyWith(color: colors.muted),
                         ),
                       ],

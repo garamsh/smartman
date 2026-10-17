@@ -107,7 +107,7 @@ void main() {
     // decks tab's new-deck sheet.
     if (find.text('Create by hand').evaluate().isEmpty) {
       await showTab(tester, 'Decks');
-      await tester.tap(find.text('New deck'));
+      await tester.tap(find.text('Create a deck'));
       await tester.pumpAndSettle();
     }
     await tester.tap(find.text('Create by hand'));
@@ -186,7 +186,7 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Browse public decks'), findsNothing);
-    await tester.tap(find.text('New deck'));
+    await tester.tap(find.text('Create a deck'));
     await tester.pumpAndSettle();
     expect(find.text('Copy a public deck'), findsNothing);
     await unmountApp(tester);
@@ -209,7 +209,7 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Browse public decks'), findsOneWidget);
-    await tester.tap(find.text('New deck'));
+    await tester.tap(find.text('Create a deck'));
     await tester.pumpAndSettle();
     expect(find.text('Copy a public deck'), findsOneWidget);
     await unmountApp(tester);
@@ -230,8 +230,8 @@ void main() {
       );
       expect(find.text('Create by hand'), findsOneWidget);
       expect(find.text('Browse public decks'), findsNothing);
-      // The bottom bar waits for the first deck.
-      expect(find.text('New deck'), findsNothing);
+      // The decks tab's way to a new deck waits for the first deck.
+      expect(find.text('Create a deck'), findsNothing);
       await unmountApp(tester);
 
       await pumpApp(
@@ -519,7 +519,7 @@ void main() {
         await meetsGuidelines();
         await showTab(tester, 'Decks');
         await meetsGuidelines();
-        await tester.tap(find.text('New deck'));
+        await tester.tap(find.text('Create a deck'));
         await tester.pumpAndSettle();
         await meetsGuidelines();
         await tester.tapAt(const Offset(20, 20));
@@ -592,13 +592,6 @@ void main() {
         // The decks tab with a deck row and its progress.
         await meetsGuidelines();
 
-        await tester.tap(find.text('Select'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('French'));
-        await tester.pumpAndSettle();
-        await meetsGuidelines();
-        await tester.tap(find.byTooltip('Clear selection'));
-        await tester.pumpAndSettle();
         // The 오늘 tab with its today card, the next seven days and a deck.
         await showTab(tester, 'Today');
         await meetsGuidelines();

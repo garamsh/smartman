@@ -54,6 +54,28 @@ List<String> _listed(WidgetTester tester) =>
 
 void main() {
   testWidgets(
+    'under the deck rows come Create a deck, which opens the new-deck sheet, then Browse public decks',
+    (tester) async {
+      final app = await SharingApp.open(
+        tester,
+        server: _server(),
+        myDecks: {'Mine': {}},
+      );
+      await tester.ensureVisible(find.text('Browse public decks'));
+      final create = tester.getRect(find.text('Create a deck'));
+      final browse = tester.getRect(find.text('Browse public decks'));
+      expect(create.top, greaterThan(tester.getRect(find.text('Mine')).bottom));
+      expect(browse.top, greaterThan(create.bottom));
+
+      await app.tapText('Create a deck');
+      // The new-deck sheet, with its way to public decks since sharing exists.
+      expect(find.text('Create by hand'), findsOneWidget);
+      expect(find.text('Copy a public deck'), findsOneWidget);
+      await app.close();
+    },
+  );
+
+  testWidgets(
     'the deck list opens browse, which lists public decks newest first with owner and counts',
     (tester) async {
       final app = await SharingApp.open(tester, server: _server());

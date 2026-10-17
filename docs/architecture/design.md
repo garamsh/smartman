@@ -12,7 +12,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it.
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
    - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
-   - 덱 tab: "새 덱" in the top bar, its ways in a sheet; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, `BottomActions`; rename and delete sit in the deck screen's menu.
+   - 덱 tab: "새 덱 만들기" under the rows, before "공개 덱 둘러보기", its ways in a sheet, and nothing in the top bar but the title; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, `BottomActions`; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
@@ -23,7 +23,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
    - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다"; a horizontal drag on the previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기", and a tap on it opens the whole card; a drag on either card moves that card alone.
-   - 덱 tab: "선택" enters selection mode, as a long-press does; the rows expose their selected state, and selection mode has visible controls. Deck screen: a long-press opens a card, and a screen reader reaches the same through the row's "카드 편집" action.
+   - Deck screen: a long-press opens a card, and a screen reader reaches the same through the row's "카드 편집" action.
    - Every sheet: a drag or a tap outside dismisses it, and Android's back does the same.
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
    - Study: the next card is on screen before the answer's write finishes.

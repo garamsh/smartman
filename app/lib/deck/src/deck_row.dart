@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_chip.dart';
 import '../../design/app_list_row.dart';
@@ -9,14 +8,12 @@ import 'model.dart';
 
 /// A deck on a row: its tile, its name with "공개" when it is published and
 /// [today] beside them, and [progress] under them, or its card count while
-/// [progress] is null; in selection mode, a check in place of the tile.
+/// [progress] is null. A tap calls [onOpen].
 class DeckRow extends StatelessWidget {
   const DeckRow({
     super.key,
     required this.deck,
     required this.cardCount,
-    required this.selected,
-    required this.onSelect,
     required this.onOpen,
     this.today,
     this.progress,
@@ -25,13 +22,7 @@ class DeckRow extends StatelessWidget {
   final Deck deck;
   final int cardCount;
 
-  /// Whether the deck is selected, or null outside selection mode.
-  final bool? selected;
-
-  /// Enters selection mode with this deck, or toggles it once there.
-  final VoidCallback onSelect;
-
-  /// Opens the deck, outside selection mode.
+  /// Opens the deck.
   final VoidCallback onOpen;
 
   /// What the deck holds for today, as its caller draws it.
@@ -44,62 +35,46 @@ class DeckRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final selected = this.selected;
     return MergeSemantics(
-      child: Semantics(
-        selected: selected,
-        child: AppRowSurface(
-          onTap: selected == null ? onOpen : onSelect,
-          onLongPress: onSelect,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.s16,
-              AppSpace.s12,
-              AppSpace.s12,
-              AppSpace.s12,
-            ),
-            child: Row(
-              spacing: AppSpace.s12,
-              children: [
-                if (selected == null)
-                  DeckTile(deck: deck)
-                else
-                  SizedBox.square(
-                    dimension: AppSize.deckTile,
-                    child: Icon(
-                      selected ? LucideIcons.circleCheck : LucideIcons.circle,
-                      color: selected ? colors.ink : colors.muted,
+      child: AppRowSurface(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.s16,
+            AppSpace.s12,
+            AppSpace.s12,
+            AppSpace.s12,
+          ),
+          child: Row(
+            spacing: AppSpace.s12,
+            children: [
+              DeckTile(deck: deck),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: AppSpace.s4,
+                  children: [
+                    Row(
+                      spacing: AppSpace.s8,
+                      children: [
+                        Expanded(
+                          child: Text(deck.name, style: AppType.bodyStrong),
+                        ),
+                        if (deck.visibility is PublicDeck)
+                          AppChip(label: l10n.publicChip),
+                        ?today,
+                      ],
                     ),
-                  ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: AppSpace.s4,
-                    children: [
-                      Row(
-                        spacing: AppSpace.s8,
-                        children: [
-                          Expanded(
-                            child: Text(deck.name, style: AppType.bodyStrong),
-                          ),
-                          if (deck.visibility is PublicDeck)
-                            AppChip(label: l10n.publicChip),
-                          ?today,
-                        ],
-                      ),
-                      progress ??
-                          Text(
-                            l10n.cardCount(cardCount),
-                            style: AppType.caption.copyWith(
-                              color: colors.muted,
-                            ),
-                          ),
-                    ],
-                  ),
+                    progress ??
+                        Text(
+                          l10n.cardCount(cardCount),
+                          style: AppType.caption.copyWith(color: colors.muted),
+                        ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -109,19 +109,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get delete => '삭제';
 
   @override
-  String get clearSelection => '선택 해제';
-
-  @override
-  String decksSelected(int count) {
-    return '$count개 선택됨';
-  }
-
-  @override
-  String studySelected(int count) {
-    return '학습 ($count)';
-  }
-
-  @override
   String todayCards(int count) {
     return '오늘 할 카드 $count장';
   }
@@ -712,9 +699,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tabsLabel => '탭';
 
   @override
-  String get selectDecks => '선택';
-
-  @override
   String get searchDecks => '덱 검색';
 
   @override
@@ -1046,4 +1030,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get masteredEmpty => '아직 익힌 카드가 없어요.';
+
+  @override
+  String get newDeckEntryBody => '새 덱을 시작할 방법을 골라요';
 }

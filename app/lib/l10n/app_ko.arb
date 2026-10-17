@@ -67,18 +67,6 @@
   "@rename": {"description": "Deck menu item for renaming."},
   "delete": "삭제",
   "@delete": {"description": "Confirms a deletion."},
-  "clearSelection": "선택 해제",
-  "@clearSelection": {"description": "Label of the button that leaves the deck list's selection mode."},
-  "decksSelected": "{count}개 선택됨",
-  "@decksSelected": {
-    "description": "Deck list title in selection mode: how many decks are selected.",
-    "placeholders": {"count": {"type": "int"}}
-  },
-  "studySelected": "학습 ({count})",
-  "@studySelected": {
-    "description": "Deck list action in selection mode that studies the selected decks in one session, with how many are selected.",
-    "placeholders": {"count": {"type": "int"}}
-  },
   "todayCards": "오늘 할 카드 {count}장",
   "@todayCards": {
     "description": "Deck list header: how many cards a session over every deck would study now.",
@@ -505,8 +493,6 @@
   "@tabRecord": {"description": "The bottom bar's third tab: the study record."},
   "tabsLabel": "탭",
   "@tabsLabel": {"description": "What a screen reader calls the bottom bar of tabs."},
-  "selectDecks": "선택",
-  "@selectDecks": {"description": "The decks tab's action that enters selection mode, to study several decks in one session."},
   "searchDecks": "덱 검색",
   "@searchDecks": {"description": "The hint in the decks tab's search field, which filters decks by name."},
   "noDeckMatches": "찾는 덱이 없어요. 다른 단어로 검색해 보세요.",
@@ -672,5 +658,7 @@
   "studyDay": "{date} {count}장",
   "@studyDay": {"description": "One studied day of the heatmap as a screen reader reads it.", "placeholders": {"date": {"type": "String"}, "count": {"type": "int"}}},
   "masteredEmpty": "아직 익힌 카드가 없어요.",
-  "@masteredEmpty": {"description": "The mastered card while no card was mastered in any of the eight weeks."}
+  "@masteredEmpty": {"description": "The mastered card while no card was mastered in any of the eight weeks."},
+  "newDeckEntryBody": "새 덱을 시작할 방법을 골라요",
+  "@newDeckEntryBody": {"description": "Under 새 덱 만들기 at the foot of the decks tab, which opens the new-deck sheet."}
 }

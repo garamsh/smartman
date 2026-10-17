@@ -78,7 +78,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Row
 
-- `DeckRow` draws a deck on a rounded surface: the name's first letter on a 44 px tile (`DeckTile`) in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one, hidden from screen readers beside the name; its name, a "공개" chip when it is public, and what its caller shows of today; and under them what its caller shows of its progress, or "카드 n장" without it. In selection mode a check in place of the tile shows whether the deck is selected.
+- `DeckRow` draws a deck on a rounded surface: the name's first letter on a 44 px tile (`DeckTile`) in one of four tints, chosen from the deck's id so a deck keeps its tint and the web app picks the same one, hidden from screen readers beside the name; its name, a "공개" chip when it is public, and what its caller shows of today; and under them what its caller shows of its progress, or "카드 n장" without it. A tap opens the deck.
 - Its caller passes the card count as a value, what to show of today and of its progress as widgets, and the callbacks that open the deck and select it; the 덱 tab is that caller ([`home.md`](home.md)).
 - `CardAnswerRow` draws a card's question on a rounded row with its answer hidden behind a bar, or shown, as its owner says; a tap calls back for its owner to decide, so a screen can set every row at once (issue #142); a long-press, or the screen reader's "카드 편집", calls back to edit it. It is read as "{front}, 답 가려짐" or "{front}, 답 {back}" ([ADR 0036](adr/0036-organise-the-app-in-today-decks-and-record-tabs-and-define-the-daily-goal-forecast-and-card-progress.md)).
 
