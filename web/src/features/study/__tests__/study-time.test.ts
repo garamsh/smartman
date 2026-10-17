@@ -82,15 +82,15 @@ describe("the figure", () => {
     expect(studyTime(days)).toBeGreaterThan(180000);
   });
 
-  it("lets a recent fast week pull the review pace below the plain mean of the window", () => {
+  it("lets a recent fast week outweigh an older slow month in the review pace", () => {
     // 23 study days of reviews at 8 s, then 7 at 4 s, ten reviews each.
     const days = [
       ...Array.from({ length: 23 }, () => studyDay({ reviews: 10, reviewMs: 8000 })),
       ...Array.from({ length: 7 }, () => studyDay({ reviews: 10 })),
     ];
-    const plainMean = (23 * 8000 + 7 * 4000) / 30;
 
-    expect(paceOf(days).reviewMs).toBeLessThan(plainMean - 500);
+    // Nearer the week's 4 s than the month's 8.
+    expect(paceOf(days).reviewMs).toBeLessThan(6000);
   });
 
   it("takes a kind with fewer than 20 answers in the window at 10 s an answer", () => {

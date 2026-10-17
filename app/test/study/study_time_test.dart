@@ -99,16 +99,19 @@ void main() {
       },
     );
 
-    test('a recent fast week pulls the review pace below the plain mean of the window', () {
-      // 23 study days of reviews at 8 s, then 7 at 4 s, ten reviews each.
-      final days = [
-        ...List.filled(23, _day(reviews: 10, reviewMs: 8000)),
-        ...List.filled(7, _day(reviews: 10)),
-      ];
-      final plainMean = (23 * 8000 + 7 * 4000) / 30;
+    test(
+      'a recent fast week outweighs an older slow month in the review pace',
+      () {
+        // 23 study days of reviews at 8 s, then 7 at 4 s, ten reviews each.
+        final days = [
+          ...List.filled(23, _day(reviews: 10, reviewMs: 8000)),
+          ...List.filled(7, _day(reviews: 10)),
+        ];
 
-      expect(paceOf(days).reviewMs, lessThan(plainMean - 500));
-    });
+        // Nearer the week's 4 s than the month's 8.
+        expect(paceOf(days).reviewMs, lessThan(6000));
+      },
+    );
 
     test('a kind with fewer than 20 answers in the window is taken at 10 s an answer', () {
       final days = [_day(reviews: 19, firsts: 20)];

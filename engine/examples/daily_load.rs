@@ -644,7 +644,7 @@ fn measure(scenario: &Scenario, rule: &Rule) -> Row {
 
 const CHOSEN: Rule = Rule {
     estimate: Estimate::Weighted(7.0),
-    pace_half_life: 14.0,
+    pace_half_life: 7.0,
     step: Some(0.1),
     cold_days: 5,
     window: 30,

@@ -3,7 +3,7 @@
 -- every answer counted up to the cap; it reads only the caller's live answers and runs as the
 -- caller.
 begin;
-select plan(9);
+select plan(14);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000001', 'window@example.com'),
@@ -117,6 +117,28 @@ select is(
   pg_temp.days_of('00000000-0000-4000-8000-000000000004', 'UTC', '2026-10-10 04:00Z', 30),
   null,
   'no answer before the time given: no study day');
+
+-- Only the caller's answers: user 4 reads none of user 1's.
+select is(
+  pg_temp.days_of('00000000-0000-4000-8000-000000000004', 'UTC', '2026-10-11 04:00Z', 30),
+  null,
+  'another user''s answers are not read: user 1''s 8th and 10th are not this user''s');
+
+select throws_ok(
+  $$select pg_temp.days_of('00000000-0000-4000-8000-000000000001', 'Mars/Olympus', '2026-10-14 04:00Z', 30)$$,
+  '22023', null, 'a zone Postgres does not know raises');
+
+select function_privs_are('public', 'study_days_before',
+  array['text', 'timestamp with time zone', 'integer', 'integer'],
+  'authenticated', array['EXECUTE'], 'authenticated may read its study days');
+select function_privs_are('public', 'study_days_before',
+  array['text', 'timestamp with time zone', 'integer', 'integer'],
+  'anon', array[]::text[], 'anon may not');
+select results_eq(
+  $$select prosecdef, provolatile = 's', proconfig = array['search_path=""'] from pg_proc
+    where oid = 'public.study_days_before(text, timestamptz, integer, integer)'::regprocedure$$,
+  $$values (false, true, true)$$,
+  'it runs as the caller, is stable, and sets an empty search_path');
 
 select * from finish();
 rollback;

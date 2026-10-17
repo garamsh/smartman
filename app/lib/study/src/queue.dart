@@ -20,7 +20,7 @@ const studyDayWindow = 30;
 const studyTimeHalfLife = 7;
 
 /// The half-life, in study days, of an answer's weight in the pace.
-const paceHalfLife = 14;
+const paceHalfLife = 7;
 
 /// The most the study time moves from one study day's to the next, in percent.
 const studyTimeStepPercent = 10;

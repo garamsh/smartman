@@ -226,7 +226,7 @@ describe("the deck list", () => {
       ...reviews.map((front) => reviewRow(`last-${front}`, `due-${front}`, due.lastReview, 6_000)),
     );
     await render(Decks, {});
-    const before = /^복습 4 · 새 카드 (\d+) · /.exec(counts() ?? "")?.[1];
+    const before = /^복습 4 · 새 카드 (\d+) · /.exec(counts())?.[1];
     // The figure is the user's own, short of the ten new cards the deck holds.
     expect(Number(before)).toBeGreaterThan(0);
     expect(Number(before)).toBeLessThan(10);

@@ -21,7 +21,7 @@ export const studyDayWindow = 30;
 export const studyTimeHalfLife = 7;
 
 /** The half-life, in study days, of an answer's weight in the pace. */
-export const paceHalfLife = 14;
+export const paceHalfLife = 7;
 
 /** The most the study time moves from one study day's to the next, in percent. */
 export const studyTimeStepPercent = 10;
