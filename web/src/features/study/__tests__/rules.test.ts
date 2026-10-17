@@ -21,7 +21,16 @@ function dartConstants(source: string): Map<string, number> {
 
 /** The rules both clients apply, each a constant of the same name in queue.dart and queue.ts. */
 const shared = {
-  newCardLimit: queue.newCardLimit,
+  coldStartNewCards: queue.coldStartNewCards,
+  coldStartStudyDays: queue.coldStartStudyDays,
+  studyDayWindow: queue.studyDayWindow,
+  studyTimeHalfLife: queue.studyTimeHalfLife,
+  paceHalfLife: queue.paceHalfLife,
+  studyTimeStepPercent: queue.studyTimeStepPercent,
+  reviewSpreadDays: queue.reviewSpreadDays,
+  answerCapMs: queue.answerCapMs,
+  paceMinimum: queue.paceMinimum,
+  defaultAnswerMs: queue.defaultAnswerMs,
   studyDayStartHour: queue.studyDayStartHour,
   reshowGapMin: queue.reshowGapMin,
   reshowGapMax: queue.reshowGapMax,
@@ -38,9 +47,9 @@ describe("the queue rules", () => {
     }
     // Control: the comparison sees a changed value.
     const changed = dartConstants(
-      queueDart.replace("const newCardLimit = 20;", "const newCardLimit = 21;"),
+      queueDart.replace("const coldStartNewCards = 20;", "const coldStartNewCards = 21;"),
     );
-    expect(changed.get("newCardLimit")).not.toBe(shared.newCardLimit);
+    expect(changed.get("coldStartNewCards")).not.toBe(shared.coldStartNewCards);
   });
 
   it("are every rule queue.dart declares, so a new one is compared too", () => {

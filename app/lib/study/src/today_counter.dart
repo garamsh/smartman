@@ -16,6 +16,7 @@ import 'failure_message.dart';
 import 'model.dart';
 import 'providers.dart';
 import 'queue.dart';
+import 'study_time.dart';
 
 /// What a session over a selection would study now.
 sealed class TodayCount {
@@ -27,28 +28,22 @@ final class TodayPending extends TodayCount {
   const TodayPending();
 }
 
-/// [review] cards are due and [fresh] cards are new, and the user takes
-/// [perCard] over one card.
+/// [review] cards are due and [fresh] cards are new, at the user's [pace].
 final class TodayCounted extends TodayCount {
   const TodayCounted({
     required this.review,
     required this.fresh,
-    this.perCard = defaultPerCard,
+    this.pace = Pace.unknown,
   }) : backlog = false;
 
   /// So many reviews are due that new cards pause until they are done.
-  const TodayCounted.backlog({
-    required this.review,
-    this.perCard = defaultPerCard,
-  }) : fresh = 0,
-       backlog = true;
+  const TodayCounted.backlog({required this.review, this.pace = Pace.unknown})
+    : fresh = 0,
+      backlog = true;
 
   final int review;
   final int fresh;
-  final Duration perCard;
-
-  /// The time one card is taken to need while the user's own pace is unknown.
-  static const defaultPerCard = Duration(seconds: 10);
+  final Pace pace;
 
   /// Whether new cards pause for a backlog of reviews.
   final bool backlog;
@@ -56,8 +51,8 @@ final class TodayCounted extends TodayCount {
   /// The size of the session: every due card and every new one.
   int get total => review + fresh;
 
-  /// The whole minutes the session takes at [perCard], rounded up.
-  int get minutes => (total * perCard.inMilliseconds / 60000).ceil();
+  /// The whole minutes the session takes at [pace], rounded up.
+  int get minutes => pace.minutes(reviews: review, fresh: fresh);
 }
 
 /// The count could not be read; [message] says why, for the user.
@@ -88,25 +83,21 @@ readToday(DeckSelection decks, WidgetRef ref) async {
     ref.read(deckRepositoryProvider),
     repository,
   );
-  final now = ref.read(studyClockProvider)();
-  final zone = ref.read(studyZoneProvider);
-  final day = StudyDay.at(
-    now,
-    firstAnswers: await repository.firstAnswersSince(studyDayStart(now, zone)),
-    offsetAt: zone,
+  final (day, pace) = await readStudyDay(
+    repository,
+    ref.read(studyClockProvider)(),
+    ref.read(studyZoneProvider),
   );
   final queue = selectQueue(cards, states, day);
-  final pace =
-      await repository.medianReviewDuration() ?? TodayCounted.defaultPerCard;
   final fresh = queue.cards
       .where((card) => !states.containsKey(card.id))
       .length;
   final count = queue.backlog
-      ? TodayCounted.backlog(review: queue.cards.length, perCard: pace)
+      ? TodayCounted.backlog(review: queue.cards.length, pace: pace)
       : TodayCounted(
           review: queue.cards.length - fresh,
           fresh: fresh,
-          perCard: pace,
+          pace: pace,
         );
   return (cards: cards, states: states, day: day, queue: queue, count: count);
 }

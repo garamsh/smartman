@@ -80,7 +80,8 @@ type Held = { release: () => void; released: Promise<void> };
  * filters the app sends, its order by one column, the paging of `offset` and `limit` with the
  * count `Prefer: count=exact` asks for, the server's revision on every write, an upsert's
  * `resolution`, and the reviews' column grant. It answers `study_streak_before` from the seeded
- * reviews with the web's own `streak`, as the server counts the same days.
+ * reviews with the web's own `streak`, as the server counts the same days, and
+ * `study_days_before` with the web's own `studyDayStart`, as the server groups the same days.
  */
 export class FakePostgrest {
   readonly rows: Record<Table, Row[]> = { decks: [], cards: [], reviews: [], card_states: [] };
@@ -154,6 +155,52 @@ export class FakePostgrest {
         .filter((at) => at < start);
       // The day holding [start] has no answer here, so the count starts from the day before it.
       return HttpResponse.json(streak(answers, start, timeZone));
+    }),
+    http.post(`${supabaseUrl}/rest/v1/rpc/study_days_before`, async ({ request }) => {
+      const refused = await this.gate("reviews");
+      if (refused) return refused;
+      const user = bearerUser(request.headers.get("authorization"));
+      if (!user) {
+        return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
+      }
+      this.requests.push("POST rpc/study_days_before");
+      const body = (await request.json()) as {
+        time_zone: string;
+        before: string;
+        days: number;
+        cap_ms: number;
+      };
+      const live = this.rows.reviews
+        .filter((row) => row.user_id === user.id && row.deleted_at == null)
+        .map((row) => ({
+          card: String(row.card_id),
+          at: Date.parse(String(row.reviewed_at)),
+          ms: Number(row.duration_ms),
+        }));
+      const before = Date.parse(body.before);
+      const totals = new Map<number, Row>();
+      for (const answer of live.filter(({ at }) => at < before)) {
+        const day = studyDayStart(answer.at, body.time_zone);
+        const total = totals.get(day) ?? {
+          day_start: new Date(day).toISOString(),
+          review_ms: 0,
+          reviews: 0,
+          first_ms: 0,
+          first_answers: 0,
+        };
+        const first = !live.some(({ card, at }) => card === answer.card && at < answer.at);
+        const ms = Math.min(answer.ms, body.cap_ms);
+        if (first) {
+          total.first_ms = Number(total.first_ms) + ms;
+          total.first_answers = Number(total.first_answers) + 1;
+        } else {
+          total.review_ms = Number(total.review_ms) + ms;
+          total.reviews = Number(total.reviews) + 1;
+        }
+        totals.set(day, total);
+      }
+      const days = [...totals.keys()].sort((a, b) => a - b).slice(-body.days);
+      return HttpResponse.json(days.map((day) => totals.get(day)));
     }),
     http.get(`${supabaseUrl}/rest/v1/:table`, async ({ request, params }) => {
       const { table } = params;

@@ -10,25 +10,20 @@ import {
   readLibrary,
   StudyLink,
 } from "@/features/decks";
-import { countToday, readCardStates, readToday } from "@/features/study";
+import { countToday, readToday } from "@/features/study";
 
 /** The deck [params] names, read on the server; a deck that does not exist is not found. */
 export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const deckId = id as DeckId;
-  const [read, states, studyDay] = await Promise.all([
-    readLibrary([deckId]),
-    readCardStates(),
-    readToday(),
-  ]);
+  const [read, studyDay] = await Promise.all([readLibrary([deckId]), readToday()]);
   if ("failure" in read) return <ReadFailure failure={read.failure} />;
-  if ("failure" in states) return <ReadFailure failure={states.failure} />;
   if ("failure" in studyDay) return <ReadFailure failure={studyDay.failure} />;
 
   const deck = read.library.decks.find((candidate) => candidate.id === deckId);
   if (!deck) notFound();
   const { cards } = read.library;
-  const today = countToday(cards, states.states, studyDay.today.day);
+  const today = countToday(cards, studyDay.today.states, studyDay.today.day);
   const pills = [
     `카드 ${String(cards.length)}`,
     `복습 ${String(today.review)}`,

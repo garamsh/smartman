@@ -9,6 +9,7 @@ import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/queue.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/study_repository.dart';
+import 'package:smartman/study/src/study_time.dart';
 
 import 'fixtures.dart';
 
@@ -117,12 +118,9 @@ class _Decks {
   }
 
   /// The study day holding [now] in the time zone [offsetAt] gives, from the
-  /// first answers stored across every deck.
-  Future<StudyDay> day(DateTime now, UtcOffsetAt offsetAt) async => StudyDay.at(
-    now,
-    firstAnswers: await study.firstAnswersSince(studyDayStart(now, offsetAt)),
-    offsetAt: offsetAt,
-  );
+  /// answers and states stored across every deck.
+  Future<StudyDay> day(DateTime now, UtcOffsetAt offsetAt) async =>
+      (await readStudyDay(study, now, offsetAt)).$1;
 
   /// The fronts of the cards a session over [decks] would study in [day].
   Future<List<String>> queueIn(List<String> decks, StudyDay day) async {
@@ -169,7 +167,7 @@ void main() {
 
   group('membership', () {
     test('a session over several decks takes every card due by the end of the study day in them and the 20 oldest new cards across them', () async {
-      expect(newCardLimit, 20);
+      expect(coldStartNewCards, 20);
       final decks = await _Decks.open();
       // Created alternately, so the oldest twenty new cards are the first
       // ten of each deck.
@@ -485,7 +483,7 @@ void main() {
     );
 
     test('the day takes 20 new cards less those first answered in it across every deck, counting 04:00 and not 03:59', () async {
-      expect(newCardLimit, 20);
+      expect(coldStartNewCards, 20);
       final decks = await _Decks.open();
       for (var index = 0; index < 30; index++) {
         await decks.add('a', 'a new $index');

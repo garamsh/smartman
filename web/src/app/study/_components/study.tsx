@@ -7,13 +7,7 @@ import {
   ReadFailure,
   readLibrary,
 } from "@/features/decks";
-import {
-  type CardStates,
-  readCardStates,
-  readToday,
-  selectQueue,
-  StudyScreen,
-} from "@/features/study";
+import { type CardStates, readToday, selectQueue, StudyScreen } from "@/features/study";
 
 /**
  * Opens a session over the decks [searchParams] names: reads their cards, their states and
@@ -28,13 +22,11 @@ export async function Study({
   const { decks } = await searchParams;
   const named = typeof decks === "string" ? decks.split(",").filter(Boolean) : [];
   if (named.length === 0) notFound();
-  const [read, states, today] = await Promise.all([
+  const [read, today] = await Promise.all([
     readLibrary(named as DeckId[]),
-    readCardStates(),
     readToday({ streak: true }),
   ]);
   if ("failure" in read) return <Failure failure={read.failure} />;
-  if ("failure" in states) return <Failure failure={states.failure} />;
   if ("failure" in today) return <Failure failure={today.failure} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
@@ -43,11 +35,11 @@ export async function Study({
     ...card,
     text: { front: describeContent(card.front), back: describeContent(card.back) },
   }));
-  const { day, answers, streakBefore, answeredBefore } = today.today;
-  const queue = selectQueue(cards, states.states, day);
+  const { day, answers, states, readAt, streakBefore, answeredBefore } = today.today;
+  const queue = selectQueue(cards, states, day);
   const before: CardStates = {};
   for (const card of queue.cards) {
-    const state = states.states[card.id];
+    const state = states[card.id];
     if (state) before[card.id] = state;
   }
   const byId = new Map(cards.map((card) => [card.id, card]));
@@ -58,7 +50,7 @@ export async function Study({
   return (
     <StudyScreen
       plan={{
-        startedAt: states.readAt,
+        startedAt: readAt,
         queue,
         before,
         today: {

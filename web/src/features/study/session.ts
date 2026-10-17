@@ -103,6 +103,10 @@ export class StudySession {
   private readonly total: number;
   private readonly answers: Answered[] = [];
   private shownAt: number;
+  /** When the page was last hidden while the card on screen waited, or null while it is visible. */
+  private pausedAt: number | null = null;
+  /** The time hidden since the card on screen was shown, up to `pausedAt`. */
+  private awayMs = 0;
   private practicing = false;
   private pass: Pass = "all";
   /** Counts the passes started, so a toggle can tell whether its answer is in the one under way. */
@@ -146,14 +150,41 @@ export class StudySession {
       id: this.newId(),
       answer,
       reviewedAt: now,
-      durationMs: Math.max(0, now - this.shownAt),
+      durationMs: this.onScreen(now),
       fuzzFactor: this.random.nextDouble(),
     };
     this.answers.push({ card, answer, first: answer, review, pass: null });
     if (answer === "dontKnow") reinsert(this.queue, card, this.random);
-    this.shownAt = now;
+    this.show(now);
     this.snapshot = this.build();
     return this.write(card.id, { kind: "answer", reviewId: review.id }, now);
+  }
+
+  /**
+   * Stops the clock of the card on screen while the page is hidden, so an answer's duration
+   * counts only the time the page was visible.
+   */
+  pause(): void {
+    this.pausedAt ??= this.clock();
+  }
+
+  /** Starts the clock of the card on screen again as the page is shown. */
+  resume(): void {
+    if (this.pausedAt !== null) this.awayMs += this.clock() - this.pausedAt;
+    this.pausedAt = null;
+  }
+
+  /** Starts the clock of the next card shown, at [now]. */
+  private show(now: number): void {
+    this.shownAt = now;
+    this.awayMs = 0;
+    if (this.pausedAt !== null) this.pausedAt = now;
+  }
+
+  /** The time the card on screen has been shown at [now] with the page visible. */
+  private onScreen(now: number): number {
+    const away = this.awayMs + (this.pausedAt === null ? 0 : now - this.pausedAt);
+    return Math.max(0, now - this.shownAt - away);
   }
 
   /**
@@ -267,7 +298,7 @@ export class StudySession {
   private toggleQueued(queue: StudyCard[], card: StudyCard, answer: Answer, now: number): void {
     const waiting = queue.findIndex((queued) => queued.id === card.id);
     if (answer === "dontKnow" && waiting === -1) {
-      if (queue.length === 0) this.shownAt = now;
+      if (queue.length === 0) this.show(now);
       reinsert(queue, card, this.random);
     } else if (answer === "know" && waiting > 0) {
       queue.splice(waiting, 1);

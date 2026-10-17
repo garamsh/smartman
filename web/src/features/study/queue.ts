@@ -5,8 +5,38 @@ import type { Random } from "./random";
 // The queue rules of study.md, in one place: which cards a session studies, in what order, and
 // when a "Don't know" comes back. The counts the deck screens show come from the same rules.
 
-/** How many never-reviewed cards a study day takes, across all the user's decks. */
-export const newCardLimit = 20;
+/**
+ * How many never-reviewed cards a study day takes, across all the user's decks, while the window
+ * holds fewer than [coldStartStudyDays] study days.
+ */
+export const coldStartNewCards = 20;
+
+/** The study days the window must hold before a day's new cards follow the user's own time and pace. */
+export const coldStartStudyDays = 5;
+
+/** How many of the latest study days before today the study time and the pace are read from. */
+export const studyDayWindow = 30;
+
+/** The half-life, in study days, of a study day's weight in the study time. */
+export const studyTimeHalfLife = 7;
+
+/** The half-life, in study days, of an answer's weight in the pace. */
+export const paceHalfLife = 7;
+
+/** The most the study time moves from one study day's to the next, in percent. */
+export const studyTimeStepPercent = 10;
+
+/** Over how many days the reviews due beyond the daily load are spread. */
+export const reviewSpreadDays = 7;
+
+/** The most of one answer's duration the study time and the pace count, in milliseconds. */
+export const answerCapMs = 30000;
+
+/** The fewest answers of a kind the window must hold for its pace to be read. */
+export const paceMinimum = 20;
+
+/** The time one answer is taken to need while its kind's pace is unknown, in milliseconds. */
+export const defaultAnswerMs = 10000;
 
 /** The local hour a study day starts at. */
 export const studyDayStartHour = 4;
@@ -45,7 +75,7 @@ export type StudyDay = {
   start: number;
   /** When the next study day starts. */
   end: number;
-  /** How many new cards the day still takes: [newCardLimit] less those first answered in it. */
+  /** How many new cards the day still takes: its new cards less those first answered in it. */
   newCardsLeft: number;
 };
 
@@ -101,17 +131,27 @@ export function studyDayStart(now: number, timeZone: string): number {
   return startOn(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() - back, timeZone);
 }
 
-/**
- * The study day holding [now] in [timeZone], in which the user first answered a card at each
- * of [firstAnswers], across every deck.
- */
-export function studyDay(now: number, firstAnswers: Iterable<number>, timeZone: string): StudyDay {
-  const start = studyDayStart(now, timeZone);
+/** When the study day starting at [start] in [timeZone] ends: the start of the next one. */
+export function studyDayEnd(start: number, timeZone: string): number {
   const wall = new Date(wallClock(start, timeZone));
-  const end = startOn(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() + 1, timeZone);
+  return startOn(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() + 1, timeZone);
+}
+
+/**
+ * The study day holding [now] in [timeZone], which takes [newCards] new cards, and in which the
+ * user first answered a card at each of [firstAnswers], across every deck.
+ */
+export function studyDay(
+  now: number,
+  firstAnswers: Iterable<number>,
+  timeZone: string,
+  newCards: number = coldStartNewCards,
+): StudyDay {
+  const start = studyDayStart(now, timeZone);
+  const end = studyDayEnd(start, timeZone);
   let taken = 0;
   for (const answer of firstAnswers) if (answer >= start && answer < end) taken += 1;
-  return { start, end, newCardsLeft: Math.max(0, newCardLimit - taken) };
+  return { start, end, newCardsLeft: Math.max(0, newCards - taken) };
 }
 
 /**

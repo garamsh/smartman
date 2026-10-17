@@ -5,8 +5,39 @@ import 'model.dart';
 import 'study_repository.dart';
 
 /// How many never-reviewed cards a study day takes, across all the user's
-/// decks.
-const newCardLimit = 20;
+/// decks, while the window holds fewer than [coldStartStudyDays] study days.
+const coldStartNewCards = 20;
+
+/// The study days the window must hold before a day's new cards follow the
+/// user's own study time and pace.
+const coldStartStudyDays = 5;
+
+/// How many of the latest study days before today the study time and the pace
+/// are read from.
+const studyDayWindow = 30;
+
+/// The half-life, in study days, of a study day's weight in the study time.
+const studyTimeHalfLife = 7;
+
+/// The half-life, in study days, of an answer's weight in the pace.
+const paceHalfLife = 7;
+
+/// The most the study time moves from one study day's to the next, in percent.
+const studyTimeStepPercent = 10;
+
+/// Over how many days the reviews due beyond the daily load are spread.
+const reviewSpreadDays = 7;
+
+/// The most of one answer's duration the study time and the pace count, in
+/// milliseconds.
+const answerCapMs = 30000;
+
+/// The fewest answers of a kind the window must hold for its pace to be read.
+const paceMinimum = 20;
+
+/// The time one answer is taken to need while its kind's pace is unknown, in
+/// milliseconds.
+const defaultAnswerMs = 10000;
 
 /// The local hour a study day starts at.
 const studyDayStartHour = 4;
@@ -80,11 +111,13 @@ final class StudyDay {
     required this.newCardsLeft,
   });
 
-  /// The study day holding [now], in which the user first answered a card
-  /// at each of [firstAnswers], across every deck.
+  /// The study day holding [now], which takes [newCards] new cards, and in
+  /// which the user first answered a card at each of [firstAnswers], across
+  /// every deck.
   factory StudyDay.at(
     DateTime now, {
     required Iterable<DateTime> firstAnswers,
+    int newCards = coldStartNewCards,
     UtcOffsetAt offsetAt = localOffsetAt,
   }) {
     final start = studyDayStart(now, offsetAt);
@@ -95,7 +128,7 @@ final class StudyDay {
     return StudyDay(
       start: start,
       end: end,
-      newCardsLeft: max(0, newCardLimit - taken),
+      newCardsLeft: max(0, newCards - taken),
     );
   }
 
@@ -104,7 +137,7 @@ final class StudyDay {
   /// When the next study day starts.
   final DateTime end;
 
-  /// How many new cards the day still takes: [newCardLimit] less the cards
+  /// How many new cards the day still takes: its new cards less the cards
   /// first answered in it, never below zero.
   final int newCardsLeft;
 

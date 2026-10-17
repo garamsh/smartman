@@ -9,7 +9,7 @@ import {
   type CardStates,
   countToday,
   dailyLoad,
-  newCardLimit,
+  coldStartNewCards,
   orderQueue,
   selectQueue,
   streak,
@@ -172,7 +172,7 @@ describe("the study day", () => {
   });
 
   it("takes 20 new cards less those first answered in it, counting 04:00 and not 03:59", () => {
-    expect(newCardLimit).toBe(20);
+    expect(coldStartNewCards).toBe(20);
     // 11:00 on 15 October in Seoul; the day began at 19:00 UTC on the 14th.
     const at = Date.UTC(2026, 9, 15, 2);
     const firstAnswers = [

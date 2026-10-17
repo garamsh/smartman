@@ -17,7 +17,9 @@ The scheduling engine: how a card's memory state and next due time are computed 
 - **No learning steps.** The state is stability, difficulty and the last review time; every interval is whole days. Re-showing a failed card within a session belongs to the app's session queue (M3).
 - **Fuzz.** Given a `FuzzFactor` in `[0, 1)`, `review` fuzzes the interval as py-fsrs v6.3.2's `Scheduler._get_fuzzed_interval` does: an interval under 2.5 days is unchanged, a longer one moves to a whole number of days in a range around it that widens with the interval ([ADR 0012](adr/0012-fuzz-review-intervals.md)). The engine draws nothing: without a factor the interval is not fuzzed. Fuzz moves the due time, not the state, so `replay` takes no factor.
 - **Reference values.** `engine/tests/fixtures/generate.py` runs py-fsrs 6.3.2, pinned with its dependencies in `generate.py.lock`, over fixed rating sequences and writes `engine/tests/fixtures/reference.json`: each sequence without fuzzing, and again with fuzzing under seeds 1 and 2, recording the factor each review drew. Regenerate with `uv run --locked --script engine/tests/fixtures/generate.py` from the repository root. CI does not run Python; the tests read the committed file.
-- **Simulation.** `engine/examples/backlog.rs` drives the engine through a simulated user with a review backlog, seeded, and prints the tables that chose the study queue's backlog order, run size and threshold ([ADR 0025](adr/0025-order-a-review-backlog-by-due-date-and-pause-new-cards.md)). Run it from `engine/` with `cargo run --locked --release --example backlog`; `make lint` and `make test` compile it, and nothing runs it.
+- **Simulations.** Two examples drive the engine through seeded simulated users and print the tables that chose a study rule; run each from `engine/` with `cargo run --locked --release --example <name>`. `make lint` and `make test` compile them, and nothing runs them.
+  - `engine/examples/backlog.rs`, a user with a review backlog: the study queue's backlog order, run size and threshold ([ADR 0025](adr/0025-order-a-review-backlog-by-due-date-and-pause-new-cards.md)).
+  - `engine/examples/daily_load.rs`, users of five study habits whose pace speeds up with familiarity: the constants of a day's new cards and the cap on an answer's duration ([ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md)).
 - **Checks.** `make lint`, `format`, `test` and `build` each cover the crate. The toolchain is pinned in `engine/rust-toolchain.toml`; Dependabot proposes its bumps and those of `engine/Cargo.toml`.
 
 ### WebAssembly
@@ -44,6 +46,7 @@ The scheduling engine: how a card's memory state and next due time are computed 
 - [ADR 0003](adr/0003-fsrs-engine.md) records the FSRS version and its sources, and why steps live in the session queue.
 - [ADR 0012](adr/0012-fuzz-review-intervals.md) records the fuzz formula and its source, why the caller supplies the factor, and why it supersedes ADR 0003's "The engine does not fuzz".
 - [ADR 0018](adr/0018-engine-as-webassembly.md) records why the web app's engine is a separate crate built with the wasm-bindgen CLI, why it takes the two answers, and why errors are returned rather than thrown.
+- [ADR 0025](adr/0025-order-a-review-backlog-by-due-date-and-pause-new-cards.md) and [ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md) record what each simulation models and the tables it printed.
 
 ## Open questions
 

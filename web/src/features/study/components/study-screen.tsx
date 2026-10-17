@@ -168,6 +168,19 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
     };
   }, []);
 
+  // An answer counts only the time the page is visible.
+  useEffect(() => {
+    const listener = () => {
+      if (document.visibilityState === "hidden") session.pause();
+      else session.resume();
+    };
+    listener();
+    document.addEventListener("visibilitychange", listener);
+    return () => {
+      document.removeEventListener("visibilitychange", listener);
+    };
+  }, [session]);
+
   // The first write needs the engine; fetching it now keeps that write from waiting on it. A
   // failure here is not shown: the write that needs the engine fetches it again and reports it.
   useEffect(() => {

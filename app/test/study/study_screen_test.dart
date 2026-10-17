@@ -65,10 +65,17 @@ class _StalledRepository implements StudyRepository {
   }
 
   @override
-  Future<Duration?> medianReviewDuration() async => null;
+  Future<Map<CardId, CardState>> allStates() async => {};
 
   @override
-  Future<List<DateTime>> firstAnswersSince(DateTime since) async => [];
+  Future<Map<CardId, DateTime>> latestAnswersBefore(
+    List<CardId> cards,
+    DateTime end,
+  ) async => {};
+
+  @override
+  Future<List<TimedAnswer>> answersBetween(DateTime from, DateTime to) async =>
+      [];
 
   @override
   Future<List<StoredAnswer>> answersSince(DateTime since) async => [];
