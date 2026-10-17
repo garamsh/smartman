@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = ["pillow==12.3.0", "numpy==2.5.3", "fonttools==4.66.1"]
 # ///
-"""Writes the eval's synthetic sample set: photos of printed vocabulary pages and their cards.
+"""Writes the eval's synthetic sample set: photos of vocabulary and notes pages, and their truth.
 
 Regenerate from the repository root with:
 
@@ -11,8 +11,10 @@ Regenerate from the repository root with:
 Each sample is a page in one layout and language pair, set in the bundled OFL fonts under
 tools/eval/fonts/, then photographed synthetically: perspective, rotation, uneven lighting,
 blur, and JPEG noise. Every random choice comes from SEED and the sample's index, so a rerun
-with the locked dependencies writes the same files. The cards a page shows, with the parts of
-speech and examples it prints, are written beside its image as the ground truth.
+with the locked dependencies writes the same files. The cards a vocabulary page shows, with the
+parts of speech and examples it prints, are written beside its image as the ground truth; a notes
+page's truth is the facts it teaches, each with its step and the terms that cover it, and the
+examples it prints, from tools/eval/notes.json.
 """
 
 import json
@@ -63,11 +65,11 @@ HARSH = Distortion(perspective=0.05, rotation=9, shadow=0.55, blur=1.6, noise=10
 class Page:
     """A blank sheet and the fonts it is set in; `ink` jitters baselines for handwriting."""
 
-    def __init__(self, rng: np.random.Generator, pair: str, hand: str):
+    def __init__(self, rng: np.random.Generator, pair: str, hand: str, faces: tuple[str, str] | None = None):
         self.rng = rng
         self.image = Image.new("RGB", PAGE, (250, 248, 240))
         self.draw = ImageDraw.Draw(self.image)
-        self.front_face, self.back_face = FACES[(pair, hand)]
+        self.front_face, self.back_face = faces or FACES[(pair, hand)]
         self.handwritten = hand == "handwriting"
         self.ink = (25, 40, 110) if self.handwritten else (20, 20, 20)
         self.covered: dict[str, set[str]] = {}
@@ -151,6 +153,51 @@ def glossary(page: Page, entries: list[dict], pair: str) -> None:
         x += page.text((x, y), entry["front"], page.front_face, 36) + 18
         page.text((x, y + 2), entry["back"], page.back_face, 34, (70, 70, 70) if not page.handwritten else None)
     page.text((PAGE[0] // 2 - 30, PAGE[1] - 110), f"— {10 + unit * 4} —", LABEL_FACE, 30, (120, 120, 120))
+
+
+# The face a notes page is written in, per hand; both cover Korean and Latin.
+NOTE_FACES = {"print": "NanumGothic-Regular.ttf", "handwriting": "NanumPenScript-Regular.ttf"}
+NOTE_LANGUAGES = ["ko", "en"]
+NOTE_HANDS = ["print", "handwriting"]
+NOTE_DISTORTIONS = ["mild", "harsh"]
+
+
+def wrap(page: Page, text: str, face: str, size: int, width: float) -> list[str]:
+    """Breaks text at spaces into lines no wider than width, as a writer would."""
+    lines: list[str] = []
+    line = ""
+    for word in text.split(" "):
+        candidate = word if not line else f"{line} {word}"
+        if line and page.width(candidate, face, size) > width:
+            lines.append(line)
+            line = word
+        else:
+            line = candidate
+    return lines + [line]
+
+
+def notes(page: Page, doc: dict) -> None:
+    """A page of notes: a title, headings, points and sub-points under them, and examples."""
+    face = page.front_face
+    page.text((100, 80), doc["title"], face, 50, (30, 60, 120) if not page.handwritten else None)
+    page.draw.line([(100, 160), (PAGE[0] - 100, 160)], fill=(30, 60, 120), width=3)
+    y = 200
+    for line in doc["lines"]:
+        kind = line["kind"]
+        size, indent, mark, colour = {
+            "heading": (40, 100, "", (30, 60, 120)),
+            "point": (32, 130, "- ", None),
+            "sub": (30, 190, "- ", None),
+            "example": (30, 160, "", (120, 60, 30)),
+        }[kind]
+        if kind == "heading":
+            y += 14
+        for i, part in enumerate(wrap(page, mark + line["text"], face, size, PAGE[0] - 100 - indent)):
+            page.text((indent + (0 if i == 0 else page.width(mark, face, size)), y), part, face, size,
+                      None if page.handwritten else colour)
+            y += size * 1.55
+    if y > PAGE[1] - 60:
+        raise SystemExit(f"the notes page {doc['title']} runs off the page")
 
 
 RENDER = {"two-column": two_column, "bilingual-table": bilingual_table, "dictionary": dictionary, "glossary": glossary}
@@ -249,6 +296,34 @@ def main() -> None:
                     "distortion": style if style == "harsh" else "mild",
                     "fonts": sorted({page.front_face, page.back_face}),
                     "cards": [truth_card(e, layout) for e in picked],
+                }
+                (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                      encoding="utf-8")
+    documents = json.loads((HERE / "notes.json").read_text(encoding="utf-8"))
+    for language in NOTE_LANGUAGES:
+        for hand in NOTE_HANDS:
+            for distortion in NOTE_DISTORTIONS:
+                index += 1
+                rng = np.random.default_rng([SEED, index])
+                face = NOTE_FACES[hand]
+                page = Page(rng, "", hand, (face, face))
+                doc = documents[language]
+                notes(page, doc)
+                check_coverage(page.covered)
+                d = HARSH if distortion == "harsh" else MILD
+                photo = photograph(page.image, rng, d)
+                name = f"{index:02d}-notes-{language}-{hand}-{distortion}"
+                photo.save(SAMPLES / f"{name}.jpg", quality=d.quality, optimize=False)
+                truth = {
+                    "image": f"{name}.jpg",
+                    "kind": "notes",
+                    "layout": "notes",
+                    "languages": {"front": language, "back": language},
+                    "hand": hand,
+                    "distortion": distortion,
+                    "fonts": [face],
+                    "facts": doc["facts"],
+                    "examples": doc["examples"],
                 }
                 (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                       encoding="utf-8")

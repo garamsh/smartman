@@ -2,17 +2,33 @@
 
 export const MAX_CARDS = 100;
 export const MAX_FIELD_CHARS = 500;
+export const MAX_ANSWER_CHARS = 1000;
 export const MAX_EXAMPLES = 5;
 
+/** The detail steps of a page, from its core ideas (1) to every detail (5). */
+export const STEPS = [1, 2, 3, 4, 5] as const;
+export type Step = (typeof STEPS)[number];
+
+/** What a card was read from: an entry of a vocabulary page, or a point of notes. */
+export const KINDS = ["vocabulary", "note"] as const;
+export type CardKind = (typeof KINDS)[number];
+
 /**
- * One candidate card, each field plain, trimmed, non-empty text as the page prints it.
- * `partOfSpeech` and `examples` are absent when the page prints none; `back` is composed
- * from the others by `composeBack`, for apps that read only `front` and `back`.
+ * One candidate card, each text field plain, trimmed and non-empty. `front` is the headword or
+ * a question; `answer` the fullest answer the page supports and `short` a shorter form of it;
+ * `step` the detail step from which the card is offered. A vocabulary card also carries
+ * `meaning` (its answer), and `partOfSpeech` and `examples` when the page prints them; a note
+ * card may carry `examples` the page prints. `back` is the answer an app that reads only
+ * `front` and `back` shows: a vocabulary card's `composeBack`, or a note card's `answer`.
  */
 export type Card = {
+  readonly kind: CardKind;
   readonly front: string;
+  readonly answer: string;
+  readonly short: string;
+  readonly step: Step;
   readonly back: string;
-  readonly meaning: string;
+  readonly meaning?: string;
   readonly partOfSpeech?: string;
   readonly examples?: readonly string[];
 };
@@ -24,9 +40,10 @@ const field = {
 } as const;
 
 /**
- * The structured-output schema sent to the model; `parseCards` enforces the same limits.
- * Strict structured outputs require every key, so an absent part of speech is `null` and
- * absent examples are an empty list.
+ * The structured-output schema sent to the model; `parseCards` enforces the same limits and,
+ * beyond what a schema can say, that `short` is no longer than `answer` and that only a
+ * vocabulary card has a part of speech. Strict structured outputs require every key, so an
+ * absent part of speech is `null` and absent examples are an empty list.
  */
 export const cardsSchema = {
   type: "object",
@@ -37,12 +54,23 @@ export const cardsSchema = {
       items: {
         type: "object",
         properties: {
+          kind: { type: "string", enum: [...KINDS] },
           front: field,
-          meaning: field,
+          answer: { ...field, maxLength: MAX_ANSWER_CHARS },
+          short: field,
+          step: { type: "integer", enum: [...STEPS] },
           partOfSpeech: { ...field, type: ["string", "null"] },
           examples: { type: "array", maxItems: MAX_EXAMPLES, items: field },
         },
-        required: ["front", "meaning", "partOfSpeech", "examples"],
+        required: [
+          "kind",
+          "front",
+          "answer",
+          "short",
+          "step",
+          "partOfSpeech",
+          "examples",
+        ],
         additionalProperties: false,
       },
     },
@@ -51,14 +79,15 @@ export const cardsSchema = {
   additionalProperties: false,
 } as const;
 
-/** The default answer: the part of speech and a space before the meaning, when there is one. */
+/** A vocabulary card's default answer: the part of speech and a space before the meaning. */
 export function composeBack(meaning: string, partOfSpeech?: string): string {
   return partOfSpeech === undefined ? meaning : `${partOfSpeech} ${meaning}`;
 }
 
 /**
  * Parses a model's reply into cards, or returns null when it is not JSON matching
- * `cardsSchema` once each field is trimmed. Lengths count code points, as JSON Schema does.
+ * `cardsSchema` once each field is trimmed, or breaks a rule the schema cannot state. Lengths
+ * count code points, as JSON Schema does.
  */
 export function parseCards(reply: string): Card[] | null {
   let value: unknown;
@@ -82,37 +111,61 @@ export function parseCards(reply: string): Card[] | null {
 function parseCard(item: unknown): Card | null {
   if (
     !isRecord(item) ||
-    !hasOnlyKeys(item, ["front", "meaning", "partOfSpeech", "examples"])
+    !hasOnlyKeys(item, [
+      "kind",
+      "front",
+      "answer",
+      "short",
+      "step",
+      "partOfSpeech",
+      "examples",
+    ])
   ) return null;
-  const front = text(item.front);
-  const meaning = text(item.meaning);
+  const kind = KINDS.find((known) => known === item.kind);
+  const step = STEPS.find((known) => known === item.step);
+  const front = text(item.front, MAX_FIELD_CHARS);
+  const answer = text(item.answer, MAX_ANSWER_CHARS);
+  const short = text(item.short, MAX_FIELD_CHARS);
   const partOfSpeech = item.partOfSpeech === null
     ? undefined
-    : text(item.partOfSpeech);
+    : text(item.partOfSpeech, MAX_FIELD_CHARS);
   if (
-    front === null || meaning === null || partOfSpeech === null ||
+    kind === undefined || step === undefined || front === null ||
+    answer === null || short === null || partOfSpeech === null ||
     !Array.isArray(item.examples) || item.examples.length > MAX_EXAMPLES
   ) return null;
+  // The shorter form is never the longer one, and notes carry no part of speech.
+  if ([...short].length > [...answer].length) return null;
+  if (kind === "note" && partOfSpeech !== undefined) return null;
   const examples: string[] = [];
   for (const example of item.examples) {
-    const parsed = text(example);
+    const parsed = text(example, MAX_FIELD_CHARS);
     if (parsed === null) return null;
     examples.push(parsed);
   }
-  return {
+  const shared = {
+    kind,
     front,
-    back: composeBack(meaning, partOfSpeech),
-    meaning,
-    ...(partOfSpeech === undefined ? {} : { partOfSpeech }),
+    answer,
+    short,
+    step,
     ...(examples.length === 0 ? {} : { examples }),
   };
+  return kind === "vocabulary"
+    ? {
+      ...shared,
+      back: composeBack(answer, partOfSpeech),
+      meaning: answer,
+      ...(partOfSpeech === undefined ? {} : { partOfSpeech }),
+    }
+    : { ...shared, back: answer };
 }
 
-function text(value: unknown): string | null {
+function text(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   const length = [...trimmed].length;
-  return length >= 1 && length <= MAX_FIELD_CHARS ? trimmed : null;
+  return length >= 1 && length <= max ? trimmed : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

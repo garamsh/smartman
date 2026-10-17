@@ -1,9 +1,15 @@
 // The eval end to end with OpenRouter and the file system replaced by in-memory fakes.
 import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
+import { normalize } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
-import { worstCallUsd } from "./budget.ts";
+import {
+  estimateUsd,
+  TYPICAL_NOTE_TOKENS_PER_CARD,
+  TYPICAL_VOCABULARY_TOKENS_PER_CARD,
+  worstCallUsd,
+} from "./budget.ts";
 
 const truth = [{ front: "apple", meaning: "사과", partOfSpeech: "n." }, {
   front: "river",
@@ -11,10 +17,47 @@ const truth = [{ front: "apple", meaning: "사과", partOfSpeech: "n." }, {
 }];
 /** The same cards as the model writes them, one inventing an example. */
 const modelCards = [
-  { ...truth[0], examples: ["She ate an apple."] },
-  { ...truth[1], partOfSpeech: null, examples: [] },
+  {
+    kind: "vocabulary",
+    front: "apple",
+    answer: "사과",
+    short: "사과",
+    step: 1,
+    partOfSpeech: "n.",
+    examples: ["She ate an apple."],
+  },
+  {
+    kind: "vocabulary",
+    front: "river",
+    answer: "강",
+    short: "강",
+    step: 1,
+    partOfSpeech: null,
+    examples: [],
+  },
 ];
+/** A notes page's ground truth, and the note cards a model writes for it. */
+const notesTruth = {
+  kind: "notes",
+  facts: [
+    { id: "deduction", step: 1, terms: ["연역", "반드시"] },
+    { id: "induction", step: 2, terms: ["귀납", "개연"] },
+  ],
+  examples: ["253+4637+647898=652788 -> 연역"],
+};
+const noteCards = [{
+  kind: "note",
+  front: "연역 논증이란?",
+  answer: "전제가 참이면 결론이 반드시 참인 논증",
+  short: "결론이 반드시 참",
+  step: 1,
+  partOfSpeech: null,
+  examples: ["253+4637+647898=652788 -> 연역"],
+}];
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
+/** A notes sample's image, told apart from the vocabulary ones by its bytes. */
+const NOTES_JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 9, 9, 9, 9, 9]);
+const NOTES_IMAGE = btoa(String.fromCharCode(...NOTES_JPEG));
 
 const model = (
   id: string,
@@ -98,7 +141,10 @@ function io(
       if (url === OPENROUTER_URL) {
         const body = JSON.parse(String(init?.body));
         w.chatCalls.push(body.model);
-        const cards = body.model === "vendor/dear"
+        const notes = JSON.stringify(body.messages).includes(NOTES_IMAGE);
+        const cards = notes
+          ? noteCards
+          : body.model === "vendor/dear"
           ? modelCards
           : modelCards.slice(0, 1);
         return Promise.resolve(Response.json({
@@ -120,7 +166,8 @@ function io(
         ? Promise.reject(new Error(`no file ${path}`))
         : Promise.resolve(text);
     },
-    readBytes: () => Promise.resolve(JPEG),
+    readBytes: (path) =>
+      Promise.resolve(path.includes("notes") ? NOTES_JPEG : JPEG),
     list: () =>
       Promise.resolve(
         [...w.files.keys()].filter((p) => p.startsWith(PATHS.samples)).map((
@@ -158,7 +205,8 @@ Deno.test("a dry run prints the resolved models and the estimate, and calls no m
   );
   assert.ok(
     w.printed.some((line) =>
-      /2 samples x 2 configurations: estimated \$\d/.test(line)
+      /2 samples \(2 vocabulary, 0 notes\) x 2 configurations: estimated \$\d/
+        .test(line)
     ),
   );
   assert.equal(w.files.get(PATHS.report), undefined);
@@ -207,7 +255,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v2",
+    note: "prompt v3",
   });
   assert.ok(
     w.printed.includes(
@@ -226,9 +274,64 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   );
   assert.match(
     table,
-    /- Dear with cheap retry: the cheapest configuration whose F1 is within 2 points/,
+    /- Dear with cheap retry: the cheapest configuration whose vocabulary F1 is within 2 points/,
   );
   assert.match(table, /All runs: \$1\.0040 of the \$10\.0000 budget/);
+  assert.doesNotMatch(table, /## Notes pages/, "no notes image ran");
+});
+
+Deno.test("a notes sample is scored by coverage per step, unsupported cards, invented examples and step order", async () => {
+  const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
+  w.files.set(
+    `${PATHS.samples}/03-notes.json`,
+    JSON.stringify({ image: "03-notes.jpg", ...notesTruth }),
+  );
+  assert.equal(await main(["--dry-run"], io(w)), 0);
+  assert.ok(
+    w.printed.some((line) =>
+      line.startsWith("3 samples (2 vocabulary, 1 notes)")
+    ),
+  );
+  assert.equal(await main([], io(w)), 0);
+  const table = w.files.get(PATHS.report) ?? "";
+  // The one note card covers the step-1 fact: all of step 1, half from step 2.
+  assert.match(
+    table,
+    /\| Cheap \| 100\.0 \| 50\.0 \| 50\.0 \| 50\.0 \| 50\.0 \| 0\.0 \| 0\.0 \| — \|/,
+  );
+  assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
+});
+
+Deno.test("a notes ground truth without facts, or with a step outside 1 to 5, is refused", async () => {
+  for (const facts of [[], [{ id: "a", step: 6, terms: ["x"] }]]) {
+    const w = world();
+    w.files.set(
+      `${PATHS.samples}/03-notes.json`,
+      JSON.stringify({ image: "03-notes.jpg", ...notesTruth, facts }),
+    );
+    await assert.rejects(loadSamples(io(w)), /notes ground truth/);
+  }
+  const control = world();
+  control.files.set(
+    `${PATHS.samples}/03-notes.json`,
+    JSON.stringify({ image: "03-notes.jpg", ...notesTruth }),
+  );
+  assert.equal((await loadSamples(io(control))).length, 3);
+});
+
+Deno.test("the dry estimate prices a note card above a vocabulary card", () => {
+  const cheap = newest("^vendor/cheap$", parseModels(MODEL_LIST));
+  assert.ok(cheap !== null);
+  const candidate = [{ label: "Cheap", primary: cheap, retry: cheap }];
+  const vocabulary = estimateUsd(candidate, [{
+    cards: 10,
+    tokensPerCard: TYPICAL_VOCABULARY_TOKENS_PER_CARD,
+  }]);
+  const notes = estimateUsd(candidate, [{
+    cards: 10,
+    tokensPerCard: TYPICAL_NOTE_TOKENS_PER_CARD,
+  }]);
+  assert.ok(notes > vocabulary);
 });
 
 Deno.test("a run stops before a call whose worst case could exceed the remaining budget", async () => {
@@ -287,28 +390,23 @@ Deno.test("a run without OPENROUTER_API_KEY stops before any call", async () => 
   assert.equal(w.chatCalls.length, 0);
 });
 
-Deno.test("the committed sample set has at least 20 images in every layout and language pair, with the fields each prints", async () => {
-  const dir = new URL("./samples/", import.meta.url);
-  const names = (await Array.fromAsync(Deno.readDir(dir))).map((entry) =>
-    entry.name
+Deno.test("the committed sample set has at least 20 vocabulary images in every layout and language pair, with the fields each prints", async () => {
+  const samples = await committedSamples();
+  const vocabulary = samples.flatMap((sample) =>
+    sample.kind === "vocabulary" ? [sample] : []
   );
-  const samples = await loadSamples({
-    list: () => Promise.resolve(names),
-    readText: (path) =>
-      Deno.readTextFile(new URL(path.slice(PATHS.samples.length + 1), dir)),
-    readBytes: (path) =>
-      Deno.readFile(new URL(path.slice(PATHS.samples.length + 1), dir)),
-  });
-  assert.ok(samples.length >= 20, `${samples.length} samples`);
+  assert.ok(vocabulary.length >= 20, `${vocabulary.length} vocabulary samples`);
   for (const sample of samples) {
-    assert.ok(sample.cards.length > 0, `${sample.name} has cards`);
     assert.ok(
       atob(sample.image.base64.slice(0, 4)).startsWith("\xff\xd8\xff"),
       `${sample.name} is a JPEG`,
     );
   }
-  const dictionary = samples.filter((s) => s.name.includes("dictionary"));
-  const others = samples.filter((s) => !s.name.includes("dictionary"));
+  for (const sample of vocabulary) {
+    assert.ok(sample.cards.length > 0, `${sample.name} has cards`);
+  }
+  const dictionary = vocabulary.filter((s) => s.name.includes("dictionary"));
+  const others = vocabulary.filter((s) => !s.name.includes("dictionary"));
   assert.ok(
     dictionary.every((s) => s.cards.every((c) => c.partOfSpeech !== undefined)),
     "every dictionary entry has the part of speech its page prints",
@@ -343,8 +441,66 @@ Deno.test("the committed sample set has at least 20 images in every layout and l
     ]
   ) {
     assert.ok(
-      samples.some((sample) => sample.name.includes(part)),
+      vocabulary.some((sample) => sample.name.includes(part)),
       `a sample has ${part}`,
     );
   }
 });
+
+Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step, and only terms and examples their page prints", async () => {
+  const notes = (await committedSamples()).flatMap((sample) =>
+    sample.kind === "notes" ? [sample] : []
+  );
+  assert.equal(notes.length, 8);
+  for (
+    const part of ["-ko-", "-en-", "print", "handwriting", "mild", "harsh"]
+  ) {
+    assert.equal(
+      notes.filter((sample) => sample.name.includes(part)).length,
+      4,
+      part,
+    );
+  }
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  for (const sample of notes) {
+    const language = sample.name.includes("-ko-") ? "ko" : "en";
+    const page = normalize(
+      documents[language].lines.map((line: { text: string }) => line.text)
+        .join("\n"),
+    );
+    for (const step of [1, 2, 3, 4, 5]) {
+      assert.ok(
+        sample.notes.facts.some((fact) => fact.step === step),
+        `${sample.name} has a fact at step ${step}`,
+      );
+    }
+    for (const fact of sample.notes.facts) {
+      for (const term of fact.terms) {
+        assert.ok(
+          page.includes(normalize(term)),
+          `${sample.name}: ${fact.id}'s term ${term} is on the page`,
+        );
+      }
+    }
+    for (const example of sample.notes.examples) {
+      assert.ok(page.includes(normalize(example)), `${example} is printed`);
+    }
+  }
+});
+
+/** The committed samples, read from `tools/eval/samples/`. */
+async function committedSamples() {
+  const dir = new URL("./samples/", import.meta.url);
+  const names = (await Array.fromAsync(Deno.readDir(dir))).map((entry) =>
+    entry.name
+  );
+  return await loadSamples({
+    list: () => Promise.resolve(names),
+    readText: (path) =>
+      Deno.readTextFile(new URL(path.slice(PATHS.samples.length + 1), dir)),
+    readBytes: (path) =>
+      Deno.readFile(new URL(path.slice(PATHS.samples.length + 1), dir)),
+  });
+}

@@ -1,0 +1,119 @@
+{
+  "image": "25-notes-ko-print-mild.jpg",
+  "kind": "notes",
+  "layout": "notes",
+  "languages": {
+    "front": "ko",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "facts": [
+    {
+      "id": "definition",
+      "step": 1,
+      "terms": [
+        "논리학",
+        "추론",
+        "구별"
+      ]
+    },
+    {
+      "id": "purpose",
+      "step": 2,
+      "terms": [
+        "목적",
+        "판별"
+      ]
+    },
+    {
+      "id": "argument",
+      "step": 1,
+      "terms": [
+        "논증",
+        "전제",
+        "결론"
+      ]
+    },
+    {
+      "id": "premise",
+      "step": 3,
+      "terms": [
+        "전제",
+        "근거"
+      ]
+    },
+    {
+      "id": "conclusion",
+      "step": 3,
+      "terms": [
+        "결론",
+        "주장"
+      ]
+    },
+    {
+      "id": "premise-indicators",
+      "step": 4,
+      "terms": [
+        "전제 지시어",
+        "왜냐하면"
+      ]
+    },
+    {
+      "id": "conclusion-indicators",
+      "step": 4,
+      "terms": [
+        "결론 지시어",
+        "따라서"
+      ]
+    },
+    {
+      "id": "deduction",
+      "step": 1,
+      "terms": [
+        "연역",
+        "반드시"
+      ]
+    },
+    {
+      "id": "induction",
+      "step": 1,
+      "terms": [
+        "귀납",
+        "개연"
+      ]
+    },
+    {
+      "id": "difference",
+      "step": 2,
+      "terms": [
+        "연역",
+        "귀납",
+        "새로운 정보"
+      ]
+    },
+    {
+      "id": "deduction-example",
+      "step": 5,
+      "terms": [
+        "652788",
+        "연역"
+      ]
+    },
+    {
+      "id": "induction-example",
+      "step": 5,
+      "terms": [
+        "백조",
+        "귀납"
+      ]
+    }
+  ],
+  "examples": [
+    "253+4637+647898=652788 -> 연역",
+    "지금까지 본 백조는 모두 희다 -> 모든 백조는 희다 -> 귀납"
+  ]
+}
