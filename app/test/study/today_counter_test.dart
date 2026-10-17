@@ -25,6 +25,14 @@ class _InstantScheduler implements Scheduler {
       throw UnimplementedError('sessions do not fold');
 
   @override
+  Future<List<CardState>> history(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
+  Future<double> retrievability(CardState state, DateTime at) =>
+      throw UnimplementedError('sessions read no recall');
+
+  @override
   Future<CardState> review(
     CardState? state,
     Answer answer,
@@ -75,6 +83,9 @@ class _UnreadableStates implements StudyRepository {
   @override
   Future<DateTime?> latestAnswerBefore(DateTime end) =>
       throw UnimplementedError();
+
+  @override
+  Future<List<ReviewRow>> reviews() => throw UnimplementedError();
 }
 
 final _now = DateTime.utc(2026, 10, 14, 9);

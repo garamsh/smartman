@@ -21,6 +21,14 @@ class _FirstCallBreaks implements Scheduler {
   Future<CardState?> fold(List<ReviewRow> reviews) =>
       throw UnimplementedError('sessions do not fold');
 
+  @override
+  Future<List<CardState>> history(List<ReviewRow> reviews) =>
+      throw UnimplementedError('sessions do not fold');
+
+  @override
+  Future<double> retrievability(CardState state, DateTime at) =>
+      throw UnimplementedError('sessions read no recall');
+
   final unexpected = StateError('engine state lost');
   var _calls = 0;
 

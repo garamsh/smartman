@@ -2,6 +2,7 @@ import '../../database/database.dart';
 import 'failure.dart';
 import 'model.dart';
 import 'rust/api/engine.dart';
+import 'rust/api/engine.dart' as engine show retrievability;
 import 'rust/frb_generated.dart';
 
 /// Schedules reviews with the Rust engine.
@@ -29,19 +30,39 @@ class Scheduler {
   /// The state a new card reaches after its stored [reviews], taken in
   /// `reviewed_at` order, each scheduled with its own fuzz factor and a null
   /// factor as none; null when there are no reviews.
-  Future<CardState?> fold(List<ReviewRow> reviews) async {
+  Future<CardState?> fold(List<ReviewRow> reviews) async =>
+      (await history(reviews)).lastOrNull;
+
+  /// The states a new card passes through over its stored [reviews], one
+  /// after each, taken in `reviewed_at` order as [fold] takes them.
+  Future<List<CardState>> history(List<ReviewRow> reviews) async {
     final ordered = [...reviews]
       ..sort((a, b) => a.reviewedAt.compareTo(b.reviewedAt));
-    CardState? state;
+    final states = <CardState>[];
     for (final review in ordered) {
-      state = await _review(
-        state,
-        answerOf(review.rating),
-        review.reviewedAt,
-        review.fuzzFactor,
+      states.add(
+        await _review(
+          states.lastOrNull,
+          answerOf(review.rating),
+          review.reviewedAt,
+          review.fuzzFactor,
+        ),
       );
     }
-    return state;
+    return states;
+  }
+
+  /// The probability of recall at [at] of a card in [state]. The engine
+  /// counts time in whole seconds, so [at] is truncated.
+  Future<double> retrievability(CardState state, DateTime at) async {
+    try {
+      return await engine.retrievability(
+        state: _parts(state),
+        at: _toSeconds(at),
+      );
+    } on EngineError catch (cause, stackTrace) {
+      Error.throwWithStackTrace(SchedulingFailure(cause), stackTrace);
+    }
   }
 
   Future<CardState> _review(
@@ -55,11 +76,7 @@ class Scheduler {
       final scheduled = state == null
           ? await reviewNewCard(answer: answer, at: seconds, fuzzFactor: fuzz)
           : await reviewCard(
-              state: MemoryStateParts(
-                stability: state.stability,
-                difficulty: state.difficulty,
-                lastReview: _toSeconds(state.lastReview),
-              ),
+              state: _parts(state),
               answer: answer,
               at: seconds,
               fuzzFactor: fuzz,
@@ -75,6 +92,12 @@ class Scheduler {
     }
   }
 }
+
+MemoryStateParts _parts(CardState state) => MemoryStateParts(
+  stability: state.stability,
+  difficulty: state.difficulty,
+  lastReview: _toSeconds(state.lastReview),
+);
 
 int _toSeconds(DateTime time) => time.millisecondsSinceEpoch ~/ 1000;
 
