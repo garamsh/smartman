@@ -194,10 +194,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changingToDontKnow => '모른다로 바꿔요';
 
   @override
-  String get guideReveal => '먼저 떠올려 보고, 카드를 탭해 답을 확인해요';
+  String guideSize(int cards, int minutes) {
+    return '오늘 $cards장 · 약 $minutes분';
+  }
+
+  @override
+  String get guideReveal => '카드를 누르면 답이 보여요';
 
   @override
   String get guideSwipe => '알면 오른쪽, 모르면 왼쪽으로 밀어요';
+
+  @override
+  String get guideRise => '답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요';
 
   @override
   String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';

@@ -202,11 +202,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changingToDontKnow => 'Change to Don\'t know';
 
   @override
-  String get guideReveal =>
-      'Try to recall it first, then tap the card to see the answer';
+  String guideSize(int cards, int minutes) {
+    return 'Today $cards cards · about $minutes min';
+  }
+
+  @override
+  String get guideReveal => 'Tap the card to see the answer';
 
   @override
   String get guideSwipe => 'Swipe right if you know it, left if you don\'t';
+
+  @override
+  String get guideRise => 'Answered cards come up here. Swipe one to change it';
 
   @override
   String get answerNotSaved =>

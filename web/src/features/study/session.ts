@@ -3,6 +3,7 @@ import type { Card, CardId } from "@/features/decks";
 import type { Answer, AnswerWrite, SessionReview } from "./answer-write";
 import { type CardStates, orderQueue, reinsert, type SelectedQueue } from "./queue";
 import { type Random, seededRandom } from "./random";
+import { type Pace, sessionMinutes } from "./study-time";
 
 /**
  * A card of the session: `decks`' card with each side as the one line of text `decks` describes
@@ -13,13 +14,14 @@ export type StudyCard = Card & { text: { front: string; back: string } };
 /**
  * What a study page opens with, built on the server: the cards the queue rules selected for
  * today, in the order selected, whether they are a backlog, each one's stored state, the start
- * time, which also seeds the session's random source, and what today already holds. Times are
- * milliseconds since the epoch.
+ * time, which also seeds the session's random source, the user's pace, and what today already
+ * holds. Times are milliseconds since the epoch.
  */
 export type SessionPlan = {
   startedAt: number;
   queue: SelectedQueue<StudyCard>;
   before: CardStates;
+  pace: Pace;
   today: {
     /** The answers stored today for the decks' cards before the session opened. */
     answers: { answer: Answer; durationMs: number }[];
@@ -29,10 +31,14 @@ export type SessionPlan = {
     answeredAnyDeck: boolean;
     /** Study days in a row before today holding an answer. */
     streakBefore: number;
-    /** Whether an answer is stored before today in any deck. */
-    answeredBefore: boolean;
   };
 };
+
+/**
+ * How many cards a session opened with, and the whole minutes they take at the user's pace, as
+ * the today card counts them.
+ */
+export type SessionSize = { cards: number; minutes: number };
 
 /** An answer given in this session, shown in the stack above the current card. */
 export type PreviousAnswer = {
@@ -72,8 +78,11 @@ export type SessionView = {
   | {
       kind: "studying";
       current: StudyCard;
-      /** Whether the user has no answer stored or given yet, so the first-run guide shows. */
-      firstRun: boolean;
+      /**
+       * Before the session's first answer, outside practice, the session's size the guide in the
+       * previous card's place shows; otherwise null, and no guide shows.
+       */
+      guide: SessionSize | null;
     }
   | { kind: "complete"; completion: Completion }
   | { kind: "empty" }
@@ -101,6 +110,8 @@ export class StudySession {
   private readonly random: Random;
   private readonly queue: StudyCard[];
   private readonly total: number;
+  /** The session's size when it opened. */
+  private readonly size: SessionSize;
   private readonly answers: Answered[] = [];
   private shownAt: number;
   /** When the page was last hidden while the card on screen waited, or null while it is visible. */
@@ -124,6 +135,11 @@ export class StudySession {
     this.random = seededRandom(plan.startedAt);
     this.queue = orderQueue(plan.queue, this.random);
     this.total = this.queue.length;
+    const fresh = this.queue.filter((card) => !plan.before[card.id]).length;
+    this.size = {
+      cards: this.total,
+      minutes: sessionMinutes(this.total - fresh, fresh, plan.pace),
+    };
     this.shownAt = plan.startedAt;
     this.snapshot = this.build();
   }
@@ -347,9 +363,8 @@ export class StudySession {
     const counts = { previous, answered, total: this.total };
     const current = this.practicing ? this.practiceQueue[0] : this.queue[0];
     if (current) {
-      const { answeredAnyDeck, answeredBefore } = this.plan.today;
-      const firstRun = !answeredAnyDeck && !answeredBefore && this.answers.length === 0;
-      return { ...counts, kind: "studying", current, firstRun };
+      const guide = !this.practicing && this.answers.length === 0 ? this.size : null;
+      return { ...counts, kind: "studying", current, guide };
     }
     if (this.practiceSet().length === 0) return { ...counts, kind: "empty" };
     return { ...counts, kind: "complete", completion: this.completion() };

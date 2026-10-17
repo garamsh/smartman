@@ -56,8 +56,11 @@ abstract final class StudyStyle {
   /// The eye in the hidden answer's half.
   static const hiddenAnswerIcon = AppSpace.s24;
 
-  /// The first-run guide's icon tile.
-  static const guideTile = AppSpace.s32;
+  /// The width of the session guide's dashed outline.
+  static const guideOutline = 1.5;
+
+  /// The length of each dash of the session guide's outline, and of each gap.
+  static const guideDash = 6.0;
 
   /// The drag after which the answer chip and tint appear.
   static const dragFeedbackDistance = 40.0;

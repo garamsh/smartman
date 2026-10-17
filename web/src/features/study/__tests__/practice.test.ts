@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { CardId, DeckId } from "@/features/decks";
 
 import { type SessionPlan, type StudyCard, StudySession } from "../session";
+import { unknownPace } from "../study-time";
 
 const start = Date.UTC(2026, 0, 15, 9);
 
@@ -21,12 +22,12 @@ function session(fronts: string[], seed = start): StudySession {
     startedAt: seed,
     queue: { cards: fronts.map(card), backlog: false },
     before: {},
+    pace: unknownPace,
     today: {
       answers: [],
       cards: [],
       answeredAnyDeck: false,
       streakBefore: 0,
-      answeredBefore: false,
     },
   };
   let id = 0;

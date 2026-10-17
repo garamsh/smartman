@@ -1,6 +1,6 @@
 # ADR 0042: Show only the previous and the current study card at one size, re-decide the previous card by a swipe, and open it on a tap
 
-> Status: accepted
+> Status: accepted; its "First session" guide superseded by ADR-0044
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

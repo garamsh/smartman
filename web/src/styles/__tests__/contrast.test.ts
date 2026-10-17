@@ -66,8 +66,13 @@ describe("the text the login, account and empty home pages draw", () => {
   });
 });
 
-/** The text the study screen draws on its grades and answer buttons, by where it appears. */
+/**
+ * The text the study screen draws on its grades, its answer buttons and its guide, by where it
+ * appears.
+ */
 const studyPairs: [string, string, string][] = [
+  ["the guide's size on the ground", "ink", "ground"],
+  ["the guide's lines on the ground", "ink-2", "ground"],
   ["a 안다 card's front", "ink", "know-card"],
   ["a 안다 card's back", "ink-2", "know-card"],
   ["a 모른다 card's front", "ink", "dont-know-card"],

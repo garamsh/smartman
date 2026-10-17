@@ -17,7 +17,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
-   - Study: no deck name and no hint text, but for the first session's guide of two lines; the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
+   - Study: no deck name and no hint text, but for the session's guide, which holds the previous card's empty place from every session's start until its first answer ([ADR 0044](adr/0044-show-a-guide-with-the-session-s-size-in-the-previous-card-s-place-at-every-session-s-start.md)); the completion card carries no sentence beyond its heading and one line of counts, and practice is not marked apart from studying.
    - Deck screen: each row shows the question, its answer hidden until a tap or the "뜻 보기" switch; the deck name is the only title, and the row above the cards a quiet "카드 n".
    - Tabs: no line explains a long-press or a tab; 기록 says only that its record is coming.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
@@ -82,7 +82,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 ### Brand
 
 - The marks are the owner's ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)): the symbol (the mascot, a rounded-stroke drawing), the horizontal lockup and the stacked lockup, each navy for a light ground and white for a dark one. `app/assets/brand/` holds them as PNGs at 1x to 3x, scaled from the owner's 4x files, and `AppBrand` in `app/lib/design/theme.dart` names each theme's file; `web/public/brand/` holds the owner's SVGs.
-- Where they appear: the horizontal lockup, 30 high, heading the 오늘 tab and the first-run home; the stacked lockup, 200 wide, on the sign-in screen; and the mascot, through the component `Mascot`, in a 128 px white circle on the first-run home, a 96 px white circle resting with three z's on the 오늘 tab's done card, a 64 px white circle with an amber check on its backlog card, an 84 px brand-tint circle on the study completion card, alone at 64 px above the first study session's guide, and alone at 28 px and half opacity at the foot of the account screen.
+- Where they appear: the horizontal lockup, 30 high, heading the 오늘 tab and the first-run home; the stacked lockup, 200 wide, on the sign-in screen; and the mascot, through the component `Mascot`, in a 128 px white circle on the first-run home, a 96 px white circle resting with three z's on the 오늘 tab's done card, a 64 px white circle with an amber check on its backlog card, an 84 px brand-tint circle on the study completion card, and alone at 28 px and half opacity at the foot of the account screen.
 - Icons are Lucide's, a 2 px stroke with rounded caps and joins: `lucide_icons_flutter` in the app, with the theme's back and close buttons drawn from it, and `lucide-react` on the web.
 - The launcher icons are generated from `app/assets/brand/icon/app-icon-light-1024.png` by `flutter_launcher_icons`, with `app-icon-dark-1024.png` as iOS 18's dark icon; the native splash, from `app/assets/brand/splash/`, by `flutter_native_splash`: the navy symbol on `#F4F6FA`, the white one on `#0E1424` in dark mode, Android 12's splash icon included. Both are pinned exactly in `app/pubspec.yaml`, which holds their configuration. To regenerate, run `dart run flutter_launcher_icons` and `dart run flutter_native_splash:create` in `app/`, then revert the two edits they make beyond their output: `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` in `ios/Runner.xcodeproj/project.pbxproj` and the rewrite of `ios/Runner/Info.plist`.
 
@@ -111,7 +111,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 - **Spacing**, `AppSpace`: 4, 8, 12, 16, 20, 24, 28, 32, 40. The screen gutter is 20, the gap between rows 8, and the gap between sections 28.
 - **Radii**, `AppRadius`: panel 40, sheet 28, card 24, previous card 20, row 18, button 16, field 14; a chip is fully rounded.
-- **Heights**, `AppSize`: a call to action 56, a button 52, a field 52, a search field 48, a tap target at least 44; and the brand's sizes: the lockup 30 high, the stacked lockup 200 wide, the mascot's circles 128 and 84 and the guide's mascot 64, the avatars 56 and 32, a deck tile 44.
+- **Heights**, `AppSize`: a call to action 56, a button 52, a field 52, a search field 48, a tap target at least 44; and the brand's sizes: the lockup 30 high, the stacked lockup 200 wide, the mascot's circles 128 and 84 and the backlog card's mascot 64, the avatars 56 and 32, a deck tile 44.
 - **Shadows**, `AppShadow`: card, for a surface resting on the ground, and raised, a close layer under a wide soft one, for the current study card and the completion card.
 
 ### Components
@@ -152,6 +152,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 - [ADR 0011](adr/0011-shared-app-theme-bundled-font-and-today-builder.md) records why the theme is one file with a token extension, why the font is bundled, and why the choice is stored in `shared_preferences`.
 - [ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md) records why the scales sit in the theme file, why the components are a shared layer of their own, and why every modal is a sheet.
 - [ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md) records why the strings are 해요체, why a sheet has a cancel only when it confirms an irreversible action, and why Google sign-in is Google's button with the bundle's PNG mark.
+- [ADR 0044](adr/0044-show-a-guide-with-the-session-s-size-in-the-previous-card-s-place-at-every-session-s-start.md) records why a guide holds the previous card's place at every session's start, widening the no-hint rule.
 - Issue #58 records the scales and the component set as the PM decided them on 2026-10-15, and issue #64 the voice, the sheet rule, the Google button and the sign-in and account screens.
 - Issue #22 records the principles, the tokens and the screens as the owner approved them on 2026-10-15.
 - [ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md) records the brand, Pretendard, the token values with the three adjusted for contrast, the icons and the generated launcher icons and splash; issue #72 records them as the PM decided them on 2026-10-15.

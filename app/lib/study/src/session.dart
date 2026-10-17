@@ -47,7 +47,7 @@ final class SessionStudying extends SessionState {
     this.current,
     this.previous,
     this.progress, {
-    this.firstRun = false,
+    this.guide,
   });
 
   final Card current;
@@ -56,9 +56,26 @@ final class SessionStudying extends SessionState {
   final List<PreviousCard> previous;
   final SessionProgress progress;
 
-  /// Whether the user has no answer stored or given yet, so the first-run
+  /// Before the session's first answer, outside practice, the session's size
+  /// the guide in the previous card's place shows; otherwise null, and no
   /// guide shows.
-  final bool firstRun;
+  final SessionSize? guide;
+}
+
+/// How many cards a session opened with, and the whole minutes they take at
+/// the user's pace, as the today card counts them.
+final class SessionSize {
+  const SessionSize({required this.cards, required this.minutes});
+
+  final int cards;
+  final int minutes;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SessionSize && other.cards == cards && other.minutes == minutes;
+
+  @override
+  int get hashCode => Object.hash(cards, minutes);
 }
 
 /// No card is left today: the completion card takes the current card's
@@ -237,8 +254,8 @@ class StudySession extends ChangeNotifier {
   /// How many study days in a row before [_openedDay] hold a stored answer.
   var _daysBefore = 0;
 
-  /// Whether any answer was stored, in any deck, when the session opened.
-  var _anyStored = false;
+  /// The session's size when it opened.
+  var _size = const SessionSize(cards: 0, minutes: 0);
 
   bool _practicing = false;
   var _pass = _Pass.all;
@@ -278,7 +295,7 @@ class StudySession extends ChangeNotifier {
         _queue.first,
         previous,
         progress,
-        firstRun: !_anyStored && _answers.isEmpty,
+        guide: _answers.isEmpty ? _size : null,
       );
     }
     if (_practiceSet.isEmpty) return const SessionEmpty();
@@ -495,7 +512,7 @@ class StudySession extends ChangeNotifier {
       final (read, states) = await readCards(decks, cards, _repository);
       final now = _clock();
       final start = studyDayStart(now, _offsetAt);
-      final (day, _) = await readStudyDay(_repository, now, _offsetAt);
+      final (day, pace) = await readStudyDay(_repository, now, _offsetAt);
       final byId = {for (final card in read) card.id: card};
       final storedSince = await _repository.answersSince(start);
       _storedToday = [
@@ -513,12 +530,14 @@ class StudySession extends ChangeNotifier {
         _repository.latestAnswerBefore,
         _offsetAt,
       );
-      _anyStored =
-          storedSince.isNotEmpty ||
-          await _repository.latestAnswerBefore(start) != null;
       _before.addAll(states);
       _queue.addAll(orderQueue(selectQueue(read, states, day), _random));
       _total = _queue.length;
+      final fresh = _queue.where((card) => !states.containsKey(card.id)).length;
+      _size = SessionSize(
+        cards: _total,
+        minutes: pace.minutes(reviews: _total - fresh, fresh: fresh),
+      );
       _show(now);
       _loaded = true;
     } on DeckFailure catch (failure) {

@@ -14,6 +14,7 @@ import { StudyScreen } from "../components/study-screen";
 import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
 import type { CardState } from "../queue";
 import type { StudyCard } from "../session";
+import { unknownPace } from "../study-time";
 
 /** A day with no answer stored in it before the session. */
 const noAnswerToday = {
@@ -21,7 +22,6 @@ const noAnswerToday = {
   cards: [],
   answeredAnyDeck: false,
   streakBefore: 0,
-  answeredBefore: false,
 };
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
@@ -104,6 +104,7 @@ describe("a study session's writes", () => {
           startedAt: start,
           queue: { cards: [card], backlog: false },
           before: { [card.id]: before },
+          pace: unknownPace,
           today: noAnswerToday,
         }}
       />,
@@ -151,6 +152,7 @@ describe("a study session's writes", () => {
           startedAt: start,
           queue: { cards: [card], backlog: false },
           before: {},
+          pace: unknownPace,
           today: noAnswerToday,
         }}
       />,
@@ -176,6 +178,7 @@ describe("a study session's writes", () => {
           startedAt: start,
           queue: { cards: [card], backlog: false },
           before: {},
+          pace: unknownPace,
           today: noAnswerToday,
         }}
       />,
@@ -210,6 +213,7 @@ describe("a study session's writes", () => {
           startedAt: start,
           queue: { cards: [card], backlog: false },
           before: { [card.id]: before },
+          pace: unknownPace,
           today: noAnswerToday,
         }}
       />,

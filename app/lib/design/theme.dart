@@ -95,7 +95,7 @@ abstract final class AppSize {
   /// The mascot's circle on the study completion card.
   static const mascotMedium = 84.0;
 
-  /// The mascot over the first study session's guide.
+  /// The mascot on the 오늘 tab's backlog card.
   static const mascotGuide = 64.0;
 
   /// The mascot in the account screen's footer.

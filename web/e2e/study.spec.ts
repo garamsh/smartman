@@ -147,8 +147,10 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   const answer = page.getByRole("group", { name: "답", exact: true });
   await expect(question).toHaveText(/^(chat|chien)$/);
   const first = (await question.textContent()) ?? "";
-  // The user's first session: the guide shows above the first card.
-  await expect(page.getByRole("region", { name: "학습 안내" })).toBeVisible();
+  // The session's start: its guide, with its size, shows above the first card.
+  const guide = page.getByRole("region", { name: "학습 안내" });
+  await expect(guide).toBeVisible();
+  await expect(guide.getByText("오늘 2장 · 약 1분", { exact: true })).toBeVisible();
   await shot(page, "03-study-question");
   await page.keyboard.press("Space");
   await expect(answer).toHaveText(backs.get(first) ?? "");
@@ -380,22 +382,6 @@ test("each page that waits on the server shows its skeleton, still under reduced
         source: "manual",
         created_at: now,
         updated_at: now,
-      })
-    ).error,
-  ).toBeNull();
-  // An answer stored days ago, so this is not the user's first session: the first-run guide,
-  // which no skeleton can foresee, stays off the study page.
-  const daysAgo = new Date(Date.now() - 3 * 86_400_000).toISOString();
-  expect(
-    (
-      await phone.from("reviews").insert({
-        id: randomUUID(),
-        user_id: userId,
-        card_id: cardId,
-        rating: "good",
-        reviewed_at: daysAgo,
-        duration_ms: 1000,
-        updated_at: daysAgo,
       })
     ).error,
   ).toBeNull();

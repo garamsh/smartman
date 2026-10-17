@@ -35,7 +35,7 @@ export async function Study({
     ...card,
     text: { front: describeContent(card.front), back: describeContent(card.back) },
   }));
-  const { day, answers, states, readAt, streakBefore, answeredBefore } = today.today;
+  const { day, answers, states, readAt, pace, streakBefore } = today.today;
   const queue = selectQueue(cards, states, day);
   const before: CardStates = {};
   for (const card of queue.cards) {
@@ -53,12 +53,12 @@ export async function Study({
         startedAt: readAt,
         queue,
         before,
+        pace,
         today: {
           answers: own.map(({ answer, durationMs }) => ({ answer, durationMs })),
           cards: answeredCards,
           answeredAnyDeck: answers.length > 0,
           streakBefore,
-          answeredBefore,
         },
       }}
     />

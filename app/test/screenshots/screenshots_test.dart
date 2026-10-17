@@ -260,7 +260,7 @@ void main() {
       await tap(tester, find.text('영단어 기본'));
 
       await tap(tester, find.text(ko.studyDeck));
-      // The first session, with the guide above the card.
+      // The session's start, with its guide above the card.
       await shot(tester, '12-study-start');
       Future<void> answer(String label) =>
           tap(tester, find.widgetWithText(TextButton, label));
