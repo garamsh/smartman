@@ -23,12 +23,13 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **Cards.** `public.study_record_cards()` returns one row per live card of a live deck with a live answer: its live state or none, and its live answers' ratings, times and fuzz factors in the order given.
 - **Both functions** run as the caller, `stable`, with an empty `search_path`, executable by `authenticated` alone, and change no row. Migration `20261018090001_study_record.sql` adds them; its version follows `20261018090000_study_days.sql`, the latest on `main`, on the PM's instruction.
 - **Engine on the server.** The `/record` page's Server Component reads both in two requests sent together, parses every row at the boundary, and runs the engine on the server: `web/src/features/study/engine-server.ts` instantiates the same module from its file's bytes, once per server process, read from the project's root at the link `src/features/study/engine-wasm`. `next.config.ts` traces the file into the `/record` route's output with `outputFileTracingIncludes`, so the standalone server and each serverless function carry it; no Vercel-only feature is used. A state or answer the engine refuses reads as `unreadable`.
+- **오늘.** The 오늘 page's 기억률 card reads `study_record_days` alone, keeps the last 30 study days, and runs no engine; the PM widened Part B to this card on 2026-10-18, on the worker's question in the dispatch, once Part A (#156) had merged without it.
 - **Supersessions.** This replaces ADR 0022's engine in the browser alone: the study screen still runs it there, and the record page also runs it on the server.
 
 ## Consequences
 
 - The browser receives the computed metrics and the study days, never the history; the page renders whole on the server.
-- Each `/record` load reads every live answer twice on the server, grouped in Postgres and folded in Node. Locally, over 996 reviews of 200 cards, the page's warm load took 189 ms (`supabase/test-web.sh`'s record test); a far longer history may need a summary kept per card.
+- Each `/record` load reads every live answer twice on the server, grouped in Postgres and folded in Node. Locally, over 996 reviews of 200 cards, the page's warm load took 149 to 233 ms over three runs of `supabase/test-web.sh`'s record test, and 오늘's, with its card, 79 ms; a far longer history may need a summary kept per card.
 - The module is 83 KB in the server's memory once loaded; a cold function pays its read and instantiation once.
 - The standalone output carries the module through a link to `next_additional_roots/engine/`, which the image copies with the rest of `.next/standalone`.
 

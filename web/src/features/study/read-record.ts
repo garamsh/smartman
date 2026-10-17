@@ -11,6 +11,7 @@ import { type FoldedAnswer, foldStates, recallAt } from "./engine-server";
 import { type CardState, streak } from "./queue";
 import {
   bestStreak,
+  retentionIn,
   masteredByWeek,
   type RecallBands,
   recallBands,
@@ -166,4 +167,28 @@ function parseState(row: unknown): CardState | null | undefined {
 /** [value] when it is a whole number at least zero, or null. */
 function count(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+/**
+ * The signed-in user's study days with a scheduled review over the last 30 study days, for the
+ * 오늘 page's retention card: one request, `study_record_days`, and no engine; or a server
+ * failure, or `unreadable` for a row this version cannot read.
+ */
+export async function readRecentRetention(): Promise<
+  { days: RecordDay[]; timeZone: string } | { failure: ServerFailure | "unreadable" }
+> {
+  const supabase = await createClient();
+  const session = await readUserId(supabase);
+  if ("failure" in session) return session;
+  const timeZone = parseTimeZone(
+    (await cookies()).getAll().find((cookie) => cookie.name === timeZoneCookie)?.value,
+  );
+  const now = Date.now();
+  const read = await supabase
+    .rpc("study_record_days", { time_zone: timeZone, before: new Date(now).toISOString() })
+    .abortSignal(AbortSignal.timeout(requestTimeoutMs));
+  if (read.error) return { failure: classifyFailure(read.error, read.status) };
+  const days = parseRows(read.data, parseDay);
+  if (!days) return { failure: "unreadable" };
+  return { days: retentionIn(days, "month", now, timeZone), timeZone };
 }

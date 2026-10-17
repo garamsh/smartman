@@ -7,7 +7,9 @@ import {
   dailyGoal,
   deckProgress,
   forecast,
+  readRecentRetention,
   readToday,
+  RetentionPreview,
   selectQueue,
   sessionMinutes,
   statusLine,
@@ -23,12 +25,18 @@ const noon = (start: number) => start + 12 * 3_600_000;
 
 /**
  * The 오늘 page's content, read on the server: the today card over every deck, the next seven
- * days, and today's decks; with no deck, the first-run invitation.
+ * days, today's decks and the retention of the last 30 days; with no deck, the first-run
+ * invitation.
  */
 export async function Today() {
-  const [read, today] = await Promise.all([readDeckList(), readToday({ streak: true })]);
+  const [read, today, retention] = await Promise.all([
+    readDeckList(),
+    readToday({ streak: true }),
+    readRecentRetention(),
+  ]);
   if ("failure" in read) return <ReadFailure failure={read.failure} />;
   if ("failure" in today) return <ReadFailure failure={today.failure} />;
+  if ("failure" in retention) return <ReadFailure failure={retention.failure} />;
   const { decks, cards } = read.library;
   const { day, states, pace, answers, streakBefore, timeZone } = today.today;
   const header = (
@@ -125,6 +133,7 @@ export async function Today() {
         </section>
         <Forecast days={days} starts={starts} timeZone={timeZone} done={total === 0} />
         {rows.length > 0 && <TodayDecks rows={rows} />}
+        <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
       </div>
     </>
   );

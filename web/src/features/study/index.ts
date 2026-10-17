@@ -1,4 +1,5 @@
 export { RecordView } from "./components/record-view";
+export { RetentionPreview } from "./components/retention-preview";
 export { StudyScreen } from "./components/study-screen";
 export {
   type CardState,
@@ -19,7 +20,7 @@ export {
   statusLine,
   todayStatus,
 } from "./overview";
-export { readRecord } from "./read-record";
+export { readRecentRetention, readRecord } from "./read-record";
 export { readToday } from "./read-today";
 export { recordDays } from "./stats";
 export { sessionMinutes } from "./study-time";

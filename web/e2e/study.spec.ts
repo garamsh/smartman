@@ -648,6 +648,25 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
 
     await page.getByText("30일", { exact: true }).click();
     await shot(page, "10-record");
+
+    // 오늘's retention card: the last 30 days' figure and gap, linking here.
+    await page.goto("/");
+    const card = page.getByRole("region", { name: "기억률", exact: true });
+    await expect(
+      card.getByRole("img", { name: /^최근 30일 복습에서 맞힌 비율, 목표 90%: / }),
+    ).toBeVisible();
+    await expect(
+      card.getByRole("link", { name: "기록에서 자세히 보기", exact: true }),
+    ).toHaveAttribute("href", "/record");
+    await page.reload();
+    await expect(card).toBeVisible();
+    const todayLoad = await page.evaluate(() => {
+      const [entry] = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+      return entry ? entry.loadEventEnd - entry.startTime : -1;
+    });
+    console.log(`오늘's warm load with the retention card: ${String(Math.round(todayLoad))} ms`);
+    expect(todayLoad).toBeGreaterThan(0);
+    await shot(page, "10b-today-retention");
   });
 
   test("the streak counts the server's earlier study days with today's answer", async ({
