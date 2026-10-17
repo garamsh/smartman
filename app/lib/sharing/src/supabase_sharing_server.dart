@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../account/account.dart';
+import '../../database/database.dart';
 import '../../deck/deck.dart';
 import 'failure.dart';
 import 'model.dart';
@@ -219,7 +220,7 @@ final class _NoSession implements Exception {
   String toString() => 'no session';
 }
 
-String _time(DateTime time) => time.toUtc().toIso8601String();
+String _time(DateTime time) => storedTime(time).toIso8601String();
 
 PublicDeckSummary _decodeSummary(_Fields row) => PublicDeckSummary(
   id: DeckId(row.string('id')),
