@@ -9,10 +9,17 @@ permissions: read-all
 
 # The ubuntu job runs make ci, which skips the iOS simulator build off macOS; the macos job runs
 # that build alone.
+#
+# Each job runs on a versioned runner label, the image `-latest` named when it was set. A label
+# cannot be pinned to a digest, and Dependabot moves `uses:` references only, so the PM moves the
+# labels, in one pull request, when GitHub announces that `-latest` moves to a newer image or that
+# a pinned image is deprecated (github.com/actions/runner-images, its announcements). The job names
+# carry the OS family alone, so a move renames no required check. Each run's "Set up job" step
+# logs the image it resolved to: its name, version and release.
 jobs:
   ubuntu:
-    name: ci (ubuntu-latest)
-    runs-on: ubuntu-latest
+    name: ci (ubuntu)
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # make lint's check-migration-order.sh reads main as the merge commit's first parent.
@@ -57,8 +64,8 @@ jobs:
       - run: make ci
 
   macos:
-    name: ci (macos-latest)
-    runs-on: macos-latest
+    name: ci (macos)
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
