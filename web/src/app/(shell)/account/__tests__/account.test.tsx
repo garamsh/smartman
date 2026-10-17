@@ -56,7 +56,7 @@ describe("the account page", () => {
   });
 });
 
-describe("the home page's account link", () => {
+describe("the shell's account link", () => {
   beforeEach(async () => {
     setRequestCookies(await signedInCookies());
   });
@@ -64,9 +64,17 @@ describe("the home page's account link", () => {
   it("is the signed-in account's initial, and opens the account page", async () => {
     await render(AccountLink, {});
 
-    const link = screen.getByRole("link", { name: "계정" });
+    const link = screen.getByRole("link", { name: "계정과 설정" });
     expect(link).toHaveAttribute("href", "/account");
     expect(link).toHaveTextContent(testUser.email.charAt(0).toLocaleUpperCase());
+  });
+
+  it("in the side menu, names 계정과 설정 beside the initial", async () => {
+    await render(AccountLink, { labelled: true });
+
+    const link = screen.getByRole("link", { name: /계정과 설정$/ });
+    expect(link).toHaveAttribute("href", "/account");
+    expect(link).toHaveTextContent(`${testUser.email.charAt(0).toLocaleUpperCase()}계정과 설정`);
   });
 
   it("redirects to /login without a session", async () => {

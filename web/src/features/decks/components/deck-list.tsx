@@ -1,53 +1,103 @@
-import { ChevronRight } from "lucide-react";
+"use client";
+
+import { ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
-import { deckTint } from "../deck-tint";
 import type { Deck } from "../library";
-
-/** A deck as its row shows it: its card count, and what a session over it would study now. */
-export type DeckRow = { deck: Deck; cards: number; today: number };
+import { DeckTile } from "./deck-tile";
 
 /**
- * The decks, each a row that opens the deck: its initial on a tinted tile, its name and card
- * count, "공개" when it is published, today's chip, and a chevron.
+ * A deck as its row shows it: its card count, what a session over it would study now, and how
+ * many of its cards are mastered (익힘) and learning (학습 중).
+ */
+export type DeckRow = {
+  deck: Deck;
+  cards: number;
+  today: number;
+  mastered: number;
+  learning: number;
+};
+
+/**
+ * The decks under a search that keeps those whose name holds it, ignoring case; each a row that
+ * opens the deck: its tile, its name, "공개" when it is published, today's chip, its progress
+ * bar with "n장 중 m장 익힘", and a chevron.
  */
 export function DeckList({ rows }: { rows: DeckRow[] }) {
+  const [search, setSearch] = useState("");
+  const needle = search.trim().toLocaleLowerCase();
+  const shown = needle
+    ? rows.filter((row) => row.deck.name.toLocaleLowerCase().includes(needle))
+    : rows;
   return (
-    <section aria-labelledby="deck-list-title" className="flex flex-col gap-3">
-      <h2 id="deck-list-title" className="text-section text-ink-2">
-        내 덱 {rows.length}
-      </h2>
-      <ul className="flex flex-col gap-row-gap">
-        {rows.map(({ deck, cards, today }) => (
-          <li key={deck.id}>
-            <Link
-              href={`/decks/${encodeURIComponent(deck.id)}`}
-              aria-label={`${deck.name}, 카드 ${String(cards)}장${deck.public ? ", 공개" : ""}${today > 0 ? `, 오늘 ${String(today)}` : ""}`}
-              className="flex min-h-13 items-center gap-3 rounded-row bg-surface py-3 pr-3 pl-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              <span
-                aria-hidden
-                className={`flex size-deck-tile shrink-0 items-center justify-center rounded-field text-headline ${deckTint(deck.id)}`}
+    <section aria-label="덱 목록" className="flex flex-col gap-3">
+      <div className="relative">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted"
+          strokeWidth={2}
+        />
+        <input
+          type="search"
+          aria-label="덱 검색"
+          placeholder="덱 검색"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+          }}
+          className="h-search w-full rounded-field border border-outline bg-surface pr-4 pl-12 text-body placeholder:text-muted focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink"
+        />
+      </div>
+      {shown.length === 0 ? (
+        <p role="status" className="text-muted">
+          찾는 덱이 없어요. 다른 말로 검색해 보세요.
+        </p>
+      ) : (
+        <ul className="grid gap-row-gap lg:grid-cols-2">
+          {shown.map(({ deck, cards, today, mastered, learning }) => (
+            <li key={deck.id}>
+              <Link
+                href={`/decks/${encodeURIComponent(deck.id)}`}
+                aria-label={`${deck.name}, 카드 ${String(cards)}장${deck.public ? ", 공개" : ""}${today > 0 ? `, 오늘 ${String(today)}` : ""}, ${String(cards)}장 중 ${String(mastered)}장 익힘`}
+                className="flex min-h-13 items-center gap-3 rounded-row bg-surface py-3 pr-3 pl-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
-                {deck.name.trim().charAt(0).toLocaleUpperCase()}
-              </span>
-              <span className="flex flex-1 flex-col">
-                <span className="text-body-strong">{deck.name}</span>
-                <span className="text-caption text-muted">카드 {cards}장</span>
-              </span>
-              {deck.public && <PublicChip />}
-              {today > 0 && (
-                <span className="rounded-full bg-brand-tint px-3 py-1 text-micro font-semibold text-ink">
-                  오늘 {today}
+                <DeckTile deck={deck} />
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="truncate text-body-strong">{deck.name}</span>
+                  <span aria-hidden className="flex h-1.5 overflow-hidden rounded-full bg-hairline">
+                    <span
+                      className="bg-ink"
+                      style={{ width: `${String(share(mastered, cards))}%` }}
+                    />
+                    <span
+                      className="bg-muted"
+                      style={{ width: `${String(share(learning, cards))}%` }}
+                    />
+                  </span>
+                  <span className="text-caption text-muted">
+                    {cards}장 중 {mastered}장 익힘
+                  </span>
                 </span>
-              )}
-              <ChevronRight aria-hidden className="size-5 text-muted" strokeWidth={2} />
-            </Link>
-          </li>
-        ))}
-      </ul>
+                {deck.public && <PublicChip />}
+                {today > 0 && (
+                  <span className="shrink-0 rounded-full bg-brand-tint px-3 py-1 text-micro font-semibold text-ink">
+                    오늘 {today}
+                  </span>
+                )}
+                <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" strokeWidth={2} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
+}
+
+/** [part] of [whole] in percent, 0 for an empty whole. */
+function share(part: number, whole: number): number {
+  return whole === 0 ? 0 : (part / whole) * 100;
 }
 
 /** The chip beside a deck its owner published, as the phone draws it. */

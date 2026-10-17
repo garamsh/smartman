@@ -10,23 +10,27 @@ import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
 
 import { Deck } from "../_components/deck";
-import { Study } from "../../../study/_components/study";
+import { Study } from "../../../../study/_components/study";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const open = (id: string) => render(Deck, { params: Promise.resolve({ id }) });
 
-/** The deck's count pills, in order. */
-const pills = () =>
-  within(screen.getByRole("list", { name: "개수" }))
-    .getAllByRole("listitem")
-    .map((pill) => pill.textContent);
+/** What the page says of the deck: its card count under the name, and today's cards for it. */
+const summary = () => ({
+  cards: /카드 (\d+)장/.exec(screen.getByRole("banner").textContent)?.[1],
+  today: /오늘 할 카드 (\d+)장/.exec(
+    within(screen.getByRole("region", { name: "오늘 이 덱" }))
+      .getByLabelText(/^오늘 할 카드/)
+      .getAttribute("aria-label") ?? "",
+  )?.[1],
+});
 
-/** The card rows on screen, each as "front | back". */
+/** The cards on screen, each as its button names it: its front, and its answer or that it is hidden. */
 const rows = () =>
   within(screen.getByRole("region", { name: "카드" }))
-    .queryAllByRole("listitem")
-    .map((row) => [...row.children].map((cell) => cell.textContent).join(" | "));
+    .queryAllByRole("button", { name: /, 답 / })
+    .map((card) => card.getAttribute("aria-label"));
 
 describe("the deck page", () => {
   let postgrest: FakePostgrest;
@@ -58,12 +62,22 @@ describe("the deck page", () => {
     await open("d-fr");
 
     expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
-    expect(pills()).toEqual(["카드 3", "복습 1", "새 카드 1"]);
-    expect(screen.getByRole("link", { name: "학습하기 · 2장" })).toHaveAttribute(
+    expect(summary()).toEqual({ cards: "3", today: "2" });
+    expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "href",
       "/study?decks=d-fr",
     );
-    expect(rows()).toEqual(["Chat | Chat back", "chien | chien back", "oiseau | oiseau back"]);
+    expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Enter",
+    );
+    // Every answer hidden until it is asked for.
+    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+    // Two learning and one new: the progress, read as one sentence.
+    expect(
+      screen.getByRole("img", { name: "익힘 0장, 학습 중 2장, 새 카드 1장" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "덱" })).toHaveAttribute("href", "/decks");
   });
 
   it("with no card left today still links 학습하기 · 0장 to the study page, which opens on nothing to study or on the completion card", async () => {
@@ -87,8 +101,8 @@ describe("the deck page", () => {
       }
       await open("d-done");
 
-      expect(pills(), answered).toEqual(["카드 1", "복습 0", "새 카드 0"]);
-      const href = screen.getByRole("link", { name: "학습하기 · 0장" }).getAttribute("href");
+      expect(summary(), answered).toEqual({ cards: "1", today: "0" });
+      const href = screen.getByRole("link", { name: "학습하기" }).getAttribute("href");
       expect(href, answered).toBe("/study?decks=d-done");
 
       cleanup();
@@ -104,24 +118,24 @@ describe("the deck page", () => {
     }
   });
 
-  it("marks a deck its owner published with 공개 beside its name", async () => {
+  it("marks a deck its owner published with 공개 under its name", async () => {
     // Control: the private deck carries no chip.
     await open("d-fr");
     expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
-    expect(screen.queryByText("공개")).not.toBeInTheDocument();
+    expect(screen.getByText("카드 3장")).toBeInTheDocument();
     cleanup();
 
     postgrest.seed("decks", deckRow("d-pub", "Shared", false, "public"));
     await open("d-pub");
     expect(screen.getByRole("heading", { name: "Shared" })).toBeInTheDocument();
-    expect(screen.getByText("공개")).toBeInTheDocument();
+    expect(screen.getByText("카드 0장 · 공개")).toBeInTheDocument();
   });
 
   it("says new cards wait while more than three days of reviews are due, and not otherwise", async () => {
     const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
     // Control: one card due every four days and one every day are not a backlog.
     await open("d-fr");
-    expect(pills()).toEqual(["카드 3", "복습 1", "새 카드 1"]);
+    expect(summary()).toEqual({ cards: "3", today: "2" });
     expect(screen.queryByText(paused)).not.toBeInTheDocument();
     cleanup();
 
@@ -141,24 +155,70 @@ describe("the deck page", () => {
     );
     await open("d-fr");
 
-    expect(pills()).toEqual(["카드 7", "복습 5", "새 카드 0"]);
+    expect(summary()).toEqual({ cards: "7", today: "5" });
     expect(screen.getByText(paused)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "학습하기 · 5장" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "학습하기" })).toBeInTheDocument();
   });
 
   it("keeps the cards whose front or back holds the search, ignoring case", async () => {
     await open("d-fr");
     const user = userEvent.setup();
 
-    await user.type(screen.getByRole("searchbox", { name: "검색" }), "CH");
-    expect(rows()).toEqual(["Chat | Chat back", "chien | chien back"]);
+    await user.type(screen.getByRole("searchbox", { name: "카드 검색" }), "CH");
+    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐"]);
+    // The results follow the switch.
+    await user.click(screen.getByRole("switch", { name: "뜻 보기" }));
+    expect(rows()).toEqual(["Chat, 답 Chat back", "chien, 답 chien back"]);
+    expect(screen.getByRole("heading", { name: "카드 2" })).toBeInTheDocument();
 
-    await user.clear(screen.getByRole("searchbox", { name: "검색" }));
-    await user.type(screen.getByRole("searchbox", { name: "검색" }), "zèbre");
+    await user.clear(screen.getByRole("searchbox", { name: "카드 검색" }));
+    await user.type(screen.getByRole("searchbox", { name: "카드 검색" }), "zèbre");
     expect(rows()).toEqual([]);
     expect(screen.getByRole("status")).toHaveTextContent(
       "찾는 카드가 없어요. 다른 말로 검색해 보세요.",
     );
+  });
+
+  it("shows a card's answer on a click and hides it on the next, that card alone", async () => {
+    await open("d-fr");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "chien, 답 가려짐" }));
+    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 chien back", "oiseau, 답 가려짐"]);
+    expect(screen.getByRole("button", { name: "chien, 답 chien back" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "chien, 답 chien back" }));
+    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+  });
+
+  it("shows or hides every answer with 뜻 보기, off when the page opens, resetting a card set apart by a click", async () => {
+    await open("d-fr");
+    const user = userEvent.setup();
+    const answers = screen.getByRole("switch", { name: "뜻 보기" });
+    expect(answers).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("heading", { name: "카드 3" })).toBeInTheDocument();
+
+    await user.click(answers);
+    expect(answers).toHaveAttribute("aria-checked", "true");
+    expect(rows()).toEqual([
+      "Chat, 답 Chat back",
+      "chien, 답 chien back",
+      "oiseau, 답 oiseau back",
+    ]);
+    // A click after the switch sets that card alone apart.
+    await user.click(screen.getByRole("button", { name: "Chat, 답 Chat back" }));
+    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 chien back", "oiseau, 답 oiseau back"]);
+    // The switch then sets every card to its state, the one set apart included.
+    await user.click(answers);
+    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+    await user.click(answers);
+    expect(rows()).toEqual([
+      "Chat, 답 Chat back",
+      "chien, 답 chien back",
+      "oiseau, 답 oiseau back",
+    ]);
   });
 
   it("is not found for a deleted deck, and found for a live one", async () => {
