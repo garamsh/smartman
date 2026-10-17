@@ -11,6 +11,7 @@ permissions: read-all
 # iOS simulator build, which needs macOS. Each installs the tools its targets run.
 jobs:
   ubuntu:
+    name: ubuntu (${{ matrix.check }})
     strategy:
       fail-fast: false
       matrix:
