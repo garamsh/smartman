@@ -166,7 +166,7 @@ void main() {
       final storage = (await tester.runAsync(
         () => SharedPreferencesWithCache.create(
           cacheOptions: const SharedPreferencesWithCacheOptions(
-            allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
+            allowList: {...themeStorageKeys, ...detailStepStorageKeys},
           ),
         ),
       ))!;
@@ -591,14 +591,42 @@ void main() {
       client.answerCards(const [
         CandidateCard(
           front: 'serendipity',
-          meaning: '뜻밖의 행운',
+          answer: '뜻밖의 행운',
           partOfSpeech: '[명]',
         ),
-        CandidateCard(front: 'candid', meaning: '솔직한', partOfSpeech: '[형]'),
-        CandidateCard(front: 'lucid', meaning: '맑은, 또렷한'),
+        CandidateCard(front: 'candid', answer: '솔직한', partOfSpeech: '[형]'),
+        CandidateCard(front: 'lucid', answer: '맑은, 또렷한'),
       ]);
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-review');
+
+      await tap(tester, find.text(ko.retake));
+      await tester.tap(find.byTooltip(ko.photoShutter));
+      await tester.pump();
+      await tester.pump();
+      client.answerCards(const [
+        CandidateCard(
+          kind: CandidateKind.note,
+          front: '논증이란?',
+          answer: '전제와 결론으로 이루어진 문장들의 집합',
+          short: '전제와 결론의 집합',
+        ),
+        CandidateCard(
+          kind: CandidateKind.note,
+          front: '연역 논증과 귀납 논증의 차이는?',
+          answer: '연역은 전제에 담긴 내용만 말하고, 귀납은 새로운 정보를 준다',
+          short: '귀납만 새로운 정보를 준다',
+          step: DetailStep.keyPoints,
+        ),
+        CandidateCard(
+          kind: CandidateKind.note,
+          front: '전제 지시어는?',
+          answer: '왜냐하면, ~이므로, ~때문에',
+          step: DetailStep.detailed,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      await shot(tester, '23-photo-review-notes');
 
       await tap(tester, find.text(ko.retake));
       await tester.tap(find.byTooltip(ko.photoShutter));

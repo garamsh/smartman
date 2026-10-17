@@ -2,9 +2,14 @@
 /// reviews and saves into a deck.
 library;
 
-export 'src/detail_level.dart' show DetailLevel, detailLevelStorageKeys;
+export 'src/detail_step.dart' show DetailStep, detailStepStorageKeys;
 export 'src/extraction_client.dart'
-    show CandidateCard, ExtractionClient, extractCardsUrl, HttpExtractionClient;
+    show
+        CandidateCard,
+        CandidateKind,
+        ExtractionClient,
+        extractCardsUrl,
+        HttpExtractionClient;
 export 'src/failure.dart'
     show
         CameraDenied,

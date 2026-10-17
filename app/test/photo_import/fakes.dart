@@ -98,10 +98,10 @@ final class FakeExtractionClient implements ExtractionClient {
     return call.answer.future;
   }
 
-  /// Answers the last call with cards, front → meaning.
+  /// Answers the last call with vocabulary cards at step 1, front → answer.
   void answer(Map<String, String> cards) => answerCards([
-    for (final MapEntry(key: front, value: meaning) in cards.entries)
-      CandidateCard(front: front, meaning: meaning),
+    for (final MapEntry(key: front, value: answer) in cards.entries)
+      CandidateCard(front: front, answer: answer),
   ]);
 
   /// Answers the last call with [cards].
@@ -124,7 +124,7 @@ Future<SharedPreferencesWithCache> openPreferences(
   return (await tester.runAsync(
     () => SharedPreferencesWithCache.create(
       cacheOptions: const SharedPreferencesWithCacheOptions(
-        allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
+        allowList: {...themeStorageKeys, ...detailStepStorageKeys},
       ),
     ),
   ))!;

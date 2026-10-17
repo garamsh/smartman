@@ -1,6 +1,6 @@
 # ADR 0028: Extract each photo card's fields in one call, and compose its answer at a detail level the app chooses
 
-> Status: accepted; its model reply, response, prompt v2 and the eval's matching on `meaning` alone superseded by ADR-0051
+> Status: accepted; its model reply, response, prompt v2 and the eval's matching on `meaning` alone superseded by ADR-0051; its three levels, their segmented control and their storage superseded by ADR-0052
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

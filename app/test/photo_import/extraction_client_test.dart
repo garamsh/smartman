@@ -57,7 +57,7 @@ void main() {
       final body = jsonDecode(sent.body) as Map<String, Object?>;
       expect(body.keys, ['image']);
       expect(base64Decode(body['image']! as String), _photo.bytes);
-      expect(cards!.map((card) => (card.front, card.meaning)), [
+      expect(cards!.map((card) => (card.front, card.answer)), [
         ('chat', 'cat'),
         ('chien', 'dog'),
       ]);
@@ -65,7 +65,8 @@ void main() {
   );
 
   test(
-    'reads each card\'s meaning, part of speech and examples beside its back',
+    'a card from a function before kind takes its meaning as its answer and '
+    'short form, as vocabulary at step 1, with its part of speech and examples',
     () async {
       final client = _client(
         (_) async => _json(200, {
@@ -84,15 +85,24 @@ void main() {
 
       final [run, river] = (await _extract(client))!;
 
-      expect((run.front, run.meaning, run.partOfSpeech), ('run', '달리다', '[동]'));
+      expect(
+        (run.front, run.answer, run.short, run.partOfSpeech),
+        ('run', '달리다', '달리다', '[동]'),
+      );
       expect(run.examples, ['I run every morning.', 'run a shop']);
-      expect((river.meaning, river.partOfSpeech), ('강', null));
+      expect((river.answer, river.partOfSpeech), ('강', null));
       expect(river.examples, isEmpty);
+      for (final card in [run, river]) {
+        expect(
+          (card.kind, card.step),
+          (CandidateKind.vocabulary, DetailStep.core),
+        );
+      }
     },
   );
 
   test(
-    'a card from a function that sends back alone takes back as its meaning',
+    'a card from a function that sends back alone takes back as its answer',
     () async {
       final client = _client(
         (_) async => _json(200, {
@@ -104,10 +114,74 @@ void main() {
 
       final [card] = (await _extract(client))!;
 
-      expect((card.meaning, card.partOfSpeech), ('n. cat', null));
+      expect(
+        (card.answer, card.short, card.partOfSpeech),
+        ('n. cat', 'n. cat', null),
+      );
+      expect(
+        (card.kind, card.step),
+        (CandidateKind.vocabulary, DetailStep.core),
+      );
       expect(card.examples, isEmpty);
     },
   );
+
+  test('a card with kind reads its kind, answer, short form and step, and a '
+      'vocabulary card its part of speech and examples', () async {
+    final client = _client(
+      (_) async => _json(200, {
+        'cards': [
+          {
+            'kind': 'vocabulary',
+            'front': 'run',
+            'answer': ' 달리다, 운영하다 ',
+            'short': '달리다',
+            'step': 1,
+            'back': '[동] 달리다, 운영하다',
+            'meaning': '달리다, 운영하다',
+            'partOfSpeech': '[동]',
+            'examples': ['I run every morning.'],
+          },
+          {
+            'kind': 'note',
+            'front': '연역 논증이란?',
+            'answer': '전제가 참이면 결론이 반드시 참인 논증',
+            'short': '결론이 반드시 참',
+            'step': 4,
+            'back': '전제가 참이면 결론이 반드시 참인 논증',
+            'examples': ['253+4637+647898=652788 -> 연역'],
+          },
+        ],
+      }),
+    );
+
+    final [run, deduction] = (await _extract(client))!;
+
+    expect(
+      (run.kind, run.answer, run.short, run.step, run.partOfSpeech),
+      (CandidateKind.vocabulary, '달리다, 운영하다', '달리다', DetailStep.core, '[동]'),
+    );
+    expect(run.examples, ['I run every morning.']);
+    expect(
+      (
+        deduction.kind,
+        deduction.front,
+        deduction.answer,
+        deduction.short,
+        deduction.step,
+        deduction.partOfSpeech,
+      ),
+      (
+        CandidateKind.note,
+        '연역 논증이란?',
+        '전제가 참이면 결론이 반드시 참인 논증',
+        '결론이 반드시 참',
+        DetailStep.detailed,
+        null,
+      ),
+    );
+    expect(deduction.examples, ['253+4637+647898=652788 -> 연역']);
+  });
 
   test('each refusal the contract names maps to its failure', () async {
     final cases = <(int, String), Matcher>{
@@ -157,6 +231,37 @@ void main() {
             'front': 'chat',
             'back': 'cat',
             'examples': ['a cat', ''],
+          },
+        ],
+      }),
+      for (final field in <String, Object?>{
+        'kind': 'word',
+        'answer': ' ',
+        'short': null,
+        'step': 6,
+      }.entries)
+        jsonEncode({
+          'cards': [
+            {
+              'kind': 'note',
+              'front': 'What is an argument?',
+              'answer': 'Premises and a conclusion',
+              'short': 'Premises',
+              'step': 2,
+              'back': 'Premises and a conclusion',
+              field.key: field.value,
+            },
+          ],
+        }),
+      jsonEncode({
+        'cards': [
+          {
+            'kind': 'note',
+            'front': 'What is an argument?',
+            'answer': 'Premises and a conclusion',
+            'short': 'Premises',
+            'step': 0,
+            'back': 'Premises and a conclusion',
           },
         ],
       }),

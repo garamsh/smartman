@@ -8,7 +8,7 @@ import '../../deck/deck.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
 import 'capture_view.dart';
-import 'detail_level.dart';
+import 'detail_step.dart';
 import 'extracting_view.dart';
 import 'extraction_client.dart';
 import 'failure.dart';
@@ -24,10 +24,10 @@ final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
 );
 
 /// Takes or picks one photo, extracts candidate cards from it, and saves the
-/// ones the user keeps into [deck], or into a new deck when it is null, each
-/// answer composed at the detail level kept in [preferences]. Nothing is
-/// written before the user confirms; the screen then pops with the [Deck] it
-/// saved into.
+/// ones the user keeps into [deck], or into a new deck when it is null, the
+/// rows offered and their answers composed at the detail step kept in
+/// [preferences]. Nothing is written before the user confirms; the screen then
+/// pops with the [Deck] it saved into.
 class PhotoImportScreen extends ConsumerStatefulWidget {
   const PhotoImportScreen({
     super.key,
@@ -41,8 +41,8 @@ class PhotoImportScreen extends ConsumerStatefulWidget {
   final ExtractionClient client;
   final PhotoSource photos;
 
-  /// The device storage the detail level is kept in, opened to cache
-  /// [detailLevelStorageKeys].
+  /// The device storage the detail step is kept in, opened to cache
+  /// [detailStepStorageKeys].
   final SharedPreferencesWithCache preferences;
 
   @override
@@ -85,7 +85,7 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
   /// The deck the cards go into; null for a new deck.
   late DeckId? _target = widget.deck;
 
-  late DetailLevel _level = readDetailLevel(widget.preferences);
+  late DetailStep _step = readDetailStep(widget.preferences);
 
   bool _saving = false;
 
@@ -112,8 +112,8 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
         decks: decks.value ?? const [],
         target: target,
         onTarget: (deck) => setState(() => _target = deck),
-        level: _level,
-        onLevel: _chooseLevel,
+        step: _step,
+        onStep: _chooseStep,
         onPhoto: _extract,
         onFailure: (failure) => setState(() => _stage = _Failed(failure, null)),
       ),
@@ -132,7 +132,7 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
         review: review,
         deckName: targetName,
         saving: _saving,
-        onLevel: _chooseLevel,
+        onStep: _chooseStep,
         onChanged: () => setState(() {}),
         onRetake: _retake,
         onSave: () => _save(review),
@@ -160,7 +160,7 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
         () => _stage = _Reviewing(
           Review(cards, {
             for (final card in existing) card.cardKey,
-          }, level: _level),
+          }, step: _step),
         ),
       );
     } on PhotoImportFailure catch (failure) {
@@ -172,13 +172,13 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
     }
   }
 
-  /// Applies [level] at once, to the review too, then stores it.
-  void _chooseLevel(DetailLevel level) {
+  /// Applies [step] at once, to the review too, then stores it.
+  void _chooseStep(DetailStep step) {
     setState(() {
-      _level = level;
-      if (_stage case _Reviewing(:final review)) review.level = level;
+      _step = step;
+      if (_stage case _Reviewing(:final review)) review.step = step;
     });
-    unawaited(storeDetailLevel(widget.preferences, level));
+    unawaited(storeDetailStep(widget.preferences, step));
   }
 
   void _cancel() {

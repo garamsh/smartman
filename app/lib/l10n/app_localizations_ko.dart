@@ -402,16 +402,27 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get detailLevelLabel => '카드에 담을 내용';
+  String get detailStepLabel => '카드에 담을 내용';
 
   @override
-  String get detailLevelSimple => '간단';
+  String get detailStepCore => '핵심';
 
   @override
-  String get detailLevelBasic => '기본';
+  String get detailStepKeyPoints => '요점';
 
   @override
-  String get detailLevelDetailed => '자세히';
+  String get detailStepBasic => '기본';
+
+  @override
+  String get detailStepDetailed => '자세히';
+
+  @override
+  String get detailStepFull => '세부';
+
+  @override
+  String detailStepValue(String name, int step) {
+    return '$name, 5단계 중 $step단계';
+  }
 
   @override
   String get candidateEdited => '직접 고침';

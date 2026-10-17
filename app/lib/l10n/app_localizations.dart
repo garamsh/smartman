@@ -781,29 +781,47 @@ abstract class AppLocalizations {
   /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요 · {deck}'**
   String reviewHint(String deck);
 
-  /// Label of the selector of how much each photo card's answer says, on the capture and review screens.
+  /// Label of the slider of how much of a photo becomes cards, on the capture and review screens.
   ///
   /// In ko, this message translates to:
   /// **'카드에 담을 내용'**
-  String get detailLevelLabel;
+  String get detailStepLabel;
 
-  /// Detail level: the meaning alone.
+  /// Detail step 1: the page's core ideas, each answer in its short form.
   ///
   /// In ko, this message translates to:
-  /// **'간단'**
-  String get detailLevelSimple;
+  /// **'핵심'**
+  String get detailStepCore;
 
-  /// Detail level, the default: the part of speech the page prints, then the meaning.
+  /// Detail step 2: the key points, each answer in full.
+  ///
+  /// In ko, this message translates to:
+  /// **'요점'**
+  String get detailStepKeyPoints;
+
+  /// Detail step 3, the default: a vocabulary entry's part of speech before its answer.
   ///
   /// In ko, this message translates to:
   /// **'기본'**
-  String get detailLevelBasic;
+  String get detailStepBasic;
 
-  /// Detail level: the basic answer, then each example the page prints on its own line.
+  /// Detail step 4: step 3, then each example the page prints on its own line.
   ///
   /// In ko, this message translates to:
   /// **'자세히'**
-  String get detailLevelDetailed;
+  String get detailStepDetailed;
+
+  /// Detail step 5: every detail of the page offered as cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'세부'**
+  String get detailStepFull;
+
+  /// What a screen reader reads as the slider's value: the step's name and its number.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}, 5단계 중 {step}단계'**
+  String detailStepValue(String name, int step);
 
   /// Mark on a candidate whose answer the user edited, which a detail level switch leaves as typed.
   ///
