@@ -53,9 +53,6 @@ abstract final class StudyStyle {
   /// How far the divider between a card's halves stops short of its edges.
   static const dividerInset = AppSpace.s28;
 
-  /// The eye in the hidden answer's half.
-  static const hiddenAnswerIcon = AppSpace.s24;
-
   /// The width of the session guide's dashed outline.
   static const guideOutline = 1.5;
 

@@ -291,8 +291,6 @@ void main() {
       }
       // At rest: the previous card above the current one.
       await shot(tester, '13-study-session');
-      await tap(tester, find.bySemanticsLabel(RegExp('^앞면: [a-z]+\$')));
-      await shot(tester, '13a-study-revealed');
       // The previous card, above the current one.
       final previous = find
           .bySemanticsLabel(
@@ -319,10 +317,8 @@ void main() {
       ) {
         await answer(ko.know);
       }
+      // No new card is left past today's, so the card says so.
       await shot(tester, '15-study-complete');
-      await tap(tester, find.text(ko.keepStudying));
-      await answer(ko.dontKnow);
-      await shot(tester, '15b-study-practice');
       await tap(tester, find.byTooltip(ko.close));
 
       // The empty deck has nothing to study today.

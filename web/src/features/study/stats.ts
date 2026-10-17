@@ -19,8 +19,7 @@ export type RecordAnswer = { cardId: CardId; know: boolean; reviewedAt: number }
 /**
  * Each study day in [timeZone] holding one of [answers], oldest first. A review is scheduled when
  * it is a card's first answer of its study day and the card has an answer on an earlier one: a
- * card's first answer ever, and a re-show after "모른다" on the same day, are left out. Practice
- * stores no answer, so it is never in [answers].
+ * card's first answer ever, and a re-show after "모른다" on the same day, are left out.
  */
 export function recordDays(answers: Iterable<RecordAnswer>, timeZone: string): RecordDay[] {
   const ordered = [...answers].sort((a, b) => a.reviewedAt - b.reviewedAt);

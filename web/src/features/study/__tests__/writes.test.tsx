@@ -19,7 +19,6 @@ import { unknownPace } from "../study-time";
 /** A day with no answer stored in it before the session. */
 const noAnswerToday = {
   answers: [],
-  cards: [],
   answeredAnyDeck: false,
   streakBefore: 0,
 };
@@ -103,6 +102,7 @@ describe("a study session's writes", () => {
         plan={{
           startedAt: start,
           queue: { cards: [card], backlog: false },
+          more: [],
           before: { [card.id]: before },
           pace: unknownPace,
           today: noAnswerToday,
@@ -151,6 +151,7 @@ describe("a study session's writes", () => {
         plan={{
           startedAt: start,
           queue: { cards: [card], backlog: false },
+          more: [],
           before: {},
           pace: unknownPace,
           today: noAnswerToday,
@@ -177,6 +178,7 @@ describe("a study session's writes", () => {
         plan={{
           startedAt: start,
           queue: { cards: [card], backlog: false },
+          more: [],
           before: {},
           pace: unknownPace,
           today: noAnswerToday,
@@ -212,6 +214,7 @@ describe("a study session's writes", () => {
         plan={{
           startedAt: start,
           queue: { cards: [card], backlog: false },
+          more: [],
           before: { [card.id]: before },
           pace: unknownPace,
           today: noAnswerToday,

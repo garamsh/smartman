@@ -1,18 +1,17 @@
-import { ArrowUp, Eye, MoveHorizontal } from "lucide-react";
+import { ArrowUp, MoveHorizontal } from "lucide-react";
 
 import type { SessionSize } from "../session";
 
-/** The three lines on how to study, each after its icon; the web's answer line names its keys. */
+/** The two lines on how to study, each after its icon; the web's answer line names its keys. */
 const lines = [
-  { Icon: Eye, text: "카드를 누르면 답이 보여요" },
   { Icon: MoveHorizontal, text: "알면 안다(→), 모르면 모른다(←)를 눌러요" },
-  { Icon: ArrowUp, text: "답한 카드는 여기로 올라와요. 밀어서 바꿀 수 있어요" },
+  { Icon: ArrowUp, text: "답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요" },
 ] as const;
 
 /**
  * In the previous card's place from a session's start until its first answer: a panel with a
- * dashed outline and no fill, so it never reads as a card, holding the session's [size] and three
- * lines on how to study.
+ * dashed outline and no fill, so it never reads as a card, holding the session's [size], or that
+ * today's cards are done where it holds none, and two lines on how to study.
  */
 export function SessionGuide({ size }: { size: SessionSize }) {
   return (
@@ -21,7 +20,9 @@ export function SessionGuide({ size }: { size: SessionSize }) {
       className="flex w-full flex-col justify-center gap-3 rounded-previous border-[1.5px] border-dashed border-outline px-5 py-4"
     >
       <p className="text-body font-bold text-ink">
-        오늘 {size.cards}장 · 약 {size.minutes}분
+        {size.cards === 0
+          ? "오늘 할 카드를 다 했어요"
+          : `오늘 ${String(size.cards)}장 · 약 ${String(size.minutes)}분`}
       </p>
       <ul className="flex flex-col gap-3">
         {lines.map(({ Icon, text }) => (

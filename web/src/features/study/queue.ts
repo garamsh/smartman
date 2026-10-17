@@ -210,14 +210,10 @@ export function selectQueue<C extends Queueable>(
   day: StudyDay,
 ): SelectedQueue<C> {
   const due: { card: C; due: number }[] = [];
-  const fresh: C[] = [];
   const reviewed: CardState[] = [];
   for (const card of cards) {
     const state = states[card.id];
-    if (!state) {
-      fresh.push(card);
-      continue;
-    }
+    if (!state) continue;
     reviewed.push(state);
     if (state.due < day.end) due.push({ card, due: state.due });
   }
@@ -226,11 +222,22 @@ export function selectQueue<C extends Queueable>(
     due.sort((a, b) => a.due - b.due);
     return { cards: due.map((entry) => entry.card), backlog: true };
   }
-  fresh.sort((a, b) => a.createdAt - b.createdAt);
   return {
-    cards: [...due.map((entry) => entry.card), ...fresh.slice(0, day.newCardsLeft)],
+    cards: [
+      ...due.map((entry) => entry.card),
+      ...newCards(cards, states).slice(0, day.newCardsLeft),
+    ],
     backlog: false,
   };
+}
+
+/**
+ * The cards of [cards] with no stored state in [states], oldest first by creation time, ties in
+ * the order given: the order the day's new cards are taken in, and those past them.
+ */
+export function newCards<C extends Queueable>(cards: readonly C[], states: CardStates): C[] {
+  // Array.prototype.sort is stable, so equal times keep the order given.
+  return cards.filter((card) => !states[card.id]).sort((a, b) => a.createdAt - b.createdAt);
 }
 
 /** How many due and new cards are left in [day] for a session over [cards]. */

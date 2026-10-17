@@ -10,16 +10,19 @@ import 'study_style.dart';
 
 /// The completion card in the current card's place once no card is left
 /// today: the mascot, the heading, today's answers, time and streak, and the
-/// choice to go on as practice or to stop.
+/// choice to go on with the new cards past today's, through [onStudyOn], or
+/// to stop; with none left, a line saying so in place of going on.
 class CompletionCard extends StatelessWidget {
   const CompletionCard({
     super.key,
     required this.completion,
-    required this.onPractice,
+    required this.onStudyOn,
   });
 
   final Completion completion;
-  final VoidCallback onPractice;
+
+  /// Goes on with the new cards past today's; null when none is left.
+  final VoidCallback? onStudyOn;
 
   @override
   Widget build(BuildContext context) {
@@ -129,11 +132,18 @@ class CompletionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpace.s4),
-              AppButton(
-                label: l10n.keepStudying,
-                size: AppButtonSize.cta,
-                onPressed: onPractice,
-              ),
+              if (onStudyOn case final onStudyOn?)
+                AppButton(
+                  label: l10n.studyOn,
+                  size: AppButtonSize.cta,
+                  onPressed: onStudyOn,
+                )
+              else
+                Text(
+                  l10n.noCardsLeft,
+                  textAlign: TextAlign.center,
+                  style: AppType.body.copyWith(color: colors.ink2),
+                ),
               AppButton(
                 label: l10n.stopStudying,
                 variant: AppButtonVariant.text,

@@ -174,25 +174,23 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   }).toPass();
 
   const question = page.getByRole("group", { name: "문제", exact: true });
-  const answer = page.getByRole("group", { name: "답", exact: true });
+  const currentCard = page.getByRole("region", { name: "현재 카드", exact: true });
   await expect(question).toHaveText(/^(chat|chien)$/);
   const first = (await question.textContent()) ?? "";
   // The session's start: its guide, with its size, shows above the first card.
   const guide = page.getByRole("region", { name: "학습 안내" });
   await expect(guide).toBeVisible();
   await expect(guide.getByText("오늘 2장 · 약 1분", { exact: true })).toBeVisible();
+  // The current card shows its question alone; its answer shows once answered, above.
+  await expect(currentCard).not.toContainText(backs.get(first) ?? "");
   await shot(page, "03-study-question");
-  await page.keyboard.press("Space");
-  await expect(answer).toHaveText(backs.get(first) ?? "");
-  await shot(page, "04-study-revealed");
   await page.keyboard.press("k");
   const second = first === "chat" ? "chien" : "chat";
   await expect(question).toHaveText(second);
   await expect(
     page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
   ).toHaveCount(1);
-  await page.keyboard.press("Space");
-  await expect(answer).toHaveText(backs.get(second) ?? "");
+  await expect(currentCard).not.toContainText(backs.get(second) ?? "");
   await expect(page.getByRole("region", { name: "학습 안내" })).toHaveCount(0);
   await shot(page, "05-study-stack");
   // A click on the previous card opens it whole; Esc closes it, and the session goes on.
@@ -247,30 +245,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
     expect(Date.parse(String(state.due))).toBeGreaterThan(Date.now() + 86_400_000);
   }
 
-  // 계속 학습 goes on as practice on the same page, over the two cards, and writes nothing.
-  const studyUrl = page.url();
-  const posts = browserLog.filter((line) => line.startsWith("POST ")).length;
-  await completion.getByRole("button", { name: "계속 학습", exact: true }).click();
-  await expect(question).toHaveText(/^(chat|chien)$/);
-  expect(page.url()).toBe(studyUrl);
-  await page.keyboard.press("j");
-  await expect(question).toHaveText(/^(chat|chien)$/);
-  await shot(page, "06b-study-practice");
-  await page.keyboard.press("k");
-  await page.keyboard.press("z");
-  await expect(
-    page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
-  ).toHaveCount(4);
-  expect(page.url()).toBe(studyUrl);
-  expect(browserLog.filter((line) => line.startsWith("POST ")).length).toBe(posts);
-  const practisedReviews = await phone
-    .from("reviews")
-    .select("card_id, rating, fuzz_factor, revision");
-  expect(practisedReviews.data).toEqual(reviews.data);
-  const practisedStates = await phone
-    .from("card_states")
-    .select("card_id, stability, due, revision");
-  expect(practisedStates.data).toEqual(states.data);
+  // No new card is left past today's: the completion card says so, and offers no 학습하기.
+  await expect(completion.getByText("더 학습할 카드가 없어요", { exact: true })).toBeVisible();
+  await expect(completion.getByRole("button", { name: "학습하기" })).toHaveCount(0);
 
   // Esc leaves for the deck list.
   await page.keyboard.press("Escape");

@@ -28,11 +28,11 @@ const card = (front: string): StudyCard => ({
 const plan: SessionPlan = {
   startedAt: start,
   queue: { cards: [card("a"), card("b")], backlog: false },
+  more: [],
   before: {},
   pace: unknownPace,
   today: {
     answers: [],
-    cards: [],
     answeredAnyDeck: false,
     streakBefore: 0,
   },

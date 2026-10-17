@@ -128,7 +128,7 @@ export async function Today() {
           <GoalRing done={goal.done} goal={goal.goal} />
           <EnterLink
             href={studyHref(decks.map((deck) => deck.id))}
-            label={total === 0 ? "계속 학습" : "모두 학습"}
+            label={total === 0 ? "학습하기" : "모두 학습"}
           />
         </section>
         <Forecast days={days} starts={starts} timeZone={timeZone} done={total === 0} />

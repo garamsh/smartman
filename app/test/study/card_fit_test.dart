@@ -113,7 +113,7 @@ void main() {
   });
 
   testWidgets(
-    'a question shrinks until its widest word fits, breaks only between words above the floor, and sits centred in its half',
+    'a question shrinks until its widest word fits, breaks only between words above the floor, and sits centred on the current card',
     (tester) async {
       tester.view.physicalSize = const Size(_phoneWidth, 844);
       tester.view.devicePixelRatio = 1;
@@ -121,7 +121,8 @@ void main() {
 
       for (final front in [
         'meticulous',
-        'incomprehensibility',
+        'antidisestablishmentarianism',
+        'pneumonoultramicroscopicsilicovolcanoconiosis',
         'once in a blue moon',
       ]) {
         await tester.pumpWidget(
@@ -159,7 +160,7 @@ void main() {
         final text = find.text(front);
         final paragraph = tester.renderObject<RenderParagraph>(text);
         final size = paragraph.text.style!.fontSize!;
-        final width = (card.width - 1) / 2 - StudyStyle.cardPadding * 2;
+        final width = card.width - StudyStyle.cardPadding * 2;
 
         expect(size, lessThanOrEqualTo(AppType.question.fontSize!));
         expect(size, greaterThanOrEqualTo(AppType.questionFloor));
@@ -186,33 +187,26 @@ void main() {
           // Past the floor a word may break, at the floor's size.
           expect(size, AppType.questionFloor, reason: front);
         }
-        // Centred in the question's half, across and down.
-        final half = Rect.fromLTRB(
-          card.left,
-          card.top,
-          card.left + card.width / 2,
-          card.bottom,
-        );
+        // Centred on the card, across and down.
         expect(
           tester.getCenter(text).dx,
-          closeTo(half.center.dx, 1),
+          closeTo(card.center.dx, 1),
           reason: front,
         );
         expect(
           tester.getCenter(text).dy,
-          closeTo(half.center.dy, 1),
+          closeTo(card.center.dy, 1),
           reason: front,
         );
       }
-      // Control: "meticulous" lands between the floor and the full size, and
-      // "incomprehensibility" does not fit even at the floor, so both
-      // branches above ran.
+      // Control: "antidisestablishmentarianism" lands between the floor and
+      // the full size, and "pneumonoultramicroscopicsilicovolcanoconiosis"
+      // does not fit even at the floor, so both branches above ran.
       final width =
-          (_phoneWidth - 2 * StudyStyle.cardMargin - 1) / 2 -
-          StudyStyle.cardPadding * 2;
+          _phoneWidth - 2 * StudyStyle.cardMargin - StudyStyle.cardPadding * 2;
       expect(
         fittedFontSize(
-          'meticulous',
+          'antidisestablishmentarianism',
           style: AppType.question,
           minFontSize: AppType.questionFloor,
           width: width,
@@ -225,14 +219,17 @@ void main() {
         ),
       );
       expect(
-        _widest('incomprehensibility', AppType.questionFloor),
+        _widest(
+          'pneumonoultramicroscopicsilicovolcanoconiosis',
+          AppType.questionFloor,
+        ),
         greaterThan(width),
       );
     },
   );
 
   testWidgets(
-    'a long answer shows whole at the answer size, on the current card and on the previous card, on a 390 by 844 phone at the default text scale',
+    'a long answer shows whole at the answer size on the previous card, on a 390 by 844 phone at the default text scale',
     (tester) async {
       const answer = '(결과·수익 등을) 내다, 산출하다; 양도하다';
       // An iPhone of that size: its status bar and home indicator.
@@ -282,25 +279,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Shown on the current card, it fits its half without scrolling.
-      final current = find.byType(CurrentCard);
-      await tester.tap(current);
-      await tester.pumpAndSettle();
-      final shown = _paragraph(tester, current, '양도하다');
-      expect(shown.text.style!.fontSize, AppType.answer.fontSize);
-      expect(shown.text.toPlainText(), answer);
-      for (final half
-          in find
-              .descendant(of: current, matching: find.byType(Scrollable))
-              .evaluate()) {
-        expect(
-          ((half as StatefulElement).state as ScrollableState)
-              .position
-              .maxScrollExtent,
-          0,
-        );
-      }
-
       // Answered "모른다", the card is shown again at once, under itself as
       // the previous card, which shows the answer whole, uncut.
       await tester.tap(find.widgetWithText(TextButton, '모른다'));
@@ -320,7 +298,10 @@ void main() {
         tester.getSize(previous),
         tester.getSize(
           find
-              .descendant(of: current, matching: find.byType(GestureDetector))
+              .descendant(
+                of: find.byType(CurrentCard),
+                matching: find.byType(GestureDetector),
+              )
               .first,
         ),
       );

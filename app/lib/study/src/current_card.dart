@@ -11,9 +11,9 @@ import 'rust/api/engine.dart';
 import 'study_style.dart';
 
 /// The card under study, filling the height it is given less the answer
-/// buttons under it: the question on one half and, once tapped, the answer on
-/// the other. Dragged right, or
-/// by its "안다" button, it answers "Know"; left, or by "모른다", "Don't know".
+/// buttons under it: its front alone, centred; its back shows once answered,
+/// on the previous card. Dragged right, or by its "안다" button, it answers
+/// "Know"; left, or by "모른다", "Don't know".
 class CurrentCard extends StatefulWidget {
   const CurrentCard({super.key, required this.card, required this.onAnswer});
 
@@ -28,7 +28,6 @@ class _CurrentCardState extends State<CurrentCard>
     with SingleTickerProviderStateMixin {
   /// The card's horizontal offset from its place.
   late final _drag = AnimationController.unbounded(vsync: this);
-  var _revealed = false;
   var _committed = false;
 
   @override
@@ -84,15 +83,10 @@ class _CurrentCardState extends State<CurrentCard>
     if (mounted) widget.onAnswer(answer);
   }
 
-  void _toggleRevealed() {
-    if (!_committed) setState(() => _revealed = !_revealed);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final front = describeContent(l10n, widget.card.front);
-    final back = describeContent(l10n, widget.card.back);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,12 +94,7 @@ class _CurrentCardState extends State<CurrentCard>
         Expanded(
           child: Semantics(
             container: true,
-            button: true,
-            label: _revealed
-                ? l10n.currentCardRevealedSemantics(front, back)
-                : l10n.currentCardSemantics(front),
-            onTapHint: _revealed ? l10n.hideAnswer : l10n.showAnswer,
-            onTap: _toggleRevealed,
+            label: l10n.currentCardSemantics(front),
             customSemanticsActions: {
               CustomSemanticsAction(label: l10n.know): () =>
                   _commit(Answer.know),
@@ -116,7 +105,6 @@ class _CurrentCardState extends State<CurrentCard>
             child: GestureDetector(
               // The card follows the finger from where it touched down.
               dragStartBehavior: DragStartBehavior.down,
-              onTap: _toggleRevealed,
               onHorizontalDragUpdate: _onDragUpdate,
               onHorizontalDragEnd: _onDragEnd,
               onHorizontalDragCancel: _springBack,
@@ -129,7 +117,7 @@ class _CurrentCardState extends State<CurrentCard>
                     child: _DragFeedback(offset: _drag.value, child: child!),
                   ),
                 ),
-                child: _CardFace(card: widget.card, revealed: _revealed),
+                child: _CardFace(card: widget.card),
               ),
             ),
           ),
@@ -279,15 +267,12 @@ class _DragFeedback extends StatelessWidget {
   }
 }
 
-/// The card itself: the question and the answer side by side, or the answer
-/// under the question when the halves would be too narrow. Either way the two
-/// halves are the same size. While the answer is hidden an eye holds its
-/// place.
+/// The card itself: its front alone, centred, scrolling inside where it is
+/// taller than the card.
 class _CardFace extends StatelessWidget {
-  const _CardFace({required this.card, required this.revealed});
+  const _CardFace({required this.card});
 
   final Card card;
-  final bool revealed;
 
   @override
   Widget build(BuildContext context) {
@@ -301,45 +286,23 @@ class _CardFace extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
         child: SizedBox.expand(
-          child: SplitCard(
-            padding: StudyStyle.cardPadding,
-            dividerInset: StudyStyle.dividerInset,
-            stackBelow: StudyStyle.minHalfWidth,
-            scrolls: true,
-            front: (context, width) => ContentView(
-              card.front,
-              style: AppType.question,
-              fit: (
-                minFontSize: AppType.questionFloor,
-                width: width,
-                height: null,
-              ),
-            ),
-            back: (context, width) => Stack(
-              alignment: Alignment.center,
-              children: [
-                Visibility(
-                  visible: revealed,
-                  maintainSize: true,
-                  maintainAnimation: true,
-                  maintainState: true,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(StudyStyle.cardPadding),
+                child: SizedBox(
+                  width: double.infinity,
                   child: ContentView(
-                    card.back,
-                    style: AppType.answer,
+                    card.front,
+                    style: AppType.question,
                     fit: (
-                      minFontSize: AppType.answerFloor,
-                      width: width,
+                      minFontSize: AppType.questionFloor,
+                      width: constraints.maxWidth - 2 * StudyStyle.cardPadding,
                       height: null,
                     ),
                   ),
                 ),
-                if (!revealed)
-                  Icon(
-                    LucideIcons.eye,
-                    size: StudyStyle.hiddenAnswerIcon,
-                    color: colors.muted,
-                  ),
-              ],
+              ),
             ),
           ),
         ),

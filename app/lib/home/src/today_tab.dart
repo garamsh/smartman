@@ -18,7 +18,7 @@ import 'hero.dart';
 /// The 오늘 tab over [decks]: the today card, the next seven days, and the
 /// decks that hold cards for today; in a backlog, the backlog card and the
 /// catch-up at an average day's load; once today's cards are done, the done card, the seven days
-/// and 계속 학습.
+/// and 학습하기.
 class TodayTab extends StatelessWidget {
   const TodayTab({super.key, required this.decks});
 
@@ -52,7 +52,7 @@ class TodayTab extends StatelessWidget {
                     _Forecast(overview: overview),
                     const SizedBox(height: AppSpace.s12),
                     AppButton(
-                      label: l10n.todayKeepStudying,
+                      label: l10n.todayStudy,
                       icon: LucideIcons.play,
                       size: AppButtonSize.cta,
                       onPressed: () => _study(context, all),

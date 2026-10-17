@@ -361,7 +361,7 @@ void main() {
   );
 
   testWidgets(
-    'with no card left and none answered today, Keep studying and the deck\'s Study open a session with nothing to study',
+    'with no card left and none answered today, the today card\'s Study and the deck\'s Study open a session with nothing to study',
     (tester) async {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
@@ -376,7 +376,7 @@ void main() {
       await showTab(tester, 'Today');
 
       expect(find.text("You've done today's cards"), findsOneWidget);
-      await tester.tap(find.text('Keep studying'));
+      await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('No cards to study today'), findsOneWidget);
       await unmountApp(tester);
@@ -384,7 +384,7 @@ void main() {
   );
 
   testWidgets(
-    'with no card left and one answered today, Keep studying and the deck\'s Study open the completion card',
+    'with no card left and one answered today, the today card\'s Study and the deck\'s Study open the completion card',
     (tester) async {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
@@ -423,7 +423,7 @@ void main() {
       await showTab(tester, 'Today');
 
       expect(find.text("You've done today's cards"), findsOneWidget);
-      await tester.tap(find.text('Keep studying'));
+      await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('Done for today'), findsOneWidget);
       await unmountApp(tester);

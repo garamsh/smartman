@@ -41,7 +41,6 @@ final class StatesUnreadable extends SessionLoadFailed {
 }
 
 /// [current] is on screen, below every card answered so far in [previous].
-/// Practice shows the same way.
 final class SessionStudying extends SessionState {
   const SessionStudying(
     this.current,
@@ -56,9 +55,8 @@ final class SessionStudying extends SessionState {
   final List<PreviousCard> previous;
   final SessionProgress progress;
 
-  /// Before the session's first answer, outside practice, the session's size
-  /// the guide in the previous card's place shows; otherwise null, and no
-  /// guide shows.
+  /// Before the session's first answer, the session's size the guide in the
+  /// previous card's place shows; otherwise null, and no guide shows.
   final SessionSize? guide;
 }
 
@@ -81,16 +79,25 @@ final class SessionSize {
 /// No card is left today: the completion card takes the current card's
 /// place, below every card answered so far in [previous].
 final class SessionComplete extends SessionState {
-  const SessionComplete(this.completion, this.previous, this.progress);
+  const SessionComplete(
+    this.completion,
+    this.previous,
+    this.progress, {
+    required this.more,
+  });
 
   final Completion completion;
+
+  /// Whether new cards are left past today's, which [StudySession.studyOn]
+  /// goes on with; otherwise no card is left to take.
+  final bool more;
 
   /// Oldest first.
   final List<PreviousCard> previous;
   final SessionProgress progress;
 }
 
-/// No card is left today and none of the decks' cards was answered today.
+/// No card is left to take and none of the decks' cards was answered today.
 final class SessionEmpty extends SessionState {
   const SessionEmpty();
 }
@@ -120,7 +127,8 @@ final class SessionProgress {
 
   final int answered;
 
-  /// The cards in the queue when the session opened.
+  /// The cards in the queue when the session opened, and those taken past
+  /// today's since.
   final int total;
 }
 
@@ -146,51 +154,31 @@ final class Completion {
   final int streak;
 }
 
-/// An answer given in this session. A written answer holds the [review]
-/// that records it; a practice answer holds the [pass] it was given in and is
-/// never written.
+/// An answer given in this session and the [review] that records it.
 final class _Answered {
-  _Answered.written(this.card, Review this.review)
-    : answer = review.answer,
-      first = review.answer,
-      pass = null;
-
-  _Answered.practice(this.card, this.answer, {required int this.pass})
-    : review = null,
-      first = answer;
+  _Answered(this.card, this.review) : first = review.answer;
 
   final Card card;
-  Answer answer;
-  Review? review;
+  Review review;
   final Answer first;
-  final int? pass;
 
-  void toggle() {
-    answer = switch (answer) {
-      Answer.know => Answer.dontKnow,
-      Answer.dontKnow => Answer.know,
-    };
-    review = review?.withAnswer(answer);
-  }
-}
+  Answer get answer => review.answer;
 
-/// Which cards a practice pass shows.
-enum _Pass {
-  /// Every card of the practice set, shuffled.
-  all,
-
-  /// The cards missed in the pass over all, until each is answered right.
-  missed,
+  void toggle() => review = review.withAnswer(switch (answer) {
+    Answer.know => Answer.dontKnow,
+    Answer.dontKnow => Answer.know,
+  });
 }
 
 /// One study session over one or more decks.
 ///
 /// It shows the cards left today, then the completion card; from there,
-/// [practice] goes on over the cards answered today, which writes nothing.
+/// [studyOn] goes on with the new cards past today's, oldest first, each
+/// answer recorded as any other. A session that opens with no card left today
+/// starts on those at once.
 ///
-/// Every random choice, the queue's order, each re-show gap, each answer's
-/// fuzz factor and the practice order, is drawn from the one [Random] the
-/// session receives.
+/// Every random choice, the queue's order, each re-show gap and each answer's
+/// fuzz factor, is drawn from the one [Random] the session receives.
 ///
 /// Every answer and every toggle changes the session at once. The engine calls
 /// and the write that follow run afterwards, one at a time in the order given,
@@ -221,6 +209,9 @@ class StudySession extends ChangeNotifier {
   bool _loaded = false;
   final _queue = <Card>[];
   var _total = 0;
+
+  /// The new cards past today's, oldest first, not yet taken.
+  var _more = const <Card>[];
 
   /// Each card's stored state when the session opened; a new card is absent.
   final _before = <CardId, CardState>{};
@@ -257,17 +248,6 @@ class StudySession extends ChangeNotifier {
   /// The session's size when it opened.
   var _size = const SessionSize(cards: 0, minutes: 0);
 
-  bool _practicing = false;
-  var _pass = _Pass.all;
-
-  /// Counts the practice passes started, so a toggle can tell whether its
-  /// answer belongs to the pass under way.
-  var _passNumber = 0;
-  final _practiceQueue = <Card>[];
-
-  /// The cards answered "Don't know" in the pass over all, oldest first.
-  final _missed = <Card>[];
-
   SessionState get state {
     if (_loadFailure case final failure?) return failure;
     if (!_loaded) return const SessionLoading();
@@ -281,15 +261,9 @@ class StudySession extends ChangeNotifier {
         ),
     ];
     final progress = SessionProgress(
-      {
-        for (final answered in _answers)
-          if (answered.review != null) answered.card.id,
-      }.length,
+      {for (final answered in _answers) answered.card.id}.length,
       _total,
     );
-    if (_practicing) {
-      return SessionStudying(_practiceQueue.first, previous, progress);
-    }
     if (_queue.isNotEmpty) {
       return SessionStudying(
         _queue.first,
@@ -298,28 +272,17 @@ class StudySession extends ChangeNotifier {
         guide: _answers.isEmpty ? _size : null,
       );
     }
-    if (_practiceSet.isEmpty) return const SessionEmpty();
-    return SessionComplete(_completion(), previous, progress);
-  }
-
-  /// The answers given in this session that are written, as they stand.
-  Iterable<_Answered> get _written =>
-      _answers.where((answered) => answered.review != null);
-
-  /// Every card answered today: before the session opened, then in it.
-  List<Card> get _practiceSet {
-    final seen = <CardId>{};
-    return [
-      for (final card in [
-        ..._answeredToday,
-        for (final answered in _written) answered.card,
-      ])
-        if (seen.add(card.id)) card,
-    ];
+    if (_answeredToday.isEmpty && _answers.isEmpty) return const SessionEmpty();
+    return SessionComplete(
+      _completion(),
+      previous,
+      progress,
+      more: _more.isNotEmpty,
+    );
   }
 
   Completion _completion() {
-    final written = _written.toList();
+    final written = _answers;
     final answers = [
       for (final stored in _storedToday) stored.answer,
       for (final answered in written) answered.answer,
@@ -331,11 +294,11 @@ class StudySession extends ChangeNotifier {
           .length,
       timeSpent: [
         for (final stored in _storedToday) stored.duration,
-        for (final answered in written) answered.review!.duration,
+        for (final answered in written) answered.review.duration,
       ].fold(Duration.zero, (sum, duration) => sum + duration),
       streak: streak(
         [
-          for (final answered in written) answered.review!.reviewedAt,
+          for (final answered in written) answered.review.reviewedAt,
           ..._storedTimes,
         ],
         _clock(),
@@ -350,15 +313,13 @@ class StudySession extends ChangeNotifier {
   /// reported.
   Future<void> get settled => _writes;
 
-  /// Answers the card on screen and shows the next. A practice answer is
-  /// kept in the session alone.
+  /// Answers the card on screen and shows the next.
   void answer(Answer answer) {
     if (state is! SessionStudying) return;
-    if (_practicing) return _answerPractice(answer);
     final now = _clock();
     final card = _queue.removeAt(0);
     _answers.add(
-      _Answered.written(
+      _Answered(
         card,
         Review(
           id: _repository.newReviewId(),
@@ -405,74 +366,38 @@ class StudySession extends ChangeNotifier {
     return shown.isNegative ? Duration.zero : shown;
   }
 
-  /// Goes on from the completion card as practice: every card answered
-  /// today, shuffled; then the ones missed in that pass, each put back after
-  /// a gap until answered right; then all again, until the user stops.
-  void practice() {
-    if (state is! SessionComplete) return;
-    _practicing = true;
-    _startPass(_Pass.all);
+  /// Goes on from the completion card with the new cards past today's,
+  /// oldest first; with none left, does nothing.
+  void studyOn() {
+    if (state is! SessionComplete || _more.isEmpty) return;
+    _takeMore();
+    _show(_clock());
     notifyListeners();
   }
 
-  void _startPass(_Pass pass) {
-    final cards = switch (pass) {
-      _Pass.all => _practiceSet,
-      _Pass.missed => List.of(_missed),
-    };
-    _pass = pass;
-    _passNumber++;
-    _missed.clear();
-    _practiceQueue.addAll(orderQueue(SelectedQueue.current(cards), _random));
-  }
-
-  void _answerPractice(Answer answer) {
-    final card = _practiceQueue.removeAt(0);
-    _answers.add(_Answered.practice(card, answer, pass: _passNumber));
-    if (answer == Answer.dontKnow) {
-      switch (_pass) {
-        case _Pass.all:
-          _missed.add(card);
-        case _Pass.missed:
-          reinsert(_practiceQueue, card, _random);
-      }
-    }
-    if (_practiceQueue.isEmpty) {
-      _startPass(
-        _pass == _Pass.all && _missed.isNotEmpty ? _Pass.missed : _Pass.all,
-      );
-    }
-    notifyListeners();
+  /// Moves the new cards past today's into the queue.
+  void _takeMore() {
+    _queue.addAll(_more);
+    _total += _more.length;
+    _more = const [];
   }
 
   /// Toggles the answer at [position] between "Know" and "Don't know".
   ///
-  /// A written answer is rescheduled by replaying its card's written answers
-  /// in this session, each with the fuzz factor drawn when it was given.
-  /// Before practice, a toggle to "Don't know" of a card's last answer puts
-  /// the card back as an answer would, unless it is already waiting, which
-  /// takes the completion card away again; a toggle to "Know" of a card's last
-  /// answer removes the card's re-show if it is waiting behind the card on
-  /// screen.
-  ///
-  /// A practice answer is not written. A toggle of the last answer of its
-  /// card in the pass under way has the same effects on the practice queue: in
-  /// the pass over all it adds the card to or removes it from the missed.
+  /// The answer is rescheduled by replaying its card's answers in this
+  /// session, each with the fuzz factor drawn when it was given. A toggle to
+  /// "Don't know" of a card's last answer puts the card back as an answer
+  /// would, unless it is already waiting, which takes the completion card away
+  /// again; a toggle to "Know" of a card's last answer removes the card's
+  /// re-show if it is waiting behind the card on screen.
   void toggle(int position) {
     if (!_loaded) return;
     final answered = _answers[position]..toggle();
     final card = answered.card;
     final isLast = !_answers
         .skip(position + 1)
-        .any(
-          (later) => later.card.id == card.id && later.pass == answered.pass,
-        );
-    if (answered.pass case final pass?) {
-      if (isLast && pass == _passNumber) _togglePractice(card, answered.answer);
-      notifyListeners();
-      return;
-    }
-    if (!_practicing) _toggleQueued(_queue, card, answered.answer, isLast);
+        .any((later) => later.card.id == card.id);
+    _toggleQueued(card, answered.answer, isLast);
     notifyListeners();
     _write(card.id);
   }
@@ -484,26 +409,16 @@ class StudySession extends ChangeNotifier {
     toggle(position);
   }
 
-  void _togglePractice(Card card, Answer answer) {
-    switch (_pass) {
-      case _Pass.all:
-        _missed.removeWhere((missed) => missed.id == card.id);
-        if (answer == Answer.dontKnow) _missed.add(card);
-      case _Pass.missed:
-        _toggleQueued(_practiceQueue, card, answer, true);
-    }
-  }
-
-  /// Puts [card] back into [queue] for a toggle to "Don't know", or takes its
-  /// re-show out for one to "Know", when the toggled answer [isLast].
-  void _toggleQueued(List<Card> queue, Card card, Answer answer, bool isLast) {
+  /// Puts [card] back into the queue for a toggle to "Don't know", or takes
+  /// its re-show out for one to "Know", when the toggled answer [isLast].
+  void _toggleQueued(Card card, Answer answer, bool isLast) {
     if (!isLast) return;
-    final waiting = queue.indexWhere((queued) => queued.id == card.id);
+    final waiting = _queue.indexWhere((queued) => queued.id == card.id);
     if (answer == Answer.dontKnow && waiting == -1) {
-      if (queue.isEmpty) _show(_clock());
-      reinsert(queue, card, _random);
+      if (_queue.isEmpty) _show(_clock());
+      reinsert(_queue, card, _random);
     } else if (answer == Answer.know && waiting > 0) {
-      queue.removeAt(waiting);
+      _queue.removeAt(waiting);
     }
   }
 
@@ -533,11 +448,18 @@ class StudySession extends ChangeNotifier {
       _before.addAll(states);
       _queue.addAll(orderQueue(selectQueue(read, states, day), _random));
       _total = _queue.length;
+      final taken = {for (final card in _queue) card.id};
+      _more = [
+        for (final card in newCards(read, states))
+          if (!taken.contains(card.id)) card,
+      ];
       final fresh = _queue.where((card) => !states.containsKey(card.id)).length;
       _size = SessionSize(
         cards: _total,
         minutes: pace.minutes(reviews: _total - fresh, fresh: fresh),
       );
+      // Opening the screen with no card left today is the choice to go on.
+      if (_queue.isEmpty) _takeMore();
       _show(now);
       _loaded = true;
     } on DeckFailure catch (failure) {
@@ -561,8 +483,8 @@ class StudySession extends ChangeNotifier {
   /// state when the session opened, then written with that state.
   void _write(CardId card) {
     final history = [
-      for (final answered in _written)
-        if (answered.card.id == card) answered.review!,
+      for (final answered in _answers)
+        if (answered.card.id == card) answered.review,
     ];
     final before = _before[card];
     _writes = _writes.then((_) async {
