@@ -1,6 +1,6 @@
 # AI extraction
 
-The `extract-cards` Edge Function that turns a photo of a vocabulary page into candidate cards, its limits and privacy, how its model is switched, the eval that chooses the model, and the app's `photo_import` domain that calls it.
+The `extract-cards` Edge Function that turns a photo of a study page, a vocabulary page or notes, into candidate cards, its limits and privacy, how its model is switched, the eval that chooses the model, and the app's `photo_import` domain that calls it.
 
 ## Current decisions
 
@@ -17,12 +17,17 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 - `POST` with the user's access token as `Authorization: Bearer`, and a JSON body:
   - `image` — one JPEG, PNG or WebP image, base64-encoded, at most 6 MiB decoded. The type is read from the image's leading bytes; a declared type is ignored.
   - `languages` — optional `front` and `back` BCP 47 tags, the deck's languages, passed to the model as hints.
-- Success is `200` with `{ "cards": [...] }`, 1 to 100 cards, each field plain trimmed text as the page prints it ([ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md)):
-  - `front` — the headword or phrase, 1 to 500 characters (code points);
-  - `meaning` — the meaning or meanings, 1 to 500 characters;
-  - `partOfSpeech` — present only when the page prints one for the entry, its own notation verbatim, such as `[동]`, `n.` or `(형)`, 1 to 500 characters;
-  - `examples` — present only when the page prints any for the entry, 1 to 5 example sentences or phrases of 1 to 500 characters each;
-  - `back` — the answer at the 기본 level below, for apps that read only `front` and `back`: `partOfSpeech`, a space and `meaning`, or `meaning` alone; at most 1001 characters.
+- Success is `200` with `{ "cards": [...] }`, 1 to 100 cards, each text field plain trimmed text ([ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md)):
+  - `kind` — `vocabulary` for an entry of a vocabulary list, glossary, bilingual table or dictionary page, `note` for a point of notes;
+  - `front` — the headword or phrase as the page prints it, or, for a note, a question or the term the point defines, 1 to 500 characters (code points);
+  - `answer` — the fullest answer the page supports: a vocabulary entry's meaning or meanings as printed, or a note's point in a sentence or a few, 1 to 1000 characters;
+  - `short` — a shorter form of `answer`, no longer than it, 1 to 500 characters;
+  - `step` — 1 to 5, the detail step from which the card is offered: 1 the page's core ideas, 5 every detail; every vocabulary entry is 1;
+  - `examples` — present only when the page prints any for the card, 1 to 5 example sentences, phrases or worked examples of 1 to 500 characters each;
+  - `meaning` — a vocabulary card's `answer`, for apps that read it ([ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md)); a note card has none;
+  - `partOfSpeech` — on a vocabulary card, present only when the page prints one for the entry, its own notation verbatim, such as `[동]`, `n.` or `(형)`, 1 to 500 characters;
+  - `back` — for apps that read only `front` and `back`: a vocabulary card's `partOfSpeech`, a space and `meaning`, or `meaning` alone, at most 1501 characters; a note card's `answer`.
+- An app that has not updated reads a vocabulary card as before and a note card as its `front` and `back`, the fullest answer at every level: `app/lib/photo_import/src/extraction_client.dart` limits no field's length, ignores the keys it does not know, and takes `back` as the meaning when there is none.
 - Every refusal is `{ "error": "<code>" }`, the code naming the case the app shows:
 
 | Status | Code | When |
@@ -44,10 +49,10 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 
 - OpenRouter chat completions, with the image as a data URL and `response_format` a strict JSON schema of the card list, generated from the same limits the parser enforces (`cards.ts`).
 - `provider.require_parameters` routes only to providers that honour the schema; `max_tokens` is 16384.
-- The schema asks for `front`, `meaning`, `partOfSpeech` and `examples` on every card, since strict structured outputs require every key: an absent part of speech is `null`, absent examples an empty list, and the parser turns both into an absent field.
-- The prompt is `prompt_v2.ts`. A changed prompt is a new versioned file, so an eval result names the prompt it measured.
-- Nothing is invented: the prompt asks for each field exactly as written and forbids supplying a part of speech, a meaning or an example the page does not print for the entry. The eval measures how often a model does anyway.
-- The reply is parsed, not trusted: anything other than JSON of exactly the schema's shape, after trimming each field, is invalid output — a field empty once trimmed or over 500 characters, more than 5 examples, or more than 100 cards among it.
+- The schema asks for `kind`, `front`, `answer`, `short`, `step`, `partOfSpeech` and `examples` on every card, since strict structured outputs require every key: `kind` and `step` are enums, an absent part of speech is `null`, absent examples an empty list, and the parser turns both into an absent field.
+- The prompt is `prompt_v3.ts` ([ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md)). A changed prompt is a new versioned file, so an eval result names the prompt it measured.
+- Nothing is invented: the prompt asks for vocabulary exactly as written; for notes it lets the model phrase a question and join or shorten the page's words, and forbids any fact, meaning, part of speech or example the page does not show. A page's own worked example may be a card or a card's example. The eval measures how often a model invents anyway.
+- The reply is parsed, not trusted: anything other than JSON of exactly the schema's shape, after trimming each field, is invalid output — a field empty once trimmed or over its limit, a step outside 1 to 5, an unknown kind, more than 5 examples, or more than 100 cards among it — and so is a `short` longer than its `answer`, or a note with a part of speech.
 - Invalid output is retried once; a second invalid output is `502`. An HTTP or network failure is `502` without a retry.
 - A valid empty list is `422`.
 
@@ -72,25 +77,32 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 ### Tests
 
 - `supabase/functions/extract-cards/*_test.ts`, run by `make test` through `deno.sh`, with Supabase and OpenRouter replaced by a fake `fetch`: no network in CI.
-- They cover authentication, size and type refusal, the fields and the composed `back`, a missing part of speech, the field limits, the schema and the one retry, the daily limit, the configuration, and the log line. They run without write or network permission, and a test asserts that, so a write anywhere fails the suite.
+- They cover authentication, size and type refusal, each kind's fields and `back`, a note card without `meaning`, a missing part of speech, the steps and kinds, a short form longer than its answer, a note with a part of speech, the field limits, prompt v2's shape refused, the schema and the one retry, the daily limit, the configuration, and the log line. They run without write or network permission, and a test asserts that, so a write anywhere fails the suite.
 - The SQL side of the limit is tested by `supabase/tests/extraction_usage_test.sql`.
 
 ### Eval
 
-- `tools/eval/run.ts` runs every configuration in `tools/eval/candidates.json` over every sample and writes `docs/eval/extract-cards.md`: per configuration, precision, recall, F1, part-of-speech and examples precision, the invented rate, p50 and p90 latency, cost per image, and total spend, then the recommendation.
+- `tools/eval/run.ts` runs every configuration in `tools/eval/candidates.json` over every sample and writes `docs/eval/extract-cards.md`: per configuration, for vocabulary pages precision, recall, F1, part-of-speech and examples precision and the invented rate; for notes pages coverage at each step, unsupported cards, invented examples and step order; p50 and p90 latency, cost per image, and total spend, then the recommendation ([ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md)).
 - A candidate names patterns, not IDs. At run time each resolves to the newest model in OpenRouter's model list that matches, takes images, and supports structured outputs, and the report records the exact IDs and prices.
-- Scores are per image, then averaged. A candidate card matches when its front and meaning equal the ground truth after the card key normalization ([`deck.md`](deck.md)); an image with no cards scores 0.
-- Over the matched cards of every image:
+- `candidates.json` holds seven configurations: Claude Haiku, Sonnet and Opus 5.5, Haiku with a Sonnet retry, the newest Gemini Flash and Pro, and the newest GPT mini. The newest GPT left it on 2026-10-18 to fit the budget.
+- Vocabulary pages: scores are per image, then averaged. A candidate card matches when its front and its `meaning`, or its `answer` when it has none, equal the ground truth after the card key normalization ([`deck.md`](deck.md)); an image with no cards scores 0.
+- Over the matched cards of every vocabulary image:
   - part-of-speech precision is the share of returned parts of speech equal to the page's, and examples precision the share of returned examples the page prints, each after the same normalization;
   - the invented rate is the share of returned fields — a part of speech, or a card's examples — on an entry whose page prints no such field;
   - each is shown as a dash when the configuration returned no such field.
-- The recommendation is the cheapest configuration per image whose F1 is within 2 points of the best.
+- Notes pages: a card covers a fact when its front and answer hold every one of the fact's terms after the same normalization.
+  - Coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, per image and then averaged.
+  - Unsupported cards are the share of returned cards that cover no fact, and invented examples the share of returned examples the page does not print; a returned example counts as printed when it and a printed one contain each other.
+  - Step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half; a covered fact's returned step is the lowest step of a card covering it.
+  - Term matching undercounts a fact the model paraphrased past its terms, in coverage and as an unsupported card: the cost of scoring with no judge model.
+- The recommendation is the cheapest configuration per image whose vocabulary F1 is within 2 points of the best and whose notes coverage at step 5 is within 5 points of the best; none when no configuration is within both.
 - Spend is capped at $10 across all runs, recorded in `tools/eval/spend.json`, which each run appends to.
-  - A run starts only when a dry estimate fits the remaining budget; `--dry-run` prints the estimate and calls no model.
+  - A run starts only when a dry estimate fits the remaining budget; `--dry-run` prints the estimate and calls no model. The estimate prices every image as a call and a retry, a vocabulary card's reply at 45 tokens and a note card's at 120. On 2026-10-18 it came to $7.82 for the 32 samples and seven configurations, with $10 remaining.
   - Before each image it checks that the worst case of a call and its retry still fits, and stops otherwise.
   - It prints the run's spend and the total after each run.
-- The samples are `tools/eval/samples/`: 24 synthetic photos and their ground truth, written by `tools/eval/generate.py` from `tools/eval/vocabulary.json` and the OFL fonts in `tools/eval/fonts/`. Provenance and licences are in `tools/eval/samples/provenance.md`.
-- A ground-truth card holds `front` and `meaning`, and the `partOfSpeech` and `examples` its page prints: the six dictionary pages print a part of speech for every entry — `n.`, `v.`, `adj.` or `adv.` for English, a bracket notation such as `[동]` for Japanese — and an example under each English entry; the other layouts print neither.
+- The samples are `tools/eval/samples/`: 32 synthetic photos and their ground truth, written by `tools/eval/generate.py` from `tools/eval/vocabulary.json`, `tools/eval/notes.json` and the OFL fonts in `tools/eval/fonts/`. Provenance and licences are in `tools/eval/samples/provenance.md`.
+- The 24 vocabulary pages: a ground-truth card holds `front` and `meaning`, and the `partOfSpeech` and `examples` its page prints: the six dictionary pages print a part of speech for every entry — `n.`, `v.`, `adj.` or `adv.` for English, a bracket notation such as `[동]` for Japanese — and an example under each English entry; the other layouts print neither.
+- The 8 notes pages, `kind` "notes": a Korean page of logic notes and an English page of economics notes, each in a print and a handwriting face under the mild and the harsh distortion. A ground truth holds 12 facts, each with its `step` (every step from 1 to 5 has one) and the page `terms` that cover it, and the `examples` the page prints. None is a real photo; the owner's own notes photo was not used.
 - The eval needs `supabase/functions/.env`, so it runs on the owner's machine, not in CI.
 
 ### App: the `photo_import` domain
@@ -189,12 +201,13 @@ The `extract-cards` Edge Function that turns a photo of a vocabulary page into c
 
 - [ADR 0013](adr/0013-extract-cards-function-and-eval.md) records the function's shape, the limit's mechanism, the retry model, and where the eval lives.
 - [ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md) records why one extraction returns each card's fields and the app composes the answer, why `back` stays, and why prompt v1 was removed.
+- [ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md) records the notes cards, the fullest and short answers and the detail step, why `back` stays readable, prompt v3, the notes samples and metrics, and why the eval scores notes by terms rather than a judge model; issue #148 records the owner's request.
 - Issue #73 records the fields, the no-invention rule, the three levels and where the user chooses them, as decided by the PM on 2026-10-15.
 - Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 
 ## Open questions
 
 - On Android, the system may end the app while the photo picker is open; the picked photo is then lost and the user picks again. `image_picker`'s `retrieveLostData` could recover it.
-- Which model `CARD_MODEL` names, and how often each model invents a part of speech or an example. The eval has not run, with prompt v1 or v2: it waits for the owner's `supabase/functions/.env`, so `docs/eval/` holds no report yet.
+- Which model `CARD_MODEL` names, how well each covers a notes page's facts step by step, and how often each invents a fact, a part of speech or an example. The eval has not run, with any prompt: it waits for the owner's run on their machine, so `docs/eval/` holds no report yet.
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.
 - `SUPABASE_SERVICE_ROLE_KEY` is Supabase's legacy key form. A project that disables legacy keys would need the function to read `SUPABASE_SECRET_KEYS` instead.

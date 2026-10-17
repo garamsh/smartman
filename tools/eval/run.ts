@@ -9,11 +9,12 @@
  * stops after the estimate and calls no model.
  */
 
+import { STEPS } from "../../supabase/functions/extract-cards/cards.ts";
 import {
   extractCards,
   type Models,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v2.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v3.ts";
 import type {
   Image,
   LanguageHints,
@@ -25,15 +26,22 @@ import {
   type Ledger,
   parseLedger,
   remaining,
+  type SampleSize,
   spent,
+  TYPICAL_NOTE_TOKENS_PER_CARD,
+  TYPICAL_VOCABULARY_TOKENS_PER_CARD,
   worstCallUsd,
 } from "./budget.ts";
 import {
   type Entry,
+  entryOf,
+  type Fact,
   type ImageResult,
+  type NotesTruth,
   recommend,
   type Row,
   score,
+  scoreNotes,
   summarize,
 } from "./metrics.ts";
 import {
@@ -52,13 +60,33 @@ export const PATHS = {
   report: "docs/eval/extract-cards.md",
 } as const;
 
-/** One labelled photo: its name, the image as the function receives it, its hints and cards. */
-export type Sample = {
-  readonly name: string;
-  readonly image: Image;
-  readonly languages: LanguageHints;
-  readonly cards: readonly Entry[];
-};
+/**
+ * One labelled photo: its name, the image as the function receives it, its hints, and its
+ * ground truth: a vocabulary page's cards, or a notes page's facts and examples.
+ */
+export type Sample =
+  & {
+    readonly name: string;
+    readonly image: Image;
+    readonly languages: LanguageHints;
+  }
+  & (
+    | { readonly kind: "vocabulary"; readonly cards: readonly Entry[] }
+    | { readonly kind: "notes"; readonly notes: NotesTruth }
+  );
+
+/** How large a sample's reply is taken to be in the dry estimate. */
+export function sizeOf(sample: Sample): SampleSize {
+  return sample.kind === "vocabulary"
+    ? {
+      cards: sample.cards.length,
+      tokensPerCard: TYPICAL_VOCABULARY_TOKENS_PER_CARD,
+    }
+    : {
+      cards: sample.notes.facts.length,
+      tokensPerCard: TYPICAL_NOTE_TOKENS_PER_CARD,
+    };
+}
 
 /** Everything the eval reads, writes, or calls, so a test can stand in for each. */
 export type Io = {
@@ -107,13 +135,13 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.print(`${candidate.label}: ${describe(candidate)}`);
   }
 
-  const estimate = estimateUsd(
-    candidates,
-    samples.map((sample) => sample.cards.length),
-  );
+  const estimate = estimateUsd(candidates, samples.map(sizeOf));
+  const notes = samples.filter((sample) => sample.kind === "notes").length;
   const left = remaining(ledger);
   io.print(
-    `${samples.length} samples x ${candidates.length} configurations: estimated ${
+    `${samples.length} samples (${
+      samples.length - notes
+    } vocabulary, ${notes} notes) x ${candidates.length} configurations: estimated ${
       usd(estimate)
     }, ` +
       `${usd(left)} of the ${usd(ledger.budgetUsd)} budget remaining`,
@@ -232,7 +260,14 @@ export async function runEval(
       }
       spentUsd += costUsd;
       const cards = extraction.kind === "cards" ? extraction.cards : [];
-      results.push({ score: score(cards, sample.cards), latencyMs, costUsd });
+      results.push({
+        score: sample.kind === "vocabulary"
+          ? score(cards.map(entryOf), sample.cards)
+          : null,
+        notes: sample.kind === "notes" ? scoreNotes(cards, sample.notes) : null,
+        latencyMs,
+        costUsd,
+      });
       deps.print(
         `${candidate.label} ${sample.name}: ${extraction.kind}, ${
           usd(costUsd)
@@ -244,7 +279,10 @@ export async function runEval(
   return { rows, spentUsd, stopped: false };
 }
 
-/** Reads every `NN-*.json` ground truth in the samples folder with the image it names. */
+/**
+ * Reads every `NN-*.json` ground truth in the samples folder with the image it names: a
+ * vocabulary page's `cards`, or, with `kind` "notes", a notes page's `facts` and `examples`.
+ */
 export async function loadSamples(
   io: Pick<Io, "list" | "readText" | "readBytes">,
 ): Promise<Sample[]> {
@@ -256,10 +294,31 @@ export async function loadSamples(
     const truth: unknown = JSON.parse(
       await io.readText(`${PATHS.samples}/${name}`),
     );
-    if (
-      !isRecord(truth) || typeof truth.image !== "string" ||
-      !Array.isArray(truth.cards)
-    ) {
+    if (!isRecord(truth) || typeof truth.image !== "string") {
+      throw new Error(`${name} is not a ground truth naming its image`);
+    }
+    const bytes = await io.readBytes(`${PATHS.samples}/${truth.image}`);
+    const type = truth.image.endsWith(".png")
+      ? "image/png"
+      : truth.image.endsWith(".webp")
+      ? "image/webp"
+      : "image/jpeg";
+    const photo = {
+      name: name.replace(/\.json$/, ""),
+      image: { type, base64: encodeBase64(bytes) },
+      languages: languages(truth.languages),
+    } as const;
+    if (truth.kind === "notes") {
+      const notes = parseNotes(truth);
+      if (notes === null) {
+        throw new Error(
+          `${name} is not a notes ground truth of {facts: [{id, step, terms}], examples}`,
+        );
+      }
+      samples.push({ ...photo, kind: "notes", notes });
+      continue;
+    }
+    if (!Array.isArray(truth.cards)) {
       throw new Error(`${name} is not a ground truth of {image, cards}`);
     }
     const cards = truth.cards.map((card: unknown) => {
@@ -271,20 +330,29 @@ export async function loadSamples(
       }
       return entry;
     });
-    const bytes = await io.readBytes(`${PATHS.samples}/${truth.image}`);
-    const type = truth.image.endsWith(".png")
-      ? "image/png"
-      : truth.image.endsWith(".webp")
-      ? "image/webp"
-      : "image/jpeg";
-    samples.push({
-      name: name.replace(/\.json$/, ""),
-      image: { type, base64: encodeBase64(bytes) },
-      languages: languages(truth.languages),
-      cards,
-    });
+    samples.push({ ...photo, kind: "vocabulary", cards });
   }
   return samples;
+}
+
+function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
+  const { facts, examples } = truth;
+  if (
+    !Array.isArray(facts) || facts.length === 0 || !Array.isArray(examples) ||
+    !examples.every((example) => typeof example === "string")
+  ) return null;
+  const parsed: Fact[] = [];
+  for (const fact of facts) {
+    if (!isRecord(fact) || typeof fact.id !== "string") return null;
+    const step = STEPS.find((known) => known === fact.step);
+    const terms = fact.terms;
+    if (
+      step === undefined || !Array.isArray(terms) || terms.length === 0 ||
+      !terms.every((term) => typeof term === "string" && term.trim() !== "")
+    ) return null;
+    parsed.push({ id: fact.id, step, terms });
+  }
+  return { facts: parsed, examples };
 }
 
 function parseEntry(card: unknown): Entry | null {
@@ -341,10 +409,11 @@ export function report(
     "Results of `tools/eval/run.ts`: how each candidate configuration extracts cards from the sample set.",
     "",
     `- Run on ${date} with prompt ${PROMPT_VERSION}, over ${sampleCount} images in \`tools/eval/samples/\`.`,
-    "- The samples are synthetic: printed pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
-    "- Precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning equal the ground truth after card key normalization.",
+    "- The samples are synthetic: printed and handwritten-style pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
+    "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
     "- Over the matched cards of every image, in percent: part of speech and examples are the share equal to the page's after the same normalization; invented is the share of present parts of speech and example lists on an entry whose page prints none. A dash means the configuration returned no such field.",
-    "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost.",
+    "- Notes pages, in percent: coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print; step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half.",
+    "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost, over every image.",
     "",
     "## Models",
     "",
@@ -352,7 +421,7 @@ export function report(
       `- ${candidate.label}: ${describe(candidate)}`
     ),
     "",
-    "## Results",
+    "## Vocabulary pages",
     "",
     "| Configuration | Precision | Recall | F1 | Part of speech | Examples | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
     "|---|---|---|---|---|---|---|---|---|---|---|",
@@ -367,11 +436,12 @@ export function report(
       } |`
     ),
     "",
+    ...notesSection(rows),
     "## Recommendation",
     "",
     pick === null
-      ? "- None: no configuration completed."
-      : `- ${pick.label}: the cheapest configuration whose F1 is within 2 points of the best.`,
+      ? "- None: no configuration is within both bounds below, or none completed."
+      : `- ${pick.label}: the cheapest configuration whose vocabulary F1 is within 2 points of the best and whose notes coverage at step 5 is within 5 points of the best.`,
     "",
     "## Spend",
     "",
@@ -382,6 +452,28 @@ export function report(
     "",
   ];
   return lines.join("\n");
+}
+
+/** The notes table, one row per configuration, or nothing when no notes image ran. */
+function notesSection(rows: readonly Row[]): string[] {
+  if (rows.every((row) => row.notes === null)) return [];
+  const pct = (value: number | null | undefined) =>
+    value === null || value === undefined ? "—" : (value * 100).toFixed(1);
+  return [
+    "## Notes pages",
+    "",
+    "| Configuration | Coverage at 1 | 2 | 3 | 4 | 5 | Unsupported | Invented examples | Step order |",
+    "|---|---|---|---|---|---|---|---|---|",
+    ...rows.map((row) => {
+      const notes = row.notes;
+      return `| ${row.label} | ${
+        [0, 1, 2, 3, 4].map((at) => pct(notes?.coverage[at])).join(" | ")
+      } | ${pct(notes?.unsupportedRate)} | ${
+        pct(notes?.inventedExamplesRate)
+      } | ${pct(notes?.stepAgreement)} |`;
+    }),
+    "",
+  ];
 }
 
 function describe(candidate: Candidate): string {

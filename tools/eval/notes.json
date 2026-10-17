@@ -1,0 +1,349 @@
+{
+  "ko": {
+    "title": "논리와 추리 2주차",
+    "lines": [
+      {
+        "text": "1. 논리학의 정의",
+        "kind": "heading"
+      },
+      {
+        "text": "올바른 추론과 그렇지 않은 추론을 구별하는 원리를 연구하는 학문",
+        "kind": "point"
+      },
+      {
+        "text": "2. 논리학의 목적",
+        "kind": "heading"
+      },
+      {
+        "text": "좋은 논증을 판별하고 스스로 좋은 논증을 구성하는 능력을 기른다",
+        "kind": "point"
+      },
+      {
+        "text": "3. 논증",
+        "kind": "heading"
+      },
+      {
+        "text": "전제와 결론으로 이루어진 문장들의 집합",
+        "kind": "point"
+      },
+      {
+        "text": "전제: 결론을 뒷받침하는 근거가 되는 문장",
+        "kind": "sub"
+      },
+      {
+        "text": "결론: 전제로부터 이끌어지는 주장",
+        "kind": "sub"
+      },
+      {
+        "text": "4. 논증 지시어",
+        "kind": "heading"
+      },
+      {
+        "text": "전제 지시어: 왜냐하면, ~이므로, ~때문에",
+        "kind": "sub"
+      },
+      {
+        "text": "결론 지시어: 따라서, 그러므로, 결국",
+        "kind": "sub"
+      },
+      {
+        "text": "5. 연역과 귀납",
+        "kind": "heading"
+      },
+      {
+        "text": "연역 논증: 전제가 참이면 결론이 반드시 참",
+        "kind": "point"
+      },
+      {
+        "text": "귀납 논증: 전제가 참이면 결론이 개연적으로 참",
+        "kind": "point"
+      },
+      {
+        "text": "차이: 연역은 전제에 담긴 내용만 말하고, 귀납은 전제를 넘어서는 새로운 정보를 준다",
+        "kind": "point"
+      },
+      {
+        "text": "예) 253+4637+647898=652788 -> 연역",
+        "kind": "example"
+      },
+      {
+        "text": "예) 지금까지 본 백조는 모두 희다 -> 모든 백조는 희다 -> 귀납",
+        "kind": "example"
+      }
+    ],
+    "facts": [
+      {
+        "id": "definition",
+        "step": 1,
+        "terms": [
+          "논리학",
+          "추론",
+          "구별"
+        ]
+      },
+      {
+        "id": "purpose",
+        "step": 2,
+        "terms": [
+          "목적",
+          "판별"
+        ]
+      },
+      {
+        "id": "argument",
+        "step": 1,
+        "terms": [
+          "논증",
+          "전제",
+          "결론"
+        ]
+      },
+      {
+        "id": "premise",
+        "step": 3,
+        "terms": [
+          "전제",
+          "근거"
+        ]
+      },
+      {
+        "id": "conclusion",
+        "step": 3,
+        "terms": [
+          "결론",
+          "주장"
+        ]
+      },
+      {
+        "id": "premise-indicators",
+        "step": 4,
+        "terms": [
+          "전제 지시어",
+          "왜냐하면"
+        ]
+      },
+      {
+        "id": "conclusion-indicators",
+        "step": 4,
+        "terms": [
+          "결론 지시어",
+          "따라서"
+        ]
+      },
+      {
+        "id": "deduction",
+        "step": 1,
+        "terms": [
+          "연역",
+          "반드시"
+        ]
+      },
+      {
+        "id": "induction",
+        "step": 1,
+        "terms": [
+          "귀납",
+          "개연"
+        ]
+      },
+      {
+        "id": "difference",
+        "step": 2,
+        "terms": [
+          "연역",
+          "귀납",
+          "새로운 정보"
+        ]
+      },
+      {
+        "id": "deduction-example",
+        "step": 5,
+        "terms": [
+          "652788",
+          "연역"
+        ]
+      },
+      {
+        "id": "induction-example",
+        "step": 5,
+        "terms": [
+          "백조",
+          "귀납"
+        ]
+      }
+    ],
+    "examples": [
+      "253+4637+647898=652788 -> 연역",
+      "지금까지 본 백조는 모두 희다 -> 모든 백조는 희다 -> 귀납"
+    ]
+  },
+  "en": {
+    "title": "Econ 101 - Week 3: Supply and Demand",
+    "lines": [
+      {
+        "text": "Demand",
+        "kind": "heading"
+      },
+      {
+        "text": "Demand: the quantity of a good buyers are willing and able to buy at each price",
+        "kind": "point"
+      },
+      {
+        "text": "Law of demand: as price rises, quantity demanded falls (other things equal)",
+        "kind": "point"
+      },
+      {
+        "text": "Demand shifters: income, tastes, prices of related goods, expectations",
+        "kind": "sub"
+      },
+      {
+        "text": "Normal good: demand rises when income rises",
+        "kind": "sub"
+      },
+      {
+        "text": "Inferior good: demand falls when income rises",
+        "kind": "sub"
+      },
+      {
+        "text": "Supply",
+        "kind": "heading"
+      },
+      {
+        "text": "Supply: the quantity sellers are willing and able to sell at each price",
+        "kind": "point"
+      },
+      {
+        "text": "Law of supply: as price rises, quantity supplied rises",
+        "kind": "point"
+      },
+      {
+        "text": "Market",
+        "kind": "heading"
+      },
+      {
+        "text": "Equilibrium: the price at which quantity demanded equals quantity supplied",
+        "kind": "point"
+      },
+      {
+        "text": "Shortage: quantity demanded exceeds quantity supplied, below the equilibrium price",
+        "kind": "point"
+      },
+      {
+        "text": "Surplus: quantity supplied exceeds quantity demanded, above the equilibrium price",
+        "kind": "point"
+      },
+      {
+        "text": "e.g. coffee price rises -> demand for tea rises (substitutes)",
+        "kind": "example"
+      },
+      {
+        "text": "e.g. income rises -> fewer bus rides (inferior good)",
+        "kind": "example"
+      }
+    ],
+    "facts": [
+      {
+        "id": "demand",
+        "step": 1,
+        "terms": [
+          "demand",
+          "willing and able",
+          "buy"
+        ]
+      },
+      {
+        "id": "law-of-demand",
+        "step": 1,
+        "terms": [
+          "law of demand",
+          "falls"
+        ]
+      },
+      {
+        "id": "shifters",
+        "step": 4,
+        "terms": [
+          "income",
+          "tastes",
+          "expectations"
+        ]
+      },
+      {
+        "id": "normal-good",
+        "step": 3,
+        "terms": [
+          "normal good",
+          "income"
+        ]
+      },
+      {
+        "id": "inferior-good",
+        "step": 3,
+        "terms": [
+          "inferior good",
+          "income"
+        ]
+      },
+      {
+        "id": "supply",
+        "step": 1,
+        "terms": [
+          "supply",
+          "willing and able",
+          "sell"
+        ]
+      },
+      {
+        "id": "law-of-supply",
+        "step": 2,
+        "terms": [
+          "law of supply",
+          "rises"
+        ]
+      },
+      {
+        "id": "equilibrium",
+        "step": 1,
+        "terms": [
+          "equilibrium",
+          "equals"
+        ]
+      },
+      {
+        "id": "shortage",
+        "step": 2,
+        "terms": [
+          "shortage",
+          "below"
+        ]
+      },
+      {
+        "id": "surplus",
+        "step": 2,
+        "terms": [
+          "surplus",
+          "above"
+        ]
+      },
+      {
+        "id": "substitutes-example",
+        "step": 5,
+        "terms": [
+          "tea",
+          "substitutes"
+        ]
+      },
+      {
+        "id": "inferior-example",
+        "step": 5,
+        "terms": [
+          "bus"
+        ]
+      }
+    ],
+    "examples": [
+      "coffee price rises -> demand for tea rises (substitutes)",
+      "income rises -> fewer bus rides (inferior good)"
+    ]
+  }
+}

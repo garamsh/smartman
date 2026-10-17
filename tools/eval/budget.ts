@@ -41,9 +41,12 @@ export function remaining(ledger: Ledger): number {
 }
 
 // Typical tokens of one call: the system prompt with one photo, and a reply per card with
-// room for hidden reasoning. The dry estimate uses these.
-export const TYPICAL_PROMPT_TOKENS = 2000;
-export const TYPICAL_REPLY_TOKENS_PER_CARD = 30;
+// room for hidden reasoning. A vocabulary card writes its fields twice over (answer and short);
+// a note card writes a question, an answer of a sentence or two and its short form. The dry
+// estimate uses these.
+export const TYPICAL_PROMPT_TOKENS = 2500;
+export const TYPICAL_VOCABULARY_TOKENS_PER_CARD = 45;
+export const TYPICAL_NOTE_TOKENS_PER_CARD = 120;
 export const TYPICAL_REASONING_TOKENS = 1000;
 // The most one call's prompt is taken to cost: the guard before each call uses this, with
 // the reply at the function's output cap.
@@ -63,19 +66,24 @@ export function worstCallUsd(pricing: Pricing): number {
   return cost(pricing, WORST_PROMPT_TOKENS, MAX_OUTPUT_TOKENS);
 }
 
+/** How large one sample's reply is taken to be: its cards, and the typical tokens of each. */
+export type SampleSize = {
+  readonly cards: number;
+  readonly tokensPerCard: number;
+};
+
 /**
- * The dry estimate of a run: every candidate over every image, each image priced as one
- * typical call to the primary model plus one to the retry model, as if every image retried.
+ * The dry estimate of a run: every candidate over every sample, each priced as one typical
+ * call to the primary model plus one to the retry model, as if every image retried.
  */
 export function estimateUsd(
   candidates: readonly Candidate[],
-  cardCounts: readonly number[],
+  sizes: readonly SampleSize[],
 ): number {
   let total = 0;
   for (const candidate of candidates) {
-    for (const cards of cardCounts) {
-      const reply = TYPICAL_REASONING_TOKENS +
-        TYPICAL_REPLY_TOKENS_PER_CARD * cards;
+    for (const size of sizes) {
+      const reply = TYPICAL_REASONING_TOKENS + size.tokensPerCard * size.cards;
       total += cost(candidate.primary.pricing, TYPICAL_PROMPT_TOKENS, reply);
       total += cost(candidate.retry.pricing, TYPICAL_PROMPT_TOKENS, reply);
     }
