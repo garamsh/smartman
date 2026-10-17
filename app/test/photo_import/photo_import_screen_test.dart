@@ -453,7 +453,7 @@ void main() {
       expect(call.cancelled, isTrue);
       expect(find.byTooltip('Take photo'), findsOneWidget);
       // A late answer to the cancelled request is ignored.
-      call.answer.complete([const CandidateCard(front: 'a', meaning: 'b')]);
+      call.answer.complete([const CandidateCard(front: 'a', answer: 'b')]);
       await tester.pumpAndSettle();
       expect(find.text('Found 1 card'), findsNothing);
       expect(find.byTooltip('Take photo'), findsOneWidget);
@@ -701,72 +701,129 @@ void main() {
     });
   });
 
-  group('detail level', () {
+  group('detail step', () {
     const run = CandidateCard(
       front: 'run',
-      meaning: '달리다',
+      answer: '달리다, 운영하다',
+      short: '달리다',
       partOfSpeech: '[동]',
       examples: ['I run every morning.', 'run a shop'],
     );
-    const river = CandidateCard(front: 'river', meaning: '강');
+    const river = CandidateCard(front: 'river', answer: '강');
 
-    DetailLevel selected(WidgetTester tester) => tester
-        .widget<SegmentedButton<DetailLevel>>(
-          find.byType(SegmentedButton<DetailLevel>),
-        )
-        .selected
-        .single;
+    /// A page of notes with a card at steps 1, 2, 4 and 5.
+    const notes = [
+      CandidateCard(
+        kind: CandidateKind.note,
+        front: 'What is an argument?',
+        answer: 'A set of premises and a conclusion',
+        short: 'Premises and a conclusion',
+      ),
+      CandidateCard(
+        kind: CandidateKind.note,
+        front: 'Why study logic?',
+        answer: 'To judge and build good arguments',
+        short: 'Good arguments',
+        step: DetailStep.keyPoints,
+      ),
+      CandidateCard(
+        kind: CandidateKind.note,
+        front: 'Premise indicators?',
+        answer: 'Because, since, for',
+        step: DetailStep.detailed,
+      ),
+      CandidateCard(
+        kind: CandidateKind.note,
+        front: 'An example of deduction?',
+        answer: '253+4637+647898=652788',
+        step: DetailStep.full,
+        examples: ['253+4637+647898=652788 -> deduction'],
+      ),
+    ];
 
-    Future<void> extractCards(_Import import) async {
+    DetailStep selected(WidgetTester tester) => DetailStep
+        .values[tester.widget<Slider>(find.byType(Slider)).value.round() - 1];
+
+    /// Moves the slider to [step] as a drag that ends on it would.
+    Future<void> slide(_Import import, DetailStep step) async {
+      import.tester.widget<Slider>(find.byType(Slider)).onChanged!(
+        step.value.toDouble(),
+      );
+      await import.tester.pumpAndSettle();
+    }
+
+    Future<void> extractCards(
+      _Import import, [
+      List<CandidateCard> cards = const [run, river],
+    ]) async {
       await import.shoot();
-      import.client.answerCards(const [run, river]);
+      import.client.answerCards(cards);
       await import.tester.pumpAndSettle();
     }
 
     testWidgets(
-      'with no choice stored, capture and review start at Basic, the part of speech before the meaning',
+      'with no choice stored, capture and review start at Basic, the part of speech before the answer',
       (tester) async {
         final import = await _Import.open(tester);
-        expect(import.preferences.getString('photoDetailLevel'), isNull);
+        expect(import.preferences.getString('photoDetailStep'), isNull);
 
-        expect(find.text('What each card says'), findsOneWidget);
-        expect(selected(tester), DetailLevel.basic);
+        expect(find.text('What the cards hold'), findsOneWidget);
+        expect(find.text('Basic'), findsOneWidget);
+        expect(selected(tester), DetailStep.basic);
         await extractCards(import);
 
-        expect(selected(tester), DetailLevel.basic);
-        expect(find.text('[동] 달리다'), findsOneWidget);
+        expect(selected(tester), DetailStep.basic);
+        expect(find.text('[동] 달리다, 운영하다'), findsOneWidget);
         expect(find.text('강'), findsOneWidget);
         await import.close();
       },
     );
 
-    for (final (level, label, back) in [
-      (DetailLevel.simple, 'Simple', '달리다'),
-      (DetailLevel.basic, 'Basic', '[동] 달리다'),
-      (
-        DetailLevel.detailed,
-        'Detailed',
-        '[동] 달리다\nI run every morning.\nrun a shop',
-      ),
+    testWidgets(
+      'a drag along the slider chooses the step it ends on, from Core to Every detail',
+      (tester) async {
+        final import = await _Import.open(tester);
+        final slider = find.byType(Slider);
+
+        await tester.drag(slider, Offset(-tester.getSize(slider).width, 0));
+        await tester.pumpAndSettle();
+        expect(selected(tester), DetailStep.core);
+        expect(find.text('Core'), findsNWidgets(2), reason: 'name and end');
+
+        await tester.drag(slider, Offset(tester.getSize(slider).width, 0));
+        await tester.pumpAndSettle();
+        expect(selected(tester), DetailStep.full);
+        expect(find.text('Every detail'), findsNWidgets(2));
+        expect(import.preferences.getString('photoDetailStep'), 'full');
+        await import.close();
+      },
+    );
+
+    for (final (step, back) in [
+      (DetailStep.core, '달리다'),
+      (DetailStep.keyPoints, '달리다, 운영하다'),
+      (DetailStep.basic, '[동] 달리다, 운영하다'),
+      (DetailStep.detailed, '[동] 달리다, 운영하다\nI run every morning.\nrun a shop'),
+      (DetailStep.full, '[동] 달리다, 운영하다\nI run every morning.\nrun a shop'),
     ]) {
       testWidgets(
-        '$label, chosen on the camera, composes each answer it shows and saves, and is remembered',
+        '${step.name}, chosen on the camera, offers every vocabulary card, composes each answer it shows and saves, and is remembered',
         (tester) async {
-          final initial = level == DetailLevel.basic
-              ? DetailLevel.simple
-              : DetailLevel.basic;
+          final initial = step == DetailStep.basic
+              ? DetailStep.core
+              : DetailStep.basic;
           final import = await _Import.open(
             tester,
-            stored: {'photoDetailLevel': initial.name},
+            stored: {'photoDetailStep': initial.name},
           );
-          expect(selected(tester), initial, reason: 'the stored level');
+          expect(selected(tester), initial, reason: 'the stored step');
 
-          await import.tap(find.text(label));
-          expect(selected(tester), level);
-          expect(import.preferences.getString('photoDetailLevel'), level.name);
+          await slide(import, step);
+          expect(selected(tester), step);
+          expect(import.preferences.getString('photoDetailStep'), step.name);
           await extractCards(import);
 
-          expect(selected(tester), level);
+          expect(selected(tester), step);
           expect(find.text(back), findsOneWidget);
           expect(find.text('강'), findsOneWidget, reason: 'no field to add');
           await import.tap(find.text('Add 2 cards'));
@@ -781,7 +838,130 @@ void main() {
     }
 
     testWidgets(
-      'switching on review recomposes every answer but one typed by hand, which is marked edited and saved as typed',
+      'each step offers the notes cards of that step or below, at their short form at Core and in full above, and saves only those',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          stored: {'photoDetailStep': 'core'},
+        );
+        await extractCards(import, notes);
+
+        expect(find.text('What is an argument?'), findsOneWidget);
+        expect(find.text('Premises and a conclusion'), findsOneWidget);
+        expect(find.text('Why study logic?'), findsNothing);
+        expect(find.text('Add 1 card'), findsOneWidget);
+
+        await slide(import, DetailStep.keyPoints);
+        expect(find.text('A set of premises and a conclusion'), findsOneWidget);
+        expect(find.text('To judge and build good arguments'), findsOneWidget);
+        expect(find.text('Premise indicators?'), findsNothing);
+        expect(find.text('Add 2 cards'), findsOneWidget);
+
+        await slide(import, DetailStep.detailed);
+        expect(find.text('Because, since, for'), findsOneWidget);
+        expect(find.text('An example of deduction?'), findsNothing);
+        expect(find.text('Add 3 cards'), findsOneWidget);
+
+        await slide(import, DetailStep.full);
+        expect(
+          find.text(
+            '253+4637+647898=652788\n253+4637+647898=652788 -> deduction',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Add 4 cards'), findsOneWidget);
+
+        await slide(import, DetailStep.keyPoints);
+        await import.tap(find.text('Add 2 cards'));
+
+        expect(await import.cards(import.french), [
+          (
+            'What is an argument?',
+            'A set of premises and a conclusion',
+            CardSource.import,
+          ),
+          (
+            'Why study logic?',
+            'To judge and build good arguments',
+            CardSource.import,
+          ),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a card a step hides comes back with its typed answer, its checkbox and its duplicate option, and nothing is written before adding',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          french: {'Premise indicators?': 'because'},
+          stored: {'photoDetailStep': 'full'},
+        );
+        await tester.binding.setSurfaceSize(const Size(800, 2000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final before = await import.cards(import.french);
+        await extractCards(import, notes);
+        expect(find.text('1 card already in the deck'), findsOneWidget);
+
+        await import.tap(
+          find.text(
+            '253+4637+647898=652788\n253+4637+647898=652788 -> deduction',
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'adding numbers');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        await import.tap(
+          find.descendant(
+            of: import.row('To judge and build good arguments'),
+            matching: find.byType(Checkbox),
+          ),
+        );
+        await import.choose('Premise indicators?', 'Add as new');
+
+        await slide(import, DetailStep.core);
+        expect(find.text('adding numbers'), findsNothing);
+        expect(find.text('Premise indicators?'), findsNothing);
+        expect(find.text('1 card already in the deck'), findsNothing);
+        expect(find.text('Add 1 card'), findsOneWidget);
+
+        await slide(import, DetailStep.full);
+        expect(find.text('adding numbers'), findsOneWidget);
+        expect(find.text('Edited'), findsOneWidget);
+        expect(
+          tester
+              .widget<Checkbox>(
+                find.descendant(
+                  of: import.row('To judge and build good arguments'),
+                  matching: find.byType(Checkbox),
+                ),
+              )
+              .value,
+          isFalse,
+        );
+        expect(find.text('Add as new'), findsOneWidget);
+        expect(find.text('Add 3 cards'), findsOneWidget);
+        expect(await import.cards(import.french), before);
+
+        await import.tap(find.text('Add 3 cards'));
+
+        expect(await import.cards(import.french), [
+          ('Premise indicators?', 'because', CardSource.manual),
+          (
+            'What is an argument?',
+            'A set of premises and a conclusion',
+            CardSource.import,
+          ),
+          ('Premise indicators?', 'Because, since, for', CardSource.import),
+          ('An example of deduction?', 'adding numbers', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'moving on review recomposes every answer but one typed by hand, which is marked edited and saved as typed',
       (tester) async {
         final import = await _Import.open(tester);
         await extractCards(import);
@@ -797,17 +977,17 @@ void main() {
           findsOneWidget,
         );
 
-        await import.tap(find.text('Detailed'));
+        await slide(import, DetailStep.detailed);
 
         expect(
-          find.text('[동] 달리다\nI run every morning.\nrun a shop'),
+          find.text('[동] 달리다, 운영하다\nI run every morning.\nrun a shop'),
           findsOneWidget,
         );
         expect(find.text('a river'), findsOneWidget);
         expect(find.text('Edited'), findsOneWidget);
-        expect(import.preferences.getString('photoDetailLevel'), 'detailed');
+        expect(import.preferences.getString('photoDetailStep'), 'detailed');
 
-        await import.tap(find.text('Simple'));
+        await slide(import, DetailStep.core);
         expect(find.text('달리다'), findsOneWidget);
         expect(find.text('a river'), findsOneWidget);
         await import.tap(find.text('Add 2 cards'));
@@ -821,22 +1001,94 @@ void main() {
     );
 
     testWidgets(
-      'candidates combined on the photo merge their answers at the chosen level',
+      'candidates combined on the photo merge the answers of those the step offers',
       (tester) async {
         final import = await _Import.open(tester);
-        await import.shoot();
-        import.client.answerCards(const [
+        await extractCards(import, const [
           run,
-          CandidateCard(front: 'Run', meaning: '운영하다', partOfSpeech: '[동]'),
+          CandidateCard(front: 'Run', answer: '운영하다', partOfSpeech: '[동]'),
+          CandidateCard(
+            kind: CandidateKind.note,
+            front: 'RUN',
+            answer: 'to manage a business',
+            step: DetailStep.detailed,
+          ),
         ]);
-        await tester.pumpAndSettle();
 
-        expect(find.text('[동] 달리다\n[동] 운영하다'), findsOneWidget);
-        await import.tap(find.text('Simple'));
+        expect(find.text('[동] 달리다, 운영하다\n[동] 운영하다'), findsOneWidget);
+        await slide(import, DetailStep.core);
         expect(find.text('달리다\n운영하다'), findsOneWidget);
+        await slide(import, DetailStep.detailed);
+        expect(
+          find.text(
+            '[동] 달리다, 운영하다\nI run every morning.\nrun a shop\n[동] 운영하다\nto manage a business',
+          ),
+          findsOneWidget,
+        );
         await import.close();
       },
     );
+
+    for (final (level, step) in [
+      ('simple', DetailStep.core),
+      ('basic', DetailStep.basic),
+      ('detailed', DetailStep.detailed),
+    ]) {
+      testWidgets(
+        'a level stored before the steps, $level, starts at ${step.name}, which is stored in its place',
+        (tester) async {
+          final import = await _Import.open(
+            tester,
+            stored: {'photoDetailLevel': level},
+          );
+
+          expect(selected(tester), step);
+          await tester.pumpAndSettle();
+          expect(import.preferences.getString('photoDetailStep'), step.name);
+          expect(import.preferences.getString('photoDetailLevel'), isNull);
+          await import.close();
+        },
+      );
+    }
+
+    testWidgets(
+      'a screen reader hears the slider as what the cards hold, with the step\'s name and number',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        final import = await _Import.open(tester);
+
+        expect(
+          tester.getSemantics(find.byType(Slider)),
+          matchesSemantics(
+            label: 'What the cards hold',
+            value: 'Basic, step 3 of 5',
+            increasedValue: 'Detailed, step 4 of 5',
+            decreasedValue: 'Key points, step 2 of 5',
+            isSlider: true,
+            isEnabled: true,
+            hasEnabledState: true,
+            isFocusable: true,
+            hasIncreaseAction: true,
+            hasDecreaseAction: true,
+            hasFocusAction: true,
+          ),
+        );
+        await import.close();
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('a step stored wins over a level stored before the steps', (
+      tester,
+    ) async {
+      final import = await _Import.open(
+        tester,
+        stored: {'photoDetailStep': 'full', 'photoDetailLevel': 'simple'},
+      );
+
+      expect(selected(tester), DetailStep.full);
+      await import.close();
+    });
   });
 
   group('failures', () {

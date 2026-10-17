@@ -29,7 +29,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
    - Account: a theme choice applies at once and is stored after.
-   - Photo import: a detail level switch recomposes every answer at once and is stored after.
+   - Photo import: a move of the detail step slider changes the cards offered and recomposes every answer at once, and is stored after.
    - Account and photo review: `AppButton`'s loading state shows progress in the button the user pressed, and the button cannot be pressed twice.
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation sheet. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account.
    - Study: any answer of the session is corrected by a drag on the centred card, or its action, with no confirmation.
@@ -134,7 +134,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
 - **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)); the previous card's sides, run together as one paragraph, are scaled the same way and then further, as far as the floor, until they fit their half's height, and cut there ([ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md)).
 
-Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `Switch`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes.
+Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `Switch`, `Slider`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes. The slider, photo import's detail step, is an ink thumb and an ink track up to it, a muted track after it, and ticks at each step, with no side padding so its ends sit under the names of the end steps and no value bubble; the same test checks its thumb and both parts of its track at 3:1 on the ground and the surface in both themes.
 
 ### Checks
 

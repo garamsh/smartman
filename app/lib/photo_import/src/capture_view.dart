@@ -7,7 +7,7 @@ import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'detail_level.dart';
+import 'detail_step.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'photo.dart';
@@ -22,8 +22,8 @@ class CaptureView extends StatefulWidget {
     required this.decks,
     required this.target,
     required this.onTarget,
-    required this.level,
-    required this.onLevel,
+    required this.step,
+    required this.onStep,
     required this.onPhoto,
     required this.onFailure,
   });
@@ -37,8 +37,8 @@ class CaptureView extends StatefulWidget {
   /// Chooses the deck the cards go into; null for a new deck.
   final ValueChanged<DeckId?> onTarget;
 
-  final DetailLevel level;
-  final ValueChanged<DetailLevel> onLevel;
+  final DetailStep step;
+  final ValueChanged<DetailStep> onStep;
 
   final ValueChanged<JpegPhoto> onPhoto;
   final ValueChanged<PhotoImportFailure> onFailure;
@@ -267,9 +267,9 @@ class _CaptureViewState extends State<CaptureView> with WidgetsBindingObserver {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpace.s12),
-                      child: DetailLevelSelector(
-                        level: widget.level,
-                        onChanged: widget.onLevel,
+                      child: DetailStepSlider(
+                        step: widget.step,
+                        onChanged: widget.onStep,
                       ),
                     ),
                   ),

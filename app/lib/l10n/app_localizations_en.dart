@@ -436,16 +436,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get detailLevelLabel => 'What each card says';
+  String get detailStepLabel => 'What the cards hold';
 
   @override
-  String get detailLevelSimple => 'Simple';
+  String get detailStepCore => 'Core';
 
   @override
-  String get detailLevelBasic => 'Basic';
+  String get detailStepKeyPoints => 'Key points';
 
   @override
-  String get detailLevelDetailed => 'Detailed';
+  String get detailStepBasic => 'Basic';
+
+  @override
+  String get detailStepDetailed => 'Detailed';
+
+  @override
+  String get detailStepFull => 'Every detail';
+
+  @override
+  String detailStepValue(String name, int step) {
+    return '$name, step $step of 5';
+  }
 
   @override
   String get candidateEdited => 'Edited';

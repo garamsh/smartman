@@ -1,5 +1,5 @@
 import '../../deck/deck.dart';
-import 'detail_level.dart';
+import 'detail_step.dart';
 import 'extraction_client.dart';
 
 /// [cards] grouped by card key, in the order each key first appears.
@@ -21,8 +21,8 @@ final class ReviewRow {
 
   String front;
 
-  /// The answer the user typed, which no level switch replaces; null while
-  /// the answer follows the level.
+  /// The answer the user typed, which no step change replaces; null while
+  /// the answer follows the step.
   String? editedBack;
 
   bool included = true;
@@ -34,35 +34,50 @@ final class ReviewRow {
 
   bool get edited => editedBack != null;
 
-  /// The answer at [level]: the typed one, or the first candidate's
-  /// answer with each later one's joined by the merge-back rule.
-  String backAt(DetailLevel level) {
+  /// Whether the row is offered at [step]: one of its candidates is.
+  bool offeredAt(DetailStep step) =>
+      sources.any((card) => card.offeredAt(step));
+
+  /// The answer at [step]: the typed one, or the answer of the first
+  /// candidate offered at [step] with each later one's joined by the
+  /// merge-back rule.
+  String backAt(DetailStep step) {
     if (editedBack case final back?) return back;
-    var blocks = <Content>[TextContent(sources.first.backAt(level))];
-    for (final card in sources.skip(1)) {
-      blocks = mergeBack(blocks, card.backAt(level)) ?? blocks;
+    final offered = [
+      for (final card in sources)
+        if (card.offeredAt(step)) card,
+    ];
+    if (offered.isEmpty) return '';
+    var blocks = <Content>[TextContent(offered.first.backAt(step))];
+    for (final card in offered.skip(1)) {
+      blocks = mergeBack(blocks, card.backAt(step)) ?? blocks;
     }
     return plainText(blocks);
   }
 }
 
-/// The rows under review at a detail level, against the keys the deck
-/// already holds.
+/// The rows under review at a detail step, against the keys the deck already
+/// holds.
 final class Review {
-  Review(List<CandidateCard> cards, this.existingKeys, {required this.level})
+  Review(List<CandidateCard> cards, this.existingKeys, {required this.step})
     : rows = [for (final group in groupByKey(cards)) ReviewRow(group)];
 
+  /// Every row of the photo, offered or not, each keeping its edits, its
+  /// checkbox and its duplicate option while a step hides it.
   final List<ReviewRow> rows;
   final Set<CardKey> existingKeys;
 
-  /// How much each answer says; switching it recomposes every answer the
-  /// user did not type.
-  DetailLevel level;
+  /// Which rows are offered and how much each answer says; changing it
+  /// recomposes every answer the user did not type.
+  DetailStep step;
+
+  /// The rows offered at [step], in the photo's order.
+  Iterable<ReviewRow> get offered => rows.where((row) => row.offeredAt(step));
 
   bool isDuplicate(ReviewRow row) => existingKeys.contains(row.key);
 
-  /// The rows that will be written: included, and not set to skip.
-  Iterable<ReviewRow> get saved => rows.where(
+  /// The rows that will be written: offered, included, and not set to skip.
+  Iterable<ReviewRow> get saved => offered.where(
     (row) =>
         row.included &&
         !(isDuplicate(row) && row.choice == DuplicateChoice.skip),
@@ -75,7 +90,7 @@ final class Review {
     for (final row in saved)
       ImportedCard(
         front: row.front,
-        back: row.backAt(level),
+        back: row.backAt(step),
         onDuplicate: isDuplicate(row) ? row.choice : DuplicateChoice.mergeBack,
       ),
   ];

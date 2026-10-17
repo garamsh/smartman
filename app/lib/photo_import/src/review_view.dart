@@ -10,9 +10,9 @@ import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
-import 'detail_level.dart';
+import 'detail_step.dart';
 
-/// How much each answer says, over the candidates to check, edit or leave
+/// The detail step, over the candidates it offers to check, edit or leave
 /// out, with those whose key the deck already holds grouped below with a
 /// duplicate option each.
 class ReviewView extends StatelessWidget {
@@ -21,7 +21,7 @@ class ReviewView extends StatelessWidget {
     required this.review,
     required this.deckName,
     required this.saving,
-    required this.onLevel,
+    required this.onStep,
     required this.onChanged,
     required this.onRetake,
     required this.onSave,
@@ -31,8 +31,9 @@ class ReviewView extends StatelessWidget {
   final String deckName;
   final bool saving;
 
-  /// Chooses the detail level, which recomposes every answer not typed.
-  final ValueChanged<DetailLevel> onLevel;
+  /// Chooses the detail step, which changes the rows offered and recomposes
+  /// every answer not typed.
+  final ValueChanged<DetailStep> onStep;
 
   /// Called after a row of [review] changed in place.
   final VoidCallback onChanged;
@@ -44,12 +45,13 @@ class ReviewView extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
+    final offered = review.offered.toList();
     final fresh = [
-      for (final row in review.rows)
+      for (final row in offered)
         if (!review.isDuplicate(row)) row,
     ];
     final duplicates = [
-      for (final row in review.rows)
+      for (final row in offered)
         if (review.isDuplicate(row)) row,
     ];
     final count = review.saved.length;
@@ -81,10 +83,7 @@ class ReviewView extends StatelessWidget {
         children: [
           Semantics(
             header: true,
-            child: Text(
-              l10n.reviewTitle(review.rows.length),
-              style: AppType.title,
-            ),
+            child: Text(l10n.reviewTitle(offered.length), style: AppType.title),
           ),
           const SizedBox(height: AppSpace.s4),
           Text(
@@ -92,13 +91,13 @@ class ReviewView extends StatelessWidget {
             style: AppType.secondary.copyWith(color: colors.muted),
           ),
           const SizedBox(height: AppSpace.s16),
-          DetailLevelSelector(level: review.level, onChanged: onLevel),
+          DetailStepSlider(step: review.step, onChanged: onStep),
           const SizedBox(height: AppSpace.s16),
           for (final row in fresh)
             _CandidateRow(
               key: ObjectKey(row),
               row: row,
-              level: review.level,
+              step: review.step,
               duplicate: false,
               onChanged: onChanged,
             ),
@@ -109,7 +108,7 @@ class ReviewView extends StatelessWidget {
               _CandidateRow(
                 key: ObjectKey(row),
                 row: row,
-                level: review.level,
+                step: review.step,
                 duplicate: true,
                 onChanged: onChanged,
               ),
@@ -136,20 +135,20 @@ class ReviewView extends StatelessWidget {
   }
 }
 
-/// A candidate: its checkbox, its front and its answer at [level] split by a
+/// A candidate: its checkbox, its front and its answer at [step] split by a
 /// divider, each edited in place on a tap, an answer typed by hand marked
 /// edited, and its duplicate option when [duplicate].
 class _CandidateRow extends StatelessWidget {
   const _CandidateRow({
     super.key,
     required this.row,
-    required this.level,
+    required this.step,
     required this.duplicate,
     required this.onChanged,
   });
 
   final ReviewRow row;
-  final DetailLevel level;
+  final DetailStep step;
   final bool duplicate;
   final VoidCallback onChanged;
 
@@ -190,7 +189,7 @@ class _CandidateRow extends StatelessWidget {
                 Expanded(
                   child: _EditableSide(
                     label: l10n.cardBack,
-                    text: row.backAt(level),
+                    text: row.backAt(step),
                     mark: row.edited ? l10n.candidateEdited : null,
                     style: AppType.body.copyWith(color: colors.muted),
                     onSubmitted: (text) {

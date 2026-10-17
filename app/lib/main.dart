@@ -29,7 +29,7 @@ Future<void> main() async {
   final package = await PackageInfo.fromPlatform();
   final preferences = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
-      allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
+      allowList: {...themeStorageKeys, ...detailStepStorageKeys},
     ),
   );
   runApp(
@@ -59,7 +59,7 @@ Future<void> main() async {
 
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
-/// [server], keeping the theme choice and photo import's detail level in
+/// [server], keeping the theme choice and photo import's detail step in
 /// [preferences], and extracting cards from photos through [extraction],
 /// whose absence hides photo import,
 /// and sharing decks through [sharing] while [reachability] says the device
