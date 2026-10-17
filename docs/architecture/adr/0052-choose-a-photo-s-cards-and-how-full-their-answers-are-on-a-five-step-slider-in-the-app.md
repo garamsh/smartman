@@ -29,8 +29,9 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 | 1 핵심 | `short` |
 | 2 요점 | `answer` |
 | 3 기본 | `partOfSpeech`, a space, then `answer`; `answer` alone when there is no part of speech, as for every note |
-| 4 자세히, 5 세부 | the 기본 answer, then each example on its own line |
+| 4 자세히, 5 세부 | the 기본 answer, then each example on its own line, leaving out one that repeats the answer |
 
+- An example repeats the answer when its text and the answer's, normalized as `deck`'s card key normalizes a front, contain one another. ADR 0051 lets a page's worked example be both a card's answer and its example, and showing it twice says nothing more.
 - Step 5 differs from step 4 only in offering the cards of step 5. A row combining several candidates joins the answers of those the step offers by `deck`'s merge-back rule. So a vocabulary page reads at 핵심 as 간단 did when `short` is the first meaning, and at 기본 and 자세히 as the levels of those names did.
 - **Old response.** A card without `kind`, from a function deployed before ADR 0051, is vocabulary at step 1, its answer and short form its `meaning`, or its `back` when it has none. So every step offers every card, and the slider changes only how full the answers are.
 - **New response.** A card with `kind` must carry a known `kind`, a non-empty `answer` and `short`, and an integer `step` from 1 to 5; otherwise the answer is outside the contract, a `ServiceFailed`.

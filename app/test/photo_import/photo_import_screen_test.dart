@@ -737,7 +737,10 @@ void main() {
         front: 'An example of deduction?',
         answer: '253+4637+647898=652788',
         step: DetailStep.full,
-        examples: ['253+4637+647898=652788 -> deduction'],
+        examples: [
+          '253+4637+647898=652788 -> deduction',
+          'Socrates is a man, so he is mortal',
+        ],
       ),
     ];
 
@@ -865,7 +868,7 @@ void main() {
         await slide(import, DetailStep.full);
         expect(
           find.text(
-            '253+4637+647898=652788\n253+4637+647898=652788 -> deduction',
+            '253+4637+647898=652788\nSocrates is a man, so he is mortal',
           ),
           findsOneWidget,
         );
@@ -906,7 +909,7 @@ void main() {
 
         await import.tap(
           find.text(
-            '253+4637+647898=652788\n253+4637+647898=652788 -> deduction',
+            '253+4637+647898=652788\nSocrates is a man, so he is mortal',
           ),
         );
         await tester.enterText(find.byType(TextField), 'adding numbers');
@@ -1025,6 +1028,50 @@ void main() {
           ),
           findsOneWidget,
         );
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'from Detailed, an example that repeats its card\'s answer, as a card key compares them, is left out, and the others stay',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          stored: {'photoDetailStep': 'basic'},
+        );
+        await extractCards(import, const [
+          CandidateCard(
+            kind: CandidateKind.note,
+            front: 'Law of demand?',
+            answer: 'Price rises,  quantity falls',
+            examples: [
+              'e.g. PRICE RISES, QUANTITY FALLS for coffee',
+              'quantity falls',
+              'Ｃoffee costs more, fewer cups sold',
+            ],
+          ),
+        ]);
+        expect(find.text('Price rises,  quantity falls'), findsOneWidget);
+
+        for (final step in [DetailStep.detailed, DetailStep.full]) {
+          await slide(import, step);
+          expect(
+            find.text(
+              'Price rises,  quantity falls\nＣoffee costs more, fewer cups sold',
+            ),
+            findsOneWidget,
+            reason: step.name,
+          );
+        }
+        await import.tap(find.text('Add 1 card'));
+
+        expect(await import.cards(import.french), [
+          (
+            'Law of demand?',
+            'Price rises,  quantity falls / Ｃoffee costs more, fewer cups sold',
+            CardSource.import,
+          ),
+        ]);
         await import.close();
       },
     );

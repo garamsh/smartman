@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../deck/deck.dart';
 import 'detail_step.dart';
 import 'failure.dart';
 import 'photo.dart';
@@ -46,8 +47,10 @@ final class CandidateCard {
   bool offeredAt(DetailStep at) => step.value <= at.value;
 
   /// The answer at [at]: the short form at 핵심, the answer at 요점, with the
-  /// part of speech and a space before it from 기본, and each example on a
-  /// line of its own from 자세히.
+  /// part of speech and a space before it from 기본, and from 자세히 each
+  /// example on a line of its own, but one that repeats the answer: whose
+  /// text, normalized as a card key is, contains the answer's or is
+  /// contained in it.
   String backAt(DetailStep at) {
     final basic = switch (partOfSpeech) {
       final partOfSpeech? => '$partOfSpeech $answer',
@@ -57,8 +60,17 @@ final class CandidateCard {
       DetailStep.core => short,
       DetailStep.keyPoints => answer,
       DetailStep.basic => basic,
-      DetailStep.detailed || DetailStep.full => [basic, ...examples].join('\n'),
+      DetailStep.detailed || DetailStep.full => [
+        basic,
+        ...examples.where((example) => !_repeatsAnswer(example)),
+      ].join('\n'),
     };
+  }
+
+  bool _repeatsAnswer(String example) {
+    final text = CardKey.fromFront(example).value;
+    final answer = CardKey.fromFront(this.answer).value;
+    return text.contains(answer) || answer.contains(text);
   }
 }
 

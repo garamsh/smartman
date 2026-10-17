@@ -131,7 +131,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 | 1 핵심 (Core) | `short` |
 | 2 요점 (Key points) | `answer` |
 | 3 기본 (Basic), the default | `partOfSpeech`, a space, then `answer`; `answer` alone when there is no part of speech, as for every note |
-| 4 자세히 (Detailed) | the 기본 answer, then each example on its own line |
+| 4 자세히 (Detailed) | the 기본 answer, then each example on its own line, leaving out one that repeats the answer: whose text and the answer's, normalized as a card key ([`deck.md`](deck.md)), contain one another |
 | 5 세부 (Every detail) | as 자세히, with the cards of step 5 offered too |
 
 - Candidates combined on one card key take the answers of those offered at the current step, joined by `deck`'s merge-back rule.
