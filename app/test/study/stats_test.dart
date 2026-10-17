@@ -86,6 +86,46 @@ void main() {
     });
   });
 
+  group('period', () {
+    test('7 and 30 days start at 04:00 on the 7th and the 30th study day back, today included, and every day has no start', () {
+      expect(
+        StatsPeriod.week.start(_now, offsetAt: _utc),
+        DateTime.utc(2026, 10, 8, 4),
+      );
+      expect(
+        StatsPeriod.month.start(_now, offsetAt: _utc),
+        DateTime.utc(2026, 9, 15, 4),
+      );
+      expect(StatsPeriod.all.start(_now, offsetAt: _utc), isNull);
+
+      final days = retentionByDay([
+        _answer('a', _know, DateTime.utc(2026, 10, 1, 9)),
+        // 03:59 on 8 October ends 7 October's study day, before the week.
+        _answer('a', _know, DateTime.utc(2026, 10, 8, 3, 59)),
+        _answer('b', _know, DateTime.utc(2026, 10, 1, 9)),
+        // Control: 04:00 starts the week's first study day.
+        _answer('b', _dontKnow, DateTime.utc(2026, 10, 8, 4)),
+      ], offsetAt: _utc);
+
+      expect(
+        [
+          for (final (:day, retention: _) in retentionIn(
+            days,
+            StatsPeriod.week,
+            _now,
+            offsetAt: _utc,
+          ))
+            day,
+        ],
+        [DateTime.utc(2026, 10, 8, 4)],
+      );
+      expect(
+        retentionIn(days, StatsPeriod.all, _now, offsetAt: _utc),
+        hasLength(2),
+      );
+    });
+  });
+
   group('recall bands', () {
     test('split cards at 0.95 and 0.8, each bound in the upper band, with the mean', () {
       final bands = RecallBands.of([1, 0.95, 0.9499, 0.8, 0.7999]);
@@ -128,6 +168,14 @@ void main() {
     });
   });
 
+  group('mastered gain', () {
+    test('is this week\'s count less the count four weeks before, and none unless more', () {
+      expect(masteredGain([0, 1, 2, 3, 5, 6, 7, 9]), 6);
+      expect(masteredGain([0, 0, 0, 4, 4, 4, 4, 4]), isNull);
+      expect(masteredGain([0, 0, 0, 5, 4, 4, 4, 4]), isNull);
+    });
+  });
+
   group('study days', () {
     test('count the distinct cards answered on each of the last 84 study days, from 04:00 in the device\'s zone', () {
       // Seoul's 04:00 on 14 October is 19:00 UTC on 13 October.
@@ -155,6 +203,16 @@ void main() {
       ));
       expect(days.last, (date: DateTime.utc(2026, 10, 14), cards: 2));
       expect(days.fold(0, (sum, day) => sum + day.cards), 4);
+    });
+
+    test('a heatmap cell is level 0 without a card, then 1 to 3 by the third of the busiest day it falls in', () {
+      expect(
+        [
+          for (final cards in [0, 1, 4, 5, 8, 9, 12]) heatLevel(cards, 12),
+        ],
+        [0, 1, 1, 2, 2, 3, 3],
+      );
+      expect(heatLevel(1, 1), 3);
     });
 
     test('the best streak is the longest run of study days with an answer, from 04:00', () {

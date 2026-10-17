@@ -22,6 +22,7 @@ export 'src/overview.dart'
 export 'src/progress_counter.dart' show ProgressBuilder, ProgressCounter;
 export 'src/queue.dart' show localOffsetAt;
 export 'src/scheduler.dart' show Scheduler;
+export 'src/stats_view.dart' show StatsView;
 export 'src/study_repository.dart' show StudyRepository;
 export 'src/study_screen.dart' show StudyScreen;
 export 'src/today_overview.dart'

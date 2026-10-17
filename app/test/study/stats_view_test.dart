@@ -1,0 +1,387 @@
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart' hide Card;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:smartman/database/database.dart';
+import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
+import 'package:smartman/l10n/app_localizations_en.dart';
+import 'package:smartman/study/src/failure.dart';
+import 'package:smartman/study/src/model.dart';
+import 'package:smartman/study/src/rust/api/engine.dart'
+    show EngineError, Quantity;
+import 'package:smartman/study/src/stats_style.dart';
+import 'package:smartman/study/study.dart';
+
+/// 09:00 UTC on Thursday 15 October, five hours into the study day.
+final _now = DateTime.utc(2026, 10, 15, 9);
+
+/// Recalls each state at its difficulty over ten, and gives each "Know" a
+/// 30-day interval and each "Don't know" one day, so a test sets both.
+class _FixedScheduler extends Fake implements Scheduler {
+  _FixedScheduler({this.refuse = false});
+
+  final bool refuse;
+
+  @override
+  Future<List<CardState>> history(List<ReviewRow> reviews) async => [
+    for (final review in reviews)
+      CardState(
+        stability: 1,
+        difficulty: 5,
+        lastReview: review.reviewedAt,
+        due: review.reviewedAt.add(
+          Duration(days: review.rating == 'good' ? 30 : 1),
+        ),
+      ),
+  ];
+
+  @override
+  Future<double> retrievability(CardState state, DateTime at) async {
+    if (refuse) {
+      throw SchedulingFailure(
+        EngineError.nonFinite(quantity: Quantity.stability),
+      );
+    }
+    return state.difficulty / 10;
+  }
+}
+
+/// A deck in an in-memory database whose cards hold [answers], each card's
+/// state stored with the difficulty [recall] names for it.
+Future<(AppDatabase, DeckRepository, DeckId)> _seed(
+  Map<String, List<(String, DateTime)>> answers, {
+  Map<String, double> recall = const {},
+}) async {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  var ids = 0;
+  final cards = DeckRepository(
+    db,
+    clock: () => DateTime.utc(2026, 8, 1),
+    newId: () => 'id${ids++}',
+  );
+  final deck = await cards.createDeck('French');
+  for (final MapEntry(key: name, value: given) in answers.entries) {
+    final card = switch (await cards.addCard(
+      deck.id,
+      front: [TextContent(name)],
+      back: [TextContent(name)],
+    )) {
+      CardSaved(:final card) => card.id,
+      DuplicateFront() => fail('the setup saved a duplicate'),
+    };
+    for (final (rating, at) in given) {
+      await db
+          .into(db.reviews)
+          .insert(
+            ReviewsCompanion.insert(
+              id: 'review${ids++}',
+              cardId: card.value,
+              rating: rating,
+              reviewedAt: at,
+              durationMs: 3000,
+              fuzzFactor: const Value(0),
+              updatedAt: at,
+            ),
+          );
+    }
+    if (given.isNotEmpty) {
+      await db
+          .into(db.cardStates)
+          .insert(
+            CardStatesCompanion.insert(
+              cardId: card.value,
+              stability: 5,
+              difficulty: (recall[name] ?? 0.9) * 10,
+              lastReview: given.last.$2,
+              due: given.last.$2.add(const Duration(days: 5)),
+              updatedAt: given.last.$2,
+            ),
+          );
+    }
+  }
+  return (db, cards, deck.id);
+}
+
+/// The 기록 view over [seed]'s deck, in the [theme], at a height that shows
+/// every card.
+Future<void> _pump(
+  WidgetTester tester,
+  (AppDatabase, DeckRepository, DeckId) seed, {
+  ThemeData? theme,
+  Scheduler? scheduler,
+}) async {
+  final (db, cards, deck) = seed;
+  tester.view
+    ..physicalSize = const Size(390, 1600)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        deckRepositoryProvider.overrideWithValue(cards),
+        studyRepositoryProvider.overrideWithValue(
+          StudyRepository(db, newId: () => 'unused'),
+        ),
+        schedulerProvider.overrideWithValue(scheduler ?? _FixedScheduler()),
+        studyClockProvider.overrideWithValue(() => _now),
+        studyZoneProvider.overrideWithValue((_) => Duration.zero),
+      ],
+      child: MaterialApp(
+        theme: theme ?? lightTheme,
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: StatsView(
+            decks: DeckSelection(deck),
+            title: const Text('Record'),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+DateTime _at(int month, int day, [int hour = 9]) =>
+    DateTime.utc(2026, month, day, hour);
+
+/// Four cards: a and b first answered on 1 September, a's later answers all
+/// "Know", b's last one "Don't know" on 13 October; d first answered on
+/// 5 October and c today.
+final _history = {
+  'a': [('good', _at(9, 1)), ('good', _at(10, 1)), ('good', _at(10, 14))],
+  'b': [('good', _at(9, 1)), ('good', _at(9, 10)), ('again', _at(10, 13))],
+  'c': [('good', _at(10, 15, 8))],
+  'd': [('good', _at(10, 5))],
+};
+
+const _recall = {'a': 0.96, 'b': 0.8, 'c': 0.78, 'd': 0.95};
+
+String _label(WidgetTester tester, String prefix) {
+  final node = tester.getSemantics(
+    find.bySemanticsLabel(RegExp('^${RegExp.escape(prefix)}')),
+  );
+  return node.label;
+}
+
+void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  testWidgets(
+    'the retention shows its value, its gap to the 90% target and each day in its label, over 30 days by default, then 7 days and every day',
+    (tester) async {
+      await _pump(tester, await _seed(_history, recall: _recall));
+
+      // 30 days: a's "Know" on 1 and 14 October, b's "Don't know" on 13.
+      expect(find.text('67%'), findsOneWidget);
+      expect(find.text('23 pt below target'), findsOneWidget);
+      expect(find.text('30 days ago'), findsOneWidget);
+      expect(find.text('Target 90%'), findsOneWidget);
+      expect(
+        _label(tester, 'Correct in reviews, target'),
+        'Correct in reviews, target 90%: Oct 1 100%, Oct 13 0%, Oct 14 100%',
+      );
+
+      await tester.tap(find.text('7 days'));
+      await tester.pumpAndSettle();
+      expect(find.text('50%'), findsOneWidget);
+      expect(find.text('40 pt below target'), findsOneWidget);
+      expect(find.text('7 days ago'), findsOneWidget);
+      expect(
+        _label(tester, 'Correct in reviews, target'),
+        'Correct in reviews, target 90%: Oct 13 0%, Oct 14 100%',
+      );
+
+      // Every day: b's "Know" on 10 September too; the left end is that day.
+      await tester.tap(find.text('All'));
+      await tester.pumpAndSettle();
+      expect(find.text('75%'), findsOneWidget);
+      expect(find.text('15 pt below target'), findsOneWidget);
+      expect(find.text('Sep 10'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the retention says so when its period holds no review, and the gap reads above or on target',
+    (tester) async {
+      await _pump(
+        tester,
+        await _seed({
+          'a': [('good', _at(9, 1)), ('good', _at(10, 1))],
+        }),
+      );
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('10 pt above target'), findsOneWidget);
+
+      await tester.tap(find.text('7 days'));
+      await tester.pumpAndSettle();
+      expect(find.text('No reviews in this period.'), findsOneWidget);
+      expect(find.text('100%'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'the recall bands show each band\'s count and the mean, and read them in one label',
+    (tester) async {
+      await _pump(tester, await _seed(_history, recall: _recall));
+
+      expect(find.text('Average 87%'), findsOneWidget);
+      expect(
+        _label(tester, 'Of '),
+        'Of 4 cards: solid 2, fair 1, fading soon 1, average 87%',
+      );
+      expect(find.text('2 cards'), findsOneWidget);
+      expect(find.text('1 card'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets(
+    'the mastered weeks read each week\'s count, with the gain over four weeks beside the heading',
+    (tester) async {
+      await _pump(tester, await _seed(_history, recall: _recall));
+
+      expect(
+        _label(tester, 'Mastered cards by week'),
+        'Mastered cards by week, from 8 weeks ago to this week: '
+        '0 cards, 2 cards, 2 cards, 2 cards, 2 cards, 2 cards, 3 cards, 3 cards',
+      );
+      expect(find.text('+1 in 4 weeks'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the study days read each studied day with its cards, with the current and the best streak',
+    (tester) async {
+      await _pump(tester, await _seed(_history, recall: _recall));
+
+      expect(find.text('3-day streak · best 3'), findsOneWidget);
+      expect(
+        _label(tester, 'Studied on'),
+        'Studied on 7 days in the last 12 weeks: Sep 1 2, Sep 10 1, Oct 1 1, '
+        'Oct 5 1, Oct 13 1, Oct 14 1, Oct 15 1',
+      );
+    },
+  );
+
+  testWidgets(
+    'with nothing studied, each card says so in a sentence or a label',
+    (tester) async {
+      await _pump(tester, await _seed({'a': []}));
+
+      expect(find.text('No reviews in this period.'), findsOneWidget);
+      expect(find.text('No card reviewed yet.'), findsOneWidget);
+      expect(find.textContaining('in 4 weeks'), findsNothing);
+      expect(find.text('No card mastered yet.'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('No study days in the last 12 weeks'),
+        findsOneWidget,
+      );
+      expect(find.text('0-day streak · best 0'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a refused recall shows the scheduling failure\'s message', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      await _seed(_history, recall: _recall),
+      scheduler: _FixedScheduler(refuse: true),
+    );
+
+    expect(find.text(AppLocalizationsEn().schedulingFailure), findsOneWidget);
+    expect(find.text('Correct in reviews'), findsNothing);
+  });
+
+  for (final (name, theme) in [('light', lightTheme), ('dark', darkTheme)]) {
+    testWidgets(
+      'in the $name theme the view meets the tap target and contrast guidelines',
+      (tester) async {
+        await _pump(
+          tester,
+          await _seed(_history, recall: _recall),
+          theme: theme,
+        );
+        expect(find.text('Average 87%'), findsOneWidget);
+
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      },
+    );
+  }
+
+  for (final (name, colors, brightness) in [
+    ('light', AppColors.light, Brightness.light),
+    ('dark', AppColors.dark, Brightness.dark),
+  ]) {
+    test(
+      '$name: each recall band and the quiet week are 3:1 on the surface, and the bands and the heatmap levels differ in lightness by 1.5:1',
+      () {
+        final surface = colors.surface;
+        final (strong, fair, fading) = StatsStyle.bands(colors, brightness);
+        final bands = [
+          for (final band in [strong, fair, fading]) _over(band, surface),
+        ];
+        for (final mark in [
+          ...bands,
+          _over(StatsStyle.quietWeek(colors), surface),
+        ]) {
+          expect(
+            _contrast(mark, surface),
+            greaterThanOrEqualTo(3),
+            reason: '$mark',
+          );
+        }
+        for (var i = 0; i < bands.length; i++) {
+          for (var j = i + 1; j < bands.length; j++) {
+            expect(
+              _contrast(bands[i], bands[j]),
+              greaterThanOrEqualTo(1.5),
+              reason: 'band $i against band $j',
+            );
+          }
+        }
+        final heat = [
+          for (final level in StatsStyle.heat(colors)) _over(level, surface),
+        ];
+        for (var level = 1; level < heat.length; level++) {
+          expect(
+            _contrast(heat[level - 1], heat[level]),
+            greaterThanOrEqualTo(1.5),
+            reason: 'level ${level - 1} against $level',
+          );
+        }
+        // Control: the fair band at the other theme's alpha fails one of the
+        // checks, so they can fail.
+        final other = brightness == Brightness.light
+            ? Brightness.dark
+            : Brightness.light;
+        final (_, swapped, _) = StatsStyle.bands(colors, other);
+        final swappedFair = _over(swapped, surface);
+        expect(
+          _contrast(swappedFair, surface) < 3 ||
+              _contrast(swappedFair, bands[2]) < 1.5,
+          isTrue,
+        );
+      },
+    );
+  }
+}
+
+/// [colour] drawn over the opaque [ground].
+Color _over(Color colour, Color ground) => Color.alphaBlend(colour, ground);
+
+/// The WCAG 2.1 contrast ratio of two opaque colours.
+double _contrast(Color a, Color b) {
+  final (lighter, darker) = a.computeLuminance() > b.computeLuminance()
+      ? (a, b)
+      : (b, a);
+  return (lighter.computeLuminance() + 0.05) /
+      (darker.computeLuminance() + 0.05);
+}

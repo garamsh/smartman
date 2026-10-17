@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -21,6 +22,8 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/sharing/sharing.dart';
+import 'package:smartman/study/src/model.dart';
+import 'package:smartman/study/src/rust/api/engine.dart' show Answer;
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
@@ -131,6 +134,25 @@ void main() {
 
     Future<void> tap(WidgetTester tester, Finder finder) async {
       await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    /// Shows the 기록 tab once its read is done: the read awaits the
+    /// engine call by call, each finishing in real time and resuming on a
+    /// pump.
+    Future<void> showRecord(WidgetTester tester) async {
+      await tester.tap(find.text(ko.tabRecord));
+      for (
+        var tries = 0;
+        tries < 20000 && find.text(ko.retentionTitle).evaluate().isEmpty;
+        tries++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 1)),
+        );
+        await tester.pump();
+      }
+      expect(find.text(ko.retentionTitle), findsOneWidget);
       await tester.pumpAndSettle();
     }
 
@@ -329,7 +351,7 @@ void main() {
       await tap(tester, find.text('영단어 기본'));
       await shot(tester, '17-deck-list-selection');
       await tap(tester, find.byTooltip(ko.clearSelection));
-      await tap(tester, find.text(ko.tabRecord));
+      await showRecord(tester);
       await shot(tester, '16c-record');
       // Today's cards done: the done card and the next seven days.
       await tap(tester, find.text(ko.tabToday));
@@ -409,6 +431,118 @@ void main() {
       );
       await tester.pumpAndSettle();
       await shot(tester, '16d-today-backlog');
+      await unmount(tester);
+    });
+
+    testWidgets('the record tab over twelve weeks in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow.subtract(const Duration(days: 90)),
+        newId: () => 'id${ids++}',
+      );
+      final study = StudyRepository(db, newId: () => 'review${ids++}');
+      await tester.runAsync(() async {
+        final deck = await repository.createDeck('영단어 기본');
+        final cards = <CardId>[];
+        for (var i = 0; i < 60; i++) {
+          if (await repository.addCard(
+                deck.id,
+                front: [TextContent('word $i')],
+                back: [TextContent('$i')],
+              )
+              case CardSaved(:final card)) {
+            cards.add(card.id);
+          }
+        }
+        // Four new cards a study day and every card due, answered "Don't
+        // know" one time in nine, over 84 days with a few rest days.
+        final states = <CardId, CardState>{};
+        final random = Random(7);
+        var next = 0;
+        for (var day = 83; day >= 0; day--) {
+          if (day > 6 && day % 9 == 4) continue;
+          final at = DateTime.utc(
+            2026,
+            10,
+            15,
+            6,
+          ).subtract(Duration(days: day));
+          final end = at.add(const Duration(hours: 22));
+          final today = [
+            for (final card in cards)
+              if (states[card]?.due.isBefore(end) ?? false) card,
+            ...cards.skip(next).take(4),
+          ];
+          next = min(cards.length, next + 4);
+          for (final (index, card) in today.indexed) {
+            final answer = (index * 7 + day) % 9 == 0
+                ? Answer.dontKnow
+                : Answer.know;
+            final time = at.add(Duration(minutes: index));
+            final fuzz = FuzzFactor.draw(random);
+            final state = await scheduler.review(
+              states[card],
+              answer,
+              time,
+              fuzz: fuzz,
+            );
+            states[card] = state;
+            await study.record(
+              card,
+              [
+                Review(
+                  id: study.newReviewId(),
+                  cardId: card,
+                  answer: answer,
+                  reviewedAt: time,
+                  duration: const Duration(seconds: 6),
+                  fuzzFactor: fuzz,
+                ),
+              ],
+              state,
+              at: time,
+            );
+          }
+        }
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            accountServiceProvider.overrideWithValue(
+              FakeAccountService(
+                const SignedIn(userId: _ada, email: 'ada@example.com'),
+              ),
+            ),
+            studyRepositoryProvider.overrideWithValue(study),
+            schedulerProvider.overrideWithValue(scheduler),
+            studyClockProvider.overrideWithValue(() => homeNow),
+            studyZoneProvider.overrideWithValue((_) => Duration.zero),
+            studyRandomProvider.overrideWithValue((_) => Random(0)),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await showRecord(tester);
+      await shot(tester, '16e-record-history');
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      await shot(tester, '16f-record-history-scrolled');
       await unmount(tester);
     });
 

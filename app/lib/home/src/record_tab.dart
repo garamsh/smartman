@@ -1,33 +1,37 @@
 import 'package:flutter/material.dart';
 
+import '../../deck/deck.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../study/study.dart';
 
-/// The 기록 tab: its title, and that the record arrives here soon.
+/// The 기록 tab: `study`'s [StatsView] over every deck, under the tab's
+/// title.
 class RecordTab extends StatelessWidget {
-  const RecordTab({super.key});
+  const RecordTab({super.key, required this.decks});
+
+  final List<Deck> decks;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final all = DeckSelection.of([for (final deck in decks) deck.id]);
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: AppSize.cta + AppSpace.s8,
-        titleSpacing: AppSpace.gutter,
-        title: Semantics(
-          header: true,
-          child: Text(l10n.tabRecord, style: AppType.deckTitle),
-        ),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.gutter),
-          child: Text(
-            l10n.recordComingSoon,
-            textAlign: TextAlign.center,
-            style: AppType.body.copyWith(color: AppColors.of(context).muted),
-          ),
-        ),
+      body: SafeArea(
+        bottom: false,
+        child: all == null
+            ? const SizedBox.shrink()
+            : StatsView(
+                decks: all,
+                title: Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.tabRecord,
+                    style: AppType.deckTitle.copyWith(color: colors.ink),
+                  ),
+                ),
+              ),
       ),
     );
   }

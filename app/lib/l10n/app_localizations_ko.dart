@@ -714,9 +714,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tabsLabel => '탭';
 
   @override
-  String get recordComingSoon => '학습 기록은 곧 여기에서 볼 수 있어요.';
-
-  @override
   String get selectDecks => '선택';
 
   @override
@@ -916,4 +913,139 @@ class AppLocalizationsKo extends AppLocalizations {
   String catchUpSemantics(String days) {
     return '밀린 복습 예상: $days';
   }
+
+  @override
+  String get statsPeriod => '기간';
+
+  @override
+  String get statsPeriodWeek => '7일';
+
+  @override
+  String get statsPeriodMonth => '30일';
+
+  @override
+  String get statsPeriodAll => '전체';
+
+  @override
+  String get retentionTitle => '복습에서 맞힌 비율';
+
+  @override
+  String retentionPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get retentionTarget => '목표';
+
+  @override
+  String retentionBelow(int points) {
+    return '목표보다 $points%p 낮아요';
+  }
+
+  @override
+  String retentionAbove(int points) {
+    return '목표보다 $points%p 높아요';
+  }
+
+  @override
+  String get retentionOnTarget => '목표만큼 맞혔어요';
+
+  @override
+  String retentionTargetLine(int percent) {
+    return '목표 $percent%';
+  }
+
+  @override
+  String retentionDaysAgo(int days) {
+    return '$days일 전';
+  }
+
+  @override
+  String get statsToday => '오늘';
+
+  @override
+  String get retentionEmpty => '이 기간에 복습한 카드가 없어요.';
+
+  @override
+  String retentionSemantics(int target, String days) {
+    return '복습에서 맞힌 비율, 목표 $target%: $days';
+  }
+
+  @override
+  String retentionDay(String date, int percent) {
+    return '$date $percent%';
+  }
+
+  @override
+  String get recallTitle => '지금 기억하고 있을 확률';
+
+  @override
+  String recallMean(int percent) {
+    return '평균 $percent%';
+  }
+
+  @override
+  String get recallStrong => '단단함';
+
+  @override
+  String get recallFair => '보통';
+
+  @override
+  String get recallFading => '곧 잊음';
+
+  @override
+  String statsCards(int count) {
+    return '$count장';
+  }
+
+  @override
+  String recallSemantics(
+    int total,
+    int strong,
+    int fair,
+    int fading,
+    int mean,
+  ) {
+    return '$total장 중 단단함 $strong장, 보통 $fair장, 곧 잊음 $fading장, 평균 $mean%';
+  }
+
+  @override
+  String get recallEmpty => '아직 복습한 카드가 없어요.';
+
+  @override
+  String get masteredTitle => '익힌 카드';
+
+  @override
+  String masteredGain(int count) {
+    return '4주 +$count장';
+  }
+
+  @override
+  String masteredSemantics(String counts) {
+    return '주별 익힌 카드, 8주 전부터 이번 주까지: $counts';
+  }
+
+  @override
+  String get studyDaysTitle => '학습한 날';
+
+  @override
+  String studyDaysStreak(int current, int best) {
+    return '$current일 연속 · 최고 $best일';
+  }
+
+  @override
+  String studyDaysSemantics(int count, String days) {
+    return '최근 12주 동안 $count일 학습했어요: $days';
+  }
+
+  @override
+  String get studyDaysNone => '최근 12주 동안 학습한 날이 없어요';
+
+  @override
+  String studyDay(String date, int count) {
+    return '$date $count장';
+  }
+
+  @override
+  String get masteredEmpty => '아직 익힌 카드가 없어요.';
 }

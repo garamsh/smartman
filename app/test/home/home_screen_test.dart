@@ -189,16 +189,41 @@ void main() {
         expect(find.text('My decks 3'), findsOneWidget);
         expect(find.text('Next 7 days'), findsNothing);
         await list.tap('Record');
-        expect(
-          find.text('Your study record will appear here soon.'),
-          findsOneWidget,
-        );
+        expect(find.text('Correct in reviews'), findsOneWidget);
 
         expect(await tester.binding.handlePopRoute(), isTrue);
         await tester.pumpAndSettle();
         expect(find.text('Next 7 days'), findsOneWidget);
         // Control: back on 오늘 is left to the platform, which leaves the app.
         expect(await tester.binding.handlePopRoute(), isFalse);
+        await list.close();
+      },
+    );
+  });
+
+  group('기록', () {
+    testWidgets(
+      'the tab is built once first shown, and shows study\'s record over every deck',
+      (tester) async {
+        final list = await _open(
+          tester,
+          fresh: {'Alpha': 1},
+          due: {'Alpha': 1, 'Beta': 2},
+        );
+        expect(
+          find.text('Chance you remember now', skipOffstage: false),
+          findsNothing,
+        );
+
+        await list.tap('Record');
+        // Every deck's stored state, each recalled at the substituted 0.9.
+        expect(
+          find.bySemanticsLabel(
+            'Of 3 cards: solid 0, fair 3, fading soon 0, average 90%',
+          ),
+          findsOneWidget,
+        );
+        expect(homeRecall, 0.9);
         await list.close();
       },
     );

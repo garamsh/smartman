@@ -1,0 +1,59 @@
+import 'package:flutter/material.dart';
+
+import '../../design/theme.dart';
+
+/// The sizes of the 기록 tab's charts, and the shades they derive from the
+/// app theme's [AppColors]; no token is added for them.
+abstract final class StatsStyle {
+  /// The retention chart's height, its line's width and its last point.
+  static const retentionHeight = 140.0;
+  static const retentionLine = 2.5;
+  static const retentionDot = 4.5;
+  static const retentionDotRing = 2.0;
+
+  /// The target line's dashes and gaps.
+  static const targetDash = 5.0;
+
+  /// The lowest share the retention chart's scale reaches down to.
+  static const retentionFloor = 0.8;
+
+  /// The recall bar's height, the gap between its bands and a legend swatch.
+  static const recallHeight = 14.0;
+  static const bandGap = 2.0;
+  static const swatch = 8.0;
+
+  /// The mastered bars' height at the most cards.
+  static const masteredHeight = 84.0;
+
+  /// The gap between two heatmap cells, and their corner.
+  static const cellGap = AppSpace.s4;
+  static const cellRadius = AppSpace.s4;
+
+  /// The recall bands, strong, fair and fading: the ink, the ink a step
+  /// back, and the streak's amber. The fair band's alpha differs by theme so
+  /// that each band stays 3:1 on the surface and every two differ in
+  /// lightness by 1.5:1, not by hue alone.
+  static (Color, Color, Color) bands(AppColors colors, Brightness brightness) =>
+      (
+        colors.ink,
+        colors.ink.withValues(
+          alpha: brightness == Brightness.light ? 0.75 : 0.4,
+        ),
+        colors.streak,
+      );
+
+  /// A mastered week that is not this one: the ink a step back, 3:1 on the
+  /// surface.
+  static Color quietWeek(AppColors colors) =>
+      colors.ink.withValues(alpha: 0.55);
+
+  /// A heatmap cell at each level, from a day without a card to the busiest
+  /// third: the hairline, then the ink at three alphas, each level 1.5:1
+  /// from the next.
+  static List<Color> heat(AppColors colors) => [
+    colors.hairline,
+    colors.ink.withValues(alpha: 0.35),
+    colors.ink.withValues(alpha: 0.65),
+    colors.ink,
+  ];
+}
