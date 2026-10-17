@@ -647,6 +647,44 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
     expect(warm).toBeGreaterThan(0);
 
     await page.getByText("30일", { exact: true }).click();
+
+    // The side menu's surface and border run the page's whole height, and the menu stays in view
+    // as the page scrolls (ADR 0038, #160).
+    const side = page.locator('nav[aria-label="주 메뉴"]').first();
+    for (const width of [1280, 1024]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+      });
+      const heights = await side.evaluate((nav) => {
+        // The box that draws the menu's border: the menu itself, or the first ancestor with one.
+        let column: Element | null = nav;
+        while (column && getComputedStyle(column).borderRightWidth === "0px") {
+          column = column.parentElement;
+        }
+        return {
+          document: document.documentElement.scrollHeight,
+          viewport: window.innerHeight,
+          column: column ? column.getBoundingClientRect().height : 0,
+          surface: column ? getComputedStyle(column).backgroundColor : "",
+        };
+      });
+      // The page is taller than the viewport, so the check can tell the two apart.
+      expect(heights.document, `the record page at ${String(width)}`).toBeGreaterThan(
+        heights.viewport,
+      );
+      expect(heights.column, `the menu's column at ${String(width)}`).toBe(heights.document);
+      expect(heights.surface).toBe("rgb(255, 255, 255)");
+      await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+      });
+      const top = await side.evaluate((nav) => nav.getBoundingClientRect().top);
+      expect(top, `the menu in view after scrolling at ${String(width)}`).toBe(0);
+      await expect(side.getByRole("link", { name: "기록", exact: true })).toBeInViewport();
+    }
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
     await shot(page, "10-record");
 
     // 오늘's retention card: the last 30 days' figure and gap, linking here.

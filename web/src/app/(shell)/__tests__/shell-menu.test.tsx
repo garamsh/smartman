@@ -55,7 +55,8 @@ describe("the shell's menus", () => {
     );
     const [side, tabs] = screen.getAllByRole("navigation", { name: "주 메뉴" });
 
-    expect(side).toHaveClass("hidden", "lg:flex");
+    // The side menu shows and hides with the column that draws its surface down the page.
+    expect(side?.parentElement).toHaveClass("hidden", "lg:block");
     expect(tabs).toHaveClass("lg:hidden");
     expect(tabs).not.toHaveClass("hidden");
   });

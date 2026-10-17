@@ -31,37 +31,40 @@ export function SideMenu({ account }: { account: ReactNode }) {
   return <SideMenuAt path={usePathname()} account={account} />;
 }
 
-/** [SideMenu] at [path], or with no page current while the path is not yet known. */
+/**
+ * [SideMenu] at [path], or with no page current while the path is not yet known. Its column takes
+ * the surface and the border down the page's whole height, and the menu inside it stays pinned in
+ * view as the page scrolls (ADR 0038).
+ */
 export function SideMenuAt({ path, account }: { path: string | null; account: ReactNode }) {
   return (
-    <nav
-      aria-label="주 메뉴"
-      className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-1.5 border-r border-hairline bg-surface px-4 py-7 lg:flex"
-    >
-      <Link
-        href="/"
-        aria-label="smartman, 오늘"
-        className={`mx-2.5 mb-5 self-start rounded-field ${focus}`}
-      >
-        <BrandMark mark="lockup" alt="" className="h-7 w-auto" />
-      </Link>
-      {items.map(({ href, label, Icon, current }) => {
-        const selected = path !== null && current(path);
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={selected ? "page" : undefined}
-            className={`flex min-h-tap-target items-center gap-3 rounded-field px-3 text-label ${selected ? "bg-brand-tint text-ink" : "font-semibold text-ink-2"} ${focus}`}
-          >
-            <Icon aria-hidden className="size-5" strokeWidth={selected ? 2.2 : 2} />
-            {label}
-          </Link>
-        );
-      })}
-      <span className="min-h-4 flex-1" />
-      {account}
-    </nav>
+    <div className="hidden w-60 shrink-0 border-r border-hairline bg-surface lg:block">
+      <nav aria-label="주 메뉴" className="sticky top-0 flex h-dvh flex-col gap-1.5 px-4 py-7">
+        <Link
+          href="/"
+          aria-label="smartman, 오늘"
+          className={`mx-2.5 mb-5 self-start rounded-field ${focus}`}
+        >
+          <BrandMark mark="lockup" alt="" className="h-7 w-auto" />
+        </Link>
+        {items.map(({ href, label, Icon, current }) => {
+          const selected = path !== null && current(path);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={selected ? "page" : undefined}
+              className={`flex min-h-tap-target items-center gap-3 rounded-field px-3 text-label ${selected ? "bg-brand-tint text-ink" : "font-semibold text-ink-2"} ${focus}`}
+            >
+              <Icon aria-hidden className="size-5" strokeWidth={selected ? 2.2 : 2} />
+              {label}
+            </Link>
+          );
+        })}
+        <span className="min-h-4 flex-1" />
+        {account}
+      </nav>
+    </div>
   );
 }
 
