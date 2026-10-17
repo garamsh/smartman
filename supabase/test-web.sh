@@ -27,7 +27,6 @@ stack="the web e2e stack"
 . supabase/test-stack.sh
 reserve db_port 54400 54499 || exit 1
 reserve api_port 54500 54599 || exit 1
-reserve web_port 54600 54699 || exit 1
 
 export SUPABASE_PROJECT_ID="smartman_web_$db_port" SUPABASE_DB_PORT="$db_port" SUPABASE_API_PORT="$api_port"
 
@@ -37,8 +36,8 @@ stop() {
   if [ -n "$server" ]; then
     kill "$server" 2>/dev/null || true
     wait "$server" 2>/dev/null || true
-    rm -f "$server_log"
   fi
+  rm -f "${server_log:-}"
   stop_stack "$status"
 }
 trap stop EXIT
@@ -64,19 +63,41 @@ cp -R web/.next/static web/.next/standalone/.next/static
 rm -rf web/.next/standalone/public
 cp -R web/public web/.next/standalone/public
 server_log=$(mktemp)
-PORT="$web_port" HOSTNAME=127.0.0.1 NODE_ENV=production node web/.next/standalone/server.js >"$server_log" 2>&1 &
-server=$!
-base="http://127.0.0.1:$web_port"
-tries=0
-until curl --silent --fail --output /dev/null "$base/api/health"; do
-  tries=$((tries + 1))
-  if [ "$tries" -gt 60 ]; then
+# The server's port is reserved once the build is done, just before the server listens on it. The
+# reservation sees only a listener, and a port can be held without one, as the local port of an
+# outgoing connection, which Linux takes from 32768-60999 (#158). The server then exits with
+# EADDRINUSE, and the next free port is reserved and tried, five times at most.
+for attempt in 1 2 3 4 5; do
+  reserve web_port 54600 54699 || exit 1
+  PORT="$web_port" HOSTNAME=127.0.0.1 NODE_ENV=production node web/.next/standalone/server.js >"$server_log" 2>&1 &
+  server=$!
+  base="http://127.0.0.1:$web_port"
+  tries=0
+  until curl --silent --fail --output /dev/null "$base/api/health"; do
+    if ! kill -0 "$server" 2>/dev/null; then
+      break
+    fi
+    tries=$((tries + 1))
+    if [ "$tries" -gt 60 ]; then
+      cat "$server_log" >&2
+      echo "the web app built for the stack did not answer $base/api/health within 60 s" >&2
+      exit 1
+    fi
+    sleep 1
+  done
+  if kill -0 "$server" 2>/dev/null; then
+    break
+  fi
+  wait "$server" 2>/dev/null || true
+  server=""
+  if ! grep -q EADDRINUSE "$server_log" || [ "$attempt" -eq 5 ]; then
     cat "$server_log" >&2
-    echo "the web app built for the stack did not answer $base/api/health within 60 s" >&2
+    echo "the web app built for the stack exited before answering on port $web_port, attempt $attempt" >&2
     exit 1
   fi
-  sleep 1
+  echo "port $web_port was taken after it was reserved; trying the next free port"
 done
+echo "the web app answers on port $web_port"
 
 output=$(cd web && npx playwright install chromium >/dev/null &&
   E2E_BASE_URL="$base" E2E_SUPABASE_URL="$url" E2E_SUPABASE_KEY="$key" \
