@@ -47,6 +47,8 @@ export type Today = {
   states: CardStates;
   readAt: number;
   streakBefore: number;
+  /** The time zone the day is read in. */
+  timeZone: string;
 };
 
 /** How many card ids one request filters on, so its URL stays short. */
@@ -148,6 +150,7 @@ export async function readToday(
       states: states.states,
       readAt: states.readAt,
       streakBefore: before.streak,
+      timeZone,
     },
   };
 }

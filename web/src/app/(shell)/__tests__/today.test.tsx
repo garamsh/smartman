@@ -1,4 +1,5 @@
 import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -9,15 +10,28 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
 
-import { Decks } from "../_components/decks";
-import { Study } from "../study/_components/study";
+import { Study } from "../../study/_components/study";
+import { Today } from "../_components/today";
+import { Decks } from "../decks/_components/decks";
+
+/** The 오늘 page's content and the 덱 page's, rendered one after the other. */
+const renderBoth = () =>
+  render(
+    async () => (
+      <>
+        {await Today()}
+        {await Decks()}
+      </>
+    ),
+    {},
+  );
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const due = { stability: 3, difficulty: 5, lastReview: start - 4 * day, due: start - day };
 const notDue = { stability: 30, difficulty: 5, lastReview: start - day, due: start + 9 * day };
 
-describe("the deck list", () => {
+describe("the 오늘 and 덱 pages", () => {
   let postgrest: FakePostgrest;
   beforeEach(async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -31,17 +45,16 @@ describe("the deck list", () => {
   });
 
   /** The row of the deck named [name]: a link named for the deck, its count and its chip. */
-  const row = (name: string) => screen.getByRole("link", { name: new RegExp(`^${name}, `) });
-  /** The header's line of counts and minutes. */
-  const counts = () =>
-    screen.getByText(
-      (_, element) => /^복습 \d+ · 새 카드 \d+ · 약 \d+분$/.test(element?.textContent ?? ""),
-      { ignore: "html, body, main, div, section, header" },
-    ).textContent;
+  const deckList = () => within(screen.getByRole("region", { name: "덱 목록" }));
+  const row = (name: string) =>
+    deckList().getByRole("link", { name: new RegExp(`^${name}, 카드`) });
+  /** The today card's count and minutes, as its heading reads them: "n 장 · 약 m분". */
+  const todayLine = () => document.getElementById("today-title")?.textContent;
+  /** The deck rows' names, without the progress each ends with. */
   const rowNames = () =>
-    within(screen.getByRole("list"))
+    deckList()
       .getAllByRole("link")
-      .map((link) => link.getAttribute("aria-label"));
+      .map((link) => link.getAttribute("aria-label")?.replace(/, \d+장 중 \d+장 익힘$/, ""));
 
   it("shows the server's decks by name, with their card counts and today's chips", async () => {
     postgrest.seed("decks", deckRow("d-es", "Spanish"), deckRow("d-fr", "French"));
@@ -55,10 +68,10 @@ describe("the deck list", () => {
     postgrest.seed("card_states", stateRow("fr-due", due), stateRow("fr-later", notDue));
     postgrest.seed("card_states", stateRow("es-later", notDue));
 
-    await render(Decks, {});
+    await renderBoth();
 
     expect(screen.getByRole("heading", { name: "오늘 할 카드 2장" })).toBeInTheDocument();
-    expect(screen.getByText("복습 1 · 새 카드 1 · 약 1분")).toBeInTheDocument();
+    expect(todayLine()).toBe("2 장 · 약 1분");
     expect(screen.getByRole("link", { name: "모두 학습" })).toHaveAttribute(
       "href",
       "/study?decks=d-fr,d-es",
@@ -84,7 +97,7 @@ describe("the deck list", () => {
     postgrest.seed("reviews", reviewRow("r1", "b-answered", answeredAt, 1_000));
 
     // Without the cookie the day is read in Seoul.
-    await render(Decks, {});
+    await renderBoth();
     expect(screen.getByRole("heading", { name: "오늘 할 카드 20장" })).toBeInTheDocument();
     cleanup();
 
@@ -92,7 +105,7 @@ describe("the deck list", () => {
       ...(await signedInCookies()),
       { name: "smartman-tz", value: "America/Los_Angeles" },
     ]);
-    await render(Decks, {});
+    await renderBoth();
     expect(screen.getByRole("heading", { name: "오늘 할 카드 19장" })).toBeInTheDocument();
     expect(rowNames()).toEqual(["Alpha, 카드 25장, 오늘 19", "Beta, 카드 1장"]);
   });
@@ -103,8 +116,8 @@ describe("the deck list", () => {
     postgrest.seed("cards", cardRow("fr-new", "d-fr", "chat"), cardRow("fr-due", "d-fr", "chien"));
     postgrest.seed("card_states", stateRow("fr-due", due));
     // Control: one card due every three days is not a backlog.
-    await render(Decks, {});
-    expect(screen.getByText("복습 1 · 새 카드 1 · 약 1분")).toBeInTheDocument();
+    await renderBoth();
+    expect(todayLine()).toBe("2 장 · 약 1분");
     expect(screen.queryByText(paused)).not.toBeInTheDocument();
     cleanup();
 
@@ -117,10 +130,10 @@ describe("the deck list", () => {
     };
     postgrest.seed("cards", cardRow("fr-a", "d-fr", "un"), cardRow("fr-b", "d-fr", "deux"));
     postgrest.seed("card_states", stateRow("fr-a", overdue), stateRow("fr-b", overdue));
-    await render(Decks, {});
+    await renderBoth();
 
     expect(screen.getByRole("heading", { name: "오늘 할 카드 3장" })).toBeInTheDocument();
-    expect(screen.getByText("복습 3 · 새 카드 0 · 약 1분")).toBeInTheDocument();
+    expect(todayLine()).toBe("3 장 · 약 1분");
     expect(screen.getByText(paused)).toBeInTheDocument();
   });
 
@@ -133,7 +146,7 @@ describe("the deck list", () => {
       cardRow("old-live", "d-old", "maison"),
     );
 
-    await render(Decks, {});
+    await renderBoth();
 
     expect(screen.queryByText("Old")).not.toBeInTheDocument();
     expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
@@ -154,7 +167,7 @@ describe("the deck list", () => {
       user_id: other,
     });
 
-    await render(Decks, {});
+    await renderBoth();
 
     // Control: the user's own deck is read and counted.
     expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
@@ -182,14 +195,14 @@ describe("the deck list", () => {
       ]).flat();
     // Control: with 19 reviews the review pace is unknown, 10 s: 3 at 10 s and 4 at 30 s.
     postgrest.seed("reviews", ...history(19));
-    await render(Decks, {});
-    expect(screen.getByText("복습 3 · 새 카드 4 · 약 3분")).toBeInTheDocument();
+    await renderBoth();
+    expect(todayLine()).toBe("7 장 · 약 3분");
     cleanup();
 
     // The twentieth review: 3 at 24 s and 4 at 30 s.
     postgrest.seed("reviews", ...history(20).slice(-1));
-    await render(Decks, {});
-    expect(screen.getByText("복습 3 · 새 카드 4 · 약 4분")).toBeInTheDocument();
+    await renderBoth();
+    expect(todayLine()).toBe("7 장 · 약 4분");
   });
 
   it("reads the day's new cards as the day stood when it started, so answering its reviews leaves them", async () => {
@@ -225,12 +238,13 @@ describe("the deck list", () => {
       ),
       ...reviews.map((front) => reviewRow(`last-${front}`, `due-${front}`, due.lastReview, 6_000)),
     );
-    await render(Decks, {});
-    // The line goes on with the minutes, which the paces set; the counts are what this test names.
-    const before = /^복습 4 · 새 카드 (\d+) · /.exec(counts())?.[1];
+    await renderBoth();
+    // The four reviews due and the day's new cards; the line goes on with the minutes, which the
+    // paces set.
+    const before = Number(/^(\d+) 장/.exec(todayLine() ?? "")?.[1]) - 4;
     // The figure is the user's own, short of the ten new cards the deck holds.
-    expect(Number(before)).toBeGreaterThan(0);
-    expect(Number(before)).toBeLessThan(10);
+    expect(before).toBeGreaterThan(0);
+    expect(before).toBeLessThan(10);
     cleanup();
 
     // Each review answered an hour ago, and now due in nine days.
@@ -245,9 +259,10 @@ describe("the deck list", () => {
         ? { ...stateRow(`due-${front}`, notDue), revision: 0 }
         : {},
     );
-    await render(Decks, {});
+    await renderBoth();
 
-    expect(counts()).toMatch(new RegExp(`^복습 0 · 새 카드 ${String(before)} · `));
+    // The reviews are done; the new cards stand as the day started.
+    expect(todayLine()).toMatch(new RegExp(`^${String(before)} 장 · `));
   });
 
   it("says a card is unreadable when an earlier answer to a card answered today names it by no string", async () => {
@@ -258,8 +273,8 @@ describe("the deck list", () => {
     postgrest.seed("reviews", reviewRow("today", "fr", start - 3_600_000, 6_000));
     // Control: an earlier answer naming the card by its id is read.
     postgrest.seed("reviews", reviewRow("before", "fr", start - 2 * day, 6_000));
-    await render(Decks, {});
-    expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
+    await render(Today, {});
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
     expect(screen.queryByText(unreadable)).not.toBeInTheDocument();
     cleanup();
 
@@ -267,7 +282,7 @@ describe("the deck list", () => {
     postgrest.rows.reviews = postgrest.rows.reviews.map((row) =>
       row.id === "before" ? { ...row, card_id: ["fr"] } : row,
     );
-    await render(Decks, {});
+    await render(Today, {});
 
     expect(screen.getByText(unreadable)).toBeInTheDocument();
   });
@@ -276,7 +291,7 @@ describe("the deck list", () => {
     postgrest.seed("decks", deckRow("d-fr", "French", false, "public"), deckRow("d-es", "Spanish"));
     postgrest.seed("cards", cardRow("fr", "d-fr", "chat"), cardRow("es", "d-es", "gato"));
 
-    await render(Decks, {});
+    await renderBoth();
 
     expect(rowNames()).toEqual(["French, 카드 1장, 공개, 오늘 1", "Spanish, 카드 1장, 오늘 1"]);
     expect(within(row("French")).getByText("공개")).toBeInTheDocument();
@@ -313,22 +328,22 @@ describe("the deck list", () => {
     );
 
     // Three reviews at the unknown pace, 10 s each.
-    await render(Decks, {});
+    await renderBoth();
     expect(rowNames()).toEqual(["French, 카드 3장, 오늘 3"]);
-    expect(screen.getByText("복습 3 · 새 카드 0 · 약 1분")).toBeInTheDocument();
+    expect(todayLine()).toBe("3 장 · 약 1분");
     cleanup();
 
     // The other user's next request reads theirs, and nothing of the first user's: 3 at 25 s.
     setRequestCookies(await signedInCookies(otherUser));
-    await render(Decks, {});
+    await renderBoth();
     expect(rowNames()).toEqual(["Other, 카드 3장, 오늘 3"]);
-    expect(screen.getByText("복습 3 · 새 카드 0 · 약 2분")).toBeInTheDocument();
+    expect(todayLine()).toBe("3 장 · 약 2분");
   });
 
   it("carries no account content: neither the email nor 로그아웃", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"));
 
-    await render(Decks, {});
+    await renderBoth();
 
     // Control: the deck list itself rendered.
     expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
@@ -384,7 +399,7 @@ describe("the deck list", () => {
   it("says the server cannot be reached when PostgREST does not answer", async () => {
     postgrest.fail("decks", 500);
 
-    await render(Decks, {});
+    await render(Today, {});
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
@@ -402,7 +417,7 @@ describe("the deck list", () => {
       if (answered === "today") {
         postgrest.seed("reviews", reviewRow("r-today", "fr-later", start - 3_600_000, 1_000));
       }
-      await render(Decks, {});
+      await render(Today, {});
 
       expect(
         screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
@@ -425,29 +440,129 @@ describe("the deck list", () => {
     }
   });
 
-  it("shows the first-run invitation in place of the today card and the list when there is no deck", async () => {
+  it("shows the goal ring, the streak and where the user stands, from the shared definitions", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed(
+      "cards",
+      ...["a", "b", "c", "d"].map((front) => cardRow(`new-${front}`, "d-fr", front)),
+      ...["e", "f"].map((front) => cardRow(`done-${front}`, "d-fr", front)),
+    );
+    // Two cards first answered an hour ago, due again in nine days: 2 of a goal of 6 done.
+    postgrest.seed("card_states", ...["e", "f"].map((front) => stateRow(`done-${front}`, notDue)));
+    postgrest.seed(
+      "reviews",
+      ...["e", "f"].map((front) =>
+        reviewRow(`r-${front}`, `done-${front}`, start - 3_600_000, 6_000),
+      ),
+    );
+    await render(Today, {});
+
+    expect(screen.getByRole("img", { name: "하루 목표 6장 중 2장" })).toBeInTheDocument();
+    expect(screen.getByText("1일 연속")).toBeInTheDocument();
+    expect(screen.getByText("좋은 출발이에요")).toBeInTheDocument();
+    cleanup();
+
+    // Nothing answered today, after two study days in a row: the streak is the line.
+    postgrest.rows.reviews = ["e", "f"].map((front, index) =>
+      reviewRow(`r-${front}`, `done-${front}`, start - (index + 1) * day, 6_000),
+    );
+    await render(Today, {});
+
+    expect(screen.getByRole("img", { name: "하루 목표 4장 중 0장" })).toBeInTheDocument();
+    expect(screen.getByText("2일 연속")).toBeInTheDocument();
+    expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
+  });
+
+  it("forecasts the next seven days by study day, today's load first", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", ...["a", "b", "c"].map((front) => cardRow(front, "d-fr", front)));
+    // Thursday 15 January 2026 in Seoul: two cards due tomorrow, one on Sunday.
+    postgrest.seed(
+      "card_states",
+      stateRow("a", { stability: 3, difficulty: 5, lastReview: start - day, due: start + day }),
+      stateRow("b", { stability: 3, difficulty: 5, lastReview: start - day, due: start + day }),
+      stateRow("c", { stability: 9, difficulty: 5, lastReview: start - day, due: start + 3 * day }),
+    );
+    await render(Today, {});
+
+    expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: "오늘 0장, 내일 2장, 토 0장, 일 1장, 월 0장, 화 0장, 수 0장",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("이번 주 3장")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "오늘" })).toBeInTheDocument();
+    expect(screen.getByText("1월 15일 목요일")).toBeInTheDocument();
+  });
+
+  it("lists the decks with cards left today, each opening a session over it, and no other", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"), deckRow("d-es", "Spanish"));
+    postgrest.seed(
+      "cards",
+      cardRow("fr-new", "d-fr", "chat"),
+      cardRow("fr-due", "d-fr", "chien"),
+      cardRow("es-later", "d-es", "gato"),
+    );
+    postgrest.seed("card_states", stateRow("fr-due", due), stateRow("es-later", notDue));
+    await render(Today, {});
+
+    const decks = within(screen.getByRole("region", { name: "오늘 할 덱" }));
+    expect(decks.getAllByRole("link").map((link) => link.getAttribute("aria-label"))).toEqual([
+      "French, 오늘 2장 학습",
+    ]);
+    expect(decks.getByRole("link", { name: "French, 오늘 2장 학습" })).toHaveAttribute(
+      "href",
+      "/study?decks=d-fr",
+    );
+  });
+
+  it("opens 모두 학습 on Enter from the page, but not from a control", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("fr-new", "d-fr", "chat"));
+    await render(Today, {});
+    const study = screen.getByRole("link", { name: "모두 학습" });
+    const clicked = vi.spyOn(study, "click").mockImplementation(() => undefined);
+    const user = userEvent.setup();
+
+    expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
+    // Control: Enter on another link is that link's own.
+    within(screen.getByRole("region", { name: "오늘 할 덱" }))
+      .getByRole("link")
+      .focus();
+    await user.keyboard("{Enter}");
+    expect(clicked).not.toHaveBeenCalled();
+    (document.activeElement as HTMLElement | null)?.blur();
+    await user.keyboard("{Enter}");
+    expect(clicked).toHaveBeenCalledOnce();
+  });
+
+  it("shows the first-run invitation in place of the today card on 오늘 and of the list on 덱 when there is no deck", async () => {
     const title = "첫 덱을 만들어 볼까요?";
     const pointer =
       "덱은 휴대폰 앱에서 만들어요. 단어장 사진을 찍거나 직접 입력하면 여기에도 보여요.";
-    // Control: a user with one deck sees the list and no invitation.
+    // Control: a user with one deck sees the today card and the list, and no invitation.
     postgrest.seed("decks", deckRow("d-fr", "French"));
-    await render(Decks, {});
+    await renderBoth();
     expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
     cleanup();
 
     postgrest = new FakePostgrest();
     server.use(...postgrest.handlers);
-    await render(Decks, {});
+    for (const page of [Today, Decks]) {
+      await render(page, {});
 
-    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-    expect(screen.getByText(pointer)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /^내 덱/ })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
-    ).not.toBeInTheDocument();
-    // The web creates nothing and has no public-deck browsing, so the invitation offers no action.
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(screen.getByText(pointer)).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "덱 목록" })).not.toBeInTheDocument();
+      // The web creates nothing and has no public-deck browsing, so the invitation offers no
+      // action.
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      cleanup();
+    }
   });
 });

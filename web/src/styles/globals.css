@@ -132,6 +132,7 @@
   /* The column a list sits in at desktop width, and the widest a study card grows. */
   --container-list: 560px;
   --container-study: 720px;
+  --container-content: 1040px;
 
   /* A skeleton's pulse, as the phone's skeleton rows fade: to 40% and back over 1.2 s. */
   --animate-skeleton: skeleton 1.2s ease-in-out infinite alternate;

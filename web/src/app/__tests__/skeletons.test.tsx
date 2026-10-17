@@ -2,13 +2,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { DecksSkeleton } from "../_components/decks-skeleton";
-import { ProfileSkeleton } from "../account/_components/profile-skeleton";
-import { DeckSkeleton } from "../decks/[id]/_components/deck-skeleton";
+import { TodaySkeleton } from "../(shell)/_components/today-skeleton";
+import { ProfileSkeleton } from "../(shell)/account/_components/profile-skeleton";
+import { DecksSkeleton } from "../(shell)/decks/_components/decks-skeleton";
+import { DeckSkeleton } from "../(shell)/decks/[id]/_components/deck-skeleton";
 import { StudySkeleton } from "../study/_components/study-skeleton";
 
 const skeletons: [string, ReactElement, string][] = [
-  ["the home page", <DecksSkeleton key="home" />, "덱을 불러오는 중이에요."],
+  ["the 오늘 page", <TodaySkeleton key="today" />, "오늘 할 카드를 불러오는 중이에요."],
+  ["the 덱 page", <DecksSkeleton key="decks" />, "덱을 불러오는 중이에요."],
   ["a deck's page", <DeckSkeleton key="deck" />, "덱을 불러오는 중이에요."],
   ["the study page", <StudySkeleton key="study" />, "카드를 불러오는 중이에요."],
   ["the account page", <ProfileSkeleton key="account" />, "계정을 불러오는 중이에요."],

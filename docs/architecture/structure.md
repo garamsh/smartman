@@ -19,7 +19,7 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
   - `database/` — the drift database, its tables and its migration steps.
   - `l10n/` — the ARB files and the classes `gen-l10n` writes from them.
 - `web/src/`:
-  - `app/` — routes, the App Router files, their `_components/` and `__tests__/`; the legal documents in the `(legal)` route group.
+  - `app/` — routes, the App Router files, their `_components/` and `__tests__/`; the signed-in pages and their shell's menus in the `(shell)` route group ([`web.md`](web.md)); the legal documents in the `(legal)` route group.
   - `features/` — `account`, `decks`, `study` and `legal`.
   - `design/` — the brand's marks, the skeleton, the theme choice and its store.
   - `supabase/` — the Supabase adapter, the one vendor adapter.

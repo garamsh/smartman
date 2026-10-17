@@ -20,13 +20,19 @@ const screenshots = process.env.E2E_SCREENSHOTS;
 
 async function shot(page: Page, name: string) {
   if (!screenshots) return;
-  for (const colorScheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme });
-    await page.screenshot({
-      path: `${screenshots}/${colorScheme}/web-${name}.png`,
-      fullPage: true,
-    });
+  const viewport = page.viewportSize();
+  // A wide screen with the side menu, and a phone with the tab bar.
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      await page.screenshot({
+        path: `${screenshots}/${colorScheme}/web-${name}-${String(width)}.png`,
+        fullPage: true,
+      });
+    }
   }
+  if (viewport) await page.setViewportSize(viewport);
   await page.emulateMedia({ colorScheme: null });
 }
 
@@ -132,16 +138,40 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   ).toBeNull();
 
   await page.goto("/");
-  const deckRow = page.getByRole("link", { name: "French, 카드 2장, 공개, 오늘 2", exact: true });
-  await expect(deckRow).toBeVisible();
-  // The deck list carries no account content; the account page, the control below, does.
+  await expect(page.getByRole("heading", { name: "오늘 할 카드 2장", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "하루 목표 2장 중 0장", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "French, 오늘 2장 학습", exact: true }),
+  ).toHaveAttribute("href", `/study?decks=${deckId}`);
+  // 오늘 carries no account content; the account page, the control below, does.
   await expect(page.getByText(email)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "로그아웃" })).toHaveCount(0);
-  await shot(page, "01-home");
+  await shot(page, "01-today");
+  await page
+    .getByRole("navigation", { name: "주 메뉴" })
+    .getByRole("link", { name: "덱", exact: true })
+    .click();
+  const deckRow = page.getByRole("link", {
+    name: "French, 카드 2장, 공개, 오늘 2, 2장 중 0장 익힘",
+    exact: true,
+  });
+  await expect(deckRow).toBeVisible();
+  await shot(page, "01b-decks");
   await deckRow.click();
   await expect(page.getByRole("heading", { name: "French", exact: true })).toBeVisible();
+  // Every answer hidden until it is asked for: one click shows that card's, 뜻 보기 them all.
+  await expect(page.getByRole("button", { name: "chat, 답 가려짐", exact: true })).toBeVisible();
   await shot(page, "02-deck");
-  await page.getByRole("link", { name: "학습하기 · 2장", exact: true }).click();
+  await page.getByRole("switch", { name: "뜻 보기" }).click();
+  await expect(page.getByRole("button", { name: "chat, 답 cat", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "chien, 답 dog", exact: true })).toBeVisible();
+  await shot(page, "02b-deck-answers");
+  // Enter opens the deck's session once the page reacts to keys, which a press shows (#152).
+  await page.getByRole("heading", { name: "French", exact: true }).click();
+  await expect(async () => {
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`/study\\?decks=${deckId}$`), { timeout: 1_000 });
+  }).toPass();
 
   const question = page.getByRole("group", { name: "문제", exact: true });
   const answer = page.getByRole("group", { name: "답", exact: true });
@@ -295,7 +325,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "06c-study-nothing-today");
 
   await page.goto("/account");
-  await expect(page.getByRole("heading", { level: 1, name: "계정", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "계정과 설정", exact: true }),
+  ).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
   await shot(page, "07-account");
@@ -392,13 +424,20 @@ test("each page that waits on the server shows its skeleton, still under reduced
   const skeletonPage = await still.newPage();
   const livePage = await context.newPage();
   const pages = [
-    { path: "/", name: "home", status: "덱을 불러오는 중이에요.", content: "section", held: 0 },
+    {
+      path: "/",
+      name: "today",
+      status: "오늘 할 카드를 불러오는 중이에요.",
+      content: "h1",
+      held: 0,
+    },
+    { path: "/decks", name: "decks", status: "덱을 불러오는 중이에요.", content: "h1", held: 0 },
     {
       path: `/decks/${deckId}`,
       name: "deck",
       status: "덱을 불러오는 중이에요.",
-      content: "h1",
-      held: 1,
+      content: '[aria-label="위치"]',
+      held: 0,
     },
     {
       path: `/study?decks=${deckId}`,
@@ -548,4 +587,78 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
     const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
     await expect(completion.getByText("연속 3일", { exact: true })).toBeVisible();
   });
+});
+
+test("the shell's menu sits at the side from 1024 px and at the foot below it, a skip link leads to the content, and no page scrolls sideways", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!supabaseUrl || !supabaseKey || !baseURL) throw new Error("skipped above");
+  const email = `web-shell-${randomUUID()}@example.com`;
+  const password = "web-shell-password";
+  const userId = await signUpInBrowser(context, baseURL, email, password);
+  const phone = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  expect((await phone.auth.signInWithPassword({ email, password })).error).toBeNull();
+  const deckId = randomUUID();
+  const now = new Date().toISOString();
+  expect(
+    (
+      await phone
+        .from("decks")
+        .insert({ id: deckId, user_id: userId, name: "French", created_at: now, updated_at: now })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await phone.from("cards").insert({
+        id: randomUUID(),
+        user_id: userId,
+        deck_id: deckId,
+        front: [{ type: "text", payload: { text: "chat" } }],
+        back: [{ type: "text", payload: { text: "cat" } }],
+        card_key: "chat",
+        source: "manual",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+
+  // Both menus, the hidden one included, which a role query leaves out.
+  const menus = page.locator('nav[aria-label="주 메뉴"]');
+  for (const width of [1280, 1024, 768, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const path of ["/", "/decks", `/decks/${deckId}`, "/record", "/account"]) {
+      await page.goto(path);
+      await expect(page.locator("h1")).toBeVisible();
+      // One menu shows at a time: the side menu from 1024 px, the tab bar below.
+      await expect(menus).toHaveCount(2);
+      const [side, tabs] = [menus.first(), menus.last()];
+      await expect(width >= 1024 ? side : tabs, `${path} at ${String(width)}`).toBeVisible();
+      await expect(width >= 1024 ? tabs : side, `${path} at ${String(width)}`).toBeHidden();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect({ path, width, overflow }).toEqual({ path, width, overflow: 0 });
+    }
+  }
+
+  // The skip link is the first stop, visible once focused, and leads past the menus.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/decks");
+  await expect(page.locator("h1")).toBeVisible();
+  await page.keyboard.press("Tab");
+  const skip = page.getByRole("link", { name: "본문으로 건너뛰기", exact: true });
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("searchbox", { name: "덱 검색" })).toBeFocused();
+  // The landmarks: the menu, the content.
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await page.goto("/record");
+  await expect(page.getByRole("heading", { level: 1, name: "기록", exact: true })).toBeVisible();
+  await shot(page, "12-record");
 });

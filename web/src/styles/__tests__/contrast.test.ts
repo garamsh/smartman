@@ -36,7 +36,10 @@ function contrast(a: string, b: string): number {
   return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
 }
 
-/** The text and its ground on the login, account and empty home pages, by where they appear. */
+/**
+ * The text and its ground on the login, account and empty home pages and the shell's menus and
+ * pages, by where they appear.
+ */
 const pairs: [string, string, string][] = [
   ["the welcome sentence on the panel", "ink-2", "ground"],
   ["the consent line on the surface", "muted", "surface"],
@@ -47,6 +50,13 @@ const pairs: [string, string, string][] = [
   ["the checked theme on its segment", "ink", "raised"],
   ["the empty home's sentence on the ground", "muted", "ground"],
   ["the empty home's title on the ground", "ink", "ground"],
+  ["the side menu's other pages on the surface", "ink-2", "surface"],
+  ["the side menu's current page on its tint", "ink", "brand-tint"],
+  ["the tab bar's other pages on the surface", "muted", "surface"],
+  ["the today card's text on the navy", "on-hero", "hero"],
+  ["the today card's button on white", "brand", "on-hero"],
+  ["the forecast's days and a deck's progress on the surface", "muted", "surface"],
+  ["the date and the breadcrumb on the ground", "muted", "ground"],
 ];
 
 describe("the text the login, account and empty home pages draw", () => {
