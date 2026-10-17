@@ -39,6 +39,7 @@ lint:
 	./check-secrets.sh
 	./check-ios-client-id.sh
 	./check-generated.sh
+	./check-migration-order.sh
 	./deno.sh lint
 	./web.sh lint
 	cd app && $(DART_FILES); \
@@ -66,6 +67,7 @@ format:
 	done
 
 test:
+	./check-migration-order.test.sh
 	cd app/rust && cargo build --locked --release && \
 	echo "built the bridge library into app/rust/target/release/, where flutter_rust_bridge loads it under flutter test"
 	cd app && flutter test --reporter expanded $(APP_CONFIG) && \
