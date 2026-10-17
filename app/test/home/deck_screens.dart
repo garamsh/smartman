@@ -76,6 +76,11 @@ class DeckScreens {
     bool photoImport = false,
     ThemeMode themeMode = ThemeMode.light,
   }) async {
+    // A phone's screen, so every card of a short deck is on it under the
+    // pinned row.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     var ids = 0;

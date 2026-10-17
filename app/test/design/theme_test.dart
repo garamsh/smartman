@@ -227,6 +227,39 @@ void main() {
       },
     );
   }
+
+  for (final (name, theme, colors) in [
+    ('light', lightTheme, AppColors.light),
+    ('dark', darkTheme, AppColors.dark),
+  ]) {
+    test('the $name switch reads at 3:1 on the ground, on and off', () {
+      final style = theme.switchTheme;
+      for (final states in [
+        <WidgetState>{},
+        {WidgetState.selected},
+      ]) {
+        final thumb = style.thumbColor!.resolve(states)!;
+        final track = style.trackColor!.resolve(states)!;
+        final outline = style.trackOutlineColor!.resolve(states)!;
+        for (final (mark, ground) in [
+          (outline, colors.ground),
+          (thumb, track),
+        ]) {
+          expect(
+            contrast(mark, ground),
+            greaterThanOrEqualTo(3),
+            reason: '$states: $mark on $ground',
+          );
+        }
+      }
+      // Control: on and off differ in the track, not only in the thumb's
+      // place.
+      expect(
+        style.trackColor!.resolve({WidgetState.selected}),
+        isNot(style.trackColor!.resolve({})),
+      );
+    });
+  }
 }
 
 /// Google's sign-in button, drawn to Google's branding guidelines rather than

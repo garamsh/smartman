@@ -1459,6 +1459,18 @@ abstract class AppLocalizations {
   /// **'단어장 사진에서 카드를 찾아요'**
   String get addCardPhotoBody;
 
+  /// The deck page's row pinned above its card list: how many cards the list shows.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}'**
+  String cardListTitle(int count);
+
+  /// The label of the deck page's switch that shows or hides every card's answer; it stays the same while the switch shows its state.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻 보기'**
+  String get showMeanings;
+
   /// What a screen reader reads for a card row whose answer is hidden.
   ///
   /// In ko, this message translates to:

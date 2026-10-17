@@ -17,8 +17,9 @@ import '../../sharing/sharing.dart';
 import '../../study/study.dart';
 
 /// A deck's page: its tile, name and card count, the navy card that studies
-/// it, and its cards, each answer hidden until tapped, searchable from the
-/// top bar; adds a card, opens one for editing, and the deck for renaming or
+/// it, and its cards under a pinned row whose "뜻 보기" switch shows or hides
+/// every answer, each answer also toggled by a tap, searchable from the top
+/// bar; adds a card, opens one for editing, and the deck for renaming or
 /// deleting.
 class DeckScreen extends ConsumerStatefulWidget {
   const DeckScreen({super.key, required this.deck});
@@ -36,6 +37,12 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
 
   /// The card search, or null while it is closed.
   String? _query;
+
+  /// The "뜻 보기" switch, off each time the page opens.
+  bool _showAll = false;
+
+  /// The cards a tap has set apart from the switch since it last changed.
+  final Set<CardId> _flipped = {};
 
   @override
   Widget build(BuildContext context) {
@@ -113,51 +120,59 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         ],
       ),
       body: switch (cards) {
-        AsyncData(:final value) => ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.gutter,
-            0,
-            AppSpace.gutter,
-            AppSpace.s16,
-          ),
-          children: [
-            Row(
-              spacing: AppSpace.s12,
-              children: [
-                DeckTile(deck: current),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        AsyncData(:final value) => CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter),
+              sliver: SliverList.list(
+                children: [
+                  Row(
+                    spacing: AppSpace.s12,
                     children: [
-                      Semantics(
-                        header: true,
-                        child: Text(_name, style: AppType.title),
-                      ),
-                      Text(
-                        public
-                            ? l10n.deckSummaryPublic(value.length)
-                            : l10n.deckSummary(value.length),
-                        style: AppType.secondary.copyWith(color: colors.muted),
+                      DeckTile(deck: current),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(_name, style: AppType.title),
+                            ),
+                            Text(
+                              public
+                                  ? l10n.deckSummaryPublic(value.length)
+                                  : l10n.deckSummary(value.length),
+                              style: AppType.secondary.copyWith(
+                                color: colors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpace.s16),
+                  _DeckTodayCard(deck: widget.deck.id, onStudy: _study),
+                  const SizedBox(height: AppSpace.s12),
+                ],
+              ),
             ),
-            const SizedBox(height: AppSpace.s16),
-            _DeckTodayCard(deck: widget.deck.id, onStudy: _study),
-            const SizedBox(height: AppSpace.s12),
             if (value.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpace.s40),
-                child: Text(
-                  l10n.noCards,
-                  textAlign: TextAlign.center,
-                  style: AppType.body.copyWith(color: colors.muted),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.gutter,
+                  vertical: AppSpace.s40,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    l10n.noCards,
+                    textAlign: TextAlign.center,
+                    style: AppType.body.copyWith(color: colors.muted),
+                  ),
                 ),
               )
             else
-              ..._rows(l10n, value),
+              ..._cardList(l10n, value),
           ],
         ),
         AsyncError(:final error, :final stackTrace) => Center(
@@ -182,43 +197,71 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     );
   }
 
-  /// A row for each card whose front or back holds the search, ignoring case,
-  /// its answer hidden until tapped.
-  List<Widget> _rows(AppLocalizations l10n, List<Card> cards) {
+  /// The pinned "카드 n" row with its "뜻 보기" switch, then a row for each
+  /// card whose front or back holds the search, ignoring case, its answer
+  /// shown as the switch and the card's own taps leave it.
+  List<Widget> _cardList(AppLocalizations l10n, List<Card> cards) {
     final query = (_query ?? '').trim().toLowerCase();
     final rows =
         [
-          for (final card in cards)
-            (
-              card: card,
-              front: describeContent(l10n, card.front),
-              back: describeContent(l10n, card.back),
-            ),
-        ].where(
-          (row) =>
-              row.front.toLowerCase().contains(query) ||
-              row.back.toLowerCase().contains(query),
-        );
-    if (rows.isEmpty) {
-      return [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
-          child: Text(
-            l10n.noMatches,
-            textAlign: TextAlign.center,
-            style: AppType.body.copyWith(color: AppColors.of(context).muted),
-          ),
-        ),
-      ];
-    }
+              for (final card in cards)
+                (
+                  card: card,
+                  front: describeContent(l10n, card.front),
+                  back: describeContent(l10n, card.back),
+                ),
+            ]
+            .where(
+              (row) =>
+                  row.front.toLowerCase().contains(query) ||
+                  row.back.toLowerCase().contains(query),
+            )
+            .toList();
+    const gutter = EdgeInsets.symmetric(horizontal: AppSpace.gutter);
     return [
-      for (final row in rows)
-        CardAnswerRow(
-          key: ValueKey(row.card.id),
-          front: row.front,
-          back: row.back,
-          onEdit: () => _open(row.card),
+      PinnedHeaderSliver(
+        child: _CardListHeader(
+          count: rows.length,
+          showAll: _showAll,
+          onShowAll: (show) => setState(() {
+            _showAll = show;
+            _flipped.clear();
+          }),
         ),
+      ),
+      SliverPadding(
+        padding: gutter.copyWith(bottom: AppSpace.s16),
+        sliver: rows.isEmpty
+            ? SliverPadding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    l10n.noMatches,
+                    textAlign: TextAlign.center,
+                    style: AppType.body.copyWith(
+                      color: AppColors.of(context).muted,
+                    ),
+                  ),
+                ),
+              )
+            : SliverList.list(
+                children: [
+                  for (final row in rows)
+                    CardAnswerRow(
+                      key: ValueKey(row.card.id),
+                      front: row.front,
+                      back: row.back,
+                      shown: _showAll != _flipped.contains(row.card.id),
+                      onToggle: () => setState(() {
+                        if (!_flipped.remove(row.card.id)) {
+                          _flipped.add(row.card.id);
+                        }
+                      }),
+                      onEdit: () => _open(row.card),
+                    ),
+                ],
+              ),
+      ),
     ];
   }
 
@@ -319,6 +362,62 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       await repository.deleteDeck(widget.deck.id);
       if (mounted) Navigator.of(context).pop();
     });
+  }
+}
+
+/// The row pinned above the card list: how many cards it lists, and the
+/// "뜻 보기" switch, whose label stays while the switch shows its state.
+class _CardListHeader extends StatelessWidget {
+  const _CardListHeader({
+    required this.count,
+    required this.showAll,
+    required this.onShowAll,
+  });
+
+  final int count;
+  final bool showAll;
+  final ValueChanged<bool> onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    // At the right, the switch's own margin brings its track to the gutter.
+    return ColoredBox(
+      color: colors.ground,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.gutter,
+          AppSpace.s4,
+          AppSpace.s16,
+          AppSpace.s4,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(l10n.cardListTitle(count), style: AppType.label),
+              ),
+            ),
+            MergeSemantics(
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => onShowAll(!showAll),
+                    child: Text(
+                      l10n.showMeanings,
+                      style: AppType.secondary.copyWith(color: colors.ink2),
+                    ),
+                  ),
+                  Switch(value: showAll, onChanged: onShowAll),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

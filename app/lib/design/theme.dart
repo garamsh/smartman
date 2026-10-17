@@ -718,6 +718,23 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
         shape: control,
       ),
     ),
+    // On, the navy track; off, a muted thumb and outline, each at least 3:1
+    // on the ground.
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? colors.onPrimary
+            : colors.muted,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.selected) ? colors.ink : colors.surface,
+      ),
+      trackOutlineColor: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.selected) ? colors.ink : colors.muted,
+      ),
+    ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: control,
