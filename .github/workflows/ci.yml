@@ -7,76 +7,51 @@ on:
 
 permissions: read-all
 
-# Together the jobs run the whole of make ci: the ubuntu jobs in parallel, the macos job only the
-# iOS simulator build, which needs macOS. Each installs the tools its targets run.
+# The ubuntu job runs make ci, which skips the iOS simulator build off macOS; the macos job runs
+# that build alone.
 jobs:
   ubuntu:
-    name: ubuntu (${{ matrix.check }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - check: lint
-            targets: lint format
-            tools: flutter rust frb wasm-bindgen node deno
-          - check: test
-            targets: test
-            tools: flutter rust wasm-bindgen node supabase deno
-          - check: build
-            targets: build
-            tools: java flutter rust node
+    name: ci (ubuntu-latest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - if: contains(matrix.tools, 'java')
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'
-      - if: contains(matrix.tools, 'flutter')
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
           flutter-version-file: app/pubspec.yaml
-      - if: contains(matrix.tools, 'rust')
-        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           rust-src-dir: engine
       # The codegen release is the flutter_rust_bridge crate's in the bridge crate's lock file.
       - id: frb
-        if: contains(matrix.tools, 'frb')
         run: echo "version=$(sed -n '/^name = "flutter_rust_bridge"$/{n;s/^version = "\(.*\)"$/\1/p;}' app/rust/Cargo.lock)" >> "$GITHUB_OUTPUT"
-      - if: contains(matrix.tools, 'frb')
-        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: flutter_rust_bridge_codegen@${{ steps.frb.outputs.version }}
           fallback: cargo-install
       # The wasm-bindgen CLI and its test runner, at the release engine-wasm/Cargo.lock pins.
       - id: wasm-bindgen
-        if: contains(matrix.tools, 'wasm-bindgen')
         run: echo "version=$(sed -n '/^name = "wasm-bindgen"$/{n;s/^version = "\(.*\)"$/\1/p;}' engine-wasm/Cargo.lock)" >> "$GITHUB_OUTPUT"
-      - if: contains(matrix.tools, 'wasm-bindgen')
-        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: wasm-bindgen@${{ steps.wasm-bindgen.outputs.version }}
-      # web.sh and the WebAssembly tests run in node.
-      - if: contains(matrix.tools, 'node')
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      # make test runs engine-wasm/'s tests in node, through wasm-bindgen-test-runner.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.22.0
-      # make test runs the database, sync and web e2e tests on local stacks, in Docker.
-      - if: contains(matrix.tools, 'supabase')
-        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+      # make test runs the database tests where Docker is, which the ubuntu runner has.
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: 2.120.0
       # make lint, format and test run deno over supabase/functions/ and tools/eval/.
-      - if: contains(matrix.tools, 'deno')
-        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: 2.9.7
-      - env:
-          TARGETS: ${{ matrix.targets }}
-        run: make $TARGETS
+      - run: make ci
 
   macos:
     name: ci (macos-latest)
@@ -91,16 +66,3 @@ jobs:
         with:
           rust-src-dir: engine
       - run: make build BUILD=ios
-
-  # The required check for the ubuntu jobs: it passes only when all three passed.
-  ubuntu-result:
-    name: ci (ubuntu-latest)
-    needs: ubuntu
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    steps:
-      - env:
-          RESULT: ${{ needs.ubuntu.result }}
-        run: |
-          echo "the ubuntu jobs ubuntu (lint), ubuntu (test) and ubuntu (build) ended: $RESULT"
-          [ "$RESULT" = success ]

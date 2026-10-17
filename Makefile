@@ -24,7 +24,7 @@ APK := build/app/outputs/flutter-apk/app-debug.apk
 IOS_APP := build/ios/iphonesimulator/Runner.app
 BRIDGE_LIB := rust_lib_smartman
 # What make build builds, set on the command line: all (the default), or ios for the iOS simulator
-# app alone, which CI's macOS job builds while the ubuntu jobs build the rest.
+# app alone, which CI's macOS job builds; the ubuntu job's make ci builds the rest.
 BUILD := all
 ifeq ($(filter $(BUILD),all ios),)
 $(error BUILD is "$(BUILD)"; it is all or ios)
