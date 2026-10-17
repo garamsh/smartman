@@ -23,6 +23,12 @@ APP_CONFIG := --dart-define-from-file=config/dev.json
 APK := build/app/outputs/flutter-apk/app-debug.apk
 IOS_APP := build/ios/iphonesimulator/Runner.app
 BRIDGE_LIB := rust_lib_smartman
+# What make build builds, set on the command line: all (the default), or ios for the iOS simulator
+# app alone, which CI's macOS job builds; the ubuntu job's make ci builds the rest.
+BUILD := all
+ifeq ($(filter $(BUILD),all ios),)
+$(error BUILD is "$(BUILD)"; it is all or ios)
+endif
 
 lint:
 	./check-contents-list.sh
@@ -74,18 +80,21 @@ test:
 	./supabase/test-web.sh
 
 build:
+	if [ "$$(uname -s)" = Darwin ]; then \
+		cd app && flutter build ios --simulator --debug --no-codesign $(APP_CONFIG) && \
+		test -f $(IOS_APP)/Frameworks/$(BRIDGE_LIB).framework/$(BRIDGE_LIB) && \
+		echo "built the unsigned iOS simulator app app/$(IOS_APP), holding $(BRIDGE_LIB).framework"; \
+	elif [ $(BUILD) = ios ]; then \
+		echo "BUILD=ios builds the iOS simulator app alone, which needs macOS, and this host is $$(uname -s)" >&2; exit 1; \
+	else \
+		echo "skipped the iOS simulator build: it needs macOS, and this host is $$(uname -s)"; \
+	fi
+ifeq ($(BUILD),all)
 	cd app && flutter build apk --debug $(APP_CONFIG) && \
 	libs=$$(unzip -Z1 $(APK) 'lib/*/lib$(BRIDGE_LIB).so'); \
 	if [ -z "$$libs" ]; then echo "app/$(APK) holds no lib$(BRIDGE_LIB).so" >&2; exit 1; fi; \
 	echo "built the debug APK app/$(APK), holding the bridge library for $$(echo "$$libs" | wc -l | tr -d ' ') ABIs:"; \
 	echo "$$libs"
-	if [ "$$(uname -s)" = Darwin ]; then \
-		cd app && flutter build ios --simulator --debug --no-codesign $(APP_CONFIG) && \
-		test -f $(IOS_APP)/Frameworks/$(BRIDGE_LIB).framework/$(BRIDGE_LIB) && \
-		echo "built the unsigned iOS simulator app app/$(IOS_APP), holding $(BRIDGE_LIB).framework"; \
-	else \
-		echo "skipped the iOS simulator build: it needs macOS, and this host is $$(uname -s)"; \
-	fi
 	cd engine && cargo build --locked && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the library crate smartman_engine and its rustdoc from engine/Cargo.toml"
@@ -93,5 +102,8 @@ build:
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
 	./web.sh build
+else
+	echo "skipped the Android APK, engine, WebAssembly and web app builds: BUILD=$(BUILD)"
+endif
 
 ci: lint format test build
