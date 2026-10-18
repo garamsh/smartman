@@ -259,31 +259,6 @@ void main() {
         isNot(style.trackColor!.resolve({})),
       );
     });
-
-    test(
-      'the $name slider reads at 3:1 on the ground and the surface, its chosen part apart from the rest',
-      () {
-        final style = theme.sliderTheme;
-        for (final ground in [colors.ground, colors.surface]) {
-          for (final mark in [
-            style.activeTrackColor!,
-            style.inactiveTrackColor!,
-            style.thumbColor!,
-          ]) {
-            expect(
-              contrast(mark, ground),
-              greaterThanOrEqualTo(3),
-              reason: '$mark on $ground',
-            );
-          }
-        }
-        // Control: the chosen part of the track differs from the rest.
-        expect(
-          contrast(style.activeTrackColor!, style.inactiveTrackColor!),
-          greaterThan(1.5),
-        );
-      },
-    );
   }
 }
 

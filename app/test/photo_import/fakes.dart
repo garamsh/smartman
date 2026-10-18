@@ -107,7 +107,7 @@ Future<SharedPreferencesWithCache> openPreferences(
   return (await tester.runAsync(
     () => SharedPreferencesWithCache.create(
       cacheOptions: const SharedPreferencesWithCacheOptions(
-        allowList: {...themeStorageKeys, ...detailStepStorageKeys},
+        allowList: {...themeStorageKeys, ...photoImportStorageKeys},
       ),
     ),
   ))!;

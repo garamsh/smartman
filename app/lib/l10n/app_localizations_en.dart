@@ -426,58 +426,101 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
-  String reviewTitle(int count) {
+  String reviewMade(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Found $count cards',
-      one: 'Found 1 card',
+      other: 'Made $count cards',
+      one: 'Made 1 card',
     );
     return '$_temp0';
   }
 
   @override
-  String get reviewHint => 'Tap to edit, and uncheck the cards to leave out';
-
-  @override
-  String get detailStepLabel => 'What the cards hold';
-
-  @override
-  String get detailStepCore => 'Core';
-
-  @override
-  String get detailStepKeyPoints => 'Key points';
-
-  @override
-  String get detailStepBasic => 'Basic';
-
-  @override
-  String get detailStepDetailed => 'Detailed';
-
-  @override
-  String get detailStepFull => 'Every detail';
-
-  @override
-  String detailStepValue(String name, int step) {
-    return '$name, step $step of 5';
+  String reviewTopic(String topic, int count) {
+    return '$topic · $count';
   }
 
   @override
-  String get candidateEdited => 'Edited';
-
-  @override
-  String reviewDuplicates(int count) {
+  String reviewTopicSwitch(String topic, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count cards already in the deck',
-      one: '1 card already in the deck',
+      other: '$count cards',
+      one: '1 card',
+    );
+    return 'Keep $topic, $_temp0';
+  }
+
+  @override
+  String reviewCard(String front, String back) {
+    return '$front, $back. Tap to edit, swipe left to remove';
+  }
+
+  @override
+  String reviewRemovedCard(String front, String back) {
+    return '$front, $back. Removed. Swipe right to put it back';
+  }
+
+  @override
+  String reviewDroppedCard(String front, String back) {
+    return '$front, $back. Left out with its topic';
+  }
+
+  @override
+  String get reviewRemove => 'Remove';
+
+  @override
+  String get reviewRestore => 'Put back';
+
+  @override
+  String get reviewRemoveCard => 'Remove this card';
+
+  @override
+  String get reviewDone => 'Done';
+
+  @override
+  String get reviewFront => 'Front';
+
+  @override
+  String get reviewBack => 'Back';
+
+  @override
+  String get reviewInDeck => 'Already in the deck';
+
+  @override
+  String reviewAdd(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add $count cards to the deck',
+      one: 'Add 1 card to the deck',
     );
     return '$_temp0';
   }
 
   @override
-  String get includeCard => 'Include';
+  String get coachRemove => 'Swipe left to remove';
+
+  @override
+  String get coachRestore => 'Swipe right to put it back';
+
+  @override
+  String get coachEdit => 'Tap to edit';
+
+  @override
+  String coachStep(int step, int total) {
+    return 'How to use, step $step of $total';
+  }
+
+  @override
+  String get coachSkip => 'Skip';
+
+  @override
+  String get coachNext => 'Next';
+
+  @override
+  String get coachStart => 'Start';
 
   @override
   String get duplicateSkip => 'Skip';
@@ -493,17 +536,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retry => 'Try again';
-
-  @override
-  String addCards(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Add $count cards',
-      one: 'Add 1 card',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get extractionOffline =>

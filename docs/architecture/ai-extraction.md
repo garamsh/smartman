@@ -28,7 +28,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
   - `meaning` — a vocabulary card's `answer`, for apps that read it ([ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md)); a note card has none;
   - `partOfSpeech` — on a vocabulary card, present only when the page prints one for the entry, its own notation verbatim, such as `[동]`, `n.` or `(형)`, 1 to 500 characters;
   - `back` — for apps that read only `front` and `back`: a vocabulary card's `partOfSpeech`, a space and `meaning`, or `meaning` alone, at most 1501 characters; a note card's `answer`.
-- An app that has not updated reads a vocabulary card as before and a note card as its `front` and `back`, ignoring `topic`, the fullest answer at every level: `app/lib/photo_import/src/extraction_client.dart` limits no field's length, ignores the keys it does not know, and takes `back` as the meaning when there is none.
+- An app that has not updated reads a vocabulary card as before and a note card as its `front` and `back`, ignoring `topic`, the fullest answer at every level: its parser, `app/lib/photo_import/src/extraction_client.dart` as released before topics, limits no field's length, ignores the keys it does not know, and takes `back` as the meaning when there is none. Today's parser refuses a `topic` over 60 characters.
 - Every refusal is `{ "error": "<code>" }`, the code naming the case the app shows:
 
 | Status | Code | When |
@@ -130,40 +130,25 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 - The app side is the domain `app/lib/photo_import/`; its public surface is `app/lib/photo_import/photo_import.dart`, with internals under `app/lib/photo_import/src/` ([`structure.md`](structure.md)). It exports:
   - `importFromPhoto`, which starts an import over a context and resolves to the deck saved into, and `photoImportProvider`, which provides it as a `PhotoImport` for a deck or for a new one, null while the app has no extraction client; the composition site overrides it with a function over the client, and `home/`'s screens read it for their photo buttons ([`home.md`](home.md));
-  - `ExtractionClient`, the seam to the function, `CandidateCard` with its `CandidateKind`, and `HttpExtractionClient`;
-  - `DetailStep`, and `detailStepStorageKeys`, the keys the device storage it is given must cache;
+  - `ExtractionClient`, the seam to the function, `CandidateCard`, and `HttpExtractionClient`;
+  - `photoImportStorageKeys`, the keys the device storage it is given must cache;
   - `PhotoSource`, the seam to the system camera, the photo library and the app's settings page, and `DevicePhotoSource`;
   - `JpegPhoto`, and the failures: `PhotoImportFailure` and its cases.
 - It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it, and `home/` opens its screen.
-- The import receives its client, its photo source, and the device storage the detail step is kept in; it constructs none of them.
+- The import receives its client, its photo source, and the device storage that keeps whether Review's coach has shown; it constructs none of them.
 - The composition site, `app/lib/main.dart`, builds the client from the Supabase client `connectAccount` returns ([`account.md`](account.md)), without importing `supabase_flutter`:
   - the URL is `extractCardsUrl` of the client's public PostgREST URL, which swaps its `/rest/v1` suffix for `/functions/v1/extract-cards`, as the Supabase client builds both from the project URL;
   - the token is read from the client's current session at each request;
-  - the device storage is the one `shared_preferences` store it opens for the theme ([`design.md`](design.md)), caching `themeStorageKeys` and `detailStepStorageKeys`.
+  - the device storage is the one `shared_preferences` store it opens for the theme ([`design.md`](design.md)), caching `themeStorageKeys` and `photoImportStorageKeys`.
 - A build with no Supabase client gets no extraction client, and `photoImportProvider` stays null, which hides both photo buttons.
 
-#### Detail step
+#### Topics
 
-- Which cards a photo offers and how full their answers are, chosen on a five-step slider and composed in the app from one extraction, so a move is instant and never counts against the daily limit ([ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md)).
-- A review row is offered at a step when one of its candidates' `step` is at or below it. The answer at each step:
-
-| Step | Answer |
-|---|---|
-| 1 핵심 (Core) | `short` |
-| 2 요점 (Key points) | `answer` |
-| 3 기본 (Basic), the default | `partOfSpeech`, a space, then `answer`; `answer` alone when there is no part of speech, as for every note |
-| 4 자세히 (Detailed) | the 기본 answer, then each example on its own line, leaving out one that repeats the answer: whose text and the answer's, normalized as a card key ([`deck.md`](deck.md)), contain one another |
-| 5 세부 (Every detail) | as 자세히, with the cards of step 5 offered too |
-
-- Candidates combined on one card key take the answers of those offered at the current step, joined by `deck`'s merge-back rule.
-- The web has no photo import; one built later offers and composes by the same rule.
-- The choice is stored on the device with `shared_preferences` under `photoDetailStep`, as the theme is, read when the screen opens, and applied at once. When no step is stored, a level stored before the steps under `photoDetailLevel` maps once to the nearest step — 간단 to 핵심, 기본 to 기본, 자세히 to 자세히 — stored as the step while the old key is removed; with neither, the step is 기본.
-
-#### Cards by topic (decided, not built yet)
-
-- [ADR 0057](adr/0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md) decides a new Review, and the app PR for issue #182 builds it. Until it lands, the Detail step and Flow below describe the app.
-- The call stays one, and each card carries a `topic` of 1 to 60 characters, which the function returns (Contract above).
-- Review groups the cards by topic, with a switch per topic that keeps or drops it. A swipe left removes a card and a swipe right restores it; a removed card stays listed, struck through. A tap edits a card in place, and a first-use coach teaches the gestures, but not under reduce motion. The slider and its stored step go.
+- Review groups the cards by the `topic` each carries, keeps or drops a topic with its switch and a card with a swipe, and shows no slider ([ADR 0057](adr/0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md)).
+- The answer a card shows and saves is the part of speech the page prints, a space, then its answer; its answer alone when the page prints none, as for every note.
+- The function writes a topic on every card (Contract above). A card without one, from a function deployed before topics, goes into one section with no heading and no switch.
+- The app no longer reads a card's `step`, `short` or `examples`, which the function keeps for apps that have not updated ([ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md)'s slider, offering, composition and storage are superseded in the app). A device keeps a step stored under `photoDetailStep`, unread.
+- The web has no photo import; one built later groups by the same rule.
 
 #### Flow
 
@@ -173,19 +158,19 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - **Extracting** — the photo's thumbnail, "카드를 찾고 있어요", an indeterminate bar, skeleton rows, and "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요":
   - "취소" aborts the request and closes the screen, as leaving it does;
   - the skeleton rows shimmer, and hold still under reduce motion.
-- **Review** — "카드 n개를 찾았어요", n the rows the step offers, and "눌러서 고치고, 뺄 카드는 체크를 끄세요":
-  - a chip "추가할 덱 · <name>" that opens a sheet of every deck and "새 덱"; choosing another deck reads its card keys and regroups the duplicates against them;
-  - "카드에 담을 내용" with the current step's name, over a slider of the five steps with 핵심 and 세부 under its ends, read by a screen reader as one node with the step's name and number; a move changes the rows offered and recomposes every answer at once;
-  - a row a step hides keeps its checkbox, its typed answer and its duplicate option, and comes back with them;
-  - each candidate is a row with a checkbox and its front and back split by a divider, each centred vertically in its side and breaking lines only between words through `keepWords` ([`design.md`](design.md)), while a screen reader hears it as written;
-  - a tap on a side edits it in place, and a side left empty keeps its previous text;
-  - an answer typed by hand stays as typed through every move, marked "직접 고침" under it;
-  - candidates with one card key on the photo are combined into one before review, their backs joined by `deck`'s merge-back rule;
-  - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));
+- **Review** — "카드 n장을 만들었어요", n every card made, then the chip "추가할 덱 · <name>" that opens a sheet of every deck and "새 덱":
+  - the cards are grouped by topic, in the order each first appears; a section's heading is "<topic> · n장" with a switch, on at first. Off, every card of the topic shows as removed, its heading is muted, and its cards cannot be edited; on again, each card not removed on its own comes back;
+  - each card shows its front and its answer side by side, each breaking lines only between words through `keepWords` ([`design.md`](design.md)), and a screen reader hears it as written with what a tap and a swipe do;
+  - a swipe left removes a card and a swipe right puts it back, the directions of studying's "모른다" and "안다" ([`study.md`](study.md)), with "빼기" on the red or "다시 넣기" on the green under the moving card; a removed card stays listed, struck through inside a dashed outline. A card whose topic is off takes no swipe;
+  - a tap opens a card for editing in place: "앞면" and "뒷면" fields, "이 카드 빼기" or "다시 넣기", and "완료". What is typed is kept, a side left empty keeping its text, whether the edit ends by "완료", by the remove or restore button, by a tap on another card, by a switch, or by adding the cards;
+  - a screen reader opens a card with a tap and removes or puts it back with the custom action "빼기" or "다시 넣기"; a card whose topic is off has neither;
+  - candidates with one card key on the photo are combined into one before review, their answers joined by `deck`'s merge-back rule;
+  - a card whose key the deck holds shows "이미 덱에 있어요" under it and starts removed; choosing another deck decides again which cards start removed, for each card the user has not removed, put back or edited. An edit whose front the deck holds keeps the card as it was, marked, and it merges back when saved;
+  - on first use, a three-step coach shows a finger on the first card and dims the others, with "왼쪽으로 밀면 빼요", "오른쪽으로 밀면 다시 넣어요" and "눌러서 바로 고쳐요", dots, "건너뛰기" and "다음", the last "시작하기", in place of the add button. It is stored as shown under `photoReviewCoachShown` when it first shows, any swipe, tap or switch ends it, and it does not show under reduce motion;
   - "다시 찍기" at the top right opens the source sheet over the review; a cancel keeps the review, and a photo replaces it;
-  - "카드 n개 추가" counts the offered rows checked and not set to skip, and is disabled at 0.
-- **Saving** — one `DeckRepository.importCards` call over the rows the step offers, each answer as the review shows it, plain text as every import writes. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the home and deck screens open that deck's screen.
-- Nothing is written before "카드 n개 추가": not the deck, not a card.
+  - "덱에 n장 추가" counts the cards whose topic is on and which are not removed, and is disabled at 0.
+- **Saving** — one `DeckRepository.importCards` call over the cards kept, each answer as the review shows it, plain text as every import writes; each merges back into a card with its key, so a duplicate put back adds its answer to the deck's card. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the home and deck screens open that deck's screen.
+- Nothing is written before "덱에 n장 추가": not the deck, not a card.
 
 #### Photo
 
@@ -196,9 +181,9 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 #### Request and failures
 
 - `HttpExtractionClient` posts `{"image": <base64 JPEG>}` to `<SUPABASE_URL>/functions/v1/extract-cards` with the session's access token as `Authorization: Bearer`, through `package:http` with an abortable request. Without a session it sends nothing.
-- The answer is parsed at the boundary: a `200` must hold a non-empty `cards` list, each card a non-empty `front` and `back`, and a non-empty `meaning`, `partOfSpeech` and list of non-empty `examples` where present.
-  - A card with `kind` must also carry a `kind` of `vocabulary` or `note`, a non-empty `answer` and `short`, and an integer `step` from 1 to 5.
-  - A card without `kind`, from a function deployed before ADR 0051, is vocabulary at step 1, its answer and short form its `meaning`, or its `back` when it has none, so every step offers it.
+- The answer is parsed at the boundary: a `200` must hold a non-empty `cards` list, each card a non-empty `front` and `back`, and a non-empty `answer`, `meaning`, `partOfSpeech` and `topic` where present, the topic at most 60 characters.
+  - A card's answer is its `answer`, else its `meaning`, else its `back`, so a function deployed before the fields still reads.
+  - The app reads no other field.
 - Each failure is a `PhotoImportFailure`, shown in place of the screen with its ARB message:
 
 | Failure | When | Offers |
@@ -223,8 +208,8 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 #### App tests
 
-- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database: the source sheet, each source, a cancel of the sheet, the camera or the album, a refused permission with its way to Settings, a device without a camera, the deck chip on review and the duplicates it regroups, a retake cancelled or taken, cancel while extracting, edits, exclusions, the three duplicate options, the saved count, each failure, reduce motion, nothing written before adding, the default step, a drag along the slider, each step's answers as shown, saved and remembered, the notes cards each step offers and saves, a hidden row keeping its typed answer, checkbox and duplicate option, a move on review keeping a typed answer marked edited, combined candidates at a step, a stored level mapped to its step, an example that repeats its answer left out, each side breaking lines only between words, the slider as a screen reader hears it, and the accessibility guidelines in both themes. It starts each import from a button, as the home and deck screens do.
-- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, the fields of both kinds with `kind`, a card without `kind` read as vocabulary at step 1, an answer without the fields, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
+- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database: the source sheet, each source, a cancel of the sheet, the camera or the album, a refused permission with its way to Settings, a device without a camera, cancel while extracting, the skeleton under reduce motion; on Review the topics with their counts and switches, cards without a topic, a swipe each way against a short drag, a topic switched off and on, editing in place with its remove and restore button, only the cards kept saved, a duplicate that starts removed and merges back, combined candidates, the deck chip and the duplicates it decides again, a new deck named on saving, a retake cancelled or taken, each side breaking lines only between words as a screen reader hears the card; the coach's three steps, its end by a gesture or Skip, its flag, and its absence once shown or under reduce motion; each failure; and the accessibility guidelines in both themes. It starts each import from a button, as the home and deck screens do.
+- `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, the answer from `answer`, `meaning` or `back` with the part of speech, the topic and its absence, the fields no longer read, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
 - `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.
 - `app/test/photo_import/photo_test.dart` checks the downscaling: aspect ratio, long side, size limit and orientation.
 - `app/test/photo_import/permissions_test.dart` reads `Info.plist`, both `InfoPlist.strings`, the Xcode project and the Android manifest: the camera and library descriptions present, the microphone's absent, and no camera or microphone permission on Android.
@@ -235,12 +220,12 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - [ADR 0013](adr/0013-extract-cards-function-and-eval.md) records the function's shape, the limit's mechanism, the retry model, and where the eval lives.
 - [ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md) records why one extraction returns each card's fields and the app composes the answer, why `back` stays, and why prompt v1 was removed.
 - [ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md) records the notes cards, the fullest and short answers and the detail step, why `back` stays readable, prompt v3, the notes samples and metrics, and why the eval scores notes by terms rather than a judge model; issue #148 records the owner's request.
+- [ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md), superseded in the app by ADR 0057, records the five-step slider, which rows each step offers and how full their answers are, why a hidden row is not saved, the reading of the old response, and why a stored level maps to a step.
+- [ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md) records the system camera and the library in place of the in-app camera view, why the source sheet comes before the screen, the deck chip on review, the refusal and its way to Settings, why Android declares no camera permission, and the black screen's cause; issue #174 records the owner's report and choice.
 - [ADR 0055](adr/0055-cover-everything-a-notes-page-teaches-at-step-5-with-prompt-v4-and-eval-a-dense-page-by-coverage-per-page.md) records prompt v4's coverage of every rule and exception at step 5, the theory-first card with its `topic`, worked examples only on their rule's card, the dense page, coverage of rules and exceptions through a card's front and answer, the per-page report, the measured limits and the proposal for `max_tokens`; issue #176 records the owner's request, and #179 the owner's decisions of 2026-10-18.
+- [ADR 0057](adr/0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md) records the cards grouped by topic on Review, the switches and swipes that replace the slider and the checkboxes, the coach, and why a survey and a choice screen were dropped; issue #182 records the owner's request.
 - [ADR 0058](adr/0058-stop-asking-the-model-for-a-short-form-and-a-step-with-prompt-v5-and-add-a-notes-sample-with-the-writer-s-additions.md) records prompt v5 without the short form and step, the function filling both for the app, the eval's single coverage, and the sample with the writer's additions; issue #189 records the owner's aim and the PM's v4 measurements.
 - [ADR 0059](adr/0059-keep-one-sonnet-call-per-photo-after-measuring-an-outline-then-fill-pipeline-and-the-newest-models.md) records the outline-then-fill and newest-model measurements, why a photo stays one Sonnet call, why the outline code was removed, and the candidates' patterns; issue #189 records the aim.
-- [ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md) records the five-step slider, which rows each step offers and how full their answers are, why a hidden row is not saved, the reading of the old response, and why a stored level maps to a step.
-- [ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md) records the system camera and the library in place of the in-app camera view, why the source sheet comes before the screen, the deck chip on review, the refusal and its way to Settings, why Android declares no camera permission, and the black screen's cause; issue #174 records the owner's report and choice.
-- [ADR 0057](adr/0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md) records the cards grouped by topic on Review, the switches and swipes that replace the slider and the checkboxes, and why the survey and the choice screen of its earlier versions were dropped; issue #182 records the owner's request and decisions.
 - Issue #73 records the fields, the no-invention rule, the three levels and where the user chooses them, as decided by the PM on 2026-10-15.
 - Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 

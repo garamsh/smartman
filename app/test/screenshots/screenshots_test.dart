@@ -166,7 +166,7 @@ void main() {
       final storage = (await tester.runAsync(
         () => SharedPreferencesWithCache.create(
           cacheOptions: const SharedPreferencesWithCacheOptions(
-            allowList: {...themeStorageKeys, ...detailStepStorageKeys},
+            allowList: {...themeStorageKeys, ...photoImportStorageKeys},
           ),
         ),
       ))!;
@@ -590,6 +590,12 @@ void main() {
         ),
       );
 
+      /// The text that reads [text] once its word joiners are left out.
+      Finder shown(String text) => find.byWidgetPredicate(
+        (widget) =>
+            widget is Text && widget.data?.replaceAll('\u2060', '') == text,
+      );
+
       /// Takes a photo from the source sheet, through to the extraction.
       Future<void> shoot() async {
         await tester.tap(find.text(ko.photoCamera));
@@ -605,44 +611,55 @@ void main() {
       await shot(tester, '22-photo-extracting');
       client.answerCards(const [
         CandidateCard(
-          front: 'serendipity',
-          answer: '뜻밖의 행운',
-          partOfSpeech: '[명]',
+          front: '양성모음',
+          answer: 'ㅏ ㅗ ㅑ ㅛ. 밝고 가벼운 느낌의 모음',
+          topic: '모음조화',
         ),
-        CandidateCard(front: 'candid', answer: '솔직한', partOfSpeech: '[형]'),
-        CandidateCard(front: 'lucid', answer: '맑은, 또렷한'),
+        CandidateCard(
+          front: '음성모음',
+          answer: 'ㅓ ㅜ ㅡ ㅕ ㅠ. 어둡고 무거운 느낌의 모음',
+          topic: '모음조화',
+        ),
+        CandidateCard(
+          front: 'ㅗ + ㅏ 축약',
+          answer: 'ㅗ와 ㅏ가 만나면 ㅘ로 줄어듦',
+          topic: '축약·탈락',
+        ),
+        CandidateCard(
+          front: 'ㅏ 탈락',
+          answer: '어간이 ㅏ로 끝나면 어미 아가 빠짐',
+          topic: '축약·탈락',
+        ),
+        CandidateCard(
+          front: '여 불규칙 (하다)',
+          answer: "하 + 아는 '하아'가 아니라 해(하여)",
+          topic: '예외 ★',
+        ),
+        CandidateCard(front: 'lucid', answer: '맑은, 또렷한', topic: '단어'),
       ]);
+      // The coach repeats its demonstration, so frames are pumped, not
+      // settled: the first card mid-peek, with "빼기" under it.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 1000));
+      await shot(tester, '23-photo-review-coach');
+      await tap(tester, find.text(ko.coachSkip));
+
+      await tester.drag(
+        find
+            .ancestor(of: shown('ㅏ 탈락'), matching: find.byType(GestureDetector))
+            .first,
+        const Offset(-120, 0),
+      );
       await tester.pumpAndSettle();
+      await tap(tester, find.byType(Switch).at(2));
       await shot(tester, '23-photo-review');
+      await tap(tester, shown('음성모음'));
+      await shot(tester, '23-photo-review-edit');
+      await tap(tester, find.text(ko.reviewDone));
       await tap(tester, find.text(ko.photoTarget('영단어 기본')));
       await shot(tester, '21-photo-deck-sheet');
       await dismissSheet(tester);
-
-      await tap(tester, find.text(ko.retake));
-      await shoot();
-      client.answerCards(const [
-        CandidateCard(
-          kind: CandidateKind.note,
-          front: '논증이란?',
-          answer: '전제와 결론으로 이루어진 문장들의 집합',
-          short: '전제와 결론의 집합',
-        ),
-        CandidateCard(
-          kind: CandidateKind.note,
-          front: '연역 논증과 귀납 논증의 차이는?',
-          answer: '연역은 전제에 담긴 내용만 말하고, 귀납은 새로운 정보를 준다',
-          short: '귀납만 새로운 정보를 준다',
-          step: DetailStep.keyPoints,
-        ),
-        CandidateCard(
-          kind: CandidateKind.note,
-          front: '전제 지시어는?',
-          answer: '왜냐하면, ~이므로, ~때문에',
-          step: DetailStep.detailed,
-        ),
-      ]);
-      await tester.pumpAndSettle();
-      await shot(tester, '23-photo-review-notes');
 
       await tap(tester, find.text(ko.retake));
       await shoot();
