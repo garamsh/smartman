@@ -20,6 +20,21 @@
       "date": "2026-10-18",
       "spentUsd": 0.33,
       "note": "vocabulary only, Claude Haiku 5.5 and Claude Sonnet 5.5 x the 24 vocabulary pages, prompt v4 tree; spend read from OpenRouter's key usage ($1.6076 less $1.2776 read just before the run); the eval recorded $0.4068. The key read $1.2776 before this run against the $1.2424 recorded above: the $0.0352 between them was spent outside any eval run this ledger records and is unexplained"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.0556,
+      "note": "prompt v4 at #179's head, the eval of #179; spend read from OpenRouter's key usage (#189)"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.0376,
+      "note": "prompt v4, the owner's own photo of a textbook page, kept only locally, on two models; spend read from OpenRouter's key usage (#189)"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.7912,
+      "note": "prompt v4, Claude Sonnet 5.5, Claude Haiku 5.5, OpenAI GPT 5.5, OpenAI GPT 5.4 mini and Google Gemini 2.5 Pro on samples 27, 33 and 35 and the owner's photo, the table in #189; spend read from OpenRouter's key usage"
     }
   ]
 }
