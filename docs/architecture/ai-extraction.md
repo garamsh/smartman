@@ -142,6 +142,20 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - The web has no photo import; one built later offers and composes by the same rule.
 - The choice is stored on the device with `shared_preferences` under `photoDetailStep`, as the theme is, read when the screen opens, and applied at once. When no step is stored, a level stored before the steps under `photoDetailLevel` maps once to the nearest step — 간단 to 핵심, 기본 to 기본, 자세히 to 자세히 — stored as the step while the old key is removed; with neither, the step is 기본.
 
+#### Conversation before the cards (decided, not built yet)
+
+- [ADR 0057](adr/0057-make-photo-import-a-two-step-conversation-in-two-model-calls-what-becomes-cards-then-how-each-kind-is-memorised.md) decides how photo import asks before it makes cards. Until the implementation lands, the Flow below describes the app.
+- **Two calls.**
+  - A survey (`survey: true`) returns the page's summary and its groups, each with a kind, title, count, `memorise` flag, one sample, and one example question and answer.
+  - A make call follows the user's plan: the groups chosen, each in its shape, and up to 5 typed topics.
+  - A request with neither is today's single call, for apps that have not updated.
+- **One extraction a conversation.** The survey counts. Its signed token, bound to the user, the image's SHA-256 and 30 minutes, lets the make call on the same photo count nothing.
+- **Models.** The survey runs on `SURVEY_MODEL`. The make call runs on `VOCAB_MODEL` when every survey group is vocabulary, and on `CARD_MODEL` otherwise. Both settings fall back to `CARD_MODEL`, and the owner sets them before the implementation merges.
+- **Screens**, as the PM's design canvas draws them:
+  - "무엇을 외울까요": topic pills, "추가" for a typed topic, a sample card per chosen topic whose front and back open its shape options, and "카드 만들기";
+  - Review: a swipe left removes a card and a swipe right restores it, struck through while removed; a tap edits in place, with the remove or restore button; a first-use coach, not shown under reduce motion; no checkboxes and no slider.
+  - "바로 만들기" is not offered.
+
 #### Flow
 
 - **Source** — the photo button opens the sheet "사진 가져오기" over the screen it is on, with "사진 찍기", the system camera, and "앨범에서 고르기", the library ([ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md)):
@@ -214,12 +228,12 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - [ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md) records the notes cards, the fullest and short answers and the detail step, why `back` stays readable, prompt v3, the notes samples and metrics, and why the eval scores notes by terms rather than a judge model; issue #148 records the owner's request.
 - [ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md) records the five-step slider, which rows each step offers and how full their answers are, why a hidden row is not saved, the reading of the old response, and why a stored level maps to a step.
 - [ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md) records the system camera and the library in place of the in-app camera view, why the source sheet comes before the screen, the deck chip on review, the refusal and its way to Settings, why Android declares no camera permission, and the black screen's cause; issue #174 records the owner's report and choice.
+- [ADR 0057](adr/0057-make-photo-import-a-two-step-conversation-in-two-model-calls-what-becomes-cards-then-how-each-kind-is-memorised.md) records the photo conversation: why two calls and not three, the light survey and its model, the vocabulary routing, the signed token, the screens, and why there is no "바로 만들기"; issue #182 records the owner's request and decisions.
 - Issue #73 records the fields, the no-invention rule, the three levels and where the user chooses them, as decided by the PM on 2026-10-15.
 - Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 
 ## Open questions
 
-- Whether photo import asks before it makes cards, what becomes cards and how they are shaped, in a survey call and a make call counted as one extraction: proposed in [ADR 0057](adr/0057-make-photo-import-a-two-step-conversation-in-two-model-calls-what-becomes-cards-then-how-each-kind-is-memorised.md), for the owner's review before any implementation (issue #182).
 - On Android, the system may end the app while the photo picker is open; the picked photo is then lost and the user picks again. `image_picker`'s `retrieveLostData` could recover it.
 - Which model `CARD_MODEL` names, how well each covers a notes page's facts step by step, and how often each invents a fact, a part of speech or an example. The eval has not run, with any prompt: it waits for the owner's run on their machine, so `docs/eval/` holds no report yet.
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.

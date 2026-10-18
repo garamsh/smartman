@@ -1,6 +1,6 @@
 # ADR 0057: Make photo import a two-step conversation in two model calls: what becomes cards, then how each kind is memorised
 
-> Status: proposed
+> Status: accepted
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
@@ -19,8 +19,10 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **The owner's decisions on 2026-10-18**, on a first version of this ADR:
   - the survey runs on a fast, cheap model with a light reply;
   - the card shape is chosen per topic;
-  - Review has no checkboxes and no edit button, and a swipe left removes a card;
-  - "바로 만들기" stays open.
+  - Review has no checkboxes and no edit button, and a swipe left removes a card.
+- **The owner approved this ADR on 2026-10-18**, and decided two more points:
+  - "바로 만들기" is not offered on the choice screen: every topic worth memorising starts on, so "카드 만들기" already makes those cards;
+  - the make call picks its model by the page: a vocabulary page runs on a cheap model, and notes on `CARD_MODEL`.
 - Merging a function change deploys it. A change to the cost of a call, or one needing a secret the production project lacks, waits for the owner's approval (`server.md` §Edge Function deploys).
 - The eval's token model (`tools/eval/budget.ts`): a call's prompt, with its photo, is 2,500 tokens; its reply is 1,000 tokens of reasoning plus 120 per note card or 45 per vocabulary card. No run has measured latency yet.
 - Alternatives considered:
@@ -69,13 +71,18 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
     - `added` holds up to 5 topics the user typed, each at most 60 characters, made in the default shape, `question` and `short`.
   - A `200` is today's `{cards}`, so Review reads it unchanged. The prompt is ADR 0055's, told to make only the plan's groups and added topics in their shapes, writing each card's term and short form itself. The rules against inventing anything stand.
   - **Without `survey` or `plan`** the request is today's single call, so every app that has not updated keeps working.
-- **Survey model.** The survey runs on `SURVEY_MODEL`, a new function secret naming a fast, cheap OpenRouter model, and falls back to `CARD_MODEL` when it is unset. The make call runs on `CARD_MODEL`, with the retry as today. Setting `SURVEY_MODEL` is the owner's action in the Supabase console, so the implementation pull request merges only after the owner approves and sets it (`server.md` §Edge Function deploys).
+- **Models.** Two new function secrets, each falling back to `CARD_MODEL` when unset:
+  - The survey runs on `SURVEY_MODEL`, a fast, cheap OpenRouter model.
+  - The make call runs on `VOCAB_MODEL` when every group of the survey is of kind `vocabulary`, and on `CARD_MODEL` otherwise, typed topics included. A vocabulary entry is copied as printed, which a cheap model does as well as a dear one, while notes need a model that phrases questions and covers the page.
+  - The retry runs on `CARD_RETRY_MODEL` as today.
+  - The eval already reports vocabulary pages per configuration, which checks the rule: a cheap model whose vocabulary F1 is within the recommendation's 2 points of the best qualifies for `VOCAB_MODEL`.
+  - Setting `SURVEY_MODEL` and `VOCAB_MODEL` is the owner's action in the Supabase console, so the implementation pull request merges only after the owner approves and sets them (`server.md` §Edge Function deploys).
 - **Daily limit.** A conversation counts once:
   - The survey consumes one extraction before its model call, as a request does today, so a failed survey counts.
   - Its reply carries `conversation`, a token holding the user's id, the SHA-256 of the image bytes and an expiry 30 minutes ahead. It is signed with HMAC-SHA-256 under a key derived from `SUPABASE_SERVICE_ROLE_KEY` with the label "extract-cards conversation", so it needs no secret of its own.
   - A make request whose token verifies for the same user and the same image before it expires consumes nothing. Any other request consumes one, as today.
 - **Slider.** The make call still returns each card's `step`. Review after a conversation shows no slider: the user has chosen what to card, and the shape sets how full each answer is.
-- **"바로 만들기" is open.** Whether the choice screen offers a way to make cards without choosing, where it sits, and whether a failed survey offers it, are the owner's to decide. The contract already serves it: a request without `plan`, with the conversation's token, is today's single call counted once. If it is offered, Review after it keeps the slider, as ADR 0052 has it. It is not offered while the page is being read: the survey has already counted, and cancelling it to make cards at once would count a second extraction.
+- **No "바로 만들기".** The choice screen offers no way to make cards without choosing: every topic worth memorising starts on, so "카드 만들기" makes them all. A failed survey shows its failure with a retry and a retake, as a failed extraction does today. The contract keeps a request without `survey` or `plan` as today's single call, for apps that have not updated, and Review after it keeps the slider, as ADR 0052 has it.
 - **Cost per conversation**, from the eval's token model:
   - Each group's survey output is about 60 tokens (an id, a kind, a title, a count, the flag, a sample, a question and an answer) after a 30-token summary. The eval's 1,000 tokens of reasoning are kept for every call, though a fast model without reasoning writes fewer.
   - The plan adds about 50 prompt tokens a group, and every topic switched on is made, which is the worst case.
@@ -99,18 +106,19 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - the make call: about 2,600 to 2,850 in, and the same out as today's call.
   - GPT 5.4 mini as the survey model prices within 4% of Gemini 3.8 Flash.
   - The dense grammar page is the eval sample #179 adds.
+- On a vocabulary page with `VOCAB_MODEL` set to Claude Haiku 5.5 and `CARD_MODEL` to a dearer model, the make call costs what a Haiku call does: with the survey on Haiku too, the 15-entry page costs $0.0019 against today's $0.0217 on Sonnet 5.5 or $0.0090 on Gemini 3.8 Flash.
 - So a conversation costs 1.04 to 1.10 times today's call when the survey runs on Claude Haiku 5.5 and the cards on a dearer model. When both run on the cheapest model, it costs 1.42 to 1.74 times. The heavier survey of this ADR's first version cost 1.5 to 1.8 times on every model.
 - **Wait per conversation.**
   - The make call waits as long as today's call.
   - The survey adds one call before the choices, of 1,090 to 1,390 completion tokens under the eval's token model, most of them its reasoning allowance, on the survey model.
   - How long that takes is unmeasured until the eval runs the survey on the candidate models.
-- **Before implementation.** The cost per photo rises, and the survey needs `SURVEY_MODEL` set, so the implementation pull request waits for the owner's approval (`server.md` §Edge Function deploys).
+- **Before implementation merges.** The cost per photo changes, and the calls need `SURVEY_MODEL` and `VOCAB_MODEL` set, so the implementation pull request waits for the owner's approval (`server.md` §Edge Function deploys).
 
 ## Consequences
 
 - The user gets the cards they chose, in the shape they chose for each topic, for one extraction against the daily limit.
 - A conversation costs 1.04 to 1.74 times today's call when the survey model is no dearer than the cards' model, and the user waits once more before the choices.
-- The survey can be tuned for speed separately from the cards: `SURVEY_MODEL` switches it with no code change.
+- The survey can be tuned for speed, and vocabulary pages for cost, separately from notes: `SURVEY_MODEL` and `VOCAB_MODEL` switch them with no code change.
 - The app keeps the photo and resends it with the make call. The server stores nothing, and a conversation lives only in its signed token.
 - Within 30 minutes, the same photo can be made into cards again without counting, for example after going back to change a choice. Any other photo counts.
 - An app that has not updated keeps today's single call, slider and all.
@@ -122,6 +130,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - Users go back from Review to the choices because a shape came out unlike its preview, so the survey should return the term and short form after all.
 - The light survey's groups miss items the make call would have found, so the plan narrows the cards below what one call gives today.
 - Most conversations keep every default, so the choice screen costs a call and a wait for nothing.
+- The eval shows the cheap model's vocabulary F1 well below the best, so vocabulary pages should run on `CARD_MODEL` after all.
 - Users remove cards by accident with a swipe, or never find the swipe despite the coach.
 - Repeated make calls within one token's 30 minutes show up in the usage logs, so a conversation needs a count of its own.
 - The survey's wait drives users away before the choices.
