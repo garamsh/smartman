@@ -47,7 +47,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - `AccountService.deleteAccount` posts to the `delete-account` Edge Function through the Supabase client's Edge Functions client, which sends the session's access token; the request names no user. The function deletes the token's user, and the server's cascade deletes every row it owns ([`server.md`](server.md)).
 - Once the account is deleted, the screen signs out of Supabase and Google and clears the device's data through `AccountData`, as sign-out does but without pushing first. The gate then shows the sign-in screen.
 - A failed deletion changes nothing: the account stays signed in with its data.
-- Only the PM deploys the function, after the pull request that changes it merges; it lives in `supabase/functions/delete-account/` with its Deno tests, run by `make test` through `deno.sh` with Supabase Auth replaced by a fake `fetch`.
+- Merging the pull request that changes the function deploys it ([`server.md`](server.md) §Edge Function deploys); it lives in `supabase/functions/delete-account/` with its Deno tests, run by `make test` through `deno.sh` with Supabase Auth replaced by a fake `fetch`.
 
 ### Configuration
 
