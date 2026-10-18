@@ -134,7 +134,8 @@ void main() {
     const start = 1792296000; // 2026-10-18 04:00 UTC
     const end = start + 86400;
     const hour = 3600;
-    final list = await todaysList(
+    // A synchronous call, which a widget test's fake clock can run.
+    final list = todaysList(
       cards: [
         // Due today, not answered: left.
         const TodayCard(due: start + 5 * hour, reviews: []),
