@@ -37,6 +37,9 @@ class DeckScreen extends ConsumerStatefulWidget {
 
 enum _DeckAction { rename, publish, unpublish, delete }
 
+/// The ways the add sheet offers to add a card.
+enum _Add { byHand, camera, album }
+
 class _DeckScreenState extends ConsumerState<DeckScreen> {
   late String _name = widget.deck.name;
 
@@ -292,43 +295,52 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     ];
   }
 
-  /// Offers the two ways to add a card: typing it in, or from a photo.
+  /// Offers the ways to add a card, named as the new-deck sheet names them:
+  /// by hand, or from a photo taken with the camera or picked from the album.
   Future<void> _addCard(PhotoImport photoImport) async {
     final l10n = AppLocalizations.of(context);
-    final photo = await showOptionSheet(
+    final choice = await showOptionSheet<_Add>(
       context,
       title: l10n.newCard,
       options: [
         (
           icon: LucideIcons.pencilLine,
-          title: l10n.addCardManually,
+          title: l10n.createManually,
           body: l10n.addCardManuallyBody,
-          value: false,
+          value: _Add.byHand,
         ),
         (
           icon: LucideIcons.camera,
-          title: l10n.addCardPhoto,
-          body: l10n.addCardPhotoBody,
-          value: true,
+          title: l10n.photoCamera,
+          body: l10n.photoCameraBody,
+          value: _Add.camera,
+        ),
+        (
+          icon: LucideIcons.images,
+          title: l10n.photoAlbum,
+          body: l10n.photoAlbumBody,
+          value: _Add.album,
         ),
       ],
     );
     if (!mounted) return;
-    switch (photo) {
-      case false:
+    switch (choice) {
+      case _Add.byHand:
         await _open(null);
-      case true:
-        await _importPhoto(photoImport);
+      case _Add.camera:
+        await _importPhoto(photoImport, PhotoOrigin.camera);
+      case _Add.album:
+        await _importPhoto(photoImport, PhotoOrigin.album);
       case null:
         return;
     }
   }
 
-  /// Starts photo import for this deck. When it saved into another deck,
-  /// that deck's list replaces this one.
-  Future<void> _importPhoto(PhotoImport photoImport) async {
+  /// Starts photo import for this deck from a photo by [origin]. When it
+  /// saved into another deck, that deck's list replaces this one.
+  Future<void> _importPhoto(PhotoImport photoImport, PhotoOrigin origin) async {
     final navigator = Navigator.of(context);
-    final deck = await photoImport(context, widget.deck.id);
+    final deck = await photoImport(context, widget.deck.id, origin);
     if (deck == null || deck.id == widget.deck.id || !mounted) return;
     await navigator.pushReplacement(
       MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),

@@ -66,6 +66,7 @@ void main() {
       tester.element(find.byType(HomeScreen)),
     ).read(syncControllerProvider);
 
+    await tapAndSettle(tester, 'Make a deck');
     await tapAndSettle(tester, 'Create by hand');
     await tester.enterText(
       find.widgetWithText(AppTextField, 'Deck name'),

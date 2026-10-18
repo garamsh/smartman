@@ -68,19 +68,23 @@ void main() {
       expect(browse.top, greaterThan(create.bottom));
 
       await app.tapText('Create a deck');
-      // The new-deck sheet, with its way to public decks since sharing exists.
+      // The new-deck sheet offers no second way to public decks: the row is
+      // the one.
       expect(find.text('Create by hand'), findsOneWidget);
-      expect(find.text('Copy a public deck'), findsOneWidget);
+      expect(find.text('Copy a public deck'), findsNothing);
       await app.close();
     },
   );
 
   testWidgets(
-    'the deck list opens browse, which lists public decks newest first with owner and counts',
+    'the deck list opens browse, titled Public decks, which lists public decks newest first with owner and counts',
     (tester) async {
       final app = await SharingApp.open(tester, server: _server());
       await app.browse();
 
+      // The screen is named for what the entry that opened it names.
+      expect(find.text('Public decks'), findsOneWidget);
+      expect(find.text('Browse'), findsNothing);
       expect(_listed(tester), ['French', 'German', 'Spanish']);
       expect(find.text('Bea · 1 card · copied once'), findsOneWidget);
       expect(find.text('Cal · 12 cards · copied 5 times'), findsOneWidget);

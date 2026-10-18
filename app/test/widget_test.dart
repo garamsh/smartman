@@ -112,13 +112,15 @@ void main() {
   }
 
   Future<void> createDeckAndOpen(WidgetTester tester, String name) async {
-    // The first deck is made from the first-run home, later ones from the
-    // decks tab's new-deck sheet.
-    if (find.text('Create by hand').evaluate().isEmpty) {
+    // The first deck is made from the first-run home's new-deck sheet, later
+    // ones from the decks tab's.
+    if (find.text('Make a deck').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Make a deck'));
+    } else {
       await showTab(tester, 'Decks');
       await tester.tap(find.text('Create a deck'));
-      await tester.pumpAndSettle();
     }
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Create by hand'));
     await tester.pumpAndSettle();
     await enterText(tester, 'Deck name', name);
@@ -141,12 +143,18 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
+    await tester.tap(find.text('Make a deck'));
+    await tester.pumpAndSettle();
     expect(find.text('Create by hand'), findsOneWidget);
-    expect(find.text('Create from photo'), findsNothing);
+    expect(find.text('Take photo'), findsNothing);
+    expect(find.text('Choose from album'), findsNothing);
     await unmountApp(tester);
 
     await pumpApp(tester, extraction: _NoExtraction());
-    expect(find.text('Create from photo'), findsOneWidget);
+    await tester.tap(find.text('Make a deck'));
+    await tester.pumpAndSettle();
+    expect(find.text('Take photo'), findsOneWidget);
+    expect(find.text('Choose from album'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -219,9 +227,11 @@ void main() {
     await tester.pumpAndSettle();
     await showTab(tester, 'Decks');
     expect(find.text('Browse public decks'), findsOneWidget);
+    // The public decks have that one way in: the new-deck sheet offers none.
     await tester.tap(find.text('Create a deck'));
     await tester.pumpAndSettle();
-    expect(find.text('Copy a public deck'), findsOneWidget);
+    expect(find.text('Create by hand'), findsOneWidget);
+    expect(find.text('Copy a public deck'), findsNothing);
     await unmountApp(tester);
   });
 
@@ -238,7 +248,9 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Create by hand'), findsOneWidget);
+      // One primary, which opens the new-deck sheet with every way to start.
+      expect(find.text('Make a deck'), findsOneWidget);
+      expect(find.text('Create by hand'), findsNothing);
       expect(find.text('Browse public decks'), findsNothing);
       // The decks tab's way to a new deck waits for the first deck.
       expect(find.text('Create a deck'), findsNothing);
@@ -249,7 +261,7 @@ void main() {
         extraction: _NoExtraction(),
         sharing: FakeSharingServer(),
       );
-      expect(find.text('Create from photo'), findsOneWidget);
+      expect(find.text('Make a deck'), findsOneWidget);
       await tester.tap(find.text('Browse public decks'));
       await tester.pumpAndSettle();
       expect(
@@ -269,7 +281,7 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text('첫 덱을 만들어 볼까요?'), findsOneWidget);
-    expect(find.text('직접 만들기'), findsOneWidget);
+    expect(find.text('덱 만들기'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -520,9 +532,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(brightness(tester).name, mode);
         await meetsGuidelines();
+        await tester.tap(find.text('Make a deck'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
         await tester.tap(find.text('Create by hand'));
         await tester.pumpAndSettle();
-        expect(find.text('Create a deck'), findsOneWidget);
+        expect(find.text('New deck'), findsOneWidget);
         expect(find.text('You can change the name later.'), findsOneWidget);
         await meetsGuidelines();
         await enterText(tester, 'Deck name', 'French');

@@ -28,7 +28,7 @@ class DeckScreens {
       tester.widget<StudyScreen>(find.byType(StudyScreen)).decks.ids;
 
   /// The deck of every photo import opened.
-  final photoImports = <DeckId?>[];
+  final photoImports = <(DeckId?, PhotoOrigin)>[];
 
   /// The deck's cards as stored.
   Future<List<Card>> cards() async =>
@@ -125,8 +125,8 @@ class DeckScreens {
           deckRepositoryProvider.overrideWithValue(repository),
           ...homeOverrides(db, storage: storage, stalled: stalled),
           if (photoImport)
-            photoImportProvider.overrideWithValue((context, deck) {
-              screens.photoImports.add(deck);
+            photoImportProvider.overrideWithValue((context, deck, origin) {
+              screens.photoImports.add((deck, origin));
               return Navigator.of(context).push(
                 MaterialPageRoute<Deck>(
                   builder: (_) => const Scaffold(body: Text('photo import')),

@@ -80,12 +80,16 @@ Future<_List> _open(
   Map<String, int> mastered = const {},
   Duration? pace,
   Set<String> unreadable = const {},
-  Widget Function(DeckId? deck)? photoImport,
+  Widget Function(DeckId? deck, PhotoOrigin origin)? photoImport,
   List<String> decks = const ['Alpha', 'Beta', 'Gamma'],
 }) async {
-  Future<Deck?> pushed(BuildContext context, DeckId? deck) =>
-      Navigator.of(context)
-          .push(MaterialPageRoute<Deck>(builder: (_) => photoImport!(deck)));
+  Future<Deck?> pushed(
+    BuildContext context,
+    DeckId? deck,
+    PhotoOrigin origin,
+  ) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<Deck>(builder: (_) => photoImport!(deck, origin)));
   // A phone's screen, so the 오늘 tab's decks are on it.
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
@@ -542,8 +546,11 @@ void main() {
         // The sheet's title over the entry that opened it.
         expect(find.text('Create a deck'), findsNWidgets(2));
         expect(find.text('Create by hand'), findsOneWidget);
-        expect(find.text('Create from photo'), findsNothing);
+        expect(find.text('Take photo'), findsNothing);
+        expect(find.text('Choose from album'), findsNothing);
         await list.tap('Create by hand');
+        // The name sheet is "New deck", as photo import's is.
+        expect(find.text('New deck'), findsOneWidget);
         await tester.enterText(find.byType(EditableText).last, 'Delta');
         await list.tap('Create');
 
@@ -560,23 +567,33 @@ void main() {
     );
 
     testWidgets(
-      'with photo import, Create a deck offers a photo, which opens it for a new deck',
+      'with photo import, Create a deck offers the camera and the album in the same sheet, each opening photo import for a new deck from its source',
       (tester) async {
-        final opened = <DeckId?>[];
+        final opened = <(DeckId?, PhotoOrigin)>[];
         final list = await _open(
           tester,
-          photoImport: (deck) {
-            opened.add(deck);
-            return const Scaffold(body: Text('photo import'));
+          photoImport: (deck, origin) {
+            opened.add((deck, origin));
+            return Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('photo import'),
+                ),
+              ),
+            );
           },
         );
         await list.decks();
 
-        await list.newDeck();
-        await list.tap('Create from photo');
-
-        expect(find.text('photo import'), findsOneWidget);
-        expect(opened, [null]);
+        for (final row in ['Take photo', 'Choose from album']) {
+          await list.newDeck();
+          expect(find.text('Create by hand'), findsOneWidget);
+          await list.tap(row);
+          expect(find.text('photo import'), findsOneWidget);
+          await list.tap('photo import');
+        }
+        expect(opened, [(null, PhotoOrigin.camera), (null, PhotoOrigin.album)]);
         await list.close();
       },
     );
@@ -586,7 +603,7 @@ void main() {
     ) async {
       final list = await _open(
         tester,
-        photoImport: (_) => Builder(
+        photoImport: (_, _) => Builder(
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () => Navigator.of(context).pop(
@@ -606,7 +623,7 @@ void main() {
       await list.decks();
 
       await list.newDeck();
-      await list.tap('Create from photo');
+      await list.tap('Take photo');
       await list.tap('saved');
 
       expect(find.byType(HomeScreen), findsNothing);
@@ -620,7 +637,7 @@ void main() {
     ) async {
       final list = await _open(
         tester,
-        photoImport: (_) => Builder(
+        photoImport: (_, _) => Builder(
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -632,7 +649,7 @@ void main() {
       await list.decks();
 
       await list.newDeck();
-      await list.tap('Create from photo');
+      await list.tap('Take photo');
       await list.tap('left');
 
       expect(find.byType(HomeScreen), findsOneWidget);

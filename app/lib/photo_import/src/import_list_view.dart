@@ -26,6 +26,7 @@ class ImportListView extends StatefulWidget {
     required this.onChanged,
     required this.onCancel,
     required this.onRetake,
+    required this.retakeLabel,
     required this.onSave,
   });
 
@@ -45,6 +46,10 @@ class ImportListView extends StatefulWidget {
 
   final VoidCallback onCancel;
   final VoidCallback onRetake;
+
+  /// What the retake is called: "다시 찍기", or "다른 사진 고르기" for a photo
+  /// from the album.
+  final String retakeLabel;
   final VoidCallback onSave;
 
   @override
@@ -89,7 +94,7 @@ class _ImportListViewState extends State<ImportListView> {
           Padding(
             padding: const EdgeInsets.only(right: AppSpace.s4),
             child: AppButton(
-              label: l10n.retake,
+              label: widget.retakeLabel,
               variant: AppButtonVariant.text,
               onPressed: widget.onRetake,
             ),

@@ -5,19 +5,31 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../deck/deck.dart';
 import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
-import '../../sharing/sharing.dart';
 import 'deck_screen.dart';
 import 'option_sheet.dart';
 
-enum _NewDeck { manual, photo, public }
+/// A way to start a new deck: by hand, or from a photo taken or picked.
+sealed class _NewDeck {
+  const _NewDeck();
+}
 
-/// Offers the ways to start a deck the app has: by hand, from a photo, and
-/// from a public deck; then starts the one chosen.
+final class _ByHand extends _NewDeck {
+  const _ByHand();
+}
+
+final class _FromPhoto extends _NewDeck {
+  const _FromPhoto(this.origin);
+
+  final PhotoOrigin origin;
+}
+
+/// Offers the ways to start a deck the app has: by hand, and, with photo
+/// import, from a photo taken with the camera or picked from the album; then
+/// starts the one chosen.
 Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context);
   final photoImport = ref.read(photoImportProvider);
-  final sharing = ref.read(sharingServiceProvider);
-  final choice = await showOptionSheet(
+  final choice = await showOptionSheet<_NewDeck>(
     context,
     title: l10n.newDeckTitle,
     options: [
@@ -25,35 +37,31 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
         icon: LucideIcons.pencilLine,
         title: l10n.createManually,
         body: l10n.createManuallyBody,
-        value: _NewDeck.manual,
+        value: const _ByHand(),
       ),
-      if (photoImport != null)
+      if (photoImport != null) ...[
         (
           icon: LucideIcons.camera,
-          title: l10n.createFromPhoto,
-          body: l10n.createFromPhotoBody,
-          value: _NewDeck.photo,
+          title: l10n.photoCamera,
+          body: l10n.photoCameraBody,
+          value: const _FromPhoto(PhotoOrigin.camera),
         ),
-      if (sharing != null)
         (
-          icon: LucideIcons.compass,
-          title: l10n.importFromPublic,
-          body: l10n.importFromPublicBody,
-          value: _NewDeck.public,
+          icon: LucideIcons.images,
+          title: l10n.photoAlbum,
+          body: l10n.photoAlbumBody,
+          value: const _FromPhoto(PhotoOrigin.album),
         ),
+      ],
     ],
   );
   if (!context.mounted) return;
   switch (choice) {
-    case _NewDeck.manual:
+    case _ByHand():
       await createDeckByHand(context, ref);
-    case _NewDeck.photo when photoImport != null:
-      await importDeckFromPhoto(context, photoImport);
-    case _NewDeck.public when sharing != null:
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()));
-    case _NewDeck.photo || _NewDeck.public || null:
+    case _FromPhoto(:final origin) when photoImport != null:
+      await importDeckFromPhoto(context, photoImport, origin);
+    case _FromPhoto() || null:
       return;
   }
 }
@@ -66,7 +74,7 @@ Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context);
   final name = await showNameSheet(
     context,
-    title: l10n.newDeckTitle,
+    title: l10n.newDeck,
     body: l10n.newDeckBody,
     action: l10n.create,
   );
@@ -83,13 +91,15 @@ Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
   }
 }
 
-/// Starts photo import for a new deck, then opens the deck it saved into.
+/// Starts photo import for a new deck from a photo by [origin], then opens
+/// the deck it saved into.
 Future<void> importDeckFromPhoto(
   BuildContext context,
   PhotoImport photoImport,
+  PhotoOrigin origin,
 ) async {
   final navigator = Navigator.of(context);
-  final deck = await photoImport(context, null);
+  final deck = await photoImport(context, null, origin);
   if (deck == null || !context.mounted) return;
   await navigator.push(
     MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),

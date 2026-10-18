@@ -28,5 +28,5 @@ export 'src/failure.dart'
 export 'src/photo.dart' show JpegPhoto;
 export 'src/photo_import_screen.dart'
     show importFromPhoto, photoImportStorageKeys;
-export 'src/photo_source.dart' show DevicePhotoSource, PhotoSource;
+export 'src/photo_source.dart' show DevicePhotoSource, PhotoOrigin, PhotoSource;
 export 'src/providers.dart' show PhotoImport, photoImportProvider;
