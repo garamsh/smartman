@@ -307,9 +307,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get createFromPhoto => '사진으로 만들기';
-
-  @override
   String get backlogPaused => '밀린 복습을 마칠 때까지 새 카드는 쉬어요.';
 
   @override
@@ -378,9 +375,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get photoTargetTitle => '추가할 덱';
 
   @override
-  String get photoSourceTitle => '사진 가져오기';
-
-  @override
   String get photoCamera => '사진 찍기';
 
   @override
@@ -420,6 +414,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get retake => '다시 찍기';
 
   @override
+  String get pickAnother => '다른 사진 고르기';
+
+  @override
+  String get makeDeck => '덱 만들기';
+
+  @override
+  String get photoCameraBody => '단어장을 찍으면 카드를 찾아 드려요';
+
+  @override
+  String get photoAlbumBody => '고른 사진에서 카드를 찾아 드려요';
+
+  @override
   String get retry => '다시 시도';
 
   @override
@@ -450,7 +456,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckDeleted => '이 덱은 삭제됐어요. 다른 덱을 골라 주세요.';
 
   @override
-  String get browse => '둘러보기';
+  String get browse => '공개 덱';
 
   @override
   String get publish => '공개하기';
@@ -706,15 +712,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get createManuallyBody => '이름을 정하고 카드를 하나씩 넣어요';
 
   @override
-  String get createFromPhotoBody => '단어장 사진을 찍으면 카드를 찾아 드려요';
-
-  @override
-  String get importFromPublic => '공개 덱에서 가져오기';
-
-  @override
-  String get importFromPublicBody => '다른 사람이 만든 덱을 복사해요';
-
-  @override
   String progressSemantics(int mastered, int learning, int fresh) {
     return '익힘 $mastered장, 학습 중 $learning장, 새 카드 $fresh장';
   }
@@ -752,16 +749,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get closeSearch => '검색 닫기';
 
   @override
-  String get addCardManually => '직접 입력';
-
-  @override
   String get addCardManuallyBody => '문제와 답을 하나씩 적어요';
-
-  @override
-  String get addCardPhoto => '사진';
-
-  @override
-  String get addCardPhotoBody => '단어장 사진에서 카드를 찾아요';
 
   @override
   String cardListTitle(int count) {

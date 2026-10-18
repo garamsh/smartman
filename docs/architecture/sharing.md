@@ -27,8 +27,8 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 
 ### Browsing
 
-- The home screen's "둘러보기" icon button, left of the account button, opens the browse screen.
-- The screen has a large title, a search over name and description (ignoring case, run 300 ms after typing pauses), and a segmented "최신순" / "가져오기 많은 순".
+- "공개 덱 둘러보기" opens the browse screen: the row under the 덱 tab's deck rows, and the first-run home's text action ([`home.md`](home.md), [ADR 0067](adr/0067-start-a-deck-or-a-card-from-one-sheet-that-holds-the-photo-source-and-name-public-decks-once.md)).
+- The screen has a large title, "공개 덱", a search over name and description (ignoring case, run 300 ms after typing pauses), and a segmented "최신순" / "가져오기 많은 순".
 - Each row shows the deck's name and "{display name} · 카드 n장 · 가져오기 m회". The listing comes from `list_public_decks` ([`server.md`](server.md)), at most 100 decks; decks of users the user blocked are absent.
 - Offline, the screen shows "인터넷에 연결되지 않았어요. 연결되면 공개 덱을 볼 수 있어요." and lists once the connection returns; a failed request shows its message with "다시 시도".
 
@@ -58,7 +58,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 ### Tests
 
 - `app/test/sharing/sharing_service_test.dart` — display name validation, publish and unpublish order and failure, the first publish's name, and copies as a new deck and into a deck with each duplicate option, over an in-memory database and a substituted server (`app/test/sharing/fakes.dart`).
-- `app/test/sharing/browse_screen_test.dart` — the listing, search, sort, the offline state, a failed request, and the guidelines in both themes.
+- `app/test/sharing/browse_screen_test.dart` — the 덱 tab's "공개 덱 둘러보기" as the one way in beside a new-deck sheet that offers none, the title "공개 덱", the listing, search, sort, the offline state, a failed request, and the guidelines in both themes.
 - `app/test/sharing/public_deck_screen_test.dart` — the preview, each import option, a deck no longer public, report and block, and the guidelines in both themes.
 - `app/test/sharing/publish_test.dart` — publish, display name and description validation, the required agreement, a refused publish, unpublish, the chips, the offline menu item, and the guidelines in both themes.
 - `app/test/screenshots/screenshots_test.dart` draws the deck menu, the publish sheet, the public chips, browse, the preview, and the import, report and block sheets in both themes when asked to.

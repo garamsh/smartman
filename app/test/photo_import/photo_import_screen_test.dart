@@ -43,6 +43,9 @@ class _Import {
   /// screen reader hears.
   late final SemanticsHandle _semantics = tester.ensureSemantics();
 
+  /// Where the import's photo is taken from, which the source sheets choose.
+  PhotoOrigin origin = PhotoOrigin.camera;
+
   /// What photo import resolved to, once it has.
   Object? popped = _notPopped;
   static const _notPopped = Object();
@@ -110,6 +113,7 @@ class _Import {
                   import.popped = await importFromPhoto(
                     context,
                     deck: target,
+                    origin: import.origin,
                     client: import.client,
                     photos: import.photos,
                     preferences: import.preferences,
@@ -122,8 +126,6 @@ class _Import {
         ),
       ),
     );
-    await tester.tap(_shown('open'));
-    await tester.pumpAndSettle();
     return import;
   }
 
@@ -134,16 +136,32 @@ class _Import {
     await tester.pumpAndSettle();
   }
 
-  /// Takes a photo from the source sheet; the extraction then waits for
-  /// [client]'s answer, so this pumps frames rather than settling the
-  /// progress bar.
-  Future<void> shoot() => _choose('Take photo');
+  /// Starts the import with a photo taken by the camera; the extraction then
+  /// waits for [client]'s answer, so this pumps frames rather than settling
+  /// the progress bar.
+  Future<void> shoot() => _from(PhotoOrigin.camera);
 
-  /// Picks a photo from the source sheet, as [shoot] takes one.
-  Future<void> pick() => _choose('Choose from album');
+  /// Starts the import with a photo picked from the album, as [shoot] does.
+  Future<void> pick() => _from(PhotoOrigin.album);
 
-  Future<void> _choose(String source) async {
-    await tester.tap(_shown(source));
+  /// Starts the import with a photo by [origin] whose taking fails or is
+  /// cancelled, and settles.
+  Future<void> start(PhotoOrigin origin) async {
+    this.origin = origin;
+    await tap(_shown('open'));
+  }
+
+  Future<void> _from(PhotoOrigin origin) async {
+    this.origin = origin;
+    await _pumpPast(_shown('open'));
+  }
+
+  /// Taps the retake, named [label], which takes the next photo at once, as
+  /// [shoot] does.
+  Future<void> retake([String label = 'Retake']) => _pumpPast(_shown(label));
+
+  Future<void> _pumpPast(Finder finder) async {
+    await tester.tap(finder);
     for (var frame = 0; frame < 5; frame++) {
       await tester.pump(const Duration(milliseconds: 200));
     }
@@ -221,15 +239,32 @@ void main() {
 
   group('photo source', () {
     testWidgets(
-      'the photo button offers the camera and the album in a sheet, and nothing opens before a photo',
+      'nothing is taken before the import starts, and its retake goes back to where the photo came from, named for it',
       (tester) async {
         final import = await _Import.open(tester);
-
-        expect(_shown('Add a photo'), findsOneWidget);
-        expect(_shown('Take photo'), findsOneWidget);
-        expect(_shown('Choose from album'), findsOneWidget);
-        expect(_shown('Finding cards'), findsNothing);
         expect((import.photos.cameraCalls, import.photos.libraryCalls), (0, 0));
+
+        // From the camera, "Retake" takes another with it.
+        await import.extract({'a': '1'});
+        expect(_shown('Pick another photo'), findsNothing);
+        await import.retake('Retake');
+        expect((import.photos.cameraCalls, import.photos.libraryCalls), (2, 0));
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'from the album, the retake reads "Pick another photo" and picks from it again',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pick();
+        import.client.answer({'a': '1'});
+        await tester.pumpAndSettle();
+
+        expect(_shown('Retake'), findsNothing);
+        await import.retake('Pick another photo');
+        expect((import.photos.cameraCalls, import.photos.libraryCalls), (0, 2));
+        expect(_shown('Finding cards'), findsOneWidget);
         await import.close();
       },
     );
@@ -255,7 +290,7 @@ void main() {
       });
     }
 
-    for (final cancel in ['the sheet', 'the camera', 'the album']) {
+    for (final cancel in ['the camera', 'the album']) {
       testWidgets(
         'cancelling $cancel returns to where the user was, with nothing opened or sent',
         (tester) async {
@@ -267,19 +302,16 @@ void main() {
           );
 
           switch (cancel) {
-            case 'the sheet':
-              await import.tap(find.byType(ModalBarrier).last);
             case 'the camera':
-              await import.tap(_shown('Take photo'));
+              await import.start(PhotoOrigin.camera);
               expect(import.photos.cameraCalls, 1);
             case _:
-              await import.tap(_shown('Choose from album'));
+              await import.start(PhotoOrigin.album);
               expect(import.photos.libraryCalls, 1);
           }
 
           expect(import.hasPopped, isTrue);
           expect(import.popped, isNull);
-          expect(_shown('Take photo'), findsNothing);
           expect(_shown('open'), findsOneWidget);
           expect(find.byType(FilledButton), findsNothing, reason: 'no failure');
           expect(import.client.calls, isEmpty);
@@ -288,9 +320,12 @@ void main() {
       );
     }
 
-    for (final source in ['Take photo', 'Choose from album']) {
+    for (final (source, origin, retake) in [
+      ('the camera', PhotoOrigin.camera, 'Retake'),
+      ('the album', PhotoOrigin.album, 'Pick another photo'),
+    ]) {
       testWidgets(
-        'a refused permission behind "$source" says so with a way to Settings, where an unreadable photo has none',
+        'a refused permission behind $source says so with a way to Settings, where an unreadable photo has none',
         (tester) async {
           final import = await _Import.open(
             tester,
@@ -299,7 +334,7 @@ void main() {
               ..libraryFailure = const PhotoAccessDenied('denied'),
           );
 
-          await import.tap(_shown(source));
+          await import.start(origin);
 
           expect(
             _shown(
@@ -319,14 +354,13 @@ void main() {
           import.photos
             ..cameraFailure = const PhotoUnreadable('heic')
             ..libraryFailure = const PhotoUnreadable('heic');
-          await import.tap(_shown('Retake'));
-          await import.tap(_shown(source));
+          await import.tap(_shown(retake));
           expect(
             _shown("Couldn't read this photo. Choose another one."),
             findsOneWidget,
           );
           expect(_shown('Open Settings'), findsNothing);
-          expect(_shown('Retake'), findsOneWidget);
+          expect(_shown(retake), findsOneWidget);
           expect(import.client.calls, isEmpty);
           await import.close();
         },
@@ -342,7 +376,7 @@ void main() {
           ..cameraFailure = const PhotoAccessDenied('denied')
           ..settingsOpen = false,
       );
-      await import.tap(_shown('Take photo'));
+      await import.start(PhotoOrigin.camera);
 
       await import.tap(_shown('Open Settings'));
 
@@ -353,27 +387,32 @@ void main() {
       await import.close();
     });
 
-    testWidgets('a device without a camera says so and offers the album', (
-      tester,
-    ) async {
-      final import = await _Import.open(
-        tester,
-        before: (import) =>
-            import.photos.cameraFailure = const CameraUnavailable('none'),
-      );
+    testWidgets(
+      'a device without a camera says so, and its retake picks from the album, as later retakes do',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) =>
+              import.photos.cameraFailure = const CameraUnavailable('none'),
+        );
 
-      await import.tap(_shown('Take photo'));
-      expect(
-        _shown("Couldn't open the camera. Choose a photo from your album."),
-        findsOneWidget,
-      );
-      expect(_shown('Open Settings'), findsNothing);
-      await import.tap(_shown('Retake'));
-      await import.pick();
+        await import.start(PhotoOrigin.camera);
+        expect(
+          _shown("Couldn't open the camera. Choose a photo from your album."),
+          findsOneWidget,
+        );
+        expect(_shown('Open Settings'), findsNothing);
+        expect(_shown('Retake'), findsNothing);
+        await import.retake('Choose from album');
 
-      expect(import.client.calls.single.photo, same(testPhoto));
-      await import.close();
-    });
+        expect(import.photos.libraryCalls, 1);
+        expect(import.client.calls.single.photo, same(testPhoto));
+        import.client.answer({'a': '1'});
+        await tester.pumpAndSettle();
+        expect(_shown('Pick another photo'), findsOneWidget);
+        await import.close();
+      },
+    );
   });
 
   group('extracting', () {
@@ -788,7 +827,6 @@ void main() {
         await import.pickItem('Meaning → word');
         await import.tap(_shown('Add 3 cards'));
 
-        await import.tap(_shown('open'));
         await import.extractCards(words);
         expect(_shown('Meaning → word'), findsOneWidget, reason: '빈출 숙어');
         expect(_shown('Word → meaning'), findsOneWidget, reason: '최빈출 단어');
@@ -800,7 +838,6 @@ void main() {
         await import.tap(_shown('Spanish'));
         await import.tap(_shown('Add 5 cards'));
 
-        await import.tap(_shown('open'));
         await import.extractCards(words);
         expect(_shown('Both ways'), findsNothing, reason: "French's forms");
         expect(_shown('Meaning → word'), findsOneWidget);
@@ -847,22 +884,22 @@ void main() {
     });
 
     testWidgets(
-      'retake offers the camera and the album again; a cancel keeps the list, a photo replaces it',
+      'retake takes another photo; a cancel keeps the list, a photo replaces it',
       (tester) async {
         final import = await _Import.open(tester);
         await import.extract({'a': '1'});
         await import.tap(import.check('a'));
 
-        await import.tap(_shown('Retake'));
         import.photos.cameraPhoto = null;
-        await import.tap(_shown('Take photo'));
+        await import.tap(_shown('Retake'));
         expect(_shown('Found 1 word'), findsOneWidget);
         expect(import.included('a'), isFalse, reason: 'kept as it was');
         expect(import.client.calls, hasLength(1));
 
         import.photos.cameraPhoto = testPhoto;
-        await import.tap(_shown('Retake'));
-        await import.extract({'b': '2', 'c': '3'});
+        await import.retake();
+        import.client.answer({'b': '2', 'c': '3'});
+        await tester.pumpAndSettle();
         expect(_shown('Found 2 words'), findsOneWidget);
         expect(_shown('a'), findsNothing);
         expect(await import.cards(import.french), isEmpty);
@@ -1212,10 +1249,13 @@ void main() {
             expect(import.client.calls.last.photo, same(testPhoto));
             expect(_shown('Finding cards'), findsOneWidget);
           } else if (retake) {
-            await import.tap(_shown('Retake'));
-            expect(_shown('Take photo'), findsOneWidget);
+            await import.retake();
+            expect(import.photos.cameraCalls, 2);
+            expect(_shown('Finding cards'), findsOneWidget);
           } else {
-            await import.tap(_shown('Close'));
+            // The top bar's close is the one way out.
+            expect(_shown('Close'), findsNothing);
+            await import.tap(find.byTooltip('Close'));
             expect(import.popped, isNull);
           }
           expect(await import.cards(import.french), isEmpty);
@@ -1230,15 +1270,15 @@ void main() {
       final import = await _Import.open(tester);
       import.photos.libraryFailure = const PhotoUnreadable('heic');
 
-      await import.tap(_shown('Choose from album'));
+      await import.start(PhotoOrigin.album);
 
       expect(
         _shown("Couldn't read this photo. Choose another one."),
         findsOneWidget,
       );
       expect(_shown('Try again'), findsNothing);
-      await import.tap(_shown('Retake'));
-      expect(_shown('Take photo'), findsOneWidget);
+      await import.tap(_shown('Pick another photo'));
+      expect(import.photos.libraryCalls, 2);
       expect(import.client.calls, isEmpty);
       await import.close();
     });
@@ -1247,7 +1287,7 @@ void main() {
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'the source sheet, extracting, the list with a row left out and a row held, its form menu, the edit sheet, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
+        'extracting, the list with a row left out and a row held, its form menu, the edit sheet, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
         (tester) async {
           final import = await _Import.open(
             tester,
@@ -1266,8 +1306,6 @@ void main() {
             await expectLater(tester, meetsGuideline(textContrastGuideline));
           }
 
-          expect(_shown('Add a photo'), findsOneWidget);
-          await check();
           await import.shoot();
           await check();
           import.client.answer({
@@ -1293,15 +1331,13 @@ void main() {
           expect(_shown('Add to'), findsOneWidget);
           await check();
           await import.tap(_shown('Spanish'));
-          await import.tap(_shown('Retake'));
-          await import.shoot();
+          await import.retake();
           import.client.fail(const ModelFailed());
           await tester.pumpAndSettle();
           expect(_shown('Try again'), findsOneWidget);
           await check();
           import.photos.cameraFailure = const PhotoAccessDenied('denied');
           await import.tap(_shown('Retake'));
-          await import.tap(_shown('Take photo'));
           expect(_shown('Open Settings'), findsOneWidget);
           await check();
           await import.close();

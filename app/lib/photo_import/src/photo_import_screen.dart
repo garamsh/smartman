@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../deck/deck.dart';
-import '../../design/app_list_row.dart';
-import '../../design/app_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import 'extracting_view.dart';
 import 'extraction_client.dart';
@@ -40,18 +37,20 @@ final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
 Future<Deck?> importFromPhoto(
   BuildContext context, {
   required DeckId? deck,
+  required PhotoOrigin origin,
   required ExtractionClient client,
   required PhotoSource photos,
   required SharedPreferencesWithCache preferences,
 }) async {
   final navigator = Navigator.of(context);
-  final first = await _choosePhoto(context, photos);
+  final first = await _takePhoto(photos, origin);
   if (first == null) return null;
   return navigator.push(
     MaterialPageRoute<Deck>(
       builder: (_) => _PhotoImportScreen(
         first: first,
         deck: deck,
+        origin: origin,
         client: client,
         photos: photos,
         preferences: preferences,
@@ -60,36 +59,15 @@ Future<Deck?> importFromPhoto(
   );
 }
 
-/// Offers "사진 찍기" and "앨범에서 고르기" in a sheet over [context], then
-/// the one chosen. Resolves to extracting its photo, or to the failure that
-/// came instead; null when the sheet or the picker is cancelled.
-Future<_Stage?> _choosePhoto(BuildContext context, PhotoSource photos) async {
-  final l10n = AppLocalizations.of(context);
-  final source = await showAppSheet<Future<JpegPhoto?> Function()>(
-    context,
-    builder: (context) => AppSheet(
-      title: l10n.photoSourceTitle,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppListRow(
-            title: l10n.photoCamera,
-            leading: const Icon(LucideIcons.camera),
-            onSheet: true,
-            onTap: () => Navigator.of(context).pop(photos.takePhoto),
-          ),
-          AppListRow(
-            title: l10n.photoAlbum,
-            leading: const Icon(LucideIcons.images),
-            onSheet: true,
-            onTap: () => Navigator.of(context).pop(photos.pickFromLibrary),
-          ),
-        ],
-      ),
-    ),
-  );
+/// Takes a photo by [origin] from [photos]. Resolves to extracting it, or to
+/// the failure that came instead; null when the camera or the picker is
+/// cancelled.
+Future<_Stage?> _takePhoto(PhotoSource photos, PhotoOrigin origin) async {
   try {
-    final photo = await source?.call();
+    final photo = await switch (origin) {
+      PhotoOrigin.camera => photos.takePhoto(),
+      PhotoOrigin.album => photos.pickFromLibrary(),
+    };
     return photo == null ? null : _Extracting(photo);
   } on PhotoImportFailure catch (failure) {
     return _Failed(failure, null);
@@ -100,6 +78,7 @@ class _PhotoImportScreen extends ConsumerStatefulWidget {
   const _PhotoImportScreen({
     required this.first,
     required this.deck,
+    required this.origin,
     required this.client,
     required this.photos,
     required this.preferences,
@@ -109,6 +88,9 @@ class _PhotoImportScreen extends ConsumerStatefulWidget {
   final _Stage first;
 
   final DeckId? deck;
+
+  /// Where the photo came from, which a retake goes back to.
+  final PhotoOrigin origin;
   final ExtractionClient client;
   final PhotoSource photos;
   final SharedPreferencesWithCache preferences;
@@ -177,6 +159,12 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       AsyncData(:final value) => value.where((deck) => deck.id == _target),
       _ => const <Deck>[],
     }.firstOrNull;
+    final l10n = AppLocalizations.of(context);
+    final retakeLabel = switch (_retakeOrigin) {
+      PhotoOrigin.camera => l10n.retake,
+      PhotoOrigin.album when _origin == PhotoOrigin.camera => l10n.photoAlbum,
+      PhotoOrigin.album => l10n.pickAnother,
+    };
     return switch (_stage) {
       _Extracting(:final photo) => ExtractingView(
         photo: photo,
@@ -188,6 +176,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
             ? null
             : () => _start(_Extracting(photo)),
         onRetake: _retake,
+        retakeLabel: retakeLabel,
         onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
       _Listing(:final list) => ImportListView(
@@ -199,6 +188,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onChanged: () => setState(() {}),
         onCancel: () => Navigator.of(context).pop(),
         onRetake: _retake,
+        retakeLabel: retakeLabel,
         onSave: () => _save(list),
       ),
     };
@@ -263,11 +253,25 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
     Navigator.of(context).pop();
   }
 
-  /// Offers the camera and the library again; a cancel leaves the screen as
+  /// Where the photo on screen came from; a retake goes back there.
+  late PhotoOrigin _origin = widget.origin;
+
+  /// Where a retake takes the next photo from: where the last one came from,
+  /// or the album where the camera cannot open.
+  PhotoOrigin get _retakeOrigin => switch (_stage) {
+    _Failed(failure: CameraUnavailable()) => PhotoOrigin.album,
+    _ => _origin,
+  };
+
+  /// Takes another photo from [_retakeOrigin]; a cancel leaves the screen as
   /// it was.
   Future<void> _retake() async {
-    final stage = await _choosePhoto(context, widget.photos);
-    if (stage != null && mounted) _start(stage);
+    final origin = _retakeOrigin;
+    final stage = await _takePhoto(widget.photos, origin);
+    if (stage != null && mounted) {
+      _origin = origin;
+      _start(stage);
+    }
   }
 
   Future<void> _openSettings() async {

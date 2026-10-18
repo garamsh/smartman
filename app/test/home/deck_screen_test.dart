@@ -6,6 +6,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/home/src/deck_screen.dart';
+import 'package:smartman/photo_import/photo_import.dart';
 
 import 'deck_screens.dart';
 
@@ -357,23 +358,35 @@ void main() {
 
     await screens.tap(find.text('Add card'));
 
-    expect(find.text('Photo'), findsNothing);
+    expect(find.text('Take photo'), findsNothing);
     expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
     await screens.close();
   });
 
   testWidgets(
-    'with photo import, Add card offers typing it in or a photo, which opens photo import for this deck',
+    'with photo import, Add card offers by hand, the camera and the album in one sheet, named as the new-deck sheet names them, each photo row opening photo import for this deck from its source',
     (tester) async {
       final screens = await DeckScreens.open(tester, photoImport: true);
       await screens.push((deck) => DeckScreen(deck: deck));
 
+      for (final (row, origin) in [
+        ('Take photo', PhotoOrigin.camera),
+        ('Choose from album', PhotoOrigin.album),
+      ]) {
+        await screens.tap(find.text('Add card'));
+        expect(find.text('Create by hand'), findsOneWidget);
+        expect(find.text('Take photo'), findsOneWidget);
+        expect(find.text('Choose from album'), findsOneWidget);
+        await screens.tap(find.text(row));
+        expect(find.text('photo import'), findsOneWidget);
+        expect(screens.photoImports.last, (screens.deck.id, origin));
+        screens.navigator.currentState!.pop();
+        await tester.pumpAndSettle();
+      }
+      // By hand opens the editor.
       await screens.tap(find.text('Add card'));
-      expect(find.text('Type it in'), findsOneWidget);
-      await screens.tap(find.text('Photo'));
-
-      expect(find.text('photo import'), findsOneWidget);
-      expect(screens.photoImports, [screens.deck.id]);
+      await screens.tap(find.text('Create by hand'));
+      expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
       await screens.close();
     },
   );
@@ -389,7 +402,7 @@ void main() {
 
       Future<void> saveInto(Deck deck) async {
         await screens.tap(find.text('Add card'));
-        await screens.tap(find.text('Photo'));
+        await screens.tap(find.text('Take photo'));
         screens.navigator.currentState!.pop(deck);
         await tester.pumpAndSettle();
       }

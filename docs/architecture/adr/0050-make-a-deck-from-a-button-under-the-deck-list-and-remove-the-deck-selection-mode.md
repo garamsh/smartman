@@ -1,6 +1,6 @@
 # ADR 0050: Make a deck from a button under the deck list, and remove the deck selection mode
 
-> Status: accepted
+> Status: accepted; its new-deck sheet's public-deck option superseded by ADR-0067
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

@@ -211,6 +211,9 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      // The first-run home's one primary opens the new-deck sheet.
+      await tap(tester, find.text(ko.makeDeck));
+      await shot(tester, '03b-new-deck-options');
       await tap(tester, find.text(ko.createManually));
       await shot(tester, '03-new-deck-sheet');
       await enter(ko.deckName, '영단어 기본');
@@ -223,7 +226,6 @@ void main() {
       await shot(tester, '16-today-no-cards');
       await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text(ko.newDeckTitle));
-      await shot(tester, '03b-new-deck-options');
       await tap(tester, find.text(ko.createManually));
       await enter(ko.deckName, '일본어 N3 한자');
       await tap(tester, find.text(ko.create));
@@ -241,14 +243,14 @@ void main() {
           in cards.entries.indexed) {
         await tap(tester, find.text(ko.newCard));
         if (index == 0) await shot(tester, '04b-add-card-sheet');
-        await tap(tester, find.text(ko.addCardManually));
+        await tap(tester, find.text(ko.createManually));
         await enter(ko.cardFront, front);
         await enter(ko.cardBack, back);
         if (index == 0) await shot(tester, '05-card-editor');
         await tap(tester, find.text(ko.save));
       }
       await tap(tester, find.text(ko.newCard));
-      await tap(tester, find.text(ko.addCardManually));
+      await tap(tester, find.text(ko.createManually));
       await enter(ko.cardFront, 'Ephemeral');
       await enter(ko.cardBack, '순간의');
       await tap(tester, find.text(ko.save));
@@ -617,6 +619,7 @@ void main() {
                     onPressed: () => importFromPhoto(
                       context,
                       deck: deck.id,
+                      origin: PhotoOrigin.camera,
                       client: client,
                       photos: photos,
                       preferences: preferences,
@@ -636,18 +639,16 @@ void main() {
             widget is Text && widget.data?.replaceAll('\u2060', '') == text,
       );
 
-      /// Takes a photo from the source sheet, through to the extraction.
-      Future<void> shoot() async {
-        await tester.tap(find.text(ko.photoCamera));
+      /// Taps [finder], which takes a photo with the camera, through to the
+      /// extraction.
+      Future<void> shoot(Finder finder) async {
+        await tester.tap(finder);
         for (var frame = 0; frame < 5; frame++) {
           await tester.pump(const Duration(milliseconds: 200));
         }
       }
 
-      await tap(tester, find.text('open'));
-      await shot(tester, '20-photo-source');
-
-      await shoot();
+      await shoot(find.text('open'));
       await shot(tester, '22-photo-extracting');
       client.answerCards([
         const CandidateCard(
@@ -703,8 +704,7 @@ void main() {
       await shot(tester, '21-photo-deck-sheet');
       await dismissSheet(tester);
 
-      await tap(tester, find.text(ko.retake));
-      await shoot();
+      await shoot(find.text(ko.retake));
       client.answerCards(const [
         CandidateCard(
           front: '양성모음',
@@ -731,15 +731,13 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-notes');
 
-      await tap(tester, find.text(ko.retake));
-      await shoot();
+      await shoot(find.text(ko.retake));
       client.fail(const ModelFailed());
       await tester.pumpAndSettle();
       await shot(tester, '24-photo-failure');
 
       photos.cameraFailure = const PhotoAccessDenied('denied');
       await tap(tester, find.text(ko.retake));
-      await tap(tester, find.text(ko.photoCamera));
       await shot(tester, '25-photo-refused');
 
       await unmount(tester);

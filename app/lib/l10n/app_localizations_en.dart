@@ -327,9 +327,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get createFromPhoto => 'Create from photo';
-
-  @override
   String get backlogPaused =>
       'New cards wait until you catch up on your reviews.';
 
@@ -402,9 +399,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get photoTargetTitle => 'Add to';
 
   @override
-  String get photoSourceTitle => 'Add a photo';
-
-  @override
   String get photoCamera => 'Take photo';
 
   @override
@@ -448,6 +442,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retake => 'Retake';
 
   @override
+  String get pickAnother => 'Pick another photo';
+
+  @override
+  String get makeDeck => 'Make a deck';
+
+  @override
+  String get photoCameraBody =>
+      'Take a photo of a vocabulary page and we\'ll find the cards';
+
+  @override
+  String get photoAlbumBody => 'We\'ll find the cards in the photo you pick';
+
+  @override
   String get retry => 'Try again';
 
   @override
@@ -486,7 +493,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckDeleted => 'This deck was deleted. Choose another deck.';
 
   @override
-  String get browse => 'Browse';
+  String get browse => 'Public decks';
 
   @override
   String get publish => 'Publish';
@@ -763,16 +770,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createManuallyBody => 'Name it and add cards one by one';
 
   @override
-  String get createFromPhotoBody =>
-      'Take a photo of a vocabulary page and we\'ll find the cards';
-
-  @override
-  String get importFromPublic => 'Copy a public deck';
-
-  @override
-  String get importFromPublicBody => 'Copy a deck someone else made';
-
-  @override
   String progressSemantics(int mastered, int learning, int fresh) {
     return '$mastered mastered, $learning learning, $fresh new';
   }
@@ -822,16 +819,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closeSearch => 'Close search';
 
   @override
-  String get addCardManually => 'Type it in';
-
-  @override
   String get addCardManuallyBody => 'Write the question and the answer';
-
-  @override
-  String get addCardPhoto => 'Photo';
-
-  @override
-  String get addCardPhotoBody => 'Find cards in a photo of a vocabulary page';
 
   @override
   String cardListTitle(int count) {

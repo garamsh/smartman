@@ -5,6 +5,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'failure.dart';
 import 'photo.dart';
 
+/// Which of a [PhotoSource]'s ways a photo is taken by.
+enum PhotoOrigin {
+  /// The system camera.
+  camera,
+
+  /// The photo library.
+  album,
+}
+
 /// Where a photo comes from: the system camera, or the photo library.
 abstract interface class PhotoSource {
   /// Lets the user take one photo with the system camera; null when they

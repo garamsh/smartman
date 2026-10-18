@@ -6,7 +6,6 @@ import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
 import 'decks_tab.dart';
 import 'first_run.dart';
@@ -33,7 +32,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final photoImport = ref.watch(photoImportProvider);
     final sharing = ref.watch(sharingServiceProvider);
     return switch ((ref.watch(decksProvider), ref.watch(cardCountsProvider))) {
       (AsyncData(value: final decks), AsyncData(value: final counts)) =>
@@ -45,10 +43,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   actions: const [AccountButton()],
                 ),
                 body: _EmptyHome(
-                  onPhoto: photoImport == null
-                      ? null
-                      : () => importDeckFromPhoto(context, photoImport),
-                  onCreate: () => createDeckByHand(context, ref),
+                  onCreate: () => showNewDeckSheet(context, ref),
                   onBrowse: sharing == null
                       ? null
                       : () => Navigator.of(context).push(
@@ -178,38 +173,26 @@ class _TabBar extends StatelessWidget {
   }
 }
 
-/// The first-run home: the mascot, what to do first, and the three ways to
-/// start a deck, each shown only when the app offers it.
+/// The first-run home: the mascot, what to do first, "덱 만들기", which opens
+/// the new-deck sheet with every way to start one, and, with sharing, the
+/// public decks.
 class _EmptyHome extends StatelessWidget {
-  const _EmptyHome({
-    required this.onPhoto,
-    required this.onCreate,
-    required this.onBrowse,
-  });
+  const _EmptyHome({required this.onCreate, required this.onBrowse});
 
-  final VoidCallback? onPhoto;
   final VoidCallback onCreate;
   final VoidCallback? onBrowse;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final onPhoto = this.onPhoto;
     final onBrowse = this.onBrowse;
     return FirstRun(
       title: l10n.emptyHomeTitle,
       body: l10n.emptyHomeBody,
       actions: [
-        if (onPhoto != null)
-          AppButton(
-            label: l10n.createFromPhoto,
-            icon: LucideIcons.camera,
-            size: AppButtonSize.cta,
-            onPressed: onPhoto,
-          ),
         AppButton(
-          label: l10n.createManually,
-          variant: AppButtonVariant.secondary,
+          label: l10n.makeDeck,
+          icon: LucideIcons.plus,
           size: AppButtonSize.cta,
           onPressed: onCreate,
         ),

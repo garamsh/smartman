@@ -9,13 +9,14 @@ import 'failure_message.dart';
 
 /// What went wrong, in plain words, with a retry where sending the same photo
 /// again can succeed, a retake where a new photo can, and the way to Settings
-/// where access was refused.
+/// where access was refused. The top bar's close is the one way out.
 class FailureView extends StatelessWidget {
   const FailureView({
     super.key,
     required this.failure,
     required this.onRetry,
     required this.onRetake,
+    required this.retakeLabel,
     required this.onOpenSettings,
   });
 
@@ -25,6 +26,10 @@ class FailureView extends StatelessWidget {
   final VoidCallback? onRetry;
 
   final VoidCallback onRetake;
+
+  /// What the retake is called: "다시 찍기", or "다른 사진 고르기" for a photo
+  /// from the album.
+  final String retakeLabel;
 
   /// Opens this app's page in the system settings; null when access was not
   /// what failed.
@@ -57,56 +62,50 @@ class FailureView extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.gutter,
-            AppSpace.s8,
-            AppSpace.gutter,
-            AppSpace.s16,
-          ),
-          child: Row(
-            spacing: AppSpace.s12,
-            children: [
-              if (isRetakeable(failure))
-                Expanded(
-                  child: AppButton(
-                    label: l10n.retake,
-                    variant: primaryElsewhere
-                        ? AppButtonVariant.secondary
-                        : AppButtonVariant.primary,
-                    size: AppButtonSize.cta,
-                    onPressed: onRetake,
-                  ),
+      bottomNavigationBar: !isRetakeable(failure) && !primaryElsewhere
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.gutter,
+                  AppSpace.s8,
+                  AppSpace.gutter,
+                  AppSpace.s16,
                 ),
-              if (onRetry != null)
-                Expanded(
-                  child: AppButton(
-                    label: l10n.retry,
-                    size: AppButtonSize.cta,
-                    onPressed: onRetry,
-                  ),
+                child: Row(
+                  spacing: AppSpace.s12,
+                  children: [
+                    if (isRetakeable(failure))
+                      Expanded(
+                        child: AppButton(
+                          label: retakeLabel,
+                          variant: primaryElsewhere
+                              ? AppButtonVariant.secondary
+                              : AppButtonVariant.primary,
+                          size: AppButtonSize.cta,
+                          onPressed: onRetake,
+                        ),
+                      ),
+                    if (onRetry != null)
+                      Expanded(
+                        child: AppButton(
+                          label: l10n.retry,
+                          size: AppButtonSize.cta,
+                          onPressed: onRetry,
+                        ),
+                      ),
+                    if (onOpenSettings != null)
+                      Expanded(
+                        child: AppButton(
+                          label: l10n.openSettings,
+                          size: AppButtonSize.cta,
+                          onPressed: onOpenSettings,
+                        ),
+                      ),
+                  ],
                 ),
-              if (onOpenSettings != null)
-                Expanded(
-                  child: AppButton(
-                    label: l10n.openSettings,
-                    size: AppButtonSize.cta,
-                    onPressed: onOpenSettings,
-                  ),
-                ),
-              if (!isRetakeable(failure) && !primaryElsewhere)
-                Expanded(
-                  child: AppButton(
-                    label: l10n.close,
-                    size: AppButtonSize.cta,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 }

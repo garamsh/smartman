@@ -607,12 +607,6 @@ abstract class AppLocalizations {
   /// **'오늘 {count}'**
   String todayChip(int count);
 
-  /// Deck list bottom-bar button that creates a deck from a photo.
-  ///
-  /// In ko, this message translates to:
-  /// **'사진으로 만들기'**
-  String get createFromPhoto;
-
   /// Sentence under the today count while so many reviews are due that a session takes no new card.
   ///
   /// In ko, this message translates to:
@@ -745,12 +739,6 @@ abstract class AppLocalizations {
   /// **'추가할 덱'**
   String get photoTargetTitle;
 
-  /// Title of the sheet that offers the camera and the album for photo import.
-  ///
-  /// In ko, this message translates to:
-  /// **'사진 가져오기'**
-  String get photoSourceTitle;
-
   /// Row of the photo source sheet that opens the system camera.
   ///
   /// In ko, this message translates to:
@@ -829,6 +817,30 @@ abstract class AppLocalizations {
   /// **'다시 찍기'**
   String get retake;
 
+  /// Takes another photo from the album, on photo import's list and failure screens, when the photo came from the album.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 사진 고르기'**
+  String get pickAnother;
+
+  /// First-run home's one primary button, which opens the new-deck sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 만들기'**
+  String get makeDeck;
+
+  /// Line under '사진 찍기' on the new-deck and add-card sheets.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어장을 찍으면 카드를 찾아 드려요'**
+  String get photoCameraBody;
+
+  /// Line under '앨범에서 고르기' on the new-deck and add-card sheets.
+  ///
+  /// In ko, this message translates to:
+  /// **'고른 사진에서 카드를 찾아 드려요'**
+  String get photoAlbumBody;
+
   /// Button that sends the same photo again.
   ///
   /// In ko, this message translates to:
@@ -892,7 +904,7 @@ abstract class AppLocalizations {
   /// Opens other users' public decks; also the title of that screen.
   ///
   /// In ko, this message translates to:
-  /// **'둘러보기'**
+  /// **'공개 덱'**
   String get browse;
 
   /// Deck menu item that publishes the deck.
@@ -1345,24 +1357,6 @@ abstract class AppLocalizations {
   /// **'이름을 정하고 카드를 하나씩 넣어요'**
   String get createManuallyBody;
 
-  /// Under 사진으로 만들기 in the new-deck sheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'단어장 사진을 찍으면 카드를 찾아 드려요'**
-  String get createFromPhotoBody;
-
-  /// The new-deck sheet's option that opens the public decks.
-  ///
-  /// In ko, this message translates to:
-  /// **'공개 덱에서 가져오기'**
-  String get importFromPublic;
-
-  /// Under 공개 덱에서 가져오기 in the new-deck sheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'다른 사람이 만든 덱을 복사해요'**
-  String get importFromPublicBody;
-
   /// What a screen reader reads for a progress bar of mastered, learning and new cards.
   ///
   /// In ko, this message translates to:
@@ -1417,29 +1411,11 @@ abstract class AppLocalizations {
   /// **'검색 닫기'**
   String get closeSearch;
 
-  /// The add-card sheet's option that opens the card editor.
-  ///
-  /// In ko, this message translates to:
-  /// **'직접 입력'**
-  String get addCardManually;
-
-  /// Under 직접 입력 in the add-card sheet.
+  /// Under 직접 만들기 in the add-card sheet.
   ///
   /// In ko, this message translates to:
   /// **'문제와 답을 하나씩 적어요'**
   String get addCardManuallyBody;
-
-  /// The add-card sheet's option that opens photo import for the deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'사진'**
-  String get addCardPhoto;
-
-  /// Under 사진 in the add-card sheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'단어장 사진에서 카드를 찾아요'**
-  String get addCardPhotoBody;
 
   /// The deck page's row pinned above its card list: how many cards the list shows.
   ///

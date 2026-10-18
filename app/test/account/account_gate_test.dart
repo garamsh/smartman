@@ -149,6 +149,7 @@ void main() {
   /// Creates the deck "French" from the first-run home, which opens it, and
   /// goes back to the tabs.
   Future<void> createDeck(WidgetTester tester) async {
+    await tapAndSettle(tester, find.text('Make a deck'));
     await tapAndSettle(tester, find.text('Create by hand'));
     await tester.enterText(
       find.widgetWithText(AppTextField, 'Deck name'),
@@ -297,15 +298,14 @@ void main() {
       'card editor': (tester) async {
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Add card'));
-        await tapAndSettle(tester, find.text('Type it in'));
+        await tapAndSettle(tester, find.text('Create by hand'));
       },
       'study': (tester) async {
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Study'));
       },
-      'photo source sheet': (tester) async {
+      'new-deck sheet': (tester) async {
         await tapAndSettle(tester, find.text('Create a deck'));
-        await tapAndSettle(tester, find.text('Create from photo'));
       },
       'account': (tester) async {
         await tapAndSettle(tester, find.text('Today'));
@@ -320,6 +320,7 @@ void main() {
           const SignedIn(userId: _ada, email: 'ada@example.com'),
         );
         await pumpApp(tester, account);
+        await tapAndSettle(tester, find.text('Make a deck'));
         await tapAndSettle(tester, find.text('Create by hand'));
         await tester.enterText(
           find.widgetWithText(AppTextField, 'Deck name'),
@@ -329,7 +330,7 @@ void main() {
         await tapAndSettle(tester, find.text('Create'));
         await tapAndSettle(tester, find.text('Add card'));
         // With photo import, Add card asks how.
-        await tapAndSettle(tester, find.text('Type it in'));
+        await tapAndSettle(tester, find.text('Create by hand'));
         await tester.enterText(
           find.widgetWithText(AppTextField, 'Question'),
           'Chat',
