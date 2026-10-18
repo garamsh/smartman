@@ -61,7 +61,8 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 - `CARD_MODEL` is the OpenRouter model ID of every first call. Changing the secret switches the model with no code change.
 - `CARD_RETRY_MODEL`, when set, is the model of the retry, so a cheap model can fall back to a stronger one; unset, the retry uses `CARD_MODEL`.
-- On 2026-10-18 the owner chose Claude Sonnet 5.5 from the eval's report, and the PM set `CARD_MODEL` to `anthropic/claude-sonnet-5.5`; `CARD_RETRY_MODEL` already named it (issue #184).
+- On 2026-10-18 the owner first chose Claude Sonnet 5.5 from the notes report, and the PM set `CARD_MODEL` to `anthropic/claude-sonnet-5.5`; `CARD_RETRY_MODEL` already named it (issue #184).
+- Later that day the owner judged the dense grammar page a deliberate worst case and moved back to Claude Haiku 5.5. The PM set `CARD_MODEL` to `anthropic/claude-haiku-5.5` at 2026-10-18T04:56:22Z, with `CARD_RETRY_MODEL` still on Sonnet. The evidence was a run over the 24 vocabulary pages: Haiku F1 99.0 at $0.0009 per image, Sonnet F1 100.0 at $0.0161, and neither invented a field (`docs/eval/extract-cards.md`).
 - `OPENROUTER_API_KEY` is a Supabase secret. Locally it is in `supabase/functions/.env`, which git ignores; creating that file is an owner action.
 
 ### Privacy

@@ -53,6 +53,15 @@ Each cell is the page's coverage at step 5 in percent, then the completion token
 | 35-notes-ko-grammar-handwriting-mild | 76.9 · 5683 tokens | 100.0 · 2630 tokens | 0.0 · 0 tokens | 50.0 · 1292 tokens |
 | 36-notes-ko-grammar-handwriting-harsh | 84.6 · 7691 tokens | 100.0 · 2649 tokens | 0.0 · 0 tokens | 26.9 · 1068 tokens |
 
+## 2026-10-18 vocabulary run
+
+A later run on 2026-10-18, by the PM, of Claude Haiku 5.5 and Claude Sonnet 5.5 over the 24 vocabulary pages, with the prompt v4 tree. Its figures are as the PM reported them in the review of #185; its spend is in `tools/eval/spend.json`.
+
+| Configuration | Precision | Recall | F1 | Part of speech | Examples | Invented | p50 | p90 | Cost per image |
+|---|---|---|---|---|---|---|---|---|---|
+| Claude Haiku 5.5 | 99.0 | 99.0 | 99.0 | 100.0 | 100.0 | 0.0 | 5.1 s | 6.2 s | $0.0009 |
+| Claude Sonnet 5.5 | 100.0 | 100.0 | 100.0 | 100.0 | 100.0 | 0.0 | 5.7 s | 7.2 s | $0.0161 |
+
 ## Recommendation
 
 - Claude Sonnet 5.5: the cheapest configuration whose vocabulary F1 is within 2 points of the best and whose notes coverage at step 5 is within 5 points of the best.
