@@ -44,6 +44,11 @@ const notesTruth = {
     { id: "induction", step: 2, terms: ["귀납", "개연"] },
   ],
   examples: ["253+4637+647898=652788 -> 연역"],
+  lines: [
+    "5. 연역과 귀납",
+    "연역 논증: 전제가 참이면 결론이 반드시 참",
+    "예) 253+4637+647898=652788 -> 연역",
+  ],
 };
 const noteCards = [{
   kind: "note",
@@ -87,6 +92,8 @@ const MODEL_LIST = {
     model("vendor/no-schema", 4, "0.000001", {
       supported_parameters: ["response_format"],
     }),
+    model("vendor/broken", 5),
+    model("vendor/flaky", 6),
   ],
 };
 
@@ -96,6 +103,11 @@ type World = {
   printed: string[];
   /** The cost each chat reply reports. */
   replyCost: number;
+};
+
+/** The error body OpenRouter answers a call to `vendor/broken` with, and `vendor/flaky`'s first. */
+const ERROR_BODY = {
+  error: { code: 400, message: "Provider returned error", metadata: {} },
 };
 
 function world(
@@ -141,6 +153,13 @@ function io(
       if (url === OPENROUTER_URL) {
         const body = JSON.parse(String(init?.body));
         w.chatCalls.push(body.model);
+        if (
+          body.model === "vendor/broken" ||
+          (body.model === "vendor/flaky" &&
+            w.chatCalls.filter((m) => m === "vendor/flaky").length === 1)
+        ) {
+          return Promise.resolve(Response.json(ERROR_BODY, { status: 400 }));
+        }
         const notes = JSON.stringify(body.messages).includes(NOTES_IMAGE);
         const cards = notes
           ? noteCards
@@ -180,6 +199,7 @@ function io(
     },
     print: (line) => w.printed.push(line),
     today: () => "2026-10-15",
+    startedAt: () => "2026-10-15T04:05:06.789Z",
   };
 }
 
@@ -189,6 +209,8 @@ Deno.test("only models taking images with structured outputs are candidates, the
     "vendor/cheap",
     "vendor/cheap-old",
     "vendor/dear",
+    "vendor/broken",
+    "vendor/flaky",
   ]);
   assert.equal(newest("^vendor/cheap", models)?.id, "vendor/cheap");
   assert.equal(newest("^vendor/text-only$", models), null);
@@ -322,6 +344,79 @@ Deno.test("the report is written before the ledger, so a failed ledger write lea
   );
 });
 
+Deno.test("a run keeps each image's reply in a folder named for its start, and the report names the folder", async () => {
+  const w = world();
+  assert.equal(await main([], io(w)), 0);
+  const folder = "tools/eval/replies/2026-10-15T04-05-06Z";
+  const kept = [...w.files.keys()].filter((path) =>
+    path.startsWith("tools/eval/replies/")
+  ).sort();
+  assert.deepEqual(kept, [
+    `${folder}/cheap/01-a.json`,
+    `${folder}/cheap/02-b.json`,
+    `${folder}/dear-with-cheap-retry/01-a.json`,
+    `${folder}/dear-with-cheap-retry/02-b.json`,
+  ]);
+  const reply = JSON.parse(w.files.get(`${folder}/cheap/01-a.json`) ?? "");
+  assert.equal(reply.candidate, "Cheap");
+  assert.equal(reply.sample, "01-a");
+  assert.equal(reply.outcome, "cards");
+  assert.equal(reply.cards[0].front, "apple");
+  assert.equal(reply.calls.length, 1);
+  assert.equal(reply.calls[0].model, "vendor/cheap");
+  assert.equal(reply.calls[0].status, 200);
+  assert.equal(reply.calls[0].body.usage.cost, w.replyCost);
+  assert.match(
+    w.files.get(PATHS.report) ?? "",
+    /Every reply, its parsed cards or its error body, is kept in `tools\/eval\/replies\/2026-10-15T04-05-06Z\/`/,
+  );
+});
+
+Deno.test("a candidate stops after two model errors in a row, its error bodies kept, and one error then a reply does not stop it", async () => {
+  const w = world(undefined, [
+    { label: "Broken", primary: "^vendor/broken$" },
+    { label: "Flaky", primary: "^vendor/flaky$" },
+  ]);
+  w.files.set(
+    `${PATHS.samples}/03-c.json`,
+    JSON.stringify({ image: "03-c.jpg", cards: truth }),
+  );
+  assert.equal(await main([], io(w)), 0);
+
+  assert.deepEqual(w.chatCalls, [
+    "vendor/broken",
+    "vendor/broken",
+    "vendor/flaky",
+    "vendor/flaky",
+    "vendor/flaky",
+  ], "Broken ran two of the three images; control: Flaky ran all three");
+  const folder = "tools/eval/replies/2026-10-15T04-05-06Z";
+  const broken = JSON.parse(w.files.get(`${folder}/broken/02-b.json`) ?? "");
+  assert.equal(broken.outcome, "model_error");
+  assert.deepEqual(broken.calls, [{
+    model: "vendor/broken",
+    status: 400,
+    body: ERROR_BODY,
+  }]);
+  assert.equal(w.files.get(`${folder}/broken/03-c.json`), undefined);
+  assert.ok(
+    w.printed.includes(
+      "Broken: stopped after 2 model errors in a row, 2 of 3 images run",
+    ),
+  );
+  const table = w.files.get(PATHS.report) ?? "";
+  assert.match(
+    table,
+    /- Broken stopped after 2 model errors in a row: its row covers 2 of 3 images\./,
+  );
+  assert.doesNotMatch(table, /- Flaky stopped/);
+  assert.equal(
+    JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).spentUsd,
+    2 * w.replyCost,
+    "a failed call reports no usage and records no spend; control: Flaky's two replies do",
+  );
+});
+
 Deno.test("a notes sample is scored by coverage per step, unsupported cards, invented examples and step order", async () => {
   const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
   w.files.set(
@@ -344,7 +439,7 @@ Deno.test("a notes sample is scored by coverage per step, unsupported cards, inv
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
 
-Deno.test("a notes ground truth without facts, or with a step outside 1 to 5, is refused", async () => {
+Deno.test("a notes ground truth without facts, with a step outside 1 to 5, or without its lines, is refused", async () => {
   for (const facts of [[], [{ id: "a", step: 6, terms: ["x"] }]]) {
     const w = world();
     w.files.set(
@@ -352,6 +447,17 @@ Deno.test("a notes ground truth without facts, or with a step outside 1 to 5, is
       JSON.stringify({ image: "03-notes.jpg", ...notesTruth, facts }),
     );
     await assert.rejects(loadSamples(io(w)), /notes ground truth/);
+  }
+  for (const lines of [undefined, [], [1]]) {
+    const w = world();
+    w.files.set(
+      `${PATHS.samples}/03-notes.json`,
+      JSON.stringify({ image: "03-notes.jpg", ...notesTruth, lines }),
+    );
+    await assert.rejects(
+      loadSamples(io(w)),
+      /notes ground truth of \{facts: \[\{id, step, terms\}\], examples, lines\}/,
+    );
   }
   const control = world();
   control.files.set(
@@ -394,6 +500,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
       fetch: io(w).fetch,
       now: () => 0,
       print: () => {},
+      keep: () => Promise.resolve(),
     },
   );
   assert.equal(run.stopped, true);
@@ -411,7 +518,13 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
       budgetUsd: worst + 3 * w.replyCost,
       runs: [],
     },
-    { apiKey: "key", fetch: io(world()).fetch, now: () => 0, print: () => {} },
+    {
+      apiKey: "key",
+      fetch: io(world()).fetch,
+      now: () => 0,
+      print: () => {},
+      keep: () => Promise.resolve(),
+    },
   );
   assert.equal(roomy.stopped, false, "control: room for both images");
 });
@@ -529,6 +642,14 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
     for (const example of sample.notes.examples) {
       assert.ok(page.includes(normalize(example)), `${example} is printed`);
     }
+    assert.deepEqual(
+      sample.notes.lines,
+      [
+        documents[language].title,
+        ...documents[language].lines.map((line: { text: string }) => line.text),
+      ],
+      `${sample.name} holds every line its page prints`,
+    );
   }
 });
 

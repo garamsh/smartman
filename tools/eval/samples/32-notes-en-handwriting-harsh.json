@@ -114,5 +114,23 @@
   "examples": [
     "coffee price rises -> demand for tea rises (substitutes)",
     "income rises -> fewer bus rides (inferior good)"
+  ],
+  "lines": [
+    "Econ 101 - Week 3: Supply and Demand",
+    "Demand",
+    "Demand: the quantity of a good buyers are willing and able to buy at each price",
+    "Law of demand: as price rises, quantity demanded falls (other things equal)",
+    "Demand shifters: income, tastes, prices of related goods, expectations",
+    "Normal good: demand rises when income rises",
+    "Inferior good: demand falls when income rises",
+    "Supply",
+    "Supply: the quantity sellers are willing and able to sell at each price",
+    "Law of supply: as price rises, quantity supplied rises",
+    "Market",
+    "Equilibrium: the price at which quantity demanded equals quantity supplied",
+    "Shortage: quantity demanded exceeds quantity supplied, below the equilibrium price",
+    "Surplus: quantity supplied exceeds quantity demanded, above the equilibrium price",
+    "e.g. coffee price rises -> demand for tea rises (substitutes)",
+    "e.g. income rises -> fewer bus rides (inferior good)"
   ]
 }

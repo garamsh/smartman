@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 const ENTRY = new URL("./run_fake_openrouter.ts", import.meta.url).pathname;
 const DOCUMENTED_FLAGS = [
   "--allow-read",
-  "--allow-write=tools/eval/spend.json,docs/eval",
+  "--allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies",
   "--allow-net=openrouter.ai",
   "--allow-env=OPENROUTER_API_KEY",
   "--env-file=supabase/functions/.env",
@@ -42,7 +42,7 @@ async function root(): Promise<string> {
   return dir;
 }
 
-Deno.test("the documented command records the run in the ledger and writes the report, creating docs/eval", async () => {
+Deno.test("the documented command records the run in the ledger, writes the report creating docs/eval, and keeps each reply", async () => {
   const dir = await root();
   try {
     await assert.rejects(Deno.stat(`${dir}/docs`), Deno.errors.NotFound);
@@ -67,6 +67,16 @@ Deno.test("the documented command records the run in the ledger and writes the r
       await Deno.readTextFile(`${dir}/docs/eval/extract-cards.md`),
       /\| Cheap \| 100\.0 \| 100\.0 \| 100\.0 \|/,
     );
+    const runs = await Array.fromAsync(
+      Deno.readDir(`${dir}/tools/eval/replies`),
+    );
+    assert.equal(runs.length, 1);
+    const reply = JSON.parse(
+      await Deno.readTextFile(
+        `${dir}/tools/eval/replies/${runs[0].name}/cheap/01-a.json`,
+      ),
+    );
+    assert.equal(reply.outcome, "cards");
   } finally {
     await Deno.remove(dir, { recursive: true });
   }

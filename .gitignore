@@ -41,3 +41,6 @@ rustc-ice-*.txt
 
 # Supabase CLI local state (project link, versions)
 supabase/.temp/
+
+# The eval's kept model replies, one folder per run (tools/eval/run.ts)
+tools/eval/replies/

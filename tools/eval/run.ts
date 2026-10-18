@@ -1,18 +1,22 @@
 /**
  * The extract-cards model eval. From the repository root:
  *
- *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval --allow-net=openrouter.ai \
- *     --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env tools/eval/run.ts [--dry-run]
+ *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
+ *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
+ *     tools/eval/run.ts [--dry-run]
  *
  * It resolves `candidates.json` against OpenRouter's model list, estimates the run's cost,
  * and refuses to start one the remaining budget in `spend.json` cannot cover. `--dry-run`
- * stops after the estimate and calls no model.
+ * stops after the estimate and calls no model. Every reply is kept in a folder of
+ * `tools/eval/replies/` named for the run's start, which git ignores.
  */
 
 import { STEPS } from "../../supabase/functions/extract-cards/cards.ts";
 import {
   extractCards,
+  type Extraction,
   type Models,
+  OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
 import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v3.ts";
 import type {
@@ -58,7 +62,11 @@ export const PATHS = {
   ledger: "tools/eval/spend.json",
   samples: "tools/eval/samples",
   report: "docs/eval/extract-cards.md",
+  replies: "tools/eval/replies",
 } as const;
+
+/** A candidate's images stop running after this many model errors in a row. */
+export const MODEL_ERRORS_TO_STOP = 2;
 
 /**
  * One labelled photo: its name, the image as the function receives it, its hints, and its
@@ -100,6 +108,8 @@ export type Io = {
   readonly print: (line: string) => void;
   /** Today's date as YYYY-MM-DD. */
   readonly today: () => string;
+  /** The current UTC time as an ISO 8601 string. */
+  readonly startedAt: () => string;
 };
 
 /** Runs the eval and returns the process exit code. */
@@ -159,11 +169,20 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     return 1;
   }
 
+  const replies = `${PATHS.replies}/${
+    io.startedAt().replace(/\.\d+/, "").replaceAll(":", "-")
+  }`;
+  io.print(`keeping every reply in ${replies}/`);
   const run = await runEval(candidates, samples, ledger, {
     apiKey,
     fetch: io.fetch,
     now: io.now,
     print: io.print,
+    keep: (path, reply) =>
+      io.writeText(
+        `${replies}/${path}`,
+        JSON.stringify(reply, null, 2) + "\n",
+      ),
   });
   const updated: Ledger = {
     ...ledger,
@@ -193,6 +212,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
           run.spentUsd,
           updated,
           io.today(),
+          { replies, halted: run.halted },
         ),
       );
       io.print(`wrote ${PATHS.report}`);
@@ -209,24 +229,48 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
   return 0;
 }
 
+/** One OpenRouter call as it answered: its HTTP status and body, or the error that ended it. */
+export type Call =
+  | { readonly status: number; readonly body: unknown }
+  | { readonly error: string };
+
+/** What one candidate returned for one image: the parsed cards, and every call's answer. */
+export type Reply = {
+  readonly candidate: string;
+  readonly sample: string;
+  readonly outcome: Extraction["kind"];
+  readonly cards: readonly unknown[];
+  readonly calls: readonly ({ readonly model: string } & Call)[];
+};
+
+/** A candidate that stopped after model errors in a row, and how many images it ran. */
+export type Halt = { readonly label: string; readonly ran: number };
+
 type RunDeps = {
   apiKey: string;
   fetch: typeof fetch;
   now: () => number;
   print: (line: string) => void;
+  /** Stores one image's reply at [path], relative to the run's replies folder. */
+  keep: (path: string, reply: Reply) => Promise<void>;
 };
 
 /**
  * Every candidate over every sample, one call at a time. Before each image it checks that the
- * worst case of a call and its retry still fits the remaining budget, and stops otherwise.
+ * worst case of a call and its retry still fits the remaining budget, and stops otherwise. A
+ * candidate whose calls fail `MODEL_ERRORS_TO_STOP` images in a row runs no further image.
+ * Each image's reply is kept as it completes.
  */
 export async function runEval(
   candidates: readonly Candidate[],
   samples: readonly Sample[],
   ledger: Ledger,
   deps: RunDeps,
-): Promise<{ rows: Row[]; spentUsd: number; stopped: boolean }> {
+): Promise<
+  { rows: Row[]; spentUsd: number; stopped: boolean; halted: Halt[] }
+> {
   const rows: Row[] = [];
+  const halted: Halt[] = [];
   let spentUsd = 0;
   for (const candidate of candidates) {
     const models: Models = {
@@ -241,18 +285,28 @@ export async function runEval(
       candidate.retry,
     ]]);
     const results: ImageResult[] = [];
+    let errorsInRow = 0;
     for (const sample of samples) {
+      if (errorsInRow === MODEL_ERRORS_TO_STOP) {
+        halted.push({ label: candidate.label, ran: results.length });
+        deps.print(
+          `${candidate.label}: stopped after ${MODEL_ERRORS_TO_STOP} model errors in a row, ${results.length} of ${samples.length} images run`,
+        );
+        break;
+      }
       const worst = worstCallUsd(candidate.primary.pricing) +
         worstCallUsd(candidate.retry.pricing);
       if (spentUsd + worst > remaining(ledger)) {
-        return { rows, spentUsd, stopped: true };
+        return { rows, spentUsd, stopped: true, halted };
       }
+      const calls: Call[] = [];
       const extraction = await extractCards(
         sample.image,
         sample.languages,
         models,
-        deps,
+        { ...deps, fetch: recording(deps.fetch, calls) },
       );
+      errorsInRow = extraction.kind === "model_error" ? errorsInRow + 1 : 0;
       let costUsd = 0;
       let latencyMs = 0;
       for (const attempt of extraction.attempts) {
@@ -267,6 +321,16 @@ export async function runEval(
       }
       spentUsd += costUsd;
       const cards = extraction.kind === "cards" ? extraction.cards : [];
+      await deps.keep(`${slug(candidate.label)}/${sample.name}.json`, {
+        candidate: candidate.label,
+        sample: sample.name,
+        outcome: extraction.kind,
+        cards,
+        calls: extraction.attempts.map((attempt, i) => ({
+          model: attempt.model,
+          ...(calls[i] ?? { error: "no answer was recorded" }),
+        })),
+      });
       results.push({
         score: sample.kind === "vocabulary"
           ? score(cards.map(entryOf), sample.cards)
@@ -283,7 +347,35 @@ export async function runEval(
     }
     rows.push(summarize(candidate.label, results));
   }
-  return { rows, spentUsd, stopped: false };
+  return { rows, spentUsd, stopped: false, halted };
+}
+
+/** [send], recording each OpenRouter call's status and body, or its error, into [calls]. */
+function recording(send: typeof fetch, calls: Call[]): typeof fetch {
+  return async (input, init) => {
+    if (String(input) !== OPENROUTER_URL) return send(input, init);
+    let response: Response;
+    try {
+      response = await send(input, init);
+    } catch (error) {
+      calls.push({ error: String(error) });
+      throw error;
+    }
+    const text = await response.clone().text();
+    let body: unknown = text;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      // A body that is not JSON is kept as its text.
+    }
+    calls.push({ status: response.status, body });
+    return response;
+  };
+}
+
+/** A configuration's label as a folder name: lower case, runs of other characters as one dash. */
+function slug(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 /**
@@ -319,7 +411,7 @@ export async function loadSamples(
       const notes = parseNotes(truth);
       if (notes === null) {
         throw new Error(
-          `${name} is not a notes ground truth of {facts: [{id, step, terms}], examples}`,
+          `${name} is not a notes ground truth of {facts: [{id, step, terms}], examples, lines}`,
         );
       }
       samples.push({ ...photo, kind: "notes", notes });
@@ -343,10 +435,12 @@ export async function loadSamples(
 }
 
 function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
-  const { facts, examples } = truth;
+  const { facts, examples, lines } = truth;
   if (
     !Array.isArray(facts) || facts.length === 0 || !Array.isArray(examples) ||
-    !examples.every((example) => typeof example === "string")
+    !examples.every((example) => typeof example === "string") ||
+    !Array.isArray(lines) || lines.length === 0 ||
+    !lines.every((line) => typeof line === "string")
   ) return null;
   const parsed: Fact[] = [];
   for (const fact of facts) {
@@ -359,7 +453,7 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
     ) return null;
     parsed.push({ id: fact.id, step, terms });
   }
-  return { facts: parsed, examples };
+  return { facts: parsed, examples, lines };
 }
 
 function parseEntry(card: unknown): Entry | null {
@@ -406,6 +500,7 @@ export function report(
   runUsd: number,
   ledger: Ledger,
   date: string,
+  kept: { readonly replies: string; readonly halted: readonly Halt[] },
 ): string {
   const pick = recommend(rows);
   const pct = (value: number) => (value * 100).toFixed(1);
@@ -421,6 +516,10 @@ export function report(
     "- Over the matched cards of every image, in percent: part of speech and examples are the share equal to the page's after the same normalization; invented is the share of present parts of speech and example lists on an entry whose page prints none. A dash means the configuration returned no such field.",
     "- Notes pages, in percent: coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print; step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half.",
     "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost, over every image.",
+    `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
+    ...kept.halted.map((halt) =>
+      `- ${halt.label} stopped after ${MODEL_ERRORS_TO_STOP} model errors in a row: its row covers ${halt.ran} of ${sampleCount} images.`
+    ),
     "",
     "## Models",
     "",
@@ -536,6 +635,7 @@ export function denoIo(): Io {
     },
     print: (line) => console.log(line),
     today: () => new Date().toISOString().slice(0, 10),
+    startedAt: () => new Date().toISOString(),
   };
 }
 
