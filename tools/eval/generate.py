@@ -13,8 +13,8 @@ tools/eval/fonts/, then photographed synthetically: perspective, rotation, uneve
 blur, and JPEG noise. Every random choice comes from SEED and the sample's index, so a rerun
 with the locked dependencies writes the same files. The cards a vocabulary page shows, with the
 parts of speech and examples it prints, are written beside its image as the ground truth; a notes
-page's truth is the facts it teaches, each with its step and the terms that cover it, the
-examples it prints on lines of their own, and every line it prints, from tools/eval/notes.json.
+page's truth is the rules and exceptions it teaches, each with its step, the terms that cover it
+and the worked examples the page prints for it, and every line it prints, from tools/eval/notes.json.
 """
 
 import json
@@ -160,6 +160,10 @@ NOTE_FACES = {"print": "NanumGothic-Regular.ttf", "handwriting": "NanumPenScript
 NOTE_LANGUAGES = ["ko", "en"]
 NOTE_HANDS = ["print", "handwriting"]
 NOTE_DISTORTIONS = ["mild", "harsh"]
+# The dense pages, each in every hand and distortion after the pages above: many small rules,
+# worked examples, and exceptions the writer marked with a star or a circle.
+DENSE_DOCUMENTS = ["ko-grammar"]
+MARK_COLOUR = (190, 40, 40)
 
 
 def wrap(page: Page, text: str, face: str, size: int, width: float) -> list[str]:
@@ -176,25 +180,42 @@ def wrap(page: Page, text: str, face: str, size: int, width: float) -> list[str]
     return lines + [line]
 
 
+def star(page: Page, centre: tuple[float, float], radius: float) -> None:
+    """A five-pointed star, as a writer marks a line to remember."""
+    cx, cy = centre
+    points = [(cx + (radius if i % 2 == 0 else radius * 0.4) * np.sin(i * np.pi / 5),
+               cy - (radius if i % 2 == 0 else radius * 0.4) * np.cos(i * np.pi / 5)) for i in range(10)]
+    page.draw.polygon(points, outline=MARK_COLOUR, width=3)
+
+
 def notes(page: Page, doc: dict) -> None:
-    """A page of notes: a title, headings, points and sub-points under them, and examples."""
+    """A page of notes: a title, headings, points and sub-points under them, and examples; a
+    dense page sets them at its `scale`, and a line's `mark` draws a star before it or a circle
+    around its first line."""
     face = page.front_face
+    scale = doc.get("scale", 1.0)
     page.text((100, 80), doc["title"], face, 50, (30, 60, 120) if not page.handwritten else None)
     page.draw.line([(100, 160), (PAGE[0] - 100, 160)], fill=(30, 60, 120), width=3)
     y = 200
     for line in doc["lines"]:
         kind = line["kind"]
-        size, indent, mark, colour = {
+        base, indent, mark, colour = {
             "heading": (40, 100, "", (30, 60, 120)),
             "point": (32, 130, "- ", None),
             "sub": (30, 190, "- ", None),
             "example": (30, 160, "", (120, 60, 30)),
         }[kind]
+        size = round(base * scale)
         if kind == "heading":
             y += 14
+        if line.get("mark") == "star":
+            star(page, (indent - 28, y + size * 0.6), size * 0.55)
         for i, part in enumerate(wrap(page, mark + line["text"], face, size, PAGE[0] - 100 - indent)):
-            page.text((indent + (0 if i == 0 else page.width(mark, face, size)), y), part, face, size,
-                      None if page.handwritten else colour)
+            x = indent + (0 if i == 0 else page.width(mark, face, size))
+            width = page.text((x, y), part, face, size, None if page.handwritten else colour)
+            if i == 0 and line.get("mark") == "circle":
+                page.draw.ellipse([(x - 16, y - size * 0.15), (x + width + 16, y + size * 1.35)],
+                                  outline=MARK_COLOUR, width=3)
             y += size * 1.55
     if y > PAGE[1] - 60:
         raise SystemExit(f"the notes page {doc['title']} runs off the page")
@@ -323,11 +344,38 @@ def main() -> None:
                     "distortion": distortion,
                     "fonts": [face],
                     "facts": doc["facts"],
-                    "examples": doc["examples"],
                     "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
                 }
                 (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                       encoding="utf-8")
+    for name in DENSE_DOCUMENTS:
+        doc = documents[name]
+        language = name.split("-")[0]
+        for hand in NOTE_HANDS:
+            for distortion in NOTE_DISTORTIONS:
+                index += 1
+                rng = np.random.default_rng([SEED, index])
+                face = NOTE_FACES[hand]
+                page = Page(rng, "", hand, (face, face))
+                notes(page, doc)
+                check_coverage(page.covered)
+                d = HARSH if distortion == "harsh" else MILD
+                photo = photograph(page.image, rng, d)
+                sample = f"{index:02d}-notes-{name}-{hand}-{distortion}"
+                photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
+                truth = {
+                    "image": f"{sample}.jpg",
+                    "kind": "notes",
+                    "layout": "notes",
+                    "languages": {"front": language, "back": language},
+                    "hand": hand,
+                    "distortion": distortion,
+                    "fonts": [face],
+                    "facts": doc["facts"],
+                    "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
+                }
+                (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                        encoding="utf-8")
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 
