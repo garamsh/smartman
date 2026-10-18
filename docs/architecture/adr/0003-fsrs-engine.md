@@ -1,6 +1,6 @@
 # ADR 0003: Schedule with FSRS-6 as py-fsrs 6.3.2 implements it, in a pure engine without learning steps
 
-> Status: accepted; its "The engine does not fuzz" superseded by ADR-0012
+> Status: accepted; its "The engine does not fuzz" superseded by ADR-0012; its learning and relearning left to the session queue alone superseded by ADR-0061, which keeps a card failed today in today's list through an engine function
 > Date: 2026-10-14
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

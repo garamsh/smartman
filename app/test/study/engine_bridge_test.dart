@@ -129,4 +129,37 @@ void main() {
       );
     },
   );
+
+  test("today's list marks each card where it stands in the study day, in the order given", () async {
+    const start = 1792296000; // 2026-10-18 04:00 UTC
+    const end = start + 86400;
+    const hour = 3600;
+    final list = await todaysList(
+      cards: [
+        // Due today, not answered: left.
+        const TodayCard(due: start + 5 * hour, reviews: []),
+        // Failed today, due tomorrow by its state: left.
+        TodayCard(
+          due: end + 5 * hour,
+          reviews: [ReviewRecord(answer: Answer.dontKnow, at: start + hour)],
+        ),
+        // Failed, then passed, today: done.
+        TodayCard(
+          due: end + 5 * hour,
+          reviews: [
+            ReviewRecord(answer: Answer.dontKnow, at: start + hour),
+            ReviewRecord(answer: Answer.know, at: start + 2 * hour),
+          ],
+        ),
+        // Due tomorrow, passed yesterday: not in today's list.
+        TodayCard(
+          due: end + 5 * hour,
+          reviews: [ReviewRecord(answer: Answer.know, at: start - hour)],
+        ),
+      ],
+      dayStart: start,
+      dayEnd: end,
+    );
+    expect(list, [Today.left, Today.left, Today.done, Today.absent]);
+  });
 }
