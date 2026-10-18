@@ -650,11 +650,11 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
   const notes = (await committedSamples()).flatMap((sample) =>
     sample.kind === "notes" ? [sample] : []
   );
-  assert.equal(notes.length, 12);
+  assert.equal(notes.length, 16);
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
   );
-  for (const document of ["ko", "en", "ko-grammar"]) {
+  for (const document of ["ko", "en", "ko-grammar", "ko-auxiliary"]) {
     const drawn = notes.filter((sample) =>
       documentOf(sample.name) === document
     );
@@ -734,7 +734,7 @@ Deno.test("the committed notes pages count rules and exceptions as facts, each w
       `a fact for: ${line.text}`,
     );
   }
-  for (const name of ["ko", "en", "ko-grammar"]) {
+  for (const name of ["ko", "en", "ko-grammar", "ko-auxiliary"]) {
     const document = documents[name];
     // No fact is a worked example: none is named as one.
     assert.ok(
@@ -763,6 +763,80 @@ Deno.test("the committed notes pages count rules and exceptions as facts, each w
     assert.ok(sample.kind === "notes");
     assert.equal(sample.notes.facts.length, dense.facts.length);
   }
+});
+
+Deno.test("the committed page with the writer's additions holds a classification table, a definition with printed examples, and pen additions, and its truth makes each list one card", async () => {
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  const page = documents["ko-auxiliary"];
+  type Line = {
+    text: string;
+    kind: string;
+    mark?: string;
+    hand?: boolean;
+    header?: boolean;
+  };
+  type Fact = { id: string; terms: string[]; examples?: string[] };
+  const lines: Line[] = page.lines;
+  const rows = lines.filter((line) => line.kind === "row");
+  assert.ok(rows[0].header, "the table opens with a header row");
+  assert.ok(rows.length >= 4, "a header and at least three kinds");
+  assert.ok(rows.every((row) => row.text.split(" | ").length === 3));
+  const definition = lines.findIndex((line) =>
+    line.kind === "point" && !line.hand
+  );
+  assert.equal(
+    lines[definition + 1].kind,
+    "example",
+    "the definition with its printed examples",
+  );
+  const starred = lines.filter((line) => line.hand && line.mark === "star");
+  assert.equal(starred.length, 1, "a starred list added in pen");
+  const methods = lines.filter((line) =>
+    line.hand && /^[12]\) /.test(line.text)
+  );
+  assert.equal(methods.length, 2, "numbered judgment methods added in pen");
+  const aside = lines.findIndex((line) => line.kind === "aside");
+  assert.equal(lines[aside - 1].kind, "heading", "a rule beside a heading");
+  // Control: the earlier pages have no table and no pen additions.
+  for (const name of ["ko", "en", "ko-grammar"]) {
+    assert.ok(
+      documents[name].lines.every((line: Line) =>
+        line.kind !== "row" && line.kind !== "aside" && !line.hand
+      ),
+      name,
+    );
+  }
+
+  const facts: Fact[] = page.facts;
+  const fact = (id: string) => {
+    const found = facts.find((fact) => fact.id === id);
+    assert.ok(found, id);
+    return found;
+  };
+  const holds = (line: string, terms: string[]) =>
+    terms.every((term) => normalize(line).includes(normalize(term)));
+  // The definition, with its printed examples.
+  assert.deepEqual(fact("definition").examples, [
+    lines[definition + 1].text.replace(/^예\) /, ""),
+  ]);
+  // The starred list as one card: every member a term of one fact.
+  assert.ok(holds(starred[0].text, fact("always-auxiliary").terms));
+  assert.equal(fact("always-auxiliary").terms.length, 4);
+  // A table row's list as one card.
+  assert.ok(
+    rows.some((row) => holds(row.text, fact("auxiliary-verbs").terms)),
+  );
+  // Both judgment methods as one card.
+  const judgment = fact("judgment").terms;
+  assert.ok(
+    methods.every((method) =>
+      judgment.some((term) => holds(method.text, [term]))
+    ),
+  );
+  // The rule beside the heading.
+  assert.ok(holds(lines[aside].text, fact("spacing-rule").terms));
 });
 
 /** The committed samples, read from `tools/eval/samples/`. */
