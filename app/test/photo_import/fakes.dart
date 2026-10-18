@@ -81,10 +81,11 @@ final class FakeExtractionClient implements ExtractionClient {
     return call.answer.future;
   }
 
-  /// Answers the last call with vocabulary cards at step 1, front → answer.
+  /// Answers the last call with vocabulary cards of one sense, front →
+  /// meaning.
   void answer(Map<String, String> cards) => answerCards([
-    for (final MapEntry(key: front, value: answer) in cards.entries)
-      CandidateCard(front: front, answer: answer),
+    for (final MapEntry(key: front, value: meaning) in cards.entries)
+      CandidateCard.word(front: front, meaning: meaning),
   ]);
 
   /// Answers the last call with [cards].

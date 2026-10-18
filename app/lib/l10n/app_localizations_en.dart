@@ -389,11 +389,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncRetry => 'Try again';
 
   @override
-  String photoTarget(String name) {
-    return 'Add to · $name';
-  }
-
-  @override
   String get photoTargetTitle => 'Add to';
 
   @override
@@ -429,145 +424,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get extractingNote =>
       'Your photo is used only to make cards and isn\'t kept on the server';
-
-  @override
-  String choiceTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Made $count cards.',
-      one: 'Made 1 card.',
-    );
-    return '$_temp0\nWhat will you memorise?';
-  }
-
-  @override
-  String get choiceTopics => 'Topics to memorise';
-
-  @override
-  String get choiceTopicNone => 'This page';
-
-  @override
-  String choiceFrontLabel(String topic, String text) {
-    return '$topic front: $text. Tap to change';
-  }
-
-  @override
-  String choiceBackLabel(String topic, String text) {
-    return '$topic back: $text. Tap to change';
-  }
-
-  @override
-  String get choiceFrontName => 'Concept name';
-
-  @override
-  String get choiceFrontContent => 'Content first';
-
-  @override
-  String get choiceBackCore => 'Core only';
-
-  @override
-  String get choiceBackExamples => 'With examples';
-
-  @override
-  String get choiceNext => 'Next';
-
-  @override
-  String reviewMade(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Made $count cards',
-      one: 'Made 1 card',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String reviewTopic(String topic, int count) {
-    return '$topic · $count';
-  }
-
-  @override
-  String reviewTopicSwitch(String topic, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count cards',
-      one: '1 card',
-    );
-    return 'Keep $topic, $_temp0';
-  }
-
-  @override
-  String reviewCard(String front, String back) {
-    return '$front, $back. Tap to edit, swipe left to remove';
-  }
-
-  @override
-  String reviewRemovedCard(String front, String back) {
-    return '$front, $back. Removed. Swipe right to put it back';
-  }
-
-  @override
-  String reviewDroppedCard(String front, String back) {
-    return '$front, $back. Left out with its topic';
-  }
-
-  @override
-  String get reviewRemove => 'Remove';
-
-  @override
-  String get reviewRestore => 'Put back';
-
-  @override
-  String get reviewRemoveCard => 'Remove this card';
-
-  @override
-  String get reviewDone => 'Done';
-
-  @override
-  String get reviewFront => 'Front';
-
-  @override
-  String get reviewBack => 'Back';
-
-  @override
-  String get reviewInDeck => 'Already in the deck';
-
-  @override
-  String reviewAdd(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Add $count cards to the deck',
-      one: 'Add 1 card to the deck',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get coachRemove => 'Swipe left to remove';
-
-  @override
-  String get coachRestore => 'Swipe right to put it back';
-
-  @override
-  String get coachEdit => 'Tap to edit';
-
-  @override
-  String coachStep(int step, int total) {
-    return 'How to use, step $step of $total';
-  }
-
-  @override
-  String get coachSkip => 'Skip';
-
-  @override
-  String get coachNext => 'Next';
-
-  @override
-  String get coachStart => 'Start';
 
   @override
   String get duplicateSkip => 'Skip';
@@ -1221,4 +1077,145 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newDeckEntryBody => 'Choose how to start a new deck';
+
+  @override
+  String importTitleWords(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Found $count words',
+      one: 'Found 1 word',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importTitleCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Made $count cards',
+      one: 'Made 1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importDeck(String name) {
+    return 'Adds to the deck \'$name\'';
+  }
+
+  @override
+  String importAdd(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add $count cards',
+      one: 'Add 1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importSection(String topic, int count) {
+    return '$topic $count';
+  }
+
+  @override
+  String get importTopicNone => 'This page';
+
+  @override
+  String importIdentifySection(String topic) {
+    return 'Identify · $topic';
+  }
+
+  @override
+  String get importForward => 'Word → meaning';
+
+  @override
+  String get importBackward => 'Meaning → word';
+
+  @override
+  String get importBoth => 'Both ways';
+
+  @override
+  String get importBothShort => 'Both ways';
+
+  @override
+  String get importFirstSense => 'First meaning only';
+
+  @override
+  String get importShowPos => 'Show part of speech';
+
+  @override
+  String get importShowPronunciation => 'Show pronunciation';
+
+  @override
+  String get importShowExtras => 'Show synonyms and more';
+
+  @override
+  String get importNoteForward => 'Front → back';
+
+  @override
+  String get importNoteSwapped => 'Back → front';
+
+  @override
+  String get importSwap => 'Swap sides';
+
+  @override
+  String get importDropSection => 'Leave out this group';
+
+  @override
+  String get importKeepSection => 'Include this group';
+
+  @override
+  String importFormMenu(String topic, String form) {
+    return '$topic card form, $form';
+  }
+
+  @override
+  String importRow(String front, String back) {
+    return '$front, $back. Tap to edit';
+  }
+
+  @override
+  String importInclude(String front) {
+    return 'Include $front';
+  }
+
+  @override
+  String get importRemove => 'Remove';
+
+  @override
+  String get importInDeck => 'Already in the deck';
+
+  @override
+  String get editTitle => 'Edit card';
+
+  @override
+  String get editFront => 'Front';
+
+  @override
+  String get editBack => 'Back';
+
+  @override
+  String get editSenses => 'Meanings';
+
+  @override
+  String editSense(int number) {
+    return 'Meaning $number';
+  }
+
+  @override
+  String editKeepSense(int number) {
+    return 'Include meaning $number';
+  }
+
+  @override
+  String editMoveSense(int number) {
+    return 'Move meaning $number';
+  }
+
+  @override
+  String get editDone => 'Done';
 }

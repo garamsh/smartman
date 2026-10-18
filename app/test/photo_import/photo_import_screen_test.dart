@@ -1,14 +1,11 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -36,6 +33,10 @@ class _Import {
   final photos = FakePhotoSource();
   final client = FakeExtractionClient();
 
+  /// Semantics, on for the import's life, so rows are found by what a
+  /// screen reader hears.
+  late final SemanticsHandle _semantics = tester.ensureSemantics();
+
   /// What photo import resolved to, once it has.
   Object? popped = _notPopped;
   static const _notPopped = Object();
@@ -46,7 +47,6 @@ class _Import {
     Map<String, String> french = const {},
     ThemeMode themeMode = ThemeMode.light,
     bool disableAnimations = false,
-    bool coach = false,
     void Function(_Import import)? before,
   }) async {
     final db = AppDatabase(NativeDatabase.memory());
@@ -70,9 +70,7 @@ class _Import {
       }
       return (frenchDeck, spanishDeck);
     }))!;
-    final preferences = await openPreferences(tester, {
-      if (!coach) 'photoReviewCoachShown': true,
-    });
+    final preferences = await openPreferences(tester);
     final import = _Import._(
       tester,
       repository,
@@ -80,6 +78,7 @@ class _Import {
       spanishDeck,
       preferences,
     );
+    import._semantics;
     before?.call(import);
     final target = deck == null ? frenchDeck.id : deck(import);
     await tester.pumpWidget(
@@ -143,38 +142,46 @@ class _Import {
     }
   }
 
-  /// Takes a photo and answers its extraction with [cards].
+  /// Takes a photo and answers its extraction with vocabulary cards of one
+  /// sense, front → meaning.
   Future<void> extract(Map<String, String> cards) async {
     await shoot();
     client.answer(cards);
     await tester.pumpAndSettle();
-    await next();
+  }
+
+  /// Takes a photo and answers its extraction with [cards].
+  Future<void> extractCards(List<CandidateCard> cards) async {
+    await shoot();
+    client.answerCards(cards);
     await tester.pumpAndSettle();
   }
 
-  /// Goes on from the choice screen to Review; frames are pumped, not
-  /// settled, since Review's coach may be animating.
-  Future<void> next() async {
-    await tester.tap(_shown('Next'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-  }
+  /// The list row showing [text], which a drag moves.
+  Finder row(String text) =>
+      find.ancestor(of: _shown(text), matching: find.byType(Dismissible)).first;
 
-  /// The review card showing [text], which a drag moves.
-  Finder row(String text) => find
-      .ancestor(of: _shown(text), matching: find.byType(GestureDetector))
-      .first;
-
-  /// Drags the card showing [text] by [dx], left when negative.
+  /// Drags the row showing [text] by [dx], left when negative.
   Future<void> swipe(String text, double dx) async {
     await tester.drag(row(text), Offset(dx, 0));
     await tester.pumpAndSettle();
   }
 
-  /// Whether [text] is drawn struck through, as a removed card's side is.
-  bool struck(String text) =>
-      tester.widget<Text>(_shown(text)).style?.decoration ==
-      TextDecoration.lineThrough;
+  /// The check of the row whose front reads [front].
+  Finder check(String front) => find.bySemanticsLabel('Include $front');
+
+  /// Whether the row whose front reads [front] is included.
+  bool included(String front) =>
+      isSemantics(isChecked: true)
+          .matches(tester.getSemantics(check(front)), {});
+
+  /// Opens the form menu of the section titled [title].
+  Future<void> menu(String title) =>
+      tap(find.bySemanticsLabel(RegExp('^${RegExp.escape(title)} card form')));
+
+  /// Picks the menu item reading [label].
+  Future<void> pickItem(String label) =>
+      tap(find.widgetWithText(MenuItemButton, label));
 
   /// Each card of [deck], as front → back with back lines joined by " / ".
   Future<List<(String, String, CardSource)>> cards(Deck deck) async => [
@@ -198,6 +205,7 @@ class _Import {
   Future<void> close() async {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
+    _semantics.dispose();
   }
 }
 
@@ -235,9 +243,7 @@ void main() {
         expect(import.client.calls.single.photo, same(testPhoto));
         import.client.answer({'chien': 'dog'});
         await tester.pumpAndSettle();
-        await import.next();
-        await tester.pumpAndSettle();
-        expect(_shown('Made 1 card'), findsOneWidget);
+        expect(_shown('Found 1 word'), findsOneWidget);
         await import.close();
       });
     }
@@ -445,535 +451,276 @@ void main() {
     }
   });
 
-  group('choice', () {
-    /// A page of two topics: two notes, one with printed examples, and a
-    /// vocabulary card with its part of speech.
-    const page = [
-      CandidateCard(
-        front: '양성모음',
-        answer: 'ㅏ ㅗ ㅑ ㅛ',
-        examples: ['졸졸', '찰랑찰랑'],
-        topic: '모음조화',
+  group('list', () {
+    /// A word-book page of two topics: a word of two senses with its
+    /// pronunciation and a synonym, a word of one, and a phrase with no part
+    /// of speech.
+    final words = [
+      const CandidateCard(
+        front: 'face',
+        kind: CardKind.vocabulary,
+        senses: [
+          Sense(pos: '[동]', meaning: '직면하다, 마주하다'),
+          Sense(pos: '[명]', meaning: '표면, 겉면'),
+        ],
+        pronunciation: "['feis]",
+        extras: [Extra(label: '유의어', text: 'confront')],
+        topic: '최빈출 단어',
       ),
-      CandidateCard(front: '음성모음', answer: 'ㅓ ㅜ ㅡ', topic: '모음조화'),
-      CandidateCard(
-        front: 'run',
-        answer: '달리다',
+      CandidateCard.word(
+        front: 'include',
+        meaning: '포함하다',
         partOfSpeech: '[동]',
-        topic: '단어',
+        topic: '최빈출 단어',
+      ),
+      CandidateCard.word(
+        front: 'in addition',
+        meaning: '~뿐만 아니라',
+        topic: '빈출 숙어',
       ),
     ];
 
-    Future<void> answerPage(
-      _Import import, [
-      List<CandidateCard> cards = page,
-    ]) async {
-      await import.shoot();
-      import.client.answerCards(cards);
-      await import.tester.pumpAndSettle();
-    }
-
-    /// The pill or option chip reading [label].
-    Finder chip(String label) =>
-        find.ancestor(of: _shown(label), matching: find.byType(AppChip)).first;
-
-    /// Whether the choice chip reading [label] is on; null for another kind.
-    bool? chosen(WidgetTester tester, String label) =>
-        switch (tester.widget<AppChip>(chip(label)).kind) {
-          AppChipChoice(:final selected) => selected,
-          _ => null,
-        };
-
-    testWidgets(
-      'shows how many cards were made, each topic as a pill, on at first, and each topic sample in its default shape',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import);
-
-        expect(
-          _shown('Made 3 cards.\nWhat will you memorise?'),
-          findsOneWidget,
-        );
-        for (final topic in ['모음조화', '단어']) {
-          expect(chosen(tester, topic), isTrue, reason: '$topic on');
-        }
-        expect(_shown('양성모음'), findsOneWidget);
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget, reason: '핵심만');
-        expect(_shown('run'), findsOneWidget);
-        expect(_shown('[동] 달리다'), findsOneWidget);
-        expect(_shown('음성모음'), findsNothing, reason: 'one sample a topic');
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'a pill switched off leaves its sample and its cards out of Review, and on again brings them back',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import);
-
-        await import.tap(chip('단어'));
-        expect(chosen(tester, '단어'), isFalse);
-        expect(_shown('run'), findsNothing);
-        await import.next();
-        await tester.pumpAndSettle();
-        expect(_shown('Made 2 cards'), findsOneWidget);
-        expect(_shown('run'), findsNothing);
-        expect(_shown('음성모음'), findsOneWidget);
-        await import.close();
-
-        // Control: switched off and on again, the topic goes to Review.
-        final again = await _Import.open(tester);
-        await answerPage(again);
-        await again.tap(chip('단어'));
-        await again.tap(chip('단어'));
-        await again.next();
-        await tester.pumpAndSettle();
-        expect(_shown('Made 3 cards'), findsOneWidget);
-        expect(_shown('run'), findsOneWidget);
-        await again.close();
-      },
-    );
-
-    testWidgets('Next is disabled with no topic on', (tester) async {
-      final import = await _Import.open(tester);
-      await answerPage(import);
-      FilledButton next() => tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Next'),
-      );
-
-      await import.tap(chip('모음조화'));
-      expect(next().onPressed, isNotNull, reason: 'control: one topic on');
-      await import.tap(chip('단어'));
-      expect(next().onPressed, isNull);
-      await import.close();
-    });
-
-    testWidgets(
-      'content first swaps front and answer for every card of the topic, on the sample and on Review',
-      (tester) async {
-        final semantics = tester.ensureSemantics();
-        final import = await _Import.open(tester);
-        await answerPage(import);
-
-        await import.tap(_shown('양성모음'));
-        expect(chip('Concept name'), findsOneWidget);
-        await import.tap(chip('Content first'));
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget);
-        expect(
-          find.bySemanticsLabel('모음조화 front: ㅏ ㅗ ㅑ ㅛ. Tap to change'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel('모음조화 back: 양성모음. Tap to change'),
-          findsOneWidget,
-        );
-        await import.next();
-        await tester.pumpAndSettle();
-
-        for (final (front, back) in [('ㅏ ㅗ ㅑ ㅛ', '양성모음'), ('ㅓ ㅜ ㅡ', '음성모음')]) {
-          expect(
-            find.bySemanticsLabel(
-              '$front, $back. Tap to edit, swipe left to remove',
-            ),
-            findsOneWidget,
-            reason: front,
-          );
-        }
-        // Control: the other topic keeps the concept's name in front.
-        expect(
-          find.bySemanticsLabel(
-            'run, [동] 달리다. Tap to edit, swipe left to remove',
-          ),
-          findsOneWidget,
-        );
-        await import.close();
-        semantics.dispose();
-      },
-    );
-
-    testWidgets(
-      'with examples puts the printed examples after the answer, on the sample and on Review',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import);
-
-        await import.tap(_shown('ㅏ ㅗ ㅑ ㅛ'));
-        await import.tap(chip('With examples'));
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑'), findsOneWidget);
-        await import.next();
-        await tester.pumpAndSettle();
-
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑'), findsOneWidget);
-        expect(_shown('ㅓ ㅜ ㅡ'), findsOneWidget, reason: 'prints none');
-        await import.tap(_shown('Add 3 cards to the deck'));
-        expect(await import.cards(import.french), [
-          ('양성모음', 'ㅏ ㅗ ㅑ ㅛ / 졸졸 / 찰랑찰랑', CardSource.import),
-          ('음성모음', 'ㅓ ㅜ ㅡ', CardSource.import),
-          ('run', '[동] 달리다', CardSource.import),
-        ]);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'the headline counts the cards Review shows, those of one card key once',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import, [
-          ...page,
-          const CandidateCard(front: 'Run', answer: '뛰다', topic: '단어'),
-        ]);
-
-        expect(
-          _shown('Made 3 cards.\nWhat will you memorise?'),
-          findsOneWidget,
-        );
-        await import.next();
-        await tester.pumpAndSettle();
-        expect(_shown('Made 3 cards'), findsOneWidget);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'back from Review returns to the choice with its pills and shapes kept, and Next opens Review as before',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import);
-        await import.tap(chip('단어'));
-        await import.tap(_shown('양성모음'));
-        await import.tap(chip('Content first'));
-        await import.next();
-        await tester.pumpAndSettle();
-        expect(_shown('Made 2 cards'), findsOneWidget);
-
-        await import.tap(find.byTooltip('Back'));
-
-        expect(
-          _shown('Made 3 cards.\nWhat will you memorise?'),
-          findsOneWidget,
-        );
-        expect(chosen(tester, '단어'), isFalse);
-        expect(chosen(tester, '모음조화'), isTrue);
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget);
-        await import.next();
-        await tester.pumpAndSettle();
-        expect(_shown('Made 2 cards'), findsOneWidget);
-        expect(_shown('run'), findsNothing);
-        expect(_shown('ㅓ ㅜ ㅡ'), findsOneWidget, reason: 'content first');
-
-        // A system back returns to the choice too.
-        final navigator = tester.state<NavigatorState>(
-          find.byType(Navigator).last,
-        );
-        await navigator.maybePop();
-        await tester.pumpAndSettle();
-        expect(chosen(tester, '단어'), isFalse);
-        expect(import.hasPopped, isFalse);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'With examples is offered only for a topic one of whose cards has examples',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import);
-
-        await import.tap(_shown('[동] 달리다'));
-        expect(chip('Core only'), findsOneWidget);
-        expect(_shown('With examples'), findsNothing);
-        // Control: the topic with printed examples offers it.
-        await import.tap(_shown('ㅏ ㅗ ㅑ ㅛ'));
-        expect(chip('With examples'), findsOneWidget);
-        await import.close();
-      },
-    );
-
-    testWidgets('a shape is kept when its pill goes off and on again', (
-      tester,
-    ) async {
-      final import = await _Import.open(tester);
-      await answerPage(import);
-
-      await import.tap(_shown('양성모음'));
-      await import.tap(chip('Content first'));
-      await import.tap(chip('모음조화'));
-      expect(_shown('양성모음'), findsNothing);
-      await import.tap(chip('모음조화'));
-
-      expect(
-        find.bySemanticsLabel('모음조화 front: ㅏ ㅗ ㅑ ㅛ. Tap to change'),
-        findsOneWidget,
-      );
-      await import.close();
-    });
-
-    testWidgets(
-      'content first with examples puts the examples after the content in front and the name behind',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await answerPage(import);
-
-        await import.tap(_shown('양성모음'));
-        await import.tap(chip('Content first'));
-        await import.tap(_shown('양성모음'));
-        await import.tap(chip('With examples'));
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑'), findsOneWidget);
-        await import.next();
-        await tester.pumpAndSettle();
-
-        await import.tap(_shown('Add 3 cards to the deck'));
-        expect(await import.cards(import.french), [
-          ('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑', '양성모음', CardSource.import),
-          ('ㅓ ㅜ ㅡ', '음성모음', CardSource.import),
-          ('run', '[동] 달리다', CardSource.import),
-        ]);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'a deck that cannot be read on Next says so in a snack bar and stays on the choice',
-      (tester) async {
-        final import = await _Import.open(
-          tester,
-          before: (import) =>
-              import.repository.unreadable.add(import.french.id),
-        );
-        await answerPage(import);
-
-        await import.next();
-        await tester.pumpAndSettle();
-
-        expect(
-          _shown(
-            "Couldn't read or write the device's storage. Please try again.",
-          ),
-          findsOneWidget,
-        );
-        expect(
-          _shown('Made 3 cards.\nWhat will you memorise?'),
-          findsOneWidget,
-        );
-        expect(_shown('Add 3 cards to the deck'), findsNothing);
-        await import.close();
-      },
-    );
-
-    testWidgets('the default option is read as selected and the other as not', (
-      tester,
-    ) async {
-      final semantics = tester.ensureSemantics();
-      final import = await _Import.open(tester);
-      await answerPage(import);
-
-      await import.tap(_shown('양성모음'));
-      expect(
-        tester.getSemantics(_shown('Concept name')),
-        isSemantics(hasSelectedState: true, isSelected: true),
-      );
-      expect(
-        tester.getSemantics(_shown('Content first')),
-        isSemantics(hasSelectedState: true, isSelected: false),
-      );
-      await import.close();
-      semantics.dispose();
-    });
-
-    testWidgets('cards with no topic go under one pill, This page', (
-      tester,
-    ) async {
-      final import = await _Import.open(tester);
-      await import.shoot();
-      import.client.answer({'chien': 'dog', 'chat': 'cat'});
-      await tester.pumpAndSettle();
-
-      expect(chip('This page'), findsOneWidget);
-      expect(find.byType(AppChip), findsOneWidget);
-      expect(_shown('chien'), findsOneWidget, reason: 'its sample');
-      await import.next();
-      await tester.pumpAndSettle();
-      expect(_shown('Made 2 cards'), findsOneWidget);
-      await import.close();
-    });
-  });
-
-  group('review', () {
-    /// A page of two topics, two cards and one, a vocabulary card with its
-    /// part of speech among them.
-    const page = [
+    /// A notes page: two rules and an identify card of their topic.
+    const notes = [
       CandidateCard(front: '양성모음', answer: 'ㅏ ㅗ ㅑ ㅛ', topic: '모음조화'),
       CandidateCard(front: '음성모음', answer: 'ㅓ ㅜ ㅡ', topic: '모음조화'),
       CandidateCard(
-        front: 'run',
-        answer: '달리다',
-        partOfSpeech: '[동]',
-        topic: '단어',
+        front: "'아름다운 꽃'의 '아'",
+        answer: '양성모음 — ㅏ',
+        type: CardType.identify,
+        topic: '모음조화',
       ),
     ];
 
-    Future<void> extractPage(
-      _Import import, [
-      List<CandidateCard> cards = page,
-    ]) async {
-      await import.shoot();
-      import.client.answerCards(cards);
-      await import.tester.pumpAndSettle();
-      await import.next();
-      await import.tester.pumpAndSettle();
-    }
-
     testWidgets(
-      'shows the cards made, the deck chip, each topic with its count and switch, and each card front and answer',
+      'a word page shows the words found, the deck, each topic with its count and form, and each row checked with its senses one per line',
       (tester) async {
         final import = await _Import.open(tester);
-        await extractPage(import);
+        await import.extractCards(words);
+
+        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(_shown("Adds to the deck '"), findsOneWidget);
+        expect(_shown('French'), findsOneWidget);
+        expect(_shown('최빈출 단어 2'), findsOneWidget);
+        expect(_shown('빈출 숙어 1'), findsOneWidget);
+        expect(_shown('Word → meaning'), findsNWidgets(2));
+        expect(_shown('face'), findsOneWidget);
+        expect(_shown('[동] 직면하다, 마주하다\n[명] 표면, 겉면'), findsOneWidget);
+        expect(_shown('~뿐만 아니라'), findsOneWidget, reason: 'no label');
+        for (final front in ['face', 'include', 'in addition']) {
+          expect(import.included(front), isTrue, reason: front);
+        }
+        expect(_shown('Add 3 cards'), findsOneWidget);
+        expect(find.byType(Switch), findsNothing);
+        expect(_shown('Next'), findsNothing, reason: 'no choice screen');
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a notes page counts the cards made, its rules front to back and its identify cards in their own section, left out',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(notes);
 
         expect(_shown('Made 3 cards'), findsOneWidget);
-        expect(_shown('Add to · French'), findsOneWidget);
-        expect(_shown('모음조화 · 2'), findsOneWidget);
-        expect(_shown('단어 · 1'), findsOneWidget);
-        expect(find.byType(Switch), findsNWidgets(2));
-        expect(_shown('양성모음'), findsOneWidget);
-        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget);
-        expect(_shown('[동] 달리다'), findsOneWidget, reason: '기본');
-        expect(_shown('Retake'), findsOneWidget);
-        expect(_shown('Add 3 cards to the deck'), findsOneWidget);
-        expect(find.byType(Checkbox), findsNothing);
-        expect(find.byType(Slider), findsNothing);
-        await import.close();
-      },
-    );
+        expect(_shown('모음조화 2'), findsOneWidget);
+        expect(_shown('Identify · 모음조화 1'), findsOneWidget);
+        expect(_shown('Front → back'), findsNWidgets(2));
+        expect(import.included('양성모음'), isTrue);
+        expect(import.included("'아름다운 꽃'의 '아'"), isFalse);
+        expect(_shown('Add 2 cards'), findsOneWidget);
 
-    testWidgets(
-      'cards without a topic go into one section with no heading and no switch',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await import.extract({'chien': 'dog', 'chat': 'cat'});
-
-        expect(_shown('Made 2 cards'), findsOneWidget);
-        expect(find.byType(Switch), findsNothing);
-        expect(_shown('chien'), findsOneWidget);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'a swipe left removes a card, struck through and still listed, a swipe right puts it back, and the count follows',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await extractPage(import);
-
-        // Control: a drag short of the threshold changes nothing.
-        await import.swipe('양성모음', -30);
-        expect(import.struck('양성모음'), isFalse);
-        expect(_shown('Add 3 cards to the deck'), findsOneWidget);
-
-        await import.swipe('양성모음', -120);
-        expect(import.struck('양성모음'), isTrue);
-        expect(import.struck('ㅏ ㅗ ㅑ ㅛ'), isTrue);
-        expect(import.struck('음성모음'), isFalse);
-        expect(_shown('Made 3 cards'), findsOneWidget, reason: 'every card');
-        expect(_shown('Add 2 cards to the deck'), findsOneWidget);
-
-        await import.swipe('양성모음', 120);
-        expect(import.struck('양성모음'), isFalse);
-        expect(_shown('Add 3 cards to the deck'), findsOneWidget);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      "a topic's switch drops every card of it, closed to editing, and switching it back keeps a card removed on its own",
-      (tester) async {
-        final import = await _Import.open(tester);
-        await extractPage(import);
-        await import.swipe('양성모음', -120);
-
-        await import.tap(find.byType(Switch).first);
-        expect(import.struck('음성모음'), isTrue);
-        expect(import.struck('run'), isFalse);
-        expect(_shown('Add 1 card to the deck'), findsOneWidget);
-        await import.tap(_shown('음성모음'));
-        expect(find.byType(TextField), findsNothing, reason: 'not editable');
-
-        await import.tap(find.byType(Switch).first);
-        expect(import.struck('음성모음'), isFalse);
-        expect(import.struck('양성모음'), isTrue);
-        expect(_shown('Add 2 cards to the deck'), findsOneWidget);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'a tap edits a card in place, its button removes it or puts it back, and Done keeps what was typed but an emptied side',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await extractPage(import);
-
-        await import.tap(_shown('음성모음'));
-        expect(find.byType(TextField), findsNWidgets(2));
-        await tester.enterText(find.byType(TextField).first, ' ');
-        await tester.enterText(find.byType(TextField).last, 'ㅓ ㅜ ㅡ ㅕ ㅠ');
-        await import.tap(_shown('Done'));
-        expect(find.byType(TextField), findsNothing);
-        expect(_shown('음성모음'), findsOneWidget, reason: 'emptied: kept');
-        expect(_shown('ㅓ ㅜ ㅡ ㅕ ㅠ'), findsOneWidget);
-
-        await import.tap(_shown('음성모음'));
-        await import.tap(_shown('Remove this card'));
-        expect(import.struck('음성모음'), isTrue);
-        await import.tap(_shown('음성모음'));
-        await import.tap(_shown('Put back'));
-        expect(import.struck('음성모음'), isFalse);
-        await import.close();
-      },
-    );
-
-    testWidgets(
-      'only the cards kept are saved, each answer as shown, and nothing is written before adding',
-      (tester) async {
-        // Tall enough that every card is on screen.
-        await tester.binding.setSurfaceSize(const Size(800, 2000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        final import = await _Import.open(tester);
-        await extractPage(import, [
-          ...page,
-          const CandidateCard(front: 'walk', answer: '걷다', topic: '단어'),
-        ]);
-        await import.swipe('walk', -120);
-        await import.tap(find.byType(Switch).first);
-        await import.tap(_shown('run'));
-        await tester.enterText(find.byType(TextField).last, '[동] 뛰다');
-        await import.tap(_shown('Done'));
-        expect(await import.cards(import.french), isEmpty);
-
-        await import.tap(_shown('Add 1 card to the deck'));
-
+        await import.tap(import.check("'아름다운 꽃'의 '아'"));
+        await import.tap(_shown('Add 3 cards'));
         expect(await import.cards(import.french), [
-          ('run', '[동] 뛰다', CardSource.import),
+          ('양성모음', 'ㅏ ㅗ ㅑ ㅛ', CardSource.import),
+          ('음성모음', 'ㅓ ㅜ ㅡ', CardSource.import),
+          ("'아름다운 꽃'의 '아'", '양성모음 — ㅏ', CardSource.import),
         ]);
-        expect((import.popped! as Deck).id, import.french.id);
         await import.close();
       },
     );
 
     testWidgets(
-      "a card the deck already holds starts removed and marked, and put back it merges its answer into the deck's card",
+      'a check leaves a row out and puts it back, and only the rows checked are added',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(words);
+
+        await import.tap(import.check('include'));
+        expect(import.included('include'), isFalse);
+        expect(_shown('Add 2 cards'), findsOneWidget);
+        await import.tap(import.check('in addition'));
+        await import.tap(import.check('in addition'));
+        expect(import.included('in addition'), isTrue, reason: 'put back');
+
+        await import.tap(_shown('Add 2 cards'));
+        expect(await import.cards(import.french), [
+          ('face', '[동] 직면하다, 마주하다 / [명] 표면, 겉면', CardSource.import),
+          ('in addition', '~뿐만 아니라', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets('a swipe left leaves a row out, and a short drag does not', (
+      tester,
+    ) async {
+      final import = await _Import.open(tester);
+      await import.extract({'chien': 'dog', 'chat': 'cat'});
+
+      await import.swipe('chien', -30);
+      expect(import.included('chien'), isTrue, reason: 'control: short');
+      await import.swipe('chien', -600);
+      expect(import.included('chien'), isFalse);
+      expect(_shown('chien'), findsOneWidget, reason: 'still listed');
+      expect(_shown('Add 1 card'), findsOneWidget);
+      // A swipe does not put it back; its check does.
+      await import.swipe('chien', -600);
+      expect(import.included('chien'), isFalse);
+      await import.tap(import.check('chien'));
+      expect(import.included('chien'), isTrue);
+      await import.close();
+    });
+
+    testWidgets(
+      "the menu's direction turns a section's cards to meaning → word, or makes both, counting each card",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(words);
+
+        await import.menu('빈출 숙어');
+        expect(find.byType(MenuItemButton), findsNWidgets(6));
+        await import.pickItem('Meaning → word');
+        expect(_shown('Meaning → word'), findsOneWidget, reason: 'header');
+        expect(_shown('Add 3 cards'), findsOneWidget);
+
+        await import.menu('최빈출 단어');
+        await import.pickItem('Both ways');
+        expect(_shown('Both ways'), findsOneWidget, reason: 'header');
+        expect(_shown('Add 5 cards'), findsOneWidget);
+
+        await import.tap(_shown('Add 5 cards'));
+        expect(await import.cards(import.french), [
+          ('face', '[동] 직면하다, 마주하다 / [명] 표면, 겉면', CardSource.import),
+          ('[동] 직면하다, 마주하다\n[명] 표면, 겉면', 'face', CardSource.import),
+          ('include', '[동] 포함하다', CardSource.import),
+          ('[동] 포함하다', 'include', CardSource.import),
+          ('~뿐만 아니라', 'in addition', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'first meaning only and the part of speech change what a section shows and saves',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(words);
+
+        await import.menu('최빈출 단어');
+        await import.pickItem('First meaning only');
+        expect(_shown('[동] 직면하다, 마주하다'), findsOneWidget);
+        await import.menu('최빈출 단어');
+        await import.pickItem('Show part of speech');
+        expect(_shown('직면하다, 마주하다'), findsOneWidget);
+        expect(_shown('[동] 직면하다, 마주하다'), findsNothing);
+
+        await import.tap(_shown('Add 3 cards'));
+        expect((await import.cards(import.french)).take(2).toList(), [
+          ('face', '직면하다, 마주하다', CardSource.import),
+          ('include', '포함하다', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'pronunciation and extras are offered only where the page prints them, and off until chosen',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(words);
+        expect(_shown("face\n['feis]"), findsNothing);
+
+        await import.menu('빈출 숙어');
+        expect(
+          find.widgetWithText(MenuItemButton, 'Show pronunciation'),
+          findsNothing,
+        );
+        expect(
+          find.widgetWithText(MenuItemButton, 'Show synonyms and more'),
+          findsNothing,
+        );
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
+
+        await import.menu('최빈출 단어');
+        await import.pickItem('Show pronunciation');
+        expect(_shown("face\n['feis]"), findsOneWidget);
+        await import.menu('최빈출 단어');
+        await import.pickItem('Show synonyms and more');
+        expect(
+          _shown('[동] 직면하다, 마주하다\n[명] 표면, 겉면\n유의어 confront'),
+          findsOneWidget,
+        );
+        await import.close();
+      },
+    );
+
+    testWidgets("a note section's menu swaps front and back", (tester) async {
+      final import = await _Import.open(tester);
+      await import.extractCards(notes);
+
+      await import.menu('모음조화');
+      expect(
+        find.widgetWithText(MenuItemButton, 'Meaning → word'),
+        findsNothing,
+      );
+      await import.pickItem('Swap sides');
+      expect(_shown('Back → front'), findsOneWidget);
+
+      await import.tap(_shown('Add 2 cards'));
+      expect(await import.cards(import.french), [
+        ('ㅏ ㅗ ㅑ ㅛ', '양성모음', CardSource.import),
+        ('ㅓ ㅜ ㅡ', '음성모음', CardSource.import),
+      ]);
+      await import.close();
+    });
+
+    testWidgets(
+      "the menu's last item leaves out every row of a section, then includes them",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(words);
+
+        await import.menu('최빈출 단어');
+        await import.pickItem('Leave out this group');
+        expect(import.included('face'), isFalse);
+        expect(import.included('include'), isFalse);
+        expect(import.included('in addition'), isTrue, reason: 'control');
+        expect(_shown('Add 1 card'), findsOneWidget);
+
+        await import.menu('최빈출 단어');
+        await import.pickItem('Include this group');
+        expect(import.included('face'), isTrue);
+        expect(_shown('Add 3 cards'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a row the deck holds starts left out, marked, and merges into its card when checked',
       (tester) async {
         final import = await _Import.open(tester, french: {'chat': 'cat'});
-        await import.extract({'Chat': 'talk', 'chien': 'dog'});
+        await import.extract({'chat': 'talk', 'chien': 'dog'});
 
-        expect(import.struck('Chat'), isTrue);
+        expect(import.included('chat'), isFalse);
         expect(_shown('Already in the deck'), findsOneWidget);
-        expect(import.struck('chien'), isFalse, reason: 'control');
-        expect(_shown('Add 1 card to the deck'), findsOneWidget);
+        expect(import.included('chien'), isTrue, reason: 'control');
 
-        await import.swipe('Chat', 120);
-        await import.tap(_shown('Add 2 cards to the deck'));
-
+        await import.tap(import.check('chat'));
+        await import.tap(_shown('Add 2 cards'));
         expect(await import.cards(import.french), [
           ('chat', 'cat / talk', CardSource.manual),
           ('chien', 'dog', CardSource.import),
@@ -983,68 +730,97 @@ void main() {
     );
 
     testWidgets(
-      'cards with one key on the photo are combined, their answers merged',
+      'the deck name opens the deck chooser, and another deck decides again which rows it holds',
+      (tester) async {
+        final import = await _Import.open(tester, french: {'chat': 'cat'});
+        await import.extract({'chat': 'talk', 'chien': 'dog'});
+        expect(import.included('chat'), isFalse);
+
+        await import.tap(_shown('French'));
+        expect(_shown('Add to'), findsOneWidget);
+        await import.tap(_shown('Spanish'));
+        expect(import.included('chat'), isTrue);
+        expect(_shown('Already in the deck'), findsNothing);
+        await import.tap(_shown('Add 2 cards'));
+
+        expect(await import.cards(import.spanish), [
+          ('chat', 'talk', CardSource.import),
+          ('chien', 'dog', CardSource.import),
+        ]);
+        expect((import.popped! as Deck).id, import.spanish.id);
+        await import.close();
+      },
+    );
+
+    testWidgets('a new deck is named when saving, and created only then', (
+      tester,
+    ) async {
+      final import = await _Import.open(tester, deck: (_) => null);
+      await import.extract({'chien': 'dog', 'chat': 'cat'});
+      expect(_shown('New deck'), findsOneWidget);
+      expect(await import.deckNames(), ['French', 'Spanish']);
+
+      await import.tap(_shown('Add 2 cards'));
+      await tester.enterText(find.byType(TextField), 'Page 12');
+      await import.tap(_shown('Create'));
+
+      expect(await import.deckNames(), ['French', 'Page 12', 'Spanish']);
+      expect(await import.cards(import.popped! as Deck), [
+        ('chien', 'dog', CardSource.import),
+        ('chat', 'cat', CardSource.import),
+      ]);
+      await import.close();
+    });
+
+    testWidgets(
+      "a section's form is remembered for its deck and topic, and not for another deck or topic",
       (tester) async {
         final import = await _Import.open(tester);
+        await import.extractCards(words);
+        await import.menu('빈출 숙어');
+        await import.pickItem('Meaning → word');
+        await import.tap(_shown('Add 3 cards'));
 
-        await import.extract({
-          'chat': 'cat',
-          'CHAT ': 'tomcat',
-          'chien': 'dog',
-        });
+        await import.tap(_shown('open'));
+        await import.extractCards(words);
+        expect(_shown('Meaning → word'), findsOneWidget, reason: '빈출 숙어');
+        expect(_shown('Word → meaning'), findsOneWidget, reason: '최빈출 단어');
 
-        expect(_shown('Made 2 cards'), findsOneWidget);
-        expect(_shown('cat\ntomcat'), findsOneWidget);
+        // Saved into Spanish, a form is Spanish's alone.
+        await import.menu('최빈출 단어');
+        await import.pickItem('Both ways');
+        await import.tap(_shown('French'));
+        await import.tap(_shown('Spanish'));
+        await import.tap(_shown('Add 5 cards'));
+
+        await import.tap(_shown('open'));
+        await import.extractCards(words);
+        expect(_shown('Both ways'), findsNothing, reason: "French's forms");
+        expect(_shown('Meaning → word'), findsOneWidget);
+        await import.tap(_shown('French'));
+        await import.tap(_shown('Spanish'));
+        expect(_shown('Both ways'), findsOneWidget, reason: "Spanish's forms");
         await import.close();
       },
     );
 
     testWidgets(
-      'each side breaks lines only between words, and a screen reader hears the card as written',
+      'candidates of one card key on the photo are one row with their senses, and a card with no topic goes under This page',
       (tester) async {
-        const front = '연역 논증과 귀납 논증의 차이는?';
-        const back = '연역은 전제에 담긴 내용만 말하고, 귀납은 전제를 넘어서는 새로운 정보를 준다';
-        // A narrow phone, so both sides wrap.
-        await tester.binding.setSurfaceSize(const Size(320, 1200));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        final semantics = tester.ensureSemantics();
         final import = await _Import.open(tester);
-        await import.extract({front: back});
-
-        for (final text in [front, back]) {
-          final paragraph = tester.renderObject<RenderParagraph>(
-            find.descendant(of: _shown(text), matching: find.byType(RichText)),
-          );
-          final drawn = paragraph.text.toPlainText();
-          // The paragraph's text laid out again at its width, to read where
-          // its lines start.
-          final painter = TextPainter(
-            text: paragraph.text,
-            textDirection: paragraph.textDirection,
-            textScaler: paragraph.textScaler,
-          )..layout(maxWidth: paragraph.size.width);
-          addTearDown(painter.dispose);
-          final starts = {
-            for (var offset = 0; offset < drawn.length; offset++)
-              painter.getLineBoundary(TextPosition(offset: offset)).start,
-          };
-          expect(starts.length, greaterThan(1), reason: '$text wraps');
-          for (final start in starts.where((start) => start > 0)) {
-            expect(
-              drawn[start - 1],
-              ' ',
-              reason: 'a line starts at "${drawn.substring(start)}"',
-            );
-          }
-        }
-        expect(
-          find.bySemanticsLabel(
-            '$front, $back. Tap to edit, swipe left to remove',
+        await import.extractCards([
+          CandidateCard.word(front: 'run', meaning: '달리다', partOfSpeech: '[동]'),
+          CandidateCard.word(
+            front: 'Run',
+            meaning: '경영하다',
+            partOfSpeech: '[동]',
           ),
-          findsOneWidget,
-        );
+        ]);
+
+        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('This page 1'), findsOneWidget);
+        expect(_shown('[동] 달리다\n[동] 경영하다'), findsOneWidget);
         await import.close();
-        semantics.dispose();
       },
     );
 
@@ -1054,120 +830,46 @@ void main() {
       final import = await _Import.open(tester);
       await import.extract({'a': '1'});
 
-      await import.swipe('a', -120);
+      await import.tap(import.check('a'));
 
       final button = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Add 0 cards to the deck'),
+        find.widgetWithText(FilledButton, 'Add 0 cards'),
       );
       expect(button.onPressed, isNull);
       await import.close();
     });
 
     testWidgets(
-      'retake offers the camera and the album again; a cancel keeps the review, a photo replaces it',
+      'retake offers the camera and the album again; a cancel keeps the list, a photo replaces it',
       (tester) async {
         final import = await _Import.open(tester);
         await import.extract({'a': '1'});
-        await import.tap(_shown('1'));
-        await tester.enterText(find.byType(TextField).last, 'one');
-        await import.tap(_shown('Done'));
+        await import.tap(import.check('a'));
 
         await import.tap(_shown('Retake'));
-        expect(_shown('Take photo'), findsOneWidget);
         import.photos.cameraPhoto = null;
         await import.tap(_shown('Take photo'));
-        expect(_shown('Made 1 card'), findsOneWidget);
-        expect(_shown('one'), findsOneWidget);
+        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(import.included('a'), isFalse, reason: 'kept as it was');
         expect(import.client.calls, hasLength(1));
 
         import.photos.cameraPhoto = testPhoto;
         await import.tap(_shown('Retake'));
         await import.extract({'b': '2', 'c': '3'});
-        expect(import.client.calls, hasLength(2));
-        expect(_shown('Made 2 cards'), findsOneWidget);
-        expect(_shown('one'), findsNothing);
+        expect(_shown('Found 2 words'), findsOneWidget);
+        expect(_shown('a'), findsNothing);
         expect(await import.cards(import.french), isEmpty);
         await import.close();
       },
     );
 
-    testWidgets('the chip switches the deck the cards are saved into', (
-      tester,
-    ) async {
-      final import = await _Import.open(tester);
-      await import.extract({'perro': 'dog'});
-
-      await import.tap(_shown('Add to · French'));
-      await import.tap(_shown('Spanish'));
-      expect(_shown('Add to · Spanish'), findsOneWidget);
-      expect(_shown('Add to · French'), findsNothing);
-      await import.tap(_shown('Add 1 card to the deck'));
-
-      expect(await import.cards(import.spanish), [
-        ('perro', 'dog', CardSource.import),
-      ]);
-      expect(await import.cards(import.french), isEmpty);
-      expect((import.popped! as Deck).id, import.spanish.id);
-      await import.close();
-    });
-
     testWidgets(
-      'switching the deck decides again which cards start removed, against the deck chosen',
-      (tester) async {
-        final import = await _Import.open(tester, french: {'chat': 'cat'});
-        await import.extract({'chat': 'talk', 'chien': 'dog'});
-        expect(import.struck('chat'), isTrue);
-        expect(_shown('Add 1 card to the deck'), findsOneWidget);
-
-        await import.tap(_shown('Add to · French'));
-        await import.tap(_shown('Spanish'));
-        expect(import.struck('chat'), isFalse);
-        expect(_shown('Already in the deck'), findsNothing);
-        expect(_shown('Add 2 cards to the deck'), findsOneWidget);
-
-        await import.tap(_shown('Add to · Spanish'));
-        await import.tap(_shown('French'));
-        expect(import.struck('chat'), isTrue);
-        expect(_shown('Add 1 card to the deck'), findsOneWidget);
-        await import.close();
-      },
-    );
-
-    testWidgets('a new deck is named when saving, and created only then', (
-      tester,
-    ) async {
-      final import = await _Import.open(tester, deck: (_) => null);
-
-      await import.extract({'chien': 'dog', 'chat': 'cat'});
-      expect(_shown('Add to · New deck'), findsOneWidget);
-      expect(await import.deckNames(), ['French', 'Spanish']);
-      await import.tap(_shown('Add 2 cards to the deck'));
-      await tester.enterText(find.byType(TextField), 'Page 12');
-      await import.tap(_shown('Create'));
-
-      expect(await import.deckNames(), ['French', 'Page 12', 'Spanish']);
-      final saved = import.popped! as Deck;
-      expect(saved.name, 'Page 12');
-      expect(await import.cards(saved), [
-        ('chien', 'dog', CardSource.import),
-        ('chat', 'cat', CardSource.import),
-      ]);
-      await import.close();
-    });
-
-    testWidgets(
-      'going back from Review and closing without adding writes nothing and pops with nothing',
+      'cancel closes the list, writes nothing and pops with nothing',
       (tester) async {
         final import = await _Import.open(tester, deck: (_) => null);
         await import.extract({'a': '1'});
 
-        expect(
-          find.byTooltip('Close'),
-          findsNothing,
-          reason: 'Review has a back',
-        );
-        await import.tap(find.byTooltip('Back'));
-        await import.tap(find.byTooltip('Close'));
+        await import.tap(_shown('Cancel'));
 
         expect(import.hasPopped, isTrue);
         expect(import.popped, isNull);
@@ -1175,246 +877,157 @@ void main() {
         await import.close();
       },
     );
+
     testWidgets(
-      'a screen reader opens a card with a tap and removes or restores it with a custom action, and a card whose topic is off has neither',
+      'a deck that cannot be read says so in a snack bar, and the list opens with no row marked as held',
       (tester) async {
-        final semantics = tester.ensureSemantics();
-        final import = await _Import.open(tester);
-        await import.shoot();
-        import.client.answerCards(const [
-          CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
-        ]);
-        await tester.pumpAndSettle();
-        await import.next();
-        await tester.pumpAndSettle();
-        void perform(String label, String action) =>
-            tester.semantics.customAction(
-              find.semantics.byLabel(label),
-              CustomSemanticsAction(label: action),
-            );
-
-        const kept = 'chien, dog. Tap to edit, swipe left to remove';
-        expect(
-          tester.getSemantics(find.bySemanticsLabel(kept)),
-          matchesSemantics(
-            label: kept,
-            isButton: true,
-            hasTapAction: true,
-            customActions: [const CustomSemanticsAction(label: 'Remove')],
-          ),
+        final import = await _Import.open(
+          tester,
+          french: {'chat': 'cat'},
+          before: (import) =>
+              import.repository.unreadable.add(import.french.id),
         );
-        perform(kept, 'Remove');
-        await tester.pumpAndSettle();
-        expect(import.struck('chien'), isTrue);
+        await import.extract({'chat': 'talk'});
 
-        const removed = 'chien, dog. Removed. Swipe right to put it back';
-        perform(removed, 'Put back');
-        await tester.pumpAndSettle();
-        expect(import.struck('chien'), isFalse);
+        expect(
+          _shown(
+            "Couldn't read or write the device's storage. Please try again.",
+          ),
+          findsOneWidget,
+        );
+        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(import.included('chat'), isTrue);
+        await import.close();
+      },
+    );
+  });
 
-        tester.semantics.tap(find.semantics.byLabel(kept));
+  group('edit sheet', () {
+    final face = [
+      const CandidateCard(
+        front: 'face',
+        kind: CardKind.vocabulary,
+        senses: [
+          Sense(pos: '[동]', meaning: '직면하다'),
+          Sense(pos: '[명]', meaning: '표면'),
+          Sense(pos: '[명]', meaning: '얼굴'),
+        ],
+      ),
+    ];
+
+    testWidgets(
+      "a tap opens the sheet with the front and each sense; Done applies the edits and a dismissal none",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(face);
+
+        await import.tap(_shown('face'));
+        expect(_shown('Edit card'), findsOneWidget);
+        expect(find.byType(TextField), findsNWidgets(4));
+        await tester.enterText(find.byType(TextField).at(2), '겉면');
+        await tester.tapAt(Offset.zero);
         await tester.pumpAndSettle();
-        expect(_shown('Remove this card'), findsOneWidget);
+        expect(
+          _shown('[동] 직면하다\n[명] 표면\n[명] 얼굴'),
+          findsOneWidget,
+          reason: 'dismissed',
+        );
+
+        await import.tap(_shown('face'));
+        await tester.enterText(find.byType(TextField).first, 'faces');
+        await tester.enterText(find.byType(TextField).at(2), '겉면');
         await import.tap(_shown('Done'));
+        expect(_shown('faces'), findsOneWidget);
+        expect(_shown('[동] 직면하다\n[명] 겉면\n[명] 얼굴'), findsOneWidget);
+        await import.close();
+      },
+    );
 
-        await import.tap(find.byType(Switch));
+    testWidgets(
+      'a sense dropped leaves the card, and with every sense dropped Done is disabled',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(face);
+
+        await import.tap(_shown('face'));
+        await import.tap(find.byType(Checkbox).at(1));
+        await import.tap(_shown('Done'));
+        expect(_shown('[동] 직면하다\n[명] 얼굴'), findsOneWidget);
+
+        await import.tap(_shown('face'));
+        for (final i in [0, 2]) {
+          await import.tap(find.byType(Checkbox).at(i));
+        }
+        final done = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Done'),
+        );
+        expect(done.onPressed, isNull);
+        // Control: one sense kept again.
+        await import.tap(find.byType(Checkbox).at(2));
         expect(
-          tester.getSemantics(
-            find.bySemanticsLabel('chien, dog. Left out with its topic'),
-          ),
-          matchesSemantics(label: 'chien, dog. Left out with its topic'),
+          tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'))
+              .onPressed,
+          isNotNull,
         );
         await import.close();
-        semantics.dispose();
       },
     );
 
-    testWidgets(
-      'a card whose topic is off takes no swipe, so switching the topic back keeps a duplicate removed',
-      (tester) async {
-        final import = await _Import.open(tester, french: {'chat': 'cat'});
-        await import.shoot();
-        import.client.answerCards(const [
-          CandidateCard(front: 'chat', answer: 'talk', topic: 'Verbs'),
-          CandidateCard(front: 'parler', answer: 'speak', topic: 'Verbs'),
-        ]);
-        await tester.pumpAndSettle();
-        await import.next();
-        await tester.pumpAndSettle();
-        expect(import.struck('chat'), isTrue);
+    testWidgets('a sense dragged by its handle moves, and the card follows', (
+      tester,
+    ) async {
+      final import = await _Import.open(tester);
+      await import.extractCards(face);
 
-        await import.tap(find.byType(Switch));
-        await import.swipe('chat', 120);
-        await import.swipe('parler', -120);
-        await import.tap(find.byType(Switch));
+      await import.tap(_shown('face'));
+      final handle = find.bySemanticsLabel('Move meaning 3');
+      await tester.drag(handle, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      await import.tap(_shown('Done'));
 
-        expect(import.struck('chat'), isTrue, reason: 'still a duplicate');
-        expect(import.struck('parler'), isFalse, reason: 'swipe ignored');
-        // Control: with the topic on, the same swipe puts it back.
-        await import.swipe('chat', 120);
-        expect(import.struck('chat'), isFalse);
-        await import.close();
-      },
-    );
+      expect(_shown('[명] 얼굴\n[동] 직면하다\n[명] 표면'), findsOneWidget);
+      await import.tap(_shown('Add 1 card'));
+      expect(await import.cards(import.french), [
+        ('face', '[명] 얼굴 / [동] 직면하다 / [명] 표면', CardSource.import),
+      ]);
+      await import.close();
+    });
 
-    testWidgets(
-      'what is typed is kept when the card is removed, another card is tapped, its topic is switched or the cards are added',
-      (tester) async {
-        // Tall enough that every card is on screen.
-        await tester.binding.setSurfaceSize(const Size(800, 2000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        final import = await _Import.open(tester);
-        await import.shoot();
-        import.client.answerCards(const [
-          CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
-          CandidateCard(front: 'chat', answer: 'cat', topic: 'Animals'),
-          CandidateCard(front: 'cheval', answer: 'horse', topic: 'Farm'),
-        ]);
-        await tester.pumpAndSettle();
-        await import.next();
-        await tester.pumpAndSettle();
-        Future<void> type(String side, String text) async {
-          await import.tap(_shown(side));
-          await tester.enterText(find.byType(TextField).last, text);
-          await tester.pump();
-        }
+    testWidgets("a note's sheet edits its back", (tester) async {
+      final import = await _Import.open(tester);
+      await import.extractCards(const [
+        CandidateCard(front: '양성모음', answer: 'ㅏ ㅗ', topic: '모음조화'),
+      ]);
 
-        await type('dog', 'puppy');
-        await import.tap(_shown('Remove this card'));
-        expect(_shown('puppy'), findsOneWidget);
-        expect(import.struck('puppy'), isTrue);
+      await import.tap(_shown('양성모음'));
+      expect(find.byType(Checkbox), findsNothing);
+      await tester.enterText(find.byType(TextField).last, 'ㅏ ㅗ ㅑ ㅛ');
+      await import.tap(_shown('Done'));
 
-        await type('cat', 'kitten');
-        await import.tap(_shown('cheval'));
-        expect(_shown('kitten'), findsOneWidget);
-        await tester.enterText(find.byType(TextField).last, 'pony');
-        await tester.pump();
-        // Its own topic, switched off and on again.
-        await import.tap(find.byType(Switch).last);
-        expect(_shown('pony'), findsOneWidget);
-        await import.tap(find.byType(Switch).last);
-
-        await type('kitten', 'kitty');
-        await import.tap(_shown('Add 2 cards to the deck'));
-        expect(await import.cards(import.french), [
-          ('chat', 'kitty', CardSource.import),
-          ('cheval', 'pony', CardSource.import),
-        ]);
-        await import.close();
-      },
-    );
+      expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget);
+      await import.close();
+    });
 
     testWidgets(
-      "an edit whose front the deck holds keeps the card, marked, and merges it into the deck's card",
+      "an edit whose front the deck holds keeps the row, marked, and merges it into the deck's card",
       (tester) async {
         final import = await _Import.open(tester, french: {'chat': 'cat'});
         await import.extract({'chien': 'dog'});
-        expect(_shown('Already in the deck'), findsNothing, reason: 'control');
 
         await import.tap(_shown('chien'));
         await tester.enterText(find.byType(TextField).first, 'chat');
         await import.tap(_shown('Done'));
 
-        expect(import.struck('chat'), isFalse);
+        expect(import.included('chat'), isTrue);
         expect(_shown('Already in the deck'), findsOneWidget);
-        await import.tap(_shown('Add 1 card to the deck'));
+        await import.tap(_shown('Add 1 card'));
         expect(await import.cards(import.french), [
           ('chat', 'cat / dog', CardSource.manual),
         ]);
         await import.close();
       },
     );
-  });
-
-  group('coach', () {
-    testWidgets(
-      'on first use it teaches left, right and tap in place of the add button, then is stored as shown',
-      (tester) async {
-        final import = await _Import.open(tester, coach: true);
-        await import.shoot();
-        import.client.answer({'chien': 'dog', 'chat': 'cat'});
-        await tester.pumpAndSettle();
-        await import.next();
-
-        expect(_shown('Swipe left to remove'), findsOneWidget);
-        expect(_shown('Add 2 cards to the deck'), findsNothing);
-        expect(find.byIcon(LucideIcons.pointer), findsOneWidget);
-        await tester.tap(_shown('Next'));
-        await tester.pump();
-        expect(_shown('Swipe right to put it back'), findsOneWidget);
-        await tester.tap(_shown('Next'));
-        await tester.pump();
-        expect(_shown('Tap to edit'), findsOneWidget);
-        // Stored as shown when it first shows, not when it ends.
-        expect(import.preferences.getBool('photoReviewCoachShown'), isTrue);
-        await tester.tap(_shown('Start'));
-        await tester.pumpAndSettle();
-
-        expect(_shown('Tap to edit'), findsNothing);
-        expect(find.byIcon(LucideIcons.pointer), findsNothing);
-        expect(_shown('Add 2 cards to the deck'), findsOneWidget);
-        expect(import.preferences.getBool('photoReviewCoachShown'), isTrue);
-        await import.close();
-      },
-    );
-
-    testWidgets('a swipe, a tap, a switch or Skip ends it', (tester) async {
-      for (final end in ['swipe', 'tap', 'switch', 'skip']) {
-        final import = await _Import.open(tester, coach: true);
-        await import.shoot();
-        import.client.answerCards(const [
-          CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
-        ]);
-        await tester.pumpAndSettle();
-        await import.next();
-        expect(_shown('Swipe left to remove'), findsOneWidget, reason: end);
-
-        switch (end) {
-          case 'swipe':
-            await tester.drag(import.row('chien'), const Offset(-120, 0));
-          case 'tap':
-            await tester.tap(import.row('chien'));
-          case 'switch':
-            await tester.tap(find.byType(Switch));
-          case _:
-            await tester.tap(_shown('Skip'));
-        }
-        await tester.pumpAndSettle();
-
-        expect(_shown('Swipe left to remove'), findsNothing, reason: end);
-        expect(
-          import.preferences.getBool('photoReviewCoachShown'),
-          isTrue,
-          reason: end,
-        );
-        await import.close();
-      }
-    });
-
-    testWidgets('once shown it does not show again, nor under reduce motion', (
-      tester,
-    ) async {
-      for (final (stored, reduceMotion) in [(true, false), (false, true)]) {
-        final import = await _Import.open(
-          tester,
-          coach: !stored,
-          disableAnimations: reduceMotion,
-        );
-        await import.extract({'chien': 'dog'});
-
-        expect(_shown('Swipe left to remove'), findsNothing);
-        expect(_shown('Add 1 card to the deck'), findsOneWidget);
-        await import.close();
-      }
-      // Control: neither stored nor under reduce motion, it shows.
-      final control = await _Import.open(tester, coach: true);
-      await control.shoot();
-      control.client.answer({'chien': 'dog'});
-      await tester.pumpAndSettle();
-      await control.next();
-      expect(_shown('Swipe left to remove'), findsOneWidget);
-      await control.close();
-    });
   });
 
   group('failures', () {
@@ -1523,9 +1136,8 @@ void main() {
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'the source sheet, extracting, the choice screen with its options open, review, a card being edited, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
+        'the source sheet, extracting, the list with a row left out and a row held, its form menu, the edit sheet, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
         (tester) async {
-          final semantics = tester.ensureSemantics();
           final import = await _Import.open(
             tester,
             themeMode: mode,
@@ -1547,24 +1159,29 @@ void main() {
           await check();
           await import.shoot();
           await check();
-          import.client.answer({'chat': 'talk', 'chien': 'dog'});
+          import.client.answer({
+            'chat': 'talk',
+            'chien': 'dog',
+            'cheval': 'horse',
+          });
           await tester.pumpAndSettle();
-          await import.tap(_shown('chat'));
-          expect(_shown('Content first'), findsOneWidget);
+          await import.tap(import.check('cheval'));
+          expect(_shown('Already in the deck'), findsOneWidget);
+          expect(_shown('Add 1 card'), findsOneWidget);
           await check();
-          await import.next();
+          await import.menu('This page');
+          expect(find.byType(MenuItemButton), findsWidgets);
+          await check();
+          await tester.tapAt(Offset.zero);
           await tester.pumpAndSettle();
-          expect(_shown('Add 1 card to the deck'), findsOneWidget);
+          await import.tap(_shown('dog'));
+          expect(_shown('Edit card'), findsOneWidget);
           await check();
-          await import.tap(_shown('Add to · French'));
+          await import.tap(_shown('Done'));
+          await import.tap(_shown('French'));
           expect(_shown('Add to'), findsOneWidget);
           await check();
           await import.tap(_shown('Spanish'));
-          expect(_shown('Add 2 cards to the deck'), findsOneWidget);
-          await import.tap(_shown('dog'));
-          expect(_shown('Remove this card'), findsOneWidget);
-          await check();
-          await import.tap(_shown('Done'));
           await import.tap(_shown('Retake'));
           await import.shoot();
           import.client.fail(const ModelFailed());
@@ -1577,10 +1194,42 @@ void main() {
           expect(_shown('Open Settings'), findsOneWidget);
           await check();
           await import.close();
-          semantics.dispose();
         },
       );
     }
+
+    testWidgets(
+      "a screen reader hears each row's sides and its check's state, and taps either",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extract({'chien': 'dog'});
+
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('chien, dog. Tap to edit')),
+          matchesSemantics(
+            label: 'chien, dog. Tap to edit',
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          tester.getSemantics(import.check('chien')),
+          matchesSemantics(
+            label: 'Include chien',
+            hasCheckedState: true,
+            isChecked: true,
+            hasTapAction: true,
+          ),
+        );
+        tester.semantics.tap(find.semantics.byLabel('Include chien'));
+        await tester.pumpAndSettle();
+        expect(import.included('chien'), isFalse);
+        tester.semantics.tap(find.semantics.byLabel('chien, dog. Tap to edit'));
+        await tester.pumpAndSettle();
+        expect(_shown('Edit card'), findsOneWidget);
+        await import.close();
+      },
+    );
   });
 }
 

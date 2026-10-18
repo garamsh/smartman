@@ -49,6 +49,9 @@ abstract final class AppRadius {
 
   /// A field.
   static const field = 14.0;
+
+  /// A pull-down menu, such as a photo import section's form menu.
+  static const menu = 13.0;
 }
 
 /// The heights and sizes of the app's controls and brand marks.
@@ -744,6 +747,33 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
       color: colors.surface,
       textStyle: AppType.body.copyWith(color: colors.ink),
       shape: control,
+    ),
+    // A pull-down menu: rounded, softly shadowed, with items at least a tap
+    // target high, unlike Material's dropdown.
+    menuTheme: MenuThemeData(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(colors.raised),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        shadowColor: WidgetStatePropertyAll(colors.shadow),
+        elevation: const WidgetStatePropertyAll(AppSpace.s12),
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        shape: const WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(AppRadius.menu)),
+          ),
+        ),
+      ),
+    ),
+    menuButtonTheme: MenuButtonThemeData(
+      style: ButtonStyle(
+        foregroundColor: WidgetStatePropertyAll(colors.ink),
+        iconColor: WidgetStatePropertyAll(colors.ink),
+        textStyle: WidgetStatePropertyAll(AppType.body),
+        minimumSize: const WidgetStatePropertyAll(Size(0, AppSize.tapTarget)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: AppSpace.s16),
+        ),
+      ),
     ),
   );
 }

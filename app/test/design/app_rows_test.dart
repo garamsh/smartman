@@ -99,14 +99,8 @@ void main() {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AppChip(
-              label: 'Today 3',
-              kind: AppChipStatus(tone: AppChipTone.brand),
-            ),
-            AppChip(
-              label: 'Skip',
-              kind: AppChipAction(icon: Icons.expand_more, onPressed: () {}),
-            ),
+            const AppChip(label: 'Today 3', tone: AppChipTone.brand),
+            const AppChip(label: 'Public'),
           ],
         ),
         themeMode: mode,
@@ -127,7 +121,22 @@ void main() {
           shape: StadiumBorder(side: BorderSide(color: colors.brandTint)),
         ),
       );
-      expect(_fill(tester, find.text('Skip')), colors.surface);
+      expect(
+        tester
+            .widget<DecoratedBox>(
+              find
+                  .ancestor(
+                    of: find.text('Public'),
+                    matching: find.byType(DecoratedBox),
+                  )
+                  .first,
+            )
+            .decoration,
+        ShapeDecoration(
+          color: colors.surface,
+          shape: StadiumBorder(side: BorderSide(color: colors.outline)),
+        ),
+      );
       await meetsGuidelines(tester);
     });
   }
@@ -163,41 +172,6 @@ void main() {
         ),
       );
       semantics.dispose();
-    },
-  );
-
-  testWidgets(
-    'a chip with an action is a button with a full tap target, and one without is a label',
-    (tester) async {
-      var presses = 0;
-      await pumpComponent(
-        tester,
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AppChip(label: 'Today 3'),
-            AppChip(
-              label: 'Skip',
-              kind: AppChipAction(onPressed: () => presses++),
-            ),
-          ],
-        ),
-      );
-
-      await tester.tap(find.text('Skip'));
-      expect(presses, 1);
-      expect(
-        tester.getSemantics(find.text('Skip')),
-        isSemantics(isButton: true, hasTapAction: true, label: 'Skip'),
-      );
-      expect(
-        tester.getSize(find.byType(TextButton)).height,
-        greaterThanOrEqualTo(48),
-      );
-      expect(
-        tester.getSemantics(find.text('Today 3')),
-        isNot(isSemantics(isButton: true)),
-      );
     },
   );
 }

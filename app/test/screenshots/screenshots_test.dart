@@ -539,6 +539,7 @@ void main() {
     });
 
     testWidgets('photo import in $mode', skip: !_capture, (tester) async {
+      final semantics = tester.ensureSemantics();
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -609,6 +610,62 @@ void main() {
 
       await shoot();
       await shot(tester, '22-photo-extracting');
+      client.answerCards([
+        const CandidateCard(
+          front: 'face',
+          kind: CardKind.vocabulary,
+          senses: [
+            Sense(pos: '[동]', meaning: '직면하다, 마주하다'),
+            Sense(pos: '[명]', meaning: '표면, 겉면'),
+            Sense(pos: '[명]', meaning: '얼굴, 생김새'),
+          ],
+          pronunciation: "['feis]",
+          extras: [Extra(label: '유의어', text: 'confront')],
+          topic: '최빈출 단어',
+        ),
+        CandidateCard.word(
+          front: 'include',
+          meaning: '포함하다, 포괄하다',
+          partOfSpeech: '[동]',
+          topic: '최빈출 단어',
+        ),
+        CandidateCard.word(
+          front: 'strategy',
+          meaning: '전략, 계획',
+          partOfSpeech: '[명]',
+          topic: '최빈출 단어',
+        ),
+        CandidateCard.word(
+          front: 'lucid',
+          meaning: '맑은, 또렷한',
+          partOfSpeech: '[형]',
+          topic: '최빈출 단어',
+        ),
+        CandidateCard.word(
+          front: 'in addition',
+          meaning: '~뿐만 아니라, 또한',
+          topic: '빈출 숙어',
+        ),
+        CandidateCard.word(
+          front: 'be ready to',
+          meaning: '~할 준비가 되다',
+          topic: '빈출 숙어',
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      await shot(tester, '22a-photo-list');
+      await tap(tester, find.bySemanticsLabel(RegExp('^최빈출 단어 카드 모양')));
+      await shot(tester, '22b-photo-list-menu');
+      await tap(tester, find.widgetWithText(MenuItemButton, ko.importBoth));
+      await tap(tester, shown('face'));
+      await shot(tester, '22c-photo-edit');
+      await tap(tester, find.text(ko.editDone));
+      await tap(tester, find.text('영단어 기본'));
+      await shot(tester, '21-photo-deck-sheet');
+      await dismissSheet(tester);
+
+      await tap(tester, find.text(ko.retake));
+      await shoot();
       client.answerCards(const [
         CandidateCard(
           front: '양성모음',
@@ -626,46 +683,14 @@ void main() {
           topic: '축약·탈락',
         ),
         CandidateCard(
-          front: 'ㅏ 탈락',
-          answer: '어간이 ㅏ로 끝나면 어미 아가 빠짐',
-          topic: '축약·탈락',
+          front: "'잡아라'의 '아'",
+          answer: '양성모음 어간 뒤 — ㅏ',
+          type: CardType.identify,
+          topic: '모음조화',
         ),
-        CandidateCard(
-          front: '여 불규칙 (하다)',
-          answer: "하 + 아는 '하아'가 아니라 해(하여)",
-          topic: '예외 ★',
-        ),
-        CandidateCard(front: 'lucid', answer: '맑은, 또렷한', topic: '단어'),
       ]);
       await tester.pumpAndSettle();
-      await shot(tester, '22a-photo-choice');
-      await tap(tester, shown('양성모음'));
-      await shot(tester, '22b-photo-choice-options');
-      await tap(tester, shown(ko.choiceFrontName));
-      await tester.tap(find.text(ko.choiceNext));
-      // The coach repeats its demonstration, so frames are pumped, not
-      // settled: the first card mid-peek, with "빼기" under it.
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pump(const Duration(milliseconds: 1000));
-      await shot(tester, '23-photo-review-coach');
-      await tap(tester, find.text(ko.coachSkip));
-
-      await tester.drag(
-        find
-            .ancestor(of: shown('ㅏ 탈락'), matching: find.byType(GestureDetector))
-            .first,
-        const Offset(-120, 0),
-      );
-      await tester.pumpAndSettle();
-      await tap(tester, find.byType(Switch).at(2));
-      await shot(tester, '23-photo-review');
-      await tap(tester, shown('음성모음'));
-      await shot(tester, '23-photo-review-edit');
-      await tap(tester, find.text(ko.reviewDone));
-      await tap(tester, find.text(ko.photoTarget('영단어 기본')));
-      await shot(tester, '21-photo-deck-sheet');
-      await dismissSheet(tester);
+      await shot(tester, '23-photo-notes');
 
       await tap(tester, find.text(ko.retake));
       await shoot();
@@ -679,6 +704,7 @@ void main() {
       await shot(tester, '25-photo-refused');
 
       await unmount(tester);
+      semantics.dispose();
     });
 
     testWidgets('sharing in $mode', skip: !_capture, (tester) async {

@@ -8,25 +8,83 @@ import 'photo.dart';
 /// The most characters (code points) a card's topic has.
 const maxTopicChars = 60;
 
+/// What a card was read from: an entry of a vocabulary page, or a point of
+/// notes.
+enum CardKind { vocabulary, note }
+
+/// What a card asks: a named concept and its statement, a line with one blank
+/// and what fills it, or a printed sentence with a word to judge.
+enum CardType { concept, cloze, identify }
+
+/// One meaning of a vocabulary entry, with the part-of-speech label the page
+/// prints for it, such as "[동]"; null when it prints none.
+final class Sense {
+  const Sense({this.pos, required this.meaning});
+
+  final String? pos;
+  final String meaning;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Sense && other.pos == pos && other.meaning == meaning;
+
+  @override
+  int get hashCode => Object.hash(pos, meaning);
+}
+
+/// Something else the page prints for a vocabulary entry, under its own
+/// label, such as 유의어.
+final class Extra {
+  const Extra({required this.label, required this.text});
+
+  final String label;
+  final String text;
+}
+
 /// A card the model read off the page, before the user reviews it: its
-/// headword or concept, its fullest answer, the part of speech and examples
-/// the page prints, and the topic of the page it belongs to.
+/// headword or concept, the topic of the page it belongs to, and the fields of
+/// its kind. A vocabulary card has its [senses] in page order, and [extras]
+/// and a [pronunciation] when the page prints them; a note has its [answer].
 final class CandidateCard {
   const CandidateCard({
     required this.front,
-    required this.answer,
-    this.partOfSpeech,
+    this.answer = '',
+    this.kind = CardKind.note,
+    this.type = CardType.concept,
+    this.senses = const [],
+    this.extras = const [],
+    this.pronunciation,
     this.examples = const [],
     this.topic,
   });
 
+  /// A vocabulary card of one sense, as a function before senses sent it.
+  CandidateCard.word({
+    required String front,
+    required String meaning,
+    String? partOfSpeech,
+    List<String> examples = const [],
+    String? topic,
+  }) : this(
+         front: front,
+         answer: meaning,
+         kind: CardKind.vocabulary,
+         senses: [Sense(pos: partOfSpeech, meaning: meaning)],
+         examples: examples,
+         topic: topic,
+       );
+
   final String front;
 
-  /// The fullest answer the page supports.
+  /// A note's answer; on a vocabulary card, the answer the function composed
+  /// from its senses.
   final String answer;
 
-  /// The page's own notation, such as "[동]"; null when it prints none.
-  final String? partOfSpeech;
+  final CardKind kind;
+  final CardType type;
+  final List<Sense> senses;
+  final List<Extra> extras;
+  final String? pronunciation;
 
   /// The examples the page prints for the card; empty when it prints none.
   final List<String> examples;
@@ -34,13 +92,6 @@ final class CandidateCard {
   /// The part of the page the card comes from, such as "모음조화"; null from
   /// a function that names none.
   final String? topic;
-
-  /// The answer as Review shows and saves it: the part of speech and a space
-  /// before [answer] when the page prints one.
-  String get back => switch (partOfSpeech) {
-    final partOfSpeech? => '$partOfSpeech $answer',
-    null => answer,
-  };
 }
 
 /// Sends a photo to `extract-cards` and returns the cards it found.
@@ -122,10 +173,13 @@ List<CandidateCard> _parseCards(String body) {
   throw const ServiceFailed('the success body holds no card list');
 }
 
-/// A card of non-empty `front` and `back`. Its answer is its `answer`, else
-/// its `meaning`, else, from a function deployed before the fields, its
-/// `back`; with the optional `partOfSpeech`, `examples` of non-empty text,
-/// and a `topic` of 1 to [maxTopicChars] characters. Other fields are not
+/// A card of non-empty `front` and `back`, a `topic` of 1 to
+/// [maxTopicChars] characters when it has one, and the fields of its `kind`.
+/// A note's answer is its `answer`, else its `back`. A vocabulary card's
+/// senses are its `senses` of `{pos, meaning}`, else, from a function before
+/// senses, one sense of its `meaning` or `answer`, else its `back`, with its
+/// `partOfSpeech`. A card with no `kind` from a function before kinds is a
+/// vocabulary card; one with no `type` is a concept. Other fields are not
 /// read.
 CandidateCard _parseCard(Object? card) {
   if (card
@@ -134,24 +188,69 @@ CandidateCard _parseCard(Object? card) {
       when front.trim().isNotEmpty && back.trim().isNotEmpty) {
     String? optional(String key) =>
         fields.containsKey(key) ? _text(fields[key]) : null;
+    List<T> list<T>(String key, T Function(Object?) parse) =>
+        switch (fields[key]) {
+          null => const [],
+          final List<Object?> items => [for (final item in items) parse(item)],
+          _ => throw ServiceFailed('$key is not a list'),
+        };
     final topic = optional('topic');
     if (topic != null && topic.runes.length > maxTopicChars) {
       throw const ServiceFailed("a card's topic is too long");
     }
+    final kind = switch (fields['kind']) {
+      'note' => CardKind.note,
+      'vocabulary' || null => CardKind.vocabulary,
+      _ => throw const ServiceFailed('a card has an unknown kind'),
+    };
+    final type = switch (fields['type']) {
+      null => CardType.concept,
+      final String name =>
+        CardType.values.where((type) => type.name == name).firstOrNull ??
+            (throw const ServiceFailed('a card has an unknown type')),
+      _ => throw const ServiceFailed('a card has an unknown type'),
+    };
+    final answer = optional('answer') ?? optional('meaning') ?? back.trim();
+    final senses = fields.containsKey('senses')
+        ? list('senses', _parseSense)
+        : [Sense(pos: optional('partOfSpeech'), meaning: answer)];
+    if (kind == CardKind.vocabulary && senses.isEmpty) {
+      throw const ServiceFailed('a vocabulary card has no sense');
+    }
     return CandidateCard(
       front: front.trim(),
-      answer: optional('answer') ?? optional('meaning') ?? back.trim(),
-      partOfSpeech: optional('partOfSpeech'),
-      examples: switch (fields['examples']) {
-        null => const [],
-        final List<Object?> list => [for (final item in list) _text(item)],
-        _ => throw const ServiceFailed('examples is not a list'),
-      },
+      answer: answer,
+      kind: kind,
+      type: type,
+      senses: kind == CardKind.vocabulary ? senses : const [],
+      extras: list('extras', _parseExtra),
+      pronunciation: optional('pronunciation'),
+      examples: list('examples', _text),
       topic: topic,
     );
   }
   throw const ServiceFailed('a card is not two non-empty sides');
 }
+
+Sense _parseSense(Object? sense) {
+  if (sense case final Map<String, Object?> fields
+      when fields.containsKey('meaning')) {
+    final pos = fields['pos'];
+    return Sense(
+      pos: pos == null ? null : _text(pos),
+      meaning: _text(fields['meaning']),
+    );
+  }
+  throw const ServiceFailed('a sense has no meaning');
+}
+
+Extra _parseExtra(Object? extra) => switch (extra) {
+  {'label': final Object? label, 'text': final Object? text} => Extra(
+    label: _text(label),
+    text: _text(text),
+  ),
+  _ => throw const ServiceFailed('an extra is not a label and a text'),
+};
 
 String _text(Object? value) => switch (value) {
   final String text when text.trim().isNotEmpty => text.trim(),
