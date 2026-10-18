@@ -213,9 +213,10 @@ class EarlierCardView extends StatelessWidget {
 }
 
 /// The coach's third step in the previous card's place: a sample card,
-/// [front] and [back], answered "Know", dragged toward "Don't know" by a finger and sprung back,
-/// [progress] through one [coachCycle], over what the drag shows behind it.
-/// Hidden from screen readers, which read the coach's caption.
+/// [front] and [back], answered "Know", dragged toward "Don't know" by a
+/// finger and sprung back, [progress] through one [coachCycle], over what the
+/// drag shows behind it. Hidden from screen readers, which read the coach's
+/// caption.
 class PreviousCardDemo extends StatelessWidget {
   const PreviousCardDemo({
     super.key,

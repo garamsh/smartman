@@ -16,7 +16,7 @@ export const coachShownKey = "studyCoachShown";
  * Each step's line, true to the web's controls: the answers by their buttons and keys, and a
  * change by "마지막 답 바꾸기" or Z, which work with a mouse as with a keyboard.
  */
-const lines: Record<CoachStep, string> = {
+export const coachLines: Record<CoachStep, string> = {
   know: "알면 안다(→)를 눌러요",
   dontKnow: "모르면 모른다(←)를 눌러요",
   redecide: "답한 카드는 위로 올라와요. '마지막 답 바꾸기'나 Z로 답을 바꿀 수 있어요",
@@ -27,8 +27,9 @@ const button =
 
 /**
  * The coach's caption on the navy surface in the answer buttons' place: the step's line, a dot
- * for each step with this one drawn long, "건너뛰기" and "다음", the last step's "시작하기". A
- * screen reader hears the step of how many as it changes.
+ * for each step with this one drawn long, "건너뛰기" and "다음", the last step's "시작하기". What
+ * a screen reader hears as the step changes is [coachAnnouncement], in a live region the screen
+ * keeps mounted.
  */
 export function CoachCaption({
   step,
@@ -39,20 +40,14 @@ export function CoachCaption({
   onNext: () => void;
   onSkip: () => void;
 }) {
-  const index = coachSteps.indexOf(step);
-  const last = index === coachSteps.length - 1;
+  const last = coachSteps.indexOf(step) === coachSteps.length - 1;
   return (
     <section
       aria-label="학습 사용 방법"
       className="flex flex-col gap-2 rounded-card bg-hero px-5 pt-4 pb-3 text-on-hero shadow-card"
     >
       <div className="flex items-center justify-between gap-3">
-        <p aria-live="polite" className="text-body-strong">
-          <span className="sr-only">
-            사용 방법, {coachSteps.length}단계 중 {index + 1}단계.{" "}
-          </span>
-          {lines[step]}
-        </p>
+        <p className="text-body-strong">{coachLines[step]}</p>
         <div aria-hidden className="flex shrink-0 gap-1">
           {coachSteps.map((dot) => (
             <span
@@ -72,6 +67,11 @@ export function CoachCaption({
       </div>
     </section>
   );
+}
+
+/** What a screen reader hears for [step]: the step of how many, and its line. */
+export function coachAnnouncement(step: CoachStep): string {
+  return `사용 방법, ${String(coachSteps.length)}단계 중 ${String(coachSteps.indexOf(step) + 1)}단계. ${coachLines[step]}`;
 }
 
 /** The coach's finger, moving with the card it demonstrates on; hidden from screen readers. */

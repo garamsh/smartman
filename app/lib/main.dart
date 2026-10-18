@@ -64,12 +64,11 @@ Future<void> main() async {
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
 /// [server], keeping the theme choice and whether photo import's and the
-/// study screen's coaches have shown in [preferences], and extracting cards from photos through [extraction],
-/// whose absence hides photo import,
-/// and sharing decks through [sharing] while [reachability] says the device
-/// is online; without [sharing] the app offers no sharing. The account screen
-/// names the app's [version]. Sync starts
-/// at once.
+/// study screen's coaches have shown in [preferences], extracting cards from
+/// photos through [extraction], whose absence hides photo import, and sharing
+/// decks through [sharing] while [reachability] says the device is online;
+/// without [sharing] the app offers no sharing. The account screen names the
+/// app's [version]. Sync starts at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,

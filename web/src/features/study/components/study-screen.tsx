@@ -21,6 +21,7 @@ import {
   CoachCaption,
   CoachDemo,
   CoachSample,
+  coachAnnouncement,
   type CoachStep,
   coachShownKey,
   coachSteps,
@@ -150,39 +151,56 @@ function Session({ plan }: { plan: SessionPlan }) {
   const helpButton = useRef<HTMLButtonElement>(null);
   const closeLink = useRef<HTMLAnchorElement>(null);
   const status = useSyncExternalStore(writes.subscribe, writes.getStatus, writes.getStatus);
-  /**
-   * The coach's step; null while it does not show. It starts on a device's first session once a
-   * card is on screen. This component renders only in the browser, where the engine has loaded.
-   */
-  const [coach, setCoach] = useState<CoachStep | null>(() =>
-    session.view().kind === "studying" && !coachShown() ? "know" : null,
-  );
+  /** The coach's step; null while it does not show. */
+  const [coach, setCoach] = useState<CoachStep | null>(null);
+  /** Whether a card has been on screen, after which the coach no longer starts on its own. */
+  const studied = useRef(false);
+  // On a device's first session the coach starts the first time a card is on screen, at the
+  // page's start or after "학습하기", as on the phone. It starts after the screen has mounted, so
+  // the live region that announces it is already there, empty.
+  useEffect(() => {
+    if (view.kind !== "studying" || studied.current) return;
+    studied.current = true;
+    if (coachShown()) return;
+    const timer = window.setTimeout(() => {
+      setCoach("know");
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      studied.current = false;
+    };
+  }, [view.kind]);
   // The browser keeps that the coach has shown once it shows.
   useEffect(() => {
     if (coach) markCoachShown();
   }, [coach]);
-  /** That the session goes on with the day, said for a moment as it opens. */
-  const [notice, setNotice] = useState(() => {
-    const { resumed, cards, minutes } = session.size;
-    return resumed && cards > 0
-      ? `이어서 해요 · 남은 ${String(cards)}장 · 약 ${String(minutes)}분`
-      : null;
-  });
+  /**
+   * That the session goes on with the day, said for a moment as it opens: set after the status
+   * region has mounted empty, so a screen reader announces it, and cleared after [noticeMs].
+   */
+  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    const { resumed, cards, minutes } = session.size;
+    if (!resumed || cards === 0) return;
+    const shown = window.setTimeout(() => {
+      setNotice(`이어서 해요 · 남은 ${String(cards)}장 · 약 ${String(minutes)}분`);
+    }, 0);
+    const gone = window.setTimeout(() => {
       setNotice(null);
     }, noticeMs);
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(shown);
+      window.clearTimeout(gone);
     };
-  }, []);
-  /** Applies an action, which ends the coach, and queues its write. */
+  }, [session]);
+  /** Applies an action and queues its write. */
   function apply(write: AnswerWrite | null) {
-    setCoach(null);
     setView(session.view());
     if (write) writes.push(write);
   }
+  /** Answers the current card, which ends the coach. */
   function answer(choice: Answer) {
+    setCoach(null);
     apply(session.answer(choice));
   }
   function toggle(position: number) {
@@ -361,6 +379,10 @@ function Session({ plan }: { plan: SessionPlan }) {
             </p>
           )}
         </div>
+        {/* Mounted empty, so the coach's steps are announced as they show. */}
+        <p aria-live="polite" className="sr-only">
+          {coach ? coachAnnouncement(coach) : ""}
+        </p>
       </header>
 
       {status.failure !== null && (
