@@ -201,6 +201,7 @@ const twoCards = [{
   answer: "달리다",
   short: "달리다",
   step: 1,
+  topic: "Unit 3 동사",
   partOfSpeech: "[동]",
   examples: ["I run every morning."],
 }, {
@@ -209,14 +210,16 @@ const twoCards = [{
   answer: "강",
   short: "강",
   step: 1,
+  topic: "Unit 3 동사",
   partOfSpeech: null,
   examples: [],
 }, {
   kind: "note",
-  front: "연역 논증이란?",
+  front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
   short: "결론이 반드시 참",
   step: 2,
+  topic: "연역과 귀납",
   partOfSpeech: null,
   examples: ["253+4637+647898=652788 -> 연역"],
 }];
@@ -227,6 +230,7 @@ const twoAnswered = [{
   answer: "달리다",
   short: "달리다",
   step: 1,
+  topic: "Unit 3 동사",
   examples: ["I run every morning."],
   back: "[동] 달리다",
   meaning: "달리다",
@@ -237,14 +241,16 @@ const twoAnswered = [{
   answer: "강",
   short: "강",
   step: 1,
+  topic: "Unit 3 동사",
   back: "강",
   meaning: "강",
 }, {
   kind: "note",
-  front: "연역 논증이란?",
+  front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
   short: "결론이 반드시 참",
   step: 2,
+  topic: "연역과 귀납",
   examples: ["253+4637+647898=652788 -> 연역"],
   back: "전제가 참이면 결론이 반드시 참인 논증",
 }];
@@ -257,7 +263,7 @@ Deno.test("the suite runs without write or network permission", () => {
   assert.notEqual(Deno.permissions.querySync({ name: "net" }).state, "granted");
 });
 
-Deno.test("a signed-in user's photo returns each card's kind, answers, step and back, and a vocabulary card's fields", async () => {
+Deno.test("a signed-in user's photo returns each card's kind, answers, step, topic and back, and a vocabulary card's fields", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { cards: twoAnswered });
@@ -450,9 +456,63 @@ Deno.test("the model call asks for the cards schema from providers that honour i
   assert.deepEqual(call.response_format.json_schema.schema.required, ["cards"]);
   assert.deepEqual(
     call.response_format.json_schema.schema.properties.cards.items.required,
-    ["kind", "front", "answer", "short", "step", "partOfSpeech", "examples"],
+    [
+      "kind",
+      "front",
+      "answer",
+      "short",
+      "step",
+      "topic",
+      "partOfSpeech",
+      "examples",
+    ],
   );
   assert.equal(call.provider.require_parameters, true);
+});
+
+Deno.test("the model is asked for theory and exceptions, named by concept and grouped by topic, with worked examples only on their rule's card, inventing nothing", async () => {
+  const r = await run({ replies: [cardsReply(twoCards)] });
+  const system = r.modelCalls[0].messages[0].content;
+  for (
+    const asked of [
+      "cards hold the theory and the exceptions",
+      "every definition and every rule, each on its own card",
+      "each member of a list or table",
+      "each exception, and each line the writer marked as important, such as with a star, a circle",
+      "the name of the concept, rule or exception the card states",
+      "It is a name, never a question",
+      "the theory itself, the definition, rule or exception",
+      '"topic" is the name of the page section the card comes from, at most 60 characters',
+      "Cards of one section share one topic",
+      "It is never a card of its own: it goes in the examples of the card whose rule it illustrates, exactly as the page prints it, and only when the page prints it.",
+      "Do not merge separate rules into one card",
+      "so step 5 offers every card",
+      "keep every card of steps 1 to 4 and leave out the last cards of step 5",
+    ]
+  ) {
+    assert.ok(system.includes(asked), `asks: ${asked}`);
+  }
+  // The steps keep their meaning, and nothing outside the page enters a card.
+  for (
+    const kept of [
+      "1 is the page's core ideas",
+      "Every vocabulary entry is step 1.",
+      "never add a fact, a meaning, a part of speech or an example the page does not show",
+      "Never write an example of your own.",
+    ]
+  ) {
+    assert.ok(system.includes(kept), `keeps: ${kept}`);
+  }
+  // Prompt v4 before the owner's decisions of 2026-10-18 asked for these.
+  for (
+    const dropped of [
+      "a short question",
+      "each worked example, such as",
+      "as a card of its own or as an example",
+    ]
+  ) {
+    assert.ok(!system.includes(dropped), `no longer asks: ${dropped}`);
+  }
 });
 
 Deno.test("a user over the daily limit is refused with 429 and no model call", async () => {

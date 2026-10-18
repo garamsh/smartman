@@ -26,6 +26,7 @@ const CARD = {
   answer: "사과",
   short: "사과",
   step: 1,
+  topic: "Fruit",
   partOfSpeech: null,
   examples: [],
 };

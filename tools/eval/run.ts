@@ -15,10 +15,11 @@ import { STEPS } from "../../supabase/functions/extract-cards/cards.ts";
 import {
   extractCards,
   type Extraction,
+  MAX_OUTPUT_TOKENS,
   type Models,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v3.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v4.ts";
 import type {
   Image,
   LanguageHints,
@@ -70,7 +71,7 @@ export const MODEL_ERRORS_TO_STOP = 2;
 
 /**
  * One labelled photo: its name, the image as the function receives it, its hints, and its
- * ground truth: a vocabulary page's cards, or a notes page's facts and examples.
+ * ground truth: a vocabulary page's cards, or a notes page's rules and exceptions and its lines.
  */
 export type Sample =
   & {
@@ -309,6 +310,7 @@ export async function runEval(
       errorsInRow = extraction.kind === "model_error" ? errorsInRow + 1 : 0;
       let costUsd = 0;
       let latencyMs = 0;
+      let completionTokens = 0;
       for (const attempt of extraction.attempts) {
         const model = pricing.get(attempt.model);
         if (model === undefined) {
@@ -318,6 +320,7 @@ export async function runEval(
         }
         costUsd += callUsd(model.pricing, attempt.usage);
         latencyMs += attempt.latencyMs;
+        completionTokens += attempt.usage?.completionTokens ?? 0;
       }
       spentUsd += costUsd;
       const cards = extraction.kind === "cards" ? extraction.cards : [];
@@ -332,12 +335,14 @@ export async function runEval(
         })),
       });
       results.push({
+        name: sample.name,
         score: sample.kind === "vocabulary"
           ? score(cards.map(entryOf), sample.cards)
           : null,
         notes: sample.kind === "notes" ? scoreNotes(cards, sample.notes) : null,
         latencyMs,
         costUsd,
+        completionTokens,
       });
       deps.print(
         `${candidate.label} ${sample.name}: ${extraction.kind}, ${
@@ -380,7 +385,7 @@ function slug(label: string): string {
 
 /**
  * Reads every `NN-*.json` ground truth in the samples folder with the image it names: a
- * vocabulary page's `cards`, or, with `kind` "notes", a notes page's `facts` and `examples`.
+ * vocabulary page's `cards`, or, with `kind` "notes", a notes page's `facts` and `lines`.
  */
 export async function loadSamples(
   io: Pick<Io, "list" | "readText" | "readBytes">,
@@ -411,7 +416,7 @@ export async function loadSamples(
       const notes = parseNotes(truth);
       if (notes === null) {
         throw new Error(
-          `${name} is not a notes ground truth of {facts: [{id, step, terms}], examples, lines}`,
+          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines}`,
         );
       }
       samples.push({ ...photo, kind: "notes", notes });
@@ -435,10 +440,9 @@ export async function loadSamples(
 }
 
 function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
-  const { facts, examples, lines } = truth;
+  const { facts, lines } = truth;
   if (
-    !Array.isArray(facts) || facts.length === 0 || !Array.isArray(examples) ||
-    !examples.every((example) => typeof example === "string") ||
+    !Array.isArray(facts) || facts.length === 0 ||
     !Array.isArray(lines) || lines.length === 0 ||
     !lines.every((line) => typeof line === "string")
   ) return null;
@@ -446,14 +450,16 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
   for (const fact of facts) {
     if (!isRecord(fact) || typeof fact.id !== "string") return null;
     const step = STEPS.find((known) => known === fact.step);
-    const terms = fact.terms;
+    const { terms, examples = [] } = fact;
     if (
       step === undefined || !Array.isArray(terms) || terms.length === 0 ||
-      !terms.every((term) => typeof term === "string" && term.trim() !== "")
+      !terms.every((term) => typeof term === "string" && term.trim() !== "") ||
+      !Array.isArray(examples) ||
+      !examples.every((example) => typeof example === "string")
     ) return null;
-    parsed.push({ id: fact.id, step, terms });
+    parsed.push({ id: fact.id, step, terms, examples });
   }
-  return { facts: parsed, examples, lines };
+  return { facts: parsed, lines };
 }
 
 function parseEntry(card: unknown): Entry | null {
@@ -514,7 +520,7 @@ export function report(
     "- The samples are synthetic: printed and handwritten-style pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
     "- Over the matched cards of every image, in percent: part of speech and examples are the share equal to the page's after the same normalization; invented is the share of present parts of speech and example lists on an entry whose page prints none. A dash means the configuration returned no such field.",
-    "- Notes pages, in percent: coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print; step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half.",
+    "- Notes pages, in percent: coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, its front and answer holding each of the fact's terms after the same normalization; the facts are the page's rules and exceptions, and its worked examples are not facts, averaged over the images; unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed; step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half.",
     "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -543,6 +549,7 @@ export function report(
     ),
     "",
     ...notesSection(rows),
+    ...pagesSection(rows),
     "## Recommendation",
     "",
     pick === null
@@ -578,6 +585,39 @@ function notesSection(rows: readonly Row[]): string[] {
         pct(notes?.inventedExamplesRate)
       } | ${pct(notes?.stepAgreement)} |`;
     }),
+    "",
+  ];
+}
+
+/**
+ * Coverage at step 5 of each notes page, with the completion tokens its calls used against the
+ * function's output cap, one row per page and a column per configuration, or nothing when no
+ * notes image ran.
+ */
+function pagesSection(rows: readonly Row[]): string[] {
+  const names = rows.find((row) => row.notes !== null)?.notes?.pages.map((
+    page,
+  ) => page.name) ?? [];
+  if (names.length === 0) return [];
+  const pct = (value: number | null | undefined) =>
+    value === null || value === undefined ? "—" : (value * 100).toFixed(1);
+  return [
+    "## Coverage at step 5 per notes page",
+    "",
+    `Each cell is the page's coverage at step 5 in percent, then the completion tokens of its calls, retry included, against the function's \`max_tokens\` of ${MAX_OUTPUT_TOKENS} per call.`,
+    "",
+    `| Page | ${rows.map((row) => row.label).join(" | ")} |`,
+    `|---|${rows.map(() => "---|").join("")}`,
+    ...names.map((name) =>
+      `| ${name} | ${
+        rows.map((row) => {
+          const page = row.notes?.pages.find((page) => page.name === name);
+          return page === undefined
+            ? "—"
+            : `${pct(page.coverage)} · ${page.completionTokens} tokens`;
+        }).join(" | ")
+      } |`
+    ),
     "",
   ];
 }

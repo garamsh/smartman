@@ -7,6 +7,7 @@ import {
   MAX_CARDS,
   MAX_EXAMPLES,
   MAX_FIELD_CHARS,
+  MAX_TOPIC_CHARS,
   parseCards,
   STEPS,
 } from "./cards.ts";
@@ -20,6 +21,7 @@ const item = (fields: Record<string, unknown> = {}) => ({
   answer: "사과",
   short: "사과",
   step: 1,
+  topic: "과일",
   partOfSpeech: null,
   examples: [],
   ...fields,
@@ -29,11 +31,12 @@ const item = (fields: Record<string, unknown> = {}) => ({
 const note = (fields: Record<string, unknown> = {}) =>
   item({
     kind: "note",
-    front: "연역 논증과 귀납 논증의 차이는?",
+    front: "연역 논증과 귀납 논증의 차이",
     answer:
       "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
     short: "반드시 참과 개연적으로 참",
     step: 3,
+    topic: "연역과 귀납",
     ...fields,
   });
 
@@ -52,6 +55,7 @@ Deno.test("parseCards returns a vocabulary card's fields trimmed, its answer as 
       answer: "달리다, 운영하다",
       short: "달리다",
       step: 1,
+      topic: "과일",
       examples: ["I run every morning.", "run a shop"],
       back: "[동] 달리다, 운영하다",
       meaning: "달리다, 운영하다",
@@ -60,17 +64,18 @@ Deno.test("parseCards returns a vocabulary card's fields trimmed, its answer as 
   );
 });
 
-Deno.test("a note card returns its question, answers and step, its back is the fullest answer, and it has no meaning", () => {
+Deno.test("a note card returns its concept, answers, step and topic, its back is the fullest answer, and it has no meaning", () => {
   const [card] = parseCards(reply([note({
     examples: ["253+4637+647898=652788 -> 연역"],
   })])) ?? [];
   assert.deepEqual(card, {
     kind: "note",
-    front: "연역 논증과 귀납 논증의 차이는?",
+    front: "연역 논증과 귀납 논증의 차이",
     answer:
       "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
     short: "반드시 참과 개연적으로 참",
     step: 3,
+    topic: "연역과 귀납",
     examples: ["253+4637+647898=652788 -> 연역"],
     back:
       "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
@@ -133,6 +138,26 @@ Deno.test("parseCards refuses a note with a part of speech, which only vocabular
     "n.",
     "control: a vocabulary card with one",
   );
+});
+
+Deno.test("parseCards takes a topic trimmed, of 1 to 60 code points, and refuses any other", () => {
+  const atLimit = "가".repeat(MAX_TOPIC_CHARS - 1) + "😀";
+  assert.equal(
+    parseCards(reply([note({ topic: "  3. 축약 " })]))?.[0].topic,
+    "3. 축약",
+  );
+  assert.equal(
+    parseCards(reply([note({ topic: atLimit })]))?.[0].topic,
+    atLimit,
+    "control: a topic of 60 code points",
+  );
+  for (const topic of [atLimit + "a", " ", "", 1, null]) {
+    assert.equal(
+      parseCards(reply([note({ topic })])),
+      null,
+      JSON.stringify(topic),
+    );
+  }
 });
 
 Deno.test("parseCards accepts an empty list, which the handler reports as no cards", () => {
@@ -281,6 +306,9 @@ Deno.test("the schema sent to the model states the fields and the limits the par
   assert.equal(fields.answer.maxLength, MAX_ANSWER_CHARS);
   assert.deepEqual(fields.kind.enum, ["vocabulary", "note"]);
   assert.deepEqual(fields.step.enum, [1, 2, 3, 4, 5]);
+  assert.equal(fields.topic.type, "string");
+  assert.equal(fields.topic.minLength, 1);
+  assert.equal(fields.topic.maxLength, MAX_TOPIC_CHARS);
   assert.equal(fields.step.type, "integer");
   assert.deepEqual(fields.partOfSpeech.type, ["string", "null"]);
   assert.equal(fields.examples.maxItems, MAX_EXAMPLES);
@@ -291,6 +319,7 @@ Deno.test("the schema sent to the model states the fields and the limits the par
     "answer",
     "short",
     "step",
+    "topic",
     "partOfSpeech",
     "examples",
   ]);

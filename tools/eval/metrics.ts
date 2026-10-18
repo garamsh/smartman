@@ -125,20 +125,20 @@ function cardKey(card: Entry): string {
 }
 
 /**
- * A fact a notes page teaches: the step from which it is worth learning, and the page terms a
- * card's front and answer must all hold, after `normalize`, to cover it.
+ * A rule or exception a notes page teaches: the step from which it is worth learning, the page
+ * terms a card's front and answer must all hold, after `normalize`, to cover it, and the worked
+ * examples the page prints for it, each as printed.
  */
 export type Fact = {
   readonly id: string;
   readonly step: Step;
   readonly terms: readonly string[];
+  readonly examples: readonly string[];
 };
 
-/** A notes page's ground truth: its facts, and the examples it prints. */
+/** A notes page's ground truth: its rules and exceptions, and every line it prints. */
 export type NotesTruth = {
   readonly facts: readonly Fact[];
-  /** The examples the page prints on lines of their own. */
-  readonly examples: readonly string[];
   /** Every line the page prints, its title included. */
   readonly lines: readonly string[];
 };
@@ -167,7 +167,10 @@ export type NotesScore = {
   readonly ties: number;
 };
 
-/** Whether [card] covers [fact]: its front and answer hold every one of the fact's terms. */
+/**
+ * Whether [card] covers [fact]: its front and answer hold every one of the fact's terms. A
+ * card's examples do not count, since another rule's worked example can hold a rule's terms.
+ */
 export function covers(card: NoteCandidate, fact: Fact): boolean {
   const text = normalize(`${card.front} ${card.answer}`);
   return fact.terms.every((term) => text.includes(normalize(term)));
@@ -191,13 +194,12 @@ export function scoreNotes(
   const unsupported =
     candidates.filter((card) => !truth.facts.some((fact) => covers(card, fact)))
       .length;
-  const printed = truth.examples.map(normalize);
+  const printed = truth.facts.flatMap((fact) => fact.examples).map(normalize);
   const lines = truth.lines.map(normalize);
   const returned = candidates.flatMap((card) => card.examples ?? []);
-  // The page prints an example after a label such as "예)" or "e.g.", which a card may keep
-  // or drop, so a returned example counts as printed when it and a printed one contain each
-  // other after normalization. A rule's own worked example sits inside the rule's line, so an
-  // example any printed line contains counts as printed too.
+  // The page may print an example after a label such as "예)" or "e.g.", which a card may keep
+  // or drop, so a returned example counts as printed when it and one of the page's worked
+  // examples contain each other after normalization, or when a line the page prints holds it.
   const inventedExamples = returned.filter((example) => {
     const text = normalize(example);
     return !printed.some((page) =>
@@ -255,6 +257,15 @@ export type NotesRow = {
   readonly inventedExamplesRate: number | null;
   /** The share of pairs of covered facts ordered alike by their steps, a tie counting half. */
   readonly stepAgreement: number | null;
+  /**
+   * Each notes image's coverage at step 5, every card offered, and the completion tokens its
+   * calls used, in the order the images ran.
+   */
+  readonly pages: readonly {
+    readonly name: string;
+    readonly coverage: number | null;
+    readonly completionTokens: number;
+  }[];
 };
 
 /** One configuration's results over every image. */
@@ -282,10 +293,13 @@ export type Row = {
 
 /** One image's outcome for one configuration: a vocabulary score or a notes score. */
 export type ImageResult = {
+  readonly name: string;
   readonly score: Score | null;
   readonly notes: NotesScore | null;
   readonly latencyMs: number;
   readonly costUsd: number;
+  /** The completion tokens of every call for the image, retry included. */
+  readonly completionTokens: number;
 };
 
 export function summarize(label: string, images: readonly ImageResult[]): Row {
@@ -293,7 +307,11 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
     image.score === null ? [] : [image.score]
   );
   const notes = images.flatMap((image) =>
-    image.notes === null ? [] : [image.notes]
+    image.notes === null ? [] : [{
+      name: image.name,
+      score: image.notes,
+      completionTokens: image.completionTokens,
+    }]
   );
   const mean = (pick: (score: Score) => number) =>
     scores.length === 0
@@ -325,7 +343,14 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
   };
 }
 
-function summarizeNotes(notes: readonly NotesScore[]): NotesRow {
+function summarizeNotes(
+  images: readonly {
+    name: string;
+    score: NotesScore;
+    completionTokens: number;
+  }[],
+): NotesRow {
+  const notes = images.map((image) => image.score);
   const total = (pick: (score: NotesScore) => number) =>
     notes.reduce((sum, score) => sum + pick(score), 0);
   const coverage = [0, 1, 2, 3, 4].map((at) => {
@@ -348,6 +373,11 @@ function summarizeNotes(notes: readonly NotesScore[]): NotesRow {
       total((s) => s.concordant + s.ties / 2),
       total((s) => s.pairs),
     ),
+    pages: images.map((image) => ({
+      name: image.name,
+      coverage: image.score.coverage[4] ?? null,
+      completionTokens: image.completionTokens,
+    })),
   };
 }
 

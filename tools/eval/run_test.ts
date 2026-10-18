@@ -23,6 +23,7 @@ const modelCards = [
     answer: "사과",
     short: "사과",
     step: 1,
+    topic: "Unit 1",
     partOfSpeech: "n.",
     examples: ["She ate an apple."],
   },
@@ -32,6 +33,7 @@ const modelCards = [
     answer: "강",
     short: "강",
     step: 1,
+    topic: "Unit 1",
     partOfSpeech: null,
     examples: [],
   },
@@ -40,10 +42,14 @@ const modelCards = [
 const notesTruth = {
   kind: "notes",
   facts: [
-    { id: "deduction", step: 1, terms: ["연역", "반드시"] },
+    {
+      id: "deduction",
+      step: 1,
+      terms: ["연역", "반드시"],
+      examples: ["253+4637+647898=652788 -> 연역"],
+    },
     { id: "induction", step: 2, terms: ["귀납", "개연"] },
   ],
-  examples: ["253+4637+647898=652788 -> 연역"],
   lines: [
     "5. 연역과 귀납",
     "연역 논증: 전제가 참이면 결론이 반드시 참",
@@ -52,10 +58,11 @@ const notesTruth = {
 };
 const noteCards = [{
   kind: "note",
-  front: "연역 논증이란?",
+  front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
   short: "결론이 반드시 참",
   step: 1,
+  topic: "연역과 귀납",
   partOfSpeech: null,
   examples: ["253+4637+647898=652788 -> 연역"],
 }];
@@ -277,7 +284,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v3",
+    note: "prompt v4",
   });
   assert.ok(
     w.printed.includes(
@@ -325,7 +332,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v3",
+    note: "prompt v4",
   }]);
 });
 
@@ -439,8 +446,41 @@ Deno.test("a notes sample is scored by coverage per step, unsupported cards, inv
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
 
-Deno.test("a notes ground truth without facts, with a step outside 1 to 5, or without its lines, is refused", async () => {
-  for (const facts of [[], [{ id: "a", step: 6, terms: ["x"] }]]) {
+Deno.test("the report gives each notes page's coverage at step 5, with the completion tokens of its calls", async () => {
+  const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
+  w.files.set(
+    `${PATHS.samples}/03-notes.json`,
+    JSON.stringify({ image: "03-notes.jpg", ...notesTruth }),
+  );
+  // A page whose one rule is the deduction rule the note card states.
+  w.files.set(
+    `${PATHS.samples}/04-notes-dense.json`,
+    JSON.stringify({
+      image: "04-notes-dense.jpg",
+      kind: "notes",
+      facts: [notesTruth.facts[0]],
+      lines: notesTruth.lines,
+    }),
+  );
+  assert.equal(await main([], io(w)), 0);
+  const table = w.files.get(PATHS.report) ?? "";
+  assert.match(table, /## Coverage at step 5 per notes page/);
+  assert.match(table, /\| Page \| Cheap \|/);
+  // Each call of the fake replies with 50 completion tokens.
+  assert.match(table, /\| 03-notes \| 50\.0 · 50 tokens \|/);
+  assert.match(table, /\| 04-notes-dense \| 100\.0 · 50 tokens \|/);
+  assert.match(table, /against the function's `max_tokens` of 16384 per call/);
+});
+
+Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with examples not of text, or without its lines, is refused", async () => {
+  for (
+    const facts of [
+      [],
+      [{ id: "a", step: 6, terms: ["x"] }],
+      [{ id: "a", step: 1, terms: ["x"], examples: "x" }],
+      [{ id: "a", step: 1, terms: ["x"], examples: [1] }],
+    ]
+  ) {
     const w = world();
     w.files.set(
       `${PATHS.samples}/03-notes.json`,
@@ -456,7 +496,7 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, or wi
     );
     await assert.rejects(
       loadSamples(io(w)),
-      /notes ground truth of \{facts: \[\{id, step, terms\}\], examples, lines\}/,
+      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines\}/,
     );
   }
   const control = world();
@@ -602,30 +642,41 @@ Deno.test("the committed sample set has at least 20 vocabulary images in every l
   }
 });
 
-Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step, and only terms and examples their page prints", async () => {
+/** The notes document a committed notes sample was drawn from, named between "notes-" and its hand. */
+function documentOf(name: string): string {
+  return name.replace(/^\d+-notes-/, "").replace(
+    /-(print|handwriting)-.*$/,
+    "",
+  );
+}
+
+Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step from 1 to 4, and only terms and examples their page prints", async () => {
   const notes = (await committedSamples()).flatMap((sample) =>
     sample.kind === "notes" ? [sample] : []
   );
-  assert.equal(notes.length, 8);
-  for (
-    const part of ["-ko-", "-en-", "print", "handwriting", "mild", "harsh"]
-  ) {
-    assert.equal(
-      notes.filter((sample) => sample.name.includes(part)).length,
-      4,
-      part,
-    );
-  }
+  assert.equal(notes.length, 12);
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
   );
-  for (const sample of notes) {
-    const language = sample.name.includes("-ko-") ? "ko" : "en";
-    const page = normalize(
-      documents[language].lines.map((line: { text: string }) => line.text)
-        .join("\n"),
+  for (const document of ["ko", "en", "ko-grammar"]) {
+    const drawn = notes.filter((sample) =>
+      documentOf(sample.name) === document
     );
-    for (const step of [1, 2, 3, 4, 5]) {
+    for (const part of ["print", "handwriting", "mild", "harsh"]) {
+      assert.equal(
+        drawn.filter((sample) => sample.name.includes(part)).length,
+        2,
+        `${document} ${part}`,
+      );
+    }
+  }
+  for (const sample of notes) {
+    const page = normalize(
+      documents[documentOf(sample.name)].lines.map((line: { text: string }) =>
+        line.text
+      ).join("\n"),
+    );
+    for (const step of [1, 2, 3, 4]) {
       assert.ok(
         sample.notes.facts.some((fact) => fact.step === step),
         `${sample.name} has a fact at step ${step}`,
@@ -639,17 +690,82 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
         );
       }
     }
-    for (const example of sample.notes.examples) {
+    for (const example of sample.notes.facts.flatMap((fact) => fact.examples)) {
       assert.ok(page.includes(normalize(example)), `${example} is printed`);
     }
     assert.deepEqual(
       sample.notes.lines,
       [
-        documents[language].title,
-        ...documents[language].lines.map((line: { text: string }) => line.text),
+        documents[documentOf(sample.name)].title,
+        ...documents[documentOf(sample.name)].lines.map((
+          line: { text: string },
+        ) => line.text),
       ],
       `${sample.name} holds every line its page prints`,
     );
+  }
+});
+
+Deno.test("the committed notes pages count rules and exceptions as facts, each worked example an example of its rule's fact, and the dense page marks its exceptions", async () => {
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  const dense = documents["ko-grammar"];
+  const sparse = documents["ko"];
+  type Line = { text: string; kind: string; mark?: string };
+  type Fact = {
+    id: string;
+    step: number;
+    terms: string[];
+    examples?: string[];
+  };
+  // Control: the earlier Korean page marks nothing and teaches 10 rules.
+  assert.equal(sparse.lines.filter((line: Line) => line.mark).length, 0);
+  assert.equal(sparse.facts.length, 10);
+  assert.ok(dense.facts.length >= 2 * sparse.facts.length, "dense");
+  const marked = dense.lines.filter((line: Line) => line.mark);
+  assert.deepEqual(
+    [...new Set(marked.map((line: Line) => line.mark))].sort(),
+    ["circle", "star"],
+  );
+  // Every marked line is covered by a fact of its own terms.
+  for (const line of marked) {
+    const text = normalize(line.text);
+    assert.ok(
+      dense.facts.some((fact: Fact) =>
+        fact.terms.every((term) => text.includes(normalize(term)))
+      ),
+      `a fact for: ${line.text}`,
+    );
+  }
+  for (const name of ["ko", "en", "ko-grammar"]) {
+    const document = documents[name];
+    // No fact is a worked example: none is named as one.
+    assert.ok(
+      document.facts.every((fact: Fact) => !fact.id.endsWith("-example")),
+      `${name} has no worked-example fact`,
+    );
+    // Every example line belongs to the examples of exactly one fact.
+    for (
+      const line of document.lines.filter((line: Line) =>
+        line.kind === "example"
+      )
+    ) {
+      const owners = document.facts.filter((fact: Fact) =>
+        (fact.examples ?? []).some((example) =>
+          normalize(line.text).includes(normalize(example))
+        )
+      );
+      assert.equal(owners.length, 1, `${name}: one rule owns ${line.text}`);
+    }
+  }
+  const samples = (await committedSamples()).filter((sample) =>
+    sample.name.includes("-ko-grammar-")
+  );
+  assert.equal(samples.length, 4);
+  for (const sample of samples) {
+    assert.ok(sample.kind === "notes");
+    assert.equal(sample.notes.facts.length, dense.facts.length);
   }
 });
 
