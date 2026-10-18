@@ -140,14 +140,14 @@ function parseGroup(item: unknown): Group | null {
     kind === undefined || id === null || title === null || sample === null ||
     question === null || answer === null ||
     typeof item.memorise !== "boolean" ||
-    !Number.isInteger(count) || (count as number) < 1 ||
-    (count as number) > MAX_COUNT
+    typeof count !== "number" || !Number.isInteger(count) || count < 1 ||
+    count > MAX_COUNT
   ) return null;
   return {
     id,
     kind,
     title,
-    count: count as number,
+    count,
     memorise: item.memorise,
     sample,
     example: { question, answer },

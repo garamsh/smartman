@@ -147,9 +147,10 @@ function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
 }
 
 function isPayload(value: unknown): value is Payload {
-  return typeof value === "object" && value !== null &&
-    typeof (value as Payload).u === "string" &&
-    typeof (value as Payload).h === "string" &&
-    typeof (value as Payload).v === "boolean" &&
-    typeof (value as Payload).e === "number";
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record: Record<string, unknown> = { ...value };
+  return typeof record.u === "string" && typeof record.h === "string" &&
+    typeof record.v === "boolean" && typeof record.e === "number";
 }
