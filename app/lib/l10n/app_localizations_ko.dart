@@ -622,6 +622,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get todayTitle => '오늘 할 카드';
 
   @override
+  String get noCardsTitle => '첫 카드를 만들어 볼까요?';
+
+  @override
+  String get noCardsBody => '덱에 카드를 추가해 시작해요';
+
+  @override
+  String get openDeck => '덱 열기';
+
+  @override
+  String get addCardsInDecks => '덱에서 카드 추가하기';
+
+  @override
   String get emptyHomeTitle => '첫 덱을 만들어 볼까요?';
 
   @override

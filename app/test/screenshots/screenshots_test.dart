@@ -214,16 +214,23 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await shot(tester, '03-new-deck-sheet');
       await enter(ko.deckName, '영단어 기본');
+      // Creating the deck opens it, empty, adding a card its one primary.
       await tap(tester, find.text(ko.create));
+      await shot(tester, '04-card-list-empty');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      // The 오늘 tab while no deck holds a card: how to start.
+      await shot(tester, '16-today-no-cards');
       await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text(ko.newDeckTitle));
       await shot(tester, '03b-new-deck-options');
       await tap(tester, find.text(ko.createManually));
       await enter(ko.deckName, '일본어 N3 한자');
       await tap(tester, find.text(ko.create));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
 
       await tap(tester, find.text('영단어 기본'));
-      await shot(tester, '04-card-list-empty');
       const cards = {
         'ephemeral': '덧없는, 순간적인',
         'meticulous': '꼼꼼한, 세심한',

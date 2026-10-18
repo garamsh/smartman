@@ -1,7 +1,14 @@
 import { Flame, Play } from "lucide-react";
 import Link from "next/link";
 
-import { type Deck, DeckTile, EmptyHome, ReadFailure, readDeckList } from "@/features/decks";
+import {
+  type Deck,
+  DeckTile,
+  EmptyHome,
+  NoCardsHome,
+  ReadFailure,
+  readDeckList,
+} from "@/features/decks";
 import {
   countDay,
   dailyGoal,
@@ -27,7 +34,7 @@ const noon = (start: number) => start + 12 * 3_600_000;
 /**
  * The 오늘 page's content, read on the server: the today card over every deck, the next seven
  * days, today's decks and the retention of the last 30 days; with no deck, the first-run
- * invitation.
+ * invitation, and with decks but no card in any, the invitation to add cards.
  */
 export async function Today() {
   const [read, today, retention] = await Promise.all([
@@ -58,6 +65,15 @@ export async function Today() {
       <>
         {header}
         <EmptyHome />
+      </>
+    );
+  }
+  // With decks but no card in any, how to start rather than a finished day.
+  if (cards.length === 0) {
+    return (
+      <>
+        {header}
+        <NoCardsHome />
       </>
     );
   }

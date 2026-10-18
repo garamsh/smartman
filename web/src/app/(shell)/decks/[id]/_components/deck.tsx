@@ -101,7 +101,8 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
             <span className="flex-1 bg-on-hero/20" />
           </div>
         </div>
-        <EnterLink href={studyHref([deck.id])} label="학습하기" />
+        {/* A deck with no card has nothing to study. */}
+        {cards.length > 0 && <EnterLink href={studyHref([deck.id])} label="학습하기" />}
       </section>
       <CardGrid cards={cards} />
     </>

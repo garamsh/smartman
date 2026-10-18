@@ -58,9 +58,11 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
   }
 }
 
-/// Asks for a name and creates an empty deck with it.
+/// Asks for a name, creates an empty deck with it, and opens it, as a photo
+/// import opens the deck it saved into.
 Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
   final repository = ref.read(deckRepositoryProvider);
+  final navigator = Navigator.of(context);
   final l10n = AppLocalizations.of(context);
   final name = await showNameSheet(
     context,
@@ -69,7 +71,16 @@ Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
     action: l10n.create,
   );
   if (name == null || !context.mounted) return;
-  await reportingFailure(context, () => repository.createDeck(name));
+  Deck? created;
+  await reportingFailure(
+    context,
+    () async => created = await repository.createDeck(name),
+  );
+  if (created case final deck?) {
+    await navigator.push(
+      MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
+    );
+  }
 }
 
 /// Starts photo import for a new deck, then opens the deck it saved into.

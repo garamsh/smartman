@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
@@ -80,6 +81,7 @@ Future<_List> _open(
   Duration? pace,
   Set<String> unreadable = const {},
   Widget Function(DeckId? deck)? photoImport,
+  List<String> decks = const ['Alpha', 'Beta', 'Gamma'],
 }) async {
   Future<Deck?> pushed(BuildContext context, DeckId? deck) =>
       Navigator.of(context)
@@ -98,8 +100,7 @@ Future<_List> _open(
   );
   final created = (await tester.runAsync(() async {
     final created = {
-      for (final name in ['Alpha', 'Beta', 'Gamma'])
-        name: (await repository.createDeck(name)).id,
+      for (final name in decks) name: (await repository.createDeck(name)).id,
     };
     Future<CardId> add(String deck, String front) async =>
         switch (await repository.addCard(
@@ -235,6 +236,51 @@ void main() {
 
   group('오늘', () {
     testWidgets(
+      'with one deck and no card, it shows how to start, adding a card to the deck as its one primary, not a finished day',
+      (tester) async {
+        final list = await _open(tester, decks: ['Alpha']);
+
+        expect(find.text('Make your first card?'), findsOneWidget);
+        expect(find.text('Add cards to a deck to start'), findsOneWidget);
+        expect(find.text("You've done today's cards"), findsNothing);
+        AppButton button(String label) =>
+            tester.widget<AppButton>(find.widgetWithText(AppButton, label));
+        expect(button('Add card').variant, AppButtonVariant.primary);
+        expect(button('Open deck').variant, AppButtonVariant.text);
+
+        // "Add card" opens the deck and its card editor.
+        await list.tap('Add card');
+        expect(find.byType(CardEditorScreen), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.byType(DeckScreen), findsOneWidget);
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'with several decks and no card, its one primary shows the 덱 tab',
+      (tester) async {
+        final list = await _open(tester);
+
+        expect(find.text('Make your first card?'), findsOneWidget);
+        await list.tap('Add cards in a deck');
+        expect(find.text('My decks 3'), findsOneWidget);
+        await list.close();
+      },
+    );
+
+    testWidgets('with a card in any deck, it shows the day, not how to start', (
+      tester,
+    ) async {
+      final list = await _open(tester, decks: ['Alpha'], fresh: {'Alpha': 1});
+
+      expect(find.text('Make your first card?'), findsNothing);
+      expect(find.text('Study all'), findsOneWidget);
+      await list.close();
+    });
+
+    testWidgets(
       'the today card counts every deck with its minutes, the goal ring, the streak, and Study all studies every deck',
       (tester) async {
         final list = await _open(
@@ -351,7 +397,8 @@ void main() {
     testWidgets(
       'a done day with nothing answered and nothing due this week reaches no goal and has no next review',
       (tester) async {
-        final list = await _open(tester);
+        // A card due in ten days: nothing this week.
+        final list = await _open(tester, mastered: {'Alpha': 1});
 
         expect(find.text("You've done today's cards"), findsOneWidget);
         expect(find.text('No reviews in the next 7 days'), findsOneWidget);
@@ -416,7 +463,11 @@ void main() {
     );
 
     testWidgets('a count that cannot be read says why', (tester) async {
-      final list = await _open(tester, unreadable: {'Beta'});
+      final list = await _open(
+        tester,
+        mastered: {'Alpha': 1},
+        unreadable: {'Beta'},
+      );
 
       expect(
         find.text(
@@ -496,6 +547,12 @@ void main() {
         await tester.enterText(find.byType(EditableText).last, 'Delta');
         await list.tap('Create');
 
+        // The new deck opens, as a photo import's deck does.
+        expect(find.byType(DeckScreen), findsOneWidget);
+        expect(find.text('Delta'), findsOneWidget);
+        expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
         expect(find.text('My decks 4'), findsOneWidget);
         expect(find.text('Delta'), findsOneWidget);
         await list.close();

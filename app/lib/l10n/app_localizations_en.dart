@@ -678,6 +678,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todayTitle => 'Today\'s cards';
 
   @override
+  String get noCardsTitle => 'Make your first card?';
+
+  @override
+  String get noCardsBody => 'Add cards to a deck to start';
+
+  @override
+  String get openDeck => 'Open deck';
+
+  @override
+  String get addCardsInDecks => 'Add cards in a deck';
+
+  @override
   String get emptyHomeTitle => 'Shall we make your first deck?';
 
   @override

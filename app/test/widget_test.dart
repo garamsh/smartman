@@ -122,11 +122,10 @@ void main() {
     await tester.tap(find.text('Create by hand'));
     await tester.pumpAndSettle();
     await enterText(tester, 'Deck name', name);
+    // Creating the deck opens it.
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
-    await showTab(tester, 'Decks');
-    await tester.tap(find.text(name));
-    await tester.pumpAndSettle();
+    expect(find.text(name), findsOneWidget);
   }
 
   Future<void> addCard(WidgetTester tester, String front, String back) async {
@@ -194,6 +193,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await showTab(tester, 'Decks');
     expect(find.text('Browse public decks'), findsNothing);
     await tester.tap(find.text('Create a deck'));
     await tester.pumpAndSettle();
@@ -217,6 +217,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await showTab(tester, 'Decks');
     expect(find.text('Browse public decks'), findsOneWidget);
     await tester.tap(find.text('Create a deck'));
     await tester.pumpAndSettle();
@@ -370,24 +371,29 @@ void main() {
   );
 
   testWidgets(
-    'with no card left and none answered today, the today card\'s Study and the deck\'s Study open a session with nothing to study',
+    'a deck made by hand opens empty, offering a card to add and no Study, and the 오늘 tab shows how to start until a card is added',
     (tester) async {
       await pumpApp(tester);
       await createDeckAndOpen(tester, 'French');
 
-      await tester.tap(find.text('Study'));
+      expect(find.text('Study'), findsNothing);
+      await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(find.text('No cards to study today'), findsOneWidget);
-      await tester.tap(find.byTooltip('Close'));
+      expect(find.text('Make your first card?'), findsOneWidget);
+      expect(find.text("You've done today's cards"), findsNothing);
+
+      // Its one primary opens the deck's card editor; with a card added, the
+      // tab shows the day.
+      await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+      await enterText(tester, 'Question', 'Chat');
+      await enterText(tester, 'Answer', 'cat');
+      await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await showTab(tester, 'Today');
-
-      expect(find.text("You've done today's cards"), findsOneWidget);
-      await tester.tap(find.text('Study'));
-      await tester.pumpAndSettle();
-      expect(find.text('No cards to study today'), findsOneWidget);
+      expect(find.text('Make your first card?'), findsNothing);
+      expect(find.text('Study all'), findsOneWidget);
       await unmountApp(tester);
     },
   );
@@ -427,9 +433,9 @@ void main() {
       await tester.ensureVisible(find.text('Stop'));
       await tester.tap(find.text('Stop'));
       await tester.pumpAndSettle();
+      // Back from the deck it made, the user is on the 오늘 tab.
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await showTab(tester, 'Today');
 
       expect(find.text("You've done today's cards"), findsOneWidget);
       await tester.tap(find.text('Study'));
@@ -522,7 +528,11 @@ void main() {
         await enterText(tester, 'Deck name', 'French');
         await tester.tap(find.text('Create'));
         await tester.pumpAndSettle();
-        // The 오늘 tab with its done card, and the 기록 and 덱 tabs.
+        // The new deck, empty, then the 오늘 tab showing how to start, and the
+        // 기록 and 덱 tabs.
+        await meetsGuidelines();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
         await meetsGuidelines();
         await showTab(tester, 'Record');
         await meetsGuidelines();

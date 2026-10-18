@@ -146,7 +146,8 @@ void main() {
     return rows.single['n']! as int;
   }
 
-  /// Creates the deck "French" from the deck list.
+  /// Creates the deck "French" from the first-run home, which opens it, and
+  /// goes back to the tabs.
   Future<void> createDeck(WidgetTester tester) async {
     await tapAndSettle(tester, find.text('Create by hand'));
     await tester.enterText(
@@ -154,6 +155,8 @@ void main() {
       'French',
     );
     await tapAndSettle(tester, find.text('Create'));
+    await tester.pageBack();
+    await tester.pumpAndSettle();
   }
 
   /// The buttons on screen that respond to a tap.
@@ -322,9 +325,8 @@ void main() {
           find.widgetWithText(AppTextField, 'Deck name'),
           'French',
         );
+        // Creating the deck opens it.
         await tapAndSettle(tester, find.text('Create'));
-        await tapAndSettle(tester, find.text('Decks'));
-        await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Add card'));
         // With photo import, Add card asks how.
         await tapAndSettle(tester, find.text('Type it in'));
@@ -337,8 +339,10 @@ void main() {
           'cat',
         );
         await tapAndSettle(tester, find.text('Save'));
+        // Back from the deck it opened, then to the deck list.
         await tester.pageBack();
         await tester.pumpAndSettle();
+        await tapAndSettle(tester, find.text('Decks'));
         await open(tester);
         final navigator = tester.state<NavigatorState>(find.byType(Navigator));
         // The setup reached a screen over the deck list.

@@ -71,9 +71,8 @@ void main() {
       find.widgetWithText(AppTextField, 'Deck name'),
       'French',
     );
+    // Creating the deck opens it.
     await tapAndSettle(tester, 'Create');
-    await tapAndSettle(tester, 'Decks');
-    await tapAndSettle(tester, 'French');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
       await tester.enterText(

@@ -13,16 +13,27 @@ import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import '../../study/study.dart';
 import '../../sync/sync.dart';
+import 'deck_screen.dart';
+import 'first_run.dart';
 import 'hero.dart';
 
 /// The 오늘 tab over [decks]: the today card, the next seven days, and the
 /// decks that hold cards for today; in a backlog, the backlog card and the
-/// catch-up at an average day's load; once today's cards are done, the done card, the seven days
-/// and 학습하기.
+/// catch-up at an average day's load; once today's cards are done, the done
+/// card, the seven days and 학습하기. While no deck holds a card, by
+/// [counts], how to start: with one deck, adding cards to it; with more,
+/// [onShowDecks], which shows the 덱 tab.
 class TodayTab extends StatelessWidget {
-  const TodayTab({super.key, required this.decks});
+  const TodayTab({
+    super.key,
+    required this.decks,
+    required this.counts,
+    required this.onShowDecks,
+  });
 
   final List<Deck> decks;
+  final Map<DeckId, int> counts;
+  final VoidCallback onShowDecks;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +47,8 @@ class TodayTab extends StatelessWidget {
       ),
       body: all == null
           ? const SizedBox.shrink()
+          : counts.values.every((count) => count == 0)
+          ? _NoCards(decks: decks, onShowDecks: onShowDecks)
           : TodayOverviewReader(
               decks: all,
               builder: (context, overview) => ListView(
@@ -104,6 +117,52 @@ class TodayTab extends StatelessWidget {
                 },
               ),
             ),
+    );
+  }
+}
+
+/// How to start while no deck holds a card: add cards to the one deck, or
+/// open it; with more decks, go to the 덱 tab to add cards in one of them.
+class _NoCards extends StatelessWidget {
+  const _NoCards({required this.decks, required this.onShowDecks});
+
+  final List<Deck> decks;
+  final VoidCallback onShowDecks;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    void open(Deck deck, {required bool adding}) => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DeckScreen(deck: deck, addingCard: adding),
+      ),
+    );
+    return FirstRun(
+      title: l10n.noCardsTitle,
+      body: l10n.noCardsBody,
+      actions: switch (decks) {
+        [final deck] => [
+          AppButton(
+            label: l10n.newCard,
+            icon: LucideIcons.plus,
+            size: AppButtonSize.cta,
+            onPressed: () => open(deck, adding: true),
+          ),
+          AppButton(
+            label: l10n.openDeck,
+            variant: AppButtonVariant.text,
+            onPressed: () => open(deck, adding: false),
+          ),
+        ],
+        _ => [
+          AppButton(
+            label: l10n.addCardsInDecks,
+            icon: LucideIcons.layers,
+            size: AppButtonSize.cta,
+            onPressed: onShowDecks,
+          ),
+        ],
+      },
     );
   }
 }
