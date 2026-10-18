@@ -37,12 +37,6 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
 - Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`. The web creates its new ids, each answer's review, with the `uuid` npm package's `v7()`, pinned exactly in `web/package.json` ([`web.md`](web.md)).
 
-### Target sync (not built yet)
-
-[ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides what follows. None of it is built: each bullet holds once its implementation issue merges.
-
-- **Order.** The server's purge job is turned on only after the app release that reads the horizon has shipped ([`server.md`](server.md)). Its first mark is taken that day, so its first purge comes 90 days later. A device still on an older release then misses a delete only if it also stayed unsynced through those 90 days.
-
 ### A run
 
 - A run, for the signed-in account:
@@ -63,6 +57,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - it pulls that table from revision 0, merging as usual;
   - once that pull completes, it deletes each synced local row the pull did not return, with what cascades from it; an unsynced row stays and is pushed.
   - With the watermark stored, only a device that has not completed a pull since the horizon's mark was taken, about 90 days earlier, rebuilds.
+- The server's purge job raises the horizon daily, 90 days behind its marks ([`server.md`](server.md)). It was built before any store release, by the owner's decision of 2026-10-18 in issue #108, which supersedes [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §9's order of building it after the app's store release ([ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md)). Every client device then ran `main`'s build, which reads the watermark, so no device syncs against a rising horizon without it.
 - A push refused for a parent the server no longer holds (`23503`) is sent again one row at a time. Each row refused so is deleted locally, with what cascades from it, since a delete elsewhere wins, and the rest are pushed.
 
 ### Local purge
@@ -119,7 +114,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes.
 - `app/test/sync/sync_status_test.dart` — each status on the account screen, the retry, and the tap target and contrast guidelines in both themes.
 - `app/test/sharing/sharing_server_test.dart`, run by the same script, checks that a run never pulls another account's public deck, and that a publish reaches the owner's other device.
-- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47).
+- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. A device left below the horizon by the server's purge, which the test runs in the stack's database container, rebuilds: a card deleted elsewhere and purged leaves it, and a studied one stays, stripped, with its review. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47).
 
 ## Rationale
 
@@ -127,6 +122,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - [ADR 0010](adr/0010-server-schema-and-row-level-security.md) records the server schema sync runs against.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why pulls filter by owner and how deck visibility syncs.
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records schema v6, its indexes, the horizon and the local purge; issue #93 records the owner's direction.
+- [ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md) records why the server's purge was built before any store release; issue #108 records the owner's decision.
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why a completed pull raises the cursor to the watermark, and why the device strips its tombstones rather than delete them; issue #106 records their implementation.
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` hands the status view to the account screen.
 - Issue #24 records the decisions made by the PM, issue #29 the synced deck and card columns of schema v5, and issue #45 those for the web app as a writer.
