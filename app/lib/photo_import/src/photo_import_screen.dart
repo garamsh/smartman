@@ -10,6 +10,8 @@ import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
+import 'choice.dart';
+import 'choice_view.dart';
 import 'extracting_view.dart';
 import 'extraction_client.dart';
 import 'failure.dart';
@@ -137,8 +139,17 @@ final class _Failed extends _Stage {
   final JpegPhoto? photo;
 }
 
+final class _Choosing extends _Stage {
+  const _Choosing(this.choice);
+
+  final Choice choice;
+}
+
 final class _Reviewing extends _Stage {
-  const _Reviewing(this.review, {required this.coach});
+  const _Reviewing(this.review, {required this.choice, required this.coach});
+
+  /// The choice Review was opened from, which a back returns to as it was.
+  final Choice choice;
 
   /// Whether Review opens with its coach.
   final bool coach;
@@ -176,6 +187,10 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       _ => const <Deck>[],
     }.firstOrNull;
     return switch (_stage) {
+      _Choosing(:final choice) => ChoiceView(
+        choice: choice,
+        onNext: () => _review(choice),
+      ),
       _Extracting(:final photo) => ExtractingView(
         photo: photo,
         onCancel: _cancel,
@@ -188,7 +203,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onRetake: _retake,
         onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
-      _Reviewing(:final review, :final coach) => ReviewView(
+      _Reviewing(:final review, :final choice, :final coach) => ReviewView(
         review: review,
         decks: decks.value ?? const [],
         target: target,
@@ -196,6 +211,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         saving: _saving,
         coach: coach,
         onChanged: () => setState(() {}),
+        onBack: () => setState(() => _stage = _Choosing(choice)),
         onRetake: _retake,
         onSave: () => _save(review),
       ),
@@ -209,9 +225,6 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
   }
 
   Future<void> _extract(_Extracting stage) async {
-    final target = _target;
-    final repository = ref.read(deckRepositoryProvider);
-    final navigator = Navigator.of(context);
     bool current() => mounted && identical(_stage, stage);
     try {
       final cards = await widget.client.extract(
@@ -219,7 +232,18 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         cancel: stage.cancel.future,
       );
       if (cards == null || !current()) return;
-      final existing = await _keysOf(repository, target);
+      setState(() => _stage = _Choosing(Choice(cards)));
+    } on PhotoImportFailure catch (failure) {
+      if (current()) setState(() => _stage = _Failed(failure, stage.photo));
+    }
+  }
+
+  /// Opens Review with [choice]'s cards, grouped against the keys the deck
+  /// holds.
+  Future<void> _review(Choice choice) async {
+    final stage = _stage;
+    try {
+      final existing = await _keysOf(ref.read(deckRepositoryProvider), _target);
       if (!mounted || !identical(_stage, stage)) return;
       // The coach shows once per device, so it is stored as shown when it
       // first shows; under reduce motion it does not show.
@@ -228,14 +252,14 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
           !MediaQuery.disableAnimationsOf(context);
       if (coach) unawaited(widget.preferences.setBool(_coachShownKey, true));
       setState(
-        () => _stage = _Reviewing(Review(cards, existing), coach: coach),
+        () => _stage = _Reviewing(
+          Review(choice.chosen, existing),
+          choice: choice,
+          coach: coach,
+        ),
       );
-    } on PhotoImportFailure catch (failure) {
-      if (current()) setState(() => _stage = _Failed(failure, stage.photo));
     } on DeckFailure catch (failure) {
-      if (!current()) return;
       _showDeckFailure(failure);
-      navigator.pop();
     }
   }
 

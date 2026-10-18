@@ -93,8 +93,8 @@ void main() {
   });
 
   test(
-    "a card reads its topic, none from a function that names none, and no "
-    "longer checks the step, short form or examples it does not show",
+    "a card reads its topic and examples, none from a function that names "
+    "none, and no longer checks the step or short form it does not show",
     () async {
       final client = _client(
         (_) async => _json(200, {
@@ -105,7 +105,7 @@ void main() {
               'answer': 'ㅏ ㅗ ㅑ ㅛ',
               'short': 'ㅏ ㅗ',
               'step': 9,
-              'examples': 'not a list',
+              'examples': [' 밝고 가벼운 느낌 '],
               'back': 'ㅏ ㅗ ㅑ ㅛ',
               'topic': ' 모음조화 ',
             },
@@ -117,7 +117,9 @@ void main() {
       final [vowels, chat] = (await _extract(client))!;
 
       expect((vowels.topic, vowels.answer), ('모음조화', 'ㅏ ㅗ ㅑ ㅛ'));
+      expect(vowels.examples, ['밝고 가벼운 느낌']);
       expect(chat.topic, isNull);
+      expect(chat.examples, isEmpty);
     },
   );
 
@@ -161,6 +163,15 @@ void main() {
         jsonEncode({
           'cards': [
             {'front': 'chat', 'back': 'cat', field.key: field.value},
+          ],
+        }),
+      for (final examples in <Object?>[
+        'a cat',
+        ['a cat', ''],
+      ])
+        jsonEncode({
+          'cards': [
+            {'front': 'chat', 'back': 'cat', 'examples': examples},
           ],
         }),
       for (final topic in <Object?>['', '  ', 7, 'a' * 61])

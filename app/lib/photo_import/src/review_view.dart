@@ -47,6 +47,7 @@ class ReviewView extends StatefulWidget {
     required this.saving,
     required this.coach,
     required this.onChanged,
+    required this.onBack,
     required this.onRetake,
     required this.onSave,
   });
@@ -67,6 +68,9 @@ class ReviewView extends StatefulWidget {
 
   /// Called after [review] changed in place.
   final VoidCallback onChanged;
+
+  /// Returns to the choice, as it was; a system back does too.
+  final VoidCallback onBack;
 
   final VoidCallback onRetake;
   final VoidCallback onSave;
@@ -114,105 +118,109 @@ class _ReviewViewState extends State<ReviewView> {
     final count = _review.saved.length;
     final first = _review.rows.firstOrNull;
     final coach = _coach;
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: l10n.close,
-          icon: const Icon(LucideIcons.x),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpace.s12),
-            child: AppButton(
-              label: l10n.retake,
-              variant: AppButtonVariant.text,
-              onPressed: widget.onRetake,
-            ),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.gutter,
-          AppSpace.s8,
-          AppSpace.gutter,
-          AppSpace.s24,
-        ),
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              l10n.reviewMade(_review.rows.length),
-              textAlign: TextAlign.center,
-              style: AppType.title,
-            ),
-          ),
-          const SizedBox(height: AppSpace.s12),
-          Center(
-            child: AppChip(
-              label: l10n.photoTarget(widget.target?.name ?? l10n.newDeck),
-              icon: LucideIcons.chevronDown,
-              onPressed: () => _chooseTarget(context),
-            ),
-          ),
-          for (final topic in _review.topics) ...[
-            const SizedBox(height: AppSpace.s24),
-            if (topic.name case final name?)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpace.rowGap),
-                child: _TopicHeading(
-                  name: name,
-                  count: topic.rows.length,
-                  on: topic.on,
-                  onChanged: (on) => _change(() => topic.on = on),
-                ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (popped, _) {
+        if (!popped) widget.onBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: widget.onBack),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpace.s12),
+              child: AppButton(
+                label: l10n.retake,
+                variant: AppButtonVariant.text,
+                onPressed: widget.onRetake,
               ),
-            for (final row in topic.rows)
-              _ReviewCard(
-                key: ObjectKey(row),
-                row: row,
-                state: _review.stateOf(row),
-                inDeck: _review.isDuplicate(row),
-                editing: identical(_editing, row),
-                coachStep: identical(row, first) ? coach : null,
-                dimmed: coach != null && !identical(row, first),
-                onRemoved: (removed) => _change(() => row.removed = removed),
-                onEdit: () => _edit(row),
-                onDraft: (front, back) {
-                  _draftFront = front;
-                  _draftBack = back;
-                },
-                onDone: () => _change(() {}),
-              ),
+            ),
           ],
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
+        ),
+        body: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpace.gutter,
             AppSpace.s8,
             AppSpace.gutter,
-            AppSpace.s16,
+            AppSpace.s24,
           ),
-          child: coach != null
-              ? _Coach(
-                  step: coach,
-                  onNext: () => setState(() => _coach = coach.next),
-                  onSkip: () => setState(() => _coach = null),
-                )
-              : AppButton(
-                  label: l10n.reviewAdd(count),
-                  size: AppButtonSize.cta,
-                  loading: widget.saving,
-                  onPressed: count == 0
-                      ? null
-                      : () {
-                          _change(() {});
-                          widget.onSave();
-                        },
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.reviewMade(_review.rows.length),
+                textAlign: TextAlign.center,
+                style: AppType.title,
+              ),
+            ),
+            const SizedBox(height: AppSpace.s12),
+            Center(
+              child: AppChip(
+                label: l10n.photoTarget(widget.target?.name ?? l10n.newDeck),
+                kind: AppChipAction(
+                  icon: LucideIcons.chevronDown,
+                  onPressed: () => _chooseTarget(context),
                 ),
+              ),
+            ),
+            for (final topic in _review.topics) ...[
+              const SizedBox(height: AppSpace.s24),
+              if (topic.name case final name?)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpace.rowGap),
+                  child: _TopicHeading(
+                    name: name,
+                    count: topic.rows.length,
+                    on: topic.on,
+                    onChanged: (on) => _change(() => topic.on = on),
+                  ),
+                ),
+              for (final row in topic.rows)
+                _ReviewCard(
+                  key: ObjectKey(row),
+                  row: row,
+                  state: _review.stateOf(row),
+                  inDeck: _review.isDuplicate(row),
+                  editing: identical(_editing, row),
+                  coachStep: identical(row, first) ? coach : null,
+                  dimmed: coach != null && !identical(row, first),
+                  onRemoved: (removed) => _change(() => row.removed = removed),
+                  onEdit: () => _edit(row),
+                  onDraft: (front, back) {
+                    _draftFront = front;
+                    _draftBack = back;
+                  },
+                  onDone: () => _change(() {}),
+                ),
+            ],
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.gutter,
+              AppSpace.s8,
+              AppSpace.gutter,
+              AppSpace.s16,
+            ),
+            child: coach != null
+                ? _Coach(
+                    step: coach,
+                    onNext: () => setState(() => _coach = coach.next),
+                    onSkip: () => setState(() => _coach = null),
+                  )
+                : AppButton(
+                    label: l10n.reviewAdd(count),
+                    size: AppButtonSize.cta,
+                    loading: widget.saving,
+                    onPressed: count == 0
+                        ? null
+                        : () {
+                            _change(() {});
+                            widget.onSave();
+                          },
+                  ),
+          ),
         ),
       ),
     );
