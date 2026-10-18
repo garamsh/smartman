@@ -61,13 +61,15 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - For notes, cards hold the theory and the exceptions, each card one fact, small enough to recall and grade at once:
   - one card per fact, never a second card asking it again in another form; an answer that would list more than 5 items is split into several cards;
   - every definition and every rule on its own card, its front a short keyword naming the concept, such as "광합성" or "ㄷ 불규칙 (듣다)", never a question, and its answer the theory;
-  - a cloze only for a list line or sentence recalled in context that has no concept card of its own: one card with a blank for each word to recall, its front the line with each blank written `___` and its `cloze` the answers in order, never asking what a concept or table card answers;
+  - a list line, a group's name followed by its members, as a cloze card: its front the whole line with each member written `___` and its `cloze` the members in order, never a concept card answering the list; a line of more than 5 members as several cloze cards of at most 5 blanks, each keeping the group's name;
+  - a cloze also for a sentence recalled in context that has no concept card of its own: one card with a blank for each word to recall, never asking what a concept or table card answers;
+  - every line under a point, a member, case, condition or variant of its rule, covered by a card of its own or a cloze blank, never dropped or left only as an example, its card naming the rule it belongs to;
   - a table whose cells are to be memorised, such as a classification grid, as one table card: its front the table's name, its headers kept and the cells to recall as its blanks, never one card per cell or per row;
   - a judgment card for a rule that tells A from B, its front "A vs B" and its answer the test;
   - every tip, trap or note the writer added by hand, and every line marked as important, on its own card whose front starts with "★ ";
   - each exception on its own card, its answer stating what the exception does, as the page prints it, never only that it is an exception (#188);
   - a worked example never a concept, cloze or table card: it is an example of the card whose rule it illustrates, and only when the page prints it;
-  - an example copied character for character, only when the page prints it for that card, never completed, extended, translated or made up, and none when the model cannot see one printed for the card;
+  - an example copied whole and character for character, only when the page prints it for that card, never shortened, completed, extended, translated or made up, left out when it cannot be read with confidence, and none when the model cannot see one printed for the card;
   - identify cards from the example sentences the page prints for a rule that sorts words into categories, at most 3 a rule, from printed sentences only;
   - no separate rules merged, no rule or exception left out as minor, and at most 100 cards, a page over the cap keeping its definitions, rules, judgment cards, handwritten tips and marked exceptions before its table and cloze cards, and those before its identify cards.
 - Nothing is invented: the prompt asks for vocabulary exactly as written; for notes it lets the model name a concept and join or shorten the page's words, and forbids any fact, meaning, part of speech or example the page does not show. The eval measures how often a model invents anyway.

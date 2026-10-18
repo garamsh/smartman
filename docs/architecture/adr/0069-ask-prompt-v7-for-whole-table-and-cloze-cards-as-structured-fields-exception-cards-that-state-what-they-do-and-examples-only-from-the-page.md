@@ -31,6 +31,15 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - The app on `main` refuses a card whose `type` it does not know: `app/lib/photo_import/src/extraction_client.dart` throws `ServiceFailed('a card has an unknown type')`. It ignores keys it does not know.
   - [`server.md`](../server.md) §Edge Function deploys does not merge "a response the apps in use cannot read".
   - The coordinator ruled, on the worker's question, that this change waits for an app that reads `type: table` (#212 part 1). #212 part 1 also makes the parser read an unknown type as a plain card.
+- **The PM's first run of v7**, on #225 at `2b3f1a2ea573277b4fd8331e8a94058710d8749c`, Claude Haiku 5.5 over the 55 samples:
+  - Table blanks were 95.8, bare exceptions 0.0, the typical notes pages 100 and vocabulary F1 99.5.
+  - Cloze blanks were 0.0. On samples 52 to 55, each list line, such as "주성분: 주어, 서술어, 목적어, 보어", came back as a concept card naming the group and answering the list.
+  - The dense grammar pages 33 to 36 covered 100, 71.4, 81.0 and 57.1, against v6's 81.0, 71.4, 81.0 and 95.2 on Haiku. Page 36 missed 9 of its 21 facts:
+    - four contraction lines came back with fronts such as "ㅗ+ㅏ", without the rule's name the fact's terms hold;
+    - one sub-point, a condition under ㅡ 탈락, was dropped;
+    - one card paraphrased past its terms;
+    - three misread the harsh handwriting, such as "씹다" for "입다".
+  - Invented examples were 4.8, against 7.0 for v6. Of the 126 examples returned on the notes pages, 6 were counted invented. One was a printed example shortened, and five were misread characters on harsh or handwritten pages.
 - **Alternatives considered:**
   - **Markup in `front` and `answer`**, such as a pipe table with marked blanks. The PM's contract rules it out: every client would parse text, and an old app would show the markup.
   - **The table cell by cell, as in v6, with a new grouping field.** The cells would still be scheduled one by one, against #212's one card per table.
@@ -46,12 +55,17 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
      - its headers are kept;
      - the cells to recall are its blanks.
      - A table is never split into a card per cell or per row.
-  2. **Cloze cards.** A list line or sentence recalled in context, which has no concept card of its own, becomes one `cloze` card:
-     - its front is the line with each word to recall written `___`;
-     - its blanks are answered in order.
+  2. **Cloze cards.**
+     - A list line, a group's name followed by its members, becomes one `cloze` card:
+       - its front is the whole line with each member written `___`;
+       - its answers are the members, in order;
+       - it is never a concept card whose answer is the list.
+       - A line of more than 5 members becomes several cloze cards of at most 5 blanks, each keeping the group's name.
+     - A sentence recalled in context, which has no concept card of its own, also becomes one `cloze` card, with a blank for each word to recall.
      - A cloze never asks what a concept or table card already answers.
-  3. **Exceptions.** Each exception's card states what the exception does, as the page prints it, never only that it is an exception.
-  4. **Examples.** An example is copied character for character, and only when the page prints it for that card's entry or rule. No example is completed, extended, translated or made up. When the model cannot see one printed for the card, `examples` is empty.
+  3. **Sub-points.** Every line under a point is covered by a card of its own or by a cloze blank: a member, a case, a condition or a variant of the point's rule. It is never dropped or left only as an example, and its card names the rule it belongs to.
+  4. **Exceptions.** Each exception's card states what the exception does, as the page prints it, never only that it is an exception.
+  5. **Examples.** An example is copied whole and character for character, and only when the page prints it for that card's entry or rule. No example is shortened, completed, extended, translated or made up. One that cannot be read with confidence is left out. When the model cannot see one printed for the card, `examples` is empty.
   - At the 100-card cap, table and cloze cards come after a page's definitions, rules, judgment cards, handwritten tips and marked exceptions, and before its identify cards.
 - **The contract.** The model writes two new keys on every card, `null` where they do not apply, as strict structured outputs require:
   - `table` — `{columns, rows, blanks}`:

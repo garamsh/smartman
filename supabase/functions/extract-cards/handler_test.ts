@@ -658,10 +658,20 @@ Deno.test("prompt v7 asks for #200's rules with a whole table on one table card 
     ],
     "3 cloze only without a concept card": [
       "Cloze only where no concept card states it",
-      "which has no concept card of its own, becomes one cloze card with a blank for each word to recall",
+      "which has no concept card of its own, also becomes one cloze card with a blank for each word to recall",
       "A cloze never asks what a concept or table card already answers.",
       'replaced by a blank written "___"',
       'what fills each "___" of its front, in order, one answer for each blank',
+    ],
+    "list lines are cloze cards": [
+      "List lines are cloze cards: a line that names a group and then lists its members",
+      'It becomes one "cloze" card whose front is the whole line with each member written "___"',
+      'never a "concept" card whose front is the group\'s name and whose answer is the list',
+      "A line of more than 5 members becomes several cloze cards of at most 5 blanks each, each front keeping the group's name.",
+    ],
+    "sub-points": [
+      "every line written under a point, such as a member, a case, a condition or a variant of its rule, is covered by a card of its own or a blank of a cloze card, and never dropped or left only as an example",
+      "Its card names the rule it belongs to",
     ],
     "4 judgment cards": [
       'a rule that tells A from B gets its own card, its front "A vs B"',
@@ -693,7 +703,8 @@ Deno.test("prompt v7 asks for #200's rules with a whole table on one table card 
     ],
     "#217 examples only from the page": [
       "Examples come only from the page: copy one only when the page prints it for that card's entry or rule",
-      "never complete, extend, translate or make up an example to illustrate a rule, even a well-known one",
+      "whole and as printed, and never shorten, complete, extend, translate or make up an example to illustrate a rule, even a well-known one",
+      "Leave out an example you cannot read with confidence rather than guessing any of its characters.",
       'When you cannot see the page print an example for the card, leave "examples" empty.',
       "each copied character for character",
     ],
