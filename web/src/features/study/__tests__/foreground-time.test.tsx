@@ -30,6 +30,8 @@ const plan: SessionPlan = {
   startedAt: start,
   day: { start: start - day / 2, end: start + day / 2 },
   queue: { cards: [card("a"), card("b")], backlog: false },
+  relearn: [],
+  resumed: false,
   more: [],
   before: {},
   pace: unknownPace,

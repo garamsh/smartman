@@ -88,9 +88,20 @@ export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: Rea
   if (engine === "failed") {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-3xl items-center justify-center px-gutter">
-        <p role="alert" className="text-body text-ink-2">
-          학습 화면을 불러오지 못했어요. 새로고침해 주세요.
-        </p>
+        <div role="alert" className="flex flex-col gap-3 rounded-row bg-surface p-4">
+          <p className="text-dont-know-text">
+            학습 화면을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setEngine("loading");
+            }}
+            className={`${button} self-start bg-ink text-on-primary`}
+          >
+            다시 시도
+          </button>
+        </div>
       </main>
     );
   }
@@ -247,19 +258,19 @@ function Session({ plan }: { plan: SessionPlan }) {
                 aria-label="진행"
                 aria-valuemin={0}
                 aria-valuemax={view.total}
-                aria-valuenow={view.answered}
-                aria-valuetext={`${String(view.total)}장 중 ${String(view.answered)}장 답함`}
+                aria-valuenow={view.done}
+                aria-valuetext={`${String(view.total)}장 중 ${String(view.done)}장 끝냄`}
                 className="h-progress flex-1 overflow-hidden rounded-full bg-hairline"
               >
                 <div
                   className="h-full rounded-full bg-ink motion-safe:transition-[width]"
                   style={{
-                    width: `${String(view.total === 0 ? 0 : (100 * view.answered) / view.total)}%`,
+                    width: `${String(view.total === 0 ? 0 : (100 * view.done) / view.total)}%`,
                   }}
                 />
               </div>
               <span aria-hidden className="text-secondary font-bold text-ink tabular-nums">
-                {view.answered}/{view.total}
+                {view.done}/{view.total}
               </span>
             </>
           )}

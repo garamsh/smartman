@@ -9,13 +9,11 @@ import {
 } from "@/features/decks";
 import {
   type CardStates,
-  loadServerEngine,
+  dayPlanOf,
   newCards,
   readToday,
-  selectQueue,
+  readyServerEngine,
   StudyScreen,
-  todayOf,
-  withTodaysLeft,
 } from "@/features/study";
 
 import { StudySkeleton } from "./study-skeleton";
@@ -51,10 +49,10 @@ export async function Study({
   const ids = new Set(cards.map((card) => card.id));
   const own = answers.filter((answer) => ids.has(answer.cardId));
   // Today's list keeps a card answered "모른다" last today, which its state no longer makes due.
-  await loadServerEngine();
-  const places = todayOf(ids, states, own, day);
-  const queue = withTodaysLeft(selectQueue(cards, states, day), cards, places);
-  const taken = new Set(queue.cards.map((card) => card.id));
+  const engine = await readyServerEngine();
+  if ("failure" in engine) return <Failure failure={engine.failure} />;
+  const plan = dayPlanOf(cards, states, day, own);
+  const taken = new Set([...plan.selected.cards, ...plan.relearn].map((card) => card.id));
   const more = newCards(cards, states).filter((card) => !taken.has(card.id));
   // The state of every card the session may write, and of every card answered today, which the
   // session's count reads.
@@ -69,7 +67,9 @@ export async function Study({
       plan={{
         startedAt: readAt,
         day: { start: day.start, end: day.end },
-        queue,
+        queue: plan.selected,
+        relearn: plan.relearn,
+        resumed: plan.done.size > 0,
         more,
         before,
         pace,

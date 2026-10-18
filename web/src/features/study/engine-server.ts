@@ -45,6 +45,19 @@ export function loadServerEngine(): Promise<void> {
 }
 
 /**
+ * Loads the engine for a page, or the failure the page shows in place of what it could not read
+ * when the module cannot load.
+ */
+export async function readyServerEngine(): Promise<{ ready: true } | { failure: "failed" }> {
+  try {
+    await loadServerEngine();
+    return { ready: true };
+  } catch {
+    return { failure: "failed" };
+  }
+}
+
+/**
  * The states a new card passes through over [answers], in the order given, one after each, or
  * the engine's typed `EngineError` for an answer it refuses.
  */

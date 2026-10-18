@@ -24,6 +24,13 @@ export type SessionPlan = {
   /** The study day the session opened in, which today's list reads. */
   day: { start: number; end: number };
   queue: SelectedQueue<StudyCard>;
+  /**
+   * The cards answered "모른다" last today that the queue rules did not select, which the session
+   * puts back as a re-show does.
+   */
+  relearn: StudyCard[];
+  /** Whether a card of the day was done when the page opened, so the guide reads as going on. */
+  resumed: boolean;
   /** The new cards past today's, oldest first, which `studyOn` goes on with. */
   more: StudyCard[];
   before: CardStates;
@@ -42,7 +49,7 @@ export type SessionPlan = {
  * How many cards a session opened with, and the whole minutes they take at the user's pace, as
  * the today card counts them.
  */
-export type SessionSize = { cards: number; minutes: number };
+export type SessionSize = { cards: number; minutes: number; resumed: boolean };
 
 /** An answer given in this session, shown in the stack above the current card. */
 export type PreviousAnswer = {
@@ -80,7 +87,7 @@ export type SessionView = {
    * the day's cards: those answered today before the session opened, the queue it opened with,
    * and those taken past today's since.
    */
-  answered: number;
+  done: number;
   total: number;
 } & (
   | {
@@ -136,6 +143,9 @@ export class StudySession {
   ) {
     this.random = seededRandom(plan.startedAt);
     this.queue = orderQueue(plan.queue, this.random);
+    // The cards still on "모른다" come back as a re-show does: after a gap drawn from the session's
+    // random source, or at the end, in a backlog as out of one.
+    for (const card of plan.relearn) reinsert(this.queue, card, this.random);
     this.dayCards = new Set([
       ...plan.today.answers.map((answer) => answer.cardId),
       ...this.queue.map((card) => card.id),
@@ -144,6 +154,7 @@ export class StudySession {
     this.size = {
       cards: this.queue.length,
       minutes: sessionMinutes(this.queue.length - fresh, fresh, plan.pace),
+      resumed: plan.resumed,
     };
     this.more = [...plan.more];
     // Opening the page with no card left today is the choice to go on.
@@ -312,16 +323,18 @@ export class StudySession {
       this.plan.before,
       [
         ...this.plan.today.answers,
+        // The session's own answers count in the day it opened in, whatever their time, so a
+        // session open across 04:00 goes on counting.
         ...this.answers.map(({ card, review }) => ({
           cardId: card.id,
           answer: review.answer,
-          reviewedAt: review.reviewedAt,
+          reviewedAt: Math.min(review.reviewedAt, this.plan.day.end - 1000),
         })),
       ],
       this.plan.day,
     );
-    const answered = [...places.values()].filter((place) => place === "done").length;
-    const counts = { previous, answered, total: this.dayCards.size };
+    const done = [...places.values()].filter((place) => place === "done").length;
+    const counts = { previous, done, total: this.dayCards.size };
     const current = this.queue[0];
     if (current) {
       const guide = this.answers.length === 0 ? this.size : null;

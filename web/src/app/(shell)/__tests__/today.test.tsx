@@ -484,6 +484,35 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
   });
 
+  it("agrees with the study page on the day's cards: a card answered 모른다 today is left, one answered 안다 done", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("a", "d-fr", "a"), cardRow("b", "d-fr", "b"));
+    // Both were due; this morning a was answered 안다 and b 모른다, each now due tomorrow.
+    const tomorrow = {
+      stability: 1,
+      difficulty: 5,
+      lastReview: start - 3_600_000,
+      due: start + day,
+    };
+    postgrest.seed("card_states", stateRow("a", tomorrow), stateRow("b", tomorrow));
+    postgrest.seed("reviews", reviewRow("r-a", "a", start - 3_600_000, 6_000), {
+      ...reviewRow("r-b", "b", start - 3_600_000, 6_000),
+      rating: "again",
+    });
+    await render(Today, {});
+
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "하루 목표 2장 중 1장" })).toBeInTheDocument();
+    cleanup();
+
+    await render(Study, { searchParams: Promise.resolve({ decks: "d-fr" }) });
+    await waitFor(() => {
+      expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "문제" })).toHaveTextContent("b");
+  });
+
   it("forecasts the next seven days by study day, today's load first", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"));
     postgrest.seed("cards", ...["a", "b", "c"].map((front) => cardRow(front, "d-fr", front)));

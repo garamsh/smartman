@@ -1,6 +1,7 @@
 import type { CardId } from "@/features/decks";
 
 import { type CardState, type CardStates, type StudyDay, studyDayEnd } from "./queue";
+import { type DayPlan, leftOf } from "./today-list";
 
 // What the 오늘 page and the deck pages show of a selection beyond its queue, by the definitions
 // of study.md, as app/lib/study/src/overview.dart computes them on the phone.
@@ -61,22 +62,12 @@ export function forecast(
 export type DailyGoal = { done: number; goal: number };
 
 /**
- * The goal of the study [today] from the recorded [answers] and the cards [left] to study in it:
- * every card answered within the day or left, each once, as the load stood when the day started;
- * done are those no longer left. A card answered "모른다" and due again today is left, so not
- * yet done.
+ * The daily goal from today's [plan], as today's list places the cards: done are those answered
+ * "안다" last today, and the goal adds those left, the selection and the cards still on "모른다". A
+ * card answered "모른다" is left until it is answered "안다".
  */
-export function dailyGoal(
-  answers: Iterable<{ cardId: CardId; reviewedAt: number }>,
-  left: Iterable<CardId>,
-  today: StudyDay,
-): DailyGoal {
-  const remaining = new Set(left);
-  const cards = new Set(remaining);
-  for (const answer of answers) {
-    if (answer.reviewedAt >= today.start && answer.reviewedAt < today.end) cards.add(answer.cardId);
-  }
-  return { done: cards.size - remaining.size, goal: cards.size };
+export function dailyGoal(plan: DayPlan<unknown>): DailyGoal {
+  return { done: plan.done.size, goal: plan.done.size + leftOf(plan) };
 }
 
 /**

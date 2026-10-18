@@ -239,6 +239,30 @@ describe("the study page", () => {
       expect(screen.getByText("3/3")).toBeInTheDocument();
     });
 
+    it("reads the guide as going on with the day when a card of it is done, and as the day's start otherwise", async () => {
+      seedDeck(postgrest, "d1", ["un"]);
+      postgrest.seed("cards", cardRow("deux", "d1", "deux"));
+      postgrest.seed(
+        "card_states",
+        stateRow("deux", {
+          stability: 1,
+          difficulty: 5,
+          lastReview: start - hour,
+          due: start + day,
+        }),
+      );
+      postgrest.seed("reviews", reviewRow("r-deux", "deux", start - hour, 1_000));
+      await open("d1");
+      expect(screen.getByText(/^이어서 해요 · 남은 1장 · 약 \d+분$/)).toBeInTheDocument();
+      cleanup();
+
+      // Control: with nothing done today, the guide states the day's cards.
+      postgrest.rows.reviews = [];
+      await open("d1");
+      expect(screen.getByText(/^오늘 \d+장 · 약 \d+분$/)).toBeInTheDocument();
+      expect(screen.queryByText(/^이어서 해요/)).not.toBeInTheDocument();
+    });
+
     it("shows the completion card in the current card's place, below the stack, once no card is left", async () => {
       seedToday();
       await open("d1");
@@ -303,7 +327,7 @@ describe("the study page", () => {
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toBe(progress);
       expect(progress.getAttribute("aria-valuetext")).toBe(
-        `${String(coldStartNewCards + 2)}장 중 ${String(coldStartNewCards + 2)}장 답함`,
+        `${String(coldStartNewCards + 2)}장 중 ${String(coldStartNewCards + 2)}장 끝냄`,
       );
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       await waitFor(() => {

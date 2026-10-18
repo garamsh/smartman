@@ -2,7 +2,13 @@ import type { CardId } from "@/features/decks";
 
 import type { Answer } from "./answer-write";
 import { type Today, todaysList } from "./engine-wasm/smartman_engine_wasm.js";
-import type { CardStates, SelectedQueue } from "./queue";
+import {
+  type CardStates,
+  type SelectedQueue,
+  selectQueue,
+  type StudyDay,
+  type TodayCount,
+} from "./queue";
 
 export type { Today };
 
@@ -39,27 +45,65 @@ export function todayOf(
     toSeconds(day.start),
     toSeconds(day.end),
   );
-  return new Map(ids.map((id, index) => [id, places[index] ?? "absent"]));
+  if (places.length !== ids.length) {
+    throw new Error(
+      `today's list placed ${String(places.length)} cards of the ${String(ids.length)} given`,
+    );
+  }
+  return new Map(ids.map((id, index) => [id, places[index] as Today]));
 }
 
 /**
- * [selected] with the cards of [cards] that today's list keeps [places] "left" but the queue
- * rules did not select: those answered "모른다" last today, which their state no longer makes
- * due. They join after the selected cards; the session orders them all together.
+ * A study day over a selection of decks, as today's list places its cards: the queue the rules
+ * select, the cards still on "모른다" that the rules did not select, and the cards done. The study
+ * session, the 오늘 page's count and goal, and the deck pages all count from it, so they agree with
+ * each other and with the phone's.
  */
-export function withTodaysLeft<C extends { id: CardId }>(
-  selected: SelectedQueue<C>,
+export type DayPlan<C> = {
+  selected: SelectedQueue<C>;
+  /** The cards answered "모른다" last today, which their state no longer makes due. */
+  relearn: C[];
+  /** The cards answered "안다" last today. */
+  done: Set<CardId>;
+};
+
+/** The [DayPlan] of [day] over [cards], from their stored [states] and today's [answers] to them. */
+export function dayPlanOf<C extends { id: CardId; createdAt: number }>(
   cards: readonly C[],
-  places: ReadonlyMap<CardId, Today>,
-): SelectedQueue<C> {
+  states: CardStates,
+  day: StudyDay,
+  answers: readonly DayAnswer[],
+): DayPlan<C> {
+  const places = todayOf(
+    cards.map((card) => card.id),
+    states,
+    answers,
+    day,
+  );
+  const selected = selectQueue(cards, states, day);
   const chosen = new Set(selected.cards.map((card) => card.id));
   return {
-    backlog: selected.backlog,
-    cards: [
-      ...selected.cards,
-      ...cards.filter((card) => places.get(card.id) === "left" && !chosen.has(card.id)),
-    ],
+    selected,
+    relearn: cards.filter((card) => places.get(card.id) === "left" && !chosen.has(card.id)),
+    done: new Set([...places].flatMap(([id, place]) => (place === "done" ? [id] : []))),
   };
+}
+
+/** The cards [plan] leaves today: its selection and the cards still on "모른다". */
+export function leftOf(plan: DayPlan<unknown>): number {
+  return plan.selected.cards.length + plan.relearn.length;
+}
+
+/**
+ * How many cards [plan] leaves today, as reviews and new cards: the cards still on "모른다" are
+ * reviews, as every card with a stored state in [states] is.
+ */
+export function countDay<C extends { id: CardId }>(
+  plan: DayPlan<C>,
+  states: CardStates,
+): TodayCount {
+  const fresh = plan.selected.cards.filter((card) => !states[card.id]).length;
+  return { review: leftOf(plan) - fresh, fresh, backlog: plan.selected.backlog };
 }
 
 function toSeconds(milliseconds: number): bigint {
