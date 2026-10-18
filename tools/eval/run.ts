@@ -175,30 +175,37 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
         : `prompt ${PROMPT_VERSION}`,
     }],
   };
-  await io.writeText(PATHS.ledger, JSON.stringify(updated, null, 2) + "\n");
   io.print(
     `this run spent ${usd(run.spentUsd)}; ${usd(spent(updated))} of ${
       usd(updated.budgetUsd)
     } spent in total`,
   );
+  // The report is written before the ledger, and the ledger even when the report fails, so a
+  // failed write after the paid calls loses at most one of them.
+  try {
+    if (!run.stopped) {
+      await io.writeText(
+        PATHS.report,
+        report(
+          candidates,
+          run.rows,
+          samples.length,
+          run.spentUsd,
+          updated,
+          io.today(),
+        ),
+      );
+      io.print(`wrote ${PATHS.report}`);
+    }
+  } finally {
+    await io.writeText(PATHS.ledger, JSON.stringify(updated, null, 2) + "\n");
+  }
   if (run.stopped) {
     io.print(
       "stopped: the next call could have exceeded the remaining budget; no report was written",
     );
     return 1;
   }
-  await io.writeText(
-    PATHS.report,
-    report(
-      candidates,
-      run.rows,
-      samples.length,
-      run.spentUsd,
-      updated,
-      io.today(),
-    ),
-  );
-  io.print(`wrote ${PATHS.report}`);
   return 0;
 }
 
@@ -502,24 +509,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-if (import.meta.main) {
-  Deno.exit(
-    await main(Deno.args, {
-      fetch,
-      now: () => performance.now(),
-      env: (name) => Deno.env.get(name),
-      readText: (path) => Deno.readTextFile(path),
-      readBytes: (path) => Deno.readFile(path),
-      list: async (dir) =>
-        (await Array.fromAsync(Deno.readDir(dir))).map((entry) => entry.name),
-      writeText: async (path, text) => {
+/**
+ * The eval's real I/O, as the command in this file's header runs it. A write creates its
+ * directory only when the directory is missing, so writing `spend.json` needs no grant beyond
+ * that file.
+ */
+export function denoIo(): Io {
+  return {
+    fetch,
+    now: () => performance.now(),
+    env: (name) => Deno.env.get(name),
+    readText: (path) => Deno.readTextFile(path),
+    readBytes: (path) => Deno.readFile(path),
+    list: async (dir) =>
+      (await Array.fromAsync(Deno.readDir(dir))).map((entry) => entry.name),
+    writeText: async (path, text) => {
+      try {
+        await Deno.writeTextFile(path, text);
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) throw error;
         await Deno.mkdir(path.slice(0, path.lastIndexOf("/")), {
           recursive: true,
         });
         await Deno.writeTextFile(path, text);
-      },
-      print: (line) => console.log(line),
-      today: () => new Date().toISOString().slice(0, 10),
-    }),
-  );
+      }
+    },
+    print: (line) => console.log(line),
+    today: () => new Date().toISOString().slice(0, 10),
+  };
+}
+
+if (import.meta.main) {
+  Deno.exit(await main(Deno.args, denoIo()));
 }
