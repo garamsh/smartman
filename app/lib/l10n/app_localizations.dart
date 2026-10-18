@@ -1411,7 +1411,7 @@ abstract class AppLocalizations {
   /// **'검색 닫기'**
   String get closeSearch;
 
-  /// Under 직접 입력 in the add-card sheet.
+  /// Under 직접 만들기 in the add-card sheet.
   ///
   /// In ko, this message translates to:
   /// **'문제와 답을 하나씩 적어요'**

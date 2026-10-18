@@ -511,7 +511,7 @@
   "closeSearch": "검색 닫기",
   "@closeSearch": {"description": "The button that closes the deck page's card search."},
   "addCardManuallyBody": "문제와 답을 하나씩 적어요",
-  "@addCardManuallyBody": {"description": "Under 직접 입력 in the add-card sheet."},
+  "@addCardManuallyBody": {"description": "Under 직접 만들기 in the add-card sheet."},
   "cardListTitle": "카드 {count}",
   "@cardListTitle": {"description": "The deck page's row pinned above its card list: how many cards the list shows.", "placeholders": {"count": {"type": "int"}}},
   "showMeanings": "뜻 보기",
