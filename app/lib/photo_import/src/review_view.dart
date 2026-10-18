@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
+import '../../design/app_coach.dart';
 import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
@@ -204,8 +205,14 @@ class _ReviewViewState extends State<ReviewView> {
               AppSpace.s16,
             ),
             child: coach != null
-                ? _Coach(
-                    step: coach,
+                ? AppCoach(
+                    line: switch (coach) {
+                      _CoachStep.remove => l10n.coachRemove,
+                      _CoachStep.restore => l10n.coachRestore,
+                      _CoachStep.edit => l10n.coachEdit,
+                    },
+                    step: coach.index,
+                    steps: _CoachStep.values.length,
                     onNext: () => setState(() => _coach = coach.next),
                     onSkip: () => setState(() => _coach = null),
                   )
@@ -360,10 +367,7 @@ class _ReviewCardState extends State<_ReviewCard>
   double _drag = 0;
 
   /// Drives the coach's demonstration: a peek left, a peek right, or a press.
-  late final _demo = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2800),
-  );
+  late final _demo = AnimationController(vsync: this, duration: coachCycle);
 
   bool get _editable => widget.state != RowState.dropped;
 
@@ -404,13 +408,7 @@ class _ReviewCardState extends State<_ReviewCard>
       _CoachStep.restore => 1.0,
       _CoachStep.edit || null => 0.0,
     };
-    final out = Curves.easeOutCubic.transform(
-      ((t - 0.2) / 0.26).clamp(0.0, 1.0),
-    );
-    final back = Curves.easeOutBack.transform(
-      ((t - 0.62) / 0.18).clamp(0.0, 1.0),
-    );
-    return direction * _coachPeek * (out - back);
+    return direction * _coachPeek * coachPeek(t);
   }
 
   @override
@@ -741,112 +739,10 @@ class _CoachFinger extends StatelessWidget {
   final double progress;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final visible = progress > 0.08 && progress < 0.68;
-    return Positioned(
-      top: AppSpace.s20,
-      left: step == _CoachStep.restore ? AppSpace.s32 : null,
-      right: step == _CoachStep.remove ? AppSpace.s32 : null,
-      child: IgnorePointer(
-        child: ExcludeSemantics(
-          child: Opacity(
-            opacity: visible ? 1 : 0,
-            child: Icon(
-              LucideIcons.pointer,
-              size: 34,
-              color: colors.ink,
-              shadows: [Shadow(color: colors.shadow, blurRadius: 6)],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The coach's caption over the add button: the step's line, its dots,
-/// "건너뛰기" and "다음", the last "시작하기".
-class _Coach extends StatelessWidget {
-  const _Coach({
-    required this.step,
-    required this.onNext,
-    required this.onSkip,
-  });
-
-  final _CoachStep step;
-  final VoidCallback onNext;
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final line = switch (step) {
-      _CoachStep.remove => l10n.coachRemove,
-      _CoachStep.restore => l10n.coachRestore,
-      _CoachStep.edit => l10n.coachEdit,
-    };
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      label: l10n.coachStep(step.index + 1, _CoachStep.values.length),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.s20,
-          AppSpace.s16,
-          AppSpace.s16,
-          AppSpace.s12,
-        ),
-        decoration: BoxDecoration(
-          color: colors.hero,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    line,
-                    style: AppType.bodyStrong.copyWith(color: colors.onHero),
-                  ),
-                ),
-                for (final dot in _CoachStep.values)
-                  Container(
-                    width: dot == step ? 16 : 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(left: AppSpace.s4),
-                    decoration: BoxDecoration(
-                      color: colors.onHero.withValues(
-                        alpha: dot == step ? 1 : 0.4,
-                      ),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpace.s8),
-            Row(
-              children: [
-                AppButton(
-                  label: l10n.coachSkip,
-                  variant: AppButtonVariant.onHeroText,
-                  onPressed: onSkip,
-                ),
-                const Spacer(),
-                AppButton(
-                  label: step.next == null ? l10n.coachStart : l10n.coachNext,
-                  variant: AppButtonVariant.onHero,
-                  onPressed: onNext,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Positioned(
+    top: AppSpace.s20,
+    left: step == _CoachStep.restore ? AppSpace.s32 : null,
+    right: step == _CoachStep.remove ? AppSpace.s32 : null,
+    child: AppCoachFinger(shown: coachFingerShown(progress)),
+  );
 }
