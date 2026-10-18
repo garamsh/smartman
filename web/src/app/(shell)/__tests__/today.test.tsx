@@ -1,6 +1,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadEngine } from "@/features/study";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { otherUser, testUser } from "@/testing/mocks/handlers";
@@ -25,6 +26,12 @@ const renderBoth = () =>
     ),
     {},
   );
+
+// The study screen starts its session once the browser's engine has loaded; its first load
+// compiles the module.
+beforeAll(async () => {
+  await loadEngine();
+}, 30_000);
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 

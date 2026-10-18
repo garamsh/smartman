@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadEngine } from "@/features/study";
 
 import { cardRow, day, deckRow, reviewRow, seedDeck, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -10,6 +11,12 @@ import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
 
 import { Study } from "../_components/study";
+
+// The study screen starts its session once the browser's engine has loaded; its first load
+// compiles the module.
+beforeAll(async () => {
+  await loadEngine();
+}, 30_000);
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 

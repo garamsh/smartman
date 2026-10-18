@@ -22,6 +22,7 @@ export {
   todayStatus,
 } from "./overview";
 export { readRecentRetention, readRecord } from "./read-record";
+export { loadEngine } from "./engine";
 export { loadServerEngine } from "./engine-server";
 export { readToday } from "./read-today";
 export { todayOf, withTodaysLeft } from "./today-list";

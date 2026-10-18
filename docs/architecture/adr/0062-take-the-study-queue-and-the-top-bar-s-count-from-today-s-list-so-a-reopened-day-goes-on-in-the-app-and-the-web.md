@@ -1,4 +1,4 @@
-# ADR 0060: Take the study queue and the top bar's count from today's list, so a reopened day goes on, in the app and the web
+# ADR 0062: Take the study queue and the top bar's count from today's list, so a reopened day goes on, in the app and the web
 
 > Status: accepted
 > Date: 2026-10-18
