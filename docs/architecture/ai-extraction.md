@@ -150,6 +150,12 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - The web has no photo import; one built later offers and composes by the same rule.
 - The choice is stored on the device with `shared_preferences` under `photoDetailStep`, as the theme is, read when the screen opens, and applied at once. When no step is stored, a level stored before the steps under `photoDetailLevel` maps once to the nearest step — 간단 to 핵심, 기본 to 기본, 자세히 to 자세히 — stored as the step while the old key is removed; with neither, the step is 기본.
 
+#### Cards by topic (decided, not built yet)
+
+- [ADR 0057](adr/0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md) decides a new Review, and the app PR for issue #182 builds it. Until it lands, the Detail step and Flow below describe the app.
+- The call stays one, and each card gains a `topic` of 1 to 60 characters, which #179's revision adds to the function.
+- Review groups the cards by topic, with a switch per topic that keeps or drops it. A swipe left removes a card and a swipe right restores it; a removed card stays listed, struck through. A tap edits a card in place, and a first-use coach teaches the gestures, but not under reduce motion. The slider and its stored step go.
+
 #### Flow
 
 - **Source** — the photo button opens the sheet "사진 가져오기" over the screen it is on, with "사진 찍기", the system camera, and "앨범에서 고르기", the library ([ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md)):
@@ -222,6 +228,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - [ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md) records the notes cards, the fullest and short answers and the detail step, why `back` stays readable, prompt v3, the notes samples and metrics, and why the eval scores notes by terms rather than a judge model; issue #148 records the owner's request.
 - [ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md) records the five-step slider, which rows each step offers and how full their answers are, why a hidden row is not saved, the reading of the old response, and why a stored level maps to a step.
 - [ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md) records the system camera and the library in place of the in-app camera view, why the source sheet comes before the screen, the deck chip on review, the refusal and its way to Settings, why Android declares no camera permission, and the black screen's cause; issue #174 records the owner's report and choice.
+- [ADR 0057](adr/0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md) records the cards grouped by topic on Review, the switches and swipes that replace the slider and the checkboxes, and why the survey and the choice screen of its earlier versions were dropped; issue #182 records the owner's request and decisions.
 - Issue #73 records the fields, the no-invention rule, the three levels and where the user chooses them, as decided by the PM on 2026-10-15.
 - Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 
