@@ -101,16 +101,10 @@ const MODEL_LIST = {
 type World = {
   files: Map<string, string>;
   chatCalls: string[];
-  /** The user turn of each chat request, as sent. */
-  userTurns: unknown[];
   printed: string[];
   /** The cost each chat reply reports. */
   replyCost: number;
 };
-
-/** The outline the fake answers every outline call with, and what it reports that call cost. */
-const OUTLINE = [{ topic: "Unit 1", name: "apple", gist: "사과" }];
-const OUTLINE_COST = 0.002;
 
 /** The error body OpenRouter answers a call to `vendor/broken` with, and `vendor/flaky`'s first. */
 const ERROR_BODY = {
@@ -146,13 +140,7 @@ function world(
       JSON.stringify({ image: "02-b.jpg", cards: truth }),
     ],
   ]);
-  return {
-    files,
-    chatCalls: [],
-    userTurns: [],
-    printed: [],
-    replyCost: 0.001,
-  };
+  return { files, chatCalls: [], printed: [], replyCost: 0.001 };
 }
 
 function io(
@@ -166,26 +154,6 @@ function io(
       if (url === OPENROUTER_URL) {
         const body = JSON.parse(String(init?.body));
         w.chatCalls.push(body.model);
-        w.userTurns.push(
-          body.messages.find((m: { role: string }) => m.role === "user")
-            .content,
-        );
-        if (body.response_format.json_schema.name === "outline") {
-          return Promise.resolve(
-            body.model === "vendor/broken"
-              ? Response.json(ERROR_BODY, { status: 400 })
-              : Response.json({
-                choices: [{
-                  message: { content: JSON.stringify({ items: OUTLINE }) },
-                }],
-                usage: {
-                  prompt_tokens: 1000,
-                  completion_tokens: 20,
-                  cost: OUTLINE_COST,
-                },
-              }),
-          );
-        }
         if (
           body.model === "vendor/broken" ||
           (body.model === "vendor/flaky" &&
@@ -450,90 +418,6 @@ Deno.test("a candidate stops after two model errors in a row, its error bodies k
   );
 });
 
-Deno.test("an outline-then-fill candidate lists the page's items on its outline model, then fills on its primary model with the outline in view, and reports both calls", async () => {
-  const w = world(undefined, [
-    { label: "Cheap", primary: "^vendor/cheap$" },
-    { label: "Outlined", outline: "^vendor/dear$", primary: "^vendor/cheap$" },
-  ]);
-  assert.equal(await main([], io(w)), 0);
-  assert.deepEqual(w.chatCalls, [
-    "vendor/cheap",
-    "vendor/cheap",
-    "vendor/dear",
-    "vendor/cheap",
-    "vendor/dear",
-    "vendor/cheap",
-  ], "control: the plain candidate makes one call an image");
-  const outlineTurn = JSON.stringify(w.userTurns[2]);
-  const fillTurn = JSON.stringify(w.userTurns[3]);
-  assert.match(outlineTurn, /List the items of this page/);
-  assert.match(fillTurn, /Extract the cards from this photo/);
-  assert.match(fillTurn, /- Unit 1 \/ apple: 사과/);
-  assert.doesNotMatch(
-    JSON.stringify(w.userTurns[0]),
-    /Another reader listed/,
-    "control: the plain candidate's fill has no outline",
-  );
-
-  const table = w.files.get(PATHS.report) ?? "";
-  assert.match(table, /## Outline then fill/);
-  assert.match(
-    table,
-    /\| Outlined \| \$0\.0020 \| 0\.0 s \| \$0\.0010 \| 0\.0 s \| \$0\.0030 \| — \|/,
-  );
-  assert.doesNotMatch(table, /\| Cheap \| \$0\.0020/);
-  assert.match(
-    table,
-    /- Outlined: outline `vendor\/dear`.*then fill `vendor\/cheap`/,
-  );
-  const reply = JSON.parse(
-    w.files.get("tools/eval/replies/2026-10-15T04-05-06Z/outlined/01-a.json") ??
-      "",
-  );
-  assert.deepEqual(reply.outline.items, OUTLINE);
-  assert.equal(reply.outline.model, "vendor/dear");
-  assert.equal(reply.calls[0].model, "vendor/cheap");
-  assert.equal(
-    JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).spentUsd,
-    0.002 + 2 * (OUTLINE_COST + 0.001),
-    "both calls count toward the spend",
-  );
-});
-
-Deno.test("a failed outline fails its image as a model error, with no fill call", async () => {
-  const w = world(undefined, [
-    {
-      label: "Broken outline",
-      outline: "^vendor/broken$",
-      primary: "^vendor/cheap$",
-    },
-  ]);
-  assert.equal(await main([], io(w)), 0);
-  assert.deepEqual(w.chatCalls, ["vendor/broken", "vendor/broken"]);
-  const reply = JSON.parse(
-    w.files.get(
-      "tools/eval/replies/2026-10-15T04-05-06Z/broken-outline/01-a.json",
-    ) ?? "",
-  );
-  assert.equal(reply.outcome, "model_error");
-  assert.equal(reply.outline.items, null);
-  assert.equal(reply.outline.status, 400);
-  assert.deepEqual(reply.calls, []);
-});
-
-Deno.test("a candidate whose outline pattern matches no usable model stops the run before any call", async () => {
-  const w = world(undefined, [
-    {
-      label: "No outline",
-      outline: "^vendor/text-only$",
-      primary: "^vendor/cheap$",
-    },
-  ]);
-  assert.equal(await main([], io(w)), 1);
-  assert.equal(w.chatCalls.length, 0);
-  assert.ok(w.printed.some((line) => line.includes("No outline")));
-});
-
 Deno.test("a notes sample is scored by coverage, unsupported cards and invented examples, with no step order", async () => {
   const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
   w.files.set(
@@ -617,26 +501,6 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
     JSON.stringify({ image: "03-notes.jpg", ...notesTruth }),
   );
   assert.equal((await loadSamples(io(control))).length, 3);
-});
-
-Deno.test("the dry estimate adds an outline call, and the outline read by the fill, to an outline-then-fill candidate", () => {
-  const models = parseModels(MODEL_LIST);
-  const cheap = newest("^vendor/cheap$", models);
-  const dear = newest("^vendor/dear$", models);
-  assert.ok(cheap !== null && dear !== null);
-  const sizes = [{ cards: 10, tokensPerCard: TYPICAL_NOTE_TOKENS_PER_CARD }];
-  const plain = estimateUsd(
-    [{ label: "c", primary: cheap, retry: cheap }],
-    sizes,
-  );
-  const outlined = estimateUsd(
-    [{ label: "o", primary: cheap, retry: cheap, outline: dear }],
-    sizes,
-  );
-  const outline = 40 * 10;
-  const expected = plain + 2 * outline * cheap.pricing.prompt +
-    2500 * dear.pricing.prompt + (1000 + outline) * dear.pricing.completion;
-  assert.ok(Math.abs(outlined - expected) < 1e-12, `${outlined} ${expected}`);
 });
 
 Deno.test("the dry estimate prices a note card above a vocabulary card", () => {

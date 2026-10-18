@@ -243,16 +243,6 @@ export type Row = {
   readonly inventedRate: number | null;
   /** The notes results, null without a notes image. */
   readonly notes: NotesRow | null;
-  /**
-   * For an outline-then-fill configuration, each call's cost per image and p50 latency: the
-   * outline call's, and the fill's with its retry. Null for a configuration of one call.
-   */
-  readonly outline: {
-    readonly costPerImageUsd: number;
-    readonly p50Ms: number;
-    readonly fillCostPerImageUsd: number;
-    readonly fillP50Ms: number;
-  } | null;
   readonly p50Ms: number;
   readonly p90Ms: number;
   readonly costPerImageUsd: number;
@@ -268,10 +258,6 @@ export type ImageResult = {
   readonly costUsd: number;
   /** The completion tokens of every call for the image, retry included. */
   readonly completionTokens: number;
-  /** The outline call's cost and latency, which `costUsd` and `latencyMs` include; null without one. */
-  readonly outline:
-    | { readonly costUsd: number; readonly latencyMs: number }
-    | null;
 };
 
 export function summarize(label: string, images: readonly ImageResult[]): Row {
@@ -308,31 +294,10 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
     ),
     inventedRate: share(sum((f) => f.invented), sum((f) => f.fields)),
     notes: notes.length === 0 ? null : summarizeNotes(notes),
-    outline: summarizeOutline(images),
     p50Ms: percentile(latencies, 50),
     p90Ms: percentile(latencies, 90),
     costPerImageUsd: spentUsd / images.length,
     spentUsd,
-  };
-}
-
-function summarizeOutline(images: readonly ImageResult[]): Row["outline"] {
-  const outlined = images.flatMap((image) =>
-    image.outline === null ? [] : [{ image, outline: image.outline }]
-  );
-  if (outlined.length === 0) return null;
-  const total = (pick: (entry: (typeof outlined)[number]) => number) =>
-    outlined.reduce((sum, entry) => sum + pick(entry), 0);
-  return {
-    costPerImageUsd: total((entry) => entry.outline.costUsd) / outlined.length,
-    p50Ms: percentile(outlined.map((entry) => entry.outline.latencyMs), 50),
-    fillCostPerImageUsd:
-      total((entry) => entry.image.costUsd - entry.outline.costUsd) /
-      outlined.length,
-    fillP50Ms: percentile(
-      outlined.map((entry) => entry.image.latencyMs - entry.outline.latencyMs),
-      50,
-    ),
   };
 }
 

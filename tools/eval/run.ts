@@ -49,7 +49,6 @@ import {
   scoreNotes,
   summarize,
 } from "./metrics.ts";
-import { type Outline, outline, withOutline } from "./outline.ts";
 import {
   type Candidate,
   type Model,
@@ -236,18 +235,12 @@ export type Call =
   | { readonly status: number; readonly body: unknown }
   | { readonly error: string };
 
-/**
- * What one candidate returned for one image: the parsed cards, and every call's answer, an
- * outline-then-fill configuration's outline call first, with the items it listed.
- */
+/** What one candidate returned for one image: the parsed cards, and every call's answer. */
 export type Reply = {
   readonly candidate: string;
   readonly sample: string;
   readonly outcome: Extraction["kind"];
   readonly cards: readonly unknown[];
-  readonly outline?:
-    & { readonly model: string; readonly items: Outline["items"] }
-    & Call;
   readonly calls: readonly ({ readonly model: string } & Call)[];
 };
 
@@ -303,38 +296,17 @@ export async function runEval(
         break;
       }
       const worst = worstCallUsd(candidate.primary.pricing) +
-        worstCallUsd(candidate.retry.pricing) +
-        (candidate.outline === undefined
-          ? 0
-          : worstCallUsd(candidate.outline.pricing));
+        worstCallUsd(candidate.retry.pricing);
       if (spentUsd + worst > remaining(ledger)) {
         return { rows, spentUsd, stopped: true, halted };
       }
-      // An outline-then-fill configuration lists the page's items first; a failed outline
-      // fails the image as a model error, with no fill call.
-      const outlineCalls: Call[] = [];
-      const outlined = candidate.outline === undefined ? null : await outline(
-        sample.image,
-        candidate.outline.id,
-        { ...deps, fetch: recording(deps.fetch, outlineCalls) },
-      );
       const calls: Call[] = [];
-      const extraction: Extraction = outlined?.items === null
-        ? { kind: "model_error", attempts: [] }
-        : await extractCards(
-          sample.image,
-          sample.languages,
-          models,
-          {
-            ...deps,
-            fetch: recording(
-              outlined?.items
-                ? withOutline(deps.fetch, outlined.items)
-                : deps.fetch,
-              calls,
-            ),
-          },
-        );
+      const extraction = await extractCards(
+        sample.image,
+        sample.languages,
+        models,
+        { ...deps, fetch: recording(deps.fetch, calls) },
+      );
       errorsInRow = extraction.kind === "model_error" ? errorsInRow + 1 : 0;
       let costUsd = 0;
       let latencyMs = 0;
@@ -350,17 +322,6 @@ export async function runEval(
         latencyMs += attempt.latencyMs;
         completionTokens += attempt.usage?.completionTokens ?? 0;
       }
-      const outlineCost = outlined === null || candidate.outline === undefined
-        ? null
-        : {
-          costUsd: callUsd(candidate.outline.pricing, outlined.attempt.usage),
-          latencyMs: outlined.attempt.latencyMs,
-        };
-      if (outlineCost !== null && outlined !== null) {
-        costUsd += outlineCost.costUsd;
-        latencyMs += outlineCost.latencyMs;
-        completionTokens += outlined.attempt.usage?.completionTokens ?? 0;
-      }
       spentUsd += costUsd;
       const cards = extraction.kind === "cards" ? extraction.cards : [];
       await deps.keep(`${slug(candidate.label)}/${sample.name}.json`, {
@@ -368,13 +329,6 @@ export async function runEval(
         sample: sample.name,
         outcome: extraction.kind,
         cards,
-        ...(outlined === null ? {} : {
-          outline: {
-            model: outlined.attempt.model,
-            items: outlined.items,
-            ...(outlineCalls[0] ?? { error: "no answer was recorded" }),
-          },
-        }),
         calls: extraction.attempts.map((attempt, i) => ({
           model: attempt.model,
           ...(calls[i] ?? { error: "no answer was recorded" }),
@@ -389,7 +343,6 @@ export async function runEval(
         latencyMs,
         costUsd,
         completionTokens,
-        outline: outlineCost,
       });
       deps.print(
         `${candidate.label} ${sample.name}: ${extraction.kind}, ${
@@ -597,7 +550,6 @@ export function report(
     "",
     ...notesSection(rows),
     ...pagesSection(rows),
-    ...outlineSection(rows),
     "## Recommendation",
     "",
     pick === null
@@ -668,46 +620,14 @@ function pagesSection(rows: readonly Row[]): string[] {
   ];
 }
 
-/**
- * Each outline-then-fill configuration's two calls, their cost per image and p50 latency, and
- * the total with its notes coverage; nothing when no configuration runs an outline.
- */
-function outlineSection(rows: readonly Row[]): string[] {
-  const outlined = rows.flatMap((row) =>
-    row.outline === null ? [] : [{ row, outline: row.outline }]
-  );
-  if (outlined.length === 0) return [];
-  const pct = (value: number | null | undefined) =>
-    value === null || value === undefined ? "—" : (value * 100).toFixed(1);
-  return [
-    "## Outline then fill",
-    "",
-    "The outline call lists the page's items on one model; the fill call is the function's own extraction, retry included, on another, with that list in its user turn. Cost is per image, latency the p50 per image.",
-    "",
-    "| Configuration | Outline cost | Outline latency | Fill cost | Fill latency | Total cost | Notes coverage |",
-    "|---|---|---|---|---|---|---|",
-    ...outlined.map(({ row, outline }) =>
-      `| ${row.label} | ${usd(outline.costPerImageUsd)} | ${
-        seconds(outline.p50Ms)
-      } | ${usd(outline.fillCostPerImageUsd)} | ${
-        seconds(outline.fillP50Ms)
-      } | ${usd(row.costPerImageUsd)} | ${pct(row.notes?.coverage)} |`
-    ),
-    "",
-  ];
-}
-
 function describe(candidate: Candidate): string {
   const model = (m: Model) =>
     `\`${m.id}\` (${usd(m.pricing.prompt * 1e6)}/M prompt, ${
       usd(m.pricing.completion * 1e6)
     }/M completion)`;
-  const fill = candidate.retry.id === candidate.primary.id
+  return candidate.retry.id === candidate.primary.id
     ? model(candidate.primary)
     : `${model(candidate.primary)}, retry ${model(candidate.retry)}`;
-  return candidate.outline === undefined
-    ? fill
-    : `outline ${model(candidate.outline)}, then fill ${fill}`;
 }
 
 const usd = (value: number) => `$${value.toFixed(4)}`;
