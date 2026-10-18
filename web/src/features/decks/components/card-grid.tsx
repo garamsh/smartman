@@ -79,7 +79,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
       </div>
       {shown.length === 0 ? (
         <p role="status" className="text-muted">
-          찾는 카드가 없어요. 다른 말로 검색해 보세요.
+          찾는 카드가 없어요. 다른 단어로 검색해 보세요.
         </p>
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-2.5">

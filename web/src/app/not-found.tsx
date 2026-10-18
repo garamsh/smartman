@@ -7,7 +7,7 @@ export default function NotFound() {
       <h1 className="text-2xl font-bold">찾는 페이지가 없어요</h1>
       <p className="text-muted">삭제되었거나 주소가 잘못되었어요. 덱 목록에서 다시 골라 주세요.</p>
       <Link
-        href="/"
+        href="/decks"
         className="flex min-h-button items-center justify-center rounded-row bg-ink px-6 font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         덱 목록

@@ -1,6 +1,8 @@
 "use client";
 
-/** What a page shows when rendering it failed unexpectedly. */
+import Link from "next/link";
+
+/** What a page shows when rendering it failed unexpectedly: a retry, and a way back to 오늘. */
 export default function ErrorPage({
   reset,
 }: {
@@ -18,6 +20,12 @@ export default function ErrorPage({
       >
         다시 시도
       </button>
+      <Link
+        href="/"
+        className="flex min-h-button items-center justify-center rounded-row border border-outline bg-surface px-6 font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        오늘로 가기
+      </Link>
     </main>
   );
 }

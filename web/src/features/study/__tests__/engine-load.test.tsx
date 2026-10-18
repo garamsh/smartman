@@ -48,13 +48,14 @@ const plan: SessionPlan = {
 };
 
 describe("the study screen's engine", () => {
-  it("says it could not load the study screen, and 다시 시도 loads it and starts the session", async () => {
+  it("says it could not load the study screen, offers 그만하기 back to 오늘, and 다시 시도 loads it and starts the session", async () => {
     render(<StudyScreen plan={plan} loading={<p>불러오는 중</p>} />);
 
     expect(
       await screen.findByText("학습 화면을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "그만하기" })).toHaveAttribute("href", "/");
 
     await userEvent.setup().click(screen.getByRole("button", { name: "다시 시도" }));
 

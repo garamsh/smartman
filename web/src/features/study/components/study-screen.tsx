@@ -122,15 +122,20 @@ export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: Rea
           <p className="text-dont-know-text">
             학습 화면을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setEngine("loading");
-            }}
-            className={`${button} self-start bg-ink text-on-primary`}
-          >
-            다시 시도
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEngine("loading");
+              }}
+              className={`${button} bg-ink text-on-primary`}
+            >
+              다시 시도
+            </button>
+            <Link href="/" className={quiet}>
+              그만하기
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -326,9 +331,9 @@ function Session({ plan }: { plan: SessionPlan }) {
         <Link
           ref={closeLink}
           href="/"
-          aria-label="끝내기"
+          aria-label="그만하기"
           aria-keyshortcuts="Escape"
-          title="끝내기 (Esc)"
+          title="그만하기 (Esc)"
           className="flex size-tap-target shrink-0 items-center justify-center rounded-full text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           <X aria-hidden className="size-5" strokeWidth={2.2} />

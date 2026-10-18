@@ -51,7 +51,7 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
       </div>
       {shown.length === 0 ? (
         <p role="status" className="text-muted">
-          찾는 덱이 없어요. 다른 말로 검색해 보세요.
+          찾는 덱이 없어요. 다른 단어로 검색해 보세요.
         </p>
       ) : (
         <ul className="grid gap-row-gap lg:grid-cols-2">

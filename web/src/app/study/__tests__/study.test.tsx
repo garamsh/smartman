@@ -293,8 +293,10 @@ describe("the study page", () => {
       // No new card is left past today's, so the card says so and 그만하기 takes the focus.
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "학습하기" })).not.toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "그만하기" })).toHaveFocus();
-      expect(screen.getByRole("link", { name: "그만하기" })).toHaveAttribute("href", "/");
+      // The top bar's 그만하기 leaves too; the card's is the one in the card.
+      const stop = within(completion).getByRole("link", { name: "그만하기" });
+      expect(stop).toHaveFocus();
+      expect(stop).toHaveAttribute("href", "/");
     });
 
     it("reads the streak before today in one request and counts today's answer with it", async () => {
@@ -715,9 +717,9 @@ describe("the study page", () => {
       expect(stack()[1]).toMatch(/답: 모른다$/);
     });
 
-    it("leaves for the deck list on Esc", async () => {
+    it("leaves for 오늘 on Esc", async () => {
       const user = userEvent.setup();
-      const close = screen.getByRole("link", { name: "끝내기" });
+      const close = screen.getByRole("link", { name: "그만하기" });
       const followed = vi.fn();
       close.addEventListener("click", (event) => {
         event.preventDefault();
@@ -737,7 +739,7 @@ describe("the study page", () => {
       await user.keyboard("?");
 
       const help = screen.getByRole("dialog", { name: "단축키" });
-      for (const action of ["안다", "모른다", "마지막 답 바꾸기", "학습 끝내기", "단축키 보기"]) {
+      for (const action of ["안다", "모른다", "마지막 답 바꾸기", "그만하기", "단축키 보기"]) {
         expect(within(help).getByText(action)).toBeInTheDocument();
       }
       await user.keyboard("{Escape}");
@@ -749,10 +751,10 @@ describe("the study page", () => {
       await userEvent.setup().keyboard("k");
 
       const controls = Object.fromEntries(
-        ["안다", "모른다", "마지막 답 바꾸기", "끝내기", "단축키"].map((name) => [
+        ["안다", "모른다", "마지막 답 바꾸기", "그만하기", "단축키"].map((name) => [
           name,
           screen
-            .getByRole(name === "끝내기" ? "link" : "button", { name })
+            .getByRole(name === "그만하기" ? "link" : "button", { name })
             .getAttribute("aria-keyshortcuts"),
         ]),
       );
@@ -761,7 +763,7 @@ describe("the study page", () => {
         안다: "ArrowRight K",
         모른다: "ArrowLeft J",
         "마지막 답 바꾸기": "Z",
-        끝내기: "Escape",
+        그만하기: "Escape",
         단축키: "?",
       });
     });
@@ -993,5 +995,25 @@ describe("the study page", () => {
       await open("d1");
       expect(earlierFront()).toBe("deux");
     });
+  });
+});
+
+describe("the study page when its decks cannot be read", () => {
+  beforeEach(async () => {
+    setRequestCookies(await signedInCookies());
+  });
+
+  it("says so and offers 그만하기 back to 오늘, since no shell surrounds the page", async () => {
+    const postgrest = new FakePostgrest();
+    server.use(...postgrest.handlers);
+    postgrest.fail("decks", 500);
+    vi.setSystemTime(start);
+
+    await render(Study, { searchParams: Promise.resolve({ decks: "d1" }) });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
+    );
+    expect(screen.getByRole("link", { name: "그만하기" })).toHaveAttribute("href", "/");
   });
 });
