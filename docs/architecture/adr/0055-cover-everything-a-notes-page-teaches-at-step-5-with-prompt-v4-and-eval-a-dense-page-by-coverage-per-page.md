@@ -15,7 +15,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - What a learner memorises from such a page is the theory, its rules, and the special cases, its exceptions. A worked example such as "가 + 아라 = 가라" is a problem, not a thing to memorise: it is never a card of its own, only an example on the card of the rule it illustrates, and only when the page prints it.
   - A card states the theory and is not a quiz. Its front is the concept's name, such as "양성모음", "ㅗ + ㅏ 축약" or "여 불규칙 (하다)", and its back is the theory. Nothing is phrased as a question, such as "양성모음은?".
   - The eval's coverage counts rules and exceptions only. The dense page's worked examples move out of its facts, into the examples of their rule's fact.
-- ADR 0057, in #183 for issue #182, builds a Review that groups a photo's cards by topic, and is built against a `topic` of 1 to 60 characters on each card, which this ADR adds to the function.
+- [ADR 0057](0057-group-a-photo-s-cards-by-topic-on-review-with-a-switch-per-topic-and-swipes-per-card.md), from issue #182, decides a Review that groups a photo's cards by topic, and is built against a `topic` of 1 to 60 characters on each card, which this ADR adds to the function.
 - Issue #184 found, from kept replies, that a rule's worked example printed inside the rule's line counted as an invented example, since the ground truth listed only examples on lines of their own; #185 adds every printed line to the notes truth.
 - **Measurement of the limits, without a model call.**
   - The dense page added below holds 25 lines of content and 24 worked examples, such as "보+아라 -> 봐라". Even if every line and every worked example became its own card, that is 49 cards, under the 100-card cap.
