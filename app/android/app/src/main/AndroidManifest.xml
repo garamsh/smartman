@@ -1,9 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-    <!-- Photo import takes a photo of a page; the camera package also declares this. -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!-- The camera package declares this for video with sound; photo import opens the camera without audio. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:label="smartman"
         android:name="${applicationName}"

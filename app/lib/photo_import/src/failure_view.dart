@@ -8,13 +8,15 @@ import 'failure.dart';
 import 'failure_message.dart';
 
 /// What went wrong, in plain words, with a retry where sending the same photo
-/// again can succeed and a retake where a new photo can.
+/// again can succeed, a retake where a new photo can, and the way to Settings
+/// where access was refused.
 class FailureView extends StatelessWidget {
   const FailureView({
     super.key,
     required this.failure,
     required this.onRetry,
     required this.onRetake,
+    required this.onOpenSettings,
   });
 
   final PhotoImportFailure failure;
@@ -24,10 +26,16 @@ class FailureView extends StatelessWidget {
 
   final VoidCallback onRetake;
 
+  /// Opens this app's page in the system settings; null when access was not
+  /// what failed.
+  final VoidCallback? onOpenSettings;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final onRetry = this.onRetry;
+    final onOpenSettings = this.onOpenSettings;
+    final primaryElsewhere = onRetry != null || onOpenSettings != null;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -64,9 +72,9 @@ class FailureView extends StatelessWidget {
                 Expanded(
                   child: AppButton(
                     label: l10n.retake,
-                    variant: onRetry == null
-                        ? AppButtonVariant.primary
-                        : AppButtonVariant.secondary,
+                    variant: primaryElsewhere
+                        ? AppButtonVariant.secondary
+                        : AppButtonVariant.primary,
                     size: AppButtonSize.cta,
                     onPressed: onRetake,
                   ),
@@ -79,7 +87,15 @@ class FailureView extends StatelessWidget {
                     onPressed: onRetry,
                   ),
                 ),
-              if (!isRetakeable(failure) && onRetry == null)
+              if (onOpenSettings != null)
+                Expanded(
+                  child: AppButton(
+                    label: l10n.openSettings,
+                    size: AppButtonSize.cta,
+                    onPressed: onOpenSettings,
+                  ),
+                ),
+              if (!isRetakeable(failure) && !primaryElsewhere)
                 Expanded(
                   child: AppButton(
                     label: l10n.close,

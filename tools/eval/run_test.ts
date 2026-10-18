@@ -280,6 +280,48 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.doesNotMatch(table, /## Notes pages/, "no notes image ran");
 });
 
+/** An I/O whose write to [failing] rejects, as a missing grant does, after the paid calls. */
+function failingWrite(w: World, failing: string): Io {
+  const base = io(w);
+  return {
+    ...base,
+    writeText: (path, text) =>
+      path === failing
+        ? Promise.reject(new Error(`no write access to ${path}`))
+        : base.writeText(path, text),
+  };
+}
+
+Deno.test("a failed report write still records the run in the ledger", async () => {
+  const w = world();
+  await assert.rejects(
+    main([], failingWrite(w, PATHS.report)),
+    /no write access to docs\/eval/,
+  );
+  assert.equal(w.chatCalls.length, 4, "the calls were made");
+  assert.equal(w.files.get(PATHS.report), undefined);
+  assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
+    date: "2026-10-15",
+    spentUsd: 0.004,
+    note: "prompt v3",
+  }]);
+});
+
+Deno.test("the report is written before the ledger, so a failed ledger write leaves the report", async () => {
+  const w = world();
+  await assert.rejects(
+    main([], failingWrite(w, PATHS.ledger)),
+    /no write access to tools\/eval\/spend\.json/,
+  );
+  assert.match(w.files.get(PATHS.report) ?? "", /\| Cheap \| 100\.0 \|/);
+  assert.ok(
+    w.printed.includes(
+      "this run spent $0.0040; $0.0040 of $10.0000 spent in total",
+    ),
+    "the spend is printed before either write",
+  );
+});
+
 Deno.test("a notes sample is scored by coverage per step, unsupported cards, invented examples and step order", async () => {
   const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
   w.files.set(

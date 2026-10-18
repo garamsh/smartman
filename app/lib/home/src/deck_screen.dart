@@ -266,7 +266,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 
   /// Offers the two ways to add a card: typing it in, or from a photo.
-  Future<void> _addCard(Widget Function(DeckId? deck) photoImport) async {
+  Future<void> _addCard(PhotoImport photoImport) async {
     final l10n = AppLocalizations.of(context);
     final photo = await showOptionSheet(
       context,
@@ -297,13 +297,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     }
   }
 
-  /// Opens photo import for this deck. When it saved into another deck, that
-  /// deck's list replaces this one.
-  Future<void> _importPhoto(Widget Function(DeckId? deck) photoImport) async {
+  /// Starts photo import for this deck. When it saved into another deck,
+  /// that deck's list replaces this one.
+  Future<void> _importPhoto(PhotoImport photoImport) async {
     final navigator = Navigator.of(context);
-    final deck = await navigator.push(
-      MaterialPageRoute<Deck>(builder: (_) => photoImport(widget.deck.id)),
-    );
+    final deck = await photoImport(context, widget.deck.id);
     if (deck == null || deck.id == widget.deck.id || !mounted) return;
     await navigator.pushReplacement(
       MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),

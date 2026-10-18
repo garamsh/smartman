@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,9 +12,13 @@ import 'package:smartman/photo_import/src/photo.dart';
 /// A small prepared photo.
 final testPhoto = downscalePhoto(img.encodePng(img.Image(width: 8, height: 6)));
 
-/// A camera and a library that hand over [testPhoto], or fail as told.
+/// A system camera and a library that hand over [testPhoto], or fail as
+/// told, and a settings page that opens as told.
 final class FakePhotoSource implements PhotoSource {
-  /// Thrown by [openCamera] instead of opening, when set.
+  /// What the camera returns; null is a cancelled shot.
+  JpegPhoto? cameraPhoto = testPhoto;
+
+  /// Thrown by [takePhoto] instead of returning, when set.
   PhotoImportFailure? cameraFailure;
 
   /// What the library returns; null is a cancelled pick.
@@ -24,52 +27,32 @@ final class FakePhotoSource implements PhotoSource {
   /// Thrown by [pickFromLibrary] instead of returning, when set.
   PhotoImportFailure? libraryFailure;
 
-  /// When set, each [openCamera] waits until [finishOpen] lets it finish.
-  bool holdOpens = false;
-  final _held = <Completer<void>>[];
+  /// What [openSettings] resolves to.
+  bool settingsOpen = true;
 
-  /// Calls to [openCamera], including those that fail or are held.
-  int openCalls = 0;
-  int opened = 0;
-  int closed = 0;
+  int cameraCalls = 0;
+  int libraryCalls = 0;
+  int settingsCalls = 0;
 
   @override
-  Future<CameraSession> openCamera() async {
-    openCalls++;
-    if (holdOpens) {
-      final held = Completer<void>();
-      _held.add(held);
-      await held.future;
-    }
+  Future<JpegPhoto?> takePhoto() async {
+    cameraCalls++;
     if (cameraFailure case final failure?) throw failure;
-    opened++;
-    return _FakeCamera(this);
+    return cameraPhoto;
   }
-
-  /// Lets the oldest held open finish; it fails if [cameraFailure] is set.
-  void finishOpen() => _held.removeAt(0).complete();
 
   @override
   Future<JpegPhoto?> pickFromLibrary() async {
+    libraryCalls++;
     if (libraryFailure case final failure?) throw failure;
     return libraryPhoto;
   }
-}
-
-final class _FakeCamera implements CameraSession {
-  _FakeCamera(this._source);
-
-  final FakePhotoSource _source;
 
   @override
-  Widget get preview =>
-      const SizedBox(key: Key('camera preview'), width: 300, height: 400);
-
-  @override
-  Future<JpegPhoto> takePicture() async => testPhoto;
-
-  @override
-  Future<void> close() async => _source.closed++;
+  Future<bool> openSettings() async {
+    settingsCalls++;
+    return settingsOpen;
+  }
 }
 
 /// One extraction the test answers.
@@ -98,10 +81,10 @@ final class FakeExtractionClient implements ExtractionClient {
     return call.answer.future;
   }
 
-  /// Answers the last call with cards, front → meaning.
+  /// Answers the last call with vocabulary cards at step 1, front → answer.
   void answer(Map<String, String> cards) => answerCards([
-    for (final MapEntry(key: front, value: meaning) in cards.entries)
-      CandidateCard(front: front, meaning: meaning),
+    for (final MapEntry(key: front, value: answer) in cards.entries)
+      CandidateCard(front: front, answer: answer),
   ]);
 
   /// Answers the last call with [cards].
@@ -124,7 +107,7 @@ Future<SharedPreferencesWithCache> openPreferences(
   return (await tester.runAsync(
     () => SharedPreferencesWithCache.create(
       cacheOptions: const SharedPreferencesWithCacheOptions(
-        allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
+        allowList: {...themeStorageKeys, ...detailStepStorageKeys},
       ),
     ),
   ))!;

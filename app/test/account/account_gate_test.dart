@@ -89,7 +89,7 @@ void main() {
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: {...themeStorageKeys, ...detailLevelStorageKeys},
+          allowList: {...themeStorageKeys, ...detailStepStorageKeys},
         ),
       ),
     ))!;
@@ -294,7 +294,7 @@ void main() {
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Study'));
       },
-      'photo import': (tester) async {
+      'photo source sheet': (tester) async {
         await tapAndSettle(tester, find.text('Create a deck'));
         await tapAndSettle(tester, find.text('Create from photo'));
       },
@@ -352,7 +352,7 @@ void main() {
         expect(find.byType(HomeScreen), findsNothing);
         expect(find.byType(StudyScreen), findsNothing);
         expect(find.byType(AccountScreen), findsNothing);
-        expect(find.byType(PhotoImportScreen), findsNothing);
+        expect(find.text('Choose from album'), findsNothing);
         expect(find.text('French'), findsNothing);
         expect(find.text('Chat'), findsNothing);
         await unmountApp(tester);

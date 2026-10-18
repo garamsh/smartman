@@ -360,9 +360,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get syncRetry => '다시 시도';
 
   @override
-  String get photoCaptureHint => '단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요';
-
-  @override
   String photoTarget(String name) {
     return '추가할 덱 · $name';
   }
@@ -371,16 +368,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get photoTargetTitle => '추가할 덱';
 
   @override
+  String get photoSourceTitle => '사진 가져오기';
+
+  @override
+  String get photoCamera => '사진 찍기';
+
+  @override
   String get photoAlbum => '앨범에서 고르기';
 
   @override
-  String get photoShutter => '사진 찍기';
-
-  @override
-  String get cameraDenied => '카메라 사용이 허용되지 않았어요. 설정에서 허용하거나 앨범에서 사진을 골라 주세요.';
+  String get photoAccessDenied => '카메라나 앨범 사용이 허용되지 않았어요. 설정에서 허용해 주세요.';
 
   @override
   String get cameraUnavailable => '카메라를 열 수 없어요. 앨범에서 사진을 골라 주세요.';
+
+  @override
+  String get openSettings => '설정 열기';
+
+  @override
+  String get settingsNotOpened => '설정을 열지 못했어요. 설정 앱에서 직접 허용해 주세요.';
 
   @override
   String get photoThumbnail => '찍은 사진';
@@ -397,21 +403,30 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String reviewHint(String deck) {
-    return '눌러서 고치고, 뺄 카드는 체크를 끄세요 · $deck';
+  String get reviewHint => '눌러서 고치고, 뺄 카드는 체크를 끄세요';
+
+  @override
+  String get detailStepLabel => '카드에 담을 내용';
+
+  @override
+  String get detailStepCore => '핵심';
+
+  @override
+  String get detailStepKeyPoints => '요점';
+
+  @override
+  String get detailStepBasic => '기본';
+
+  @override
+  String get detailStepDetailed => '자세히';
+
+  @override
+  String get detailStepFull => '세부';
+
+  @override
+  String detailStepValue(String name, int step) {
+    return '$name, 5단계 중 $step단계';
   }
-
-  @override
-  String get detailLevelLabel => '카드에 담을 내용';
-
-  @override
-  String get detailLevelSimple => '간단';
-
-  @override
-  String get detailLevelBasic => '기본';
-
-  @override
-  String get detailLevelDetailed => '자세히';
 
   @override
   String get candidateEdited => '직접 고침';

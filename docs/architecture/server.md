@@ -1,6 +1,6 @@
 # Server
 
-The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, and the tests that hold them.
+The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
 
 ## Current decisions
 
@@ -17,6 +17,18 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `check-migration-order.sh`, run by `make lint`, fails when a migration file that `main` lacks has a version not later than the latest on `main`, or a name not starting with 14 digits. It reads `main` as the first parent of a pull request's merge commit in CI, where the ubuntu job's checkout fetches two commits deep, and as where `HEAD` left `origin/main` locally. It prints the number of new files and the base it compared with.
   - Branch protection on `main` requires branches to be up to date: `gh api repos/garamsh/smartman/branches/main/protection`, read 2026-10-18, returned `required_status_checks.strict: true` with the contexts `ci (ubuntu-latest)` and `ci (macos-latest)`, the CI jobs' names until #101 renamed them `ci (ubuntu)` and `ci (macos)`, which the PM sets as the required contexts when #101 merges. Of two pull requests that each pass the check against the same `main`, the second cannot merge until its branch is updated and the check runs again against the first.
   - `check-migration-order.test.sh`, run by `make test`, runs the check on repositories it builds in a temporary directory. It covers a merge commit cloned two commits deep, as CI checks one out, and a branch beside `origin/main`.
+
+### Edge Function deploys
+
+- **Deploy path.** When a pull request changing a function under `supabase/functions/` merges into `main`, Supabase's GitHub integration deploys it to the production project; no one runs `supabase functions deploy`. It deploys the functions `supabase/config.toml` declares under `[functions.<slug>]`, `extract-cards` and `delete-account`, and uploads one only when its bundle or its JWT verification setting changed. A function's bundle includes `supabase/functions/_shared/`, so a change there deploys both.
+  - Source: Supabase's GitHub integration guide, `apps/docs/content/guides/deployment/branching/github-integration.mdx` in `supabase/supabase` at commit `626f0d412a5f88ef260289d4ed2b787f9705d6fc`, committed 2026-10-14, read 2026-10-18. Under "Deploying changes to production" it lists "Edge Functions declared in `config.toml` are deployed"; under "Edge Functions" it says "A function is uploaded again only when it changed."
+  - Measured: #169's merge `5ab5440e4475237dc21f25911a4d9f52ab89c3a1` at 19:20:11Z on 2026-10-17 changed, under `supabase/`, only files in `supabase/functions/extract-cards/`. Its `Supabase Preview` check ran 19:20:38–19:20:47Z. On 2026-10-18, `supabase functions list` showed `extract-cards` at version 9, updated 19:20:46 UTC, and no one had deployed it by hand (issue #177).
+  - To confirm a function reached production: the `Supabase Preview` check succeeded on the merge commit, and `supabase functions list` shows the function updated during that check.
+- **Secrets.** The integration sets only the function secrets `config.toml` declares under `[edge_runtime.secrets]` (the same guide: "The step saves the function secrets declared under `[edge_runtime.secrets]`"), and `config.toml` declares none. The functions' secrets, `CARD_MODEL`, `OPENROUTER_API_KEY` and, where used, `CARD_RETRY_MODEL` ([`ai-extraction.md`](ai-extraction.md)), are set by hand on the production project by the owner or the PM; a merge changes none of them.
+- **Gate.** A pull request changing a function merges only after the owner approves it when the change:
+  - needs a secret the production project lacks, or a new value of one, which the owner or the PM sets before the merge, since the deploy the merge makes would otherwise run without it;
+  - changes which model is called, or otherwise the cost of a call, since cost is the owner's.
+  The PM asks with the reviewed pull request in hand. A prompt change on the same model ships as merged after the PM's review, with the eval as its evidence where one applies. A response the apps in use cannot read is not merged ([ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md)). Every other function change is deployed as merged, so it must be correct then. Workers make no change to the remote project.
 
 ### Tables
 
@@ -81,7 +93,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - The `delete-account` Edge Function deletes the caller's user from `auth.users` through Supabase Auth's admin API, with the service-role key, which stays in the function ([`account.md`](account.md), [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). The deletion is hard, so the cascade runs.
 - Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. Another user's copy of a deleted user's deck stays theirs.
 - A new table holding a user id references `auth.users` with `on delete cascade`.
-- Only the PM deploys the function, after the pull request that adds or changes it merges.
+- Merging the pull request that adds or changes the function deploys it (§Edge Function deploys).
 
 ### Integrity
 
@@ -118,14 +130,33 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - It is `security definer`, `volatile`, since it takes a lock, and sets `search_path = ''`. `execute` is revoked from `public` and `anon` and granted to `authenticated`.
 - Migration `20261017120000_sync_horizon.sql` added the table, holding 0, and the function, changing no row.
 
+### Tombstone purge
+
+- A `pg_cron` job, `purge-tombstones`, runs `private.purge_tombstones()` daily at 18:00 GMT, 03:00 in Korea ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §3). Each run:
+  - records the revision sequence's last value in `private.revision_marks`, with the server's time;
+  - deletes `cron.job_run_details` rows that ended more than 30 days earlier;
+  - purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the latest mark taken 90 days or more earlier, and stores that mark as the horizon in `private.sync_horizon`, which `sync_horizon()` returns ([`sync.md`](sync.md));
+  - deletes the marks older than that one.
+  - With no mark 90 days old, a run purges nothing and the horizon stays where it is. The first purge therefore comes 90 days after the first mark.
+- Study history survives deletion (the owner's decision, issue #93):
+  - a card tombstone that no review references is deleted, with its card state;
+  - one that reviews reference keeps its row, stripped: `front` and `back` become `[]` and `card_key` `''`, so its reviews stay in the streak and the statistics;
+  - every card state tombstone is deleted;
+  - a deck tombstone is deleted once no card row references it, with its reports and its users' copy records, which cascade from it. Until then it keeps its row, stripped of its name and description and made private.
+  - A strip is an update, so the row takes a new revision and devices pull it. A row already stripped is not updated again.
+  - Only account deletion removes reviews and the kept rows.
+- A run that purges first locks `cards` and `reviews` in `share row exclusive` mode until it commits. A write to either waits, so no review or card written during the run comes to reference a tombstone the run deletes ([ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md)). A run with no mark 90 days old takes no lock.
+- `private.purge_tombstones()` runs as its owner and sets `search_path = ''`; `execute` is revoked from `public`, `anon` and `authenticated`.
+- Migration `20261018090002_tombstone_purge.sql` added the marks table, the function and the job. It deletes no row itself.
+  - It first calls `private.check_purge_start()`, which raises, changing nothing, unless `pg_cron` is in `pg_available_extensions` and `shared_preload_libraries`, `private.sync_horizon` holds its one row at 0, and no job named `purge-tombstones` exists. The function stays, so its refusals are tested.
+  - It then runs `create extension if not exists pg_cron with schema pg_catalog`. **Merging it enables `pg_cron` in production if it is not on yet**; where the owner enabled Cron first, the statement does nothing.
+- **Order.** The purge was built before any store release, by the owner's decision of 2026-10-18 in issue #108, which supersedes ADR 0034 §9's order of building it after the app's store release ([ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md)). The only client devices then were the owner's, running `main`'s build, which reads the watermark.
+- **Runs.** `cron.job_run_details` records each run, so a failure or a missing day shows there; a horizon that stops rising shows through `sync_horizon()`.
+
 ### Target data model (not built yet)
 
 [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been applied. Until then the decisions above describe the database.
 
-- **Tombstone purge.** `private.revision_marks` records the sequence's last value once a day. A `pg_cron` job then purges the `decks`, `cards` and `card_states` tombstones whose `revision` is at or below the mark taken 90 days earlier, and stores that mark as the horizon in `private.sync_horizon`, which `sync_horizon()` returns ([`sync.md`](sync.md)). The job also deletes `cron.job_run_details` rows older than 30 days.
-  - Study history survives deletion (the owner's decision, issue #93). A card tombstone that reviews reference keeps its row, stripped of `front`, `back` and `card_key`, so its reviews stay in the streak and the statistics. One that no review references is deleted, and so is every card state tombstone.
-  - A deck tombstone is deleted once no card row references it. Until then it keeps its row, stripped of its name and description and made private.
-  - Only account deletion removes reviews and the kept rows.
 - **Functions** run as `security invoker` unless they must reach what the caller cannot. Each `security definer` function sets `search_path = ''` and revokes `execute` from `public`. The definer functions are the revision trigger, `consume_extraction`, `hide_reported_deck`, `record_deck_import`, `sync_horizon` and the purge.
 - **Public listing.** Search stays a scan, matching `strpos` on `lower()`, until a threshold in ADR 0034 is crossed; then a `pg_trgm` GIN index on the visibly public decks serves it. The card count stays a correlated count.
 - **Watching.** After each applied migration, the PM reads Supabase's Security and Performance Advisors, and monthly reads `supabase inspect db outliers` and `index-stats`. Each lint is fixed or recorded in an issue.
@@ -168,6 +199,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
   - `uuid_keys_test.sql` — every synced id and every reference to one is `uuid` with no default, with `extraction_usage.id` as control; the five foreign keys are back; `list_public_decks` returns `uuid` ids and `record_deck_import` takes one, executable by `authenticated` and not `anon`; and a report takes the lock its deck's id took as text, with the third report's hide as control;
   - `checks_policies_test.sql` — each of the five checks refuses what it names, with an accepted row beside each as control, tombstones included, and all five are validated; `decks`, `cards` and `profiles` have one policy per command, the select policy testing the owner first, with an insert policy as the pattern's control;
+  - `tombstone_purge_test.sql` — a run with no mark 90 days old purges nothing, keeps the horizon at 0, takes a mark, takes no lock and trims the run details past 30 days, with those within kept as control; a run past the 91-day mark raises the horizon to it, not to the 89-day one, strips a studied card's tombstone with its review kept and a new revision, deletes an unstudied one and every card state tombstone, deletes a deck tombstone left without cards and strips one holding a stripped card, and locks `cards` and `reviews`, with live rows and a tombstone above the horizon untouched as controls; the job's schedule; the function's owner rights and privileges; and the migration's guard passing with the horizon at 0 and no job, as control, and refusing a stored horizon, a missing horizon row and an existing job;
   - `sync_horizon_test.sql` — the horizon is 0 until one is stored and then the stored one; the watermark is the sequence's last value, at or above the caller's latest row and below a row written after the call; the call takes the caller's revision lock, with another user's lock before its call as control; and the function runs as its owner, volatile, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `study_days_test.sql` — the study days before a time, oldest first, rests left out, a review and a first answer apart with a deleted earlier answer read for nothing, a 10-minute answer counted at the cap with a higher cap as control, only the latest so many study days with history before them changing nothing and a longer window reading it as control, the 04:00 boundary in Seoul, answers at or after the time left out, only the caller's answers; an unknown zone raises; and the function runs as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `study_record_test.sql` — on the histories `app/test/study/stats_test.dart` counts: a card's first answer of a later study day scheduled from 04:00, its first answer ever, a re-show and a second answer the same day not, a deleted answer and answers at or after the time left out, the 04:00 boundary in Seoul with each card counted once a day and UTC as control, only the caller's answers, an unknown zone raising; each live card of a live deck with an answer, its state or none and its live answers in order with their fuzz factors, with a deleted card, a card of a deleted deck, a card with no answer and a deleted state each restored or added as control; and both functions run as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
@@ -193,8 +225,10 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why `sync_horizon()` returns a watermark read under the caller's lock beside the horizon.
 - [ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md) records why the web reads a day's study days through `study_days_before`.
 - [ADR 0047](adr/0047-read-the-web-record-through-two-server-functions-and-fold-it-through-the-engine-on-the-server.md) records why the web's 기록 reads through `study_record_days` and `study_record_cards`, and folds the cards through the engine on the server.
+- [ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md) records why the purge was built before any store release, why its migration enables `pg_cron`, and why a run locks `cards` and `reviews`; issue #108 records the owner's decision.
 - [ADR 0048](adr/0048-name-each-new-migration-after-every-migration-on-main-and-check-it-in-make-lint.md) records how the integration treats an older migration, with its source, and why a new migration is named after every one on `main`; issue #149 records the finding.
 - Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, issue #106 the horizon and the watermark, issue #107 the web's version 7 ids, and issue #113 the advisor lints read after #112.
+- Issue #177 records that merging deployed `extract-cards`, with its timestamps; the PM decided the function gate in the dispatch of #177 on 2026-10-18.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions

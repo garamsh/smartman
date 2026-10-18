@@ -384,10 +384,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncRetry => 'Try again';
 
   @override
-  String get photoCaptureHint =>
-      'Fit one page of a vocabulary book or textbook inside the frame';
-
-  @override
   String photoTarget(String name) {
     return 'Add to · $name';
   }
@@ -396,18 +392,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get photoTargetTitle => 'Add to';
 
   @override
+  String get photoSourceTitle => 'Add a photo';
+
+  @override
+  String get photoCamera => 'Take photo';
+
+  @override
   String get photoAlbum => 'Choose from album';
 
   @override
-  String get photoShutter => 'Take photo';
-
-  @override
-  String get cameraDenied =>
-      'The app isn\'t allowed to use the camera. Allow it in Settings, or choose a photo from your album.';
+  String get photoAccessDenied =>
+      'The app isn\'t allowed to use the camera or your photos. Allow it in Settings.';
 
   @override
   String get cameraUnavailable =>
       'Couldn\'t open the camera. Choose a photo from your album.';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get settingsNotOpened =>
+      'Couldn\'t open Settings. Allow it in the Settings app.';
 
   @override
   String get photoThumbnail => 'Your photo';
@@ -431,21 +437,30 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reviewHint(String deck) {
-    return 'Tap to edit, and uncheck the cards to leave out · $deck';
+  String get reviewHint => 'Tap to edit, and uncheck the cards to leave out';
+
+  @override
+  String get detailStepLabel => 'What the cards hold';
+
+  @override
+  String get detailStepCore => 'Core';
+
+  @override
+  String get detailStepKeyPoints => 'Key points';
+
+  @override
+  String get detailStepBasic => 'Basic';
+
+  @override
+  String get detailStepDetailed => 'Detailed';
+
+  @override
+  String get detailStepFull => 'Every detail';
+
+  @override
+  String detailStepValue(String name, int step) {
+    return '$name, step $step of 5';
   }
-
-  @override
-  String get detailLevelLabel => 'What each card says';
-
-  @override
-  String get detailLevelSimple => 'Simple';
-
-  @override
-  String get detailLevelBasic => 'Basic';
-
-  @override
-  String get detailLevelDetailed => 'Detailed';
 
   @override
   String get candidateEdited => 'Edited';

@@ -123,9 +123,13 @@ class DeckScreens {
           deckRepositoryProvider.overrideWithValue(repository),
           ...homeOverrides(db, stalled: stalled),
           if (photoImport)
-            photoImportProvider.overrideWithValue((deck) {
+            photoImportProvider.overrideWithValue((context, deck) {
               screens.photoImports.add(deck);
-              return const Scaffold(body: Text('photo import'));
+              return Navigator.of(context).push(
+                MaterialPageRoute<Deck>(
+                  builder: (_) => const Scaffold(body: Text('photo import')),
+                ),
+              );
             }),
         ],
         child: MaterialApp(

@@ -44,3 +44,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - The admin API fails often enough that users see the 502 and retry by hand.
 - A signed-in device of the same account, not the one that deleted it, keeps showing the account's data until its session expires, and that is found unacceptable.
 - `_shared/auth.ts` grows branches for one function's needs.
+
+## Errata
+
+- 2026-10-18: §Consequences says "The function must be deployed before the row works; until then the app shows the rejection message". Supabase's GitHub integration deploys a changed function when its pull request merges into `main`, so no deploy follows the merge. #169 merged as `5ab5440e4475237dc21f25911a4d9f52ab89c3a1` at 19:20:11Z on 2026-10-17, and its `Supabase Preview` check on that commit ran 19:20:38–19:20:47Z. On 2026-10-18, `supabase functions list` showed `extract-cards` at version 9, updated 19:20:46 UTC, and no one had deployed it by hand (issue #177). Supabase's GitHub integration guide (`supabase/supabase` commit `626f0d412a5f88ef260289d4ed2b787f9705d6fc`, committed 2026-10-14, read 2026-10-18) lists "Edge Functions declared in `config.toml` are deployed" among the changes deployed to production. The decision stands: the row works once the merge that adds or changes the function has deployed it, and the rejection message covers a request made before that ([`server.md`](../server.md) §Edge Function deploys).
