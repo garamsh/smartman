@@ -45,7 +45,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - a JSON `detail` object;
   - when, as `created_at`.
   - `action` and `target_kind` are snake-case names that the writing function chooses. This area writes `hide_deck`, `unhide_deck`, `unpublish_deck` and `dismiss_reports` on a `deck`, and `grant_admin` and `revoke_admin` on a `user`. #224 adds its own names, such as a plan grant on a `user` or a setting on a `plan`, with no schema change.
-  - Following [`server.md`](../server.md)'s rule for a table holding a user id, `admin_id` references `auth.users` with `on delete cascade`.
+  - `admin_id` references `auth.users` with `on delete set null`, so deleting an admin's account keeps every row it wrote, with `admin_email` saying who acted. This is an exception to [`server.md`](../server.md)'s rule that a table holding a user id cascades: an audit log that its subjects' deletion erases records nothing (the PM's review of #227).
 - **Authorisation is in Postgres.**
   - Every admin read and write is a `security definer` function in `public`, with an empty `search_path`, granted to `authenticated` only.
   - Each function first calls `private.require_admin()`, which raises `insufficient_privilege` (`42501`) unless the caller has a row in `private.admins`.
@@ -65,7 +65,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
     - `admin_unpublish_deck(deck_id)`, which makes the deck private with an edit time of now, so it wins over an older edit on a device and the owner's devices pull it;
     - `admin_dismiss_reports(deck_id)`, which deletes the deck's reports and leaves a hidden deck hidden;
     - `admin_grant_admin(email)`, for an existing user;
-    - `admin_revoke_admin(user_id)`, which refuses the caller's own role, so the last admin always remains.
+    - `admin_revoke_admin(user_id)`, which refuses the caller's own role. Revokes run one at a time under an advisory lock seeded with 3, and the caller's role is checked again once the lock is held, so two admins revoking each other at once cannot leave none: the second finds itself revoked. The last admin therefore always remains.
     - A write that changes nothing records nothing.
 - **The web area** is `/admin`, in the `(shell)` route group, with the section menu "관리 메뉴": 개요, 신고, 공개 덱, 사용자, 관리자 and 작업 기록.
   - Its layout renders nothing until `is_admin` answers. An admin then sees the menu and the page; anyone else gets the not-found page, and a server that cannot answer gets the error page.
@@ -90,7 +90,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - Granting or revoking admin takes effect on the next request; nothing waits for a token to expire.
 - #224's Plans page and plan grants add functions that call `private.require_admin()` and `private.audit()`, and pages under `/admin`. No change to the role or the log is needed.
 - The area lists every public deck and every reported deck in one page each, with no paging. A later change pages them when the lists grow.
-- Deleting an admin's account deletes that admin's audit rows with it, by the cascade rule.
+- Deleting an admin's account keeps the audit rows it wrote, which then name the admin by email alone.
 - The first admin exists only after the PM's insert. Until then, the area is not found for everyone.
 
 ## Signs the decision was wrong
@@ -98,5 +98,4 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - An admin needs a read the functions do not offer, and the functions multiply into one per screen instead of a few that serve several.
 - The audit log's free-form names drift: two names for one action, or a target kind no reader can open.
 - `supabase inspect db outliers` lists an admin function, so the scans need indexes sooner than expected.
-- Operators need the audit trail of a deleted admin, which the cascade removed.
 - A non-admin learns the area exists, from a status code, a title or a timing, so the not-found page does not hide it.

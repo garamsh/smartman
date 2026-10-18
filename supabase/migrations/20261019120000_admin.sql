@@ -13,10 +13,11 @@ create table private.admins (
 
 -- Every admin write: who, what, on what, when. `action` and `target_kind` are the names the
 -- writing function gives (ADR 0070 lists them); a later function adds its own without a schema
--- change. `admin_email` keeps who acted readable once that account is gone.
+-- change. Deleting an admin's account keeps the rows, with `admin_id` set null and `admin_email`
+-- saying who acted.
 create table private.admin_audit (
   id bigint generated always as identity primary key,
-  admin_id uuid references auth.users on delete cascade,
+  admin_id uuid references auth.users on delete set null,
   admin_email text not null,
   action text not null check (action ~ '^[a-z]+(_[a-z]+)*$'),
   target_kind text not null check (target_kind ~ '^[a-z]+(_[a-z]+)*$'),
@@ -475,16 +476,21 @@ end;
 $$;
 
 -- Removes [user_id]'s admin role and records it: 'revoked'; 'self' for the caller's own, so the
--- last admin always remains, or 'not_admin', recording nothing.
+-- last admin always remains, or 'not_admin', recording nothing. Revokes run one at a time under an
+-- advisory lock seeded with 3, and the caller's role is checked again once it is held, so two
+-- admins revoking each other at once cannot leave none: the second finds itself revoked.
 create function public.admin_revoke_admin(user_id uuid) returns text
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  caller uuid := private.require_admin();
+  caller uuid;
   revoked_email text;
 begin
+  perform private.require_admin();
+  perform pg_advisory_xact_lock(hashtextextended('private.admins', 3));
+  caller := private.require_admin();
   if admin_revoke_admin.user_id = caller then
     return 'self';
   end if;

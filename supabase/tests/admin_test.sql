@@ -1,7 +1,7 @@
 -- The admin area's functions (ADR 0070): each refuses a signed-in user who is not an admin and
 -- anon, with an admin as control, and each does what it says, recording every write.
 begin;
-select plan(54);
+select plan(58);
 
 -- A is an admin, B a signed-in user who is not, C owns the decks, D and E report.
 insert into auth.users (id, email, created_at) values
@@ -95,6 +95,18 @@ begin
 end;
 $$;
 
+-- Whether this transaction holds the advisory lock revokes take.
+create function pg_temp.holds_admins_lock() returns boolean language sql as $$
+  select exists (
+    select from pg_locks
+    where locktype = 'advisory' and pid = pg_backend_pid() and granted
+      and classid::bigint = (hashtextextended('private.admins', 3) >> 32) & 4294967295
+      and objid::bigint = hashtextextended('private.admins', 3) & 4294967295
+      and objsubid = 1
+  )
+$$;
+grant execute on function pg_temp.holds_admins_lock() to public;
+
 -- The role.
 
 select results_eq(
@@ -107,10 +119,14 @@ select results_eq(
   $$values (15::bigint)$$,
   'anon is refused by every admin function');
 reset role;
+select is((select pg_temp.holds_admins_lock()), false,
+  'control: no admin call has taken the admins lock yet');
 select is_empty(
   $$select * from pg_temp.refused_as('a')$$,
   'control: an admin is refused by none, and none fails');
 reset role;
+select is((select pg_temp.holds_admins_lock()), true,
+  'an admin''s revoke takes the admins lock, held to commit, so concurrent revokes run one after another');
 
 select pg_temp.sign_in('b');
 select is((select public.is_admin()), false, 'is_admin is false for a user without the role');
@@ -299,6 +315,18 @@ select results_eq(
   $$values ('unhide_deck'), ('hide_deck')$$,
   'a page of the log before a row');
 reset role;
+
+-- Deleting an admin's account keeps the rows it wrote.
+
+delete from auth.users where id = '00000000-0000-4000-8000-00000000000a';
+select results_eq(
+  $$select count(*), count(admin_id) from private.admin_audit where admin_email = 'admin@example.com'$$,
+  $$values (5::bigint, 0::bigint)$$,
+  'a deleted admin''s five writes stay in the log, by email, with no admin id');
+select results_eq(
+  $$select granted_by from private.admins where user_id = '00000000-0000-4000-8000-00000000000b'$$,
+  $$values (null::uuid)$$,
+  'and the role it granted stays, with no granter');
 
 select * from finish();
 rollback;
