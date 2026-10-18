@@ -3,7 +3,15 @@
 library;
 
 export 'src/extraction_client.dart'
-    show CandidateCard, ExtractionClient, extractCardsUrl, HttpExtractionClient;
+    show
+        CandidateCard,
+        CardKind,
+        CardType,
+        Extra,
+        ExtractionClient,
+        extractCardsUrl,
+        HttpExtractionClient,
+        Sense;
 export 'src/failure.dart'
     show
         CameraUnavailable,

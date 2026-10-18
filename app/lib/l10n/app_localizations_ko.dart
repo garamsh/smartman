@@ -375,11 +375,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get syncRetry => '다시 시도';
 
   @override
-  String photoTarget(String name) {
-    return '추가할 덱 · $name';
-  }
-
-  @override
   String get photoTargetTitle => '추가할 덱';
 
   @override
@@ -411,121 +406,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
-
-  @override
-  String choiceTitle(int count) {
-    return '카드 $count장을 만들었어요.\n무엇을 외울까요?';
-  }
-
-  @override
-  String get choiceTopics => '외울 주제';
-
-  @override
-  String get choiceTopicNone => '이 페이지';
-
-  @override
-  String choiceFrontLabel(String topic, String text) {
-    return '$topic 앞면: $text. 눌러서 바꾸기';
-  }
-
-  @override
-  String choiceBackLabel(String topic, String text) {
-    return '$topic 뒷면: $text. 눌러서 바꾸기';
-  }
-
-  @override
-  String get choiceFrontName => '개념 이름';
-
-  @override
-  String get choiceFrontContent => '내용을 앞에';
-
-  @override
-  String get choiceBackCore => '핵심만';
-
-  @override
-  String get choiceBackExamples => '예시까지';
-
-  @override
-  String get choiceNext => '다음';
-
-  @override
-  String reviewMade(int count) {
-    return '카드 $count장을 만들었어요';
-  }
-
-  @override
-  String reviewTopic(String topic, int count) {
-    return '$topic · $count장';
-  }
-
-  @override
-  String reviewTopicSwitch(String topic, int count) {
-    return '$topic 주제 넣기, $count장';
-  }
-
-  @override
-  String reviewCard(String front, String back) {
-    return '$front, $back. 눌러서 고치고, 왼쪽으로 밀면 빼요';
-  }
-
-  @override
-  String reviewRemovedCard(String front, String back) {
-    return '$front, $back. 뺀 카드. 오른쪽으로 밀면 다시 넣어요';
-  }
-
-  @override
-  String reviewDroppedCard(String front, String back) {
-    return '$front, $back. 주제를 꺼서 뺀 카드';
-  }
-
-  @override
-  String get reviewRemove => '빼기';
-
-  @override
-  String get reviewRestore => '다시 넣기';
-
-  @override
-  String get reviewRemoveCard => '이 카드 빼기';
-
-  @override
-  String get reviewDone => '완료';
-
-  @override
-  String get reviewFront => '앞면';
-
-  @override
-  String get reviewBack => '뒷면';
-
-  @override
-  String get reviewInDeck => '이미 덱에 있어요';
-
-  @override
-  String reviewAdd(int count) {
-    return '덱에 $count장 추가';
-  }
-
-  @override
-  String get coachRemove => '왼쪽으로 밀면 빼요';
-
-  @override
-  String get coachRestore => '오른쪽으로 밀면 다시 넣어요';
-
-  @override
-  String get coachEdit => '눌러서 바로 고쳐요';
-
-  @override
-  String coachStep(int step, int total) {
-    return '사용 방법, $total단계 중 $step단계';
-  }
-
-  @override
-  String get coachSkip => '건너뛰기';
-
-  @override
-  String get coachNext => '다음';
-
-  @override
-  String get coachStart => '시작하기';
 
   @override
   String get duplicateSkip => '건너뛰기';
@@ -1131,4 +1011,141 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get newDeckEntryBody => '새 덱을 시작할 방법을 골라요';
+
+  @override
+  String importTitleWords(int count) {
+    return '단어 $count개를 찾았어요';
+  }
+
+  @override
+  String importTitleCards(int count) {
+    return '카드 $count장을 만들었어요';
+  }
+
+  @override
+  String importDeck(String name) {
+    return '덱 \'$name\'에 추가돼요';
+  }
+
+  @override
+  String importAdd(int count) {
+    return '카드 $count장 추가';
+  }
+
+  @override
+  String importSection(String topic, int count) {
+    return '$topic $count';
+  }
+
+  @override
+  String get importTopicNone => '이 페이지';
+
+  @override
+  String importIdentifySection(String topic) {
+    return '판별 · $topic';
+  }
+
+  @override
+  String get importForward => '단어 → 뜻';
+
+  @override
+  String get importBackward => '뜻 → 단어';
+
+  @override
+  String get importBoth => '양쪽 다 만들기';
+
+  @override
+  String get importBothShort => '양쪽 다';
+
+  @override
+  String get importFirstSense => '첫 뜻만';
+
+  @override
+  String get importShowPos => '품사 표시';
+
+  @override
+  String get importShowPronunciation => '발음 표시';
+
+  @override
+  String get importShowExtras => '유의어 등 표시';
+
+  @override
+  String get importNoteForward => '앞 → 뒤';
+
+  @override
+  String get importNoteSwapped => '뒤 → 앞';
+
+  @override
+  String get importSwap => '앞뒤 바꾸기';
+
+  @override
+  String get importDropSection => '이 묶음 빼기';
+
+  @override
+  String get importKeepSection => '이 묶음 넣기';
+
+  @override
+  String importFormMenu(String topic, String form) {
+    return '$topic 카드 모양, $form';
+  }
+
+  @override
+  String importRow(String front, String back) {
+    return '$front, $back. 눌러서 고쳐요';
+  }
+
+  @override
+  String importInclude(String front) {
+    return '$front 넣기';
+  }
+
+  @override
+  String get importRemove => '빼기';
+
+  @override
+  String get importInDeck => '이미 덱에 있어요';
+
+  @override
+  String get editTitle => '카드 고치기';
+
+  @override
+  String get editFront => '앞면';
+
+  @override
+  String get editBack => '뒷면';
+
+  @override
+  String get editSenses => '뜻';
+
+  @override
+  String editSense(int number) {
+    return '$number번째 뜻';
+  }
+
+  @override
+  String editKeepSense(int number) {
+    return '$number번째 뜻 넣기';
+  }
+
+  @override
+  String editMoveSense(int number) {
+    return '$number번째 뜻 옮기기';
+  }
+
+  @override
+  String get editDone => '완료';
+
+  @override
+  String coachStep(int step, int total) {
+    return '사용 방법, $total단계 중 $step단계';
+  }
+
+  @override
+  String get coachSkip => '건너뛰기';
+
+  @override
+  String get coachNext => '다음';
+
+  @override
+  String get coachStart => '시작하기';
 }

@@ -56,7 +56,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - **skip** (건너뛰기) writes nothing;
   - **merge back** (뒷면 합치기) appends the card's back to the existing card's back as a new text block, keeping its id, front and reviews; when a line of that back already equals it under the card key normalization, nothing changes;
   - **add as new** (새 카드로 추가) adds the card beside the existing one.
-- No card is overwritten or deleted. The choice is per card; photo import gives every card it writes merge back, so a card whose key the deck holds, or one written earlier in the same import, is merged rather than doubled. It imports only the cards Review keeps, so a card removed, or whose topic is switched off, is neither written nor merged ([`ai-extraction.md`](ai-extraction.md)).
+- No card is overwritten or deleted. The choice is per card; photo import gives every card it writes merge back, so a card whose key the deck holds, or one written earlier in the same import, is merged rather than doubled. It imports only the cards of the rows its list includes, each in its section's form, so a row left out is neither written nor merged ([`ai-extraction.md`](ai-extraction.md)).
 
 ### Failures
 

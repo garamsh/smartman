@@ -9,23 +9,21 @@ import '../../deck/deck.dart';
 import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../l10n/app_localizations.dart';
-import 'candidates.dart';
-import 'choice.dart';
-import 'choice_view.dart';
 import 'extracting_view.dart';
 import 'extraction_client.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'failure_view.dart';
 import 'photo.dart';
+import 'import_list.dart';
+import 'import_list_view.dart';
 import 'photo_source.dart';
-import 'review_view.dart';
 
 /// The keys the storage given to photo import must be opened to cache.
-const photoImportStorageKeys = {_coachShownKey};
+const photoImportStorageKeys = {_formsKey};
 
-/// Set once the review's coach has shown on this device.
-const _coachShownKey = 'photoReviewCoachShown';
+/// The section forms the device remembers, per deck and section, as JSON.
+const _formsKey = 'photoImportForms';
 
 /// Every deck, kept current, for the target chip.
 final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
@@ -35,8 +33,8 @@ final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
 /// Offers the camera and the library over [context], and with the photo
 /// taken or picked opens the screen that extracts candidate cards from it and
 /// saves the ones the user keeps into [deck], or into a new deck when it is
-/// null. [preferences], opened to cache [photoImportStorageKeys], keeps
-/// whether the review's coach has shown on this device. A cancel opens
+/// null. [preferences], opened to cache [photoImportStorageKeys], keeps the
+/// form each section's cards took, per deck and topic. A cancel opens
 /// nothing. Nothing is written before the user confirms; resolves to the
 /// [Deck] saved into, or to null.
 Future<Deck?> importFromPhoto(
@@ -139,22 +137,10 @@ final class _Failed extends _Stage {
   final JpegPhoto? photo;
 }
 
-final class _Choosing extends _Stage {
-  const _Choosing(this.choice);
+final class _Listing extends _Stage {
+  const _Listing(this.list);
 
-  final Choice choice;
-}
-
-final class _Reviewing extends _Stage {
-  const _Reviewing(this.review, {required this.choice, required this.coach});
-
-  /// The choice Review was opened from, which a back returns to as it was.
-  final Choice choice;
-
-  /// Whether Review opens with its coach.
-  final bool coach;
-
-  final Review review;
+  final ImportList list;
 }
 
 class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
@@ -164,6 +150,11 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
   late DeckId? _target = widget.deck;
 
   bool _saving = false;
+
+  /// The section forms the device remembers.
+  late final _forms = SectionForms.parse(
+    widget.preferences.getString(_formsKey),
+  );
 
   @override
   void initState() {
@@ -187,10 +178,6 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       _ => const <Deck>[],
     }.firstOrNull;
     return switch (_stage) {
-      _Choosing(:final choice) => ChoiceView(
-        choice: choice,
-        onNext: () => _review(choice),
-      ),
       _Extracting(:final photo) => ExtractingView(
         photo: photo,
         onCancel: _cancel,
@@ -203,17 +190,16 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onRetake: _retake,
         onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
-      _Reviewing(:final review, :final choice, :final coach) => ReviewView(
-        review: review,
+      _Listing(:final list) => ImportListView(
+        list: list,
         decks: decks.value ?? const [],
         target: target,
-        onTarget: (deck) => _chooseTarget(review, deck),
+        onTarget: (deck) => _chooseTarget(list, deck),
         saving: _saving,
-        coach: coach,
         onChanged: () => setState(() {}),
-        onBack: () => setState(() => _stage = _Choosing(choice)),
+        onCancel: () => Navigator.of(context).pop(),
         onRetake: _retake,
-        onSave: () => _save(review),
+        onSave: () => _save(list),
       ),
     };
   }
@@ -232,34 +218,22 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         cancel: stage.cancel.future,
       );
       if (cards == null || !current()) return;
-      setState(() => _stage = _Choosing(Choice(cards)));
+      final list = ImportList(cards, await _existingKeys(_target));
+      if (_target case final deck?) _forms.applyTo(list, deck);
+      if (current()) setState(() => _stage = _Listing(list));
     } on PhotoImportFailure catch (failure) {
       if (current()) setState(() => _stage = _Failed(failure, stage.photo));
     }
   }
 
-  /// Opens Review with [choice]'s cards, grouped against the keys the deck
-  /// holds.
-  Future<void> _review(Choice choice) async {
-    final stage = _stage;
+  /// The card keys [deck] holds; none for a new deck, or when they cannot be
+  /// read, which a snack bar says.
+  Future<Set<CardKey>> _existingKeys(DeckId? deck) async {
     try {
-      final existing = await _keysOf(ref.read(deckRepositoryProvider), _target);
-      if (!mounted || !identical(_stage, stage)) return;
-      // The coach shows once per device, so it is stored as shown when it
-      // first shows; under reduce motion it does not show.
-      final coach =
-          widget.preferences.getBool(_coachShownKey) != true &&
-          !MediaQuery.disableAnimationsOf(context);
-      if (coach) unawaited(widget.preferences.setBool(_coachShownKey, true));
-      setState(
-        () => _stage = _Reviewing(
-          Review(choice.chosen, existing),
-          choice: choice,
-          coach: coach,
-        ),
-      );
+      return await _keysOf(ref.read(deckRepositoryProvider), deck);
     } on DeckFailure catch (failure) {
       _showDeckFailure(failure);
+      return const {};
     }
   }
 
@@ -271,17 +245,16 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       ? const {}
       : {for (final card in await repository.listCards(deck)) card.cardKey};
 
-  /// Saves into [deck] from now on, with the rows grouped against its keys
-  /// once they are read.
-  Future<void> _chooseTarget(Review review, DeckId? deck) async {
+  /// Saves into [deck] from now on, with the rows checked against its keys
+  /// once they are read, and the forms it remembers applied.
+  Future<void> _chooseTarget(ImportList list, DeckId? deck) async {
     setState(() => _target = deck);
-    try {
-      final existing = await _keysOf(ref.read(deckRepositoryProvider), deck);
-      if (mounted && _target == deck) {
-        setState(() => review.existingKeys = existing);
-      }
-    } on DeckFailure catch (failure) {
-      _showDeckFailure(failure);
+    final existing = await _existingKeys(deck);
+    if (mounted && _target == deck) {
+      setState(() {
+        list.existingKeys = existing;
+        if (deck != null) _forms.applyTo(list, deck);
+      });
     }
   }
 
@@ -305,7 +278,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
     }
   }
 
-  Future<void> _save(Review review) async {
+  Future<void> _save(ImportList list) async {
     final l10n = AppLocalizations.of(context);
     final ImportTarget target;
     if (_target case final deck?) {
@@ -324,7 +297,17 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
     try {
       final result = await ref
           .read(deckRepositoryProvider)
-          .importCards(target, review.toImport());
+          .importCards(target, list.toImport());
+      // The cards are saved; a form that cannot be stored says so and is
+      // used only until the app closes.
+      try {
+        await widget.preferences.setString(
+          _formsKey,
+          _forms.remember(list, result.deck.id),
+        );
+      } on Exception catch (cause) {
+        _showDeckFailure(StorageFailure(cause));
+      }
       navigator.pop(result.deck);
     } on DeckFailure catch (failure) {
       _showDeckFailure(failure);

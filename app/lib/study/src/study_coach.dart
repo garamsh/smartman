@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../l10n/app_localizations.dart';
-import 'app_button.dart';
-import 'theme.dart';
+import '../../l10n/app_localizations.dart';
+import '../../design/app_button.dart';
+import '../../design/theme.dart';
 
 /// One cycle of a coach's demonstration: the card moves out, holds, and
 /// springs back.
@@ -18,9 +18,6 @@ double coachPeek(double t) {
   return out - back;
 }
 
-/// The finger's size, as Review's coach drew it.
-const _finger = 34.0;
-
 /// Whether a coach's finger shows at [t], the progress through one
 /// [coachCycle]: from just before the card moves until just after it is
 /// back.
@@ -28,8 +25,8 @@ bool coachFingerShown(double t) => t > 0.08 && t < 0.68;
 
 /// A coach's finger over the card it demonstrates on, hidden from screen
 /// readers, which read the coach's caption instead.
-class AppCoachFinger extends StatelessWidget {
-  const AppCoachFinger({super.key, required this.shown});
+class StudyCoachFinger extends StatelessWidget {
+  const StudyCoachFinger({super.key, required this.shown});
 
   final bool shown;
 
@@ -42,9 +39,11 @@ class AppCoachFinger extends StatelessWidget {
           opacity: shown ? 1 : 0,
           child: Icon(
             LucideIcons.pointer,
-            size: _finger,
+            size: AppSize.coachFinger,
             color: colors.ink,
-            shadows: [Shadow(color: colors.shadow, blurRadius: 6)],
+            shadows: [
+              Shadow(color: colors.shadow, blurRadius: AppSize.coachFingerBlur),
+            ],
           ),
         ),
       ),
@@ -56,8 +55,8 @@ class AppCoachFinger extends StatelessWidget {
 /// screen's main action: the step's [line], a dot for each of [steps] with
 /// [step] (from 0) drawn long, "건너뛰기" and "다음", the last step's
 /// "시작하기". A screen reader hears the step of how many as it changes.
-class AppCoach extends StatelessWidget {
-  const AppCoach({
+class StudyCoach extends StatelessWidget {
+  const StudyCoach({
     super.key,
     required this.line,
     required this.step,
@@ -105,14 +104,16 @@ class AppCoach extends StatelessWidget {
                 ),
                 for (var dot = 0; dot < steps; dot++)
                   Container(
-                    width: dot == step ? 16 : 6,
-                    height: 6,
+                    width: dot == step
+                        ? AppSize.coachDotCurrent
+                        : AppSize.coachDot,
+                    height: AppSize.coachDot,
                     margin: const EdgeInsets.only(left: AppSpace.s4),
                     decoration: BoxDecoration(
                       color: colors.onHero.withValues(
                         alpha: dot == step ? 1 : 0.4,
                       ),
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(AppSize.coachDot / 2),
                     ),
                   ),
               ],

@@ -739,12 +739,6 @@ abstract class AppLocalizations {
   /// **'다시 시도'**
   String get syncRetry;
 
-  /// Chip on the photo review naming the deck the cards go into; tapping it switches the deck.
-  ///
-  /// In ko, this message translates to:
-  /// **'추가할 덱 · {name}'**
-  String photoTarget(String name);
-
   /// Title of the sheet on the photo review that chooses the deck the cards go into.
   ///
   /// In ko, this message translates to:
@@ -810,192 +804,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
-
-  /// Headline of the choice screen before Review: how many cards were made, then the question of what to memorise.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드 {count}장을 만들었어요.\n무엇을 외울까요?'**
-  String choiceTitle(int count);
-
-  /// What a screen reader reads for the group of topic pills on the choice screen.
-  ///
-  /// In ko, this message translates to:
-  /// **'외울 주제'**
-  String get choiceTopics;
-
-  /// Pill and heading for cards with no topic, from a function deployed before topics.
-  ///
-  /// In ko, this message translates to:
-  /// **'이 페이지'**
-  String get choiceTopicNone;
-
-  /// What a screen reader reads for a topic sample's front, which opens its shape options.
-  ///
-  /// In ko, this message translates to:
-  /// **'{topic} 앞면: {text}. 눌러서 바꾸기'**
-  String choiceFrontLabel(String topic, String text);
-
-  /// What a screen reader reads for a topic sample's back, which opens its shape options.
-  ///
-  /// In ko, this message translates to:
-  /// **'{topic} 뒷면: {text}. 눌러서 바꾸기'**
-  String choiceBackLabel(String topic, String text);
-
-  /// Front option: the concept's name on the front, the default.
-  ///
-  /// In ko, this message translates to:
-  /// **'개념 이름'**
-  String get choiceFrontName;
-
-  /// Front option: the content on the front, the concept's name on the back.
-  ///
-  /// In ko, this message translates to:
-  /// **'내용을 앞에'**
-  String get choiceFrontContent;
-
-  /// Back option: the answer alone, the default.
-  ///
-  /// In ko, this message translates to:
-  /// **'핵심만'**
-  String get choiceBackCore;
-
-  /// Back option: the answer, then the examples the page prints.
-  ///
-  /// In ko, this message translates to:
-  /// **'예시까지'**
-  String get choiceBackExamples;
-
-  /// Button of the choice screen that goes on to Review with the topics that are on.
-  ///
-  /// In ko, this message translates to:
-  /// **'다음'**
-  String get choiceNext;
-
-  /// Title of the review screen: how many cards were made from the photo.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드 {count}장을 만들었어요'**
-  String reviewMade(int count);
-
-  /// Heading of a topic's section on the review screen, with its card count.
-  ///
-  /// In ko, this message translates to:
-  /// **'{topic} · {count}장'**
-  String reviewTopic(String topic, int count);
-
-  /// What a screen reader reads for a topic's switch, which keeps or drops all its cards.
-  ///
-  /// In ko, this message translates to:
-  /// **'{topic} 주제 넣기, {count}장'**
-  String reviewTopicSwitch(String topic, int count);
-
-  /// What a screen reader reads for a kept card on the review screen.
-  ///
-  /// In ko, this message translates to:
-  /// **'{front}, {back}. 눌러서 고치고, 왼쪽으로 밀면 빼요'**
-  String reviewCard(String front, String back);
-
-  /// What a screen reader reads for a removed card on the review screen.
-  ///
-  /// In ko, this message translates to:
-  /// **'{front}, {back}. 뺀 카드. 오른쪽으로 밀면 다시 넣어요'**
-  String reviewRemovedCard(String front, String back);
-
-  /// What a screen reader reads for a card whose topic is switched off, which cannot be edited or swiped.
-  ///
-  /// In ko, this message translates to:
-  /// **'{front}, {back}. 주제를 꺼서 뺀 카드'**
-  String reviewDroppedCard(String front, String back);
-
-  /// Shown under a card dragged left, which removes it.
-  ///
-  /// In ko, this message translates to:
-  /// **'빼기'**
-  String get reviewRemove;
-
-  /// Shown under a card dragged right, and the edit view's button, which put a removed card back.
-  ///
-  /// In ko, this message translates to:
-  /// **'다시 넣기'**
-  String get reviewRestore;
-
-  /// Button of a card's edit view that removes the card.
-  ///
-  /// In ko, this message translates to:
-  /// **'이 카드 빼기'**
-  String get reviewRemoveCard;
-
-  /// Button that closes a card's edit view, keeping what was typed.
-  ///
-  /// In ko, this message translates to:
-  /// **'완료'**
-  String get reviewDone;
-
-  /// Label of a card's front field in its edit view.
-  ///
-  /// In ko, this message translates to:
-  /// **'앞면'**
-  String get reviewFront;
-
-  /// Label of a card's back field in its edit view.
-  ///
-  /// In ko, this message translates to:
-  /// **'뒷면'**
-  String get reviewBack;
-
-  /// Line under a card whose question the deck already holds, which starts removed.
-  ///
-  /// In ko, this message translates to:
-  /// **'이미 덱에 있어요'**
-  String get reviewInDeck;
-
-  /// Primary button of the review screen, with how many cards it adds or merges.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱에 {count}장 추가'**
-  String reviewAdd(int count);
-
-  /// First step of the review screen's coach.
-  ///
-  /// In ko, this message translates to:
-  /// **'왼쪽으로 밀면 빼요'**
-  String get coachRemove;
-
-  /// Second step of the review screen's coach.
-  ///
-  /// In ko, this message translates to:
-  /// **'오른쪽으로 밀면 다시 넣어요'**
-  String get coachRestore;
-
-  /// Third step of the review screen's coach.
-  ///
-  /// In ko, this message translates to:
-  /// **'눌러서 바로 고쳐요'**
-  String get coachEdit;
-
-  /// What a screen reader reads for the coach: its step of how many.
-  ///
-  /// In ko, this message translates to:
-  /// **'사용 방법, {total}단계 중 {step}단계'**
-  String coachStep(int step, int total);
-
-  /// Button that ends the review screen's coach.
-  ///
-  /// In ko, this message translates to:
-  /// **'건너뛰기'**
-  String get coachSkip;
-
-  /// Button that moves the review screen's coach to its next step.
-  ///
-  /// In ko, this message translates to:
-  /// **'다음'**
-  String get coachNext;
-
-  /// Button on the coach's last step, which ends it.
-  ///
-  /// In ko, this message translates to:
-  /// **'시작하기'**
-  String get coachStart;
 
   /// Duplicate option: write nothing for this candidate.
   ///
@@ -1986,6 +1794,228 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'새 덱을 시작할 방법을 골라요'**
   String get newDeckEntryBody;
+
+  /// Title of the photo import list when every card is a vocabulary entry: how many words were found.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어 {count}개를 찾았어요'**
+  String importTitleWords(int count);
+
+  /// Title of the photo import list for a notes page: how many cards were made.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장을 만들었어요'**
+  String importTitleCards(int count);
+
+  /// Line under the import list title naming the deck the cards go into; the name opens the deck chooser.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 \'{name}\'에 추가돼요'**
+  String importDeck(String name);
+
+  /// The import list button that saves the cards, counting each form.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장 추가'**
+  String importAdd(int count);
+
+  /// Header of a section of the import list: its topic and row count.
+  ///
+  /// In ko, this message translates to:
+  /// **'{topic} {count}'**
+  String importSection(String topic, int count);
+
+  /// The section title for cards with no topic.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 페이지'**
+  String get importTopicNone;
+
+  /// Title of a section holding a topic's identify cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'판별 · {topic}'**
+  String importIdentifySection(String topic);
+
+  /// Section form: cards from word to meaning.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어 → 뜻'**
+  String get importForward;
+
+  /// Section form: cards from meaning to word.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻 → 단어'**
+  String get importBackward;
+
+  /// Menu item: make a card each way.
+  ///
+  /// In ko, this message translates to:
+  /// **'양쪽 다 만들기'**
+  String get importBoth;
+
+  /// Section header form when cards go both ways.
+  ///
+  /// In ko, this message translates to:
+  /// **'양쪽 다'**
+  String get importBothShort;
+
+  /// Menu item: keep only the first meaning on each card.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 뜻만'**
+  String get importFirstSense;
+
+  /// Menu item: show each meaning's part of speech.
+  ///
+  /// In ko, this message translates to:
+  /// **'품사 표시'**
+  String get importShowPos;
+
+  /// Menu item: show the pronunciation under the word.
+  ///
+  /// In ko, this message translates to:
+  /// **'발음 표시'**
+  String get importShowPronunciation;
+
+  /// Menu item: show the extras, such as synonyms, after the meanings.
+  ///
+  /// In ko, this message translates to:
+  /// **'유의어 등 표시'**
+  String get importShowExtras;
+
+  /// Note section form: front and back as made.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞 → 뒤'**
+  String get importNoteForward;
+
+  /// Note section form: front and back swapped.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒤 → 앞'**
+  String get importNoteSwapped;
+
+  /// Menu item: swap the front and back of a note section's cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞뒤 바꾸기'**
+  String get importSwap;
+
+  /// Menu item: leave out every card of the section.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 묶음 빼기'**
+  String get importDropSection;
+
+  /// Menu item: include every card of the section.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 묶음 넣기'**
+  String get importKeepSection;
+
+  /// Screen reader label of a section's form menu button.
+  ///
+  /// In ko, this message translates to:
+  /// **'{topic} 카드 모양, {form}'**
+  String importFormMenu(String topic, String form);
+
+  /// Screen reader label of an import row.
+  ///
+  /// In ko, this message translates to:
+  /// **'{front}, {back}. 눌러서 고쳐요'**
+  String importRow(String front, String back);
+
+  /// Screen reader label of a row's check.
+  ///
+  /// In ko, this message translates to:
+  /// **'{front} 넣기'**
+  String importInclude(String front);
+
+  /// Label under a row swiped left.
+  ///
+  /// In ko, this message translates to:
+  /// **'빼기'**
+  String get importRemove;
+
+  /// Note under a row the deck already holds.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 덱에 있어요'**
+  String get importInDeck;
+
+  /// Title of the sheet that edits one card.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 고치기'**
+  String get editTitle;
+
+  /// Field label: the front of a card.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면'**
+  String get editFront;
+
+  /// Field label: the back of a note card.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒷면'**
+  String get editBack;
+
+  /// Label over the meanings of a vocabulary card in the edit sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻'**
+  String get editSenses;
+
+  /// Field label of one meaning in the edit sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'{number}번째 뜻'**
+  String editSense(int number);
+
+  /// Screen reader label of a meaning's check in the edit sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'{number}번째 뜻 넣기'**
+  String editKeepSense(int number);
+
+  /// Screen reader label of a meaning's drag handle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{number}번째 뜻 옮기기'**
+  String editMoveSense(int number);
+
+  /// The edit sheet button that applies the edits.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료'**
+  String get editDone;
+
+  /// What a screen reader reads for the coach: its step of how many.
+  ///
+  /// In ko, this message translates to:
+  /// **'사용 방법, {total}단계 중 {step}단계'**
+  String coachStep(int step, int total);
+
+  /// Button that ends the review screen's coach.
+  ///
+  /// In ko, this message translates to:
+  /// **'건너뛰기'**
+  String get coachSkip;
+
+  /// Button that moves the review screen's coach to its next step.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음'**
+  String get coachNext;
+
+  /// Button on the coach's last step, which ends it.
+  ///
+  /// In ko, this message translates to:
+  /// **'시작하기'**
+  String get coachStart;
 }
 
 class _AppLocalizationsDelegate

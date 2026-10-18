@@ -25,7 +25,7 @@ enum AppButtonVariant {
   /// A quiet action, such as one in a top bar: ink text.
   text,
 
-  /// A quiet action on the navy hero surface, such as the review coach's
+  /// A quiet action on the navy hero surface, such as the study coach's
   /// "건너뛰기": text in the colour drawn on the hero.
   onHeroText,
 }

@@ -1,6 +1,6 @@
 # ADR 0060: Choose which topics to memorise, and their card shape, before Review, from the one call's cards
 
-> Status: accepted
+> Status: superseded by ADR-0065
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

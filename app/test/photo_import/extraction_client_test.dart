@@ -84,12 +84,122 @@ void main() {
 
     final [run, river, chat] = (await _extract(client))!;
 
+    // A function before senses: one sense of the answer and its label.
     expect(
-      (run.front, run.answer, run.partOfSpeech, run.back),
-      ('run', '달리다, 운영하다', '[동]', '[동] 달리다, 운영하다'),
+      (run.front, run.answer, run.kind),
+      ('run', '달리다, 운영하다', CardKind.vocabulary),
     );
-    expect((river.answer, river.partOfSpeech, river.back), ('강', null, '강'));
-    expect((chat.answer, chat.back), ('n. cat', 'n. cat'));
+    expect(run.senses, [const Sense(pos: '[동]', meaning: '달리다, 운영하다')]);
+    expect(river.senses, [const Sense(meaning: '강')]);
+    expect(chat.senses, [const Sense(meaning: 'n. cat')]);
+  });
+
+  test(
+    "a card reads its kind, type, senses in order, extras and pronunciation, "
+    "and a note none of a vocabulary card's fields",
+    () async {
+      final client = _client(
+        (_) async => _json(200, {
+          'cards': [
+            {
+              'kind': 'vocabulary',
+              'type': 'concept',
+              'front': 'face',
+              'back': '[동] 직면하다\n[명] 표면',
+              'senses': [
+                {'pos': '[동]', 'meaning': ' 직면하다 '},
+                {'pos': null, 'meaning': '표면'},
+              ],
+              'extras': [
+                {'label': '유의어', 'text': 'confront'},
+              ],
+              'pronunciation': "['feis]",
+            },
+            {
+              'kind': 'note',
+              'type': 'identify',
+              'front': "'이는 책이다'의 '이'",
+              'answer': '대명사',
+              'back': '대명사',
+            },
+          ],
+        }),
+      );
+
+      final [face, judge] = (await _extract(client))!;
+
+      expect((face.kind, face.type), (CardKind.vocabulary, CardType.concept));
+      expect(face.senses, [
+        const Sense(pos: '[동]', meaning: '직면하다'),
+        const Sense(meaning: '표면'),
+      ]);
+      expect(face.extras.map((extra) => (extra.label, extra.text)), [
+        ('유의어', 'confront'),
+      ]);
+      expect(face.pronunciation, "['feis]");
+      expect((judge.kind, judge.type), (CardKind.note, CardType.identify));
+      expect(judge.answer, '대명사');
+      expect(judge.senses, isEmpty);
+      expect(judge.pronunciation, isNull);
+    },
+  );
+
+  test('an unknown kind or type, a vocabulary card with no sense, or a '
+      'malformed sense or extra is a service failure', () async {
+    Map<String, Object?> card(Map<String, Object?> fields) => {
+      'front': 'face',
+      'back': '표면',
+      ...fields,
+    };
+    for (final fields in <Map<String, Object?>>[
+      {'kind': 'grammar'},
+      {'type': 'judgment'},
+      {'type': 1},
+      {'kind': 'vocabulary', 'senses': <Object>[]},
+      {
+        'senses': [
+          {'pos': '[명]'},
+        ],
+      },
+      {
+        'senses': [
+          {'pos': 1, 'meaning': '표면'},
+        ],
+      },
+      {'senses': 'a'},
+      {
+        'extras': [
+          {'label': '유의어'},
+        ],
+      },
+      {'pronunciation': ' '},
+    ]) {
+      final client = _client(
+        (_) async => _json(200, {
+          'cards': [card(fields)],
+        }),
+      );
+      await expectLater(
+        _extract(client),
+        throwsA(isA<ServiceFailed>()),
+        reason: '$fields',
+      );
+    }
+    // Control: the same card with a known kind and type and a sense.
+    final valid = _client(
+      (_) async => _json(200, {
+        'cards': [
+          card({
+            'kind': 'vocabulary',
+            'type': 'cloze',
+            'senses': [
+              {'pos': null, 'meaning': '표면'},
+            ],
+          }),
+        ],
+      }),
+    );
+    expect((await _extract(valid))!.single.type, CardType.cloze);
   });
 
   test(

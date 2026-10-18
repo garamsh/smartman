@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../design/app_coach.dart';
+import 'study_coach.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -383,7 +383,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
   Widget? _coachCaption() {
     final step = _coach;
     if (step == null) return null;
-    return AppCoach(
+    return StudyCoach(
       line: keepWords(switch (step) {
         _CoachStep.know => _l10n.studyCoachKnow,
         _CoachStep.dontKnow => _l10n.studyCoachDontKnow,
