@@ -2,11 +2,16 @@
 
 import { useEffect, useRef } from "react";
 
+import { hasBlanks, WholeCard } from "@/features/decks";
+
 import type { PreviousAnswer } from "../session";
 import { CardSide } from "./card-side";
 import { GradeChip, grades } from "./graded-card";
 
-/** The whole of a card answered earlier, front and back, over the screen until it is closed. */
+/**
+ * The whole of a card answered earlier, front and back, or a whole card's front with its blanks
+ * filled, over the screen until it is closed.
+ */
 export function CardDetail({
   answer,
   onClose,
@@ -34,18 +39,24 @@ export function CardDetail({
           <GradeChip answer={answer.answer} />
           <span className="sr-only">답: {grades[answer.answer].name}</span>
         </div>
-        <section aria-labelledby="card-detail-front" className="flex flex-col gap-2">
-          <h3 id="card-detail-front" className="text-section text-muted">
-            앞면
-          </h3>
-          <CardSide blocks={answer.card.front} size="question" />
-        </section>
-        <section aria-labelledby="card-detail-back" className="flex flex-col gap-2">
-          <h3 id="card-detail-back" className="text-section text-muted">
-            뒷면
-          </h3>
-          <CardSide blocks={answer.card.back} size="answer" />
-        </section>
+        {hasBlanks(answer.card.text.front) ? (
+          <WholeCard text={answer.card.text.front} revealed className="text-answer" />
+        ) : (
+          <>
+            <section aria-labelledby="card-detail-front" className="flex flex-col gap-2">
+              <h3 id="card-detail-front" className="text-section text-muted">
+                앞면
+              </h3>
+              <CardSide blocks={answer.card.front} size="question" />
+            </section>
+            <section aria-labelledby="card-detail-back" className="flex flex-col gap-2">
+              <h3 id="card-detail-back" className="text-section text-muted">
+                뒷면
+              </h3>
+              <CardSide blocks={answer.card.back} size="answer" />
+            </section>
+          </>
+        )}
         <button
           ref={close}
           type="button"

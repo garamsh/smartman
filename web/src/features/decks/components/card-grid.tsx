@@ -4,13 +4,16 @@ import { Search } from "lucide-react";
 import { useId, useState } from "react";
 
 import { describeContent } from "../card-content";
+import { hasBlanks, spoken } from "../card-markup";
 import type { Card } from "../library";
+import { WholeCard } from "./whole-card";
 
 /**
  * A deck's cards in a grid under a search that keeps the cards whose front or back holds it,
  * ignoring case. Each card hides its answer until it is clicked; "뜻 보기", in a row pinned
  * above the grid, shows or hides every answer, starting off each time the page opens. A click
- * after the switch sets that card alone apart until the switch next changes.
+ * after the switch sets that card alone apart until the switch next changes. A whole card shows
+ * its front with its blanks empty, filled in place where its answer shows.
  */
 export function CardGrid({ cards }: { cards: Card[] }) {
   const [search, setSearch] = useState("");
@@ -90,7 +93,11 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                 <button
                   type="button"
                   aria-expanded={open}
-                  aria-label={open ? `${row.front}, 답 ${row.back}` : `${row.front}, 답 가려짐`}
+                  aria-label={
+                    open
+                      ? `${spoken(row.front, false)}, 답 ${row.back}`
+                      : `${spoken(row.front, false)}, 답 가려짐`
+                  }
                   onClick={() => {
                     const next = new Set(apart);
                     if (next.has(row.id)) next.delete(row.id);
@@ -99,11 +106,17 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                   }}
                   className="flex min-h-23 w-full flex-col gap-2 rounded-row bg-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
-                  <span className="text-headline break-words">{row.front}</span>
-                  {open ? (
-                    <span className="text-secondary break-words text-ink-2">{row.back}</span>
+                  {hasBlanks(row.front) ? (
+                    <WholeCard text={row.front} revealed={open} className="text-headline" />
                   ) : (
-                    <span aria-hidden className="h-4.5 w-3/5 rounded-md bg-hairline" />
+                    <>
+                      <span className="text-headline break-words">{row.front}</span>
+                      {open ? (
+                        <span className="text-secondary break-words text-ink-2">{row.back}</span>
+                      ) : (
+                        <span aria-hidden className="h-4.5 w-3/5 rounded-md bg-hairline" />
+                      )}
+                    </>
                   )}
                 </button>
               </li>

@@ -8,6 +8,7 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 
+import '../deck/whole_cards.dart';
 import 'deck_screens.dart';
 
 /// The front of every card row on screen, top to bottom.
@@ -183,6 +184,40 @@ void main() {
       await screens.tap(find.text('Chien'));
       expect(find.text('dog'), findsNothing);
       expect(find.byType(CardEditorScreen), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a whole card shows its question with its blank empty in place of the answer bar, and a tap fills it in place',
+    (tester) async {
+      const cloze = 'The capital of France is {{c::Paris}}';
+      final screens = await DeckScreens.open(
+        tester,
+        cards: {cloze: 'The capital of France is Paris', 'Chat': 'cat'},
+      );
+      await screens.push((deck) => DeckScreen(deck: deck));
+      final row = find.byWidgetPredicate(
+        (widget) => widget is CardAnswerRow && widget.front == cloze,
+      );
+      expect(row, findsOneWidget);
+      expect(
+        find.bySemanticsLabel('The capital of France is blank, answer hidden'),
+        findsOneWidget,
+      );
+      expect(blanksUnder(row), {'Paris': false});
+      expect(find.text('The capital of France is Paris'), findsNothing);
+
+      await screens.tap(row);
+      expect(blanksUnder(row), {'Paris': true});
+      expect(
+        find.bySemanticsLabel(
+          'The capital of France is blank, answer The capital of France is Paris',
+        ),
+        findsOneWidget,
+      );
+      // Control: the split card keeps its answer hidden.
+      expect(find.text('cat'), findsNothing);
       await screens.close();
     },
   );

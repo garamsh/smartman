@@ -194,6 +194,30 @@ abstract class AppLocalizations {
   /// **'내용을 입력하세요'**
   String get cardSideRequired;
 
+  /// Error on the card editor's question when a {{c:: blank does not close, or holds nothing.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 표시가 닫히지 않았거나 비어 있어요'**
+  String get cardBlankMalformed;
+
+  /// In the card editor in place of the answer field, once the question holds a blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸을 채운 카드가 답으로 저장돼요'**
+  String get wholeCardBack;
+
+  /// How a screen reader reads an empty blank of a table or cloze card.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸'**
+  String get blank;
+
+  /// Title of the sheet that shows a table or cloze card whole, its blanks filled.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드'**
+  String get wholeCard;
+
   /// Title of the sheet shown when a card's front duplicates another in the deck.
   ///
   /// In ko, this message translates to:

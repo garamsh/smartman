@@ -412,7 +412,8 @@ class _SectionHeader extends StatelessWidget {
                   ),
                 ),
             ],
-            if (form case NoteForm(:final swapped))
+            if (form case NoteForm(:final swapped)
+                when section.rows.any((row) => !row.whole))
               item(
                 l10n.importSwap,
                 checked: swapped,
@@ -459,8 +460,9 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// One row: its check, its front at 44% and its back one line per sense,
-/// "이미 덱에 있어요" under it when the deck holds it. A tap edits it, and a
+/// One row: its check, its front at 44% and its back one line per sense, or
+/// a whole card's front with its blanks filled, "이미 덱에 있어요" under it
+/// when the deck holds it. A tap edits it, and a
 /// swipe left leaves it out.
 class _RowTile extends StatelessWidget {
   const _RowTile({
@@ -492,6 +494,7 @@ class _RowTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final onCheck = this.onCheck;
+    final question = spoken(sides.front, revealed: false, blank: l10n.blank);
     final tile = DecoratedBox(
       decoration: BoxDecoration(
         border: first
@@ -504,7 +507,7 @@ class _RowTile extends StatelessWidget {
           Semantics(
             container: true,
             checked: included,
-            label: l10n.importInclude(sides.front),
+            label: l10n.importInclude(question),
             excludeSemantics: true,
             onTap: onCheck,
             child: InkResponse(
@@ -521,7 +524,7 @@ class _RowTile extends StatelessWidget {
             child: Semantics(
               container: true,
               button: true,
-              label: l10n.importRow(sides.front, sides.back),
+              label: l10n.importRow(question, sides.back),
               excludeSemantics: true,
               onTap: onEdit,
               child: InkWell(
@@ -538,29 +541,40 @@ class _RowTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       spacing: AppSpace.s4,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          spacing: AppSpace.s12,
-                          children: [
-                            SizedBox(
-                              width: constraints.maxWidth * 0.44,
-                              child: Text(
-                                keepWords(sides.front),
-                                style: AppType.bodyStrong.copyWith(
-                                  color: included ? colors.ink : colors.muted,
+                        if (hasBlanks(sides.front))
+                          WholeCardView(
+                            sides.front,
+                            revealed: true,
+                            style: AppType.bodyStrong.copyWith(
+                              color: included ? colors.ink : colors.muted,
+                            ),
+                          )
+                        else
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: AppSpace.s12,
+                            children: [
+                              SizedBox(
+                                width: constraints.maxWidth * 0.44,
+                                child: Text(
+                                  keepWords(sides.front),
+                                  style: AppType.bodyStrong.copyWith(
+                                    color: included ? colors.ink : colors.muted,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                keepWords(sides.back),
-                                style: AppType.secondary.copyWith(
-                                  color: included ? colors.ink2 : colors.muted,
+                              Expanded(
+                                child: Text(
+                                  keepWords(sides.back),
+                                  style: AppType.secondary.copyWith(
+                                    color: included
+                                        ? colors.ink2
+                                        : colors.muted,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                         if (inDeck)
                           Text(
                             l10n.importInDeck,

@@ -119,6 +119,27 @@ void main() {
     },
   );
 
+  test('a row whose front holds a blank saves its front with the blanks filled as its back, swapped or not, where a plain note swaps', () {
+    final list = ImportList(const [
+      CandidateCard(
+        front: '3인칭 재귀칭: 높임 당신 · 예사 {{c::자기}} · 낮춤 저',
+        answer: '자기',
+        type: CardType.cloze,
+        topic: '재귀칭',
+      ),
+      CandidateCard(front: '재귀칭', answer: '앞의 명사를 다시 가리킴', topic: '재귀칭'),
+    ], const {});
+    const whole = (
+      '3인칭 재귀칭: 높임 당신 · 예사 {{c::자기}} · 낮춤 저',
+      '3인칭 재귀칭: 높임 당신 · 예사 자기 · 낮춤 저',
+    );
+
+    expect(_sides(list), [whole, ('재귀칭', '앞의 명사를 다시 가리킴')]);
+    list.sections.single.form = const NoteForm(swapped: true);
+    // Control: the plain note in the same section swaps.
+    expect(_sides(list), [whole, ('앞의 명사를 다시 가리킴', '재귀칭')]);
+  });
+
   group('stored forms', () {
     const deck = DeckId('id0');
     ImportList words() => ImportList([

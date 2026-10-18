@@ -3,12 +3,23 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine, studyDayStart } from "@/features/study";
 
-import { cardRow, day, deckRow, reviewRow, seedDeck, start, stateRow } from "@/testing/library";
+import { filled } from "@/features/decks";
+import {
+  cardRow,
+  day,
+  deckRow,
+  reviewRow,
+  seedDeck,
+  side,
+  start,
+  stateRow,
+} from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { blanksUnder } from "@/testing/whole-cards";
 
 import { Study } from "../_components/study";
 
@@ -935,6 +946,60 @@ describe("the study page", () => {
     await user.keyboard("k");
     expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
     expect(shown()).toEqual([expect.stringMatching(/^앞면: trois\. /)]);
+  });
+
+  describe("a whole card", () => {
+    const cloze = "The capital of France is {{c::Paris}}";
+    const table =
+      "| Capital | Country |\n| --- | --- |\n| {{c::Paris}} | France |\n| {{c::Berlin}} | Germany |";
+
+    /** Seeds deck d1 with one card of [front], its back the front with its blanks filled. */
+    function seedWhole(front: string) {
+      postgrest.seed("decks", deckRow("d1", "d1"));
+      postgrest.seed("cards", { ...cardRow("d1-0", "d1", front), back: side(filled(front)) });
+    }
+
+    it("shows a cloze card's sentence with its blank empty, and once answered, as one card, fills it in place on the previous card and in its dialog", async () => {
+      seedWhole(cloze);
+      await open("d1");
+      const current = screen.getByRole("group", { name: "The capital of France is 빈칸" });
+      expect(blanksUnder(current)).toEqual({ Paris: false });
+      expect(screen.getByText("0/1")).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.keyboard("k");
+
+      expect(screen.getByText("1/1")).toBeInTheDocument();
+      expect(shown()).toEqual([
+        "앞면: The capital of France is 빈칸. 뒷면: The capital of France is Paris. 답: 안다",
+      ]);
+      const card = within(cards()).getByRole("article");
+      expect(blanksUnder(card)).toEqual({ Paris: true });
+      await user.click(within(card).getByRole("button", { name: "카드 전체 보기" }));
+      const detail = screen.getByRole("dialog", { name: "카드" });
+      expect(blanksUnder(detail)).toEqual({ Paris: true });
+      expect(within(detail).queryByText("뒷면")).not.toBeInTheDocument();
+    });
+
+    it("shows a table card whole with its headers and its cells to recall empty, and once answered, as one card, fills every one", async () => {
+      seedWhole(table);
+      await open("d1");
+      const current = screen.getByRole("group", {
+        name: "Capital, Country. 빈칸, France. 빈칸, Germany",
+      });
+      for (const header of ["Capital", "Country", "France", "Germany"]) {
+        expect(within(current).getByText(header)).toBeInTheDocument();
+      }
+      expect(blanksUnder(current)).toEqual({ Paris: false, Berlin: false });
+
+      await userEvent.setup().keyboard("k");
+
+      expect(screen.getByText("1/1")).toBeInTheDocument();
+      expect(blanksUnder(within(cards()).getByRole("article"))).toEqual({
+        Paris: true,
+        Berlin: true,
+      });
+    });
   });
 
   describe("the day's last card from an earlier session", () => {

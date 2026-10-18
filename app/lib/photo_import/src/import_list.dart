@@ -173,8 +173,13 @@ final class ImportRow {
     ].join('\n');
   }
 
+  /// Whether the row's front holds a blank: a whole card, whose back is its
+  /// front with the blanks filled, in any form.
+  bool get whole => hasBlanks(front);
+
   /// The cards the row saves in [form].
   List<CardSides> cards(SectionForm form) => switch (form) {
+    _ when whole => [(front: front, back: filled(front))],
     VocabularyForm(:final direction) when kind == CardKind.vocabulary => [
       if (direction != Direction.backward)
         (front: word(form), back: meaning(form)),

@@ -467,6 +467,86 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('whole cards in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow.subtract(const Duration(days: 1)),
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        final deck = await repository.createDeck('국어 문법');
+        for (final front in [
+          '3인칭 재귀칭: 높임 {{c::당신}} · 예사 {{c::자기}} · 낮춤 저',
+          '| 불규칙 | 기본형 | 활용 |\n| --- | --- | --- |\n'
+              '| ㄷ 불규칙 | 듣다 | {{c::들어}} |\n'
+              '| ㅂ 불규칙 | 돕다 | {{c::도와}} |\n'
+              '| ㅅ 불규칙 | 낫다 | {{c::나아}} |',
+        ]) {
+          await repository.addCard(
+            deck.id,
+            front: [TextContent(front)],
+            back: [TextContent(filled(front))],
+          );
+        }
+      });
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          // The real scheduler, as answering a card reviews it.
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            accountServiceProvider.overrideWithValue(
+              FakeAccountService(
+                const SignedIn(userId: _ada, email: 'ada@example.com'),
+              ),
+            ),
+            studyRepositoryProvider.overrideWithValue(
+              StudyRepository(db, newId: () => 'review${ids++}'),
+            ),
+            schedulerProvider.overrideWithValue(scheduler),
+            studyClockProvider.overrideWithValue(() => homeNow),
+            studyZoneProvider.overrideWithValue((_) => Duration.zero),
+            studyRandomProvider.overrideWithValue((_) => Random(0)),
+            studyStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.tabDecks));
+      await tap(tester, find.text('국어 문법'));
+      await shot(tester, '31-whole-card-list');
+      await tap(tester, find.byType(Switch));
+      await shot(tester, '31b-whole-card-list-shown');
+
+      await tap(tester, find.text(ko.studyDeck));
+      await shot(tester, '32-whole-card-study');
+      for (final name in [
+        '32b-whole-card-answered',
+        '32c-whole-card-answered',
+      ]) {
+        await tap(tester, find.widgetWithText(TextButton, ko.know));
+        await shot(tester, name);
+      }
+      // The answers' writes land before the database closes.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await unmount(tester);
+    });
+
     testWidgets('the record tab over twelve weeks in $mode', skip: !_capture, (
       tester,
     ) async {

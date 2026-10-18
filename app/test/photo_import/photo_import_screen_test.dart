@@ -17,6 +17,7 @@ import '../home/home_data.dart';
 import 'package:smartman/photo_import/src/extraction_client.dart'
     show parseExtraction;
 
+import '../deck/whole_cards.dart';
 import 'fakes.dart';
 
 /// Photo import over decks "French" (holding [french]) and "Spanish", with a
@@ -733,6 +734,43 @@ void main() {
       ]);
       await import.close();
     });
+
+    testWidgets(
+      'a row whose front holds a blank shows it whole and filled, saves its filled front as its back, and its section offers no swap',
+      (tester) async {
+        const front = '3인칭 재귀칭: 높임 당신 · 예사 {{c::자기}} · 낮춤 저';
+        final import = await _Import.open(tester);
+        await import.extractCards(const [
+          CandidateCard(
+            front: front,
+            answer: '자기',
+            type: CardType.cloze,
+            topic: '재귀칭',
+          ),
+        ]);
+
+        expect(blanksUnder(find.byType(Dismissible)), {'자기': true});
+        expect(
+          import.check('3인칭 재귀칭: 높임 당신 · 예사 blank · 낮춤 저'),
+          findsOneWidget,
+        );
+        await import.menu('재귀칭');
+        expect(find.widgetWithText(MenuItemButton, 'Swap sides'), findsNothing);
+        // Control: the menu is open, with its other item.
+        expect(
+          find.widgetWithText(MenuItemButton, 'Leave out this group'),
+          findsOneWidget,
+        );
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
+
+        await import.tap(_shown('Add 1 card'));
+        expect(await import.cards(import.french), [
+          (front, '3인칭 재귀칭: 높임 당신 · 예사 자기 · 낮춤 저', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
 
     testWidgets(
       "the menu's last item leaves out every row of a section, then includes them",

@@ -105,7 +105,11 @@ class _PreviousCardViewState extends State<PreviousCardView>
     return Semantics(
       container: true,
       label: l10n.previousCardSemantics(
-        describeContent(l10n, card.card.front),
+        spoken(
+          describeContent(l10n, card.card.front),
+          revealed: false,
+          blank: l10n.blank,
+        ),
         describeContent(l10n, card.card.back),
         _answerName(l10n, card.answer),
         card.changed ? 'yes' : 'no',
@@ -174,7 +178,11 @@ class EarlierCardView extends StatelessWidget {
       label: [
         l10n.earlierCard,
         l10n.previousCardSemantics(
-          describeContent(l10n, card.front),
+          spoken(
+            describeContent(l10n, card.front),
+            revealed: false,
+            blank: l10n.blank,
+          ),
           describeContent(l10n, card.back),
           _answerName(l10n, earlier.answer),
           'no',
@@ -333,7 +341,8 @@ class _Reveal extends StatelessWidget {
 
 /// A previous card's face: its sides on the grade's fill inside the grade's
 /// line, at the current card's sizes and shrunk as far as their floors to fit
-/// their halves, then cut, and the grade's chip on its top edge.
+/// their halves, then cut, or a whole card's front with its blanks filled,
+/// fitted to the card; and the grade's chip on its top edge.
 class _GradedCard extends StatelessWidget {
   const _GradedCard({
     required this.front,
@@ -348,6 +357,7 @@ class _GradedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final whole = describeContent(AppLocalizations.of(context), front);
     final (fill, line) = switch (answer) {
       Answer.know => (colors.knowCard, colors.knowLine),
       Answer.dontKnow => (colors.dontKnowCard, colors.dontKnowLine),
@@ -364,34 +374,50 @@ class _GradedCard extends StatelessWidget {
             ),
             // The card is given its height, so its halves are laid out at
             // it and each side reads the height its half leaves it.
-            child: SplitCard(
-              padding: StudyStyle.cardPadding,
-              dividerInset: StudyStyle.dividerInset,
-              dividerColor: line,
-              stackBelow: StudyStyle.minHalfWidth,
-              front: (context, width) => LayoutBuilder(
-                builder: (context, constraints) => ContentView(
-                  front,
-                  style: AppType.question.copyWith(color: colors.ink),
-                  fit: (
-                    minFontSize: AppType.questionFloor,
-                    width: width,
-                    height: constraints.maxHeight,
+            child: hasBlanks(whole)
+                ? Padding(
+                    padding: const EdgeInsets.all(StudyStyle.cardPadding),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => Center(
+                        child: WholeCardView(
+                          whole,
+                          revealed: true,
+                          style: AppType.question.copyWith(color: colors.ink),
+                          minFontSize: AppType.questionFloor,
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                        ),
+                      ),
+                    ),
+                  )
+                : SplitCard(
+                    padding: StudyStyle.cardPadding,
+                    dividerInset: StudyStyle.dividerInset,
+                    dividerColor: line,
+                    stackBelow: StudyStyle.minHalfWidth,
+                    front: (context, width) => LayoutBuilder(
+                      builder: (context, constraints) => ContentView(
+                        front,
+                        style: AppType.question.copyWith(color: colors.ink),
+                        fit: (
+                          minFontSize: AppType.questionFloor,
+                          width: width,
+                          height: constraints.maxHeight,
+                        ),
+                      ),
+                    ),
+                    back: (context, width) => LayoutBuilder(
+                      builder: (context, constraints) => ContentView(
+                        back,
+                        style: AppType.answer.copyWith(color: colors.ink2),
+                        fit: (
+                          minFontSize: AppType.answerFloor,
+                          width: width,
+                          height: constraints.maxHeight,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              back: (context, width) => LayoutBuilder(
-                builder: (context, constraints) => ContentView(
-                  back,
-                  style: AppType.answer.copyWith(color: colors.ink2),
-                  fit: (
-                    minFontSize: AppType.answerFloor,
-                    width: width,
-                    height: constraints.maxHeight,
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
         Positioned(
@@ -445,22 +471,27 @@ class _GradeChip extends StatelessWidget {
   }
 }
 
-/// Opens [card]'s whole front and back in a sheet.
+/// Opens [card]'s whole front and back in a sheet, or a whole card's front
+/// with its blanks filled.
 void _showWholeCard(BuildContext context, Card card) {
   final l10n = AppLocalizations.of(context);
+  final whole = describeContent(l10n, card.front);
+  final isWhole = hasBlanks(whole);
   showAppSheet<void>(
     context,
     builder: (context) => AppSheet(
-      title: l10n.cardFront,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ContentView(card.front, style: AppType.body),
-          const Divider(height: AppSpace.s32),
-          AppSectionLabel(l10n.cardBack),
-          ContentView(card.back, style: AppType.body),
-        ],
-      ),
+      title: isWhole ? l10n.wholeCard : l10n.cardFront,
+      content: isWhole
+          ? WholeCardView(whole, revealed: true, style: AppType.body)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ContentView(card.front, style: AppType.body),
+                const Divider(height: AppSpace.s32),
+                AppSectionLabel(l10n.cardBack),
+                ContentView(card.back, style: AppType.body),
+              ],
+            ),
     ),
   );
 }

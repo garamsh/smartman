@@ -9,6 +9,7 @@ import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_list.dart';
+import 'card_markup.dart';
 import 'card_preview.dart';
 import 'content.dart';
 import 'deck_repository.dart';
@@ -17,7 +18,8 @@ import 'model.dart';
 import 'providers.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
-/// of the card as the study screen shows it.
+/// of the card as the study screen shows it. A question that holds a blank
+/// makes a whole card, whose answer is the question with its blanks filled.
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -42,7 +44,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     text: plainText(widget.card?.back ?? const []),
   );
   final _frontFocus = FocusNode();
-  bool _showRequired = false;
+  bool _showErrors = false;
 
   bool get _isNew => widget.card == null;
 
@@ -54,15 +56,19 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     super.dispose();
   }
 
+  bool get _isWhole => hasBlanks(_front.text);
+
   Future<void> _save(_AfterSave after, {bool allowDuplicate = false}) async {
-    if (_front.text.trim().isEmpty || _back.text.trim().isEmpty) {
-      setState(() => _showRequired = true);
+    if (_front.text.trim().isEmpty ||
+        hasMalformedBlank(_front.text) ||
+        (!_isWhole && _back.text.trim().isEmpty)) {
+      setState(() => _showErrors = true);
       return;
     }
     final repository = ref.read(deckRepositoryProvider);
     final card = widget.card;
     final front = _replaceText(card?.front ?? const [], _front.text);
-    final back = _replaceText(card?.back ?? const [], _back.text);
+    final back = _replaceText(card?.back ?? const [], _backText);
     await reportingFailure(context, () async {
       final result = card == null
           ? await repository.addCard(
@@ -85,7 +91,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           setState(() {
             _front.clear();
             _back.clear();
-            _showRequired = false;
+            _showErrors = false;
           });
           _frontFocus.requestFocus();
         case (DuplicateFront(:final existing), _):
@@ -130,8 +136,17 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     });
   }
 
+  /// The answer saved: a whole card's question with its blanks filled.
+  String get _backText => _isWhole ? filled(_front.text) : _back.text;
+
   String? _requiredError(AppLocalizations l10n, TextEditingController side) =>
-      _showRequired && side.text.trim().isEmpty ? l10n.cardSideRequired : null;
+      _showErrors && side.text.trim().isEmpty ? l10n.cardSideRequired : null;
+
+  String? _frontError(AppLocalizations l10n) =>
+      _requiredError(l10n, _front) ??
+      (_showErrors && hasMalformedBlank(_front.text)
+          ? l10n.cardBlankMalformed
+          : null);
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +188,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             ),
             back: describeContent(
               l10n,
-              _replaceText(card?.back ?? const [], _back.text),
+              _replaceText(card?.back ?? const [], _backText),
             ),
           ),
           const SizedBox(height: AppSpace.s24),
@@ -184,18 +199,26 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             autofocus: _isNew,
             minLines: 2,
             maxLines: null,
-            errorText: _requiredError(l10n, _front),
+            errorText: _frontError(l10n),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: AppSpace.s16),
-          AppTextField(
-            label: l10n.cardBack,
-            controller: _back,
-            minLines: 2,
-            maxLines: null,
-            errorText: _requiredError(l10n, _back),
-            onChanged: (_) => setState(() {}),
-          ),
+          if (_isWhole)
+            Text(
+              l10n.wholeCardBack,
+              style: AppType.secondary.copyWith(
+                color: AppColors.of(context).muted,
+              ),
+            )
+          else
+            AppTextField(
+              label: l10n.cardBack,
+              controller: _back,
+              minLines: 2,
+              maxLines: null,
+              errorText: _requiredError(l10n, _back),
+              onChanged: (_) => setState(() {}),
+            ),
         ],
       ),
       bottomNavigationBar: _isNew

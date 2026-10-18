@@ -116,6 +116,88 @@ void main() {
     await screens.close();
   });
 
+  testWidgets(
+    'a question with a blank is a whole card: previewed filled, its answer field gone, saved with the filled question as its answer, and edited the same way',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final screens = await openNew(tester);
+      await screens.enter('Question', 'The capital of France is {{c::Paris}}');
+
+      // The preview draws it whole, the blank filled.
+      expect(
+        find.descendant(
+          of: find.byType(CardPreview),
+          matching: find.bySemanticsLabel('The capital of France is Paris'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(AppTextField, 'Answer'), findsNothing);
+      expect(
+        find.text('The card with its blanks filled is saved as the answer'),
+        findsOneWidget,
+      );
+      await screens.tap(find.text('Save'));
+      expect(await _stored(screens), [
+        (
+          'The capital of France is {{c::Paris}}',
+          'The capital of France is Paris',
+        ),
+      ]);
+
+      final card = (await screens.cards()).single;
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      // The question comes back as typed, its markup kept.
+      expect(
+        find.widgetWithText(TextField, 'The capital of France is {{c::Paris}}'),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'The capital of France is {{c::Paris}}'),
+        '{{c::Lyon}} is in France',
+      );
+      await tester.pumpAndSettle();
+      await screens.tap(find.text('Save'));
+      expect(await _stored(screens), [
+        ('{{c::Lyon}} is in France', 'Lyon is in France'),
+      ]);
+      semantics.dispose();
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a blank that does not close is refused with a message on the question, where the closed one is saved',
+    (tester) async {
+      final screens = await openNew(tester);
+      await screens.enter('Question', 'The capital of France is {{c::Paris');
+      // Not yet a whole card, so it asks for an answer too.
+      await screens.enter('Answer', 'Paris');
+
+      await screens.tap(find.text('Save'));
+
+      expect(
+        find.text('A blank is not closed, or holds nothing'),
+        findsOneWidget,
+      );
+      expect(await _stored(screens), isEmpty);
+
+      // The control: the same question with its blank closed.
+      await tester.enterText(
+        find.widgetWithText(TextField, 'The capital of France is {{c::Paris'),
+        'The capital of France is {{c::Paris}}',
+      );
+      await tester.pumpAndSettle();
+      await screens.tap(find.text('Save'));
+      expect(await _stored(screens), [
+        (
+          'The capital of France is {{c::Paris}}',
+          'The capital of France is Paris',
+        ),
+      ]);
+      await screens.close();
+    },
+  );
+
   testWidgets('editing a card offers Save only, and deletes after confirming', (
     tester,
   ) async {

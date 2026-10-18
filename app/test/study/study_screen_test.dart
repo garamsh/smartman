@@ -28,6 +28,7 @@ import 'package:smartman/study/src/study_screen.dart';
 import 'package:smartman/study/src/study_style.dart';
 import 'package:smartman/study/src/today_overview.dart';
 
+import '../deck/whole_cards.dart';
 import 'fixtures.dart';
 import 'study_storage.dart';
 
@@ -1920,6 +1921,109 @@ void main() {
       expect(_previous('c front'), findsOneWidget);
     },
   );
+
+  group('a whole card', () {
+    const cloze = 'The capital of France is {{c::Paris}}';
+    const table =
+        '| Capital | Country |\n| --- | --- |\n'
+        '| {{c::Paris}} | France |\n| {{c::Berlin}} | Germany |';
+
+    Future<_Study> openWhole(
+      WidgetTester tester,
+      String front, {
+      ThemeMode themeMode = ThemeMode.light,
+    }) => _open(
+      tester,
+      ['whole'],
+      sides: {
+        'whole': ([TextContent(front)], [TextContent(filled(front))]),
+      },
+      themeMode: themeMode,
+    );
+
+    testWidgets(
+      'a cloze card shows its sentence on the current card with its blank empty, and once answered, as one card, the previous card and its sheet fill it in place',
+      (tester) async {
+        final study = await openWhole(tester, cloze);
+        expect(
+          _label(tester, _cardNode),
+          'Front: The capital of France is blank',
+        );
+        expect(blanksUnder(_currentCard), {'Paris': false});
+        expect(find.text('0/1'), findsOneWidget);
+
+        await study.know();
+
+        expect(find.text('1/1'), findsOneWidget);
+        expect(blanksUnder(_previousCard), {'Paris': true});
+        expect(
+          find.descendant(
+            of: _previousCard,
+            matching: find.byType(VerticalDivider),
+          ),
+          findsNothing,
+        );
+        expect(
+          _label(tester, _previous('The capital of France is blank')),
+          'Front: The capital of France is blank. '
+          'Back: The capital of France is Paris. Answer: Know',
+        );
+
+        await tester.tap(_previousCard);
+        await tester.pumpAndSettle();
+        expect(find.text('Card'), findsOneWidget);
+        expect(find.text('Answer'), findsNothing);
+        expect(blanksUnder(find.byType(BottomSheet)), {'Paris': true});
+      },
+    );
+
+    testWidgets(
+      'a table card shows the whole table with its headers and its cells to recall empty, and once answered, as one card, fills every one in place',
+      (tester) async {
+        final study = await openWhole(tester, table);
+        expect(
+          find.descendant(of: _currentCard, matching: find.byType(Table)),
+          findsOneWidget,
+        );
+        for (final header in ['Capital', 'Country', 'France', 'Germany']) {
+          expect(
+            find.descendant(of: _currentCard, matching: find.text(header)),
+            findsOneWidget,
+          );
+        }
+        expect(blanksUnder(_currentCard), {'Paris': false, 'Berlin': false});
+        expect(
+          _label(tester, _cardNode),
+          'Front: Capital, Country. blank, France. blank, Germany',
+        );
+        expect(find.text('0/1'), findsOneWidget);
+
+        await study.know();
+
+        expect(find.text('1/1'), findsOneWidget);
+        expect(
+          find.descendant(of: _previousCard, matching: find.byType(Table)),
+          findsOneWidget,
+        );
+        expect(blanksUnder(_previousCard), {'Paris': true, 'Berlin': true});
+      },
+    );
+
+    for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets(
+        'in the ${mode.name} theme a cloze and a table card meet the contrast guideline before and after the answer',
+        (tester) async {
+          for (final front in [cloze, table]) {
+            final study = await openWhole(tester, front, themeMode: mode);
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+            await study.know();
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+            await study.close();
+          }
+        },
+      );
+    }
+  });
 }
 
 /// Due at 05:00 UTC tomorrow, an hour after the next study day starts.

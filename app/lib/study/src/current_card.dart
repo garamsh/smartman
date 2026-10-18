@@ -117,7 +117,9 @@ class _CurrentCardState extends State<CurrentCard>
         Expanded(
           child: Semantics(
             container: true,
-            label: l10n.currentCardSemantics(front),
+            label: l10n.currentCardSemantics(
+              spoken(front, revealed: false, blank: l10n.blank),
+            ),
             customSemanticsActions: {
               CustomSemanticsAction(label: l10n.know): () =>
                   _commit(Answer.know),
@@ -411,7 +413,7 @@ class _DragFeedback extends StatelessWidget {
 }
 
 /// The card itself: its front alone, centred, scrolling inside where it is
-/// taller than the card.
+/// taller than the card; a whole card's with its blanks empty.
 class _CardFace extends StatelessWidget {
   const _CardFace({required this.card});
 
@@ -420,6 +422,7 @@ class _CardFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final front = describeContent(AppLocalizations.of(context), card.front);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -435,15 +438,26 @@ class _CardFace extends StatelessWidget {
                 padding: const EdgeInsets.all(StudyStyle.cardPadding),
                 child: SizedBox(
                   width: double.infinity,
-                  child: ContentView(
-                    card.front,
-                    style: AppType.question,
-                    fit: (
-                      minFontSize: AppType.questionFloor,
-                      width: constraints.maxWidth - 2 * StudyStyle.cardPadding,
-                      height: null,
-                    ),
-                  ),
+                  child: hasBlanks(front)
+                      ? WholeCardView(
+                          front,
+                          revealed: false,
+                          style: AppType.question,
+                          minFontSize: AppType.questionFloor,
+                          width:
+                              constraints.maxWidth - 2 * StudyStyle.cardPadding,
+                        )
+                      : ContentView(
+                          card.front,
+                          style: AppType.question,
+                          fit: (
+                            minFontSize: AppType.questionFloor,
+                            width:
+                                constraints.maxWidth -
+                                2 * StudyStyle.cardPadding,
+                            height: null,
+                          ),
+                        ),
                 ),
               ),
             ),

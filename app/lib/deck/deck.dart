@@ -16,6 +16,7 @@ export 'src/card_import.dart'
 export 'src/card_editor_screen.dart' show CardEditorScreen;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart' show CardAnswerRow, CardSplitRow, describeContent;
+export 'src/card_markup.dart' show filled, hasBlanks, spoken;
 export 'src/content.dart'
     show Content, TextContent, UnsupportedContent, decodeContent, plainText;
 export 'src/content_view.dart' show ContentView;
@@ -46,3 +47,4 @@ export 'src/providers.dart'
         deckRepositoryProvider,
         decksProvider;
 export 'src/split_card.dart' show SideBuilder, SplitCard;
+export 'src/whole_card_view.dart' show WholeCardView;

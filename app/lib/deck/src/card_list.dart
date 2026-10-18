@@ -4,12 +4,15 @@ import 'package:flutter/semantics.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'card_markup.dart';
 import 'content.dart';
 import 'split_card.dart';
+import 'whole_card_view.dart';
 
-/// A card as two columns, front and back, split by a thin divider; read-only
-/// without [onTap]. On its own it is a row on its rounded surface; [grouped]
-/// it is one row of a group that draws the surface.
+/// A card as two columns, front and back, split by a thin divider, or a
+/// whole card's front with its blanks filled; read-only without [onTap]. On
+/// its own it is a row on its rounded surface; [grouped] it is one row of a
+/// group that draws the surface.
 class CardSplitRow extends StatelessWidget {
   const CardSplitRow({
     super.key,
@@ -27,12 +30,19 @@ class CardSplitRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final content = SplitCard(
-      centred: false,
-      front: (context, _) => Text(front, style: AppType.label),
-      back: (context, _) =>
-          Text(back, style: AppType.secondary.copyWith(color: colors.ink2)),
-    );
+    final content = hasBlanks(front)
+        ? Padding(
+            padding: const EdgeInsets.all(AppSpace.s16),
+            child: WholeCardView(front, revealed: true, style: AppType.label),
+          )
+        : SplitCard(
+            centred: false,
+            front: (context, _) => Text(front, style: AppType.label),
+            back: (context, _) => Text(
+              back,
+              style: AppType.secondary.copyWith(color: colors.ink2),
+            ),
+          );
     final onTap = this.onTap;
     if (!grouped) return AppRowSurface(onTap: onTap, child: content);
     return onTap == null ? content : InkWell(onTap: onTap, child: content);
@@ -40,8 +50,9 @@ class CardSplitRow extends StatelessWidget {
 }
 
 /// A card's question on its row, with its answer behind a bar unless
-/// [shown]; a tap calls [onToggle], whose owner decides what [shown] becomes.
-/// A long-press, or a screen reader's action, opens the card with [onEdit].
+/// [shown], or a whole card's front with its blanks empty unless [shown]; a
+/// tap calls [onToggle], whose owner decides what [shown] becomes. A
+/// long-press, or a screen reader's action, opens the card with [onEdit].
 class CardAnswerRow extends StatelessWidget {
   const CardAnswerRow({
     super.key,
@@ -62,12 +73,13 @@ class CardAnswerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
+    final question = spoken(front, revealed: false, blank: l10n.blank);
     return Semantics(
       container: true,
       button: true,
       label: shown
-          ? l10n.cardAnswerShown(front, back)
-          : l10n.cardAnswerHidden(front),
+          ? l10n.cardAnswerShown(question, back)
+          : l10n.cardAnswerHidden(question),
       onTapHint: shown ? l10n.hideAnswer : l10n.showAnswer,
       customSemanticsActions: {
         CustomSemanticsAction(label: l10n.editCard): onEdit,
@@ -83,29 +95,37 @@ class CardAnswerRow extends StatelessWidget {
               horizontal: AppSpace.s16,
               vertical: AppSpace.s12,
             ),
-            child: Row(
-              spacing: AppSpace.s12,
-              children: [
-                Expanded(child: Text(front, style: AppType.bodyStrong)),
-                if (shown)
-                  Expanded(
-                    child: Text(
-                      back,
-                      textAlign: TextAlign.end,
-                      style: AppType.secondary.copyWith(color: colors.ink2),
-                    ),
+            child: hasBlanks(front)
+                ? WholeCardView(
+                    front,
+                    revealed: shown,
+                    style: AppType.bodyStrong,
                   )
-                else
-                  Container(
-                    width: AppSize.cta * 2 - AppSpace.s16,
-                    height: AppSpace.s24 - 2,
-                    decoration: BoxDecoration(
-                      color: colors.hairline,
-                      borderRadius: BorderRadius.circular(AppSpace.s8),
-                    ),
+                : Row(
+                    spacing: AppSpace.s12,
+                    children: [
+                      Expanded(child: Text(front, style: AppType.bodyStrong)),
+                      if (shown)
+                        Expanded(
+                          child: Text(
+                            back,
+                            textAlign: TextAlign.end,
+                            style: AppType.secondary.copyWith(
+                              color: colors.ink2,
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          width: AppSize.cta * 2 - AppSpace.s16,
+                          height: AppSpace.s24 - 2,
+                          decoration: BoxDecoration(
+                            color: colors.hairline,
+                            borderRadius: BorderRadius.circular(AppSpace.s8),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
-            ),
           ),
         ),
       ),

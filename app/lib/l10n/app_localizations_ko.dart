@@ -68,6 +68,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cardSideRequired => '내용을 입력하세요';
 
   @override
+  String get cardBlankMalformed => '빈칸 표시가 닫히지 않았거나 비어 있어요';
+
+  @override
+  String get wholeCardBack => '빈칸을 채운 카드가 답으로 저장돼요';
+
+  @override
+  String get blank => '빈칸';
+
+  @override
+  String get wholeCard => '카드';
+
+  @override
   String get duplicateTitle => '이 덱에 이미 있는 카드예요';
 
   @override
