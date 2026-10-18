@@ -115,7 +115,7 @@ export function CoachDemo({ answer, children }: { answer: Answer; children: Reac
       </div>
       <div className={`relative grid ${demo.card}`}>
         {children}
-        <Finger className="top-[58%] left-[44%]" />
+        <Finger className="top-3/5 left-2/5" />
       </div>
     </div>
   );
