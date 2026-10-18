@@ -118,10 +118,12 @@ class _RecordingScheduler extends _InstantScheduler {
 const _phone = Size(390, 844);
 
 class _Study {
-  _Study(this.tester, this.db);
+  _Study(this.tester, this.db, this.navigator, this.decks);
 
   final WidgetTester tester;
   final AppDatabase db;
+  final GlobalKey<NavigatorState> navigator;
+  final DeckSelection decks;
   DateTime now = DateTime.utc(2026, 10, 14, 9);
 
   /// Drags the current card [dx] to the side over [duration], slowly enough
@@ -141,6 +143,22 @@ class _Study {
 
   Future<void> dontKnow({Duration elapsed = Duration.zero}) =>
       swipe(-200, elapsed: elapsed);
+
+  /// Closes the screen, lets the answers it queued land, and opens a new
+  /// session over the same decks.
+  Future<void> reopen() async {
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    unawaited(
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 
   /// The front of the card under study, or null when none is.
   String? get current {
@@ -228,8 +246,8 @@ Future<_Study> _open(
     }
     return deck;
   }))!;
-  final study = _Study(tester, db);
   final navigator = GlobalKey<NavigatorState>();
+  final study = _Study(tester, db, navigator, DeckSelection(deck.id));
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -493,7 +511,8 @@ void main() {
 
       expect(find.text('Done for today'), findsNothing);
       expect(study.current, 'c20 front');
-      expect(find.text('0/2'), findsOneWidget);
+      // The day's count goes on from the twenty answered today.
+      expect(find.text('20/22'), findsOneWidget);
       final guide = [_guideDone, ..._guide(0, 0).skip(1)];
       for (final line in guide) {
         expect(_guideText(line), findsOneWidget);
@@ -1224,6 +1243,51 @@ void main() {
   );
 
   testWidgets(
+    "a session reopened the same day counts the day's cards from today's answers, each card once, and goes on with those left",
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c', 'd', 'e', 'f']);
+      expect(find.text('0/6'), findsOneWidget);
+      await study.know();
+      await study.dontKnow();
+      await study.know();
+      await study.know();
+      expect(find.text('4/6'), findsOneWidget);
+
+      await study.reopen();
+      // a to d were answered today, b with Don't know, and only e and f are
+      // left: the count goes on at 4 of the same 6, not 0 of 2.
+      expect(find.text('4/6'), findsOneWidget);
+      expect(_guideText(_guide(2, 1).first), findsOneWidget);
+      expect(study.current, 'e front');
+      await study.know();
+      expect(find.text('5/6'), findsOneWidget);
+
+      // Changing that answer counts the card once still.
+      final semantics = tester.ensureSemantics();
+      await _act(tester, _previous('e front').last, "Change to Don't know");
+      semantics.dispose();
+      expect(find.text('5/6'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a session reopened on the next study day, after 04:00, counts from 0',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c']);
+      await study.know();
+      await study.reopen();
+      // Control: the same day, the count goes on.
+      expect(find.text('1/3'), findsOneWidget);
+
+      study.now = DateTime.utc(2026, 10, 15, 4, 30);
+      await study.reopen();
+      // a, due again a day after its answer, and b and c, new.
+      expect(find.text('0/3'), findsOneWidget);
+      expect(_guideText(_guide(3, 1).first), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'Study goes on with the next new cards in the same screen and route, each answer written, and stop closes it',
     (tester) async {
       // Eighteen of the first day's twenty new cards answered today: two are
@@ -1246,11 +1310,11 @@ void main() {
         same(route),
       );
       expect(route!.isCurrent, isTrue);
-      expect(find.text('2/4'), findsOneWidget);
+      expect(find.text('20/22'), findsOneWidget);
       await study.know();
       expect(study.current, 'c21 front');
       await study.know();
-      expect(find.text('4/4'), findsOneWidget);
+      expect(find.text('22/22'), findsOneWidget);
       expect(find.text('No more cards to study'), findsOneWidget);
       final reviews = await tester.runAsync(
         () => study.db.select(study.db.reviews).get(),

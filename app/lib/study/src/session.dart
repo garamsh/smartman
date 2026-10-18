@@ -121,14 +121,15 @@ final class PreviousCard {
   final bool changed;
 }
 
-/// How many of the session's cards have been answered at least once.
+/// How many of the day's cards have been answered at least once today, in
+/// this session or an earlier one.
 final class SessionProgress {
   const SessionProgress(this.answered, this.total);
 
   final int answered;
 
-  /// The cards in the queue when the session opened, and those taken past
-  /// today's since.
+  /// The day's cards: those of the decks answered today before the session
+  /// opened, the queue it opened with, and those taken past today's since.
   final int total;
 }
 
@@ -208,7 +209,10 @@ class StudySession extends ChangeNotifier {
   SessionLoadFailed? _loadFailure;
   bool _loaded = false;
   final _queue = <Card>[];
-  var _total = 0;
+
+  /// The day's cards, each once: those answered today before the session
+  /// opened, the queue it opened with, and those taken past today's since.
+  final _dayCards = <CardId>{};
 
   /// The new cards past today's, oldest first, not yet taken.
   var _more = const <Card>[];
@@ -261,8 +265,11 @@ class StudySession extends ChangeNotifier {
         ),
     ];
     final progress = SessionProgress(
-      {for (final answered in _answers) answered.card.id}.length,
-      _total,
+      {
+        for (final card in _answeredToday) card.id,
+        for (final answered in _answers) answered.card.id,
+      }.length,
+      _dayCards.length,
     );
     if (_queue.isNotEmpty) {
       return SessionStudying(
@@ -378,7 +385,7 @@ class StudySession extends ChangeNotifier {
   /// Moves the new cards past today's into the queue.
   void _takeMore() {
     _queue.addAll(_more);
-    _total += _more.length;
+    _dayCards.addAll([for (final card in _more) card.id]);
     _more = const [];
   }
 
@@ -447,7 +454,10 @@ class StudySession extends ChangeNotifier {
       );
       _before.addAll(states);
       _queue.addAll(orderQueue(selectQueue(read, states, day), _random));
-      _total = _queue.length;
+      _dayCards.addAll([
+        for (final card in _answeredToday) card.id,
+        for (final card in _queue) card.id,
+      ]);
       final taken = {for (final card in _queue) card.id};
       _more = [
         for (final card in newCards(read, states))
@@ -455,8 +465,8 @@ class StudySession extends ChangeNotifier {
       ];
       final fresh = _queue.where((card) => !states.containsKey(card.id)).length;
       _size = SessionSize(
-        cards: _total,
-        minutes: pace.minutes(reviews: _total - fresh, fresh: fresh),
+        cards: _queue.length,
+        minutes: pace.minutes(reviews: _queue.length - fresh, fresh: fresh),
       );
       // Opening the screen with no card left today is the choice to go on.
       if (_queue.isEmpty) _takeMore();

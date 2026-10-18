@@ -208,7 +208,11 @@ void main() {
       'c${_today.toString().padLeft(2, '0')}',
     );
     expect(state.guide?.cards, 0);
-    expect((state.progress.answered, state.progress.total), (0, 2));
+    // The day's count goes on from today's answered cards.
+    expect(
+      (state.progress.answered, state.progress.total),
+      (_today, _today + 2),
+    );
   });
 
   test('with no new card left past today\'s, the completion card offers none and 학습하기 does nothing', () async {
