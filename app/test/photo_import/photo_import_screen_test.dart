@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -146,6 +147,16 @@ class _Import {
     await shoot();
     client.answer(cards);
     await tester.pumpAndSettle();
+    await next();
+    await tester.pumpAndSettle();
+  }
+
+  /// Goes on from the choice screen to Review; frames are pumped, not
+  /// settled, since Review's coach may be animating.
+  Future<void> next() async {
+    await tester.tap(_shown('Next'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
   }
 
   /// The review card showing [text], which a drag moves.
@@ -222,6 +233,8 @@ void main() {
         expect(_shown('Finding cards'), findsOneWidget);
         expect(import.client.calls.single.photo, same(testPhoto));
         import.client.answer({'chien': 'dog'});
+        await tester.pumpAndSettle();
+        await import.next();
         await tester.pumpAndSettle();
         expect(_shown('Made 1 card'), findsOneWidget);
         await import.close();
@@ -431,6 +444,192 @@ void main() {
     }
   });
 
+  group('choice', () {
+    /// A page of two topics: two notes, one with printed examples, and a
+    /// vocabulary card with its part of speech.
+    const page = [
+      CandidateCard(
+        front: '양성모음',
+        answer: 'ㅏ ㅗ ㅑ ㅛ',
+        examples: ['졸졸', '찰랑찰랑'],
+        topic: '모음조화',
+      ),
+      CandidateCard(front: '음성모음', answer: 'ㅓ ㅜ ㅡ', topic: '모음조화'),
+      CandidateCard(
+        front: 'run',
+        answer: '달리다',
+        partOfSpeech: '[동]',
+        topic: '단어',
+      ),
+    ];
+
+    Future<void> answerPage(
+      _Import import, [
+      List<CandidateCard> cards = page,
+    ]) async {
+      await import.shoot();
+      import.client.answerCards(cards);
+      await import.tester.pumpAndSettle();
+    }
+
+    /// The pill or option chip reading [label].
+    Finder chip(String label) =>
+        find.ancestor(of: _shown(label), matching: find.byType(AppChip)).first;
+
+    testWidgets(
+      'shows how many cards were made, each topic as a pill, on at first, and each topic sample in its default shape',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import);
+
+        expect(
+          _shown('Made 3 cards.\nWhat will you memorise?'),
+          findsOneWidget,
+        );
+        for (final topic in ['모음조화', '단어']) {
+          expect(
+            tester.widget<AppChip>(chip(topic)).tone,
+            AppChipTone.brand,
+            reason: '$topic on',
+          );
+        }
+        expect(_shown('양성모음'), findsOneWidget);
+        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget, reason: '핵심만');
+        expect(_shown('run'), findsOneWidget);
+        expect(_shown('[동] 달리다'), findsOneWidget);
+        expect(_shown('음성모음'), findsNothing, reason: 'one sample a topic');
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a pill switched off leaves its sample and its cards out of Review, and on again brings them back',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import);
+
+        await import.tap(chip('단어'));
+        expect(tester.widget<AppChip>(chip('단어')).tone, AppChipTone.neutral);
+        expect(_shown('run'), findsNothing);
+        await import.next();
+        await tester.pumpAndSettle();
+        expect(_shown('Made 2 cards'), findsOneWidget);
+        expect(_shown('run'), findsNothing);
+        expect(_shown('음성모음'), findsOneWidget);
+        await import.close();
+
+        // Control: switched off and on again, the topic goes to Review.
+        final again = await _Import.open(tester);
+        await answerPage(again);
+        await again.tap(chip('단어'));
+        await again.tap(chip('단어'));
+        await again.next();
+        await tester.pumpAndSettle();
+        expect(_shown('Made 3 cards'), findsOneWidget);
+        expect(_shown('run'), findsOneWidget);
+        await again.close();
+      },
+    );
+
+    testWidgets('Next is disabled with no topic on', (tester) async {
+      final import = await _Import.open(tester);
+      await answerPage(import);
+      FilledButton next() => tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Next'),
+      );
+
+      await import.tap(chip('모음조화'));
+      expect(next().onPressed, isNotNull, reason: 'control: one topic on');
+      await import.tap(chip('단어'));
+      expect(next().onPressed, isNull);
+      await import.close();
+    });
+
+    testWidgets(
+      'content first swaps front and answer for every card of the topic, on the sample and on Review',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        final import = await _Import.open(tester);
+        await answerPage(import);
+
+        await import.tap(_shown('양성모음'));
+        expect(chip('Concept name'), findsOneWidget);
+        await import.tap(chip('Content first'));
+        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('모음조화 front: ㅏ ㅗ ㅑ ㅛ. Tap to change'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('모음조화 back: 양성모음. Tap to change'),
+          findsOneWidget,
+        );
+        await import.next();
+        await tester.pumpAndSettle();
+
+        for (final (front, back) in [('ㅏ ㅗ ㅑ ㅛ', '양성모음'), ('ㅓ ㅜ ㅡ', '음성모음')]) {
+          expect(
+            find.bySemanticsLabel(
+              '$front, $back. Tap to edit, swipe left to remove',
+            ),
+            findsOneWidget,
+            reason: front,
+          );
+        }
+        // Control: the other topic keeps the concept's name in front.
+        expect(
+          find.bySemanticsLabel(
+            'run, [동] 달리다. Tap to edit, swipe left to remove',
+          ),
+          findsOneWidget,
+        );
+        await import.close();
+        semantics.dispose();
+      },
+    );
+
+    testWidgets(
+      'with examples puts the printed examples after the answer, on the sample and on Review',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import);
+
+        await import.tap(_shown('ㅏ ㅗ ㅑ ㅛ'));
+        await import.tap(chip('With examples'));
+        expect(_shown('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑'), findsOneWidget);
+        await import.next();
+        await tester.pumpAndSettle();
+
+        expect(_shown('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑'), findsOneWidget);
+        expect(_shown('ㅓ ㅜ ㅡ'), findsOneWidget, reason: 'prints none');
+        await import.tap(_shown('Add 3 cards to the deck'));
+        expect(await import.cards(import.french), [
+          ('양성모음', 'ㅏ ㅗ ㅑ ㅛ / 졸졸 / 찰랑찰랑', CardSource.import),
+          ('음성모음', 'ㅓ ㅜ ㅡ', CardSource.import),
+          ('run', '[동] 달리다', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets('cards with no topic go under one pill, This page', (
+      tester,
+    ) async {
+      final import = await _Import.open(tester);
+      await import.shoot();
+      import.client.answer({'chien': 'dog', 'chat': 'cat'});
+      await tester.pumpAndSettle();
+
+      expect(chip('This page'), findsOneWidget);
+      expect(find.byType(AppChip), findsOneWidget);
+      expect(_shown('chien'), findsOneWidget, reason: 'its sample');
+      await import.next();
+      await tester.pumpAndSettle();
+      expect(_shown('Made 2 cards'), findsOneWidget);
+      await import.close();
+    });
+  });
+
   group('review', () {
     /// A page of two topics, two cards and one, a vocabulary card with its
     /// part of speech among them.
@@ -451,6 +650,8 @@ void main() {
     ]) async {
       await import.shoot();
       import.client.answerCards(cards);
+      await import.tester.pumpAndSettle();
+      await import.next();
       await import.tester.pumpAndSettle();
     }
 
@@ -807,6 +1008,8 @@ void main() {
           CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
         ]);
         await tester.pumpAndSettle();
+        await import.next();
+        await tester.pumpAndSettle();
         void perform(String label, String action) =>
             tester.semantics.customAction(
               find.semantics.byLabel(label),
@@ -859,6 +1062,8 @@ void main() {
           CandidateCard(front: 'parler', answer: 'speak', topic: 'Verbs'),
         ]);
         await tester.pumpAndSettle();
+        await import.next();
+        await tester.pumpAndSettle();
         expect(import.struck('chat'), isTrue);
 
         await import.tap(find.byType(Switch));
@@ -888,6 +1093,8 @@ void main() {
           CandidateCard(front: 'chat', answer: 'cat', topic: 'Animals'),
           CandidateCard(front: 'cheval', answer: 'horse', topic: 'Farm'),
         ]);
+        await tester.pumpAndSettle();
+        await import.next();
         await tester.pumpAndSettle();
         Future<void> type(String side, String text) async {
           await import.tap(_shown(side));
@@ -949,8 +1156,8 @@ void main() {
         final import = await _Import.open(tester, coach: true);
         await import.shoot();
         import.client.answer({'chien': 'dog', 'chat': 'cat'});
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+        await import.next();
 
         expect(_shown('Swipe left to remove'), findsOneWidget);
         expect(_shown('Add 2 cards to the deck'), findsNothing);
@@ -981,8 +1188,8 @@ void main() {
         import.client.answerCards(const [
           CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
         ]);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+        await import.next();
         expect(_shown('Swipe left to remove'), findsOneWidget, reason: end);
 
         switch (end) {
@@ -1026,8 +1233,8 @@ void main() {
       final control = await _Import.open(tester, coach: true);
       await control.shoot();
       control.client.answer({'chien': 'dog'});
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      await control.next();
       expect(_shown('Swipe left to remove'), findsOneWidget);
       await control.close();
     });
@@ -1139,7 +1346,7 @@ void main() {
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'the source sheet, extracting, review, a card being edited, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
+        'the source sheet, extracting, the choice screen with its options open, review, a card being edited, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
         (tester) async {
           final semantics = tester.ensureSemantics();
           final import = await _Import.open(
@@ -1164,6 +1371,11 @@ void main() {
           await import.shoot();
           await check();
           import.client.answer({'chat': 'talk', 'chien': 'dog'});
+          await tester.pumpAndSettle();
+          await import.tap(_shown('chat'));
+          expect(_shown('Content first'), findsOneWidget);
+          await check();
+          await import.next();
           await tester.pumpAndSettle();
           expect(_shown('Add 1 card to the deck'), findsOneWidget);
           await check();

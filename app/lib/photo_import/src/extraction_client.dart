@@ -9,13 +9,14 @@ import 'photo.dart';
 const maxTopicChars = 60;
 
 /// A card the model read off the page, before the user reviews it: its
-/// headword or question, its fullest answer, the part of speech the page
-/// prints, and the topic of the page it belongs to.
+/// headword or concept, its fullest answer, the part of speech and examples
+/// the page prints, and the topic of the page it belongs to.
 final class CandidateCard {
   const CandidateCard({
     required this.front,
     required this.answer,
     this.partOfSpeech,
+    this.examples = const [],
     this.topic,
   });
 
@@ -26,6 +27,9 @@ final class CandidateCard {
 
   /// The page's own notation, such as "[동]"; null when it prints none.
   final String? partOfSpeech;
+
+  /// The examples the page prints for the card; empty when it prints none.
+  final List<String> examples;
 
   /// The part of the page the card comes from, such as "모음조화"; null from
   /// a function that names none.
@@ -120,8 +124,9 @@ List<CandidateCard> _parseCards(String body) {
 
 /// A card of non-empty `front` and `back`. Its answer is its `answer`, else
 /// its `meaning`, else, from a function deployed before the fields, its
-/// `back`; with the optional `partOfSpeech` and a `topic` of 1 to
-/// [maxTopicChars] characters. Other fields are not read.
+/// `back`; with the optional `partOfSpeech`, `examples` of non-empty text,
+/// and a `topic` of 1 to [maxTopicChars] characters. Other fields are not
+/// read.
 CandidateCard _parseCard(Object? card) {
   if (card
       case final Map<String, Object?> fields &&
@@ -137,6 +142,11 @@ CandidateCard _parseCard(Object? card) {
       front: front.trim(),
       answer: optional('answer') ?? optional('meaning') ?? back.trim(),
       partOfSpeech: optional('partOfSpeech'),
+      examples: switch (fields['examples']) {
+        null => const [],
+        final List<Object?> list => [for (final item in list) _text(item)],
+        _ => throw const ServiceFailed('examples is not a list'),
+      },
       topic: topic,
     );
   }

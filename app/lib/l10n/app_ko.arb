@@ -273,6 +273,35 @@
   "@extractingTitle": {"description": "Title while the photo is sent for extraction."},
   "extractingNote": "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요",
   "@extractingNote": {"description": "Privacy note shown while cards are extracted."},
+  "choiceTitle": "카드 {count}장을 만들었어요.\n무엇을 외울까요?",
+  "@choiceTitle": {
+    "description": "Headline of the choice screen before Review: how many cards were made, then the question of what to memorise.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "choiceTopics": "외울 주제",
+  "@choiceTopics": {"description": "What a screen reader reads for the group of topic pills on the choice screen."},
+  "choiceTopicNone": "이 페이지",
+  "@choiceTopicNone": {"description": "Pill and heading for cards with no topic, from a function deployed before topics."},
+  "choiceFrontLabel": "{topic} 앞면: {text}. 눌러서 바꾸기",
+  "@choiceFrontLabel": {
+    "description": "What a screen reader reads for a topic sample's front, which opens its shape options.",
+    "placeholders": {"topic": {"type": "String"}, "text": {"type": "String"}}
+  },
+  "choiceBackLabel": "{topic} 뒷면: {text}. 눌러서 바꾸기",
+  "@choiceBackLabel": {
+    "description": "What a screen reader reads for a topic sample's back, which opens its shape options.",
+    "placeholders": {"topic": {"type": "String"}, "text": {"type": "String"}}
+  },
+  "choiceFrontName": "개념 이름",
+  "@choiceFrontName": {"description": "Front option: the concept's name on the front, the default."},
+  "choiceFrontContent": "내용을 앞에",
+  "@choiceFrontContent": {"description": "Front option: the content on the front, the concept's name on the back."},
+  "choiceBackCore": "핵심만",
+  "@choiceBackCore": {"description": "Back option: the answer alone, the default."},
+  "choiceBackExamples": "예시까지",
+  "@choiceBackExamples": {"description": "Back option: the answer, then the examples the page prints."},
+  "choiceNext": "다음",
+  "@choiceNext": {"description": "Button of the choice screen that goes on to Review with the topics that are on."},
   "reviewMade": "카드 {count}장을 만들었어요",
   "@reviewMade": {
     "description": "Title of the review screen: how many cards were made from the photo.",

@@ -637,6 +637,12 @@ void main() {
         ),
         CandidateCard(front: 'lucid', answer: '맑은, 또렷한', topic: '단어'),
       ]);
+      await tester.pumpAndSettle();
+      await shot(tester, '22a-photo-choice');
+      await tap(tester, shown('양성모음'));
+      await shot(tester, '22b-photo-choice-options');
+      await tap(tester, shown(ko.choiceFrontName));
+      await tester.tap(find.text(ko.choiceNext));
       // The coach repeats its demonstration, so frames are pumped, not
       // settled: the first card mid-peek, with "빼기" under it.
       await tester.pump();

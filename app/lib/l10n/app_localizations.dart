@@ -781,6 +781,66 @@ abstract class AppLocalizations {
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
 
+  /// Headline of the choice screen before Review: how many cards were made, then the question of what to memorise.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장을 만들었어요.\n무엇을 외울까요?'**
+  String choiceTitle(int count);
+
+  /// What a screen reader reads for the group of topic pills on the choice screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'외울 주제'**
+  String get choiceTopics;
+
+  /// Pill and heading for cards with no topic, from a function deployed before topics.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 페이지'**
+  String get choiceTopicNone;
+
+  /// What a screen reader reads for a topic sample's front, which opens its shape options.
+  ///
+  /// In ko, this message translates to:
+  /// **'{topic} 앞면: {text}. 눌러서 바꾸기'**
+  String choiceFrontLabel(String topic, String text);
+
+  /// What a screen reader reads for a topic sample's back, which opens its shape options.
+  ///
+  /// In ko, this message translates to:
+  /// **'{topic} 뒷면: {text}. 눌러서 바꾸기'**
+  String choiceBackLabel(String topic, String text);
+
+  /// Front option: the concept's name on the front, the default.
+  ///
+  /// In ko, this message translates to:
+  /// **'개념 이름'**
+  String get choiceFrontName;
+
+  /// Front option: the content on the front, the concept's name on the back.
+  ///
+  /// In ko, this message translates to:
+  /// **'내용을 앞에'**
+  String get choiceFrontContent;
+
+  /// Back option: the answer alone, the default.
+  ///
+  /// In ko, this message translates to:
+  /// **'핵심만'**
+  String get choiceBackCore;
+
+  /// Back option: the answer, then the examples the page prints.
+  ///
+  /// In ko, this message translates to:
+  /// **'예시까지'**
+  String get choiceBackExamples;
+
+  /// Button of the choice screen that goes on to Review with the topics that are on.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음'**
+  String get choiceNext;
+
   /// Title of the review screen: how many cards were made from the photo.
   ///
   /// In ko, this message translates to:

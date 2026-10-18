@@ -426,6 +426,48 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
+  String choiceTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Made $count cards.',
+      one: 'Made 1 card.',
+    );
+    return '$_temp0\nWhat will you memorise?';
+  }
+
+  @override
+  String get choiceTopics => 'Topics to memorise';
+
+  @override
+  String get choiceTopicNone => 'This page';
+
+  @override
+  String choiceFrontLabel(String topic, String text) {
+    return '$topic front: $text. Tap to change';
+  }
+
+  @override
+  String choiceBackLabel(String topic, String text) {
+    return '$topic back: $text. Tap to change';
+  }
+
+  @override
+  String get choiceFrontName => 'Concept name';
+
+  @override
+  String get choiceFrontContent => 'Content first';
+
+  @override
+  String get choiceBackCore => 'Core only';
+
+  @override
+  String get choiceBackExamples => 'With examples';
+
+  @override
+  String get choiceNext => 'Next';
+
+  @override
   String reviewMade(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

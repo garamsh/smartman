@@ -398,6 +398,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
+  String choiceTitle(int count) {
+    return '카드 $count장을 만들었어요.\n무엇을 외울까요?';
+  }
+
+  @override
+  String get choiceTopics => '외울 주제';
+
+  @override
+  String get choiceTopicNone => '이 페이지';
+
+  @override
+  String choiceFrontLabel(String topic, String text) {
+    return '$topic 앞면: $text. 눌러서 바꾸기';
+  }
+
+  @override
+  String choiceBackLabel(String topic, String text) {
+    return '$topic 뒷면: $text. 눌러서 바꾸기';
+  }
+
+  @override
+  String get choiceFrontName => '개념 이름';
+
+  @override
+  String get choiceFrontContent => '내용을 앞에';
+
+  @override
+  String get choiceBackCore => '핵심만';
+
+  @override
+  String get choiceBackExamples => '예시까지';
+
+  @override
+  String get choiceNext => '다음';
+
+  @override
   String reviewMade(int count) {
     return '카드 $count장을 만들었어요';
   }
