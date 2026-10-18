@@ -199,8 +199,6 @@ const twoCards = [{
   kind: "vocabulary",
   front: "run",
   answer: "달리다",
-  short: "달리다",
-  step: 1,
   topic: "Unit 3 동사",
   partOfSpeech: "[동]",
   examples: ["I run every morning."],
@@ -208,8 +206,6 @@ const twoCards = [{
   kind: "vocabulary",
   front: "river",
   answer: "강",
-  short: "강",
-  step: 1,
   topic: "Unit 3 동사",
   partOfSpeech: null,
   examples: [],
@@ -217,8 +213,6 @@ const twoCards = [{
   kind: "note",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
-  short: "결론이 반드시 참",
-  step: 2,
   topic: "연역과 귀납",
   partOfSpeech: null,
   examples: ["253+4637+647898=652788 -> 연역"],
@@ -248,8 +242,8 @@ const twoAnswered = [{
   kind: "note",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
-  short: "결론이 반드시 참",
-  step: 2,
+  short: "전제가 참이면 결론이 반드시 참인 논증",
+  step: 1,
   topic: "연역과 귀납",
   examples: ["253+4637+647898=652788 -> 연역"],
   back: "전제가 참이면 결론이 반드시 참인 논증",
@@ -263,7 +257,7 @@ Deno.test("the suite runs without write or network permission", () => {
   assert.notEqual(Deno.permissions.querySync({ name: "net" }).state, "granted");
 });
 
-Deno.test("a signed-in user's photo returns each card's kind, answers, step, topic and back, and a vocabulary card's fields", async () => {
+Deno.test("a signed-in user's photo returns each card's kind, answer, topic and back, its answer as the short form at step 1, and a vocabulary card's fields", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { cards: twoAnswered });
@@ -460,8 +454,6 @@ Deno.test("the model call asks for the cards schema from providers that honour i
       "kind",
       "front",
       "answer",
-      "short",
-      "step",
       "topic",
       "partOfSpeech",
       "examples",
@@ -470,7 +462,7 @@ Deno.test("the model call asks for the cards schema from providers that honour i
   assert.equal(call.provider.require_parameters, true);
 });
 
-Deno.test("the model is asked for theory and exceptions, named by concept and grouped by topic, with worked examples only on their rule's card, inventing nothing", async () => {
+Deno.test("the model is asked for theory and exceptions, named by concept and grouped by topic, with worked examples only on their rule's card and no short form or step, inventing nothing", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   const system = r.modelCalls[0].messages[0].content;
   for (
@@ -486,26 +478,27 @@ Deno.test("the model is asked for theory and exceptions, named by concept and gr
       "Cards of one section share one topic",
       "It is never a card of its own: it goes in the examples of the card whose rule it illustrates, exactly as the page prints it, and only when the page prints it.",
       "Do not merge separate rules into one card",
-      "so step 5 offers every card",
-      "keep every card of steps 1 to 4 and leave out the last cards of step 5",
+      "keep its definitions, rules and marked exceptions before its minor list members, in the page's order",
     ]
   ) {
     assert.ok(system.includes(asked), `asks: ${asked}`);
   }
-  // The steps keep their meaning, and nothing outside the page enters a card.
+  // Nothing outside the page enters a card.
   for (
     const kept of [
-      "1 is the page's core ideas",
-      "Every vocabulary entry is step 1.",
       "never add a fact, a meaning, a part of speech or an example the page does not show",
       "Never write an example of your own.",
     ]
   ) {
     assert.ok(system.includes(kept), `keeps: ${kept}`);
   }
-  // Prompt v4 before the owner's decisions of 2026-10-18 asked for these.
+  // Earlier prompts asked for these: v4 for a short form and a step, and v4 before the owner's
+  // decisions of 2026-10-18 for questions and worked-example cards.
   for (
     const dropped of [
+      '"short"',
+      '"step"',
+      "step 5",
       "a short question",
       "each worked example, such as",
       "as a card of its own or as an example",

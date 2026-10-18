@@ -19,7 +19,42 @@
     {
       "date": "2026-10-18",
       "spentUsd": 0.33,
-      "note": "vocabulary only, Claude Haiku 5.5 and Claude Sonnet 5.5 x the 24 vocabulary pages, prompt v4 tree; spend read from OpenRouter's key usage ($1.6076 less $1.2776 read just before the run); the eval recorded $0.4068. The key read $1.2776 before this run against the $1.2424 recorded above: the $0.0352 between them was spent outside any eval run this ledger records and is unexplained"
+      "note": "vocabulary only, Claude Haiku 5.5 and Claude Sonnet 5.5 x the 24 vocabulary pages, prompt v4 tree; spend read from OpenRouter's key usage ($1.6076 less $1.2776 read just before the run); the eval recorded $0.4068. The key read $1.2776 before this run against the $1.2424 recorded above: the $0.0352 between them is most likely OpenRouter's key-usage reading lagging the run before it, which #191's runs measured (#189)"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.0556,
+      "note": "prompt v4 at #179's head, the eval of #179; spend read from OpenRouter's key usage (#189)"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.0376,
+      "note": "prompt v4, the owner's own photo of a textbook page, kept only locally, on two models; spend read from OpenRouter's key usage (#189)"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.7912,
+      "note": "prompt v4, Claude Sonnet 5.5, Claude Haiku 5.5, OpenAI GPT 5.5, OpenAI GPT 5.4 mini and Google Gemini 2.5 Pro on samples 27, 33 and 35 and the owner's photo, the table in #189; spend read from OpenRouter's key usage"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.1899,
+      "note": "prompt v4 on main, Claude Sonnet 5.5 x samples 27, 33, 35 and 37 to 40, the baseline for #191; spend as the eval recorded it, since OpenRouter's key usage lags: a reading 25 s after a run missed about $0.07 that the next reading showed, and the readings around both runs sum to $0.3500 against the eval's $0.3153 and that $0.0725 lag. The earlier gaps between readings and this ledger, $0.0352 and $0.1121, are most likely the same lag"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.1601,
+      "note": "prompt v5 of #191, Claude Sonnet 5.5 x samples 27, 33, 35 and 37 to 40; spend as the eval recorded it, since OpenRouter's key usage lags: a reading 25 s after a run missed about $0.07 that the next reading showed, and the readings around both runs sum to $0.3500 against the eval's $0.3153 and that $0.0725 lag. The earlier gaps between readings and this ledger, $0.0352 and $0.1121, are most likely the same lag"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.1251,
+      "note": "prompt v5, #192's outline-then-fill configuration, Claude Sonnet 5.5 outline and Claude Haiku 5.5 fill x samples 27, 33, 35 and 37 to 40; spend as the eval recorded it, since OpenRouter's key usage lags"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.1702,
+      "note": "prompt v5, the newest models, OpenAI GPT 6.1 Sol, OpenAI GPT 6 Luna and Google Gemini 4 Argon x samples 27, 33, 35 and 37 to 40, Gemini stopped after two unbilled model errors; spend as the eval recorded it, since OpenRouter's key usage lags"
     }
   ]
 }
