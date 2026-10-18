@@ -40,7 +40,9 @@ if [ -z "$url" ] || [ -z "$key" ]; then
   exit 1
 fi
 
+# The two-device test runs the tombstone purge in the stack's database container.
 output=$(cd app && SMARTMAN_SYNC_TEST_URL="$url" SMARTMAN_SYNC_TEST_KEY="$key" \
+  SMARTMAN_SYNC_TEST_DB_CONTAINER="supabase_db_$SUPABASE_PROJECT_ID" \
   flutter test --concurrency=1 --reporter expanded --dart-define-from-file=config/dev.json $test_files) ||
   { echo "$output"; exit 1; }
 echo "$output"

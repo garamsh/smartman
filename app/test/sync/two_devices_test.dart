@@ -21,15 +21,17 @@ import 'device.dart';
 /// environment it runs this file in.
 const _urlVariable = 'SMARTMAN_SYNC_TEST_URL';
 const _keyVariable = 'SMARTMAN_SYNC_TEST_KEY';
+const _dbVariable = 'SMARTMAN_SYNC_TEST_DB_CONTAINER';
 
 List<Content> _text(String text) => [TextContent(text)];
 
 void main() {
   final url = Platform.environment[_urlVariable];
   final key = Platform.environment[_keyVariable];
-  final skip = url == null || key == null
+  final db = Platform.environment[_dbVariable];
+  final skip = url == null || key == null || db == null
       ? 'needs the local Supabase stack that supabase/test-sync.sh starts, '
-            'which sets $_urlVariable and $_keyVariable'
+            'which sets $_urlVariable, $_keyVariable and $_dbVariable'
       : null;
 
   late Scheduler scheduler;
@@ -267,6 +269,72 @@ void main() {
         reason: device.name,
       );
     }
+  }, skip: skip);
+
+  /// Runs the server's tombstone purge as if the mark it purges below, the
+  /// revision sequence's value now, had been taken 90 days ago; returns the
+  /// horizon it stored.
+  Future<int> purgeBelowNow() async {
+    final result = await Process.run('docker', [
+      'exec',
+      db!,
+      'psql',
+      '-U',
+      'postgres',
+      '-d',
+      'postgres',
+      '-v',
+      'ON_ERROR_STOP=1',
+      '-Atc',
+      'insert into private.revision_marks (taken_at, revision) '
+          "select now() - interval '90 days', last_value from private.revision; "
+          'select private.purge_tombstones(); '
+          'select revision from private.sync_horizon',
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    return int.parse((result.stdout as String).trim().split('\n').last);
+  }
+
+  test('a device below the horizon rebuilds: a purged card goes, and a '
+      'studied one stays stripped with its review', () async {
+    final deck = await shared();
+    final gone = await addCard(a, deck, 'gone');
+    final studied = await addCard(a, deck, 'studied');
+    await addCard(a, deck, 'kept');
+    await a.answer(studied.id, 'good');
+    await a.sync(account);
+    await b.sync(account);
+    await a.deck.deleteCard(gone.id);
+    await a.deck.deleteCard(studied.id);
+    await a.sync(account);
+
+    // B stays offline while the server purges past a mark above A's deletes.
+    final horizon = await purgeBelowNow();
+    final cursors = await b.store.cursors();
+    expect(cursors.cardsRevision, inInclusiveRange(1, horizon - 1));
+    // Control: B still shows both cards A deleted.
+    expect(
+      (await b.deck.listCards(deck.id)).map((card) => plainText(card.front)),
+      unorderedEquals(['gone', 'studied', 'kept']),
+    );
+
+    await b.sync(account);
+
+    expect(
+      (await b.deck.listCards(deck.id)).map((card) => plainText(card.front)),
+      ['kept'],
+    );
+    Future<CardRow?> row(CardId id) => (b.db.select(
+      b.db.cards,
+    )..where((card) => card.id.equals(id.value))).getSingleOrNull();
+    expect(await row(gone.id), isNull);
+    final stripped = (await row(studied.id))!;
+    expect([stripped.front, stripped.back, stripped.cardKey], ['[]', '[]', '']);
+    expect(stripped.deletedAt, isNotNull);
+    final reviews = await (b.db.select(
+      b.db.reviews,
+    )..where((review) => review.cardId.equals(studied.id.value))).get();
+    expect(reviews.map((review) => review.rating), ['good']);
   }, skip: skip);
 
   test('equal-key cards from both devices both survive', () async {
