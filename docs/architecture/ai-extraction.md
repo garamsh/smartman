@@ -8,7 +8,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 - The function is `supabase/functions/extract-cards/`, a Deno module with no third-party dependency: it calls Supabase Auth, PostgREST and OpenRouter with `fetch` ([ADR 0013](adr/0013-extract-cards-function-and-eval.md)).
 - It reads the caller through `supabase/functions/_shared/auth.ts`, which the `delete-account` function shares ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)); a deploy bundles it.
-- `index.ts` is its composition site: it reads the configuration once and passes `fetch`, the logger and the clock to the handler, which constructs none of them.
+- `index.ts` is its composition site: it reads the configuration once and passes `fetch`, the logger, the monotonic clock and the wall clock to the handler, which constructs none of them.
 - The eval is `tools/eval/`, outside the function, so the deployed folder holds only the function. It imports the function's extraction module, so it measures the same prompt, schema and retry.
 - Merging the pull request that changes the function deploys it, through Supabase's GitHub integration; a change needing a new secret or changing the model or the cost of a call merges only after the owner approves it ([`server.md`](server.md) §Edge Function deploys).
 - Its secrets are set by hand on the production project, by the owner or the PM only; a merge sets none.
@@ -43,7 +43,15 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 | 502 | `model_error` | OpenRouter failed, or the output was invalid twice |
 | 503 | `not_configured` | `OPENROUTER_API_KEY`, `CARD_MODEL`, or a platform variable is missing, or a model ID is malformed |
 
-- A request is checked in this order: method, configuration, user, body, daily limit, model. A refused request never reaches the model or the count.
+- **A survey or a plan** ([ADR 0057](adr/0057-make-photo-import-a-two-step-conversation-in-two-model-calls-what-becomes-cards-then-how-each-kind-is-memorised.md)). The body may ask for one of two things beside today's cards; a body with both is `400`:
+  - `survey: true` asks for the page's survey. Success is `200` with `{ "conversation", "summary", "groups" }`:
+    - `summary` is the page in a line, 1 to 200 characters;
+    - `groups` holds 1 to 12 groups, each with an `id` (1 to 40 characters, unique on the page), a `kind`, a `title` (1 to 60), a `count` (1 to 100), `memorise` (false for nothing to memorise, such as a date), a `sample` as the page writes it (1 to 100), and an `example` of a `question` and an `answer` with a card's limits;
+    - a survey with no group is `422 no_cards`.
+  - `plan` asks for cards made to the user's choices: `groups` of `{ id, title, shape }`, at most 12, each `shape` a `front` of `question`, `term` or `answer` and a `back` of `short` or `answer`, and `added`, at most 5 typed topics of 1 to 60 characters, with at least one group or topic. Success is today's `{ "cards": [...] }`.
+  - `conversation` is the token a survey answered with, sent with the plan; a token that is not a string of 1 to 1,024 characters is `400`.
+- **The conversation token.** It holds the user, the SHA-256 of the image bytes, whether every group of the survey was vocabulary, and an expiry 30 minutes after the survey. It is signed with HMAC-SHA-256 under a key derived from `SUPABASE_SERVICE_ROLE_KEY` by HKDF with the label "extract-cards conversation". The server keeps nothing: the token is the conversation (`conversation.ts`).
+- A request is checked in this order: method, configuration, user, body, conversation token, daily limit, model. A refused request never reaches the model or the count.
 - `config.toml` sets `verify_jwt = true` for the function, so the platform refuses a request without a valid JWT first. The function then asks Supabase Auth for the token's user, which refuses the anon key, and refuses a user with `is_anonymous`.
 
 ### Model call
@@ -52,6 +60,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - `provider.require_parameters` routes only to providers that honour the schema; `max_tokens` is 16384.
 - The schema asks for `kind`, `front`, `answer`, `short`, `step`, `partOfSpeech` and `examples` on every card, since strict structured outputs require every key: `kind` and `step` are enums, an absent part of speech is `null`, absent examples an empty list, and the parser turns both into an absent field.
 - The prompt is `prompt_v3.ts` ([ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md)). A changed prompt is a new versioned file, so an eval result names the prompt it measured.
+- A survey's prompt is `survey_prompt_v1.ts`, and a plan's choices are added to the user turn by `plan_prompt_v1.ts`: only the chosen groups and typed topics, each in its shape, with every fact still from the page. Each is versioned as the extraction prompt is.
 - Nothing is invented: the prompt asks for vocabulary exactly as written; for notes it lets the model phrase a question and join or shorten the page's words, and forbids any fact, meaning, part of speech or example the page does not show. A page's own worked example may be a card or a card's example. The eval measures how often a model invents anyway.
 - The reply is parsed, not trusted: anything other than JSON of exactly the schema's shape, after trimming each field, is invalid output — a field empty once trimmed or over its limit, a step outside 1 to 5, an unknown kind, more than 5 examples, or more than 100 cards among it — and so is a `short` longer than its `answer`, or a note with a part of speech.
 - Invalid output is retried once; a second invalid output is `502`. An HTTP or network failure is `502` without a retry.
@@ -61,6 +70,9 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 - `CARD_MODEL` is the OpenRouter model ID of every first call. Changing the secret switches the model with no code change.
 - `CARD_RETRY_MODEL`, when set, is the model of the retry, so a cheap model can fall back to a stronger one; unset, the retry uses `CARD_MODEL`.
+- `SURVEY_MODEL`, when set, is the model of a survey and of its one retry; unset, it is `CARD_MODEL`.
+- `VOCAB_MODEL`, when set, is the first call's model for cards made to a plan when the conversation's token says every group of the survey was vocabulary and the plan adds no typed topic; its retry stays `CARD_RETRY_MODEL`. Unset, or for any other request, it is `CARD_MODEL`.
+- A model secret set to a malformed ID is `503 not_configured`. `SURVEY_MODEL` and `VOCAB_MODEL` are set by the owner in the Supabase console, as the other secrets are (`server.md` §Edge Function deploys).
 - `OPENROUTER_API_KEY` is a Supabase secret. Locally it is in `supabase/functions/.env`, which git ignores; creating that file is an owner action.
 
 ### Privacy
@@ -73,12 +85,13 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 - 30 extractions per user per UTC day, counted in `public.extraction_usage` ([`server.md`](server.md)).
 - The function records an extraction through `public.consume_extraction` with the service-role key, before calling the model, so a failed or empty extraction still counts.
+- A conversation counts once: a survey counts, and a request whose `conversation` token verifies for the same user and the same image before it expires counts nothing. Any other token, or none, counts as a request does.
 - The count and its insert run under a per-user advisory lock, so two concurrent requests cannot both take the last extraction.
 
 ### Tests
 
 - `supabase/functions/extract-cards/*_test.ts`, run by `make test` through `deno.sh`, with Supabase and OpenRouter replaced by a fake `fetch`: no network in CI.
-- They cover authentication, size and type refusal, each kind's fields and `back`, a note card without `meaning`, a missing part of speech, the steps and kinds, a short form longer than its answer, a note with a part of speech, the field limits, prompt v2's shape refused, the schema and the one retry, the daily limit, the configuration, and the log line. They run without write or network permission, and a test asserts that, so a write anywhere fails the suite.
+- They cover authentication, size and type refusal, each kind's fields and `back`, a note card without `meaning`, a missing part of speech, the steps and kinds, a short form longer than its answer, a note with a part of speech, the field limits, prompt v2's shape refused, the schema and the one retry, the daily limit, the configuration, and the log line; and the survey, its model, a survey with no group or invalid twice, the token across another photo, user, expiry or a forged signature, the plan put to the model, the vocabulary routing, and a malformed plan or token. They run without write or network permission, and a test asserts that, so a write anywhere fails the suite.
 - The SQL side of the limit is tested by `supabase/tests/extraction_usage_test.sql`.
 
 ### Eval

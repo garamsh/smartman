@@ -9,6 +9,9 @@ import { MAX_IMAGE_BYTES } from "./request.ts";
 const SUPABASE_URL = "https://project.supabase.test";
 const USER_ID = "00000000-0000-4000-8000-00000000000a";
 const SIGNED_IN = "Bearer signed-in-token";
+const OTHER_USER = "Bearer other-user-token";
+/** The wall clock of a request, unless a test moves it. */
+const NOON = Date.UTC(2026, 9, 18, 12);
 
 const ENV: Record<string, string> = {
   SUPABASE_URL,
@@ -40,6 +43,12 @@ function fakeFetch(fake: Fake): typeof fetch {
         return Promise.resolve(
           Response.json({ id: USER_ID, role: "authenticated" }),
         );
+      }
+      if (authorization === OTHER_USER) {
+        return Promise.resolve(Response.json({
+          id: "00000000-0000-4000-8000-00000000000b",
+          role: "authenticated",
+        }));
       }
       if (authorization === "Bearer anonymous-sign-in") {
         return Promise.resolve(
@@ -135,6 +144,7 @@ async function run(
     replies?: Reply[];
     allowed?: boolean;
     env?: Record<string, string | undefined>;
+    clock?: number;
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
@@ -149,6 +159,7 @@ async function run(
     fetch: fakeFetch(fake),
     log: (entry) => logs.push(entry),
     now: () => 0,
+    clock: () => options.clock ?? NOON,
   });
   const headers = new Headers({ "Content-Type": "application/json" });
   const authorization = options.authorization === undefined
@@ -491,6 +502,8 @@ Deno.test("a missing OpenRouter key or model answers 503", async () => {
       { OPENROUTER_API_KEY: " " },
       { CARD_MODEL: undefined },
       { CARD_RETRY_MODEL: "not a model id" },
+      { SURVEY_MODEL: "not a model id" },
+      { VOCAB_MODEL: "not a model id" },
     ]
   ) {
     const r = await run({ env, replies: [cardsReply(twoCards)] });
@@ -558,4 +571,293 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     "tokens are summed over the retry",
   );
   assert.equal(outcomes[4].logs[0].user_id, null);
+});
+
+// The photo conversation of ADR 0057: a survey, then cards made to the user's plan.
+
+/** A survey reply: a page of notes with a group of rules and a group of examples. */
+const notesSurvey = {
+  summary: "한국어 문법 노트예요",
+  groups: [{
+    id: "rules",
+    kind: "note",
+    title: "축약·탈락",
+    count: 8,
+    memorise: true,
+    sample: "오+아라 -> 와라",
+    example: { question: "오 + 아라 = ?", answer: "와라" },
+  }, {
+    id: "date",
+    kind: "note",
+    title: "수업 날짜",
+    count: 1,
+    memorise: false,
+    sample: "10월 18일",
+    example: { question: "수업 날짜는?", answer: "10월 18일" },
+  }],
+};
+/** A survey reply: a page of vocabulary alone. */
+const vocabularySurvey = {
+  summary: "English vocabulary list",
+  groups: [{
+    id: "words",
+    kind: "vocabulary",
+    title: "Words",
+    count: 15,
+    memorise: true,
+    sample: "run 달리다",
+    example: { question: "run", answer: "달리다" },
+  }],
+};
+const surveyReply = (survey: unknown): Reply => ({
+  content: JSON.stringify(survey),
+});
+const plan = {
+  groups: [{
+    id: "rules",
+    title: "축약·탈락",
+    shape: { front: "term", back: "answer" },
+  }],
+};
+
+/** Surveys `photo` and returns the conversation token the survey answered with. */
+async function conversationFor(
+  photo: string,
+  survey: unknown = notesSurvey,
+): Promise<string> {
+  const r = await run({
+    body: { image: photo, survey: true },
+    replies: [surveyReply(survey)],
+  });
+  assert.equal(r.status, 200, "the survey succeeded");
+  return r.body.conversation as string;
+}
+
+Deno.test("a survey answers the page's summary, its groups and a conversation, and counts one extraction", async () => {
+  const r = await run({
+    body: { image: image(PNG), survey: true },
+    replies: [surveyReply(notesSurvey)],
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.summary, notesSurvey.summary);
+  assert.deepEqual(r.body.groups, notesSurvey.groups);
+  assert.equal(typeof r.body.conversation, "string");
+  assert.equal(r.body.cards, undefined, "no card yet");
+  assert.equal(usageCalls(r).length, 1);
+  const call = r.modelCalls[0];
+  assert.match(call.messages[0].content, /You make no cards\./);
+  assert.equal(
+    (call.response_format.json_schema as { name?: string }).name,
+    "survey",
+  );
+});
+
+Deno.test("the survey runs on SURVEY_MODEL, and on CARD_MODEL when it is unset", async () => {
+  const set = await run({
+    body: { image: image(PNG), survey: true },
+    replies: [surveyReply(notesSurvey)],
+    env: { SURVEY_MODEL: "vendor/fast-model" },
+  });
+  assert.deepEqual(set.modelCalls.map((call) => call.model), [
+    "vendor/fast-model",
+  ]);
+  const unset = await run({
+    body: { image: image(PNG), survey: true },
+    replies: [surveyReply(notesSurvey)],
+  });
+  assert.deepEqual(unset.modelCalls.map((call) => call.model), [
+    "vendor/primary-model",
+  ]);
+});
+
+Deno.test("a survey with no group answers 422, and invalid output twice 502 after one retry on the survey model", async () => {
+  const empty = await run({
+    body: { image: image(PNG), survey: true },
+    replies: [surveyReply({ summary: "빈 페이지", groups: [] })],
+  });
+  assert.equal(empty.status, 422);
+  assert.deepEqual(empty.body, { error: "no_cards" });
+  const invalid = await run({
+    body: { image: image(PNG), survey: true },
+    replies: [
+      surveyReply({ summary: "x" }),
+      surveyReply({
+        ...notesSurvey,
+        groups: [notesSurvey.groups[0], notesSurvey.groups[0]],
+      }),
+    ],
+    env: { SURVEY_MODEL: "vendor/fast-model" },
+  });
+  assert.equal(invalid.status, 502);
+  assert.deepEqual(invalid.modelCalls.map((call) => call.model), [
+    "vendor/fast-model",
+    "vendor/fast-model",
+  ]);
+});
+
+Deno.test("cards made on the surveyed photo with its token count nothing more, and any other token counts as usual", async () => {
+  const photo = image(PNG);
+  const token = await conversationFor(photo);
+  const make = (
+    options: {
+      token?: string;
+      photo?: string;
+      clock?: number;
+      authorization?: string;
+    },
+  ) =>
+    run({
+      body: {
+        image: options.photo ?? photo,
+        plan,
+        ...(options.token === undefined ? {} : { conversation: options.token }),
+      },
+      replies: [cardsReply(twoCards)],
+      clock: options.clock,
+      authorization: options.authorization,
+    });
+
+  const counted = async (
+    options: Parameters<typeof make>[0],
+    reason: string,
+  ) => {
+    const r = await make(options);
+    assert.equal(r.status, 200, reason);
+    return usageCalls(r).length;
+  };
+  // Control: the same photo and user, before the token expires.
+  assert.equal(await counted({ token, clock: NOON + 29 * 60_000 }, "same"), 0);
+  assert.equal(await counted({}, "no token"), 1);
+  assert.equal(
+    await counted({ token, photo: image(PNG, 65) }, "another photo"),
+    1,
+  );
+  assert.equal(
+    await counted({ token, clock: NOON + 31 * 60_000 }, "expired"),
+    1,
+  );
+  assert.equal(
+    await counted({ token, authorization: OTHER_USER }, "another user"),
+    1,
+  );
+  const [body, signature] = token.split(".");
+  const forged = `${body}.${signature.slice(0, -2)}${
+    signature.endsWith("AA") ? "BB" : "AA"
+  }`;
+  assert.equal(await counted({ token: forged }, "forged"), 1);
+  assert.equal(await counted({ token: "not-a-token" }, "malformed"), 1);
+});
+
+Deno.test("a plan's groups and typed topics are put to the model, each in its shape, and today's call has none", async () => {
+  const planned = await run({
+    body: {
+      image: image(PNG),
+      plan: { ...plan, added: ["불규칙 활용"] },
+    },
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(planned.status, 200);
+  assert.deepEqual(planned.body, { cards: twoAnswered });
+  const text = planned.modelCalls[0].messages[1].content[0].text;
+  assert.match(text, /Make cards only for the groups below/);
+  assert.match(
+    text,
+    /- "축약·탈락" \(rules\): "front" is the item's term, formula or example alone, as the page writes it; "answer" is the full answer the page gives/,
+  );
+  assert.match(text, /- "불규칙 활용", a topic the learner asked for/);
+  // Control: without a plan, the model is asked for every card, as before.
+  const today = await run({ replies: [cardsReply(twoCards)] });
+  assert.doesNotMatch(
+    today.modelCalls[0].messages[1].content[0].text,
+    /Make cards only/,
+  );
+});
+
+Deno.test("a page of vocabulary alone is made on VOCAB_MODEL; notes, a typed topic, or no token keep CARD_MODEL", async () => {
+  const env = { VOCAB_MODEL: "vendor/cheap-model" };
+  const photo = image(PNG);
+  const vocabularyToken = await conversationFor(photo, vocabularySurvey);
+  const notesToken = await conversationFor(photo, notesSurvey);
+  const modelOf = async (body: Record<string, unknown>) => {
+    const r = await run({
+      body: { image: photo, ...body },
+      replies: [cardsReply(twoCards)],
+      env,
+    });
+    assert.equal(r.status, 200);
+    return r.modelCalls[0].model;
+  };
+  const words = {
+    groups: [{
+      id: "words",
+      title: "Words",
+      shape: { front: "question", back: "short" },
+    }],
+  };
+  assert.equal(
+    await modelOf({ plan: words, conversation: vocabularyToken }),
+    "vendor/cheap-model",
+  );
+  assert.equal(
+    await modelOf({ plan: words, conversation: notesToken }),
+    "vendor/primary-model",
+    "a page with notes",
+  );
+  assert.equal(
+    await modelOf({
+      plan: { ...words, added: ["phrasal verbs"] },
+      conversation: vocabularyToken,
+    }),
+    "vendor/primary-model",
+    "a typed topic",
+  );
+  assert.equal(
+    await modelOf({ plan: words }),
+    "vendor/primary-model",
+    "no token",
+  );
+  // The retry stays on the card models.
+  const retried = await run({
+    body: { image: photo, plan: words, conversation: vocabularyToken },
+    replies: [{ content: "not json" }, cardsReply(twoCards)],
+    env: { ...env, CARD_RETRY_MODEL: "vendor/strong-model" },
+  });
+  assert.deepEqual(retried.modelCalls.map((call) => call.model), [
+    "vendor/cheap-model",
+    "vendor/strong-model",
+  ]);
+});
+
+Deno.test("a survey with a plan, or a malformed plan or conversation, is refused with 400 before any count", async () => {
+  const group = plan.groups[0];
+  for (
+    const extra of [
+      { survey: true, plan },
+      { survey: false },
+      { plan: { groups: [] } },
+      {
+        plan: {
+          groups: [{ ...group, shape: { front: "side", back: "short" } }],
+        },
+      },
+      { plan: { groups: [{ ...group, title: "" }] } },
+      { plan: { groups: [{ ...group, id: "x".repeat(41) }] } },
+      { plan: { groups: [group], added: ["a", "b", "c", "d", "e", "f"] } },
+      { plan: { groups: Array.from({ length: 13 }, () => group) } },
+      { plan, conversation: 7 },
+      { plan, conversation: "" },
+    ]
+  ) {
+    const r = await run({
+      body: { image: image(PNG), ...extra },
+      replies: [cardsReply(twoCards)],
+    });
+    assert.equal(r.status, 400, JSON.stringify(extra));
+    assert.equal(usageCalls(r).length, 0);
+  }
+  const control = await run({
+    body: { image: image(PNG), plan: { groups: [], added: ["불규칙 활용"] } },
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(control.status, 200, "control: a typed topic alone is a plan");
 });

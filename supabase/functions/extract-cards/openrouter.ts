@@ -1,8 +1,14 @@
-/** Extracts cards from an image through OpenRouter chat completions, retrying once on invalid output. */
+/**
+ * Extracts cards from an image, or surveys it, through OpenRouter chat completions, retrying
+ * once on invalid output.
+ */
 
 import { type Card, cardsSchema, parseCards } from "./cards.ts";
+import { planPrompt } from "./plan_prompt_v1.ts";
 import { SYSTEM_PROMPT, userPrompt } from "./prompt_v3.ts";
-import type { Image, LanguageHints } from "./request.ts";
+import type { Image, LanguageHints, Plan } from "./request.ts";
+import { parseSurvey, type Survey, surveySchema } from "./survey.ts";
+import { SURVEY_PROMPT } from "./survey_prompt_v1.ts";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 // Bounds one call's cost; a reply cut off at it fails the schema and is retried.
@@ -49,22 +55,88 @@ export type ExtractDeps = {
   readonly now: () => number;
 };
 
+/** Cards from the image: every card the page holds, or, with a plan, only the ones it asks for. */
 export async function extractCards(
   image: Image,
   languages: LanguageHints,
   models: Models,
   deps: ExtractDeps,
+  plan: Plan | null = null,
 ): Promise<Extraction> {
+  const text = plan === null
+    ? userPrompt(languages)
+    : `${userPrompt(languages)}\n\n${planPrompt(plan)}`;
+  const task = {
+    system: SYSTEM_PROMPT,
+    text,
+    name: "cards",
+    schema: cardsSchema,
+  };
+  const result = await attempt(task, parseCards, image, models, deps);
+  if (result.kind !== "parsed") return result;
+  return result.value.length === 0
+    ? { kind: "no_cards", attempts: result.attempts }
+    : { kind: "cards", cards: result.value, attempts: result.attempts };
+}
+
+export type SurveyResult =
+  | {
+    readonly kind: "survey";
+    readonly survey: Survey;
+    readonly attempts: readonly Attempt[];
+  }
+  | { readonly kind: "no_cards"; readonly attempts: readonly Attempt[] }
+  | { readonly kind: "invalid_output"; readonly attempts: readonly Attempt[] }
+  | { readonly kind: "model_error"; readonly attempts: readonly Attempt[] };
+
+/** The page described and its groups named, before any card; no group is `no_cards`. */
+export async function surveyPage(
+  image: Image,
+  languages: LanguageHints,
+  models: Models,
+  deps: ExtractDeps,
+): Promise<SurveyResult> {
+  const task = {
+    system: SURVEY_PROMPT,
+    text: userPrompt(languages),
+    name: "survey",
+    schema: surveySchema,
+  };
+  const result = await attempt(task, parseSurvey, image, models, deps);
+  if (result.kind !== "parsed") return result;
+  return result.value.groups.length === 0
+    ? { kind: "no_cards", attempts: result.attempts }
+    : { kind: "survey", survey: result.value, attempts: result.attempts };
+}
+
+/** What one call asks: its system prompt, its user text beside the image, and its reply schema. */
+type Task = {
+  readonly system: string;
+  readonly text: string;
+  readonly name: string;
+  readonly schema: unknown;
+};
+
+type Attempted<T> =
+  | { readonly kind: "parsed"; readonly value: T; readonly attempts: Attempt[] }
+  | { readonly kind: "invalid_output"; readonly attempts: Attempt[] }
+  | { readonly kind: "model_error"; readonly attempts: Attempt[] };
+
+/** Calls the primary model, and the retry model once when the reply does not parse. */
+async function attempt<T>(
+  task: Task,
+  parse: (reply: string) => T | null,
+  image: Image,
+  models: Models,
+  deps: ExtractDeps,
+): Promise<Attempted<T>> {
   const attempts: Attempt[] = [];
   for (const model of [models.primary, models.retry]) {
-    const call = await callModel(model, image, languages, deps);
+    const call = await callModel(model, task, image, deps);
     attempts.push(call.attempt);
     if (call.reply === null) return { kind: "model_error", attempts };
-    const cards = parseCards(call.reply);
-    if (cards === null) continue;
-    return cards.length === 0
-      ? { kind: "no_cards", attempts }
-      : { kind: "cards", cards, attempts };
+    const value = parse(call.reply);
+    if (value !== null) return { kind: "parsed", value, attempts };
   }
   return { kind: "invalid_output", attempts };
 }
@@ -74,8 +146,8 @@ type Call = { readonly attempt: Attempt; readonly reply: string | null };
 /** Sends one request; `reply` is the message text, or null when the call itself failed. */
 async function callModel(
   model: ModelId,
+  task: Task,
   image: Image,
-  languages: LanguageHints,
   deps: ExtractDeps,
 ): Promise<Call> {
   const started = deps.now();
@@ -90,11 +162,11 @@ async function callModel(
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: task.system },
           {
             role: "user",
             content: [
-              { type: "text", text: userPrompt(languages) },
+              { type: "text", text: task.text },
               {
                 type: "image_url",
                 image_url: { url: `data:${image.type};base64,${image.base64}` },
@@ -104,7 +176,7 @@ async function callModel(
         ],
         response_format: {
           type: "json_schema",
-          json_schema: { name: "cards", strict: true, schema: cardsSchema },
+          json_schema: { name: task.name, strict: true, schema: task.schema },
         },
         // Route only to providers that honour the schema rather than ignore it.
         provider: { require_parameters: true },

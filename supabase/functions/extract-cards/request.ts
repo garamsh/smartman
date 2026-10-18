@@ -1,4 +1,7 @@
-/** Parses the request body: one base64 image of a supported type, and optional language hints. */
+/**
+ * Parses the request body: one base64 image of a supported type, optional language hints, and
+ * what the request asks for: a survey of the page, cards made to a plan, or today's cards.
+ */
 
 export const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 // Base64 of the largest image, plus room for the JSON around it.
@@ -17,9 +20,44 @@ export type LanguageHints = {
   readonly back?: LanguageTag;
 };
 
+/** How a card of a chosen group is shaped: what its front asks and how full its answer is. */
+export type Shape = {
+  readonly front: "question" | "term" | "answer";
+  readonly back: "short" | "answer";
+};
+
+/** A group of the survey the user chose, by its id and title, in the shape chosen for it. */
+export type PlannedGroup = {
+  readonly id: string;
+  readonly title: string;
+  readonly shape: Shape;
+};
+
+/** What the user chose on the choice screen: groups of the survey, and topics they typed. */
+export type Plan = {
+  readonly groups: readonly PlannedGroup[];
+  readonly added: readonly string[];
+};
+
+export const MAX_PLAN_GROUPS = 12;
+export const MAX_ADDED_TOPICS = 5;
+export const MAX_GROUP_ID_CHARS = 40;
+export const MAX_TITLE_CHARS = 60;
+// A token is a few hundred characters; anything far longer is not one.
+const MAX_CONVERSATION_CHARS = 1024;
+
+/** A survey of the page; cards made to a plan; or, with neither, today's single call. */
+export type Mode =
+  | { readonly kind: "survey" }
+  | { readonly kind: "plan"; readonly plan: Plan }
+  | { readonly kind: "cards" };
+
 export type ExtractRequest = {
   readonly image: Image;
   readonly languages: LanguageHints;
+  readonly mode: Mode;
+  /** The token a survey answered with, unchecked; null when none was sent. */
+  readonly conversation: string | null;
 };
 
 export type RequestFailure = "bad_request" | "too_large" | "unsupported_type";
@@ -63,7 +101,76 @@ export async function parseRequest(
 
   const languages = parseLanguages(value.languages);
   if (languages === null) return refuse("bad_request");
-  return { ok: true, request: { image: { type, base64 }, languages } };
+  const mode = parseMode(value.survey, value.plan);
+  if (mode === null) return refuse("bad_request");
+  const conversation = value.conversation;
+  if (
+    conversation !== undefined &&
+    (typeof conversation !== "string" || conversation === "" ||
+      conversation.length > MAX_CONVERSATION_CHARS)
+  ) {
+    return refuse("bad_request");
+  }
+  return {
+    ok: true,
+    request: {
+      image: { type, base64 },
+      languages,
+      mode,
+      conversation: conversation ?? null,
+    },
+  };
+}
+
+/** `survey: true` asks for a survey and `plan` for cards made to it; never both. */
+function parseMode(survey: unknown, plan: unknown): Mode | null {
+  if (survey !== undefined && survey !== true) return null;
+  if (survey === true) return plan === undefined ? { kind: "survey" } : null;
+  if (plan === undefined) return { kind: "cards" };
+  const parsed = parsePlan(plan);
+  return parsed === null ? null : { kind: "plan", plan: parsed };
+}
+
+function parsePlan(value: unknown): Plan | null {
+  if (!isRecord(value) || !Array.isArray(value.groups)) return null;
+  const added = value.added ?? [];
+  if (
+    !Array.isArray(added) || added.length > MAX_ADDED_TOPICS ||
+    value.groups.length > MAX_PLAN_GROUPS ||
+    value.groups.length + added.length === 0
+  ) {
+    return null;
+  }
+  const groups: PlannedGroup[] = [];
+  for (const group of value.groups) {
+    if (!isRecord(group) || !isRecord(group.shape)) return null;
+    const id = text(group.id, MAX_GROUP_ID_CHARS);
+    const title = text(group.title, MAX_TITLE_CHARS);
+    const { front, back } = group.shape;
+    if (
+      id === null || title === null ||
+      (front !== "question" && front !== "term" && front !== "answer") ||
+      (back !== "short" && back !== "answer")
+    ) {
+      return null;
+    }
+    groups.push({ id, title, shape: { front, back } });
+  }
+  const topics: string[] = [];
+  for (const topic of added) {
+    const parsed = text(topic, MAX_TITLE_CHARS);
+    if (parsed === null) return null;
+    topics.push(parsed);
+  }
+  return { groups, added: topics };
+}
+
+/** A string trimmed to 1 to `max` characters (code points), else null. */
+function text(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  const length = [...trimmed].length;
+  return length >= 1 && length <= max ? trimmed : null;
 }
 
 /** The type the image's leading bytes declare; a declared MIME type is not trusted. */

@@ -2,8 +2,10 @@
 
 import type { Card } from "./cards.ts";
 import type { Config } from "./config.ts";
-import { type Attempt, extractCards } from "./openrouter.ts";
+import { issueToken, verifyToken } from "./conversation.ts";
+import { type Attempt, extractCards, surveyPage } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
+import type { Survey } from "./survey.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
 import { consumeExtraction } from "./supabase.ts";
 
@@ -42,6 +44,8 @@ export type HandlerDeps = {
   readonly log: (entry: LogEntry) => void;
   /** Milliseconds from a monotonic clock. */
   readonly now: () => number;
+  /** The wall clock, in milliseconds since the epoch, for a conversation's expiry. */
+  readonly clock: () => number;
 };
 
 export function status(outcome: Outcome): number {
@@ -76,6 +80,7 @@ type Result = {
   readonly userId: UserId | null;
   readonly attempts: readonly Attempt[];
   readonly cards?: readonly Card[];
+  readonly survey?: { readonly survey: Survey; readonly conversation: string };
 };
 
 export function createHandler(
@@ -91,9 +96,11 @@ export function createHandler(
       throw error;
     }
     log(deps, started, result);
-    const body = result.outcome === "ok"
+    const body = result.outcome !== "ok"
+      ? { error: result.outcome }
+      : result.survey === undefined
       ? { cards: result.cards }
-      : { error: result.outcome };
+      : { conversation: result.survey.conversation, ...result.survey.survey };
     return Response.json(body, { status: status(result.outcome) });
   };
 }
@@ -121,19 +128,78 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
 
   const parsed = await parseRequest(request.body);
   if (!parsed.ok) return refused(parsed.failure, userId);
-  if (!await consumeExtraction(userId, supabase)) {
+  const { image, languages, mode } = parsed.request;
+  // A survey always counts. Cards made after one, on the same photo within its token's life,
+  // count nothing more: the conversation counted once.
+  const conversation = mode.kind === "survey" ||
+      parsed.request.conversation === null
+    ? null
+    : await verifyToken(
+      config.serviceRoleKey,
+      parsed.request.conversation,
+      userId,
+      image,
+      deps.clock(),
+    );
+  if (
+    conversation === null && !await consumeExtraction(userId, supabase)
+  ) {
     return refused("rate_limited", userId);
   }
+  const call = {
+    apiKey: config.openRouterApiKey,
+    fetch: deps.fetch,
+    now: deps.now,
+  };
 
+  if (mode.kind === "survey") {
+    const model = config.surveyModel;
+    const result = await surveyPage(
+      image,
+      languages,
+      { primary: model, retry: model },
+      call,
+    );
+    if (result.kind !== "survey") {
+      return {
+        outcome: result.kind === "no_cards" ? "no_cards" : "model_error",
+        userId,
+        attempts: result.attempts,
+      };
+    }
+    const vocabulary = result.survey.groups.every((group) =>
+      group.kind === "vocabulary"
+    );
+    return {
+      outcome: "ok",
+      userId,
+      attempts: result.attempts,
+      survey: {
+        survey: result.survey,
+        conversation: await issueToken(
+          config.serviceRoleKey,
+          userId,
+          image,
+          vocabulary,
+          deps.clock(),
+        ),
+      },
+    };
+  }
+
+  const plan = mode.kind === "plan" ? mode.plan : null;
+  // A page of vocabulary alone, as its survey found it, is made on the vocabulary model; a
+  // topic the user typed may be anything, so it keeps the card model.
+  const vocabularyPage = plan !== null && conversation?.vocabulary === true &&
+    plan.added.length === 0;
   const extraction = await extractCards(
-    parsed.request.image,
-    parsed.request.languages,
-    config.models,
-    {
-      apiKey: config.openRouterApiKey,
-      fetch: deps.fetch,
-      now: deps.now,
-    },
+    image,
+    languages,
+    vocabularyPage
+      ? { primary: config.vocabularyModel, retry: config.models.retry }
+      : config.models,
+    call,
+    plan,
   );
   switch (extraction.kind) {
     case "cards":
