@@ -149,8 +149,7 @@ pub fn retrievability(state: MemoryStateParts, at: i64) -> Result<f64, EngineErr
 }
 
 /// Where each card stands in the list of the study day from `day_start`, inclusive, to
-/// `day_end`, exclusive, in the order given. It is pure and cheap, so Dart calls it
-/// synchronously.
+/// `day_end`, exclusive, in the order given. Dart calls it synchronously.
 #[flutter_rust_bridge::frb(sync)]
 pub fn todays_list(cards: Vec<TodayCard>, day_start: i64, day_end: i64) -> Vec<Today> {
     let day = engine::StudyDay {

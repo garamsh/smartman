@@ -49,8 +49,7 @@ Future<double> retrievability({
 }) => RustLib.instance.api.crateApiEngineRetrievability(state: state, at: at);
 
 /// Where each card stands in the list of the study day from `day_start`, inclusive, to
-/// `day_end`, exclusive, in the order given. It is pure and cheap, so Dart calls it
-/// synchronously.
+/// `day_end`, exclusive, in the order given. Dart calls it synchronously.
 List<Today> todaysList({
   required List<TodayCard> cards,
   required PlatformInt64 dayStart,

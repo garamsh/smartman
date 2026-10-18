@@ -30,14 +30,18 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - **Left:** its latest review in the day is `Again` ("Don't know"), or it is not reviewed in the day and falls due before the day ends.
   - **Done:** its latest review in the day is rated above `Again` ("Know").
   - **Absent:** neither, including a card never reviewed and not answered that day.
-  - **Inputs:** the card's due time, `None` without a state; its reviews in any order; and the `StudyDay`.
+  - **Inputs:** the card's due time, `None` without a state; its reviews in any order, two at one time taken in the order given; and the `StudyDay`.
     - The day's bounds come from the caller: the app's 04:00 to 04:00 in the device's zone (ADR 0033). The start is inclusive and the end exclusive.
     - Reviews outside the day are ignored. Of two at one time, the later given counts.
   - **No clock and no error:** the function reads no clock and returns no error. A day whose end is not after its start holds no review, and FSRS's functions are untouched.
 - **Exported** through the bridge as `todays_list(cards, day_start, day_end)`, and through WebAssembly as `todaysList(cards, dayStart, dayEnd)`. Each takes a list of cards, each with its due time and reviews, and returns each card's place in the order given.
+  - Dart calls the bridge's `todays_list` synchronously: the function is pure and cheap, and a widget test's fake clock can run a synchronous call where it cannot complete a port's reply.
+- **What the caller does.**
+  - **Done is any card whose latest review in the day is above `Again`.** That includes a new card first answered that day and a card studied past today's cards (ADR 0049). A day's done cards, and so its total, grow with study beyond the day's queue. This is #195's "latest answer Know", read for the engine's ratings.
+  - **New cards still to come from the day's quota are `Absent`.** The engine knows no quota, and the caller adds them, as the app's and the web's queue rules do (ADR 0033, ADR 0043).
+  - **Deleted reviews are the caller's to leave out.** A tombstoned review passed in counts like any other.
 - **No schema change and no Supabase change.** The function reads only the rows the app and the web already keep.
 - **Supersession.** This replaces ADR 0003's learning and relearning left to the session queue alone. A card failed today stays in today's list through this function, while the order of re-shows within a session stays the queue's. ADR 0003's memory model, intervals and absence of learning steps stand.
-- **Using it.** The study session's queue and the top bar's count (#194), and the web's study screen, take today's list from this function. That PR follows this one.
 
 ## Consequences
 

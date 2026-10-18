@@ -1,6 +1,6 @@
 //! Today's list: a card failed today stays until it is passed today, from the day's reviews.
 
-use smartman_engine::{Answer, Review, StudyDay, Timestamp, Today, today};
+use smartman_engine::{Answer, Rating, Review, StudyDay, Timestamp, Today, today};
 
 const HOUR: i64 = 3_600;
 
@@ -126,5 +126,48 @@ fn a_day_whose_end_is_not_after_its_start_holds_no_review() {
     assert_eq!(
         today(None, &[at(0, Answer::DontKnow)], empty),
         Today::Absent
+    );
+}
+
+#[test]
+fn hard_and_easy_count_as_done_as_good_does_and_again_does_not() {
+    for rating in [Rating::Hard, Rating::Good, Rating::Easy] {
+        let review = Review {
+            rating,
+            at: Timestamp(DAY.start.0 + HOUR),
+        };
+        assert_eq!(
+            today(due(TOMORROW), &[review], DAY),
+            Today::Done,
+            "{rating:?}"
+        );
+    }
+    let again = Review {
+        rating: Rating::Again,
+        at: Timestamp(DAY.start.0 + HOUR),
+    };
+    assert_eq!(today(due(TOMORROW), &[again], DAY), Today::Left);
+}
+
+#[test]
+fn a_day_whose_end_is_before_its_start_holds_no_review() {
+    let inverted = StudyDay {
+        start: DAY.end,
+        end: DAY.start,
+    };
+    let reviews = [at(1, Answer::DontKnow), at(25, Answer::DontKnow)];
+    assert_eq!(today(None, &reviews, inverted), Today::Absent);
+    // Control: the same reviews in the day as it runs.
+    assert_eq!(today(None, &reviews, DAY), Today::Left);
+}
+
+#[test]
+fn a_card_due_inside_the_day_with_reviews_only_outside_it_is_left() {
+    let outside = [at(-2, Answer::Know), at(26, Answer::Know)];
+    assert_eq!(today(due(10), &outside, DAY), Today::Left);
+    // Control: a review inside the day decides it.
+    assert_eq!(
+        today(due(10), &[at(-2, Answer::Know), at(3, Answer::Know)], DAY),
+        Today::Done
     );
 }

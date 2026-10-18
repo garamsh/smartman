@@ -15,6 +15,7 @@ The scheduling engine: how a card's memory state and next due time are computed 
     - `Done` when its latest review in the day is above `Again`;
     - `Absent` otherwise.
     The day runs from its start, inclusive, to its end, exclusive, and the caller sets both bounds: the app's are 04:00 to 04:00. Reviews outside the day are ignored, and of two at one time the later given counts. It returns no error.
+    The caller's part: `Done` counts any rating above `Again`, so a new card first answered that day, or a card studied past the day's queue, is done too; new cards still to come from the day's quota are `Absent`, for the caller to add; and the caller leaves deleted reviews out.
   - A caller may persist a state's parts instead of replaying every time; `MemoryState::from_parts` rebuilds it, and a state rebuilt from the parts of a replay equals that replay.
 - **Invalid input is an error, not a panic.** The public functions return `Result` with the typed `Error`: a review dated before the last one, a number that is not a rating, and a non-finite or out-of-range stability, difficulty or fuzz factor.
 - **Documented surface.** The crate denies missing docs, and `make build` builds its rustdoc with warnings denied. No bridge type lives in `engine/`.
