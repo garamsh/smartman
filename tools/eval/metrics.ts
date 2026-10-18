@@ -2,6 +2,7 @@
 
 import type {
   Card,
+  Sense,
   Step,
 } from "../../supabase/functions/extract-cards/cards.ts";
 
@@ -13,30 +14,54 @@ export function normalize(text: string): string {
   return text.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** A vocabulary entry's fields as the page prints them: the shape of a ground-truth card. */
+/**
+ * A vocabulary entry's fields as the page prints them: the shape of a ground-truth card. An
+ * entry with `senses` lists each meaning with its label; one without is a single sense of its
+ * `meaning` and `partOfSpeech`, as the truths written before senses are. `meaning` is the
+ * senses' meanings joined by "; ".
+ */
 export type Entry = {
   readonly front: string;
   readonly meaning: string;
   readonly partOfSpeech?: string;
+  readonly senses?: readonly Sense[];
   readonly examples?: readonly string[];
 };
 
-/** A returned card as a vocabulary entry: its meaning, or its answer when it has none. */
-export function entryOf(card: Card): Entry {
-  return {
-    front: card.front,
-    meaning: card.meaning ?? card.answer,
-    ...(card.partOfSpeech === undefined
-      ? {}
-      : { partOfSpeech: card.partOfSpeech }),
-    ...(card.examples === undefined ? {} : { examples: card.examples }),
-  };
+/** An entry's senses: its own, or the single sense of its meaning and part of speech. */
+export function sensesOf(entry: Entry): readonly Sense[] {
+  return entry.senses ??
+    [{ pos: entry.partOfSpeech ?? null, meaning: entry.meaning }];
+}
+
+/** The meaning an entry of [senses] matches on: their meanings joined by "; ". */
+export function meaningOf(senses: readonly Sense[]): string {
+  return senses.map((sense) => sense.meaning).join("; ");
 }
 
 /**
- * Counts of the optional fields over the matched cards. A part of speech, or a card's
- * examples, is a field present in the candidate; it is invented when the page prints no
- * such field for that entry.
+ * A returned card as a vocabulary entry: a vocabulary card's senses and their meanings, or a
+ * note's answer as one sense.
+ */
+export function entryOf(card: Card): Entry {
+  const examples = card.examples === undefined
+    ? {}
+    : { examples: card.examples };
+  return card.kind === "vocabulary"
+    ? {
+      front: card.front,
+      meaning: meaningOf(card.senses),
+      senses: card.senses,
+      ...examples,
+    }
+    : { front: card.front, meaning: card.answer, ...examples };
+}
+
+/**
+ * Counts of the optional fields over the matched cards. A sense's part of speech, or a card's
+ * examples, is a field present in the candidate; it is invented when the page prints no such
+ * field for that sense or entry. A matched card's senses pair with the page's in order, since
+ * their meanings matched.
  */
 export type FieldCounts = {
   readonly partOfSpeech: number;
@@ -47,11 +72,23 @@ export type FieldCounts = {
   readonly invented: number;
 };
 
+/**
+ * Over the candidates whose front matches an entry's after `normalize`, each entry matching at
+ * most one: the senses returned, the page's senses, and the returned senses equal to one of the
+ * page's for that entry in both part of speech and meaning, after `normalize`.
+ */
+export type SenseCounts = {
+  readonly returned: number;
+  readonly page: number;
+  readonly matched: number;
+};
+
 export type Score = {
   readonly precision: number;
   readonly recall: number;
   readonly f1: number;
   readonly fields: FieldCounts;
+  readonly senses: SenseCounts;
 };
 
 /**
@@ -80,7 +117,42 @@ export function score(
   const f1 = precision + recall === 0
     ? 0
     : (2 * precision * recall) / (precision + recall);
-  return { precision, recall, f1, fields: countFields(pairs) };
+  return {
+    precision,
+    recall,
+    f1,
+    fields: countFields(pairs),
+    senses: countSenses(candidates, truth),
+  };
+}
+
+function countSenses(
+  candidates: readonly Entry[],
+  truth: readonly Entry[],
+): SenseCounts {
+  const unmatched = [...truth];
+  const counts = { returned: 0, page: 0, matched: 0 };
+  for (const card of candidates) {
+    const at = unmatched.findIndex((entry) =>
+      normalize(entry.front) === normalize(card.front)
+    );
+    if (at < 0) continue;
+    const page = sensesOf(unmatched.splice(at, 1)[0]).map(senseKey);
+    const returned = sensesOf(card).map(senseKey);
+    counts.returned += returned.length;
+    counts.page += page.length;
+    for (const sense of returned) {
+      const found = page.indexOf(sense);
+      if (found < 0) continue;
+      page.splice(found, 1);
+      counts.matched += 1;
+    }
+  }
+  return counts;
+}
+
+function senseKey(sense: Sense): string {
+  return JSON.stringify([normalize(sense.pos ?? ""), normalize(sense.meaning)]);
 }
 
 function countFields(pairs: readonly [Entry, Entry][]): FieldCounts {
@@ -93,27 +165,28 @@ function countFields(pairs: readonly [Entry, Entry][]): FieldCounts {
     invented: 0,
   };
   for (const [candidate, page] of pairs) {
-    if (candidate.partOfSpeech !== undefined) {
+    const printed = sensesOf(page);
+    sensesOf(candidate).forEach((sense, i) => {
+      if (sense.pos === null) return;
       counts.partOfSpeech += 1;
       counts.fields += 1;
-      if (page.partOfSpeech === undefined) {
+      const label = printed[i]?.pos ?? null;
+      if (label === null) {
         counts.invented += 1;
-      } else if (
-        normalize(page.partOfSpeech) === normalize(candidate.partOfSpeech)
-      ) {
+      } else if (normalize(label) === normalize(sense.pos)) {
         counts.partOfSpeechCorrect += 1;
       }
-    }
+    });
     const examples = candidate.examples ?? [];
     if (examples.length === 0) continue;
     counts.examples += examples.length;
     counts.fields += 1;
     if (page.examples === undefined) counts.invented += 1;
-    const printed = (page.examples ?? []).map(normalize);
+    const pageExamples = (page.examples ?? []).map(normalize);
     for (const example of examples) {
-      const at = printed.indexOf(normalize(example));
+      const at = pageExamples.indexOf(normalize(example));
       if (at < 0) continue;
-      printed.splice(at, 1);
+      pageExamples.splice(at, 1);
       counts.examplesCorrect += 1;
     }
   }
@@ -121,7 +194,10 @@ function countFields(pairs: readonly [Entry, Entry][]): FieldCounts {
 }
 
 function cardKey(card: Entry): string {
-  return JSON.stringify([normalize(card.front), normalize(card.meaning)]);
+  return JSON.stringify([
+    normalize(card.front),
+    normalize(meaningOf(sensesOf(card))),
+  ]);
 }
 
 /**
@@ -146,15 +222,28 @@ export type NotesTruth = {
 /** The fields of a returned card the notes metrics read. */
 export type NoteCandidate = Pick<Card, "front" | "answer" | "examples">;
 
+/** The most items one card's answer may list under prompt v6's atomic rule. */
+export const MAX_LISTED_ITEMS = 5;
+
+/**
+ * The items an answer lists: its non-empty parts between commas, middle dots, slashes,
+ * semicolons and line breaks.
+ */
+export function listedItems(answer: string): number {
+  return answer.split(/[,，、·;\/\n]/).filter((part) => part.trim() !== "")
+    .length;
+}
+
 /**
  * One notes image's counts: `coverage`, the share of the page's facts some card covers, and over
- * every returned card, those covering no fact, the examples returned and those the page does
- * not print.
+ * every returned card, those covering no fact, those whose answer lists more than
+ * `MAX_LISTED_ITEMS` items, the examples returned and those the page does not print.
  */
 export type NotesScore = {
   readonly coverage: number;
   readonly cards: number;
   readonly unsupported: number;
+  readonly longAnswers: number;
   readonly examples: number;
   readonly inventedExamples: number;
 };
@@ -182,6 +271,9 @@ export function scoreNotes(
   const unsupported =
     candidates.filter((card) => !truth.facts.some((fact) => covers(card, fact)))
       .length;
+  const longAnswers =
+    candidates.filter((card) => listedItems(card.answer) > MAX_LISTED_ITEMS)
+      .length;
   const printed = truth.facts.flatMap((fact) => fact.examples).map(normalize);
   const lines = truth.lines.map(normalize);
   const returned = candidates.flatMap((card) => card.examples ?? []);
@@ -199,6 +291,7 @@ export function scoreNotes(
     coverage,
     cards: candidates.length,
     unsupported,
+    longAnswers,
     examples: returned.length,
     inventedExamples,
   };
@@ -218,6 +311,8 @@ export type NotesRow = {
   /** The shares of returned cards covering no fact, and of returned examples the page does not print. */
   readonly unsupportedRate: number | null;
   readonly inventedExamplesRate: number | null;
+  /** The share of returned cards whose answer lists more than `MAX_LISTED_ITEMS` items. */
+  readonly longAnswerRate: number | null;
   /** Each notes image's coverage and the completion tokens its calls used, in the order run. */
   readonly pages: readonly {
     readonly name: string;
@@ -241,6 +336,13 @@ export type Row = {
   readonly partOfSpeechPrecision: number | null;
   readonly examplesPrecision: number | null;
   readonly inventedRate: number | null;
+  /**
+   * Over every vocabulary image's entries matched by front: the share of returned senses equal
+   * to a page sense in part of speech and meaning, and the share of page senses so returned.
+   * Null when no sense was returned, or the pages held none.
+   */
+  readonly sensePrecision: number | null;
+  readonly senseRecall: number | null;
   /** The notes results, null without a notes image. */
   readonly notes: NotesRow | null;
   readonly p50Ms: number;
@@ -279,6 +381,8 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
   const spentUsd = images.reduce((total, image) => total + image.costUsd, 0);
   const sum = (pick: (fields: FieldCounts) => number) =>
     scores.reduce((total, score) => total + pick(score.fields), 0);
+  const senses = (pick: (senses: SenseCounts) => number) =>
+    scores.reduce((total, score) => total + pick(score.senses), 0);
   return {
     label,
     precision: mean((score) => score.precision),
@@ -293,6 +397,11 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
       sum((f) => f.examples),
     ),
     inventedRate: share(sum((f) => f.invented), sum((f) => f.fields)),
+    sensePrecision: share(
+      senses((s) => s.matched),
+      senses((s) => s.returned),
+    ),
+    senseRecall: share(senses((s) => s.matched), senses((s) => s.page)),
     notes: notes.length === 0 ? null : summarizeNotes(notes),
     p50Ms: percentile(latencies, 50),
     p90Ms: percentile(latencies, 90),
@@ -318,6 +427,7 @@ function summarizeNotes(
       total((s) => s.inventedExamples),
       total((s) => s.examples),
     ),
+    longAnswerRate: share(total((s) => s.longAnswers), total((s) => s.cards)),
     pages: images.map((image) => ({
       name: image.name,
       coverage: image.score.coverage,

@@ -22,10 +22,13 @@ const MODEL = {
 };
 const CARD = {
   kind: "vocabulary",
+  type: "concept",
   front: "apple",
-  answer: "사과",
+  answer: null,
   topic: "Fruit",
-  partOfSpeech: null,
+  senses: [{ pos: null, meaning: "사과" }],
+  extras: [],
+  pronunciation: null,
   examples: [],
 };
 

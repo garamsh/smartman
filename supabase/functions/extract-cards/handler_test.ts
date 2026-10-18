@@ -197,29 +197,39 @@ const usageCalls = (r: Run) =>
  */
 const twoCards = [{
   kind: "vocabulary",
+  type: "concept",
   front: "run",
-  answer: "달리다",
+  answer: null,
   topic: "Unit 3 동사",
-  partOfSpeech: "[동]",
+  senses: [{ pos: "[동]", meaning: "달리다" }],
+  extras: [],
+  pronunciation: null,
   examples: ["I run every morning."],
 }, {
   kind: "vocabulary",
+  type: "concept",
   front: "river",
-  answer: "강",
+  answer: null,
   topic: "Unit 3 동사",
-  partOfSpeech: null,
+  senses: [{ pos: null, meaning: "강" }],
+  extras: [],
+  pronunciation: null,
   examples: [],
 }, {
   kind: "note",
+  type: "concept",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
   topic: "연역과 귀납",
-  partOfSpeech: null,
+  senses: [],
+  extras: [],
+  pronunciation: null,
   examples: ["253+4637+647898=652788 -> 연역"],
 }];
 /** The same cards as the function answers them. */
 const twoAnswered = [{
   kind: "vocabulary",
+  type: "concept",
   front: "run",
   answer: "달리다",
   short: "달리다",
@@ -229,8 +239,10 @@ const twoAnswered = [{
   back: "[동] 달리다",
   meaning: "달리다",
   partOfSpeech: "[동]",
+  senses: [{ pos: "[동]", meaning: "달리다" }],
 }, {
   kind: "vocabulary",
+  type: "concept",
   front: "river",
   answer: "강",
   short: "강",
@@ -238,8 +250,10 @@ const twoAnswered = [{
   topic: "Unit 3 동사",
   back: "강",
   meaning: "강",
+  senses: [{ pos: null, meaning: "강" }],
 }, {
   kind: "note",
+  type: "concept",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
   short: "전제가 참이면 결론이 반드시 참인 논증",
@@ -257,7 +271,7 @@ Deno.test("the suite runs without write or network permission", () => {
   assert.notEqual(Deno.permissions.querySync({ name: "net" }).state, "granted");
 });
 
-Deno.test("a signed-in user's photo returns each card's kind, answer, topic and back, its answer as the short form at step 1, and a vocabulary card's fields", async () => {
+Deno.test("a signed-in user's photo returns each card's kind, type, answer, topic and back, its answer as the short form at step 1, and a vocabulary card's fields", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { cards: twoAnswered });
@@ -389,7 +403,7 @@ Deno.test("invalid JSON from the model is retried once, and a valid retry is ret
 });
 
 Deno.test("invalid output twice answers 502 after exactly one retry", async () => {
-  const card = twoCards[1];
+  const card = twoCards[2];
   const tooLong = [{ ...card, answer: "a".repeat(1001) }];
   const sixExamples = [{ ...card, examples: ["a", "b", "c", "d", "e", "f"] }];
   // The shape prompt v2 asked for, without kind, answer, short or step.
@@ -452,33 +466,34 @@ Deno.test("the model call asks for the cards schema from providers that honour i
     call.response_format.json_schema.schema.properties.cards.items.required,
     [
       "kind",
+      "type",
       "front",
       "answer",
       "topic",
-      "partOfSpeech",
+      "senses",
+      "extras",
+      "pronunciation",
       "examples",
     ],
   );
   assert.equal(call.provider.require_parameters, true);
 });
 
-Deno.test("the model is asked for theory and exceptions, named by concept and grouped by topic, with worked examples only on their rule's card and no short form or step, inventing nothing", async () => {
+Deno.test("the model is asked for atomic theory and exceptions, named by short keywords and grouped by topic, with worked examples only on their rule's card, inventing nothing", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   const system = r.modelCalls[0].messages[0].content;
   for (
     const asked of [
       "cards hold the theory and the exceptions",
-      "every definition and every rule, each on its own card",
-      "each member of a list or table",
-      "each exception, and each line the writer marked as important, such as with a star, a circle",
+      "Every definition and every rule, each on its own card.",
+      "Each exception, on its own card.",
       "the name of the concept, rule or exception the card states",
       "It is a name, never a question",
       "the theory itself, the definition, rule or exception",
       '"topic" is the name of the page section the card comes from, at most 60 characters',
       "Cards of one section share one topic",
-      "It is never a card of its own: it goes in the examples of the card whose rule it illustrates, exactly as the page prints it, and only when the page prints it.",
+      "It is never a concept or cloze card of its own: it goes in the examples of the card whose rule it illustrates, exactly as the page prints it, and only when the page prints it.",
       "Do not merge separate rules into one card",
-      "keep its definitions, rules and marked exceptions before its minor list members, in the page's order",
     ]
   ) {
     assert.ok(system.includes(asked), `asks: ${asked}`);
@@ -486,14 +501,16 @@ Deno.test("the model is asked for theory and exceptions, named by concept and gr
   // Nothing outside the page enters a card.
   for (
     const kept of [
-      "never add a fact, a meaning, a part of speech or an example the page does not show",
+      "never add a fact, a meaning, a part of speech, an extra, a pronunciation or an example the page does not show",
+      "A field the page does not print is null or empty.",
       "Never write an example of your own.",
     ]
   ) {
     assert.ok(system.includes(kept), `keeps: ${kept}`);
   }
-  // Earlier prompts asked for these: v4 for a short form and a step, and v4 before the owner's
-  // decisions of 2026-10-18 for questions and worked-example cards.
+  // Earlier prompts asked for these: v4 for a short form and a step, v4 before the owner's
+  // decisions of 2026-10-18 for questions and worked-example cards, and v5 for a list taught
+  // as one item on one card.
   for (
     const dropped of [
       '"short"',
@@ -502,9 +519,74 @@ Deno.test("the model is asked for theory and exceptions, named by concept and gr
       "a short question",
       "each worked example, such as",
       "as a card of its own or as an example",
+      "together on one card when the page teaches the list as one item to recall",
     ]
   ) {
     assert.ok(!system.includes(dropped), `no longer asks: ${dropped}`);
+  }
+});
+
+Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, and a vocabulary entry's senses, extras and pronunciation", async () => {
+  const r = await run({ replies: [cardsReply(twoCards)] });
+  const system = r.modelCalls[0].messages[0].content;
+  const rules: Record<string, string[]> = {
+    "1 atomic": [
+      "Atomic: one fact per card. An answer that would list more than 5 items is split into several cards.",
+    ],
+    "2 tables cell by cell": [
+      "Tables cell by cell",
+      "its front the row and column names",
+      "A whole table is never one card.",
+    ],
+    "3 cloze by default": [
+      "Cloze by default",
+      "one cloze card per blank",
+      'one blank written "___"',
+    ],
+    "4 judgment cards": [
+      'a rule that tells A from B gets its own card, its front "A vs B"',
+      "its answer the test",
+    ],
+    "5 handwriting first": [
+      "every tip, trap or note the writer added by hand",
+      'its front starting with "★ "',
+      "so that none is dropped",
+    ],
+    "6 short fronts": [
+      "as a short keyword",
+      "Write \"'저희': 3인칭 재귀칭\", not \"대명사 '저희'의 쓰임 - 3인칭 재귀칭\".",
+    ],
+    "7 identify cards": [
+      'make an "identify" card for each such sentence, in the topic of its rule',
+      "Make one only from a sentence the page prints, never from one of your own.",
+      "with the word to judge marked in single quotes",
+      "its category and the reason",
+    ],
+    type: [
+      '"type" is what the card asks',
+      '"concept"',
+      '"cloze"',
+      '"identify"',
+      'Every vocabulary card is "concept", and so is a judgment card.',
+    ],
+    "vocabulary form": [
+      "\"senses\" are a vocabulary entry's meanings, in the page's order",
+      '"pos" is the part-of-speech label the page prints for that meaning, copied verbatim',
+      "or null when the page prints none",
+      "An entry with one meaning has one sense.",
+      '"extras" are anything else the page prints for a vocabulary entry, each with the page\'s own label verbatim',
+      '"pronunciation" is the pronunciation, phonetic transcription or reading the page prints for a vocabulary entry, verbatim',
+      "when the page prints one per part of speech",
+      'It is null for every vocabulary card, whose meanings go in "senses".',
+    ],
+    cap: [
+      "keep its definitions, rules, judgment cards, handwritten tips and marked exceptions before its cloze and cell cards, and those before its identify cards",
+    ],
+  };
+  for (const [rule, phrases] of Object.entries(rules)) {
+    for (const phrase of phrases) {
+      assert.ok(system.includes(phrase), `rule ${rule}: ${phrase}`);
+    }
   }
 });
 
