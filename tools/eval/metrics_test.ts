@@ -102,6 +102,7 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
       latencyMs: 1000,
       costUsd: 0.01,
       completionTokens: 0,
+      outline: null,
     },
     {
       name: "02",
@@ -110,6 +111,7 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
       latencyMs: 3000,
       costUsd: 0.03,
       completionTokens: 0,
+      outline: null,
     },
   ]);
   assert.equal(row.precision, 0.5);
@@ -138,6 +140,7 @@ const row = (
   examplesPrecision: null,
   inventedRate: null,
   notes,
+  outline: null,
   p50Ms: 0,
   p90Ms: 0,
   costPerImageUsd,
@@ -369,6 +372,7 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
     latencyMs: 1000,
     costUsd: 0.01,
     completionTokens: 50,
+    outline: null,
   };
   const full = scoreNotes([
     noteCard("연역", "결론이 반드시 참"),
@@ -389,6 +393,7 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
       latencyMs: 2000,
       costUsd: 0.02,
       completionTokens: 900,
+      outline: null,
     },
     {
       name: "03-notes",
@@ -397,6 +402,7 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
       latencyMs: 3000,
       costUsd: 0.03,
       completionTokens: 0,
+      outline: null,
     },
   ]);
   assert.equal(row.f1, 1, "vocabulary scores average over vocabulary images");

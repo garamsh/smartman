@@ -21,5 +21,11 @@
   {
     "label": "OpenAI GPT mini, newest",
     "primary": "^openai/gpt-[0-9.]+-mini$"
+  },
+  {
+    "label": "Sonnet 5.5 outline, Haiku 5.5 fill",
+    "outline": "^anthropic/claude-sonnet-5\\.5$",
+    "primary": "^anthropic/claude-haiku-5\\.5$",
+    "retry": "^anthropic/claude-sonnet-5\\.5$"
   }
 ]

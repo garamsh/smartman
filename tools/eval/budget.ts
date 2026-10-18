@@ -48,6 +48,9 @@ export const TYPICAL_PROMPT_TOKENS = 2500;
 export const TYPICAL_VOCABULARY_TOKENS_PER_CARD = 45;
 export const TYPICAL_NOTE_TOKENS_PER_CARD = 120;
 export const TYPICAL_REASONING_TOKENS = 1000;
+// An outline item, its topic, name and gist, written by the outline call and read again by the
+// fill call.
+export const TYPICAL_OUTLINE_TOKENS_PER_ITEM = 40;
 // The most one call's prompt is taken to cost: the guard before each call uses this, with
 // the reply at the function's output cap.
 export const WORST_PROMPT_TOKENS = 6000;
@@ -74,7 +77,9 @@ export type SampleSize = {
 
 /**
  * The dry estimate of a run: every candidate over every sample, each priced as one typical
- * call to the primary model plus one to the retry model, as if every image retried.
+ * call to the primary model plus one to the retry model, as if every image retried. An
+ * outline-then-fill candidate adds its outline call, an item per card, and the fill calls read
+ * that outline as prompt tokens.
  */
 export function estimateUsd(
   candidates: readonly Candidate[],
@@ -84,8 +89,18 @@ export function estimateUsd(
   for (const candidate of candidates) {
     for (const size of sizes) {
       const reply = TYPICAL_REASONING_TOKENS + size.tokensPerCard * size.cards;
-      total += cost(candidate.primary.pricing, TYPICAL_PROMPT_TOKENS, reply);
-      total += cost(candidate.retry.pricing, TYPICAL_PROMPT_TOKENS, reply);
+      const outline = TYPICAL_OUTLINE_TOKENS_PER_ITEM * size.cards;
+      const prompt = TYPICAL_PROMPT_TOKENS +
+        (candidate.outline === undefined ? 0 : outline);
+      total += cost(candidate.primary.pricing, prompt, reply);
+      total += cost(candidate.retry.pricing, prompt, reply);
+      if (candidate.outline !== undefined) {
+        total += cost(
+          candidate.outline.pricing,
+          TYPICAL_PROMPT_TOKENS,
+          TYPICAL_REASONING_TOKENS + outline,
+        );
+      }
     }
   }
   return total;

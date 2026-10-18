@@ -7,11 +7,16 @@ import {
 
 export const MODELS_URL = "https://openrouter.ai/api/v1/models";
 
-/** A candidate as `candidates.json` states it: patterns matched against model IDs. */
+/**
+ * A candidate as `candidates.json` states it: patterns matched against model IDs. With
+ * `outline`, it runs outline then fill: that model lists the page's items, then `primary`
+ * makes the cards with the list in view.
+ */
 export type Selector = {
   readonly label: string;
   readonly primary: string;
   readonly retry?: string;
+  readonly outline?: string;
 };
 
 /** USD per token for prompt and completion, and per image and per request. */
@@ -33,6 +38,7 @@ export type Candidate = {
   readonly label: string;
   readonly primary: Model;
   readonly retry: Model;
+  readonly outline?: Model;
 };
 
 /**
@@ -113,8 +119,19 @@ export function resolve(
     const retry = selector.retry === undefined
       ? primary
       : newest(selector.retry, models);
-    if (primary === null || retry === null) unresolved.push(selector.label);
-    else candidates.push({ label: selector.label, primary, retry });
+    const outline = selector.outline === undefined
+      ? undefined
+      : newest(selector.outline, models);
+    if (primary === null || retry === null || outline === null) {
+      unresolved.push(selector.label);
+    } else {
+      candidates.push({
+        label: selector.label,
+        primary,
+        retry,
+        ...(outline === undefined ? {} : { outline }),
+      });
+    }
   }
   return unresolved.length > 0
     ? { ok: false, unresolved }
@@ -129,15 +146,19 @@ export function parseSelectors(value: unknown): Selector[] {
     if (
       !isRecord(entry) || typeof entry.label !== "string" ||
       typeof entry.primary !== "string" ||
-      (entry.retry !== undefined && typeof entry.retry !== "string")
+      (entry.retry !== undefined && typeof entry.retry !== "string") ||
+      (entry.outline !== undefined && typeof entry.outline !== "string")
     ) {
       throw new Error(
         `candidates.json holds a malformed candidate: ${JSON.stringify(entry)}`,
       );
     }
-    return entry.retry === undefined
-      ? { label: entry.label, primary: entry.primary }
-      : { label: entry.label, primary: entry.primary, retry: entry.retry };
+    return {
+      label: entry.label,
+      primary: entry.primary,
+      ...(entry.retry === undefined ? {} : { retry: entry.retry }),
+      ...(entry.outline === undefined ? {} : { outline: entry.outline }),
+    };
   });
 }
 
