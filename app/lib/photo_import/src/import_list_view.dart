@@ -313,23 +313,27 @@ class _SectionHeader extends StatelessWidget {
       onChanged();
     }
 
-    Widget item(
-      String label, {
-      required bool checked,
-      required VoidCallback onTap,
-    }) => Semantics(
-      checked: checked,
-      child: MenuItemButton(
+    /// A menu item that does [onTap]: a choice, read as checked or not, when
+    /// [checked] is given, else a plain action.
+    Widget item(String label, {bool? checked, required VoidCallback onTap}) {
+      final button = MenuItemButton(
         onPressed: onTap,
         leadingIcon: SizedBox(
           width: AppSize.smallIcon,
-          child: checked
+          child: checked == true
               ? const Icon(LucideIcons.check, size: AppSize.smallIcon)
               : null,
         ),
         child: Text(label),
-      ),
-    );
+      );
+      // One node, so a screen reader hears a choice's state with its label.
+      return checked == null
+          ? button
+          : MergeSemantics(
+              child: Semantics(checked: checked, child: button),
+            );
+    }
+
     // The heavier rule between a menu's groups.
     final separator = Divider(
       height: AppSpace.s4,
@@ -412,7 +416,6 @@ class _SectionHeader extends StatelessWidget {
             separator,
             item(
               anyIncluded ? l10n.importDropSection : l10n.importKeepSection,
-              checked: false,
               onTap: () {
                 list.toggleSection(section);
                 onChanged();
@@ -615,7 +618,7 @@ class _Check extends StatelessWidget {
       child: on
           ? Icon(
               LucideIcons.check,
-              size: AppSize.smallIcon - 4,
+              size: AppSize.checkIcon,
               color: colors.onPrimary,
             )
           : null,

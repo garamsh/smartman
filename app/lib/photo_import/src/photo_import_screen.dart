@@ -298,12 +298,16 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       final result = await ref
           .read(deckRepositoryProvider)
           .importCards(target, list.toImport());
-      unawaited(
-        widget.preferences.setString(
+      // The cards are saved; a form that cannot be stored says so and is
+      // used only until the app closes.
+      try {
+        await widget.preferences.setString(
           _formsKey,
           _forms.remember(list, result.deck.id),
-        ),
-      );
+        );
+      } on Exception catch (cause) {
+        _showDeckFailure(StorageFailure(cause));
+      }
       navigator.pop(result.deck);
     } on DeckFailure catch (failure) {
       _showDeckFailure(failure);

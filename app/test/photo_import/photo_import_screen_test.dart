@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
@@ -11,6 +13,10 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 
 import '../home/home_data.dart';
+
+import 'package:smartman/photo_import/src/extraction_client.dart'
+    show parseExtraction;
+
 import 'fakes.dart';
 
 /// Photo import over decks "French" (holding [french]) and "Spanish", with a
@@ -47,6 +53,7 @@ class _Import {
     Map<String, String> french = const {},
     ThemeMode themeMode = ThemeMode.light,
     bool disableAnimations = false,
+    bool refuseWrites = false,
     void Function(_Import import)? before,
   }) async {
     final db = AppDatabase(NativeDatabase.memory());
@@ -70,7 +77,7 @@ class _Import {
       }
       return (frenchDeck, spanishDeck);
     }))!;
-    final preferences = await openPreferences(tester);
+    final preferences = await openPreferences(tester, const {}, refuseWrites);
     final import = _Import._(
       tester,
       repository,
@@ -897,6 +904,110 @@ void main() {
         );
         expect(_shown('Found 1 word'), findsOneWidget);
         expect(import.included('chat'), isTrue);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      "the menu's last item is read as an action, not as an option left unchecked, and a choice with its state",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(words);
+        await import.menu('최빈출 단어');
+
+        expect(
+          tester.getSemantics(_shown('Leave out this group')),
+          isSemantics(
+            label: 'Leave out this group',
+            hasTapAction: true,
+            hasCheckedState: false,
+          ),
+        );
+        // Control: a choice is read with its state.
+        expect(
+          tester.getSemantics(_shown('Show part of speech')),
+          isSemantics(
+            label: 'Show part of speech',
+            hasTapAction: true,
+            hasCheckedState: true,
+            isChecked: true,
+          ),
+        );
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'forms that cannot be stored say so in a snack bar, and the cards are still added',
+      (tester) async {
+        final import = await _Import.open(tester, refuseWrites: true);
+        await import.extract({'chien': 'dog'});
+
+        await import.tap(_shown('Add 1 card'));
+
+        expect(
+          _shown(
+            "Couldn't read or write the device's storage. Please try again.",
+          ),
+          findsOneWidget,
+        );
+        expect((import.popped! as Deck).id, import.french.id);
+        expect(await import.cards(import.french), [
+          ('chien', 'dog', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a card from a function before senses shows its meaning with its part of speech',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extractCards(
+          parseExtraction(
+            200,
+            jsonEncode({
+              'cards': [
+                {
+                  'front': 'run',
+                  'back': '[동] 달리다',
+                  'meaning': '달리다',
+                  'partOfSpeech': '[동]',
+                },
+              ],
+            }),
+          ),
+        );
+
+        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('[동] 달리다'), findsOneWidget);
+        await import.tap(_shown('Add 1 card'));
+        expect(await import.cards(import.french), [
+          ('run', '[동] 달리다', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      "양쪽 다 over a deck that holds a word's meaning keeps the row, counts its cards by key, and merges the reversed card",
+      (tester) async {
+        final import = await _Import.open(tester, french: {'강': 'river'});
+        await import.extractCards([
+          CandidateCard.word(front: 'stream', meaning: '강'),
+          CandidateCard.word(front: 'creek', meaning: '강'),
+        ]);
+        await import.menu('This page');
+        await import.pickItem('Both ways');
+
+        expect(import.included('stream'), isTrue);
+        expect(_shown('Add 3 cards'), findsOneWidget, reason: "'강' twice");
+        await import.tap(_shown('Add 3 cards'));
+        expect(await import.cards(import.french), [
+          ('강', 'river / stream / creek', CardSource.manual),
+          ('stream', '강', CardSource.import),
+          ('creek', '강', CardSource.import),
+        ]);
         await import.close();
       },
     );

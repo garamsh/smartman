@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,14 +98,28 @@ final class FakeExtractionClient implements ExtractionClient {
       calls.last.answer.completeError(failure);
 }
 
+/// Device storage over memory that refuses every write, as a full disk does.
+base class _RefusingPreferences extends InMemorySharedPreferencesAsync {
+  _RefusingPreferences() : super.empty();
+
+  @override
+  Future<bool> setString(
+    String key,
+    String value,
+    SharedPreferencesOptions options,
+  ) => Future.error(PlatformException(code: 'full'));
+}
+
 /// Device storage over memory, opened as the composition site opens it,
-/// holding [values].
+/// holding [values]; with [refuseWrites], every write fails.
 Future<SharedPreferencesWithCache> openPreferences(
   WidgetTester tester, [
   Map<String, Object> values = const {},
+  bool refuseWrites = false,
 ]) async {
-  SharedPreferencesAsyncPlatform.instance =
-      InMemorySharedPreferencesAsync.withData(values);
+  SharedPreferencesAsyncPlatform.instance = refuseWrites
+      ? _RefusingPreferences()
+      : InMemorySharedPreferencesAsync.withData(values);
   return (await tester.runAsync(
     () => SharedPreferencesWithCache.create(
       cacheOptions: const SharedPreferencesWithCacheOptions(

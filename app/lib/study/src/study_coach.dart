@@ -18,9 +18,6 @@ double coachPeek(double t) {
   return out - back;
 }
 
-/// The finger's size.
-const _finger = 34.0;
-
 /// Whether a coach's finger shows at [t], the progress through one
 /// [coachCycle]: from just before the card moves until just after it is
 /// back.
@@ -42,9 +39,11 @@ class StudyCoachFinger extends StatelessWidget {
           opacity: shown ? 1 : 0,
           child: Icon(
             LucideIcons.pointer,
-            size: _finger,
+            size: AppSize.coachFinger,
             color: colors.ink,
-            shadows: [Shadow(color: colors.shadow, blurRadius: 6)],
+            shadows: [
+              Shadow(color: colors.shadow, blurRadius: AppSize.coachFingerBlur),
+            ],
           ),
         ),
       ),
@@ -105,14 +104,16 @@ class StudyCoach extends StatelessWidget {
                 ),
                 for (var dot = 0; dot < steps; dot++)
                   Container(
-                    width: dot == step ? 16 : 6,
-                    height: 6,
+                    width: dot == step
+                        ? AppSize.coachDotCurrent
+                        : AppSize.coachDot,
+                    height: AppSize.coachDot,
                     margin: const EdgeInsets.only(left: AppSpace.s4),
                     decoration: BoxDecoration(
                       color: colors.onHero.withValues(
                         alpha: dot == step ? 1 : 0.4,
                       ),
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(AppSize.coachDot / 2),
                     ),
                   ),
               ],

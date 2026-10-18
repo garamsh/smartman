@@ -116,7 +116,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 - **Spacing**, `AppSpace`: 4, 8, 12, 16, 20, 24, 28, 32, 40. The screen gutter is 20, the gap between rows 8, and the gap between sections 28.
 - **Radii**, `AppRadius`: panel 40, sheet 28, card 24, previous card 20, row 18, button 16, field 14, menu 13; a chip is fully rounded.
-- **Heights**, `AppSize`: a call to action 56, a button 52, a field 52, a search field 48, a tap target at least 44; and the brand's sizes: the lockup 30 high, the stacked lockup 200 wide, the mascot's circles 128 and 84 and the backlog card's mascot 64, the avatars 56 and 32, a deck tile 44.
+- **Heights**, `AppSize`: a call to action 56, a button 52, a field 52, a search field 48, a tap target at least 44; and the brand's sizes: the lockup 30 high, the stacked lockup 200 wide, the mascot's circles 128 and 84 and the backlog card's mascot 64, the avatars 56 and 32, a deck tile 44; a round check's tick 14; a coach's finger 34 with a shadow blurred 6, and its step dots 6, the current one 16 long; and a pull-down menu's elevation 12.
 - **Shadows**, `AppShadow`: card, for a surface resting on the ground, and raised, a close layer under a wide soft one, for the current study card and the completion card.
 
 ### Components

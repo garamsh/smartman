@@ -262,10 +262,13 @@ final class ImportList {
   ImportSection sectionOf(ImportRow row) =>
       sections.firstWhere((section) => section.rows.contains(row));
 
-  /// Whether the deck already holds a card [row] would save.
-  bool isDuplicate(ImportRow row) => row
-      .cards(sectionOf(row).form)
-      .any((card) => existingKeys.contains(CardKey.fromFront(card.front)));
+  /// Whether the deck already holds [row]'s first card in its form, the
+  /// word to its meaning unless the form turns it. A further card, such as
+  /// "양쪽 다"'s reversed one, whose key the deck holds merges back when
+  /// saved, as any duplicate does, and leaves the row included.
+  bool isDuplicate(ImportRow row) => existingKeys.contains(
+    CardKey.fromFront(row.cards(sectionOf(row).form).first.front),
+  );
 
   /// Whether [row] is saved: as the user set it, else unless it is an
   /// identify card or the deck holds it. A row with nothing to save is not.
@@ -287,8 +290,10 @@ final class ImportList {
             ),
   ];
 
-  /// How many cards [toImport] holds.
-  int get cardCount => toImport().length;
+  /// How many cards saving writes or merges into: one per card key among
+  /// [toImport], since cards of one key merge into one.
+  int get cardCount =>
+      {for (final card in toImport()) CardKey.fromFront(card.front)}.length;
 
   /// Includes every row of [section], or leaves every one out when any is
   /// included.

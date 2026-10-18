@@ -28,7 +28,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - **Sections.** One inset grouped section per topic and kind, in the order each first appears, with the topic's identify cards in a section of their own. A card with no topic goes under "이 페이지". The header shows the topic and its row count, and on the right the section's form, which opens its menu.
   - **Rows.** A leading circular check includes or leaves out the row. The front sits on the left at 44%, and the back on the right, one line per sense. A tap opens the edit sheet.
   - **(8)** A swipe left leaves a row out, as its check does. Only the check puts it back.
-  - **The button** "카드 n장 추가" sits over a fade at the bottom. It counts each card the forms make, and is disabled at 0.
+  - **The button** "카드 n장 추가" sits over a fade at the bottom. It counts the cards the forms make once per card key, since cards of one key merge into one, and is disabled at 0.
 - **The form menu (1, 2, 4).**
   - A vocabulary section offers "단어 → 뜻", "뜻 → 단어" and "양쪽 다 만들기", with a check on the one chosen.
     - (2) "양쪽 다" saves a second, reversed card per row, so the count doubles.
@@ -43,7 +43,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A note row has a "뒷면" field.
   - "완료" applies the edits and is disabled while every sense is dropped. A dismissal applies none.
   - An edit whose front the deck holds keeps the row included, marked.
-- **(7) Duplicates.** A row whose card the deck already holds starts left out, with "이미 덱에 있어요" under it. Checked, it merges back into the deck's card by `deck`'s merge-back rule.
+- **(7) Duplicates.** A row whose card the deck already holds starts left out, with "이미 덱에 있어요" under it. Checked, it merges back into the deck's card by `deck`'s merge-back rule. The row's first card in its form, the word's unless the form turns it, alone decides; a further card whose key the deck holds, such as "양쪽 다"'s reversed one, merges back when saved and leaves the row included.
 - **(6) No coach.** The Review coach goes, and so does its stored flag. The check makes including a row visible, so there is no gesture left to teach.
 - **(10) The menu's look.** `MenuAnchor`, themed in `theme.dart` after board D:
   - 13 px corners, as the radius token `menu`, and a soft shadow;

@@ -86,6 +86,24 @@ abstract final class AppSize {
   /// A small icon, inside a button or a line of text.
   static const smallIcon = 18.0;
 
+  /// The tick inside a row's round check, such as a photo import row's.
+  static const checkIcon = 14.0;
+
+  /// A first-use coach's finger over the card it demonstrates on.
+  static const coachFinger = 34.0;
+
+  /// The blur of the shadow that lifts a coach's finger off the card.
+  static const coachFingerBlur = 6.0;
+
+  /// A coach's step dot, and its height when it is the current step's.
+  static const coachDot = 6.0;
+
+  /// The current step's dot, drawn long.
+  static const coachDotCurrent = 16.0;
+
+  /// How high a pull-down menu floats, which sets its shadow.
+  static const menuElevation = 12.0;
+
   /// The horizontal lockup's height in the home screen's top bar.
   static const lockupHeight = 30.0;
 
@@ -755,7 +773,7 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
         backgroundColor: WidgetStatePropertyAll(colors.raised),
         surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
         shadowColor: WidgetStatePropertyAll(colors.shadow),
-        elevation: const WidgetStatePropertyAll(AppSpace.s12),
+        elevation: const WidgetStatePropertyAll(AppSize.menuElevation),
         padding: const WidgetStatePropertyAll(EdgeInsets.zero),
         shape: const WidgetStatePropertyAll(
           RoundedRectangleBorder(
