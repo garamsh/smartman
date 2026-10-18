@@ -63,6 +63,31 @@ pub struct ReviewRecord {
     pub at: i64,
 }
 
+/// A card as today's list reads it: when it is due, absent for a card never reviewed, and its
+/// reviews, in any order, those outside the study day included or not.
+#[derive(Tsify, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[tsify(large_number_types_as_bigints, missing_as_null)]
+pub struct TodayCard {
+    /// When the card is due.
+    pub due: Option<i64>,
+    /// The card's reviews.
+    pub reviews: Vec<ReviewRecord>,
+}
+
+/// Where a card stands in today's list.
+#[derive(Tsify, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum Today {
+    /// Not in today's list: not due before the day ends and not answered in it.
+    Absent,
+    /// Still to study today: due before the day ends and not answered in it, or answered
+    /// "Don't know" last in it.
+    Left,
+    /// Done today: answered "Know" last in it.
+    Done,
+}
+
 /// A floating-point quantity the engine takes.
 #[derive(Tsify, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -176,6 +201,30 @@ pub fn retrievability(state: Ts<MemoryStateParts>, at: i64) -> Result<Ts<Outcome
     Ok(outcome(recall).into_ts()?)
 }
 
+/// Where each card stands in the list of the study day from `dayStart`, inclusive, to `dayEnd`,
+/// exclusive, in the order given.
+#[wasm_bindgen(js_name = todaysList, unchecked_return_type = "Today[]")]
+pub fn todays_list(
+    cards: Vec<Ts<TodayCard>>,
+    #[wasm_bindgen(js_name = dayStart)] day_start: i64,
+    #[wasm_bindgen(js_name = dayEnd)] day_end: i64,
+) -> Result<Vec<Ts<Today>>, JsError> {
+    let day = engine::StudyDay {
+        start: engine::Timestamp(day_start),
+        end: engine::Timestamp(day_end),
+    };
+    cards
+        .into_iter()
+        .map(|card| {
+            let card = card.to_rust()?;
+            let reviews: Vec<engine::Review> =
+                card.reviews.into_iter().map(engine::Review::from).collect();
+            let today = engine::today(card.due.map(engine::Timestamp), &reviews, day);
+            Ok(Today::from(today).into_ts()?)
+        })
+        .collect()
+}
+
 fn outcome<T>(result: Result<T, engine::Error>) -> Outcome<T> {
     match result {
         Ok(value) => Outcome::Ok(value),
@@ -236,6 +285,16 @@ impl From<engine::MemoryState> for MemoryStateParts {
             stability: state.stability(),
             difficulty: state.difficulty(),
             last_review: state.last_review().0,
+        }
+    }
+}
+
+impl From<engine::Today> for Today {
+    fn from(today: engine::Today) -> Self {
+        match today {
+            engine::Today::Absent => Today::Absent,
+            engine::Today::Left => Today::Left,
+            engine::Today::Done => Today::Done,
         }
     }
 }

@@ -1,4 +1,5 @@
-//! FSRS-6 scheduling: a card's memory state and next due time from its review history.
+//! FSRS-6 scheduling: a card's memory state and next due time from its review history, and
+//! today's list: the cards a study day still holds, from its reviews.
 //!
 //! Every function is pure. The engine reads no clock and stores nothing: the caller
 //! passes the time of each review and keeps either the history or the state's parts.
@@ -9,6 +10,9 @@
 use std::fmt;
 
 mod fsrs;
+mod today;
+
+pub use today::{StudyDay, Today, today};
 
 const SECONDS_PER_DAY: i64 = 86_400;
 

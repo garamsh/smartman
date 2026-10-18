@@ -10,7 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'engine.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `fuzz`, `scheduled`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `try_from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `from`, `try_from`
 
 /// Reviews a new card for the first time, its interval fuzzed by `fuzz_factor`, a value in
 /// `[0, 1)`, or not fuzzed when it is `None`.
@@ -47,6 +47,18 @@ Future<double> retrievability({
   required MemoryStateParts state,
   required PlatformInt64 at,
 }) => RustLib.instance.api.crateApiEngineRetrievability(state: state, at: at);
+
+/// Where each card stands in the list of the study day from `day_start`, inclusive, to
+/// `day_end`, exclusive, in the order given. Dart calls it synchronously.
+List<Today> todaysList({
+  required List<TodayCard> cards,
+  required PlatformInt64 dayStart,
+  required PlatformInt64 dayEnd,
+}) => RustLib.instance.api.crateApiEngineTodaysList(
+  cards: cards,
+  dayStart: dayStart,
+  dayEnd: dayEnd,
+);
 
 /// The app's two answer buttons.
 enum Answer {
@@ -177,4 +189,40 @@ class Scheduled {
           runtimeType == other.runtimeType &&
           state == other.state &&
           due == other.due;
+}
+
+/// Where a card stands in today's list.
+enum Today {
+  /// Not in today's list: not due before the day ends and not answered in it.
+  absent,
+
+  /// Still to study today: due before the day ends and not answered in it, or answered
+  /// "Don't know" last in it.
+  left,
+
+  /// Done today: answered "Know" last in it.
+  done,
+}
+
+/// A card as today's list reads it: when it is due, `None` for a card never reviewed, and its
+/// reviews, in any order, those outside the study day included or not.
+class TodayCard {
+  /// When the card is due.
+  final PlatformInt64? due;
+
+  /// The card's reviews.
+  final List<ReviewRecord> reviews;
+
+  const TodayCard({this.due, required this.reviews});
+
+  @override
+  int get hashCode => due.hashCode ^ reviews.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TodayCard &&
+          runtimeType == other.runtimeType &&
+          due == other.due &&
+          reviews == other.reviews;
 }

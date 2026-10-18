@@ -47,6 +47,26 @@ pub struct ReviewRecord {
     pub at: i64,
 }
 
+/// A card as today's list reads it: when it is due, `None` for a card never reviewed, and its
+/// reviews, in any order, those outside the study day included or not.
+pub struct TodayCard {
+    /// When the card is due.
+    pub due: Option<i64>,
+    /// The card's reviews.
+    pub reviews: Vec<ReviewRecord>,
+}
+
+/// Where a card stands in today's list.
+pub enum Today {
+    /// Not in today's list: not due before the day ends and not answered in it.
+    Absent,
+    /// Still to study today: due before the day ends and not answered in it, or answered
+    /// "Don't know" last in it.
+    Left,
+    /// Done today: answered "Know" last in it.
+    Done,
+}
+
 /// A floating-point quantity the engine takes.
 pub enum Quantity {
     /// Stability: at least 0.001 days.
@@ -128,6 +148,24 @@ pub fn retrievability(state: MemoryStateParts, at: i64) -> Result<f64, EngineErr
     Ok(engine::MemoryState::try_from(state)?.retrievability(engine::Timestamp(at))?)
 }
 
+/// Where each card stands in the list of the study day from `day_start`, inclusive, to
+/// `day_end`, exclusive, in the order given. Dart calls it synchronously.
+#[flutter_rust_bridge::frb(sync)]
+pub fn todays_list(cards: Vec<TodayCard>, day_start: i64, day_end: i64) -> Vec<Today> {
+    let day = engine::StudyDay {
+        start: engine::Timestamp(day_start),
+        end: engine::Timestamp(day_end),
+    };
+    cards
+        .into_iter()
+        .map(|card| {
+            let reviews: Vec<engine::Review> =
+                card.reviews.into_iter().map(engine::Review::from).collect();
+            engine::today(card.due.map(engine::Timestamp), &reviews, day).into()
+        })
+        .collect()
+}
+
 fn fuzz(factor: Option<f64>) -> Result<Option<engine::FuzzFactor>, engine::Error> {
     factor.map(engine::FuzzFactor::new).transpose()
 }
@@ -183,6 +221,16 @@ impl From<engine::MemoryState> for MemoryStateParts {
             stability: state.stability(),
             difficulty: state.difficulty(),
             last_review: state.last_review().0,
+        }
+    }
+}
+
+impl From<engine::Today> for Today {
+    fn from(today: engine::Today) -> Self {
+        match today {
+            engine::Today::Absent => Today::Absent,
+            engine::Today::Left => Today::Left,
+            engine::Today::Done => Today::Done,
         }
     }
 }

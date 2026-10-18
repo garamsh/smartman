@@ -28,6 +28,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
+
+  @protected
   MemoryStateParts dco_decode_box_autoadd_memory_state_parts(dynamic raw);
 
   @protected
@@ -46,10 +49,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ReviewRecord> dco_decode_list_review_record(dynamic raw);
 
   @protected
+  List<Today> dco_decode_list_today(dynamic raw);
+
+  @protected
+  List<TodayCard> dco_decode_list_today_card(dynamic raw);
+
+  @protected
   MemoryStateParts dco_decode_memory_state_parts(dynamic raw);
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
   MemoryStateParts? dco_decode_opt_box_autoadd_memory_state_parts(dynamic raw);
@@ -64,6 +76,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Scheduled dco_decode_scheduled(dynamic raw);
 
   @protected
+  Today dco_decode_today(dynamic raw);
+
+  @protected
+  TodayCard dco_decode_today_card(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -74,6 +92,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   MemoryStateParts sse_decode_box_autoadd_memory_state_parts(
@@ -98,10 +119,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<Today> sse_decode_list_today(SseDeserializer deserializer);
+
+  @protected
+  List<TodayCard> sse_decode_list_today_card(SseDeserializer deserializer);
+
+  @protected
   MemoryStateParts sse_decode_memory_state_parts(SseDeserializer deserializer);
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   MemoryStateParts? sse_decode_opt_box_autoadd_memory_state_parts(
@@ -118,6 +148,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Scheduled sse_decode_scheduled(SseDeserializer deserializer);
 
   @protected
+  Today sse_decode_today(SseDeserializer deserializer);
+
+  @protected
+  TodayCard sse_decode_today_card(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -131,6 +167,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_memory_state_parts(
@@ -157,6 +199,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_today(List<Today> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_today_card(
+    List<TodayCard> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_memory_state_parts(
     MemoryStateParts self,
     SseSerializer serializer,
@@ -164,6 +215,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_memory_state_parts(
@@ -179,6 +236,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_scheduled(Scheduled self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_today(Today self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_today_card(TodayCard self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
