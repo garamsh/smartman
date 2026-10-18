@@ -72,17 +72,13 @@ class _ChoiceViewState extends State<ChoiceView> {
               runSpacing: AppSpace.s8,
               children: [
                 for (final topic in _choice.topics)
-                  Semantics(
+                  AppChip(
+                    label: nameOf(topic),
                     selected: topic.on,
-                    child: AppChip(
-                      label: nameOf(topic),
-                      tone: topic.on ? AppChipTone.brand : AppChipTone.neutral,
-                      icon: topic.on ? LucideIcons.check : null,
-                      onPressed: () => setState(() {
-                        topic.on = !topic.on;
-                        if (_open?.$1 == topic) _open = null;
-                      }),
-                    ),
+                    onPressed: () => setState(() {
+                      topic.on = !topic.on;
+                      if (_open?.$1 == topic) _open = null;
+                    }),
                   ),
               ],
             ),
@@ -245,17 +241,13 @@ class _TopicSample extends StatelessWidget {
             runSpacing: AppSpace.s8,
             children: [
               for (final (label, chosen, choose) in options)
-                Semantics(
+                AppChip(
+                  label: label,
                   selected: chosen,
-                  child: AppChip(
-                    label: label,
-                    tone: chosen ? AppChipTone.brand : AppChipTone.neutral,
-                    icon: chosen ? LucideIcons.check : null,
-                    onPressed: () {
-                      choose();
-                      onShaped();
-                    },
-                  ),
+                  onPressed: () {
+                    choose();
+                    onShaped();
+                  },
                 ),
             ],
           ),

@@ -488,8 +488,8 @@ void main() {
         );
         for (final topic in ['모음조화', '단어']) {
           expect(
-            tester.widget<AppChip>(chip(topic)).tone,
-            AppChipTone.brand,
+            tester.widget<AppChip>(chip(topic)).selected,
+            isTrue,
             reason: '$topic on',
           );
         }
@@ -509,7 +509,7 @@ void main() {
         await answerPage(import);
 
         await import.tap(chip('단어'));
-        expect(tester.widget<AppChip>(chip('단어')).tone, AppChipTone.neutral);
+        expect(tester.widget<AppChip>(chip('단어')).selected, isFalse);
         expect(_shown('run'), findsNothing);
         await import.next();
         await tester.pumpAndSettle();
