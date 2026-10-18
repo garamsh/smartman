@@ -85,10 +85,11 @@ class _Deck {
     );
   }
 
-  /// A session opened at [_now] in UTC, drawing from [random].
-  Future<StudySession> session([Random? random]) async {
+  /// A session opened at [_now] in UTC over [decks], this deck's by
+  /// default, drawing from [random].
+  Future<StudySession> session([Random? random, DeckSelection? decks]) async {
     final session = StudySession(
-      decks: DeckSelection(id),
+      decks: decks ?? DeckSelection(id),
       cards: cards,
       repository: study,
       scheduler: _InstantScheduler(),
@@ -102,6 +103,41 @@ class _Deck {
     addTearDown(() => session.settled);
     await untilLoaded(session);
     return session;
+  }
+
+  /// The card of this database whose front reads [front].
+  Future<Card> card(String front) async {
+    for (final deck in await cards.watchDecks().first) {
+      for (final card in await cards.listCards(deck.id)) {
+        if (plainText(card.front) == front) return card;
+      }
+    }
+    throw StateError('no card reads $front');
+  }
+
+  /// Stores an answer of "Know" to the card reading [front] at [at].
+  Future<void> answer(String front, DateTime at) async {
+    final card = await this.card(front);
+    await study.record(
+      card.id,
+      [
+        Review(
+          id: study.newReviewId(),
+          cardId: card.id,
+          answer: Answer.know,
+          reviewedAt: at,
+          duration: Duration.zero,
+          fuzzFactor: FuzzFactor.draw(FirstDraw()),
+        ),
+      ],
+      CardState(
+        stability: 1,
+        difficulty: 5,
+        lastReview: at,
+        due: at.add(const Duration(days: 1)),
+      ),
+      at: at,
+    );
   }
 
   /// Every stored review and card state, as rows.
@@ -243,5 +279,57 @@ void main() {
     final again = await deck.session();
     expect(again.state, isA<SessionComplete>());
     expect((again.state as SessionComplete).more, isFalse);
+  });
+
+  group("the day's last card from an earlier session", () {
+    /// The front of the earlier answer [session] shows, or null.
+    String? earlier(StudySession session) => switch (session.state) {
+      SessionStudying(:final earlier) || SessionComplete(:final earlier) =>
+        earlier == null ? null : plainText(earlier.card.front),
+      _ => null,
+    };
+
+    test('is the last answer to a card still in the decks, not one to a card deleted since', () async {
+      final deck = await _Deck.open(['a', 'b', 'c']);
+      await deck.answer('a', DateTime.utc(2026, 10, 14, 6));
+      await deck.answer('b', DateTime.utc(2026, 10, 14, 7));
+      // Control: with b in the deck, its answer is the last.
+      expect(earlier(await deck.session()), 'b');
+
+      await deck.cards.deleteCard((await deck.card('b')).id);
+      expect(earlier(await deck.session()), 'a');
+    });
+
+    test("is the last answer within the session's decks, not a later one in another deck", () async {
+      final deck = await _Deck.open(['a', 'b']);
+      final other = await deck.cards.createDeck('German');
+      await deck.cards.addCard(
+        other.id,
+        front: [TextContent('z')],
+        back: [TextContent('z')],
+      );
+      await deck.answer('a', DateTime.utc(2026, 10, 14, 6));
+      await deck.answer('z', DateTime.utc(2026, 10, 14, 7));
+
+      expect(earlier(await deck.session()), 'a');
+      // Control: over both decks, the other deck's later answer is the last.
+      expect(
+        earlier(await deck.session(null, DeckSelection(deck.id, [other.id]))),
+        'z',
+      );
+    });
+
+    test(
+      'is an answer from 04:00 today, not one at 03:59, the day before',
+      () async {
+        final deck = await _Deck.open(['a', 'b', 'c']);
+        await deck.answer('a', DateTime.utc(2026, 10, 14, 3, 59));
+        expect(earlier(await deck.session()), isNull);
+
+        // Control: at 04:00 the answer is the day's.
+        await deck.answer('b', DateTime.utc(2026, 10, 14, 4));
+        expect(earlier(await deck.session()), 'b');
+      },
+    );
   });
 }

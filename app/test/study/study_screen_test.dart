@@ -1747,7 +1747,7 @@ void main() {
     );
 
     testWidgets(
-      'a swipe of the current card answers it and ends the coach, and one of the previous card ends a replay',
+      'only a drag of the current card or an answer ends the coach: a drag or a tap of the previous card leaves a replay running',
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c'], coachShown: false);
         await study.know();
@@ -1760,17 +1760,30 @@ void main() {
         );
         await tester.pump();
         expect(_text('Swipe right if you know it'), findsOneWidget);
+        // A drag of the previous card changes its answer, and the coach runs on.
         await tester.timedDrag(
           _previous('a front'),
           const Offset(-200, 0),
           const Duration(seconds: 1),
         );
-        await tester.pumpAndSettle();
-        expect(find.byType(AppCoach), findsNothing);
+        await tester.pump(const Duration(seconds: 1));
         expect(
           _label(tester, _previous('a front')),
           endsWith("Answer: Don't know. Changed"),
         );
+        expect(_text('Swipe right if you know it'), findsOneWidget);
+        // A tap opens it whole, and the coach runs on.
+        await tester.tap(_previous('a front'));
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.byType(BottomSheet), findsOneWidget);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pump(const Duration(seconds: 1));
+        expect(_text('Swipe right if you know it'), findsOneWidget);
+
+        // A drag of the current card answers it and ends the coach.
+        await study.know();
+        expect(find.byType(AppCoach), findsNothing);
+        expect(_previous('b front'), findsOneWidget);
       },
     );
 

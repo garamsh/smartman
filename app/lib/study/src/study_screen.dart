@@ -310,18 +310,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
           progress: _demoProgress(context),
         ),
       ),
-      _ when newest != null => Listener(
+      _ when newest != null => PreviousCardView(
         // A new key for each answer, so the card answered just now rises in
         // and a change of its answer leaves it in place.
         key: ValueKey(newest.position),
-        onPointerMove: (_) => _setCoach(null),
-        child: PreviousCardView(
-          card: newest,
-          onRedecide: (answer) {
-            _setCoach(null);
-            _session.redecide(newest.position, answer);
-          },
-        ),
+        card: newest,
+        onRedecide: (answer) => _session.redecide(newest.position, answer),
       ),
       _ when earlier != null => EarlierCardView(
         key: const ValueKey('earlier'),
