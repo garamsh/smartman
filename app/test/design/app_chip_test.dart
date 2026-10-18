@@ -32,13 +32,13 @@ void main() {
           Wrap(
             spacing: AppSpace.s8,
             children: [
-              AppChip(label: 'on', selected: true, onPressed: () {}),
-              // The tone yields to the choice.
+              AppChip(
+                label: 'on',
+                kind: AppChipChoice(selected: true, onPressed: () {}),
+              ),
               AppChip(
                 label: 'off',
-                tone: AppChipTone.brand,
-                selected: false,
-                onPressed: () {},
+                kind: AppChipChoice(selected: false, onPressed: () {}),
               ),
             ],
           ),

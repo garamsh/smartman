@@ -13,6 +13,7 @@ import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 
+import '../home/home_data.dart';
 import 'fakes.dart';
 
 /// Photo import over decks "French" (holding [french]) and "Spanish", with a
@@ -28,7 +29,7 @@ class _Import {
   );
 
   final WidgetTester tester;
-  final DeckRepository repository;
+  final UnreadableDecks repository;
   final Deck french;
   final Deck spanish;
   final SharedPreferencesWithCache preferences;
@@ -52,7 +53,7 @@ class _Import {
     addTearDown(db.close);
     var ids = 0;
     var tick = 0;
-    final repository = DeckRepository(
+    final repository = UnreadableDecks(
       db,
       clock: () => DateTime.utc(2026, 10, 15).add(Duration(seconds: tick++)),
       newId: () => 'id${ids++}',
@@ -476,6 +477,13 @@ void main() {
     Finder chip(String label) =>
         find.ancestor(of: _shown(label), matching: find.byType(AppChip)).first;
 
+    /// Whether the choice chip reading [label] is on; null for another kind.
+    bool? chosen(WidgetTester tester, String label) =>
+        switch (tester.widget<AppChip>(chip(label)).kind) {
+          AppChipChoice(:final selected) => selected,
+          _ => null,
+        };
+
     testWidgets(
       'shows how many cards were made, each topic as a pill, on at first, and each topic sample in its default shape',
       (tester) async {
@@ -487,11 +495,7 @@ void main() {
           findsOneWidget,
         );
         for (final topic in ['모음조화', '단어']) {
-          expect(
-            tester.widget<AppChip>(chip(topic)).selected,
-            isTrue,
-            reason: '$topic on',
-          );
+          expect(chosen(tester, topic), isTrue, reason: '$topic on');
         }
         expect(_shown('양성모음'), findsOneWidget);
         expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget, reason: '핵심만');
@@ -509,7 +513,7 @@ void main() {
         await answerPage(import);
 
         await import.tap(chip('단어'));
-        expect(tester.widget<AppChip>(chip('단어')).selected, isFalse);
+        expect(chosen(tester, '단어'), isFalse);
         expect(_shown('run'), findsNothing);
         await import.next();
         await tester.pumpAndSettle();
@@ -611,6 +615,172 @@ void main() {
         await import.close();
       },
     );
+
+    testWidgets(
+      'the headline counts the cards Review shows, those of one card key once',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import, [
+          ...page,
+          const CandidateCard(front: 'Run', answer: '뛰다', topic: '단어'),
+        ]);
+
+        expect(
+          _shown('Made 3 cards.\nWhat will you memorise?'),
+          findsOneWidget,
+        );
+        await import.next();
+        await tester.pumpAndSettle();
+        expect(_shown('Made 3 cards'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'back from Review returns to the choice with its pills and shapes kept, and Next opens Review as before',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import);
+        await import.tap(chip('단어'));
+        await import.tap(_shown('양성모음'));
+        await import.tap(chip('Content first'));
+        await import.next();
+        await tester.pumpAndSettle();
+        expect(_shown('Made 2 cards'), findsOneWidget);
+
+        await import.tap(find.byTooltip('Back'));
+
+        expect(
+          _shown('Made 3 cards.\nWhat will you memorise?'),
+          findsOneWidget,
+        );
+        expect(chosen(tester, '단어'), isFalse);
+        expect(chosen(tester, '모음조화'), isTrue);
+        expect(_shown('ㅏ ㅗ ㅑ ㅛ'), findsOneWidget);
+        await import.next();
+        await tester.pumpAndSettle();
+        expect(_shown('Made 2 cards'), findsOneWidget);
+        expect(_shown('run'), findsNothing);
+        expect(_shown('ㅓ ㅜ ㅡ'), findsOneWidget, reason: 'content first');
+
+        // A system back returns to the choice too.
+        final navigator = tester.state<NavigatorState>(
+          find.byType(Navigator).last,
+        );
+        await navigator.maybePop();
+        await tester.pumpAndSettle();
+        expect(chosen(tester, '단어'), isFalse);
+        expect(import.hasPopped, isFalse);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'With examples is offered only for a topic one of whose cards has examples',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import);
+
+        await import.tap(_shown('[동] 달리다'));
+        expect(chip('Core only'), findsOneWidget);
+        expect(_shown('With examples'), findsNothing);
+        // Control: the topic with printed examples offers it.
+        await import.tap(_shown('ㅏ ㅗ ㅑ ㅛ'));
+        expect(chip('With examples'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets('a shape is kept when its pill goes off and on again', (
+      tester,
+    ) async {
+      final import = await _Import.open(tester);
+      await answerPage(import);
+
+      await import.tap(_shown('양성모음'));
+      await import.tap(chip('Content first'));
+      await import.tap(chip('모음조화'));
+      expect(_shown('양성모음'), findsNothing);
+      await import.tap(chip('모음조화'));
+
+      expect(
+        find.bySemanticsLabel('모음조화 front: ㅏ ㅗ ㅑ ㅛ. Tap to change'),
+        findsOneWidget,
+      );
+      await import.close();
+    });
+
+    testWidgets(
+      'content first with examples puts the examples after the content in front and the name behind',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await answerPage(import);
+
+        await import.tap(_shown('양성모음'));
+        await import.tap(chip('Content first'));
+        await import.tap(_shown('양성모음'));
+        await import.tap(chip('With examples'));
+        expect(_shown('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑'), findsOneWidget);
+        await import.next();
+        await tester.pumpAndSettle();
+
+        await import.tap(_shown('Add 3 cards to the deck'));
+        expect(await import.cards(import.french), [
+          ('ㅏ ㅗ ㅑ ㅛ\n졸졸\n찰랑찰랑', '양성모음', CardSource.import),
+          ('ㅓ ㅜ ㅡ', '음성모음', CardSource.import),
+          ('run', '[동] 달리다', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a deck that cannot be read on Next says so in a snack bar and stays on the choice',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) =>
+              import.repository.unreadable.add(import.french.id),
+        );
+        await answerPage(import);
+
+        await import.next();
+        await tester.pumpAndSettle();
+
+        expect(
+          _shown(
+            "Couldn't read or write the device's storage. Please try again.",
+          ),
+          findsOneWidget,
+        );
+        expect(
+          _shown('Made 3 cards.\nWhat will you memorise?'),
+          findsOneWidget,
+        );
+        expect(_shown('Add 3 cards to the deck'), findsNothing);
+        await import.close();
+      },
+    );
+
+    testWidgets('the default option is read as selected and the other as not', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final import = await _Import.open(tester);
+      await answerPage(import);
+
+      await import.tap(_shown('양성모음'));
+      expect(
+        tester.getSemantics(_shown('Concept name')),
+        isSemantics(hasSelectedState: true, isSelected: true),
+      );
+      expect(
+        tester.getSemantics(_shown('Content first')),
+        isSemantics(hasSelectedState: true, isSelected: false),
+      );
+      await import.close();
+      semantics.dispose();
+    });
 
     testWidgets('cards with no topic go under one pill, This page', (
       tester,
@@ -985,19 +1155,26 @@ void main() {
       await import.close();
     });
 
-    testWidgets('closing without adding writes nothing and pops with nothing', (
-      tester,
-    ) async {
-      final import = await _Import.open(tester, deck: (_) => null);
-      await import.extract({'a': '1'});
+    testWidgets(
+      'going back from Review and closing without adding writes nothing and pops with nothing',
+      (tester) async {
+        final import = await _Import.open(tester, deck: (_) => null);
+        await import.extract({'a': '1'});
 
-      await import.tap(find.byTooltip('Close'));
+        expect(
+          find.byTooltip('Close'),
+          findsNothing,
+          reason: 'Review has a back',
+        );
+        await import.tap(find.byTooltip('Back'));
+        await import.tap(find.byTooltip('Close'));
 
-      expect(import.hasPopped, isTrue);
-      expect(import.popped, isNull);
-      expect(await import.deckNames(), ['French', 'Spanish']);
-      await import.close();
-    });
+        expect(import.hasPopped, isTrue);
+        expect(import.popped, isNull);
+        expect(await import.deckNames(), ['French', 'Spanish']);
+        await import.close();
+      },
+    );
     testWidgets(
       'a screen reader opens a card with a tap and removes or restores it with a custom action, and a card whose topic is off has neither',
       (tester) async {

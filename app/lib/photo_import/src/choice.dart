@@ -1,3 +1,4 @@
+import 'candidates.dart';
 import 'extraction_client.dart';
 
 /// What a card of a topic asks on its front.
@@ -32,6 +33,9 @@ final class ChoiceTopic {
   bool on = true;
   FrontShape front = FrontShape.name;
   BackShape back = BackShape.core;
+
+  /// Whether a card of the topic has examples, so "예시까지" changes it.
+  bool get hasExamples => cards.any((card) => card.examples.isNotEmpty);
 
   /// The topic's first card, which the screen shows in the chosen shape.
   CandidateCard get sample => shape(cards.first);
@@ -79,8 +83,11 @@ final class Choice {
   /// The topics, in the order each first appears.
   final topics = <ChoiceTopic>[];
 
+  /// The cards Review shows when every topic is on: each topic's cards in
+  /// its shape, those of one card key counted once, as Review combines them.
   int get cardCount =>
-      topics.fold(0, (count, topic) => count + topic.cards.length);
+      groupByKey([for (final topic in topics) ...topic.cards.map(topic.shape)])
+          .length;
 
   bool get anyOn => topics.any((topic) => topic.on);
 

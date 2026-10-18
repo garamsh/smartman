@@ -99,8 +99,14 @@ void main() {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AppChip(label: 'Today 3', tone: AppChipTone.brand),
-            AppChip(label: 'Skip', icon: Icons.expand_more, onPressed: () {}),
+            const AppChip(
+              label: 'Today 3',
+              kind: AppChipStatus(tone: AppChipTone.brand),
+            ),
+            AppChip(
+              label: 'Skip',
+              kind: AppChipAction(icon: Icons.expand_more, onPressed: () {}),
+            ),
           ],
         ),
         themeMode: mode,
@@ -170,7 +176,10 @@ void main() {
           mainAxisSize: MainAxisSize.min,
           children: [
             const AppChip(label: 'Today 3'),
-            AppChip(label: 'Skip', onPressed: () => presses++),
+            AppChip(
+              label: 'Skip',
+              kind: AppChipAction(onPressed: () => presses++),
+            ),
           ],
         ),
       );

@@ -131,7 +131,7 @@ class TodayChip extends StatelessWidget {
     return switch (count) {
       TodayCounted(:final total) when total > 0 => AppChip(
         label: AppLocalizations.of(context).todayChip(total),
-        tone: AppChipTone.brand,
+        kind: const AppChipStatus(tone: AppChipTone.brand),
       ),
       TodayUnavailable(:final message) => Tooltip(
         message: message,

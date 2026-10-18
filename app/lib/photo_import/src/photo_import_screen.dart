@@ -146,7 +146,10 @@ final class _Choosing extends _Stage {
 }
 
 final class _Reviewing extends _Stage {
-  const _Reviewing(this.review, {required this.coach});
+  const _Reviewing(this.review, {required this.choice, required this.coach});
+
+  /// The choice Review was opened from, which a back returns to as it was.
+  final Choice choice;
 
   /// Whether Review opens with its coach.
   final bool coach;
@@ -200,7 +203,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onRetake: _retake,
         onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
-      _Reviewing(:final review, :final coach) => ReviewView(
+      _Reviewing(:final review, :final choice, :final coach) => ReviewView(
         review: review,
         decks: decks.value ?? const [],
         target: target,
@@ -208,6 +211,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         saving: _saving,
         coach: coach,
         onChanged: () => setState(() {}),
+        onBack: () => setState(() => _stage = _Choosing(choice)),
         onRetake: _retake,
         onSave: () => _save(review),
       ),
@@ -248,8 +252,11 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
           !MediaQuery.disableAnimationsOf(context);
       if (coach) unawaited(widget.preferences.setBool(_coachShownKey, true));
       setState(
-        () =>
-            _stage = _Reviewing(Review(choice.chosen, existing), coach: coach),
+        () => _stage = _Reviewing(
+          Review(choice.chosen, existing),
+          choice: choice,
+          coach: coach,
+        ),
       );
     } on DeckFailure catch (failure) {
       _showDeckFailure(failure);

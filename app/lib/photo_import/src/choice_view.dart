@@ -74,11 +74,13 @@ class _ChoiceViewState extends State<ChoiceView> {
                 for (final topic in _choice.topics)
                   AppChip(
                     label: nameOf(topic),
-                    selected: topic.on,
-                    onPressed: () => setState(() {
-                      topic.on = !topic.on;
-                      if (_open?.$1 == topic) _open = null;
-                    }),
+                    kind: AppChipChoice(
+                      selected: topic.on,
+                      onPressed: () => setState(() {
+                        topic.on = !topic.on;
+                        if (_open?.$1 == topic) _open = null;
+                      }),
+                    ),
                   ),
               ],
             ),
@@ -190,14 +192,15 @@ class _TopicSample extends StatelessWidget {
       ],
       _Side.back => [
         for (final shape in BackShape.values)
-          (
-            switch (shape) {
-              BackShape.core => l10n.choiceBackCore,
-              BackShape.examples => l10n.choiceBackExamples,
-            },
-            topic.back == shape,
-            () => topic.back = shape,
-          ),
+          if (shape != BackShape.examples || topic.hasExamples)
+            (
+              switch (shape) {
+                BackShape.core => l10n.choiceBackCore,
+                BackShape.examples => l10n.choiceBackExamples,
+              },
+              topic.back == shape,
+              () => topic.back = shape,
+            ),
       ],
       null => const <(String, bool, VoidCallback)>[],
     };
@@ -243,11 +246,13 @@ class _TopicSample extends StatelessWidget {
               for (final (label, chosen, choose) in options)
                 AppChip(
                   label: label,
-                  selected: chosen,
-                  onPressed: () {
-                    choose();
-                    onShaped();
-                  },
+                  kind: AppChipChoice(
+                    selected: chosen,
+                    onPressed: () {
+                      choose();
+                      onShaped();
+                    },
+                  ),
                 ),
             ],
           ),
