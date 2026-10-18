@@ -144,27 +144,19 @@ export type NotesTruth = {
 };
 
 /** The fields of a returned card the notes metrics read. */
-export type NoteCandidate = Pick<
-  Card,
-  "front" | "answer" | "step" | "examples"
->;
+export type NoteCandidate = Pick<Card, "front" | "answer" | "examples">;
 
 /**
- * One notes image's counts. `coverage[s - 1]` is the share of facts of step s or below that a
- * card of step s or below covers, null when the page has no such fact. Over every returned
- * card: those covering no fact, the examples returned and those the page does not print, and
- * the pairs of covered facts with different steps, with how many the returned steps order the
- * same way and how many they tie.
+ * One notes image's counts: `coverage`, the share of the page's facts some card covers, and over
+ * every returned card, those covering no fact, the examples returned and those the page does
+ * not print.
  */
 export type NotesScore = {
-  readonly coverage: readonly (number | null)[];
+  readonly coverage: number;
   readonly cards: number;
   readonly unsupported: number;
   readonly examples: number;
   readonly inventedExamples: number;
-  readonly pairs: number;
-  readonly concordant: number;
-  readonly ties: number;
 };
 
 /**
@@ -184,13 +176,9 @@ export function scoreNotes(
   candidates: readonly NoteCandidate[],
   truth: NotesTruth,
 ): NotesScore {
-  const coverage = [1, 2, 3, 4, 5].map((step) => {
-    const due = truth.facts.filter((fact) => fact.step <= step);
-    if (due.length === 0) return null;
-    const offered = candidates.filter((card) => card.step <= step);
-    return due.filter((fact) => offered.some((card) => covers(card, fact)))
-      .length / due.length;
-  });
+  const coverage =
+    truth.facts.filter((fact) => candidates.some((card) => covers(card, fact)))
+      .length / truth.facts.length;
   const unsupported =
     candidates.filter((card) => !truth.facts.some((fact) => covers(card, fact)))
       .length;
@@ -207,37 +195,12 @@ export function scoreNotes(
     ) &&
       !lines.some((line) => line.includes(text));
   }).length;
-  // Each covered fact's returned step is the lowest step of a card covering it.
-  const placed = truth.facts.flatMap((fact) => {
-    const steps = candidates.filter((card) => covers(card, fact)).map((card) =>
-      card.step
-    );
-    return steps.length === 0
-      ? []
-      : [{ truth: fact.step, returned: Math.min(...steps) }];
-  });
-  let pairs = 0;
-  let concordant = 0;
-  let ties = 0;
-  for (const [i, a] of placed.entries()) {
-    for (const b of placed.slice(i + 1)) {
-      if (a.truth === b.truth) continue;
-      pairs += 1;
-      if (a.returned === b.returned) ties += 1;
-      else if ((a.returned - b.returned) * (a.truth - b.truth) > 0) {
-        concordant += 1;
-      }
-    }
-  }
   return {
     coverage,
     cards: candidates.length,
     unsupported,
     examples: returned.length,
     inventedExamples,
-    pairs,
-    concordant,
-    ties,
   };
 }
 
@@ -250,20 +213,15 @@ export function percentile(values: readonly number[], p: number): number {
 
 /** One configuration's notes results, over every notes image. */
 export type NotesRow = {
-  /** The mean coverage at each step from 1 to 5, each 0-1, over the images with such facts. */
-  readonly coverage: readonly (number | null)[];
+  /** The mean coverage, 0-1, over the notes images. */
+  readonly coverage: number;
   /** The shares of returned cards covering no fact, and of returned examples the page does not print. */
   readonly unsupportedRate: number | null;
   readonly inventedExamplesRate: number | null;
-  /** The share of pairs of covered facts ordered alike by their steps, a tie counting half. */
-  readonly stepAgreement: number | null;
-  /**
-   * Each notes image's coverage at step 5, every card offered, and the completion tokens its
-   * calls used, in the order the images ran.
-   */
+  /** Each notes image's coverage and the completion tokens its calls used, in the order run. */
   readonly pages: readonly {
     readonly name: string;
-    readonly coverage: number | null;
+    readonly coverage: number;
     readonly completionTokens: number;
   }[];
 };
@@ -353,29 +311,16 @@ function summarizeNotes(
   const notes = images.map((image) => image.score);
   const total = (pick: (score: NotesScore) => number) =>
     notes.reduce((sum, score) => sum + pick(score), 0);
-  const coverage = [0, 1, 2, 3, 4].map((at) => {
-    const values = notes.flatMap((score) => {
-      const value = score.coverage[at];
-      return value === null || value === undefined ? [] : [value];
-    });
-    return values.length === 0
-      ? null
-      : values.reduce((sum, value) => sum + value, 0) / values.length;
-  });
   return {
-    coverage,
+    coverage: total((s) => s.coverage) / notes.length,
     unsupportedRate: share(total((s) => s.unsupported), total((s) => s.cards)),
     inventedExamplesRate: share(
       total((s) => s.inventedExamples),
       total((s) => s.examples),
     ),
-    stepAgreement: share(
-      total((s) => s.concordant + s.ties / 2),
-      total((s) => s.pairs),
-    ),
     pages: images.map((image) => ({
       name: image.name,
-      coverage: image.score.coverage[4] ?? null,
+      coverage: image.score.coverage,
       completionTokens: image.completionTokens,
     })),
   };
@@ -388,17 +333,17 @@ function share(part: number, whole: number): number | null {
 /** How far below the best F1, in points of 100, a configuration may be and still be recommended. */
 export const F1_TOLERANCE_POINTS = 2;
 
-/** How far below the best notes coverage at step 5, in points of 100, a recommended configuration may be. */
+/** How far below the best notes coverage, in points of 100, a recommended configuration may be. */
 export const COVERAGE_TOLERANCE_POINTS = 5;
 
-/** A configuration's notes coverage at step 5, every fact offered; 0 without one. */
-function fullCoverage(row: Row): number {
-  return row.notes?.coverage[4] ?? 0;
+/** A configuration's notes coverage; 0 without one. */
+function notesCoverage(row: Row): number {
+  return row.notes?.coverage ?? 0;
 }
 
 /**
  * The cheapest configuration per image whose vocabulary F1 is within 2 points of the best and,
- * when any configuration has notes results, whose notes coverage at step 5 is within 5 points
+ * when any configuration has notes results, whose notes coverage is within 5 points
  * of the best; among equally cheap ones, the higher F1. Null for no rows, or when no row is
  * within both.
  */
@@ -406,11 +351,11 @@ export function recommend(rows: readonly Row[]): Row | null {
   if (rows.length === 0) return null;
   const best = Math.max(...rows.map((row) => row.f1));
   const notes = rows.some((row) => row.notes !== null);
-  const bestCoverage = Math.max(...rows.map(fullCoverage));
+  const bestCoverage = Math.max(...rows.map(notesCoverage));
   const eligible = rows.filter((row) =>
     (best - row.f1) * 100 <= F1_TOLERANCE_POINTS + 1e-9 &&
     (!notes ||
-      (bestCoverage - fullCoverage(row)) * 100 <=
+      (bestCoverage - notesCoverage(row)) * 100 <=
         COVERAGE_TOLERANCE_POINTS + 1e-9)
   );
   return eligible.reduce<Row | null>(

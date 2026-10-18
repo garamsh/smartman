@@ -21,8 +21,6 @@ const modelCards = [
     kind: "vocabulary",
     front: "apple",
     answer: "사과",
-    short: "사과",
-    step: 1,
     topic: "Unit 1",
     partOfSpeech: "n.",
     examples: ["She ate an apple."],
@@ -31,8 +29,6 @@ const modelCards = [
     kind: "vocabulary",
     front: "river",
     answer: "강",
-    short: "강",
-    step: 1,
     topic: "Unit 1",
     partOfSpeech: null,
     examples: [],
@@ -60,8 +56,6 @@ const noteCards = [{
   kind: "note",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
-  short: "결론이 반드시 참",
-  step: 1,
   topic: "연역과 귀납",
   partOfSpeech: null,
   examples: ["253+4637+647898=652788 -> 연역"],
@@ -284,7 +278,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v4",
+    note: "prompt v5",
   });
   assert.ok(
     w.printed.includes(
@@ -332,7 +326,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v4",
+    note: "prompt v5",
   }]);
 });
 
@@ -424,7 +418,7 @@ Deno.test("a candidate stops after two model errors in a row, its error bodies k
   );
 });
 
-Deno.test("a notes sample is scored by coverage per step, unsupported cards, invented examples and step order", async () => {
+Deno.test("a notes sample is scored by coverage, unsupported cards and invented examples, with no step order", async () => {
   const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
   w.files.set(
     `${PATHS.samples}/03-notes.json`,
@@ -438,15 +432,17 @@ Deno.test("a notes sample is scored by coverage per step, unsupported cards, inv
   );
   assert.equal(await main([], io(w)), 0);
   const table = w.files.get(PATHS.report) ?? "";
-  // The one note card covers the step-1 fact: all of step 1, half from step 2.
+  // The one note card covers one of the page's two facts.
   assert.match(
     table,
-    /\| Cheap \| 100\.0 \| 50\.0 \| 50\.0 \| 50\.0 \| 50\.0 \| 0\.0 \| 0\.0 \| — \|/,
+    /\| Configuration \| Coverage \| Unsupported \| Invented examples \|\n/,
   );
+  assert.match(table, /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \|\n/);
+  assert.doesNotMatch(table, /Step order|Coverage at/);
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
 
-Deno.test("the report gives each notes page's coverage at step 5, with the completion tokens of its calls", async () => {
+Deno.test("the report gives each notes page's coverage, with the completion tokens of its calls", async () => {
   const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
   w.files.set(
     `${PATHS.samples}/03-notes.json`,
@@ -464,7 +460,7 @@ Deno.test("the report gives each notes page's coverage at step 5, with the compl
   );
   assert.equal(await main([], io(w)), 0);
   const table = w.files.get(PATHS.report) ?? "";
-  assert.match(table, /## Coverage at step 5 per notes page/);
+  assert.match(table, /## Coverage per notes page/);
   assert.match(table, /\| Page \| Cheap \|/);
   // Each call of the fake replies with 50 completion tokens.
   assert.match(table, /\| 03-notes \| 50\.0 · 50 tokens \|/);
