@@ -2,7 +2,7 @@ import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
  * The study page while its cards are read: the header with the progress bar, the previous card's
- * place, outlined as the session's guide holds it at a session's start, the current card with its
+ * place, outlined as it is while it holds no card, the current card with its
  * question alone, and the two answer buttons, in their sizes.
  */
 export function StudySkeleton() {
