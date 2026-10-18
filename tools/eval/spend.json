@@ -55,6 +55,16 @@
       "date": "2026-10-18",
       "spentUsd": 0.1702,
       "note": "prompt v5, the newest models, OpenAI GPT 6.1 Sol, OpenAI GPT 6 Luna and Google Gemini 4 Argon x samples 27, 33, 35 and 37 to 40, Gemini stopped after two unbilled model errors; spend as the eval recorded it, since OpenRouter's key usage lags"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.295,
+      "note": "prompt v5 on main at 3678aeace933620fc2b5e520e49164c9d052af77, Claude Sonnet 5.5 x samples 01, 07, 13, 19, 27, 33, 35 and 37 to 44, by the PM for #202; spend as the eval recorded it"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.567,
+      "note": "prompt v6 of #202 at a3a2081f6bc1b1f4da5cf928c2c9c52c21d1558c, Claude Sonnet 5.5 x samples 01, 07, 13, 19, 27, 33, 35 and 37 to 44, by the PM; spend as the eval recorded it"
     }
   ]
 }

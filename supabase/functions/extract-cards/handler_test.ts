@@ -520,6 +520,9 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
       "each worked example, such as",
       "as a card of its own or as an example",
       "together on one card when the page teaches the list as one item to recall",
+      // v6 as first measured on #202: a cloze for every row, and an identify card per sentence.
+      "Cloze by default",
+      "for each such sentence",
     ]
   ) {
     assert.ok(!system.includes(dropped), `no longer asks: ${dropped}`);
@@ -530,17 +533,19 @@ Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, 
   const r = await run({ replies: [cardsReply(twoCards)] });
   const system = r.modelCalls[0].messages[0].content;
   const rules: Record<string, string[]> = {
-    "1 atomic": [
-      "Atomic: one fact per card. An answer that would list more than 5 items is split into several cards.",
+    "1 one card per fact": [
+      "One card per fact: each fact gets exactly one card, never a second card that asks it again in another form.",
+      "An answer that would list more than 5 items is split into several cards.",
     ],
     "2 tables cell by cell": [
       "Tables cell by cell",
       "its front the row and column names",
       "A whole table is never one card.",
     ],
-    "3 cloze by default": [
-      "Cloze by default",
-      "one cloze card per blank",
+    "3 cloze only without a concept card": [
+      "Cloze only where no concept card states it",
+      "which has no concept card of its own, gets one cloze card per blank",
+      "A cloze never asks what a concept card already answers.",
       'one blank written "___"',
     ],
     "4 judgment cards": [
@@ -557,7 +562,7 @@ Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, 
       "Write \"'저희': 3인칭 재귀칭\", not \"대명사 '저희'의 쓰임 - 3인칭 재귀칭\".",
     ],
     "7 identify cards": [
-      'make an "identify" card for each such sentence, in the topic of its rule',
+      'make an "identify" card from such a printed sentence, in the topic of its rule, at most 3 for each rule',
       "Make one only from a sentence the page prints, never from one of your own.",
       "with the word to judge marked in single quotes",
       "its category and the reason",

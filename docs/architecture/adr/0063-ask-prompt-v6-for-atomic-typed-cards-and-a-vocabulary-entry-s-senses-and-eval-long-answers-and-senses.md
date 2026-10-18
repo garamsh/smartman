@@ -23,6 +23,12 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - the eval reads a truth written before senses as one sense.
 - **Old apps.** The app's parser on `main` reads the fields it knows and no other (`app/lib/photo_import/src/extraction_client.dart`), so a new key reaches it unread.
 - **The eval.** No notes page holds all four structures #200 names, nothing in the report shows an answer listing many items, and no vocabulary page prints several labelled senses for one entry.
+- **The PM's measurement of v6 as first written**, on #202 at `a3a2081f6bc1b1f4da5cf928c2c9c52c21d1558c` against v5 on `main` at `3678aeace933620fc2b5e520e49164c9d052af77`, with Claude Sonnet 5.5 over samples 01, 07, 13, 19, 27, 33, 35 and 37 to 44:
+  - the cost per image rose from $0.0197 to $0.0339, and notes cards from 126 to 183: 129 concept, 38 cloze and 16 identify;
+  - notes coverage went from 83.4 to 83.7, unsupported cards from 19.8 to 27.3, and invented examples from 1.2 to 0.9; long answers were 0.0;
+  - vocabulary F1 was 100, and senses 100/100;
+  - part of the growth was one fact on two cards: on sample 33, the concept card "어미 '-아/-어'의 선택" and a cloze asking its "-아".
+  - The owner then decided one card per fact, a cloze only for a row with no concept card, and at most 3 identify cards a rule, before a second measurement.
 - **Cost.** Merging a change to `extract-cards` deploys it (#177), and more cards, or fuller vocabulary cards, mean more completion tokens a call.
 - **Alternatives considered:**
   - **A boolean field for a handwritten card.** It needs a schema key that old apps ignore. The "★ " prefix shows in every app, at the cost the coordinator accepted: the card key keeps the star, so a ★ card does not merge with an unstarred card of the same name.
@@ -34,13 +40,13 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Decision
 
 - **Prompt v6.** `prompt_v6.ts` replaces `prompt_v5.ts`, which nothing imports any more and git keeps. For notes, it asks for the theory and the exceptions in the page's order, one fact per card:
-  1. **Atomic.** An answer that would list more than 5 items is split into several cards.
+  1. **One card per fact.** Each fact gets exactly one card, never a second card asking it again in another form. An answer that would list more than 5 items is split into several cards.
   2. **Tables cell by cell.** A table whose cells stand alone becomes one card per cell or short row, its front the row and column names and its answer the cell. A whole table is never one card.
-  3. **Cloze by default.** A list or table row the learner recalls in context gets one card per blank, its front the line with one blank written `___` and its answer what fills it.
+  3. **Cloze only without a concept card.** A member of a list or table row the learner recalls in context, which has no concept card of its own, gets one card per blank, its front the line with one blank written `___` and its answer what fills it. A cloze never asks what a concept card already answers.
   4. **Judgment cards.** A rule that tells A from B gets its own card, its front "A vs B" and its answer the test.
   5. **Handwriting first.** Every tip, trap or note the writer added by hand, and every line marked as important, is its own card, its front starting with "★ ".
   6. **Short fronts.** A front is a short keyword, never a question.
-  7. **Identify cards.** Where the page prints example sentences for a rule that sorts words into categories, the model makes an identify card for each, in the topic of its rule: the sentence with the word to judge in single quotes, and the category and the reason. Only from printed sentences.
+  7. **Identify cards.** Where the page prints example sentences for a rule that sorts words into categories, the model makes identify cards from them, at most 3 for each rule, in the topic of its rule: the sentence with the word to judge in single quotes, and the category and the reason. Only from printed sentences.
   - A worked example is never a concept or cloze card; it stays an example on its rule's card.
   - At the 100-card cap, a page keeps its definitions, rules, judgment cards, handwritten tips and marked exceptions before its cloze and cell cards, and those before its identify cards.
   - Every other rule of v5 stands, including the topic and the rules against invention. The prompt's own examples are #200's and are not taken from any eval page.
