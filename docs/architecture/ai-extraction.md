@@ -10,7 +10,8 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - It reads the caller through `supabase/functions/_shared/auth.ts`, which the `delete-account` function shares ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)); a deploy bundles it.
 - `index.ts` is its composition site: it reads the configuration once and passes `fetch`, the logger and the clock to the handler, which constructs none of them.
 - The eval is `tools/eval/`, outside the function, so the deployed folder holds only the function. It imports the function's extraction module, so it measures the same prompt, schema and retry.
-- Only the PM deploys the function and sets its secrets, after the pull request that changes it merges.
+- Merging the pull request that changes the function deploys it, through Supabase's GitHub integration; a change needing a new secret or changing the model or the cost of a call merges only after the owner approves it ([`server.md`](server.md) §Edge Function deploys).
+- Its secrets are set by hand on the production project, by the owner or the PM only; a merge sets none.
 
 ### Contract
 

@@ -1,6 +1,6 @@
 # Server
 
-The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, and the tests that hold them.
+The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
 
 ## Current decisions
 
@@ -17,6 +17,18 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `check-migration-order.sh`, run by `make lint`, fails when a migration file that `main` lacks has a version not later than the latest on `main`, or a name not starting with 14 digits. It reads `main` as the first parent of a pull request's merge commit in CI, where the ubuntu job's checkout fetches two commits deep, and as where `HEAD` left `origin/main` locally. It prints the number of new files and the base it compared with.
   - Branch protection on `main` requires branches to be up to date: `gh api repos/garamsh/smartman/branches/main/protection`, read 2026-10-18, returns `required_status_checks.strict: true` with the contexts `ci (ubuntu-latest)` and `ci (macos-latest)`. Of two pull requests that each pass the check against the same `main`, the second cannot merge until its branch is updated and the check runs again against the first.
   - `check-migration-order.test.sh`, run by `make test`, runs the check on repositories it builds in a temporary directory. It covers a merge commit cloned two commits deep, as CI checks one out, and a branch beside `origin/main`.
+
+### Edge Function deploys
+
+- **Deploy path.** When a pull request changing a function under `supabase/functions/` merges into `main`, Supabase's GitHub integration deploys it to the production project; no one runs `supabase functions deploy`. It deploys the functions `supabase/config.toml` declares under `[functions.<slug>]`, `extract-cards` and `delete-account`, and uploads one only when its bundle or its JWT verification setting changed. A function's bundle includes `supabase/functions/_shared/`, so a change there deploys both.
+  - Source: Supabase's GitHub integration guide, `apps/docs/content/guides/deployment/branching/github-integration.mdx` in `supabase/supabase` at commit `626f0d412a5f88ef260289d4ed2b787f9705d6fc`, committed 2026-10-14, read 2026-10-18. Under "Deploying changes to production" it lists "Edge Functions declared in `config.toml` are deployed"; under "Edge Functions" it says "A function is uploaded again only when it changed."
+  - Measured: #169's merge `5ab5440e4475237dc21f25911a4d9f52ab89c3a1` at 19:20:11Z on 2026-10-17 changed, under `supabase/`, only files in `supabase/functions/extract-cards/`. Its `Supabase Preview` check ran 19:20:38–19:20:47Z. On 2026-10-18, `supabase functions list` showed `extract-cards` at version 9, updated 19:20:46 UTC, and no one had deployed it by hand (issue #177).
+  - To confirm a function reached production: the `Supabase Preview` check succeeded on the merge commit, and `supabase functions list` shows the function updated during that check.
+- **Secrets.** The integration sets only the function secrets `config.toml` declares under `[edge_runtime.secrets]` (the same guide: "The step saves the function secrets declared under `[edge_runtime.secrets]`"), and `config.toml` declares none. The functions' secrets, `CARD_MODEL`, `OPENROUTER_API_KEY` and, where used, `CARD_RETRY_MODEL` ([`ai-extraction.md`](ai-extraction.md)), are set by hand on the production project by the owner or the PM; a merge changes none of them.
+- **Gate.** A pull request changing a function merges only after the owner approves it when the change:
+  - needs a secret the production project lacks, or a new value of one, which the owner or the PM sets before the merge, since the deploy the merge makes would otherwise run without it;
+  - changes which model is called, or otherwise the cost of a call, since cost is the owner's.
+  The PM asks with the reviewed pull request in hand. A prompt change on the same model ships as merged after the PM's review, with the eval as its evidence where one applies. A response the apps in use cannot read is not merged ([ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md)). Every other function change is deployed as merged, so it must be correct then. Workers make no change to the remote project.
 
 ### Tables
 
@@ -81,7 +93,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - The `delete-account` Edge Function deletes the caller's user from `auth.users` through Supabase Auth's admin API, with the service-role key, which stays in the function ([`account.md`](account.md), [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). The deletion is hard, so the cascade runs.
 - Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. Another user's copy of a deleted user's deck stays theirs.
 - A new table holding a user id references `auth.users` with `on delete cascade`.
-- Only the PM deploys the function, after the pull request that adds or changes it merges.
+- Merging the pull request that adds or changes the function deploys it (§Edge Function deploys).
 
 ### Integrity
 
@@ -216,6 +228,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md) records why the purge was built before any store release, why its migration enables `pg_cron`, and why a run locks `cards` and `reviews`; issue #108 records the owner's decision.
 - [ADR 0048](adr/0048-name-each-new-migration-after-every-migration-on-main-and-check-it-in-make-lint.md) records how the integration treats an older migration, with its source, and why a new migration is named after every one on `main`; issue #149 records the finding.
 - Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, issue #106 the horizon and the watermark, issue #107 the web's version 7 ids, and issue #113 the advisor lints read after #112.
+- Issue #177 records that merging deployed `extract-cards`, with its timestamps; the PM decided the function gate in the dispatch of #177 on 2026-10-18.
 - Issue #23 records the decisions made by the PM; issue #25 records those for the extraction count, issue #24 the fuzz factor column, issue #29 public decks, issue #67 counting each user's copy once, and issue #26 account deletion.
 
 ## Open questions

@@ -41,3 +41,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - Users switch the level after nearly every extraction, so the default is the wrong one.
 - Real pages print a part of speech the composed answer misplaces, such as one printed after the meaning, often enough that 기본 reads wrong.
 - A level is wanted that the stored fields cannot compose, such as one needing a field the page prints but the schema does not ask for.
+
+## Errata
+
+- 2026-10-18: §Consequences says the new app works against the old function at a single level "until the PM deploys". Supabase's GitHub integration deploys a changed function when its pull request merges into `main`, so no deploy follows the merge. #169 merged as `5ab5440e4475237dc21f25911a4d9f52ab89c3a1` at 19:20:11Z on 2026-10-17, and its `Supabase Preview` check on that commit ran 19:20:38–19:20:47Z. On 2026-10-18, `supabase functions list` showed `extract-cards` at version 9, updated 19:20:46 UTC, and no one had deployed it by hand (issue #177). Supabase's GitHub integration guide (`supabase/supabase` commit `626f0d412a5f88ef260289d4ed2b787f9705d6fc`, committed 2026-10-14, read 2026-10-18) lists "Edge Functions declared in `config.toml` are deployed" among the changes deployed to production. The decision stands: the new app works at a single level against the old function until the pull request changing the function merges ([`server.md`](../server.md) §Edge Function deploys).
