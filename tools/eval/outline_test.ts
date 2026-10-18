@@ -123,6 +123,11 @@ Deno.test("the fill's outline goes into the user turn before the image, and only
     "the system prompt is the function's",
   );
 
-  await outlined("https://openrouter.ai/api/v1/models", { body: "kept" });
-  assert.equal(seen[1].body, "kept", "control: another request is untouched");
+  const other = JSON.stringify(request);
+  await outlined("https://example.com/v1/chat/completions", { body: other });
+  assert.equal(
+    seen[1].body,
+    other,
+    "control: a request elsewhere is untouched",
+  );
 });
