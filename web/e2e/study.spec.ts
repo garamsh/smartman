@@ -448,7 +448,9 @@ test("each page that waits on the server shows its skeleton, still under reduced
   for (const { path, name, status, content, held: placeholder } of pages) {
     await skeletonPage.emulateMedia({ reducedMotion: "no-preference" });
     await skeletonPage.goto(path);
-    const busy = skeletonPage.locator('[aria-busy="true"]');
+    // The visible fallback: the study page's streamed content, never swapped in without scripts,
+    // holds a hidden skeleton of its own until the engine loads.
+    const busy = skeletonPage.locator('[aria-busy="true"]').filter({ visible: true });
     await expect(busy).toBeVisible();
     await expect(skeletonPage.getByRole("status")).toHaveText(status);
     const placeholders = busy.locator('> [aria-hidden="true"]');

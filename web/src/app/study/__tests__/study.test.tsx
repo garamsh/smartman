@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadEngine } from "@/features/study";
 
 import { cardRow, day, deckRow, reviewRow, seedDeck, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -11,6 +12,12 @@ import { signedInCookies } from "@/testing/session";
 
 import { Study } from "../_components/study";
 
+// The study screen starts its session once the browser's engine has loaded; its first load
+// compiles the module.
+beforeAll(async () => {
+  await loadEngine();
+}, 30_000);
+
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const hour = 3_600_000;
@@ -19,6 +26,10 @@ const hour = 3_600_000;
 async function open(decks: string, at = start) {
   vi.setSystemTime(at);
   await render(Study, { searchParams: Promise.resolve({ decks }) });
+  // The screen starts its session once the browser's engine has loaded, under the skeleton.
+  await waitFor(() => {
+    expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+  });
 }
 
 /** The front of the card on screen. */
@@ -203,21 +214,74 @@ describe("the study page", () => {
     const completionLine = () =>
       screen.getByRole("region", { name: "오늘 학습 완료" }).querySelector("p")?.textContent;
 
+    it("keeps a card answered 모른다 earlier today in today's list, and counts the day's cards done 안다", async () => {
+      seedDeck(postgrest, "d1", ["un"]);
+      postgrest.seed("cards", cardRow("deux", "d1", "deux"), cardRow("trois", "d1", "trois"));
+      const tomorrow = { stability: 1, difficulty: 5, lastReview: start - hour, due: start + day };
+      postgrest.seed("card_states", stateRow("deux", tomorrow), stateRow("trois", tomorrow));
+      postgrest.seed(
+        "reviews",
+        // deux: 모른다 this morning, due tomorrow by its state; trois: 안다 this morning.
+        { ...reviewRow("r-deux", "deux", start - hour, 1_000), rating: "again" },
+        reviewRow("r-trois", "trois", start - hour, 1_000),
+      );
+      await open("d1");
+
+      // trois is done; un, new, and deux, kept by today's list, are left.
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+      expect(screen.getByText("1/3")).toBeInTheDocument();
+      const user = userEvent.setup();
+      const fronts = [currentFront()];
+      await user.keyboard("k");
+      fronts.push(currentFront());
+      await user.keyboard("k");
+      expect(fronts.sort()).toEqual(["deux", "un"]);
+      expect(screen.getByText("3/3")).toBeInTheDocument();
+    });
+
+    it("reads the guide as going on with the day when a card of it is done, and as the day's start otherwise", async () => {
+      seedDeck(postgrest, "d1", ["un"]);
+      postgrest.seed("cards", cardRow("deux", "d1", "deux"));
+      postgrest.seed(
+        "card_states",
+        stateRow("deux", {
+          stability: 1,
+          difficulty: 5,
+          lastReview: start - hour,
+          due: start + day,
+        }),
+      );
+      postgrest.seed("reviews", reviewRow("r-deux", "deux", start - hour, 1_000));
+      await open("d1");
+      expect(screen.getByText(/^이어서 해요 · 남은 1장 · 약 \d+분$/)).toBeInTheDocument();
+      cleanup();
+
+      // Control: with nothing done today, the guide states the day's cards.
+      postgrest.rows.reviews = [];
+      await open("d1");
+      expect(screen.getByText(/^오늘 \d+장 · 약 \d+분$/)).toBeInTheDocument();
+      expect(screen.queryByText(/^이어서 해요/)).not.toBeInTheDocument();
+    });
+
     it("shows the completion card in the current card's place, below the stack, once no card is left", async () => {
       seedToday();
       await open("d1");
       const user = userEvent.setup();
+      // un and deux, new, and trois, answered 모른다 this morning, which today's list keeps until
+      // it is answered 안다.
       await user.keyboard("k");
+      await user.keyboard("k");
+      expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
       await user.keyboard("k");
 
       expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
       const completion = screen.getByRole("region", { name: "오늘 학습 완료" });
       const [previous] = within(cards()).getAllByRole("article");
       expect(previous?.compareDocumentPosition(completion)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(stack()).toHaveLength(2);
-      // This morning's 모른다 and the session's two 안다; 90 s and the session's time, rounded
+      expect(stack()).toHaveLength(3);
+      // This morning's 모른다 and the session's three 안다; 90 s and the session's time, rounded
       // up; yesterday and today in a row.
-      expect(completionLine()).toBe("2 안다1 모른다2분연속 2일");
+      expect(completionLine()).toBe("3 안다1 모른다2분연속 2일");
       // No new card is left past today's, so the card says so and 그만하기 takes the focus.
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "학습하기" })).not.toBeInTheDocument();
@@ -263,7 +327,7 @@ describe("the study page", () => {
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toBe(progress);
       expect(progress.getAttribute("aria-valuetext")).toBe(
-        `${String(coldStartNewCards + 2)}장 중 ${String(coldStartNewCards + 2)}장 답함`,
+        `${String(coldStartNewCards + 2)}장 중 ${String(coldStartNewCards + 2)}장 끝냄`,
       );
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       await waitFor(() => {

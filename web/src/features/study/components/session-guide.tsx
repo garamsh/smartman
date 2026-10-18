@@ -10,8 +10,9 @@ const lines = [
 
 /**
  * In the previous card's place from a session's start until its first answer: a panel with a
- * dashed outline and no fill, so it never reads as a card, holding the session's [size], or that
- * today's cards are done where it holds none, and two lines on how to study.
+ * dashed outline and no fill, so it never reads as a card, holding the session's [size], as a
+ * continuation of the day where it resumed one, or that today's cards are done where it holds
+ * none, and two lines on how to study.
  */
 export function SessionGuide({ size }: { size: SessionSize }) {
   return (
@@ -22,7 +23,9 @@ export function SessionGuide({ size }: { size: SessionSize }) {
       <p className="text-body font-bold text-ink">
         {size.cards === 0
           ? "오늘 할 카드를 다 했어요"
-          : `오늘 ${String(size.cards)}장 · 약 ${String(size.minutes)}분`}
+          : size.resumed
+            ? `이어서 해요 · 남은 ${String(size.cards)}장 · 약 ${String(size.minutes)}분`
+            : `오늘 ${String(size.cards)}장 · 약 ${String(size.minutes)}분`}
       </p>
       <ul className="flex flex-col gap-3">
         {lines.map(({ Icon, text }) => (

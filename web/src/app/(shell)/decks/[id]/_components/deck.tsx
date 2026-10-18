@@ -2,7 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CardGrid, type DeckId, DeckTile, ReadFailure, readLibrary } from "@/features/decks";
-import { countToday, deckProgress, readToday, sessionMinutes } from "@/features/study";
+import {
+  countDay,
+  dayPlanOf,
+  deckProgress,
+  readyServerEngine,
+  readToday,
+  sessionMinutes,
+} from "@/features/study";
 
 import { EnterLink } from "../../../_components/enter-link";
 import { studyHref } from "../../../_components/study-href";
@@ -18,8 +25,10 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   const deck = read.library.decks.find((candidate) => candidate.id === deckId);
   if (!deck) notFound();
   const { cards } = read.library;
-  const { states, day, pace } = studyDay.today;
-  const today = countToday(cards, states, day);
+  const { states, day, pace, answers } = studyDay.today;
+  const engine = await readyServerEngine();
+  if ("failure" in engine) return <ReadFailure failure={engine.failure} />;
+  const today = countDay(dayPlanOf(cards, states, day, answers), states);
   const total = today.review + today.fresh;
   const progress = deckProgress(cards, states);
   const share = (part: number) => (cards.length === 0 ? 0 : (part / cards.length) * 100);

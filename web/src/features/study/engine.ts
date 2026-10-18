@@ -21,6 +21,12 @@ export type ReviewInput = {
 };
 
 let loaded: Promise<void> | undefined;
+let ready = false;
+
+/** Whether the engine's module has loaded, so a synchronous call such as `todayOf` can run. */
+export function engineLoaded(): boolean {
+  return ready;
+}
 
 /**
  * Loads the engine's WebAssembly module once per page. engine-wasm is a link to the
@@ -29,7 +35,9 @@ let loaded: Promise<void> | undefined;
  */
 export function loadEngine(): Promise<void> {
   loaded ??= init().then(
-    () => undefined,
+    () => {
+      ready = true;
+    },
     (error: unknown) => {
       // The next call tries again rather than failing for the life of the page.
       loaded = undefined;

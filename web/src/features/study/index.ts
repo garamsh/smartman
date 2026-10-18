@@ -22,7 +22,10 @@ export {
   todayStatus,
 } from "./overview";
 export { readRecentRetention, readRecord } from "./read-record";
+export { loadEngine } from "./engine";
+export { readyServerEngine } from "./engine-server";
 export { readToday } from "./read-today";
+export { countDay, dayPlanOf } from "./today-list";
 export { recordDays } from "./stats";
 export { sessionMinutes } from "./study-time";
 export type { SessionPlan } from "./session";

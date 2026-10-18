@@ -110,21 +110,13 @@ class _TodayOverviewReaderState extends ConsumerState<TodayOverviewReader> {
     final zone = ref.read(studyZoneProvider);
     final start = today.day.start;
     final answers = await repository.answersSince(start);
-    final ids = {for (final card in today.cards) card.id};
     final days = <DateTime>[start];
     while (days.length < forecastDays) {
       days.add(studyDayEnd(days.last, zone));
     }
     return TodayOverview(
       count: today.count,
-      goal: DailyGoal.of(
-        [
-          for (final answer in answers)
-            if (ids.contains(answer.card)) (card: answer.card, at: answer.at),
-        ],
-        [for (final card in today.queue.cards) card.id],
-        today.day,
-      ),
+      goal: DailyGoal.of(today.plan),
       streak: streak(
         [for (final answer in answers) answer.at],
         now,

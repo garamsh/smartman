@@ -17,6 +17,7 @@ import 'model.dart';
 import 'providers.dart';
 import 'queue.dart';
 import 'study_time.dart';
+import 'today.dart';
 
 /// What a session over a selection would study now.
 sealed class TodayCount {
@@ -63,8 +64,8 @@ final class TodayUnavailable extends TodayCount {
 }
 
 /// What [decks] hold for today, read through [ref]: their cards and the
-/// stored states of those reviewed, the study day, the queue a session would
-/// study now, and its count at the user's pace.
+/// stored states of those reviewed, the study day, its [DayPlan] from today's
+/// list, and the count of the cards left at the user's pace.
 ///
 /// A failed read throws the [DeckFailure] or `StudyFailure` that reports it.
 Future<
@@ -72,7 +73,7 @@ Future<
     List<Card> cards,
     Map<CardId, CardState> states,
     StudyDay day,
-    SelectedQueue queue,
+    DayPlan plan,
     TodayCounted count,
   })
 >
@@ -88,18 +89,20 @@ readToday(DeckSelection decks, WidgetRef ref) async {
     ref.read(studyClockProvider)(),
     ref.read(studyZoneProvider),
   );
-  final queue = selectQueue(cards, states, day);
-  final fresh = queue.cards
+  final ids = {for (final card in cards) card.id};
+  final plan = dayPlanOf(cards, states, day, [
+    for (final answer in await repository.answersSince(day.start))
+      if (ids.contains(answer.card))
+        (card: answer.card, answer: answer.answer, at: answer.at),
+  ]);
+  // The cards still on "Don't know" are reviews, as every card with a state is.
+  final fresh = plan.selected.cards
       .where((card) => !states.containsKey(card.id))
       .length;
-  final count = queue.backlog
-      ? TodayCounted.backlog(review: queue.cards.length, pace: pace)
-      : TodayCounted(
-          review: queue.cards.length - fresh,
-          fresh: fresh,
-          pace: pace,
-        );
-  return (cards: cards, states: states, day: day, queue: queue, count: count);
+  final count = plan.selected.backlog
+      ? TodayCounted.backlog(review: plan.left, pace: pace)
+      : TodayCounted(review: plan.left - fresh, fresh: fresh, pace: pace);
+  return (cards: cards, states: states, day: day, plan: plan, count: count);
 }
 
 /// Builds what the caller shows of a [TodayCount].

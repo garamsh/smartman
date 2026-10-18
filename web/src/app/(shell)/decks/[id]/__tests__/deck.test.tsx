@@ -1,6 +1,7 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { loadEngine } from "@/features/study";
 
 import { cardRow, day, deckRow, reviewRow, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -11,6 +12,12 @@ import { signedInCookies } from "@/testing/session";
 
 import { Deck } from "../_components/deck";
 import { Study } from "../../../../study/_components/study";
+
+// The study screen starts its session once the browser's engine has loaded; its first load
+// compiles the module.
+beforeAll(async () => {
+  await loadEngine();
+}, 30_000);
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
@@ -108,6 +115,10 @@ describe("the deck page", () => {
       cleanup();
       await render(Study, {
         searchParams: Promise.resolve(Object.fromEntries(new URLSearchParams(href?.split("?")[1]))),
+      });
+      // The study screen starts once the browser's engine has loaded, under the skeleton.
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
       });
       if (answered === "yesterday") {
         expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();

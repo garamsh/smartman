@@ -3,14 +3,15 @@ import Link from "next/link";
 
 import { type Deck, DeckTile, EmptyHome, ReadFailure, readDeckList } from "@/features/decks";
 import {
-  countToday,
+  countDay,
   dailyGoal,
+  dayPlanOf,
   deckProgress,
   forecast,
   readRecentRetention,
+  readyServerEngine,
   readToday,
   RetentionPreview,
-  selectQueue,
   sessionMinutes,
   statusLine,
   studyDayEnd,
@@ -61,14 +62,13 @@ export async function Today() {
     );
   }
 
-  const count = countToday(cards, states, day);
+  // Today's list places the cards, as the study page and the phone do, so the counts agree.
+  const engine = await readyServerEngine();
+  if ("failure" in engine) return <ReadFailure failure={engine.failure} />;
+  const plan = dayPlanOf(cards, states, day, answers);
+  const count = countDay(plan, states);
   const total = count.review + count.fresh;
-  const ids = new Set(cards.map((card) => card.id));
-  const goal = dailyGoal(
-    answers.filter((answer) => ids.has(answer.cardId)),
-    selectQueue(cards, states, day).cards.map((card) => card.id),
-    day,
-  );
+  const goal = dailyGoal(plan);
   const streak = streakBefore + (answers.length > 0 ? 1 : 0);
   const stored = Object.values(states).flatMap((state) => (state ? [state] : []));
   const days = forecast(stored, day, total, timeZone);
@@ -78,7 +78,7 @@ export async function Today() {
   }
   const rows = decks.flatMap((deck) => {
     const own = cards.filter((card) => card.deckId === deck.id);
-    const left = countToday(own, states, day);
+    const left = countDay(dayPlanOf(own, states, day, answers), states);
     const n = left.review + left.fresh;
     if (n === 0) return [];
     const { mastered } = deckProgress(own, states);

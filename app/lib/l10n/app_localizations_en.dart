@@ -189,6 +189,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String guideResume(int cards, int minutes) {
+    return 'Picking up · $cards left · about $minutes min';
+  }
+
+  @override
   String get guideDone => 'You\'ve done today\'s cards';
 
   @override

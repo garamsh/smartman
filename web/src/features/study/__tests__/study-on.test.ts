@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { CardId, DeckId } from "@/features/decks";
 
+import { loadEngine } from "../engine";
 import { type SessionPlan, type StudyCard, StudySession } from "../session";
 import { unknownPace } from "../study-time";
 
@@ -23,12 +24,20 @@ const card = (front: string): StudyCard => ({
 function session(today: string[], more: string[], stored = 0): StudySession {
   const plan: SessionPlan = {
     startedAt: start,
+    day: { start: start - 43_200_000, end: start + 43_200_000 },
     queue: { cards: today.map(card), backlog: false },
+    relearn: [],
+    resumed: false,
     more: more.map(card),
     before: {},
     pace: unknownPace,
     today: {
-      answers: Array.from({ length: stored }, () => ({ answer: "know" as const, durationMs: 0 })),
+      answers: Array.from({ length: stored }, (_, index) => ({
+        cardId: `stored${String(index)}` as CardId,
+        answer: "know" as const,
+        reviewedAt: start - 1000,
+        durationMs: 0,
+      })),
       answeredAnyDeck: stored > 0,
       streakBefore: 0,
     },
@@ -48,20 +57,22 @@ function current(study: StudySession): string {
   return view.current.id;
 }
 
+beforeAll(loadEngine);
+
 describe("studying past today's cards", () => {
   it("goes on from the completion card with the new cards past today's, oldest first, each answer written and counted", () => {
     const study = session(["a", "b"], ["c", "d"]);
     study.answer("know");
     study.answer("know");
     const complete = study.view();
-    expect(complete).toMatchObject({ kind: "complete", more: true, answered: 2, total: 2 });
+    expect(complete).toMatchObject({ kind: "complete", more: true, done: 2, total: 2 });
 
     study.studyOn();
     expect(current(study)).toBe("c");
     expect(study.answer("know")?.cardId).toBe("c");
     expect(current(study)).toBe("d");
     expect(study.answer("know")?.cardId).toBe("d");
-    expect(study.view()).toMatchObject({ kind: "complete", more: false, answered: 4, total: 4 });
+    expect(study.view()).toMatchObject({ kind: "complete", more: false, done: 4, total: 4 });
   });
 
   it("shows a card answered past today's again only as the re-show after 모른다", () => {
@@ -86,8 +97,9 @@ describe("studying past today's cards", () => {
     expect(study.view()).toMatchObject({
       kind: "studying",
       guide: { cards: 0 },
-      answered: 0,
-      total: 2,
+      // The day's count goes on from the card answered "안다" today.
+      done: 1,
+      total: 3,
     });
     expect(current(study)).toBe("b");
     study.answer("know");
@@ -101,5 +113,66 @@ describe("studying past today's cards", () => {
     expect(answered.view()).toMatchObject({ kind: "complete", more: false });
 
     expect(session([], []).view().kind).toBe("empty");
+  });
+});
+
+describe("today's list in the session", () => {
+  /** A plan over [queue], in a backlog or not, with [relearn] still on 모른다 from earlier today. */
+  function plan(queue: string[], relearn: string[], backlog: boolean): SessionPlan {
+    return {
+      startedAt: start,
+      day: { start: start - 43_200_000, end: start + 43_200_000 },
+      queue: { cards: queue.map(card), backlog },
+      relearn: relearn.map(card),
+      resumed: true,
+      more: [],
+      before: {},
+      pace: unknownPace,
+      today: {
+        answers: relearn.map((front) => ({
+          cardId: front as CardId,
+          answer: "dontKnow" as const,
+          reviewedAt: start - 1000,
+          durationMs: 0,
+        })),
+        answeredAnyDeck: relearn.length > 0,
+        streakBefore: 0,
+      },
+    };
+  }
+
+  it("puts a card still on 모른다 after a re-show's gap, in a backlog as out of one", () => {
+    for (const backlog of [true, false]) {
+      let id = 0;
+      const study = new StudySession(
+        plan(["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7"], ["x"], backlog),
+        () => start,
+        () => `review${String((id += 1))}`,
+      );
+      const shown: string[] = [];
+      while (study.view().kind === "studying") {
+        shown.push(current(study));
+        study.answer("know");
+      }
+      const at = shown.indexOf("x");
+      expect(at, `backlog ${String(backlog)}`).toBeGreaterThanOrEqual(3);
+      expect(at, `backlog ${String(backlog)}`).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it("counts the session's own answers in the day it opened in, after 04:00 too", () => {
+    let now = start;
+    let id = 0;
+    const study = new StudySession(
+      plan(["a", "b"], [], false),
+      () => now,
+      () => `review${String((id += 1))}`,
+    );
+    study.answer("know");
+    expect(study.view()).toMatchObject({ done: 1, total: 2 });
+    // Past the day's end, as a session left open across 04:00.
+    now = start + 43_200_000 + 60_000;
+    study.answer("know");
+    expect(study.view()).toMatchObject({ done: 2, total: 2 });
   });
 });

@@ -1,5 +1,5 @@
 import { DeckList, EmptyHome, ReadFailure, readDeckList } from "@/features/decks";
-import { countToday, deckProgress, readToday } from "@/features/study";
+import { countDay, dayPlanOf, deckProgress, readyServerEngine, readToday } from "@/features/study";
 
 /** Every deck with what a session over it would study now and its progress, read on the server. */
 export async function Decks() {
@@ -7,7 +7,7 @@ export async function Decks() {
   if ("failure" in read) return <ReadFailure failure={read.failure} />;
   if ("failure" in today) return <ReadFailure failure={today.failure} />;
   const { decks, cards } = read.library;
-  const { day, states } = today.today;
+  const { day, states, answers } = today.today;
   const heading = (
     <h1 className="text-display">
       내 덱 <span className="text-muted">{decks.length}</span>
@@ -21,9 +21,11 @@ export async function Decks() {
       </>
     );
   }
+  const engine = await readyServerEngine();
+  if ("failure" in engine) return <ReadFailure failure={engine.failure} />;
   const rows = decks.map((deck) => {
     const own = cards.filter((card) => card.deckId === deck.id);
-    const left = countToday(own, states, day);
+    const left = countDay(dayPlanOf(own, states, day, answers), states);
     const { mastered, learning } = deckProgress(own, states);
     return { deck, cards: own.length, today: left.review + left.fresh, mastered, learning };
   });
