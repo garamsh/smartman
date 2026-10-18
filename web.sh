@@ -39,9 +39,18 @@ docker_answers() {
 	docker info >/dev/null 2>&1 && docker buildx version >/dev/null 2>&1
 }
 
+# Builds the image quietly; on a failure it prints the build's whole log, so the failing step's
+# own error, such as next build's, reaches the output and CI's log rather than its exit code alone.
 build_image() {
-	docker build --quiet -f web/Dockerfile -t "$image" \
-		--build-arg NEXT_PUBLIC_SUPABASE_URL --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY . >/dev/null
+	log=$(mktemp)
+	if ! docker build --progress=plain -f web/Dockerfile -t "$image" \
+		--build-arg NEXT_PUBLIC_SUPABASE_URL --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY . >"$log" 2>&1; then
+		cat "$log" >&2
+		rm -f "$log"
+		echo "the image build from web/Dockerfile failed; its log is above" >&2
+		exit 1
+	fi
+	rm -f "$log"
 }
 
 files() {
