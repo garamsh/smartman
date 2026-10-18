@@ -1,6 +1,6 @@
 # ADR 0055: Cover everything a notes page teaches at step 5 with prompt v4, and eval a dense page by its coverage per page
 
-> Status: accepted; its prompt v4, its cap rule by step, and its coverage at step 5 per step superseded by ADR-0058
+> Status: accepted; its prompt v4, its cap rule by step, and its coverage at step 5 per step superseded by ADR-0058; its list taught as one item on one card superseded by ADR-0063, and its worked example never a card qualified by ADR-0063's identify cards
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

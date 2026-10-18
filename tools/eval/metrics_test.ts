@@ -3,6 +3,7 @@ import {
   covers,
   entryOf,
   type FieldCounts,
+  listedItems,
   normalize,
   type NotesRow,
   percentile,
@@ -12,6 +13,8 @@ import {
   scoreNotes,
   summarize,
 } from "./metrics.ts";
+
+const NO_SENSES = { returned: 0, page: 0, matched: 0 };
 
 const NO_FIELDS: FieldCounts = {
   partOfSpeech: 0,
@@ -46,6 +49,7 @@ Deno.test("a candidate matches only when both sides match after normalization", 
       recall: 1,
       f1: 1,
       fields: NO_FIELDS,
+      senses: { returned: 2, page: 2, matched: 2 },
     },
   );
   const wrongBack = score([{ front: "apple", meaning: "배" }, {
@@ -73,6 +77,7 @@ Deno.test("an image with no candidates scores zero", () => {
     recall: 0,
     f1: 0,
     fields: NO_FIELDS,
+    senses: NO_SENSES,
   });
 });
 
@@ -97,6 +102,7 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
           partOfSpeechCorrect: 1,
           fields: 2,
         },
+        senses: NO_SENSES,
       },
       notes: null,
       latencyMs: 1000,
@@ -105,7 +111,13 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
     },
     {
       name: "02",
-      score: { precision: 0, recall: 0, f1: 0, fields: NO_FIELDS },
+      score: {
+        precision: 0,
+        recall: 0,
+        f1: 0,
+        fields: NO_FIELDS,
+        senses: NO_SENSES,
+      },
       notes: null,
       latencyMs: 3000,
       costUsd: 0.03,
@@ -137,6 +149,8 @@ const row = (
   partOfSpeechPrecision: null,
   examplesPrecision: null,
   inventedRate: null,
+  sensePrecision: null,
+  senseRecall: null,
   notes,
   p50Ms: 0,
   p90Ms: 0,
@@ -335,6 +349,18 @@ Deno.test("a card covering no fact is unsupported", () => {
   assert.equal(notes.unsupported, 1, "control: the first card covers a fact");
 });
 
+Deno.test("an answer listing more than 5 items is a long answer, its items split at commas, middle dots, slashes, semicolons and line breaks", () => {
+  assert.equal(listedItems("이, 그, 저 · 이것 / 그것; 저것\n여기"), 7);
+  assert.equal(listedItems("빛 에너지로 포도당을 만드는 과정"), 1);
+  const notes = scoreNotes([
+    noteCard("이, 그, 저가 결합된 단어", "이것, 그것, 저것, 여기, 거기, 저기"),
+    // Control: five items is within the atomic rule.
+    noteCard("3인칭", "그, 그녀, 이분, 그분, 저분"),
+  ], notesTruth);
+  assert.equal(notes.cards, 2);
+  assert.equal(notes.longAnswers, 1);
+});
+
 Deno.test("an example the page does not print is invented, and one printed with or without its label is not", () => {
   const notes = scoreNotes([{
     ...noteCard("연역 논증", "결론이 반드시 참"),
@@ -364,7 +390,13 @@ Deno.test("an example printed inside a rule's line is not invented, and one no l
 Deno.test("summarize averages notes coverage over the notes images and pools their counts", () => {
   const vocabulary = {
     name: "01-vocabulary",
-    score: { precision: 1, recall: 1, f1: 1, fields: NO_FIELDS },
+    score: {
+      precision: 1,
+      recall: 1,
+      f1: 1,
+      fields: NO_FIELDS,
+      senses: NO_SENSES,
+    },
     notes: null,
     latencyMs: 1000,
     costUsd: 0.01,
@@ -378,6 +410,10 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
       ...noteCard("결론 지시어", "따라서, 그러므로"),
       examples: ["652788 -> 연역"],
     },
+  ], notesTruth);
+  const long = scoreNotes([
+    noteCard("연역", "결론이 반드시 참"),
+    noteCard("목록", "가, 나, 다, 라, 마, 바"),
   ], notesTruth);
   const empty = scoreNotes([], notesTruth);
   const row = summarize("m", [
@@ -399,11 +435,18 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
       completionTokens: 0,
     },
   ]);
+  // Long answers pool over every notes image's returned cards: one of the six.
+  const pooled = summarize("m", [
+    { ...vocabulary, name: "02-notes", score: null, notes: full },
+    { ...vocabulary, name: "03-notes", score: null, notes: long },
+  ]);
+  assert.equal(pooled.notes?.longAnswerRate, 1 / 6);
   assert.equal(row.f1, 1, "vocabulary scores average over vocabulary images");
   assert.deepEqual(row.notes, {
     coverage: 0.5,
     unsupportedRate: 0,
     inventedExamplesRate: 0,
+    longAnswerRate: 0,
     pages: [
       { name: "02-notes", coverage: 1, completionTokens: 900 },
       { name: "03-notes", coverage: 0, completionTokens: 0 },
@@ -416,6 +459,7 @@ const notesRow = (coverage: number): NotesRow => ({
   coverage,
   unsupportedRate: null,
   inventedExamplesRate: null,
+  longAnswerRate: null,
   pages: [],
 });
 
@@ -441,10 +485,11 @@ Deno.test("with notes results, the recommendation must also be within 5 points o
   );
 });
 
-Deno.test("a returned card without a meaning is matched on a vocabulary page by its answer", () => {
+Deno.test("a note card is matched on a vocabulary page by its answer, and a vocabulary card by its senses' meanings", () => {
   const truth = [{ front: "apple", meaning: "사과" }];
   const asNote = entryOf({
     kind: "note",
+    type: "concept",
     front: "apple",
     answer: "사과",
     short: "사과",
@@ -454,20 +499,93 @@ Deno.test("a returned card without a meaning is matched on a vocabulary page by 
   });
   assert.deepEqual(asNote, { front: "apple", meaning: "사과" });
   assert.equal(score([asNote], truth).f1, 1);
+  const senses = [
+    { pos: "[동]", meaning: "직면하다, 마주하다" },
+    { pos: "[명]", meaning: "표면, 겉면" },
+  ];
   const vocabulary = entryOf({
     kind: "vocabulary",
-    front: "apple",
-    answer: "사과, 능금",
-    short: "사과",
+    type: "concept",
+    front: "face",
+    answer: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
+    short: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
     step: 1,
-    topic: "과일",
-    back: "n. 사과",
-    meaning: "사과",
-    partOfSpeech: "n.",
+    topic: "단어",
+    back: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
+    meaning: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
+    senses,
   });
+  assert.deepEqual(vocabulary, {
+    front: "face",
+    meaning: "직면하다, 마주하다; 표면, 겉면",
+    senses,
+  }, "the senses' meanings, not the composed answer with its labels");
+});
+
+Deno.test("senses are scored per entry matched by front, a sense counting when its part of speech and meaning both equal the page's", () => {
+  const truth = [{
+    front: "face",
+    meaning: "직면하다; 표면; 얼굴",
+    senses: [
+      { pos: "[동]", meaning: "직면하다" },
+      { pos: "[명]", meaning: "표면" },
+      { pos: "[명]", meaning: "얼굴" },
+    ],
+  }];
+  const result = score([{
+    front: " Face",
+    meaning: "직면하다; 표면",
+    senses: [
+      { pos: "[동]", meaning: "직면하다" },
+      { pos: "[형]", meaning: "표면" },
+    ],
+  }], truth);
+  assert.deepEqual(result.senses, { returned: 2, page: 3, matched: 1 });
   assert.equal(
-    vocabulary.meaning,
-    "사과",
-    "control: a card's meaning is used over its answer",
+    result.f1,
+    0,
+    "the card itself does not match, its meanings short of the page's",
+  );
+  // A truth written before senses is one sense of its meaning and part of speech.
+  assert.deepEqual(
+    score(
+      [{
+        front: "run",
+        meaning: "달리다",
+        senses: [{ pos: "v.", meaning: "달리다" }],
+      }],
+      [{ front: "run", meaning: "달리다", partOfSpeech: "v." }],
+    ).senses,
+    { returned: 1, page: 1, matched: 1 },
+  );
+  assert.deepEqual(
+    score([{ front: "walk", meaning: "걷다" }], truth).senses,
+    NO_SENSES,
+    "control: a front the page does not print counts no sense",
+  );
+});
+
+Deno.test("part of speech is scored per sense, against the page's label for that sense", () => {
+  const senses = [
+    { pos: "[동]", meaning: "직면하다" },
+    { pos: "[명]", meaning: "표면" },
+  ];
+  const fields = score(
+    [{ front: "face", meaning: "직면하다; 표면", senses }],
+    [{
+      front: "face",
+      meaning: "직면하다; 표면",
+      senses: [{ pos: "[동]", meaning: "직면하다" }, {
+        pos: null,
+        meaning: "표면",
+      }],
+    }],
+  ).fields;
+  assert.equal(fields.partOfSpeech, 2);
+  assert.equal(fields.partOfSpeechCorrect, 1);
+  assert.equal(
+    fields.invented,
+    1,
+    "the page prints no label for the second sense",
   );
 });

@@ -161,9 +161,10 @@ NOTE_LANGUAGES = ["ko", "en"]
 NOTE_HANDS = ["print", "handwriting"]
 NOTE_DISTORTIONS = ["mild", "harsh"]
 # The further pages, each in every hand and distortion after the pages above: a dense page of
-# many small rules, worked examples and marked exceptions, and a page with a classification
-# table and the writer's own additions in pen.
-DENSE_DOCUMENTS = ["ko-grammar", "ko-auxiliary"]
+# many small rules, worked examples and marked exceptions, a page with a classification table and
+# the writer's own additions in pen, and a page with a classification table, judgment rules,
+# starred handwritten tips and a side box.
+DENSE_DOCUMENTS = ["ko-grammar", "ko-auxiliary", "ko-numerals"]
 MARK_COLOUR = (190, 40, 40)
 # A line the writer added by hand, in pen, in the handwriting face on every page.
 ADDITION_COLOUR = (30, 90, 170)
@@ -196,7 +197,8 @@ def notes(page: Page, doc: dict) -> None:
     """A page of notes: a title, headings, points and sub-points under them, examples, and table
     rows whose cells `text` separates with " | "; a page sets them at its `scale`. A line's `mark`
     draws a star before it or a circle around its first line; a line with `hand` is the writer's
-    addition in pen, and an `aside` is one written beside the heading above it."""
+    addition in pen, an `aside` is one written beside the heading above it, and a `box` is a
+    framed side box."""
     scale = doc.get("scale", 1.0)
     page.text((100, 80), doc["title"], page.front_face, 50, (30, 60, 120) if not page.handwritten else None)
     page.draw.line([(100, 160), (PAGE[0] - 100, 160)], fill=(30, 60, 120), width=3)
@@ -212,6 +214,9 @@ def notes(page: Page, doc: dict) -> None:
             continue
         if kind == "row":
             y = table_row(page, line, round(30 * scale), y)
+            continue
+        if kind == "box":
+            y = side_box(page, line["text"], round(28 * scale), y)
             continue
         base, indent, mark, colour = {
             "heading": (40, 100, "", (30, 60, 120)),
@@ -238,6 +243,19 @@ def notes(page: Page, doc: dict) -> None:
         raise SystemExit(f"the notes page {doc['title']} runs off the page")
 
 
+def side_box(page: Page, text: str, size: int, y: float) -> float:
+    """A framed box of printed text set off from the notes, as a textbook prints a note to the side;
+    returns the y below it."""
+    left, right, pad = 130, PAGE[0] - 100, 16
+    top = y + size * 0.4
+    lines = wrap(page, text, page.front_face, size, right - left - 2 * pad)
+    bottom = top + pad * 2 + len(lines) * size * 1.5
+    page.draw.rectangle([(left, top), (right, bottom)], outline=(90, 90, 90), width=2)
+    for i, part in enumerate(lines):
+        page.text((left + pad, top + pad + i * size * 1.5), part, page.front_face, size)
+    return bottom + size * 0.6
+
+
 # A table row's cell widths, as shares of the page between its margins.
 TABLE_COLUMNS = (0.24, 0.46, 0.30)
 
@@ -255,6 +273,37 @@ def table_row(page: Page, line: dict, size: int, y: float) -> float:
                   (30, 60, 120) if line.get("header") and not page.handwritten else None)
         x += width
     return y + height
+
+
+def word_book(page: Page, entries: list[dict]) -> None:
+    """A word book's entries: each headword with its pronunciation, one line per sense with its
+    part-of-speech label in red, and its extras under their labels."""
+    page.text((100, 90), "Word Book  어휘", LABEL_FACE, 44, (60, 60, 60))
+    y = 200
+    for entry in entries:
+        x = 100 + page.text((100, y), entry["front"], page.front_face, 48) + 24
+        page.text((x, y + 12), entry["pronunciation"], LABEL_FACE, 30, (90, 90, 90))
+        y += 72
+        for sense in entry["senses"]:
+            x = 140 + page.text((140, y), sense["pos"], LABEL_FACE, 32, (150, 40, 40)) + 18
+            page.text((x, y), sense["meaning"], page.back_face, 36)
+            y += 52
+        for extra in entry.get("extras", []):
+            x = 140 + page.text((140, y), extra["label"], LABEL_FACE, 28, (30, 60, 120)) + 16
+            page.text((x, y), extra["text"], page.front_face, 30)
+            y += 46
+        page.draw.line([(100, y + 4), (PAGE[0] - 100, y + 4)], fill=(200, 200, 200), width=1)
+        y += 28
+    if y > PAGE[1] - 60:
+        raise SystemExit("the word book page runs off the page")
+
+
+def word_book_card(entry: dict) -> dict:
+    """A word book entry's truth: its senses in order, and its extras and pronunciation."""
+    card = {"front": entry["front"], "senses": entry["senses"], "pronunciation": entry["pronunciation"]}
+    if "extras" in entry:
+        card["extras"] = entry["extras"]
+    return card
 
 
 RENDER = {"two-column": two_column, "bilingual-table": bilingual_table, "dictionary": dictionary, "glossary": glossary}
@@ -412,6 +461,31 @@ def main() -> None:
                 }
                 (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                         encoding="utf-8")
+    # The word book pages, after every page above: several labelled senses an entry, and a
+    # pronunciation per part of speech.
+    entries = vocabulary["word-book"]
+    for style in STYLES:
+        index += 1
+        rng = np.random.default_rng([SEED, index])
+        hand = style if style != "harsh" else ("print", "handwriting")[index % 2]
+        page = Page(rng, "en-ko", hand)
+        word_book(page, entries)
+        check_coverage(page.covered)
+        d = HARSH if style == "harsh" else MILD
+        photo = photograph(page.image, rng, d)
+        name = f"{index:02d}-word-book-en-ko-{style}"
+        photo.save(SAMPLES / f"{name}.jpg", quality=d.quality, optimize=False)
+        truth = {
+            "image": f"{name}.jpg",
+            "layout": "word-book",
+            "languages": {"front": "en", "back": "ko"},
+            "hand": hand,
+            "distortion": style if style == "harsh" else "mild",
+            "fonts": sorted({page.front_face, page.back_face, LABEL_FACE}),
+            "cards": [word_book_card(entry) for entry in entries],
+        }
+        (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                              encoding="utf-8")
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 

@@ -1,0 +1,121 @@
+{
+  "image": "45-word-book-en-ko-print.jpg",
+  "layout": "word-book",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "face",
+      "senses": [
+        {
+          "pos": "[동]",
+          "meaning": "직면하다, 마주하다"
+        },
+        {
+          "pos": "[명]",
+          "meaning": "표면, 겉면"
+        },
+        {
+          "pos": "[명]",
+          "meaning": "얼굴, 생김새"
+        }
+      ],
+      "pronunciation": "['feis]",
+      "extras": [
+        {
+          "label": "유의어",
+          "text": "confront"
+        }
+      ]
+    },
+    {
+      "front": "content",
+      "senses": [
+        {
+          "pos": "[명]",
+          "meaning": "내용, 목차"
+        },
+        {
+          "pos": "[형]",
+          "meaning": "만족하는"
+        }
+      ],
+      "pronunciation": "명 ['kantent] / 형 [kan'tent]",
+      "extras": [
+        {
+          "label": "반의어",
+          "text": "discontent"
+        }
+      ]
+    },
+    {
+      "front": "present",
+      "senses": [
+        {
+          "pos": "[명]",
+          "meaning": "선물"
+        },
+        {
+          "pos": "[형]",
+          "meaning": "현재의, 참석한"
+        },
+        {
+          "pos": "[동]",
+          "meaning": "주다, 제시하다"
+        }
+      ],
+      "pronunciation": "명·형 ['preznt] / 동 [pri'zent]",
+      "extras": [
+        {
+          "label": "파생어",
+          "text": "presentation"
+        }
+      ]
+    },
+    {
+      "front": "record",
+      "senses": [
+        {
+          "pos": "[명]",
+          "meaning": "기록"
+        },
+        {
+          "pos": "[동]",
+          "meaning": "기록하다, 녹음하다"
+        }
+      ],
+      "pronunciation": "명 ['rekord] / 동 [ri'kord]"
+    },
+    {
+      "front": "light",
+      "senses": [
+        {
+          "pos": "[명]",
+          "meaning": "빛"
+        },
+        {
+          "pos": "[형]",
+          "meaning": "가벼운"
+        },
+        {
+          "pos": "[동]",
+          "meaning": "불을 붙이다"
+        }
+      ],
+      "pronunciation": "['lait]",
+      "extras": [
+        {
+          "label": "반의어",
+          "text": "heavy"
+        }
+      ]
+    }
+  ]
+}
