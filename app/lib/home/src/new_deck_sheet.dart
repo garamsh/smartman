@@ -72,15 +72,13 @@ Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
   await reportingFailure(context, () => repository.createDeck(name));
 }
 
-/// Opens photo import for a new deck, then the deck it saved into.
+/// Starts photo import for a new deck, then opens the deck it saved into.
 Future<void> importDeckFromPhoto(
   BuildContext context,
-  Widget Function(DeckId? deck) photoImport,
+  PhotoImport photoImport,
 ) async {
   final navigator = Navigator.of(context);
-  final deck = await navigator.push(
-    MaterialPageRoute<Deck>(builder: (_) => photoImport(null)),
-  );
+  final deck = await photoImport(context, null);
   if (deck == null || !context.mounted) return;
   await navigator.push(
     MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),

@@ -65,7 +65,10 @@ final class Review {
   /// Every row of the photo, offered or not, each keeping its edits, its
   /// checkbox and its duplicate option while a step hides it.
   final List<ReviewRow> rows;
-  final Set<CardKey> existingKeys;
+
+  /// The keys the deck the rows go into holds; replaced when the user
+  /// chooses another deck.
+  Set<CardKey> existingKeys;
 
   /// Which rows are offered and how much each answer says; changing it
   /// recomposes every answer the user did not type.

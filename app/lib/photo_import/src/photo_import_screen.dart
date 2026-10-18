@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../deck/deck.dart';
+import '../../design/app_list_row.dart';
+import '../../design/app_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
-import 'capture_view.dart';
 import 'detail_step.dart';
 import 'extracting_view.dart';
 import 'extraction_client.dart';
@@ -23,38 +25,95 @@ final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
   (ref) => ref.watch(deckRepositoryProvider).watchDecks(),
 );
 
-/// Takes or picks one photo, extracts candidate cards from it, and saves the
-/// ones the user keeps into [deck], or into a new deck when it is null, the
-/// rows offered and their answers composed at the detail step kept in
-/// [preferences]. Nothing is written before the user confirms; the screen then
-/// pops with the [Deck] it saved into.
-class PhotoImportScreen extends ConsumerStatefulWidget {
-  const PhotoImportScreen({
-    super.key,
+/// Offers the camera and the library over [context], and with the photo
+/// taken or picked opens the screen that extracts candidate cards from it and
+/// saves the ones the user keeps into [deck], or into a new deck when it is
+/// null, the rows offered and their answers composed at the detail step kept
+/// in [preferences], opened to cache [detailStepStorageKeys]. A cancel opens
+/// nothing. Nothing is written before the user confirms; resolves to the
+/// [Deck] saved into, or to null.
+Future<Deck?> importFromPhoto(
+  BuildContext context, {
+  required DeckId? deck,
+  required ExtractionClient client,
+  required PhotoSource photos,
+  required SharedPreferencesWithCache preferences,
+}) async {
+  final navigator = Navigator.of(context);
+  final first = await _choosePhoto(context, photos);
+  if (first == null) return null;
+  return navigator.push(
+    MaterialPageRoute<Deck>(
+      builder: (_) => _PhotoImportScreen(
+        first: first,
+        deck: deck,
+        client: client,
+        photos: photos,
+        preferences: preferences,
+      ),
+    ),
+  );
+}
+
+/// Offers "사진 찍기" and "앨범에서 고르기" in a sheet over [context], then
+/// the one chosen. Resolves to extracting its photo, or to the failure that
+/// came instead; null when the sheet or the picker is cancelled.
+Future<_Stage?> _choosePhoto(BuildContext context, PhotoSource photos) async {
+  final l10n = AppLocalizations.of(context);
+  final source = await showAppSheet<Future<JpegPhoto?> Function()>(
+    context,
+    builder: (context) => AppSheet(
+      title: l10n.photoSourceTitle,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppListRow(
+            title: l10n.photoCamera,
+            leading: const Icon(LucideIcons.camera),
+            onSheet: true,
+            onTap: () => Navigator.of(context).pop(photos.takePhoto),
+          ),
+          AppListRow(
+            title: l10n.photoAlbum,
+            leading: const Icon(LucideIcons.images),
+            onSheet: true,
+            onTap: () => Navigator.of(context).pop(photos.pickFromLibrary),
+          ),
+        ],
+      ),
+    ),
+  );
+  try {
+    final photo = await source?.call();
+    return photo == null ? null : _Extracting(photo);
+  } on PhotoImportFailure catch (failure) {
+    return _Failed(failure, null);
+  }
+}
+
+class _PhotoImportScreen extends ConsumerStatefulWidget {
+  const _PhotoImportScreen({
+    required this.first,
     required this.deck,
     required this.client,
     required this.photos,
     required this.preferences,
   });
 
+  /// The photo to extract from, or the failure that came instead of one.
+  final _Stage first;
+
   final DeckId? deck;
   final ExtractionClient client;
   final PhotoSource photos;
-
-  /// The device storage the detail step is kept in, opened to cache
-  /// [detailStepStorageKeys].
   final SharedPreferencesWithCache preferences;
 
   @override
-  ConsumerState<PhotoImportScreen> createState() => _PhotoImportScreenState();
+  ConsumerState<_PhotoImportScreen> createState() => _PhotoImportScreenState();
 }
 
 sealed class _Stage {
   const _Stage();
-}
-
-final class _Capturing extends _Stage {
-  const _Capturing();
 }
 
 final class _Extracting extends _Stage {
@@ -79,8 +138,8 @@ final class _Reviewing extends _Stage {
   final Review review;
 }
 
-class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
-  _Stage _stage = const _Capturing();
+class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
+  late _Stage _stage = widget.first;
 
   /// The deck the cards go into; null for a new deck.
   late DeckId? _target = widget.deck;
@@ -88,6 +147,12 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
   late DetailStep _step = readDetailStep(widget.preferences);
 
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_stage case final _Extracting stage) _extract(stage);
+  }
 
   @override
   void dispose() {
@@ -104,19 +169,7 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
       AsyncData(:final value) => value.where((deck) => deck.id == _target),
       _ => const <Deck>[],
     }.firstOrNull;
-    final l10n = AppLocalizations.of(context);
-    final targetName = target?.name ?? l10n.newDeck;
     return switch (_stage) {
-      _Capturing() => CaptureView(
-        photos: widget.photos,
-        decks: decks.value ?? const [],
-        target: target,
-        onTarget: (deck) => setState(() => _target = deck),
-        step: _step,
-        onStep: _chooseStep,
-        onPhoto: _extract,
-        onFailure: (failure) => setState(() => _stage = _Failed(failure, null)),
-      ),
       _Extracting(:final photo) => ExtractingView(
         photo: photo,
         onCancel: _cancel,
@@ -125,12 +178,15 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
         failure: failure,
         onRetry: photo == null || !isRetryable(failure)
             ? null
-            : () => _extract(photo),
+            : () => _start(_Extracting(photo)),
         onRetake: _retake,
+        onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
       _Reviewing(:final review) => ReviewView(
         review: review,
-        deckName: targetName,
+        decks: decks.value ?? const [],
+        target: target,
+        onTarget: (deck) => _chooseTarget(review, deck),
         saving: _saving,
         onStep: _chooseStep,
         onChanged: () => setState(() {}),
@@ -140,35 +196,54 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
     };
   }
 
-  Future<void> _extract(JpegPhoto photo) async {
-    final stage = _Extracting(photo);
+  /// Shows [stage], and extracts when it is extracting.
+  void _start(_Stage stage) {
     setState(() => _stage = stage);
+    if (stage case final _Extracting stage) _extract(stage);
+  }
+
+  Future<void> _extract(_Extracting stage) async {
     final target = _target;
     final repository = ref.read(deckRepositoryProvider);
+    final navigator = Navigator.of(context);
     bool current() => mounted && identical(_stage, stage);
     try {
       final cards = await widget.client.extract(
-        photo,
+        stage.photo,
         cancel: stage.cancel.future,
       );
       if (cards == null || !current()) return;
-      final existing = target == null
-          ? const <Card>[]
-          : await repository.listCards(target);
+      final existing = await _keysOf(repository, target);
       if (!current()) return;
-      setState(
-        () => _stage = _Reviewing(
-          Review(cards, {
-            for (final card in existing) card.cardKey,
-          }, step: _step),
-        ),
-      );
+      setState(() => _stage = _Reviewing(Review(cards, existing, step: _step)));
     } on PhotoImportFailure catch (failure) {
-      if (current()) setState(() => _stage = _Failed(failure, photo));
+      if (current()) setState(() => _stage = _Failed(failure, stage.photo));
     } on DeckFailure catch (failure) {
       if (!current()) return;
       _showDeckFailure(failure);
-      setState(() => _stage = const _Capturing());
+      navigator.pop();
+    }
+  }
+
+  /// The card keys [deck] holds; none for a new deck.
+  static Future<Set<CardKey>> _keysOf(
+    DeckRepository repository,
+    DeckId? deck,
+  ) async => deck == null
+      ? const {}
+      : {for (final card in await repository.listCards(deck)) card.cardKey};
+
+  /// Saves into [deck] from now on, with the rows grouped against its keys
+  /// once they are read.
+  Future<void> _chooseTarget(Review review, DeckId? deck) async {
+    setState(() => _target = deck);
+    try {
+      final existing = await _keysOf(ref.read(deckRepositoryProvider), deck);
+      if (mounted && _target == deck) {
+        setState(() => review.existingKeys = existing);
+      }
+    } on DeckFailure catch (failure) {
+      _showDeckFailure(failure);
     }
   }
 
@@ -183,10 +258,23 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
 
   void _cancel() {
     if (_stage case _Extracting(:final cancel)) cancel.complete();
-    setState(() => _stage = const _Capturing());
+    Navigator.of(context).pop();
   }
 
-  void _retake() => setState(() => _stage = const _Capturing());
+  /// Offers the camera and the library again; a cancel leaves the screen as
+  /// it was.
+  Future<void> _retake() async {
+    final stage = await _choosePhoto(context, widget.photos);
+    if (stage != null && mounted) _start(stage);
+  }
+
+  Future<void> _openSettings() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (!await widget.photos.openSettings()) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsNotOpened)));
+    }
+  }
 
   Future<void> _save(Review review) async {
     final l10n = AppLocalizations.of(context);

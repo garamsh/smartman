@@ -115,7 +115,8 @@ Widget composeApp(
       photoImportProvider.overrideWithValue(
         extraction == null
             ? null
-            : (deck) => PhotoImportScreen(
+            : (context, deck) => importFromPhoto(
+                context,
                 deck: deck,
                 client: extraction,
                 photos: const DevicePhotoSource(),

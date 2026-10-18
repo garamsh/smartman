@@ -23,19 +23,26 @@ void main() {
   const usageKeys = [
     'NSCameraUsageDescription',
     'NSPhotoLibraryUsageDescription',
-    'NSMicrophoneUsageDescription',
   ];
 
-  test('Info.plist describes camera, photo library and microphone use', () {
-    final plist = _plistStrings('ios/Runner/Info.plist');
-    // Control: the reader finds a key the plist has always held.
-    expect(plist['CFBundleDisplayName'], 'Smartman');
+  /// What only the in-app camera asked for; the system camera takes photos
+  /// without sound.
+  const microphoneKey = 'NSMicrophoneUsageDescription';
 
-    for (final key in usageKeys) {
-      expect(plist[key], isNotNull, reason: key);
-      expect(plist[key]!.trim(), isNotEmpty, reason: key);
-    }
-  });
+  test(
+    'Info.plist describes camera and photo library use, and not the microphone',
+    () {
+      final plist = _plistStrings('ios/Runner/Info.plist');
+      // Control: the reader finds a key the plist has always held.
+      expect(plist['CFBundleDisplayName'], 'Smartman');
+
+      for (final key in usageKeys) {
+        expect(plist[key], isNotNull, reason: key);
+        expect(plist[key]!.trim(), isNotEmpty, reason: key);
+      }
+      expect(plist.containsKey(microphoneKey), isFalse);
+    },
+  );
 
   test('the usage descriptions are in Korean and English, and the project ships both', () {
     final korean = _strings('ios/Runner/ko.lproj/InfoPlist.strings');
@@ -47,6 +54,8 @@ void main() {
       expect(english[key], isNot(matches(hangul)), reason: key);
       expect(english[key], isNotEmpty, reason: key);
     }
+    expect(korean.containsKey(microphoneKey), isFalse);
+    expect(english.containsKey(microphoneKey), isFalse);
     final project = File('ios/Runner.xcodeproj/project.pbxproj')
         .readAsStringSync();
     expect(project, contains('path = ko.lproj/InfoPlist.strings;'));
@@ -54,19 +63,15 @@ void main() {
     expect(project, contains('/* InfoPlist.strings in Resources */,'));
   });
 
-  test('the Android manifest asks for the camera and drops the microphone', () {
+  test('the Android manifest declares neither the camera nor the microphone, so the camera intent asks for no permission', () {
     final manifest = File('android/app/src/main/AndroidManifest.xml')
         .readAsStringSync();
+    // Control: the reader sees the manifest's own declarations.
+    expect(manifest, contains('android.intent.action.PROCESS_TEXT'));
 
-    expect(
-      manifest,
-      contains('<uses-permission android:name="android.permission.CAMERA" />'),
-    );
-    expect(
-      manifest,
-      contains(
-        '<uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />',
-      ),
-    );
+    // image_picker asks for the camera permission when the manifest declares
+    // it, and its camera intent fails without it.
+    expect(manifest, isNot(contains('android.permission.CAMERA')));
+    expect(manifest, isNot(contains('android.permission.RECORD_AUDIO')));
   });
 }

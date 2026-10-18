@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Card;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
@@ -6,6 +6,7 @@ import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
 import '../../design/app_list_row.dart';
 import '../../design/app_section_label.dart';
+import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
@@ -13,14 +14,16 @@ import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
 import 'detail_step.dart';
 
-/// The detail step, over the candidates it offers to check, edit or leave
-/// out, with those whose key the deck already holds grouped below with a
-/// duplicate option each.
+/// The deck the cards go into and the detail step, over the candidates the
+/// step offers to check, edit or leave out, with those whose key the deck
+/// already holds grouped below with a duplicate option each.
 class ReviewView extends StatelessWidget {
   const ReviewView({
     super.key,
     required this.review,
-    required this.deckName,
+    required this.decks,
+    required this.target,
+    required this.onTarget,
     required this.saving,
     required this.onStep,
     required this.onChanged,
@@ -29,7 +32,14 @@ class ReviewView extends StatelessWidget {
   });
 
   final Review review;
-  final String deckName;
+  final List<Deck> decks;
+
+  /// The deck the cards go into; null for a new deck.
+  final Deck? target;
+
+  /// Chooses the deck the cards go into; null for a new deck.
+  final ValueChanged<DeckId?> onTarget;
+
   final bool saving;
 
   /// Chooses the detail step, which changes the rows offered and recomposes
@@ -88,8 +98,17 @@ class ReviewView extends StatelessWidget {
           ),
           const SizedBox(height: AppSpace.s4),
           Text(
-            l10n.reviewHint(deckName),
+            l10n.reviewHint,
             style: AppType.secondary.copyWith(color: colors.muted),
+          ),
+          const SizedBox(height: AppSpace.s12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppChip(
+              label: l10n.photoTarget(target?.name ?? l10n.newDeck),
+              icon: LucideIcons.chevronDown,
+              onPressed: () => _chooseTarget(context),
+            ),
           ),
           const SizedBox(height: AppSpace.s16),
           DetailStepSlider(step: review.step, onChanged: onStep),
@@ -134,6 +153,49 @@ class ReviewView extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _chooseTarget(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    Widget check(bool chosen) => chosen
+        ? Icon(LucideIcons.check, color: colors.know)
+        : const SizedBox.shrink();
+    final chosen = await showAppSheet<_TargetChoice>(
+      context,
+      builder: (context) => AppSheet(
+        title: l10n.photoTargetTitle,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final deck in decks)
+              AppListRow(
+                title: deck.name,
+                onSheet: true,
+                selected: deck.id == target?.id,
+                trailing: check(deck.id == target?.id),
+                onTap: () => Navigator.of(context).pop(_TargetChoice(deck.id)),
+              ),
+            AppListRow(
+              title: l10n.newDeck,
+              leading: const Icon(LucideIcons.plus),
+              onSheet: true,
+              selected: target == null,
+              trailing: check(target == null),
+              onTap: () => Navigator.of(context).pop(const _TargetChoice(null)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) onTarget(chosen.deck);
+  }
+}
+
+/// A choice in the target sheet; null [deck] is a new deck.
+final class _TargetChoice {
+  const _TargetChoice(this.deck);
+
+  final DeckId? deck;
 }
 
 /// A candidate: its checkbox, its front and its answer at [step] split by a

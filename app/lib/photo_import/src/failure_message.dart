@@ -14,7 +14,7 @@ String describePhotoImportFailure(
   SignInRequired() => l10n.signInRequired,
   ServiceFailed() => l10n.serviceFailed,
   PhotoUnreadable() => l10n.photoUnreadable,
-  CameraDenied() => l10n.cameraDenied,
+  PhotoAccessDenied() => l10n.photoAccessDenied,
   CameraUnavailable() => l10n.cameraUnavailable,
 };
 
@@ -26,7 +26,7 @@ bool isRetryable(PhotoImportFailure failure) => switch (failure) {
   DailyLimitReached() ||
   SignInRequired() ||
   PhotoUnreadable() ||
-  CameraDenied() ||
+  PhotoAccessDenied() ||
   CameraUnavailable() => false,
 };
 
@@ -39,6 +39,6 @@ bool isRetakeable(PhotoImportFailure failure) => switch (failure) {
   PhotoRefused() ||
   NoCardsFound() ||
   PhotoUnreadable() ||
-  CameraDenied() ||
+  PhotoAccessDenied() ||
   CameraUnavailable() => true,
 };
