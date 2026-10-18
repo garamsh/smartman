@@ -62,6 +62,21 @@ A later run on 2026-10-18, by the PM, of Claude Haiku 5.5 and Claude Sonnet 5.5 
 | Claude Haiku 5.5 | 99.0 | 99.0 | 99.0 | 100.0 | 100.0 | 0.0 | 5.1 s | 6.2 s | $0.0009 |
 | Claude Sonnet 5.5 | 100.0 | 100.0 | 100.0 | 100.0 | 100.0 | 0.0 | 5.7 s | 7.2 s | $0.0161 |
 
+## 2026-10-18 notes runs on prompt v5
+
+Later runs on 2026-10-18, by the PM, over samples 27, 33, 35 and 37 to 40, with prompt v5 (#191). Their figures are as the PM reported them for #192; their spend is in `tools/eval/spend.json`.
+
+| Configuration | Coverage | Unsupported | Invented examples | Cost per image | p50 latency |
+|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 78.2 | 22.7 | 0.0 | $0.0229 | 9.2 s |
+| Claude Sonnet 5.5 outline, Claude Haiku 5.5 fill | 72.3 | 27.8 | 1.2 | $0.0179 | 16.9 s |
+| OpenAI GPT 6.1 Sol | 75.5 | 22.0 | 7.5 | $0.0227 | 29.3 s |
+| OpenAI GPT 6 Luna | 67.3 | 20.7 | — | $0.0016 | 24.9 s |
+| Google Gemini 4 Argon | — | — | — | — | — |
+
+- The outline-then-fill configuration's cost is $0.0158 for the outline call and $0.0021 for the fill, per image.
+- Google Gemini 4 Argon stopped after two model errors, Google's `400 INVALID_ARGUMENT`; neither call was billed.
+
 ## Recommendation
 
 - Claude Sonnet 5.5: the cheapest configuration whose vocabulary F1 is within 2 points of the best and whose notes coverage at step 5 is within 5 points of the best.

@@ -272,15 +272,7 @@ const notesTruth = {
     "예) 253+4637+647898=652788 -> 연역",
   ],
 };
-const noteCard = (
-  front: string,
-  answer: string,
-  step: 1 | 2 | 3 | 4 | 5 = 1,
-) => ({
-  front,
-  answer,
-  step,
-});
+const noteCard = (front: string, answer: string) => ({ front, answer });
 
 Deno.test("a card covers a fact when its front and answer hold every term after normalization", () => {
   const fact = notesTruth.facts[1];
@@ -306,7 +298,7 @@ Deno.test("a card covers a fact when its front and answer hold every term after 
 Deno.test("a card's examples do not cover a rule, whose terms its front and answer must hold", () => {
   const fact = notesTruth.facts[3];
   const card = {
-    ...noteCard("연역 논증", "전제가 참이면 결론이 반드시 참", 1),
+    ...noteCard("연역 논증", "전제가 참이면 결론이 반드시 참"),
     examples: ["결론 지시어 따라서 -> 연역"],
   };
   assert.equal(covers(card, fact), false);
@@ -316,30 +308,28 @@ Deno.test("a card's examples do not cover a rule, whose terms its front and answ
     "control: the same terms in the front and answer",
   );
   const notes = scoreNotes([card], notesTruth);
-  assert.equal(notes.coverage[4], 1 / 4, "the deduction rule alone");
+  assert.equal(notes.coverage, 1 / 4, "the deduction rule alone");
   assert.equal(notes.unsupported, 0);
 });
 
-Deno.test("coverage at a step counts the facts of that step or below covered by cards of that step or below", () => {
+Deno.test("coverage is the share of the page's facts some card covers, whatever the fact's step", () => {
   const notes = scoreNotes([
-    noteCard("연역 논증", "전제가 참이면 결론이 반드시 참", 1),
-    // The premise fact, offered only from step 4.
-    noteCard("전제란?", "결론을 뒷받침하는 근거", 4),
+    noteCard("연역 논증", "전제가 참이면 결론이 반드시 참"),
+    noteCard("결론 지시어", "따라서, 그러므로"),
   ], notesTruth);
-  assert.deepEqual(notes.coverage, [1, 1 / 2, 1 / 3, 2 / 3, 2 / 4]);
+  assert.equal(notes.coverage, 2 / 4, "the step-1 and step-5 rules");
 });
 
 Deno.test("an image with no candidates covers nothing and has no counts", () => {
   const notes = scoreNotes([], notesTruth);
-  assert.deepEqual(notes.coverage, [0, 0, 0, 0, 0]);
+  assert.equal(notes.coverage, 0);
   assert.equal(notes.cards, 0);
-  assert.equal(notes.pairs, 0);
 });
 
 Deno.test("a card covering no fact is unsupported", () => {
   const notes = scoreNotes([
-    noteCard("연역 논증", "결론이 반드시 참", 1),
-    noteCard("논리학의 아버지는?", "아리스토텔레스", 2),
+    noteCard("연역 논증", "결론이 반드시 참"),
+    noteCard("논리학의 아버지는?", "아리스토텔레스"),
   ], notesTruth);
   assert.equal(notes.cards, 2);
   assert.equal(notes.unsupported, 1, "control: the first card covers a fact");
@@ -347,7 +337,7 @@ Deno.test("a card covering no fact is unsupported", () => {
 
 Deno.test("an example the page does not print is invented, and one printed with or without its label is not", () => {
   const notes = scoreNotes([{
-    ...noteCard("연역 논증", "결론이 반드시 참", 1),
+    ...noteCard("연역 논증", "결론이 반드시 참"),
     examples: [
       "253+4637+647898=652788 -> 연역",
       "예) 253+4637+647898=652788 -> 연역",
@@ -360,7 +350,7 @@ Deno.test("an example the page does not print is invented, and one printed with 
 
 Deno.test("an example printed inside a rule's line is not invented, and one no line prints is", () => {
   const notes = scoreNotes([{
-    ...noteCard("'하다'의 어미는?", "'-여'가 붙는다", 2),
+    ...noteCard("'하다'의 어미는?", "'-여'가 붙는다"),
     examples: ["하+여 -> 하여(해)", "하+어 -> 해어"],
   }], notesTruth);
   assert.equal(notes.examples, 2);
@@ -369,20 +359,6 @@ Deno.test("an example printed inside a rule's line is not invented, and one no l
     1,
     "the rule line holds the first; control: no line holds the second",
   );
-});
-
-Deno.test("step order counts the pairs of covered facts the returned steps order alike, and their ties", () => {
-  const notes = scoreNotes([
-    noteCard("연역", "결론이 반드시 참", 1),
-    noteCard("귀납", "결론이 개연적으로 참", 3),
-    // Placed above the induction card, though the page puts it at step 3.
-    noteCard("전제", "근거가 되는 문장", 2),
-    noteCard("결론 지시어", "따라서, 그러므로", 3),
-  ], notesTruth);
-  // Pairs: (1,2) alike, (1,3) alike, (1,5) alike, (2,3) reversed, (2,5) tie, (3,5) alike.
-  assert.equal(notes.pairs, 6);
-  assert.equal(notes.concordant, 4);
-  assert.equal(notes.ties, 1);
 });
 
 Deno.test("summarize averages notes coverage over the notes images and pools their counts", () => {
@@ -395,11 +371,11 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
     completionTokens: 50,
   };
   const full = scoreNotes([
-    noteCard("연역", "결론이 반드시 참", 1),
-    noteCard("귀납", "결론이 개연적으로 참", 2),
-    noteCard("전제", "근거가 되는 문장", 3),
+    noteCard("연역", "결론이 반드시 참"),
+    noteCard("귀납", "결론이 개연적으로 참"),
+    noteCard("전제", "근거가 되는 문장"),
     {
-      ...noteCard("결론 지시어", "따라서, 그러므로", 5),
+      ...noteCard("결론 지시어", "따라서, 그러므로"),
       examples: ["652788 -> 연역"],
     },
   ], notesTruth);
@@ -425,10 +401,9 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
   ]);
   assert.equal(row.f1, 1, "vocabulary scores average over vocabulary images");
   assert.deepEqual(row.notes, {
-    coverage: [0.5, 0.5, 0.5, 0.5, 0.5],
+    coverage: 0.5,
     unsupportedRate: 0,
     inventedExamplesRate: 0,
-    stepAgreement: 1,
     pages: [
       { name: "02-notes", coverage: 1, completionTokens: 900 },
       { name: "03-notes", coverage: 0, completionTokens: 0 },
@@ -437,15 +412,14 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
   assert.ok(Math.abs(row.costPerImageUsd - 0.02) < 1e-12, "over every image");
 });
 
-const notesRow = (coverage5: number): NotesRow => ({
-  coverage: [null, null, null, null, coverage5],
+const notesRow = (coverage: number): NotesRow => ({
+  coverage,
   unsupportedRate: null,
   inventedExamplesRate: null,
-  stepAgreement: null,
   pages: [],
 });
 
-Deno.test("with notes results, the recommendation must also be within 5 points of the best coverage at step 5", () => {
+Deno.test("with notes results, the recommendation must also be within 5 points of the best notes coverage", () => {
   const rows = [
     row("best", 0.95, 0.05, notesRow(0.9)),
     row("cheap but misses notes", 0.95, 0.001, notesRow(0.8)),

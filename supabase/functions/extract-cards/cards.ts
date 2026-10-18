@@ -16,9 +16,9 @@ export type CardKind = (typeof KINDS)[number];
 
 /**
  * One candidate card, each text field plain, trimmed and non-empty. `front` is the headword or
- * the name of the concept a note states; `answer` the fullest answer the page supports and
- * `short` a shorter form of it; `step` the detail step from which the card is offered; `topic`
- * the name of the page section the card comes from. A vocabulary card also carries
+ * the name of the concept a note states; `answer` the fullest answer the page supports; `topic`
+ * the name of the page section the card comes from. `short` and `step` are for an app that
+ * reads them, which offered cards by step on a slider (ADR 0052): the answer, and step 1. A vocabulary card also carries
  * `meaning` (its answer), and `partOfSpeech` and `examples` when the page prints them; a note
  * card may carry `examples` the page prints. `back` is the answer an app that reads only
  * `front` and `back` shows: a vocabulary card's `composeBack`, or a note card's `answer`.
@@ -44,9 +44,9 @@ const field = {
 
 /**
  * The structured-output schema sent to the model; `parseCards` enforces the same limits and,
- * beyond what a schema can say, that `short` is no longer than `answer` and that only a
- * vocabulary card has a part of speech. Strict structured outputs require every key, so an
- * absent part of speech is `null` and absent examples are an empty list.
+ * beyond what a schema can say, that only a vocabulary card has a part of speech. Strict
+ * structured outputs require every key, so an absent part of speech is `null` and absent
+ * examples are an empty list. The model writes no `short` or `step`: the parser fills both.
  */
 export const cardsSchema = {
   type: "object",
@@ -60,8 +60,6 @@ export const cardsSchema = {
           kind: { type: "string", enum: [...KINDS] },
           front: field,
           answer: { ...field, maxLength: MAX_ANSWER_CHARS },
-          short: field,
-          step: { type: "integer", enum: [...STEPS] },
           topic: { ...field, maxLength: MAX_TOPIC_CHARS },
           partOfSpeech: { ...field, type: ["string", "null"] },
           examples: { type: "array", maxItems: MAX_EXAMPLES, items: field },
@@ -70,8 +68,6 @@ export const cardsSchema = {
           "kind",
           "front",
           "answer",
-          "short",
-          "step",
           "topic",
           "partOfSpeech",
           "examples",
@@ -120,30 +116,24 @@ function parseCard(item: unknown): Card | null {
       "kind",
       "front",
       "answer",
-      "short",
-      "step",
       "topic",
       "partOfSpeech",
       "examples",
     ])
   ) return null;
   const kind = KINDS.find((known) => known === item.kind);
-  const step = STEPS.find((known) => known === item.step);
   const front = text(item.front, MAX_FIELD_CHARS);
   const answer = text(item.answer, MAX_ANSWER_CHARS);
-  const short = text(item.short, MAX_FIELD_CHARS);
   const topic = text(item.topic, MAX_TOPIC_CHARS);
   const partOfSpeech = item.partOfSpeech === null
     ? undefined
     : text(item.partOfSpeech, MAX_FIELD_CHARS);
   if (
-    kind === undefined || step === undefined || front === null ||
-    answer === null || short === null || topic === null ||
-    partOfSpeech === null ||
+    kind === undefined || front === null || answer === null ||
+    topic === null || partOfSpeech === null ||
     !Array.isArray(item.examples) || item.examples.length > MAX_EXAMPLES
   ) return null;
-  // The shorter form is never the longer one, and notes carry no part of speech.
-  if ([...short].length > [...answer].length) return null;
+  // Notes carry no part of speech.
   if (kind === "note" && partOfSpeech !== undefined) return null;
   const examples: string[] = [];
   for (const example of item.examples) {
@@ -155,8 +145,9 @@ function parseCard(item: unknown): Card | null {
     kind,
     front,
     answer,
-    short,
-    step,
+    // For an app that reads them: every card at the first step, its answer its short form.
+    short: answer,
+    step: STEPS[0],
     topic,
     ...(examples.length === 0 ? {} : { examples }),
   };

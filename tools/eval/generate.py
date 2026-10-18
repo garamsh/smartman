@@ -160,10 +160,14 @@ NOTE_FACES = {"print": "NanumGothic-Regular.ttf", "handwriting": "NanumPenScript
 NOTE_LANGUAGES = ["ko", "en"]
 NOTE_HANDS = ["print", "handwriting"]
 NOTE_DISTORTIONS = ["mild", "harsh"]
-# The dense pages, each in every hand and distortion after the pages above: many small rules,
-# worked examples, and exceptions the writer marked with a star or a circle.
-DENSE_DOCUMENTS = ["ko-grammar"]
+# The further pages, each in every hand and distortion after the pages above: a dense page of
+# many small rules, worked examples and marked exceptions, and a page with a classification
+# table and the writer's own additions in pen.
+DENSE_DOCUMENTS = ["ko-grammar", "ko-auxiliary"]
 MARK_COLOUR = (190, 40, 40)
+# A line the writer added by hand, in pen, in the handwriting face on every page.
+ADDITION_COLOUR = (30, 90, 170)
+ADDITION_FACE = NOTE_FACES["handwriting"]
 
 
 def wrap(page: Page, text: str, face: str, size: int, width: float) -> list[str]:
@@ -189,16 +193,26 @@ def star(page: Page, centre: tuple[float, float], radius: float) -> None:
 
 
 def notes(page: Page, doc: dict) -> None:
-    """A page of notes: a title, headings, points and sub-points under them, and examples; a
-    dense page sets them at its `scale`, and a line's `mark` draws a star before it or a circle
-    around its first line."""
-    face = page.front_face
+    """A page of notes: a title, headings, points and sub-points under them, examples, and table
+    rows whose cells `text` separates with " | "; a page sets them at its `scale`. A line's `mark`
+    draws a star before it or a circle around its first line; a line with `hand` is the writer's
+    addition in pen, and an `aside` is one written beside the heading above it."""
     scale = doc.get("scale", 1.0)
-    page.text((100, 80), doc["title"], face, 50, (30, 60, 120) if not page.handwritten else None)
+    page.text((100, 80), doc["title"], page.front_face, 50, (30, 60, 120) if not page.handwritten else None)
     page.draw.line([(100, 160), (PAGE[0] - 100, 160)], fill=(30, 60, 120), width=3)
     y = 200
+    heading_end = (0.0, 0.0)
     for line in doc["lines"]:
         kind = line["kind"]
+        added = line.get("hand", False) or kind == "aside"
+        face = ADDITION_FACE if added else page.front_face
+        if kind == "aside":
+            x, at = heading_end
+            page.text((x + 40, at), line["text"], face, round(30 * scale), ADDITION_COLOUR)
+            continue
+        if kind == "row":
+            y = table_row(page, line, round(30 * scale), y)
+            continue
         base, indent, mark, colour = {
             "heading": (40, 100, "", (30, 60, 120)),
             "point": (32, 130, "- ", None),
@@ -206,19 +220,41 @@ def notes(page: Page, doc: dict) -> None:
             "example": (30, 160, "", (120, 60, 30)),
         }[kind]
         size = round(base * scale)
+        colour = ADDITION_COLOUR if added else colour
         if kind == "heading":
             y += 14
         if line.get("mark") == "star":
             star(page, (indent - 28, y + size * 0.6), size * 0.55)
         for i, part in enumerate(wrap(page, mark + line["text"], face, size, PAGE[0] - 100 - indent)):
             x = indent + (0 if i == 0 else page.width(mark, face, size))
-            width = page.text((x, y), part, face, size, None if page.handwritten else colour)
+            width = page.text((x, y), part, face, size, colour if added or not page.handwritten else None)
+            if i == 0 and kind == "heading":
+                heading_end = (x + width, y)
             if i == 0 and line.get("mark") == "circle":
                 page.draw.ellipse([(x - 16, y - size * 0.15), (x + width + 16, y + size * 1.35)],
                                   outline=MARK_COLOUR, width=3)
             y += size * 1.55
     if y > PAGE[1] - 60:
         raise SystemExit(f"the notes page {doc['title']} runs off the page")
+
+
+# A table row's cell widths, as shares of the page between its margins.
+TABLE_COLUMNS = (0.24, 0.46, 0.30)
+
+
+def table_row(page: Page, line: dict, size: int, y: float) -> float:
+    """One row of a ruled table, its cells from `text` split at " | ", a header row when
+    `header` is set; returns the y below it."""
+    left, right = 130, PAGE[0] - 100
+    height = size * 1.9
+    x = float(left)
+    for share, cell in zip(TABLE_COLUMNS, line["text"].split(" | ")):
+        width = (right - left) * share
+        page.draw.rectangle([(x, y), (x + width, y + height)], outline=(90, 90, 90), width=2)
+        page.text((x + 12, y + size * 0.45), cell, page.front_face, size,
+                  (30, 60, 120) if line.get("header") and not page.handwritten else None)
+        x += width
+    return y + height
 
 
 RENDER = {"two-column": two_column, "bilingual-table": bilingual_table, "dictionary": dictionary, "glossary": glossary}

@@ -24,8 +24,6 @@ const CARD = {
   kind: "vocabulary",
   front: "apple",
   answer: "사과",
-  short: "사과",
-  step: 1,
   topic: "Fruit",
   partOfSpeech: null,
   examples: [],

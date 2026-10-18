@@ -19,7 +19,7 @@ import {
   type Models,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v4.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v5.ts";
 import type {
   Image,
   LanguageHints,
@@ -520,7 +520,7 @@ export function report(
     "- The samples are synthetic: printed and handwritten-style pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
     "- Over the matched cards of every image, in percent: part of speech and examples are the share equal to the page's after the same normalization; invented is the share of present parts of speech and example lists on an entry whose page prints none. A dash means the configuration returned no such field.",
-    "- Notes pages, in percent: coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, its front and answer holding each of the fact's terms after the same normalization; the facts are the page's rules and exceptions, and its worked examples are not facts, averaged over the images; unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed; step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half.",
+    "- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed.",
     "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -554,7 +554,7 @@ export function report(
     "",
     pick === null
       ? "- None: no configuration is within both bounds below, or none completed."
-      : `- ${pick.label}: the cheapest configuration whose vocabulary F1 is within 2 points of the best and whose notes coverage at step 5 is within 5 points of the best.`,
+      : `- ${pick.label}: the cheapest configuration whose vocabulary F1 is within 2 points of the best and whose notes coverage is within 5 points of the best.`,
     "",
     "## Spend",
     "",
@@ -575,22 +575,20 @@ function notesSection(rows: readonly Row[]): string[] {
   return [
     "## Notes pages",
     "",
-    "| Configuration | Coverage at 1 | 2 | 3 | 4 | 5 | Unsupported | Invented examples | Step order |",
-    "|---|---|---|---|---|---|---|---|---|",
+    "| Configuration | Coverage | Unsupported | Invented examples |",
+    "|---|---|---|---|",
     ...rows.map((row) => {
       const notes = row.notes;
-      return `| ${row.label} | ${
-        [0, 1, 2, 3, 4].map((at) => pct(notes?.coverage[at])).join(" | ")
-      } | ${pct(notes?.unsupportedRate)} | ${
-        pct(notes?.inventedExamplesRate)
-      } | ${pct(notes?.stepAgreement)} |`;
+      return `| ${row.label} | ${pct(notes?.coverage)} | ${
+        pct(notes?.unsupportedRate)
+      } | ${pct(notes?.inventedExamplesRate)} |`;
     }),
     "",
   ];
 }
 
 /**
- * Coverage at step 5 of each notes page, with the completion tokens its calls used against the
+ * The coverage of each notes page, with the completion tokens its calls used against the
  * function's output cap, one row per page and a column per configuration, or nothing when no
  * notes image ran.
  */
@@ -602,9 +600,9 @@ function pagesSection(rows: readonly Row[]): string[] {
   const pct = (value: number | null | undefined) =>
     value === null || value === undefined ? "—" : (value * 100).toFixed(1);
   return [
-    "## Coverage at step 5 per notes page",
+    "## Coverage per notes page",
     "",
-    `Each cell is the page's coverage at step 5 in percent, then the completion tokens of its calls, retry included, against the function's \`max_tokens\` of ${MAX_OUTPUT_TOKENS} per call.`,
+    `Each cell is the page's coverage in percent, then the completion tokens of its calls, retry included, against the function's \`max_tokens\` of ${MAX_OUTPUT_TOKENS} per call.`,
     "",
     `| Page | ${rows.map((row) => row.label).join(" | ")} |`,
     `|---|${rows.map(() => "---|").join("")}`,

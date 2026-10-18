@@ -9,7 +9,6 @@ import {
   MAX_FIELD_CHARS,
   MAX_TOPIC_CHARS,
   parseCards,
-  STEPS,
 } from "./cards.ts";
 
 const reply = (cards: unknown) => JSON.stringify({ cards });
@@ -19,8 +18,6 @@ const item = (fields: Record<string, unknown> = {}) => ({
   kind: "vocabulary",
   front: "apple",
   answer: "사과",
-  short: "사과",
-  step: 1,
   topic: "과일",
   partOfSpeech: null,
   examples: [],
@@ -34,8 +31,6 @@ const note = (fields: Record<string, unknown> = {}) =>
     front: "연역 논증과 귀납 논증의 차이",
     answer:
       "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
-    short: "반드시 참과 개연적으로 참",
-    step: 3,
     topic: "연역과 귀납",
     ...fields,
   });
@@ -45,7 +40,6 @@ Deno.test("parseCards returns a vocabulary card's fields trimmed, its answer as 
     parseCards(reply([item({
       front: "  run ",
       answer: "\n달리다, 운영하다\t",
-      short: " 달리다 ",
       partOfSpeech: " [동] ",
       examples: [" I run every morning. ", "run a shop"],
     })])),
@@ -53,7 +47,7 @@ Deno.test("parseCards returns a vocabulary card's fields trimmed, its answer as 
       kind: "vocabulary",
       front: "run",
       answer: "달리다, 운영하다",
-      short: "달리다",
+      short: "달리다, 운영하다",
       step: 1,
       topic: "과일",
       examples: ["I run every morning.", "run a shop"],
@@ -64,7 +58,7 @@ Deno.test("parseCards returns a vocabulary card's fields trimmed, its answer as 
   );
 });
 
-Deno.test("a note card returns its concept, answers, step and topic, its back is the fullest answer, and it has no meaning", () => {
+Deno.test("a note card returns its concept, answer and topic, its back is the fullest answer, and it has no meaning", () => {
   const [card] = parseCards(reply([note({
     examples: ["253+4637+647898=652788 -> 연역"],
   })])) ?? [];
@@ -73,8 +67,9 @@ Deno.test("a note card returns its concept, answers, step and topic, its back is
     front: "연역 논증과 귀납 논증의 차이",
     answer:
       "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
-    short: "반드시 참과 개연적으로 참",
-    step: 3,
+    short:
+      "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
+    step: 1,
     topic: "연역과 귀납",
     examples: ["253+4637+647898=652788 -> 연역"],
     back:
@@ -101,12 +96,18 @@ Deno.test("composeBack puts the part of speech and a space before the meaning", 
   assert.equal(composeBack("먹다"), "먹다");
 });
 
-Deno.test("parseCards takes each step from 1 to 5 and refuses any other", () => {
-  for (const step of STEPS) {
-    assert.equal(parseCards(reply([note({ step })]))?.[0].step, step);
+Deno.test("the model writes no short form or step, and each card carries its answer as the short form at step 1 for an app that reads them", () => {
+  for (const card of [item({ answer: "사과, 능금" }), note()]) {
+    const [parsed] = parseCards(reply([card])) ?? [];
+    assert.equal(parsed.short, parsed.answer);
+    assert.equal(parsed.step, 1);
   }
-  for (const step of [0, 6, 2.5, "3", null]) {
-    assert.equal(parseCards(reply([note({ step })])), null, String(step));
+  for (const extra of [{ short: "사과" }, { step: 1 }]) {
+    assert.equal(
+      parseCards(reply([item(extra)])),
+      null,
+      `prompt v4's ${Object.keys(extra)[0]} is not a key of the schema`,
+    );
   }
 });
 
@@ -117,18 +118,6 @@ Deno.test("parseCards takes each kind and refuses any other", () => {
   for (const kind of ["notes", "Vocabulary", null]) {
     assert.equal(parseCards(reply([item({ kind })])), null, String(kind));
   }
-});
-
-Deno.test("parseCards refuses a short form longer than the answer, and takes one as long", () => {
-  assert.equal(
-    parseCards(reply([note({ answer: "짧다", short: "더 길다" })])),
-    null,
-  );
-  assert.equal(
-    parseCards(reply([note({ answer: "같다", short: "같다" })]))?.[0].short,
-    "같다",
-    "control: a short form equal to the answer",
-  );
 });
 
 Deno.test("parseCards refuses a note with a part of speech, which only vocabulary carries", () => {
@@ -212,7 +201,6 @@ Deno.test("parseCards refuses a field that is empty once trimmed", () => {
     const fields of [
       { front: "  " },
       { answer: "" },
-      { short: " " },
       { partOfSpeech: " " },
       { examples: ["ok", " "] },
     ]
@@ -253,19 +241,14 @@ Deno.test("parseCards refuses a field over its limit in code points, counting ea
     );
   }
   assert.equal(
-    parseCards(reply([item({ answer: long, short: atLimit })]))?.length,
+    parseCards(reply([item({ answer: long })]))?.length,
     1,
-    "an answer of 1000 and a short form of 500",
+    "an answer of 1000",
   );
   assert.equal(
-    parseCards(reply([item({ answer: long + "a", short: atLimit })])),
+    parseCards(reply([item({ answer: long + "a" })])),
     null,
     "an answer over 1000",
-  );
-  assert.equal(
-    parseCards(reply([item({ answer: long, short: atLimit + "a" })])),
-    null,
-    "a short form over 500",
   );
   assert.equal(parseCards(reply([item({ examples: [atLimit] })]))?.length, 1);
   assert.equal(parseCards(reply([item({ examples: [atLimit + "a"] })])), null);
@@ -288,7 +271,7 @@ Deno.test("parseCards refuses more than 100 cards", () => {
   const cards = (n: number) =>
     Array.from(
       { length: n },
-      (_, i) => item({ front: `w${i}`, answer: `뜻${i}`, short: `뜻${i}` }),
+      (_, i) => item({ front: `w${i}`, answer: `뜻${i}` }),
     );
   assert.equal(parseCards(reply(cards(MAX_CARDS)))?.length, 100);
   assert.equal(parseCards(reply(cards(MAX_CARDS + 1))), null);
@@ -298,27 +281,31 @@ Deno.test("the schema sent to the model states the fields and the limits the par
   const cards = cardsSchema.properties.cards;
   const fields = cards.items.properties;
   assert.equal(cards.maxItems, MAX_CARDS);
-  for (const field of [fields.front, fields.short, fields.partOfSpeech]) {
+  for (const field of [fields.front, fields.partOfSpeech]) {
     assert.equal(field.minLength, 1);
     assert.equal(field.maxLength, MAX_FIELD_CHARS);
   }
   assert.equal(fields.answer.minLength, 1);
   assert.equal(fields.answer.maxLength, MAX_ANSWER_CHARS);
   assert.deepEqual(fields.kind.enum, ["vocabulary", "note"]);
-  assert.deepEqual(fields.step.enum, [1, 2, 3, 4, 5]);
   assert.equal(fields.topic.type, "string");
   assert.equal(fields.topic.minLength, 1);
   assert.equal(fields.topic.maxLength, MAX_TOPIC_CHARS);
-  assert.equal(fields.step.type, "integer");
   assert.deepEqual(fields.partOfSpeech.type, ["string", "null"]);
   assert.equal(fields.examples.maxItems, MAX_EXAMPLES);
   assert.equal(fields.examples.items.maxLength, MAX_FIELD_CHARS);
+  assert.deepEqual(Object.keys(fields), [
+    "kind",
+    "front",
+    "answer",
+    "topic",
+    "partOfSpeech",
+    "examples",
+  ], "no short form or step");
   assert.deepEqual(cards.items.required, [
     "kind",
     "front",
     "answer",
-    "short",
-    "step",
     "topic",
     "partOfSpeech",
     "examples",
