@@ -186,7 +186,7 @@ describe("the deck page", () => {
     await user.type(screen.getByRole("searchbox", { name: "카드 검색" }), "zèbre");
     expect(rows()).toEqual([]);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "찾는 카드가 없어요. 다른 말로 검색해 보세요.",
+      "찾는 카드가 없어요. 다른 단어로 검색해 보세요.",
     );
   });
 

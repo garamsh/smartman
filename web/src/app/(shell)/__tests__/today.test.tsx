@@ -390,6 +390,21 @@ describe("the 오늘 and 덱 pages", () => {
     expect(postgrest.requests.filter((request) => request === "GET cards")).toHaveLength(2);
   });
 
+  it("filters the deck list by name, and says so in the app's words when nothing matches", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"), deckRow("d-es", "Spanish"));
+    await render(Decks, {});
+    const user = userEvent.setup();
+
+    await user.type(screen.getByRole("searchbox", { name: "덱 검색" }), "fre");
+    expect(rowNames()).toEqual(["French, 카드 0장"]);
+
+    await user.clear(screen.getByRole("searchbox", { name: "덱 검색" }));
+    await user.type(screen.getByRole("searchbox", { name: "덱 검색" }), "zèbre");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "찾는 덱이 없어요. 다른 단어로 검색해 보세요.",
+    );
+  });
+
   it("reads no card's sides, which the deck list does not show", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"));
     postgrest.seed("cards", cardRow("fr", "d-fr", "chat"));

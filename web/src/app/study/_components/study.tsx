@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
@@ -95,10 +96,17 @@ export async function Study({
   );
 }
 
+/** The decks' read failure, with "그만하기" back to 오늘, since no shell surrounds the page. */
 function Failure({ failure }: { failure: LibraryFailure }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl px-gutter py-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-4 px-gutter py-6">
       <ReadFailure failure={failure} />
+      <Link
+        href="/"
+        className="flex min-h-button items-center justify-center self-start rounded-button border border-outline bg-surface px-5 text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        그만하기
+      </Link>
     </main>
   );
 }
