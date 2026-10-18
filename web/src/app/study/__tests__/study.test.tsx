@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadEngine } from "@/features/study";
+import { loadEngine, studyDayStart } from "@/features/study";
 
 import { cardRow, day, deckRow, reviewRow, seedDeck, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
@@ -73,6 +73,8 @@ describe("the study page", () => {
   let postgrest: FakePostgrest;
   beforeEach(async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
+    // The coach has shown in this browser, unless a test clears it for a first session.
+    window.localStorage.setItem("studyCoachShown", "true");
     setRequestCookies(await signedInCookies());
     postgrest = new FakePostgrest();
     server.use(...postgrest.handlers);
@@ -239,7 +241,7 @@ describe("the study page", () => {
       expect(screen.getByText("3/3")).toBeInTheDocument();
     });
 
-    it("reads the guide as going on with the day when a card of it is done, and as the day's start otherwise", async () => {
+    it("says under the progress bar, as a status, that it goes on with the day when a card of it is done, and nothing on the day's first session", async () => {
       seedDeck(postgrest, "d1", ["un"]);
       postgrest.seed("cards", cardRow("deux", "d1", "deux"));
       postgrest.seed(
@@ -253,14 +255,20 @@ describe("the study page", () => {
       );
       postgrest.seed("reviews", reviewRow("r-deux", "deux", start - hour, 1_000));
       await open("d1");
-      expect(screen.getByText(/^이어서 해요 · 남은 1장 · 약 \d+분$/)).toBeInTheDocument();
+      // It arrives once the status region is there, and leaves after 3 s, which
+      // `live-regions.test.tsx` times with fake timers.
+      const status = screen.getByRole("status");
+      await waitFor(() => {
+        expect(status).toHaveTextContent(/^이어서 해요 · 남은 1장 · 약 \d+분$/);
+      });
+      // Under the progress bar.
+      expect(status.parentElement).toContainElement(screen.getByRole("progressbar"));
       cleanup();
 
-      // Control: with nothing done today, the guide states the day's cards.
+      // Control: with nothing done today, nothing is said.
       postgrest.rows.reviews = [];
       await open("d1");
-      expect(screen.getByText(/^오늘 \d+장 · 약 \d+분$/)).toBeInTheDocument();
-      expect(screen.queryByText(/^이어서 해요/)).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toBeEmptyDOMElement();
     });
 
     it("shows the completion card in the current card's place, below the stack, once no card is left", async () => {
@@ -417,8 +425,8 @@ describe("the study page", () => {
       expect(shown()).toEqual([label(third ?? "", "안다")]);
       const current = within(cards()).getByRole("region", { name: "현재 카드" });
       // Both in one grid whose rows share the tallest one's height.
-      expect(current.parentElement).toBe(previousCard().parentElement);
       expect(current.parentElement?.className).toContain("auto-rows-fr");
+      expect(current.parentElement).toContainElement(previousCard());
       // Both sides at the current card's sizes.
       expect(within(previousCard()).getByText(third ?? "").parentElement?.className).toContain(
         "text-question",
@@ -589,36 +597,26 @@ describe("the study page", () => {
       }
     });
 
-    it("shows the session's guide with its size in the previous card's place from its start until its first answer, for every user", async () => {
-      const guide = () => screen.queryByRole("region", { name: "학습 안내" });
+    it("holds the previous card's place with a dashed outline, an up arrow and its line on a day's first session, until its first answer", async () => {
+      const placeholder = () => screen.queryByRole("region", { name: "답한 카드가 여기에 쌓여요" });
       seedDeck(postgrest, "d1", ["un", "deux"]);
-      // A user with an answer stored before today: the guide is not the first session's alone.
-      postgrest.seed("cards", cardRow("old", "d2", "old"));
-      postgrest.seed("reviews", reviewRow("r-old", "old", start - 3 * day, 1_000));
       await open("d1");
 
-      expect(guide()).toBeInTheDocument();
-      const shownGuide = guide() ?? document.body;
-      // Two new cards at the unknown pace, 10 s each: about a minute.
-      expect(within(shownGuide).getByText("오늘 2장 · 약 1분")).toBeInTheDocument();
-      expect(
-        within(shownGuide)
-          .getAllByRole("listitem")
-          .map((item) => item.textContent),
-      ).toEqual([
-        "알면 안다(→), 모르면 모른다(←)를 눌러요",
-        "답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요",
-      ]);
+      expect(placeholder()).toBeInTheDocument();
+      expect(placeholder()?.className).toContain("border-dashed");
+      expect(placeholder()?.querySelector("svg")).not.toBeNull();
+      expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toBeEmptyDOMElement();
       const user = userEvent.setup();
       await user.keyboard("j");
-      expect(guide()).not.toBeInTheDocument();
+      expect(placeholder()).not.toBeInTheDocument();
       expect(shown()).toHaveLength(1);
-      // A "모른다" puts its card back; the guide does not return.
+      // A "모른다" puts its card back; the outline does not return.
       await user.keyboard("k");
-      expect(guide()).not.toBeInTheDocument();
+      expect(placeholder()).not.toBeInTheDocument();
     });
 
-    it("opens straight on the new cards past today's when none is left today, under the guide saying today's cards are done, until its first answer", async () => {
+    it("opens straight on the new cards past today's when none is left today, under the day's last card from an earlier session, until its first answer", async () => {
       // The first day's new cards answered this morning, and two more.
       const fronts = past(coldStartNewCards + 2);
       seedDeck(postgrest, "d1", fronts);
@@ -641,16 +639,15 @@ describe("the study page", () => {
 
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
       expect(currentFront()).toBe(fronts[coldStartNewCards]);
-      const guide = screen.getByRole("region", { name: "학습 안내" });
-      expect(
-        within(guide).getByText("오늘 할 카드를 다 했어요", { exact: true }),
-      ).toBeInTheDocument();
-      expect(within(guide).queryByText(/오늘 \d+장/)).not.toBeInTheDocument();
-      expect(within(guide).getAllByRole("listitem")).toHaveLength(2);
+      expect(shown()).toEqual([
+        expect.stringMatching(/^지난번 마지막 카드\. 앞면: f\d\d\. .*답: 안다$/),
+      ]);
+      // No card of the day's is left, so nothing goes on to say.
+      expect(screen.getByRole("status")).toBeEmptyDOMElement();
 
       await userEvent.setup().keyboard("k");
       expect(currentFront()).toBe(fronts[coldStartNewCards + 1]);
-      expect(screen.queryByRole("region", { name: "학습 안내" })).not.toBeInTheDocument();
+      expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
     });
 
     it("springs the previous card back only under prefers-reduced-motion: no-preference", async () => {
@@ -767,6 +764,234 @@ describe("the study page", () => {
         끝내기: "Escape",
         단축키: "?",
       });
+    });
+  });
+
+  describe("the coach", () => {
+    const caption = () => screen.queryByRole("region", { name: "학습 사용 방법" });
+    /** What the screen's live region announces of the coach. */
+    const announced = () => document.querySelector('[aria-live="polite"]')?.textContent;
+    const answerButton = (name: string) =>
+      screen.queryByRole("button", { name: new RegExp(`^${name}`) });
+
+    beforeEach(() => {
+      // A device's first session.
+      window.localStorage.removeItem("studyCoachShown");
+    });
+
+    it("on a device's first session shows three steps on the cards under a caption in the answer buttons' place, kept as shown once it shows", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      // The coach starts once the screen has mounted.
+      await screen.findByRole("region", { name: "학습 사용 방법" });
+      const user = userEvent.setup();
+
+      expect(caption()).toBeInTheDocument();
+      expect(window.localStorage.getItem("studyCoachShown")).toBe("true");
+      expect(announced()).toBe("사용 방법, 3단계 중 1단계. 알면 안다(→)를 눌러요");
+      expect(caption()).toHaveTextContent("알면 안다(→)를 눌러요");
+      expect(answerButton("모른다")).not.toBeInTheDocument();
+      // The current card moves toward 안다 over its tint, under a finger.
+      const demo = screen.getByTestId("coach-demo");
+      expect(demo).toHaveAttribute("data-answer", "know");
+      expect(demo).toContainElement(screen.getByRole("region", { name: "현재 카드" }));
+      expect(within(demo).getByTestId("coach-finger")).toBeInTheDocument();
+      // What is above it steps back.
+      const place = screen.getByRole("region", { name: "답한 카드가 여기에 쌓여요" });
+      expect(place.parentElement?.className).toContain("opacity-45");
+
+      await user.click(screen.getByRole("button", { name: "다음" }));
+      expect(announced()).toBe("사용 방법, 3단계 중 2단계. 모르면 모른다(←)를 눌러요");
+      expect(caption()).toHaveTextContent("모르면 모른다(←)를 눌러요");
+      expect(screen.getByTestId("coach-demo")).toHaveAttribute("data-answer", "dontKnow");
+
+      await user.click(screen.getByRole("button", { name: "다음" }));
+      expect(announced()).toBe(
+        "사용 방법, 3단계 중 3단계. 답한 카드는 위로 올라와요. '마지막 답 바꾸기'나 Z로 답을 바꿀 수 있어요",
+      );
+      expect(caption()).toHaveTextContent(
+        "답한 카드는 위로 올라와요. '마지막 답 바꾸기'나 Z로 답을 바꿀 수 있어요",
+      );
+      // A sample answered card in the previous card's place, changing toward 모른다.
+      const sample = screen.getByTestId("coach-sample");
+      expect(sample).toHaveTextContent("deadline");
+      expect(sample).toHaveTextContent("모른다로 바꿔요");
+      expect(screen.queryByTestId("coach-demo")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("region", { name: "답한 카드가 여기에 쌓여요" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "시작하기" }));
+      expect(caption()).not.toBeInTheDocument();
+      expect(screen.queryByTestId("coach-sample")).not.toBeInTheDocument();
+      expect(answerButton("안다")).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toBeInTheDocument();
+      cleanup();
+
+      // A later session in the same browser shows none, after the moment the coach would start.
+      await open("d1");
+      await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      expect(caption()).not.toBeInTheDocument();
+      expect(answerButton("안다")).toBeInTheDocument();
+    });
+
+    it("ends on 건너뛰기 and on an answer, not on a change of the previous card; 안내 다시 보기 shows it again", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux", "trois"]);
+      await open("d1");
+      // The coach starts once the screen has mounted.
+      await screen.findByRole("region", { name: "학습 사용 방법" });
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: "건너뛰기" }));
+      expect(caption()).not.toBeInTheDocument();
+      expect(answerButton("안다")).toBeInTheDocument();
+
+      // An answer by its key, with the coach skipped, gives a previous card.
+      await user.keyboard("k");
+      expect(shown()).toHaveLength(1);
+
+      await user.click(screen.getByRole("button", { name: "안내 다시 보기" }));
+      expect(announced()).toContain("3단계 중 1단계");
+      // Changing the previous card leaves it running.
+      await user.keyboard("z");
+      expect(shown()).toEqual([expect.stringMatching(/답: 모른다\. 수정됨$/)]);
+      expect(announced()).toContain("3단계 중 1단계");
+      // An answer by its key ends it.
+      await user.keyboard("k");
+      expect(caption()).not.toBeInTheDocument();
+    });
+
+    it("under reduce motion holds each step still where the card is out, and moves it otherwise", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      // The coach starts once the screen has mounted.
+      await screen.findByRole("region", { name: "학습 사용 방법" });
+      const user = userEvent.setup();
+      const moving = (testId: string) =>
+        [...screen.getByTestId(testId).querySelectorAll("[class*=animate-coach]")].map(
+          (element) => element.getAttribute("class") ?? "",
+        );
+
+      for (const [testId, name] of [
+        ["coach-demo", "know"],
+        ["coach-demo", "dont-know"],
+        ["coach-sample", "change"],
+      ] as const) {
+        const classes = moving(testId).join(" ");
+        expect(classes).toContain(`motion-safe:animate-coach-${name} `);
+        expect(classes).toContain(`motion-reduce:animate-coach-${name}-held`);
+        expect(classes).toContain("motion-reduce:animate-coach-finger-held");
+        await user.click(screen.getByRole("button", { name: /^(다음|시작하기)$/ }));
+      }
+    });
+  });
+
+  it("on a reopened day shows the day's last card from an earlier session, graded and labelled, opened by a click and not changed by a swipe, until the first answer", async () => {
+    seedDeck(postgrest, "d1", ["un", "deux", "trois"]);
+    for (const [index, front] of ["un", "deux"].entries()) {
+      postgrest.seed(
+        "card_states",
+        stateRow(`d1-${String(index)}`, {
+          stability: 1,
+          difficulty: 5,
+          lastReview: start - hour,
+          due: start + day,
+        }),
+      );
+      postgrest.seed(
+        "reviews",
+        reviewRow(`r-${front}`, `d1-${String(index)}`, start - hour + index * 1_000, 1_000),
+      );
+    }
+    await open("d1");
+
+    const label = "지난번 마지막 카드. 앞면: deux. 뒷면: deux back. 답: 안다";
+    expect(shown()).toEqual([label]);
+    const card = within(cards()).getByRole("article");
+    expect(within(card).getByText("지난번 마지막 카드")).toBeInTheDocument();
+    expect(within(card).getByText("안다")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "답한 카드가 여기에 쌓여요" }),
+    ).not.toBeInTheDocument();
+
+    // A touch swipe toward 모른다 shows nothing behind it and changes nothing.
+    fireEvent.pointerDown(card, { pointerId: 1, pointerType: "touch", clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(card, { pointerId: 1, pointerType: "touch", clientX: 40, clientY: 100 });
+    expect(within(card).queryByText("모른다로 바꿔요")).not.toBeInTheDocument();
+    fireEvent.pointerUp(card, { pointerId: 1, pointerType: "touch", clientX: 40, clientY: 100 });
+    expect(shown()).toEqual([label]);
+    expect(postgrest.rows.reviews.map((row) => row.rating)).toEqual(["good", "good"]);
+
+    // A click opens it whole.
+    const user = userEvent.setup();
+    await user.click(within(card).getByRole("button", { name: "카드 전체 보기" }));
+    const detail = screen.getByRole("dialog", { name: "카드" });
+    expect(within(detail).getByText("deux back")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    // The first answer takes its place.
+    await user.keyboard("k");
+    expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
+    expect(shown()).toEqual([expect.stringMatching(/^앞면: trois\. /)]);
+  });
+
+  describe("the day's last card from an earlier session", () => {
+    /** Stores an answer of 안다 to [cardId] at [at], with its state due tomorrow. */
+    function answered(postgrest: FakePostgrest, cardId: string, at: number) {
+      postgrest.seed(
+        "card_states",
+        stateRow(cardId, { stability: 1, difficulty: 5, lastReview: at, due: start + day }),
+      );
+      postgrest.seed("reviews", reviewRow(`r-${cardId}`, cardId, at, 1_000));
+    }
+    /** The front of the earlier card the page shows, or null. */
+    const earlierFront = () =>
+      /^지난번 마지막 카드\. 앞면: ([^.]*)\./.exec(shown()[0] ?? "")?.[1] ?? null;
+
+    it("is the last answer to a card still in the deck, not one to a card deleted since", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux", "trois"]);
+      answered(postgrest, "d1-0", start - 2 * hour);
+      answered(postgrest, "d1-1", start - hour);
+      // Control: with deux in the deck, its answer is the last.
+      await open("d1");
+      expect(earlierFront()).toBe("deux");
+      cleanup();
+
+      const deux = postgrest.rows.cards.find((row) => row.id === "d1-1");
+      if (!deux) throw new Error("deux is seeded above");
+      deux.deleted_at = new Date(start - hour / 2).toISOString();
+      await open("d1");
+      expect(earlierFront()).toBe("un");
+    });
+
+    it("is the last answer within the decks studied, not a later one in another deck", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      seedDeck(postgrest, "d2", ["zwei"]);
+      answered(postgrest, "d1-0", start - 2 * hour);
+      answered(postgrest, "d2-0", start - hour);
+      await open("d1");
+      expect(earlierFront()).toBe("un");
+      cleanup();
+
+      // Control: over both decks, the other deck's later answer is the last.
+      await open("d1,d2");
+      expect(earlierFront()).toBe("zwei");
+    });
+
+    it("is an answer from 04:00 today, not one at 03:59, the day before", async () => {
+      // With no zone cookie, the day is read in the fallback zone.
+      const dayStart = studyDayStart(start, "Asia/Seoul");
+      seedDeck(postgrest, "d1", ["un", "deux", "trois"]);
+      answered(postgrest, "d1-0", dayStart - 60_000);
+      await open("d1");
+      expect(earlierFront()).toBeNull();
+      expect(screen.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toBeInTheDocument();
+      cleanup();
+
+      // Control: at 04:00 the answer is the day's.
+      answered(postgrest, "d1-1", dayStart);
+      await open("d1");
+      expect(earlierFront()).toBe("deux");
     });
   });
 });

@@ -24,6 +24,10 @@ enum AppButtonVariant {
 
   /// A quiet action, such as one in a top bar: ink text.
   text,
+
+  /// A quiet action on the navy hero surface, such as the study coach's
+  /// "건너뛰기": text in the colour drawn on the hero.
+  onHeroText,
 }
 
 /// How tall a button is.
@@ -71,7 +75,8 @@ class AppButton extends StatelessWidget {
     AppButtonVariant.destructiveFinal => true,
     AppButtonVariant.secondary ||
     AppButtonVariant.destructive ||
-    AppButtonVariant.text => false,
+    AppButtonVariant.text ||
+    AppButtonVariant.onHeroText => false,
   };
 
   @override
@@ -79,7 +84,12 @@ class AppButton extends StatelessWidget {
     final colors = AppColors.of(context);
     final height = switch ((variant, size)) {
       (_, AppButtonSize.cta) => AppSize.cta,
-      (AppButtonVariant.text || AppButtonVariant.destructive, _) =>
+      (
+        AppButtonVariant.text ||
+            AppButtonVariant.onHeroText ||
+            AppButtonVariant.destructive,
+        _,
+      ) =>
         AppSize.tapTarget,
       (_, AppButtonSize.regular) => AppSize.button,
     };
@@ -103,6 +113,7 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.secondary ||
       AppButtonVariant.text => (colors.surface, colors.ink),
       AppButtonVariant.destructive => (colors.surface, colors.dontKnowText),
+      AppButtonVariant.onHeroText => (colors.hero, colors.onHero),
     };
     final child = loading
         ? SizedBox.square(
@@ -141,7 +152,9 @@ class AppButton extends StatelessWidget {
         onPressed: pressed,
         child: child,
       ),
-      AppButtonVariant.destructive || AppButtonVariant.text => TextButton(
+      AppButtonVariant.destructive ||
+      AppButtonVariant.text ||
+      AppButtonVariant.onHeroText => TextButton(
         style: TextButton.styleFrom(
           minimumSize: minimumSize,
           foregroundColor: onFill,

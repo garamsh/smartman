@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'queue.dart';
 import 'scheduler.dart';
@@ -44,3 +45,18 @@ final studyRandomProvider = Provider<Random Function(DateTime start)>(
     'studyRandomProvider is overridden at the composition site',
   ),
 );
+
+/// The device storage that keeps whether the study screen's coach has shown.
+/// The composition site overrides it with the storage it opens, opened to
+/// cache [studyStorageKeys].
+final studyStorageProvider = Provider<SharedPreferencesWithCache>(
+  (ref) => throw UnimplementedError(
+    'studyStorageProvider is overridden at the composition site',
+  ),
+);
+
+/// The keys [studyStorageProvider] must be opened to cache.
+const studyStorageKeys = {studyCoachShownKey};
+
+/// Set once the study screen's coach has shown on this device.
+const studyCoachShownKey = 'studyCoachShown';

@@ -16,6 +16,7 @@ import 'package:smartman/study/src/study_repository.dart';
 import 'package:smartman/study/src/study_screen.dart';
 
 import 'fixtures.dart';
+import 'study_storage.dart';
 
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
@@ -164,9 +165,11 @@ void main() {
     'the study screen stops the answer clock while the app is not resumed',
     (tester) async {
       final deck = (await tester.runAsync(_Deck.open))!;
+      final storage = await openStudyStorage(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            studyStorageProvider.overrideWithValue(storage),
             deckRepositoryProvider.overrideWithValue(deck.cards),
             studyRepositoryProvider.overrideWithValue(deck.study),
             schedulerProvider.overrideWithValue(_InstantScheduler()),

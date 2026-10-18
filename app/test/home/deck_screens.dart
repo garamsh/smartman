@@ -11,6 +11,7 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 
 import 'home_data.dart';
+import '../study/study_storage.dart';
 
 /// A deck named "French" in an in-memory database, shown by the deck screens
 /// with study over the same database and a stand-in for photo import.
@@ -117,11 +118,12 @@ class DeckScreens {
       deck,
       GlobalKey<NavigatorState>(),
     );
+    final storage = await openStudyStorage(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           deckRepositoryProvider.overrideWithValue(repository),
-          ...homeOverrides(db, stalled: stalled),
+          ...homeOverrides(db, storage: storage, stalled: stalled),
           if (photoImport)
             photoImportProvider.overrideWithValue((context, deck) {
               screens.photoImports.add(deck);

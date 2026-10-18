@@ -142,6 +142,112 @@
     }
   }
 
+  /* The study coach's demonstration, as the phone's: out over 2.8 s with an ease, held, and back
+     with a spring; the card tilts 0.0006 rad a pixel. Each -held token stops it where the card is
+     out, for reduce motion. */
+  --animate-coach-know: coach-know 2.8s infinite;
+  --animate-coach-know-held: coach-know 2.8s -1.5s infinite paused;
+  --animate-coach-dont-know: coach-dont-know 2.8s infinite;
+  --animate-coach-dont-know-held: coach-dont-know 2.8s -1.5s infinite paused;
+  --animate-coach-change: coach-change 2.8s infinite;
+  --animate-coach-change-held: coach-change 2.8s -1.5s infinite paused;
+  --animate-coach-tint: coach-tint 2.8s ease-out infinite;
+  --animate-coach-tint-held: coach-tint 2.8s ease-out -1.5s infinite paused;
+  --animate-coach-finger: coach-finger 2.8s ease-out infinite;
+  --animate-coach-finger-held: coach-finger 2.8s ease-out -1.5s infinite paused;
+  @keyframes coach-know {
+    0%,
+    18%,
+    82%,
+    100% {
+      transform: none;
+    }
+    20% {
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    46%,
+    62% {
+      transform: translateX(96px) rotate(0.0576rad);
+    }
+    64% {
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+  }
+  @keyframes coach-dont-know {
+    0%,
+    18%,
+    82%,
+    100% {
+      transform: none;
+    }
+    20% {
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    46%,
+    62% {
+      transform: translateX(-96px) rotate(-0.0576rad);
+    }
+    64% {
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+  }
+  @keyframes coach-change {
+    0%,
+    18%,
+    82%,
+    100% {
+      transform: none;
+    }
+    20% {
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    46%,
+    62% {
+      transform: translateX(-140px) rotate(-0.084rad);
+    }
+    64% {
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+  }
+  @keyframes coach-tint {
+    0%,
+    22%,
+    74%,
+    100% {
+      opacity: 0;
+    }
+    40%,
+    60% {
+      opacity: 1;
+    }
+  }
+  @keyframes coach-finger {
+    0%,
+    70%,
+    100% {
+      opacity: 0;
+    }
+    10%,
+    62% {
+      opacity: 1;
+    }
+  }
+
+  /* The notice that a session goes on with the day: in from above, held, and out over 3.2 s. */
+  --animate-resume-notice: resume-notice 3.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  @keyframes resume-notice {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    8%,
+    78% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   /* AppShadow: a card on the ground, and the current study card's two layers. */
   --shadow-card: 0 4px 12px color-mix(in srgb, var(--color-shadow) 8%, transparent);
   --shadow-raised:

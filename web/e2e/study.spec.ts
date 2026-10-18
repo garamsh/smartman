@@ -183,10 +183,12 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   const currentCard = page.getByRole("region", { name: "현재 카드", exact: true });
   await expect(question).toHaveText(/^(chat|chien)$/);
   const first = (await question.textContent()) ?? "";
-  // The session's start: its guide, with its size, shows above the first card.
-  const guide = page.getByRole("region", { name: "학습 안내" });
-  await expect(guide).toBeVisible();
-  await expect(guide.getByText("오늘 2장 · 약 1분", { exact: true })).toBeVisible();
+  // A device's first session: the coach's caption in the answer buttons' place, over the empty
+  // previous card's place.
+  const coach = page.getByRole("region", { name: "학습 사용 방법" });
+  await expect(coach).toContainText("알면 안다(→)를 눌러요");
+  await expect(page.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toBeVisible();
+  await shot(page, "03a-study-coach");
   // The current card shows its question alone; its answer shows once answered, above.
   await expect(currentCard).not.toContainText(backs.get(first) ?? "");
   await shot(page, "03-study-question");
@@ -199,7 +201,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
     page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
   ).toHaveCount(1);
   await expect(currentCard).not.toContainText(backs.get(second) ?? "");
-  await expect(page.getByRole("region", { name: "학습 안내" })).toHaveCount(0);
+  // The first answer ended the coach and took the empty place.
+  await expect(coach).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toHaveCount(0);
   await shot(page, "05-study-stack");
   // A click on the previous card opens it whole; Esc closes it, and the session goes on.
   await page.getByRole("button", { name: "카드 전체 보기", exact: true }).click();

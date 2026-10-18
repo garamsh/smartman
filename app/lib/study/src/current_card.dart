@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
+import '../../design/app_coach.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
@@ -13,12 +14,34 @@ import 'study_style.dart';
 /// The card under study, filling the height it is given less the answer
 /// buttons under it: its front alone, centred; its back shows once answered,
 /// on the previous card. Dragged right, or by its "안다" button, it answers
-/// "Know"; left, or by "모른다", "Don't know".
+/// "Know"; left, or by "모른다", "Don't know". "안내 다시 보기" between the
+/// buttons calls [onGuide].
+///
+/// While the coach demonstrates an answer, [demo], the card moves toward it
+/// over the answer's tint under a finger, [demoProgress] through one
+/// [coachCycle], and [coach] takes the answer buttons' place.
 class CurrentCard extends StatefulWidget {
-  const CurrentCard({super.key, required this.card, required this.onAnswer});
+  const CurrentCard({
+    super.key,
+    required this.card,
+    required this.onAnswer,
+    required this.onGuide,
+    this.onDragStart,
+    this.demo,
+    this.demoProgress = 0,
+    this.coach,
+  });
 
   final Card card;
   final void Function(Answer answer) onAnswer;
+  final VoidCallback onGuide;
+
+  /// Called as a drag on the card begins.
+  final VoidCallback? onDragStart;
+
+  final Answer? demo;
+  final double demoProgress;
+  final Widget? coach;
 
   @override
   State<CurrentCard> createState() => _CurrentCardState();
@@ -105,6 +128,7 @@ class _CurrentCardState extends State<CurrentCard>
             child: GestureDetector(
               // The card follows the finger from where it touched down.
               dragStartBehavior: DragStartBehavior.down,
+              onHorizontalDragStart: (_) => widget.onDragStart?.call(),
               onHorizontalDragUpdate: _onDragUpdate,
               onHorizontalDragEnd: _onDragEnd,
               onHorizontalDragCancel: _springBack,
@@ -117,13 +141,116 @@ class _CurrentCardState extends State<CurrentCard>
                     child: _DragFeedback(offset: _drag.value, child: child!),
                   ),
                 ),
-                child: _CardFace(card: widget.card),
+                child: switch (widget.demo) {
+                  final answer? => _Demo(
+                    answer: answer,
+                    progress: widget.demoProgress,
+                    child: _CardFace(card: widget.card),
+                  ),
+                  null => _CardFace(card: widget.card),
+                },
               ),
             ),
           ),
         ),
         const SizedBox(height: StudyStyle.answerGap),
-        _AnswerButtons(onAnswer: _commit),
+        widget.coach ??
+            _AnswerButtons(onAnswer: _commit, onGuide: widget.onGuide),
+      ],
+    );
+  }
+}
+
+/// The coach's demonstration of [answer] on [child], the card's face:
+/// [progress] through one [coachCycle], it moves toward the answer and back
+/// over the answer's tint and name, under a finger that moves with it.
+class _Demo extends StatelessWidget {
+  const _Demo({
+    required this.answer,
+    required this.progress,
+    required this.child,
+  });
+
+  final Answer answer;
+  final double progress;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final (sign, fill, text, icon, label, alignment) = switch (answer) {
+      Answer.know => (
+        1.0,
+        colors.tintGreen,
+        colors.onKnowTint,
+        LucideIcons.check,
+        l10n.know,
+        Alignment.centerLeft,
+      ),
+      Answer.dontKnow => (
+        -1.0,
+        colors.tintRed,
+        colors.onDontKnowTint,
+        LucideIcons.x,
+        l10n.dontKnow,
+        Alignment.centerRight,
+      ),
+    };
+    final offset = sign * StudyStyle.coachCurrentPeek * coachPeek(progress);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        if (offset != 0)
+          Positioned.fill(
+            child: ExcludeSemantics(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: fill,
+                  borderRadius: BorderRadius.circular(StudyStyle.cardRadius),
+                ),
+                child: Align(
+                  alignment: alignment,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.s20,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: AppSpace.s8,
+                      children: [
+                        Icon(icon, size: AppSize.smallIcon, color: text),
+                        Text(
+                          label,
+                          style: AppType.secondary.copyWith(
+                            color: text,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        Positioned.fill(
+          child: Transform.translate(
+            offset: Offset(offset, 0),
+            child: Transform.rotate(
+              angle: offset * StudyStyle.tiltPerPixel,
+              child: child,
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Transform.translate(
+            offset: Offset(offset, StudyStyle.coachFingerDrop),
+            child: Center(
+              child: AppCoachFinger(shown: coachFingerShown(progress)),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -132,9 +259,10 @@ class _CurrentCardState extends State<CurrentCard>
 /// "모른다" after a left chevron and "안다" before a right chevron, under the
 /// card: the answers without a drag.
 class _AnswerButtons extends StatelessWidget {
-  const _AnswerButtons({required this.onAnswer});
+  const _AnswerButtons({required this.onAnswer, required this.onGuide});
 
   final void Function(Answer answer) onAnswer;
+  final VoidCallback onGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +300,21 @@ class _AnswerButtons extends StatelessWidget {
                     child: Text(l10n.dontKnow, overflow: TextOverflow.ellipsis),
                   ),
                 ],
+              ),
+            ),
+          ),
+          Flexible(
+            child: TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: colors.muted,
+                minimumSize: const Size(AppSize.tapTarget, AppSize.tapTarget),
+                textStyle: AppType.micro,
+              ),
+              onPressed: onGuide,
+              child: Text(
+                l10n.studyCoachReplay,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),

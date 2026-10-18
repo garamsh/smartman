@@ -29,7 +29,11 @@ Future<void> main() async {
   final package = await PackageInfo.fromPlatform();
   final preferences = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
-      allowList: {...themeStorageKeys, ...photoImportStorageKeys},
+      allowList: {
+        ...themeStorageKeys,
+        ...photoImportStorageKeys,
+        ...studyStorageKeys,
+      },
     ),
   );
   runApp(
@@ -59,13 +63,12 @@ Future<void> main() async {
 
 /// Constructs the application over the database [executor] opens, scheduling
 /// with the loaded [scheduler], signing in through [account], syncing with
-/// [server], keeping the theme choice and photo import's detail step in
-/// [preferences], and extracting cards from photos through [extraction],
-/// whose absence hides photo import,
-/// and sharing decks through [sharing] while [reachability] says the device
-/// is online; without [sharing] the app offers no sharing. The account screen
-/// names the app's [version]. Sync starts
-/// at once.
+/// [server], keeping the theme choice and whether photo import's and the
+/// study screen's coaches have shown in [preferences], extracting cards from
+/// photos through [extraction], whose absence hides photo import, and sharing
+/// decks through [sharing] while [reachability] says the device is online;
+/// without [sharing] the app offers no sharing. The account screen names the
+/// app's [version]. Sync starts at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
@@ -127,6 +130,7 @@ Widget composeApp(
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),
       studyZoneProvider.overrideWithValue(localOffsetAt),
+      studyStorageProvider.overrideWithValue(preferences),
       studyRandomProvider.overrideWithValue(
         (start) => Random(start.microsecondsSinceEpoch),
       ),

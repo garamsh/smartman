@@ -53,11 +53,11 @@ abstract final class StudyStyle {
   /// How far the divider between a card's halves stops short of its edges.
   static const dividerInset = AppSpace.s28;
 
-  /// The width of the session guide's dashed outline.
-  static const guideOutline = 1.5;
+  /// The width of the empty previous card's place's dashed outline.
+  static const placeholderOutline = 1.5;
 
-  /// The length of each dash of the session guide's outline, and of each gap.
-  static const guideDash = 6.0;
+  /// The length of each dash of that outline, and of each gap.
+  static const placeholderDash = 6.0;
 
   /// The drag after which the answer chip and tint appear.
   static const dragFeedbackDistance = 40.0;
@@ -88,6 +88,30 @@ abstract final class StudyStyle {
 
   /// The tint over a dragged card at full drag.
   static const tintOpacity = 0.12;
+
+  /// How far the coach drags the current card to show an answer.
+  static const coachCurrentPeek = 96.0;
+
+  /// How far the coach drags the sample previous card to show a change: far
+  /// enough that the change's name shows whole behind it.
+  static const coachPreviousPeek = 140.0;
+
+  /// How far the coach's finger sits in from the card's side it pushes from.
+  static const coachFingerInset = 70.0;
+
+  /// How far above the sample previous card's bottom the coach's finger sits,
+  /// below its sides.
+  static const coachFingerLift = 32.0;
+
+  /// How far below the current card's centre the coach's finger rests.
+  static const coachFingerDrop = 56.0;
+
+  /// The opacity of what is above the current card while the coach shows its
+  /// answers.
+  static const coachDim = 0.45;
+
+  /// Where in its cycle the coach holds under reduce motion: the card out.
+  static const coachStill = 0.54;
 
   /// The current card's shadow, in the theme's [AppColors.shadow].
   static List<BoxShadow> currentShadow(AppColors colors) =>

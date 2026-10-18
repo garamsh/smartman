@@ -50,7 +50,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - leading checkmarks, and a heavier separator between groups;
   - 16 px items at least 44 high.
 - **Senses.** A vocabulary card's back is its kept senses one per line, each label shown or not by the form, and so it is saved. The deck and sync need no schema change.
-- **Components.** `AppChip`'s choice kind and `AppButton`'s `onHeroText` lose their only users, ① and the coach, and are removed.
+- **Components.** `AppChip`'s action kind and choice kind lose their only users, Review's deck chip and ①'s pills, and are removed. `AppCoach`, which study's coach shares since [ADR 0064](0064-teach-study-with-a-first-use-finger-coach-and-show-the-day-s-last-card-and-a-brief-notice-when-a-day-resumes.md), stays for study alone.
 - **Supersessions.**
   - This replaces ADR 0060.
   - It replaces ADR 0057's Review: its topic switches, its swipes both ways, its struck-through rows, its in-place editing and its coach.

@@ -24,8 +24,11 @@ export const grades = {
   },
 } as const;
 
-/** What a screen reader reads for an answer of the session: its sides and its grade. */
-export function answerLabel(answer: PreviousAnswer): string {
+/** An answered card as the stack shows it: its card, its answer, and whether it was changed. */
+type Graded = Pick<PreviousAnswer, "card" | "answer"> & { changed?: boolean };
+
+/** What a screen reader reads for an answered card: its sides and its grade. */
+export function answerLabel(answer: Graded): string {
   const { front, back } = answer.card.text;
   const changed = answer.changed ? ". 수정됨" : "";
   return `앞면: ${front}. 뒷면: ${back}. 답: ${grades[answer.answer].name}${changed}`;
@@ -85,18 +88,21 @@ type Touch = {
  * sizes, on its grade's fill inside its grade's line, and its grade's chip on its top edge. A
  * click opens the whole card. A horizontal touch swipe follows the finger, shows the answer it
  * would give behind it, and released past [commitDistance], or flung, toward the other answer
- * changes to it; a vertical one scrolls the page.
+ * changes to it; a vertical one scrolls the page. Without [onRedecide] it is not changed from
+ * here, and [label] names it above its sides.
  */
 export function GradedCard({
   answer,
   onRedecide,
   onOpen,
   openRef,
+  label,
 }: {
-  answer: PreviousAnswer;
-  onRedecide: (answer: Answer) => void;
+  answer: Graded;
+  onRedecide?: (answer: Answer) => void;
   onOpen: () => void;
   openRef?: Ref<HTMLButtonElement>;
+  label?: string;
 }) {
   const grade = grades[answer.answer];
   const [offset, setOffset] = useState(0);
@@ -109,7 +115,7 @@ export function GradedCard({
   const reveal = offset !== 0 && target !== answer.answer ? reveals[target] : null;
 
   function onPointerDown(event: PointerEvent) {
-    if (event.pointerType !== "touch") return;
+    if (event.pointerType !== "touch" || !onRedecide) return;
     touch.current = {
       id: event.pointerId,
       x: event.clientX,
@@ -159,12 +165,12 @@ export function GradedCard({
         (Math.abs(velocity) >= commitVelocity && Math.sign(velocity) === Math.sign(dx)));
     setDragging(false);
     setOffset(0);
-    if (committed) onRedecide(toward);
+    if (committed) onRedecide?.(toward);
   }
 
   return (
     <article
-      aria-label={answerLabel(answer)}
+      aria-label={label ? `${label}. ${answerLabel(answer)}` : answerLabel(answer)}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={(event) => {
@@ -201,6 +207,11 @@ export function GradedCard({
         className={`relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${grade.card} ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
       >
         <GradeChip answer={answer.answer} className="absolute -top-3 right-4" />
+        {label && (
+          <span aria-hidden className="absolute top-3 left-4 text-micro text-muted">
+            {label}
+          </span>
+        )}
         <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
           <span className="line-clamp-6 break-words">{answer.card.text.front}</span>
         </span>

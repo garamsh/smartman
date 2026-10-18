@@ -29,8 +29,10 @@ export type SessionPlan = {
    * puts back as a re-show does.
    */
   relearn: StudyCard[];
-  /** Whether a card of the day was done when the page opened, so the guide reads as going on. */
+  /** Whether a card of the day was done when the page opened, so the screen says it goes on. */
   resumed: boolean;
+  /** The day's last answer stored before the page opened, to a card of the decks, if any. */
+  earlier: EarlierAnswer | null;
   /** The new cards past today's, oldest first, which `studyOn` goes on with. */
   more: StudyCard[];
   before: CardStates;
@@ -50,6 +52,12 @@ export type SessionPlan = {
  * the today card counts them.
  */
 export type SessionSize = { cards: number; minutes: number; resumed: boolean };
+
+/**
+ * The day's last answer from an earlier session: shown in the previous card's place until the
+ * session's first answer, and not changed from there.
+ */
+export type EarlierAnswer = { card: StudyCard; answer: Answer };
 
 /** An answer given in this session, shown in the stack above the current card. */
 export type PreviousAnswer = {
@@ -89,15 +97,12 @@ export type SessionView = {
    */
   done: number;
   total: number;
+  /** Before the session's first answer, the day's last answer from an earlier session. */
+  earlier: EarlierAnswer | null;
 } & (
   | {
       kind: "studying";
       current: StudyCard;
-      /**
-       * Before the session's first answer, the session's size the guide in the previous card's
-       * place shows; otherwise null, and no guide shows.
-       */
-      guide: SessionSize | null;
     }
   | {
       kind: "complete";
@@ -127,7 +132,7 @@ export class StudySession {
   /** The new cards past today's, oldest first, not yet taken. */
   private more: StudyCard[];
   /** The session's size when it opened. */
-  private readonly size: SessionSize;
+  readonly size: SessionSize;
   private readonly answers: Answered[] = [];
   private shownAt: number;
   /** When the page was last hidden while the card on screen waited, or null while it is visible. */
@@ -334,12 +339,10 @@ export class StudySession {
       this.plan.day,
     );
     const done = [...places.values()].filter((place) => place === "done").length;
-    const counts = { previous, done, total: this.dayCards.size };
+    const earlier = this.answers.length === 0 ? this.plan.earlier : null;
+    const counts = { previous, done, total: this.dayCards.size, earlier };
     const current = this.queue[0];
-    if (current) {
-      const guide = this.answers.length === 0 ? this.size : null;
-      return { ...counts, kind: "studying", current, guide };
-    }
+    if (current) return { ...counts, kind: "studying", current };
     if (this.plan.today.answers.length === 0 && this.answers.length === 0) {
       return { ...counts, kind: "empty" };
     }

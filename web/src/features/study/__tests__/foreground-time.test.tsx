@@ -32,6 +32,7 @@ const plan: SessionPlan = {
   queue: { cards: [card("a"), card("b")], backlog: false },
   relearn: [],
   resumed: false,
+  earlier: null,
   more: [],
   before: {},
   pace: unknownPace,
