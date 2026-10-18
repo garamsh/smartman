@@ -1,6 +1,6 @@
 # ADR 0051: Extract each card with a question, a fullest and a short answer, and a detail step, and eval notes pages by their terms
 
-> Status: accepted; its prompt v3, and its coverage and unsupported cards counted on a card's front and answer alone, superseded by ADR-0055
+> Status: accepted; its prompt v3, its note card's question-shaped front, and its worked-example facts on the notes pages, superseded by ADR-0055
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
