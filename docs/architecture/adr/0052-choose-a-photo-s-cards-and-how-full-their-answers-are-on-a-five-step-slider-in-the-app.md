@@ -1,6 +1,6 @@
 # ADR 0052: Choose a photo's cards and how full their answers are on a five-step slider in the app
 
-> Status: accepted
+> Status: accepted; its slider in capture superseded by ADR-0054
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

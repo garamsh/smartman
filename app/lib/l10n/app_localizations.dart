@@ -709,47 +709,59 @@ abstract class AppLocalizations {
   /// **'다시 시도'**
   String get syncRetry;
 
-  /// Hint over the camera view of photo import.
-  ///
-  /// In ko, this message translates to:
-  /// **'단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요'**
-  String get photoCaptureHint;
-
-  /// Chip on the camera view naming the deck the cards go into; tapping it switches the deck.
+  /// Chip on the photo review naming the deck the cards go into; tapping it switches the deck.
   ///
   /// In ko, this message translates to:
   /// **'추가할 덱 · {name}'**
   String photoTarget(String name);
 
-  /// Title of the sheet on the camera view that chooses the deck the cards go into.
+  /// Title of the sheet on the photo review that chooses the deck the cards go into.
   ///
   /// In ko, this message translates to:
   /// **'추가할 덱'**
   String get photoTargetTitle;
 
-  /// Tooltip of the camera view's album button.
+  /// Title of the sheet that offers the camera and the album for photo import.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 가져오기'**
+  String get photoSourceTitle;
+
+  /// Row of the photo source sheet that opens the system camera.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 찍기'**
+  String get photoCamera;
+
+  /// Row of the photo source sheet that opens the photo library.
   ///
   /// In ko, this message translates to:
   /// **'앨범에서 고르기'**
   String get photoAlbum;
 
-  /// Tooltip of the camera view's shutter button.
+  /// Shown when camera or photo library access is refused.
   ///
   /// In ko, this message translates to:
-  /// **'사진 찍기'**
-  String get photoShutter;
+  /// **'카메라나 앨범 사용이 허용되지 않았어요. 설정에서 허용해 주세요.'**
+  String get photoAccessDenied;
 
-  /// Shown in place of the camera preview when camera access is refused.
-  ///
-  /// In ko, this message translates to:
-  /// **'카메라 사용이 허용되지 않았어요. 설정에서 허용하거나 앨범에서 사진을 골라 주세요.'**
-  String get cameraDenied;
-
-  /// Shown in place of the camera preview when the device has no usable camera.
+  /// Shown when the device has no camera to take the photo with.
   ///
   /// In ko, this message translates to:
   /// **'카메라를 열 수 없어요. 앨범에서 사진을 골라 주세요.'**
   String get cameraUnavailable;
+
+  /// Button that opens this app's page in the system settings, where camera and photo access are allowed.
+  ///
+  /// In ko, this message translates to:
+  /// **'설정 열기'**
+  String get openSettings;
+
+  /// Shown when this app's settings page could not be opened.
+  ///
+  /// In ko, this message translates to:
+  /// **'설정을 열지 못했어요. 설정 앱에서 직접 허용해 주세요.'**
+  String get settingsNotOpened;
 
   /// Semantic label of the photo thumbnail while cards are extracted.
   ///
@@ -775,13 +787,13 @@ abstract class AppLocalizations {
   /// **'카드 {count}개를 찾았어요'**
   String reviewTitle(int count);
 
-  /// Line under the review title, ending with the deck the cards go into.
+  /// Line under the review title.
   ///
   /// In ko, this message translates to:
-  /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요 · {deck}'**
-  String reviewHint(String deck);
+  /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요'**
+  String get reviewHint;
 
-  /// Label of the slider of how much of a photo becomes cards, on the capture and review screens.
+  /// Label of the slider of how much of a photo becomes cards, on the review screen.
   ///
   /// In ko, this message translates to:
   /// **'카드에 담을 내용'**
@@ -859,7 +871,7 @@ abstract class AppLocalizations {
   /// **'새 카드로 추가'**
   String get duplicateAddNew;
 
-  /// Button that returns to the camera for a new photo.
+  /// Button that offers the camera and the album again for a new photo.
   ///
   /// In ko, this message translates to:
   /// **'다시 찍기'**

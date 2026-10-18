@@ -77,17 +77,18 @@ final class PhotoUnreadable extends PhotoImportFailure {
   String toString() => 'PhotoUnreadable: $cause';
 }
 
-/// The user has not let the app use the camera.
-final class CameraDenied extends PhotoImportFailure {
-  const CameraDenied(this.cause);
+/// The user, or a restriction, has not let the app use the camera or the
+/// photo library.
+final class PhotoAccessDenied extends PhotoImportFailure {
+  const PhotoAccessDenied(this.cause);
 
   final Object cause;
 
   @override
-  String toString() => 'CameraDenied: $cause';
+  String toString() => 'PhotoAccessDenied: $cause';
 }
 
-/// The device has no camera the app can open, or it failed.
+/// The device has no camera the system can open.
 final class CameraUnavailable extends PhotoImportFailure {
   const CameraUnavailable(this.cause);
 

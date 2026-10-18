@@ -12,19 +12,18 @@ export 'src/extraction_client.dart'
         HttpExtractionClient;
 export 'src/failure.dart'
     show
-        CameraDenied,
         CameraUnavailable,
         DailyLimitReached,
         ExtractionOffline,
         ModelFailed,
         NoCardsFound,
+        PhotoAccessDenied,
         PhotoImportFailure,
         PhotoRefused,
         PhotoUnreadable,
         ServiceFailed,
         SignInRequired;
 export 'src/photo.dart' show JpegPhoto;
-export 'src/photo_import_screen.dart' show PhotoImportScreen;
-export 'src/photo_source.dart'
-    show CameraSession, DevicePhotoSource, PhotoSource;
-export 'src/providers.dart' show photoImportProvider;
+export 'src/photo_import_screen.dart' show importFromPhoto;
+export 'src/photo_source.dart' show DevicePhotoSource, PhotoSource;
+export 'src/providers.dart' show PhotoImport, photoImportProvider;

@@ -66,7 +66,8 @@ class _List {
 /// a 30-day interval and due in ten days.
 /// [pace] is the time the user's answers took; [unreadable] names the decks
 /// whose cards cannot be read. [photoImport] stands in for the photo import
-/// screen when given.
+/// when given: a screen it pushes, which pops with what photo import resolves
+/// to.
 Future<_List> _open(
   WidgetTester tester, {
   Map<String, int> fresh = const {},
@@ -79,6 +80,9 @@ Future<_List> _open(
   Set<String> unreadable = const {},
   Widget Function(DeckId? deck)? photoImport,
 }) async {
+  Future<Deck?> pushed(BuildContext context, DeckId? deck) =>
+      Navigator.of(context)
+          .push(MaterialPageRoute<Deck>(builder: (_) => photoImport!(deck)));
   // A phone's screen, so the 오늘 tab's decks are on it.
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
@@ -154,8 +158,7 @@ Future<_List> _open(
       overrides: [
         deckRepositoryProvider.overrideWithValue(repository),
         ...homeOverrides(db),
-        if (photoImport != null)
-          photoImportProvider.overrideWithValue(photoImport),
+        if (photoImport != null) photoImportProvider.overrideWithValue(pushed),
       ],
       child: MaterialApp(
         theme: lightTheme,

@@ -559,6 +559,7 @@ void main() {
         return deck;
       }))!;
       final client = FakeExtractionClient();
+      final photos = FakePhotoSource();
       final preferences = await openPreferences(tester);
       await tester.pumpWidget(
         ProviderScope(
@@ -569,24 +570,38 @@ void main() {
             themeMode: ThemeMode.values.byName(mode),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: PhotoImportScreen(
-              deck: deck.id,
-              client: client,
-              photos: FakePhotoSource(),
-              preferences: preferences,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => importFromPhoto(
+                      context,
+                      deck: deck.id,
+                      client: client,
+                      photos: photos,
+                      preferences: preferences,
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
       );
-      await tester.pumpAndSettle();
-      await shot(tester, '20-photo-capture');
-      await tap(tester, find.text(ko.photoTarget('영단어 기본')));
-      await shot(tester, '21-photo-deck-sheet');
-      await dismissSheet(tester);
 
-      await tester.tap(find.byTooltip(ko.photoShutter));
-      await tester.pump();
-      await tester.pump();
+      /// Takes a photo from the source sheet, through to the extraction.
+      Future<void> shoot() async {
+        await tester.tap(find.text(ko.photoCamera));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+      }
+
+      await tap(tester, find.text('open'));
+      await shot(tester, '20-photo-source');
+
+      await shoot();
       await shot(tester, '22-photo-extracting');
       client.answerCards(const [
         CandidateCard(
@@ -599,11 +614,12 @@ void main() {
       ]);
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-review');
+      await tap(tester, find.text(ko.photoTarget('영단어 기본')));
+      await shot(tester, '21-photo-deck-sheet');
+      await dismissSheet(tester);
 
       await tap(tester, find.text(ko.retake));
-      await tester.tap(find.byTooltip(ko.photoShutter));
-      await tester.pump();
-      await tester.pump();
+      await shoot();
       client.answerCards(const [
         CandidateCard(
           kind: CandidateKind.note,
@@ -629,12 +645,15 @@ void main() {
       await shot(tester, '23-photo-review-notes');
 
       await tap(tester, find.text(ko.retake));
-      await tester.tap(find.byTooltip(ko.photoShutter));
-      await tester.pump();
-      await tester.pump();
+      await shoot();
       client.fail(const ModelFailed());
       await tester.pumpAndSettle();
       await shot(tester, '24-photo-failure');
+
+      photos.cameraFailure = const PhotoAccessDenied('denied');
+      await tap(tester, find.text(ko.retake));
+      await tap(tester, find.text(ko.photoCamera));
+      await shot(tester, '25-photo-refused');
 
       await unmount(tester);
     });
