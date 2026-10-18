@@ -227,16 +227,15 @@ fn wire__crate__api__engine__review_new_card_impl(
     )
 }
 fn wire__crate__api__engine__todays_list_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "todays_list",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
         move || {
             let message = unsafe {
@@ -252,16 +251,14 @@ fn wire__crate__api__engine__todays_list_impl(
             let api_day_start = <i64>::sse_decode(&mut deserializer);
             let api_day_end = <i64>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok = Ok::<_, ()>(crate::api::engine::todays_list(
-                        api_cards,
-                        api_day_start,
-                        api_day_end,
-                    ))?;
-                    std::result::Result::Ok(output_ok)
-                })())
-            }
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::engine::todays_list(
+                    api_cards,
+                    api_day_start,
+                    api_day_end,
+                ))?;
+                std::result::Result::Ok(output_ok)
+            })())
         },
     )
 }
@@ -519,7 +516,6 @@ fn pde_ffi_dispatcher_primary_impl(
         3 => wire__crate__api__engine__retrievability_impl(port, ptr, rust_vec_len, data_len),
         4 => wire__crate__api__engine__review_card_impl(port, ptr, rust_vec_len, data_len),
         5 => wire__crate__api__engine__review_new_card_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__engine__todays_list_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -532,6 +528,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
+        6 => wire__crate__api__engine__todays_list_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

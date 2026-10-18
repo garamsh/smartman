@@ -105,7 +105,7 @@ abstract class RustLibApi extends BaseApi {
     double? fuzzFactor,
   });
 
-  Future<List<Today>> crateApiEngineTodaysList({
+  List<Today> crateApiEngineTodaysList({
     required List<TodayCard> cards,
     required PlatformInt64 dayStart,
     required PlatformInt64 dayEnd,
@@ -288,24 +288,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<Today>> crateApiEngineTodaysList({
+  List<Today> crateApiEngineTodaysList({
     required List<TodayCard> cards,
     required PlatformInt64 dayStart,
     required PlatformInt64 dayEnd,
   }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_today_card(cards, serializer);
           sse_encode_i_64(dayStart, serializer);
           sse_encode_i_64(dayEnd, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 6,
-            port: port_,
-          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_today,

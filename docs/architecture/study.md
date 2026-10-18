@@ -116,7 +116,7 @@ The `study` domain: studying one or more decks, scheduling their cards for revie
   - `review_card` — a review of a card from its persisted state parts, with an optional fuzz factor;
   - `replay` — a history folded into a state;
   - `retrievability` — the probability of recall at a time;
-  - `todays_list` — each card's place in a study day's list, `Today.absent`, `Today.left` or `Today.done`, from its due time and reviews, in the order given ([ADR 0061](adr/0061-keep-a-card-failed-today-in-today-s-list-until-it-is-passed-through-a-pure-engine-function-over-the-day-s-reviews.md)). ([`engine.md`](engine.md))
+  - `todays_list` — called synchronously, as it is pure and cheap: each card's place in a study day's list, `Today.absent`, `Today.left` or `Today.done`, from its due time and reviews, in the order given ([ADR 0061](adr/0061-keep-a-card-failed-today-in-today-s-list-until-it-is-passed-through-a-pure-engine-function-over-the-day-s-reviews.md)). ([`engine.md`](engine.md))
 - Times cross the bridge as whole seconds since the Unix epoch, as the engine holds them. Answers cross as the app's two buttons, `Answer.know` and `Answer.dontKnow`.
 - The generated Dart bindings are in `app/lib/study/src/rust/`; only this domain imports them.
 - `Scheduler.load()` runs `RustLib.init()`, which loads the library, and returns the scheduler that calls it. The composition site awaits it before `runApp`.
