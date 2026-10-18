@@ -1,6 +1,6 @@
 # ADR 0062: Take the study queue and the top bar's count from today's list, so a reopened day goes on, in the app and the web
 
-> Status: accepted
+> Status: accepted; its resume line's place in the session's guide superseded by ADR-0063
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
