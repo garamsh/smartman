@@ -1923,20 +1923,30 @@ void main() {
   );
 
   group('a whole card', () {
-    const cloze = 'The capital of France is {{c::Paris}}';
-    const table =
-        '| Capital | Country |\n| --- | --- |\n'
-        '| {{c::Paris}} | France |\n| {{c::Berlin}} | Germany |';
+    const cloze = [
+      ClozeContent('The capital of France is ___', ['Paris']),
+    ];
+    const table = [
+      TextContent('Capitals'),
+      TableContent(
+        columns: ['Capital', 'Country'],
+        rows: [
+          ['Paris', 'France'],
+          ['Berlin', 'Germany'],
+        ],
+        blanks: [(row: 0, column: 0), (row: 1, column: 0)],
+      ),
+    ];
 
     Future<_Study> openWhole(
       WidgetTester tester,
-      String front, {
+      List<Content> front, {
       ThemeMode themeMode = ThemeMode.light,
     }) => _open(
       tester,
       ['whole'],
       sides: {
-        'whole': ([TextContent(front)], [TextContent(filled(front))]),
+        'whole': (front, [TextContent(plainText(front))]),
       },
       themeMode: themeMode,
     );
@@ -1994,7 +2004,7 @@ void main() {
         expect(blanksUnder(_currentCard), {'Paris': false, 'Berlin': false});
         expect(
           _label(tester, _cardNode),
-          'Front: Capital, Country. blank, France. blank, Germany',
+          'Front: Capitals. Capital, Country. blank, France. blank, Germany',
         );
         expect(find.text('0/1'), findsOneWidget);
 

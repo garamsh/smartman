@@ -145,6 +145,7 @@ class _ImportListViewState extends State<ImportListView> {
                           _RowTile(
                             key: ObjectKey(row),
                             sides: row.cards(section.form).first,
+                            wholeFront: row.wholeFront,
                             included: _list.isIncluded(row),
                             inDeck: _list.isDuplicate(row),
                             first: i == 0,
@@ -155,7 +156,10 @@ class _ImportListViewState extends State<ImportListView> {
                                 : null,
                             onExclude: () =>
                                 _change(() => row.included = false),
-                            onEdit: () => _edit(row),
+                            // A table or cloze row cannot be edited yet.
+                            onEdit: row.wholeFront == null
+                                ? () => _edit(row)
+                                : null,
                           ),
                       ],
                     ),
@@ -413,7 +417,7 @@ class _SectionHeader extends StatelessWidget {
                 ),
             ],
             if (form case NoteForm(:final swapped)
-                when section.rows.any((row) => !row.whole))
+                when section.rows.any((row) => row.wholeFront == null))
               item(
                 l10n.importSwap,
                 checked: swapped,
@@ -461,13 +465,14 @@ class _SectionHeader extends StatelessWidget {
 }
 
 /// One row: its check, its front at 44% and its back one line per sense, or
-/// a whole card's front with its blanks filled, "이미 덱에 있어요" under it
-/// when the deck holds it. A tap edits it, and a
-/// swipe left leaves it out.
+/// a table or cloze card's front with its blanks filled, "이미 덱에 있어요"
+/// under it when the deck holds it. A tap edits it, but for a table or cloze
+/// card, and a swipe left leaves it out.
 class _RowTile extends StatelessWidget {
   const _RowTile({
     super.key,
     required this.sides,
+    required this.wholeFront,
     required this.included,
     required this.inDeck,
     required this.first,
@@ -477,6 +482,10 @@ class _RowTile extends StatelessWidget {
   });
 
   final CardSides sides;
+
+  /// A table or cloze card's front, drawn whole in place of [sides].
+  final List<Content>? wholeFront;
+
   final bool included;
   final bool inDeck;
 
@@ -487,14 +496,19 @@ class _RowTile extends StatelessWidget {
   final VoidCallback? onCheck;
 
   final VoidCallback onExclude;
-  final VoidCallback onEdit;
+
+  /// Opens the edit sheet; null for a row that cannot be edited.
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final onCheck = this.onCheck;
-    final question = spoken(sides.front, revealed: false, blank: l10n.blank);
+    final wholeFront = this.wholeFront;
+    final question = wholeFront == null
+        ? sides.front
+        : spokenContent(l10n, wholeFront, revealed: false);
     final tile = DecoratedBox(
       decoration: BoxDecoration(
         border: first
@@ -523,8 +537,10 @@ class _RowTile extends StatelessWidget {
           Expanded(
             child: Semantics(
               container: true,
-              button: true,
-              label: l10n.importRow(question, sides.back),
+              button: onEdit != null,
+              label: wholeFront == null
+                  ? l10n.importRow(question, sides.back)
+                  : spokenContent(l10n, wholeFront, revealed: true),
               excludeSemantics: true,
               onTap: onEdit,
               child: InkWell(
@@ -541,9 +557,9 @@ class _RowTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       spacing: AppSpace.s4,
                       children: [
-                        if (hasBlanks(sides.front))
+                        if (wholeFront != null)
                           WholeCardView(
-                            sides.front,
+                            wholeFront,
                             revealed: true,
                             style: AppType.bodyStrong.copyWith(
                               color: included ? colors.ink : colors.muted,

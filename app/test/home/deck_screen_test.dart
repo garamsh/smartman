@@ -16,7 +16,7 @@ List<String> _rowFronts(WidgetTester tester) => [
   for (final row in tester.widgetList<CardAnswerRow>(
     find.byType(CardAnswerRow),
   ))
-    row.front,
+    plainText(row.front),
 ];
 
 /// The deck page's "뜻 보기" switch.
@@ -28,7 +28,7 @@ List<String> _answers(WidgetTester tester) => [
   for (final row in tester.widgetList<CardAnswerRow>(
     find.byType(CardAnswerRow),
   ))
-    if (row.shown) row.back,
+    if (row.shown) plainText(row.back),
 ];
 
 void main() {
@@ -189,16 +189,20 @@ void main() {
   );
 
   testWidgets(
-    'a whole card shows its question with its blank empty in place of the answer bar, and a tap fills it in place',
+    'a cloze card shows its question with its blank empty in place of the answer bar, and a tap fills it in place',
     (tester) async {
-      const cloze = 'The capital of France is {{c::Paris}}';
-      final screens = await DeckScreens.open(
-        tester,
-        cards: {cloze: 'The capital of France is Paris', 'Chat': 'cat'},
+      const cloze = ClozeContent('The capital of France is ___', ['Paris']);
+      final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [cloze],
+          back: [const TextContent('The capital of France is Paris')],
+        ),
       );
       await screens.push((deck) => DeckScreen(deck: deck));
       final row = find.byWidgetPredicate(
-        (widget) => widget is CardAnswerRow && widget.front == cloze,
+        (widget) => widget is CardAnswerRow && widget.front.first == cloze,
       );
       expect(row, findsOneWidget);
       expect(

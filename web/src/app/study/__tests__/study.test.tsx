@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine, studyDayStart } from "@/features/study";
 
-import { filled } from "@/features/decks";
 import {
   cardRow,
   day,
@@ -949,14 +948,42 @@ describe("the study page", () => {
   });
 
   describe("a whole card", () => {
-    const cloze = "The capital of France is {{c::Paris}}";
-    const table =
-      "| Capital | Country |\n| --- | --- |\n| {{c::Paris}} | France |\n| {{c::Berlin}} | Germany |";
+    // Stored as the phone stores them: typed blocks, the back their filled text.
+    const cloze = {
+      front: [
+        { type: "cloze", payload: { text: "The capital of France is ___", answers: ["Paris"] } },
+      ],
+      back: "The capital of France is Paris",
+    };
+    const table = {
+      front: [
+        { type: "text", payload: { text: "Capitals" } },
+        {
+          type: "table",
+          payload: {
+            columns: ["Capital", "Country"],
+            rows: [
+              ["Paris", "France"],
+              ["Berlin", "Germany"],
+            ],
+            blanks: [
+              { row: 0, column: 0 },
+              { row: 1, column: 0 },
+            ],
+          },
+        },
+      ],
+      back: "Capitals\nCapital | Country\nParis | France\nBerlin | Germany",
+    };
 
-    /** Seeds deck d1 with one card of [front], its back the front with its blanks filled. */
-    function seedWhole(front: string) {
+    /** Seeds deck d1 with one card of [card]'s blocks and back. */
+    function seedWhole(card: { front: unknown[]; back: string }) {
       postgrest.seed("decks", deckRow("d1", "d1"));
-      postgrest.seed("cards", { ...cardRow("d1-0", "d1", front), back: side(filled(front)) });
+      postgrest.seed("cards", {
+        ...cardRow("d1-0", "d1", "whole"),
+        front: card.front,
+        back: side(card.back),
+      });
     }
 
     it("shows a cloze card's sentence with its blank empty, and once answered, as one card, fills it in place on the previous card and in its dialog", async () => {
@@ -985,7 +1012,7 @@ describe("the study page", () => {
       seedWhole(table);
       await open("d1");
       const current = screen.getByRole("group", {
-        name: "Capital, Country. 빈칸, France. 빈칸, Germany",
+        name: "Capitals. Capital, Country. 빈칸, France. 빈칸, Germany",
       });
       for (const header of ["Capital", "Country", "France", "Germany"]) {
         expect(within(current).getByText(header)).toBeInTheDocument();

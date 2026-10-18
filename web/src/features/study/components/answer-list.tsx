@@ -1,4 +1,4 @@
-import { spoken } from "@/features/decks";
+import { spokenContent } from "@/features/decks";
 
 import type { PreviousAnswer } from "../session";
 import { answerLabel, GradeChip } from "./graded-card";
@@ -43,7 +43,7 @@ export function AnswerList({
               className="flex min-h-tap-target w-full items-center gap-3 rounded-field px-3 text-left hover:bg-ground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               <span className="flex-1 truncate text-secondary font-bold">
-                {spoken(answer.card.text.front, true)}
+                {spokenContent(answer.card.front, true)}
               </span>
               <GradeChip answer={answer.answer} />
             </button>

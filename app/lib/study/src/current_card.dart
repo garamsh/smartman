@@ -109,7 +109,6 @@ class _CurrentCardState extends State<CurrentCard>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final front = describeContent(l10n, widget.card.front);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,7 +117,7 @@ class _CurrentCardState extends State<CurrentCard>
           child: Semantics(
             container: true,
             label: l10n.currentCardSemantics(
-              spoken(front, revealed: false, blank: l10n.blank),
+              spokenContent(l10n, widget.card.front, revealed: false),
             ),
             customSemanticsActions: {
               CustomSemanticsAction(label: l10n.know): () =>
@@ -422,7 +421,6 @@ class _CardFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final front = describeContent(AppLocalizations.of(context), card.front);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -438,9 +436,9 @@ class _CardFace extends StatelessWidget {
                 padding: const EdgeInsets.all(StudyStyle.cardPadding),
                 child: SizedBox(
                   width: double.infinity,
-                  child: hasBlanks(front)
+                  child: isWholeCard(card.front)
                       ? WholeCardView(
-                          front,
+                          card.front,
                           revealed: false,
                           style: AppType.question,
                           minFontSize: AppType.questionFloor,

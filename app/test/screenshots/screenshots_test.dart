@@ -480,16 +480,30 @@ void main() {
       await tester.runAsync(() async {
         final deck = await repository.createDeck('국어 문법');
         for (final front in [
-          '3인칭 재귀칭: 높임 {{c::당신}} · 예사 {{c::자기}} · 낮춤 저',
-          '| 불규칙 | 기본형 | 활용 |\n| --- | --- | --- |\n'
-              '| ㄷ 불규칙 | 듣다 | {{c::들어}} |\n'
-              '| ㅂ 불규칙 | 돕다 | {{c::도와}} |\n'
-              '| ㅅ 불규칙 | 낫다 | {{c::나아}} |',
+          [
+            const ClozeContent('3인칭 재귀칭: 높임 ___ · 예사 ___ · 낮춤 저', ['당신', '자기']),
+          ],
+          [
+            const TextContent('불규칙 활용'),
+            const TableContent(
+              columns: ['불규칙', '기본형', '활용'],
+              rows: [
+                ['ㄷ 불규칙', '듣다', '들어'],
+                ['ㅂ 불규칙', '돕다', '도와'],
+                ['ㅅ 불규칙', '낫다', '나아'],
+              ],
+              blanks: [
+                (row: 0, column: 2),
+                (row: 1, column: 2),
+                (row: 2, column: 2),
+              ],
+            ),
+          ],
         ]) {
           await repository.addCard(
             deck.id,
-            front: [TextContent(front)],
-            back: [TextContent(filled(front))],
+            front: front,
+            back: [TextContent(plainText(front))],
           );
         }
       });

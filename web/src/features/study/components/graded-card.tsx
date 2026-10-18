@@ -3,7 +3,7 @@
 import { Check, X } from "lucide-react";
 import { type PointerEvent, type Ref, useRef, useState } from "react";
 
-import { hasBlanks, spoken, WholeCard } from "@/features/decks";
+import { isWholeCard, spokenContent, WholeCard } from "@/features/decks";
 
 import type { Answer } from "../answer-write";
 import type { PreviousAnswer } from "../session";
@@ -34,9 +34,9 @@ type Graded = Pick<PreviousAnswer, "card" | "answer"> & { changed?: boolean };
  * blanks as "빈칸", and its grade.
  */
 export function answerLabel(answer: Graded): string {
-  const { front, back } = answer.card.text;
+  const front = spokenContent(answer.card.front, false);
   const changed = answer.changed ? ". 수정됨" : "";
-  return `앞면: ${spoken(front, false)}. 뒷면: ${back}. 답: ${grades[answer.answer].name}${changed}`;
+  return `앞면: ${front}. 뒷면: ${answer.card.text.back}. 답: ${grades[answer.answer].name}${changed}`;
 }
 
 /** A grade's chip: its mark and its word, so the grade never rests on colour alone. */
@@ -217,9 +217,9 @@ export function GradedCard({
             {label}
           </span>
         )}
-        {hasBlanks(answer.card.text.front) ? (
+        {isWholeCard(answer.card.front) ? (
           <span className="col-span-3 flex items-center justify-center p-4 text-ink lg:p-6">
-            <WholeCard text={answer.card.text.front} revealed className="text-answer" />
+            <WholeCard blocks={answer.card.front} revealed className="text-answer" />
           </span>
         ) : (
           <>

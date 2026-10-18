@@ -1,5 +1,10 @@
-export { type Content, describeContent, parseContent } from "./card-content";
-export { filled, hasBlanks, spoken } from "./card-markup";
+export {
+  type Content,
+  describeContent,
+  isWholeCard,
+  parseContent,
+  spokenContent,
+} from "./card-content";
 export { CardGrid } from "./components/card-grid";
 export { DeckList, type DeckRow, PublicChip } from "./components/deck-list";
 export { DeckTile } from "./components/deck-tile";

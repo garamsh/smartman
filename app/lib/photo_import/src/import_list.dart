@@ -173,13 +173,17 @@ final class ImportRow {
     ].join('\n');
   }
 
-  /// Whether the row's front holds a blank: a whole card, whose back is its
-  /// front with the blanks filled, in any form.
-  bool get whole => hasBlanks(front);
+  /// A table or cloze row's front blocks, drawn whole; null for any other
+  /// row (ADR 0068).
+  List<Content>? get wholeFront => sources.first.wholeFront;
 
-  /// The cards the row saves in [form].
+  /// The cards the row saves in [form]. A table or cloze row saves one, its
+  /// front's filled text on both sides, in any form; its front is saved as
+  /// [wholeFront] ([ImportList.toImport]).
   List<CardSides> cards(SectionForm form) => switch (form) {
-    _ when whole => [(front: front, back: filled(front))],
+    _ when wholeFront != null => [
+      (front: plainText(wholeFront!), back: plainText(wholeFront!)),
+    ],
     VocabularyForm(:final direction) when kind == CardKind.vocabulary => [
       if (direction != Direction.backward)
         (front: word(form), back: meaning(form)),
@@ -281,7 +285,8 @@ final class ImportList {
       row.savable &&
       (row.included ?? (row.type != CardType.identify && !isDuplicate(row)));
 
-  /// The cards to import, each as its section's form shows it. Each merges
+  /// The cards to import, each as its section's form shows it, a table or
+  /// cloze row's front as its blocks. Each merges
   /// back into a card with its key, the deck's or one written before it.
   List<ImportedCard> toImport() => [
     for (final section in sections)
@@ -289,8 +294,8 @@ final class ImportList {
         if (isIncluded(row))
           for (final card in row.cards(section.form))
             ImportedCard(
-              front: card.front,
-              back: card.back,
+              front: row.wholeFront ?? [TextContent(card.front)],
+              back: [TextContent(card.back)],
               onDuplicate: DuplicateChoice.mergeBack,
             ),
   ];
@@ -298,7 +303,8 @@ final class ImportList {
   /// How many cards saving writes or merges into: one per card key among
   /// [toImport], since cards of one key merge into one.
   int get cardCount =>
-      {for (final card in toImport()) CardKey.fromFront(card.front)}.length;
+      {for (final card in toImport()) CardKey.fromFront(plainText(card.front))}
+          .length;
 
   /// Includes every row of [section], or leaves every one out when any is
   /// included.

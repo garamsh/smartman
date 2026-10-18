@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { v7 } from "uuid";
-import { describeContent, hasBlanks, WholeCard } from "@/features/decks";
+import { isWholeCard, WholeCard } from "@/features/decks";
 
 import type { Answer, AnswerWrite } from "../answer-write";
 import { engineLoaded, loadEngine } from "../engine";
@@ -503,7 +503,6 @@ function Session({ plan }: { plan: SessionPlan }) {
  * empty; its answer shows once answered, above.
  */
 function CurrentCard({ front }: { front: PreviousAnswer["card"]["front"] }) {
-  const text = describeContent(front);
   return (
     <section
       aria-label="현재 카드"
@@ -514,8 +513,8 @@ function CurrentCard({ front }: { front: PreviousAnswer["card"]["front"] }) {
         role="group"
         className="flex flex-1 items-center justify-center p-6 text-center"
       >
-        {hasBlanks(text) ? (
-          <WholeCard text={text} revealed={false} className="text-question" />
+        {isWholeCard(front) ? (
+          <WholeCard blocks={front} revealed={false} className="text-question" />
         ) : (
           <CardSide blocks={front} size="question" />
         )}

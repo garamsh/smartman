@@ -8,7 +8,7 @@ import 'whole_cards.dart';
 
 void main() {
   testWidgets(
-    'a split row draws a whole card as its front with its blanks filled, where a plain card stays split',
+    'a split row draws a cloze card as its front with its blanks filled, where a text card stays split',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -21,10 +21,16 @@ void main() {
               children: [
                 CardSplitRow(
                   key: Key('whole'),
-                  front: 'The capital of France is {{c::Paris}}',
-                  back: 'The capital of France is Paris',
+                  front: [
+                    ClozeContent('The capital of France is ___', ['Paris']),
+                  ],
+                  back: [TextContent('The capital of France is Paris')],
                 ),
-                CardSplitRow(key: Key('plain'), front: 'Chat', back: 'cat'),
+                CardSplitRow(
+                  key: Key('plain'),
+                  front: [TextContent('Chat')],
+                  back: [TextContent('cat')],
+                ),
               ],
             ),
           ),
@@ -37,7 +43,7 @@ void main() {
         find.descendant(of: whole, matching: find.byType(VerticalDivider)),
         findsNothing,
       );
-      // Control: the plain card keeps its two halves.
+      // Control: the text card keeps its two halves.
       final plain = find.byKey(const Key('plain'));
       expect(
         find.descendant(of: plain, matching: find.byType(VerticalDivider)),

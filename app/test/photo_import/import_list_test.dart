@@ -22,7 +22,8 @@ Set<CardKey> _keys(List<String> fronts) => {
 };
 
 List<(String, String)> _sides(ImportList list) => [
-  for (final card in list.toImport()) (card.front, card.back),
+  for (final card in list.toImport())
+    (plainText(card.front), plainText(card.back)),
 ];
 
 void main() {
@@ -119,25 +120,26 @@ void main() {
     },
   );
 
-  test('a row whose front holds a blank saves its front with the blanks filled as its back, swapped or not, where a plain note swaps', () {
+  test('a cloze row saves its blocks as its front and their filled text as its back, swapped or not, where a plain note swaps', () {
+    const cloze = ClozeContent('3인칭 재귀칭: 높임 ___ · 예사 ___ · 낮춤 저', ['당신', '자기']);
     final list = ImportList(const [
       CandidateCard(
-        front: '3인칭 재귀칭: 높임 당신 · 예사 {{c::자기}} · 낮춤 저',
-        answer: '자기',
+        front: '3인칭 재귀칭: 높임 ___ · 예사 ___ · 낮춤 저',
+        answer: '당신\n자기',
         type: CardType.cloze,
         topic: '재귀칭',
+        wholeFront: [cloze],
       ),
       CandidateCard(front: '재귀칭', answer: '앞의 명사를 다시 가리킴', topic: '재귀칭'),
     ], const {});
-    const whole = (
-      '3인칭 재귀칭: 높임 당신 · 예사 {{c::자기}} · 낮춤 저',
-      '3인칭 재귀칭: 높임 당신 · 예사 자기 · 낮춤 저',
-    );
+    const filled = '3인칭 재귀칭: 높임 당신 · 예사 자기 · 낮춤 저';
 
-    expect(_sides(list), [whole, ('재귀칭', '앞의 명사를 다시 가리킴')]);
+    expect(list.toImport().first.front, [cloze]);
+    expect(_sides(list), [(filled, filled), ('재귀칭', '앞의 명사를 다시 가리킴')]);
     list.sections.single.form = const NoteForm(swapped: true);
+    expect(list.toImport().first.front, [cloze]);
     // Control: the plain note in the same section swaps.
-    expect(_sides(list), [whole, ('앞의 명사를 다시 가리킴', '재귀칭')]);
+    expect(_sides(list), [(filled, filled), ('앞의 명사를 다시 가리킴', '재귀칭')]);
   });
 
   group('stored forms', () {

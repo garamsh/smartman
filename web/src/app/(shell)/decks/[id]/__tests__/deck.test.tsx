@@ -219,7 +219,10 @@ describe("the deck page", () => {
 
   it("shows a whole card's front with its blank empty in place of the answer bar, and fills it on a click", async () => {
     postgrest.seed("cards", {
-      ...cardRow("c-cloze", "d-fr", "The capital of France is {{c::Paris}}", day / 2),
+      ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
+      front: [
+        { type: "cloze", payload: { text: "The capital of France is ___", answers: ["Paris"] } },
+      ],
       back: side("The capital of France is Paris"),
     });
     await open("d-fr");

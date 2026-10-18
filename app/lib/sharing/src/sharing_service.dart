@@ -101,8 +101,8 @@ class SharingService {
       [
         for (final card in cards)
           ImportedCard(
-            front: plainText(card.front),
-            back: plainText(card.back),
+            front: card.front,
+            back: card.back,
             onDuplicate: onDuplicate,
           ),
       ],

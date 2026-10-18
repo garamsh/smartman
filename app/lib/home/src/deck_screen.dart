@@ -279,8 +279,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   for (final row in rows)
                     CardAnswerRow(
                       key: ValueKey(row.card.id),
-                      front: row.front,
-                      back: row.back,
+                      front: row.card.front,
+                      back: row.card.back,
                       shown: _showAll != _flipped.contains(row.card.id),
                       onToggle: () => setState(() {
                         if (!_flipped.remove(row.card.id)) {

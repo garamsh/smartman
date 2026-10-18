@@ -69,17 +69,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardSideRequired => 'Enter some text';
 
   @override
-  String get cardBlankMalformed => 'A blank is not closed, or holds nothing';
-
-  @override
-  String get wholeCardBack =>
-      'The card with its blanks filled is saved as the answer';
-
-  @override
   String get blank => 'blank';
 
   @override
   String get wholeCard => 'Card';
+
+  @override
+  String get wholeCardReadOnly =>
+      'Table and cloze cards can\'t be edited yet. You can delete one.';
 
   @override
   String get duplicateTitle => 'This deck already has this card';

@@ -105,11 +105,7 @@ class _PreviousCardViewState extends State<PreviousCardView>
     return Semantics(
       container: true,
       label: l10n.previousCardSemantics(
-        spoken(
-          describeContent(l10n, card.card.front),
-          revealed: false,
-          blank: l10n.blank,
-        ),
+        spokenContent(l10n, card.card.front, revealed: false),
         describeContent(l10n, card.card.back),
         _answerName(l10n, card.answer),
         card.changed ? 'yes' : 'no',
@@ -178,11 +174,7 @@ class EarlierCardView extends StatelessWidget {
       label: [
         l10n.earlierCard,
         l10n.previousCardSemantics(
-          spoken(
-            describeContent(l10n, card.front),
-            revealed: false,
-            blank: l10n.blank,
-          ),
+          spokenContent(l10n, card.front, revealed: false),
           describeContent(l10n, card.back),
           _answerName(l10n, earlier.answer),
           'no',
@@ -357,7 +349,6 @@ class _GradedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final whole = describeContent(AppLocalizations.of(context), front);
     final (fill, line) = switch (answer) {
       Answer.know => (colors.knowCard, colors.knowLine),
       Answer.dontKnow => (colors.dontKnowCard, colors.dontKnowLine),
@@ -374,13 +365,13 @@ class _GradedCard extends StatelessWidget {
             ),
             // The card is given its height, so its halves are laid out at
             // it and each side reads the height its half leaves it.
-            child: hasBlanks(whole)
+            child: isWholeCard(front)
                 ? Padding(
                     padding: const EdgeInsets.all(StudyStyle.cardPadding),
                     child: LayoutBuilder(
                       builder: (context, constraints) => Center(
                         child: WholeCardView(
-                          whole,
+                          front,
                           revealed: true,
                           style: AppType.question.copyWith(color: colors.ink),
                           minFontSize: AppType.questionFloor,
@@ -475,14 +466,13 @@ class _GradeChip extends StatelessWidget {
 /// with its blanks filled.
 void _showWholeCard(BuildContext context, Card card) {
   final l10n = AppLocalizations.of(context);
-  final whole = describeContent(l10n, card.front);
-  final isWhole = hasBlanks(whole);
+  final isWhole = isWholeCard(card.front);
   showAppSheet<void>(
     context,
     builder: (context) => AppSheet(
       title: isWhole ? l10n.wholeCard : l10n.cardFront,
       content: isWhole
-          ? WholeCardView(whole, revealed: true, style: AppType.body)
+          ? WholeCardView(card.front, revealed: true, style: AppType.body)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

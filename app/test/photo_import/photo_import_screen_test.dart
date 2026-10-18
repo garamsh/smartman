@@ -736,25 +736,42 @@ void main() {
     });
 
     testWidgets(
-      'a row whose front holds a blank shows it whole and filled, saves its filled front as its back, and its section offers no swap',
+      'a table row shows it whole and filled, opens no edit sheet, saves its blocks with their filled text as its back, and its section offers no swap',
       (tester) async {
-        const front = '3인칭 재귀칭: 높임 당신 · 예사 {{c::자기}} · 낮춤 저';
+        const table = TableContent(
+          columns: ['구분', '높임', '낮춤'],
+          rows: [
+            ['2인칭', '당신', '너'],
+          ],
+          blanks: [(row: 0, column: 1), (row: 0, column: 2)],
+        );
         final import = await _Import.open(tester);
         await import.extractCards(const [
           CandidateCard(
-            front: front,
-            answer: '자기',
-            type: CardType.cloze,
-            topic: '재귀칭',
+            front: '인칭 대명사',
+            answer: '구분 | 높임 | 낮춤\n2인칭 | 당신 | 너',
+            type: CardType.table,
+            topic: '대명사',
+            wholeFront: [TextContent('인칭 대명사'), table],
           ),
+          CandidateCard(front: '양성모음', answer: 'ㅏ ㅗ', topic: '모음조화'),
         ]);
 
-        expect(blanksUnder(find.byType(Dismissible)), {'자기': true});
+        final whole = import.row('인칭 대명사');
+        expect(blanksUnder(whole), {'당신': true, '너': true});
         expect(
-          import.check('3인칭 재귀칭: 높임 당신 · 예사 blank · 낮춤 저'),
+          import.check('인칭 대명사. 구분, 높임, 낮춤. 2인칭, blank, blank'),
           findsOneWidget,
         );
-        await import.menu('재귀칭');
+        await import.tap(_shown('인칭 대명사'));
+        expect(_shown('Edit card'), findsNothing);
+        // Control: the plain note's row opens the sheet.
+        await import.tap(_shown('양성모음'));
+        expect(_shown('Edit card'), findsOneWidget);
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
+
+        await import.menu('대명사');
         expect(find.widgetWithText(MenuItemButton, 'Swap sides'), findsNothing);
         // Control: the menu is open, with its other item.
         expect(
@@ -764,9 +781,14 @@ void main() {
         await tester.tapAt(Offset.zero);
         await tester.pumpAndSettle();
 
-        await import.tap(_shown('Add 1 card'));
-        expect(await import.cards(import.french), [
-          (front, '3인칭 재귀칭: 높임 당신 · 예사 자기 · 낮춤 저', CardSource.import),
+        await import.tap(_shown('Add 2 cards'));
+        final saved = (await tester.runAsync(
+          () => import.repository.listCards(import.french.id),
+        ))!;
+        final card = saved.firstWhere((card) => isWholeCard(card.front));
+        expect(card.front, [const TextContent('인칭 대명사'), table]);
+        expect(card.back, [
+          const TextContent('인칭 대명사\n구분 | 높임 | 낮춤\n2인칭 | 당신 | 너'),
         ]);
         await import.close();
       },

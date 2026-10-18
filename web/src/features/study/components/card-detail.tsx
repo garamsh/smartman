@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { hasBlanks, WholeCard } from "@/features/decks";
+import { isWholeCard, WholeCard } from "@/features/decks";
 
 import type { PreviousAnswer } from "../session";
 import { CardSide } from "./card-side";
@@ -39,8 +39,8 @@ export function CardDetail({
           <GradeChip answer={answer.answer} />
           <span className="sr-only">답: {grades[answer.answer].name}</span>
         </div>
-        {hasBlanks(answer.card.text.front) ? (
-          <WholeCard text={answer.card.text.front} revealed className="text-answer" />
+        {isWholeCard(answer.card.front) ? (
+          <WholeCard blocks={answer.card.front} revealed className="text-answer" />
         ) : (
           <>
             <section aria-labelledby="card-detail-front" className="flex flex-col gap-2">
