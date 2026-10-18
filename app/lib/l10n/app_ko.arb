@@ -116,6 +116,8 @@
   "@changingToDontKnow": {"description": "Shown behind a card answered earlier while it is dragged left, toward Don't know."},
   "guideSize": "오늘 {cards}장 · 약 {minutes}분",
   "@guideSize": {"description": "The session's start guide, first line: how many cards the session opened with and the minutes they take.", "placeholders": {"cards": {"type": "int"}, "minutes": {"type": "int"}}},
+  "guideResume": "이어서 해요 · 남은 {cards}장 · 약 {minutes}분",
+  "@guideResume": {"description": "The session's start guide, first line, when the session opens on a study day that already has cards done: it goes on with the day, with the cards left and the minutes they take.", "placeholders": {"cards": {"type": "int"}, "minutes": {"type": "int"}}},
   "guideDone": "오늘 할 카드를 다 했어요",
   "@guideDone": {"description": "The session's start guide, first line, in place of the session's size when it opened with no card left today: today's cards are done."},
   "guideSwipe": "알면 오른쪽, 모르면 왼쪽으로 밀어요",

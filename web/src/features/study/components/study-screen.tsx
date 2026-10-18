@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } fro
 import { v7 } from "uuid";
 
 import type { Answer, AnswerWrite } from "../answer-write";
-import { loadEngine } from "../engine";
+import { engineLoaded, loadEngine } from "../engine";
 import { saveAnswer } from "../save-answer";
 import { type PreviousAnswer, type SessionPlan, StudySession } from "../session";
 import { WriteQueue } from "../write-queue";
@@ -68,7 +68,49 @@ function shortcut(
  * its answer stays. Each action has a keyboard shortcut, listed by "단축키", and a visible
  * control.
  */
-export function StudyScreen({ plan }: { plan: SessionPlan }) {
+export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: ReactNode }) {
+  // The session places its cards through the engine's today's list, a synchronous call, so it
+  // starts once the engine's module has loaded in the browser.
+  const [engine, setEngine] = useState<"loading" | "ready" | "failed">(() =>
+    engineLoaded() ? "ready" : "loading",
+  );
+  useEffect(() => {
+    if (engine !== "loading") return;
+    loadEngine().then(
+      () => {
+        setEngine("ready");
+      },
+      () => {
+        setEngine("failed");
+      },
+    );
+  }, [engine]);
+  if (engine === "failed") {
+    return (
+      <main className="mx-auto flex min-h-dvh w-full max-w-3xl items-center justify-center px-gutter">
+        <div role="alert" className="flex flex-col gap-3 rounded-row bg-surface p-4">
+          <p className="text-dont-know-text">
+            학습 화면을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setEngine("loading");
+            }}
+            className={`${button} self-start bg-ink text-on-primary`}
+          >
+            다시 시도
+          </button>
+        </div>
+      </main>
+    );
+  }
+  if (engine === "loading") return loading;
+  return <Session plan={plan} />;
+}
+
+/** The study screen over a session that has started, the engine loaded. */
+function Session({ plan }: { plan: SessionPlan }) {
   const [session] = useState(() => new StudySession(plan, Date.now, () => v7()));
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
@@ -174,12 +216,6 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
     };
   }, [session]);
 
-  // The first write needs the engine; fetching it now keeps that write from waiting on it. A
-  // failure here is not shown: the write that needs the engine fetches it again and reports it.
-  useEffect(() => {
-    loadEngine().catch(() => undefined);
-  }, []);
-
   // Leaving the page drops the writes still waiting, so the browser asks first.
   const unsaved = status.pending > 0;
   useEffect(() => {
@@ -222,19 +258,19 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
                 aria-label="진행"
                 aria-valuemin={0}
                 aria-valuemax={view.total}
-                aria-valuenow={view.answered}
-                aria-valuetext={`${String(view.total)}장 중 ${String(view.answered)}장 답함`}
+                aria-valuenow={view.done}
+                aria-valuetext={`${String(view.total)}장 중 ${String(view.done)}장 끝냄`}
                 className="h-progress flex-1 overflow-hidden rounded-full bg-hairline"
               >
                 <div
                   className="h-full rounded-full bg-ink motion-safe:transition-[width]"
                   style={{
-                    width: `${String(view.total === 0 ? 0 : (100 * view.answered) / view.total)}%`,
+                    width: `${String(view.total === 0 ? 0 : (100 * view.done) / view.total)}%`,
                   }}
                 />
               </div>
               <span aria-hidden className="text-secondary font-bold text-ink tabular-nums">
-                {view.answered}/{view.total}
+                {view.done}/{view.total}
               </span>
             </>
           )}

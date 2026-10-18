@@ -21,6 +21,7 @@ import 'package:smartman/study/src/scheduler.dart';
 import 'package:smartman/study/src/study_repository.dart';
 import 'package:smartman/study/src/study_screen.dart';
 import 'package:smartman/study/src/study_style.dart';
+import 'package:smartman/study/src/today_overview.dart';
 
 import 'fixtures.dart';
 
@@ -118,10 +119,12 @@ class _RecordingScheduler extends _InstantScheduler {
 const _phone = Size(390, 844);
 
 class _Study {
-  _Study(this.tester, this.db);
+  _Study(this.tester, this.db, this.navigator, this.decks);
 
   final WidgetTester tester;
   final AppDatabase db;
+  final GlobalKey<NavigatorState> navigator;
+  final DeckSelection decks;
   DateTime now = DateTime.utc(2026, 10, 14, 9);
 
   /// Drags the current card [dx] to the side over [duration], slowly enough
@@ -141,6 +144,49 @@ class _Study {
 
   Future<void> dontKnow({Duration elapsed = Duration.zero}) =>
       swipe(-200, elapsed: elapsed);
+
+  /// Closes the screen and lets the answers it queued land.
+  Future<void> close() async {
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+  }
+
+  /// The 오늘 tab's overview of the same decks, read as it reads it.
+  Future<TodayOverview> overview() async {
+    TodayOverview? read;
+    unawaited(
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => TodayOverviewReader(
+            decks: decks,
+            builder: (context, overview) {
+              if (overview is TodayOverview) read = overview;
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    return read!;
+  }
+
+  /// Closes the screen, lets the answers it queued land, and opens a new
+  /// session over the same decks.
+  Future<void> reopen() async {
+    await close();
+    unawaited(
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 
   /// The front of the card under study, or null when none is.
   String? get current {
@@ -228,8 +274,8 @@ Future<_Study> _open(
     }
     return deck;
   }))!;
-  final study = _Study(tester, db);
   final navigator = GlobalKey<NavigatorState>();
+  final study = _Study(tester, db, navigator, DeckSelection(deck.id));
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -493,7 +539,8 @@ void main() {
 
       expect(find.text('Done for today'), findsNothing);
       expect(study.current, 'c20 front');
-      expect(find.text('0/2'), findsOneWidget);
+      // The day's count goes on from the twenty answered today.
+      expect(find.text('20/22'), findsOneWidget);
       final guide = [_guideDone, ..._guide(0, 0).skip(1)];
       for (final line in guide) {
         expect(_guideText(line), findsOneWidget);
@@ -541,7 +588,8 @@ void main() {
         _label(tester, _previous('b front')),
         endsWith("Answer: Don't know"),
       );
-      expect(find.text('2/3'), findsOneWidget);
+      // Done counts the cards whose latest answer today is "Know".
+      expect(find.text('1/3'), findsOneWidget);
     },
   );
 
@@ -1224,6 +1272,164 @@ void main() {
   );
 
   testWidgets(
+    "a session reopened the same day counts the day's cards from today's list, done being those answered Know last today",
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c', 'd', 'e', 'f']);
+      expect(find.text('0/6'), findsOneWidget);
+      await study.know();
+      await study.dontKnow();
+      await study.know();
+      await study.know();
+      expect(find.text('3/6'), findsOneWidget);
+
+      await study.reopen();
+      // a, c and d are done; b, answered Don't know, is left with e and f:
+      // the count goes on at 3 of the same 6, not 0 of 3, and the guide reads
+      // as a continuation of the day.
+      expect(find.text('3/6'), findsOneWidget);
+      expect(_guideText('Picking up · 3 left · about 1 min'), findsOneWidget);
+      expect(_guideText(_guide(3, 1).first), findsNothing);
+      expect(study.current, 'e front');
+      await study.know();
+      expect(find.text('4/6'), findsOneWidget);
+
+      // Changing that answer to Don't know makes the card left again.
+      final semantics = tester.ensureSemantics();
+      await _act(tester, _previous('e front').last, "Change to Don't know");
+      semantics.dispose();
+      expect(find.text('3/6'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    "a card answered Don't know stays in today's list across a reopen until it is answered Know",
+    (tester) async {
+      final study = await _open(tester, ['a', 'b']);
+      await study.dontKnow();
+      expect(study.current, 'b front');
+
+      await study.reopen();
+      // a falls due tomorrow by its state, and today's list keeps it.
+      expect(find.text('0/2'), findsOneWidget);
+      final shown = <String?>[];
+      while (study.current != null) {
+        shown.add(study.current);
+        await study.know();
+      }
+      expect(shown, containsAll(['a front', 'b front']));
+      expect(find.text('2/2'), findsOneWidget);
+
+      // Answered Know, it leaves today's list: a reopen finds nothing left.
+      await study.reopen();
+      expect(study.current, isNull);
+      expect(find.text('Done for today'), findsOneWidget);
+      expect(find.text('2/2'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    "the 오늘 tab's goal and count agree with the study bar, a card on Don't know left in both",
+    (tester) async {
+      final study = await _open(
+        tester,
+        ['a', 'b'],
+        states: {'a': _dueToday, 'b': _dueToday},
+      );
+      expect(find.text('0/2'), findsOneWidget);
+      await study.know();
+      await study.dontKnow();
+      expect(find.text('1/2'), findsOneWidget);
+
+      await study.close();
+      final overview = await study.overview();
+      // a is done; b, answered Don't know, is left in the goal and the count.
+      expect((overview.goal.done, overview.goal.goal), (1, 2));
+      expect(overview.goal.reached, isFalse);
+      expect(overview.count.total, 1);
+
+      await study.reopen();
+      expect(find.text('1/2'), findsOneWidget);
+      expect(study.current, 'b front');
+      await study.know();
+      expect(find.text('2/2'), findsOneWidget);
+      await study.close();
+      final after = await study.overview();
+      expect(
+        (after.goal.done, after.goal.goal, after.goal.reached),
+        (2, 2, true),
+      );
+      expect(after.count.total, 0);
+    },
+  );
+
+  testWidgets(
+    "on a reopen, a card on Don't know comes back after a re-show's gap, in a backlog too",
+    (tester) async {
+      // Eight cards overdue, a backlog, and x among them, which the first
+      // session answers Don't know.
+      final names = ['x', for (var i = 0; i < 7; i++) 'o$i'];
+      final study = await _open(
+        tester,
+        names,
+        states: {for (final name in names) name: _overdue},
+      );
+      expect(study.current, 'x front');
+      await study.dontKnow();
+      await study.close();
+      expect((await study.overview()).count.backlog, isTrue);
+      await study.reopen();
+      // The first draw puts x after reshowGapMin cards, not after every
+      // overdue card.
+      final shown = <String?>[];
+      for (var i = 0; i <= reshowGapMin; i++) {
+        shown.add(study.current);
+        await study.know();
+      }
+      expect(shown.last, 'x front');
+      expect(shown.take(reshowGapMin), everyElement(isNot('x front')));
+    },
+  );
+
+  testWidgets(
+    'a session open across 04:00 keeps its day: answers after 04:00 still count',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c']);
+      study.now = DateTime.utc(2026, 10, 15, 3, 59);
+      await study.know();
+      expect(find.text('1/3'), findsOneWidget);
+      study.now = DateTime.utc(2026, 10, 15, 4, 1);
+      await study.know();
+      expect(find.text('2/3'), findsOneWidget);
+      await study.know();
+      expect(find.text('3/3'), findsOneWidget);
+
+      // The next open, after 04:00, starts the new day's list: b and c,
+      // answered after 04:00, are its done cards; a, answered at 03:59 the
+      // day before, falls due again within it on its one-day interval.
+      await study.reopen();
+      expect(find.text('2/3'), findsOneWidget);
+      expect(study.current, 'a front');
+    },
+  );
+
+  testWidgets(
+    'a session reopened on the next study day, after 04:00, counts from 0',
+    (tester) async {
+      final study = await _open(tester, ['a', 'b', 'c']);
+      await study.know();
+      await study.reopen();
+      // Control: the same day, the count goes on.
+      expect(find.text('1/3'), findsOneWidget);
+
+      study.now = DateTime.utc(2026, 10, 15, 4, 30);
+      await study.reopen();
+      // a, due again a day after its answer, and b and c, new.
+      expect(find.text('0/3'), findsOneWidget);
+      expect(_guideText(_guide(3, 1).first), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'Study goes on with the next new cards in the same screen and route, each answer written, and stop closes it',
     (tester) async {
       // Eighteen of the first day's twenty new cards answered today: two are
@@ -1246,11 +1452,11 @@ void main() {
         same(route),
       );
       expect(route!.isCurrent, isTrue);
-      expect(find.text('2/4'), findsOneWidget);
+      expect(find.text('20/22'), findsOneWidget);
       await study.know();
       expect(study.current, 'c21 front');
       await study.know();
-      expect(find.text('4/4'), findsOneWidget);
+      expect(find.text('22/22'), findsOneWidget);
       expect(find.text('No more cards to study'), findsOneWidget);
       final reviews = await tester.runAsync(
         () => study.db.select(study.db.reviews).get(),
@@ -1422,6 +1628,23 @@ final _answeredToday = CardState(
   ];
   return (names, {for (final name in names.take(today)) name: _answeredToday});
 }
+
+/// Last answered four days before the session's day and due before it began.
+final _dueToday = CardState(
+  stability: 3,
+  difficulty: 5,
+  lastReview: DateTime.utc(2026, 10, 10),
+  due: DateTime.utc(2026, 10, 13),
+);
+
+/// Overdue by a month at a thirty-day interval, so a few such cards are more
+/// than three days of reviews: a backlog.
+final _overdue = CardState(
+  stability: 30,
+  difficulty: 5,
+  lastReview: DateTime.utc(2026, 8, 14),
+  due: DateTime.utc(2026, 9, 13),
+);
 
 final dueTomorrow = CardState(
   stability: 3,

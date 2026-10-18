@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
-import 'package:smartman/study/src/rust/frb_generated.dart';
 
 /// The engine's own reference values, written by `engine/tests/fixtures/generate.py`.
 const _fixtures = '../engine/tests/fixtures/reference.json';
@@ -15,7 +14,7 @@ Matcher _closeTo(num expected) =>
     closeTo(expected, (expected * _relativeTolerance).abs());
 
 void main() {
-  setUpAll(() async => RustLib.init());
+  // flutter_test_config.dart loads the library before every test file.
 
   test(
     'reviewing persisted state parts returns the reference step of the engine',

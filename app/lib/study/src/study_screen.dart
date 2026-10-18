@@ -278,7 +278,7 @@ class _TopBar extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress.total == 0
                         ? 1
-                        : progress.answered / progress.total,
+                        : progress.done / progress.total,
                     minHeight: StudyStyle.progressHeight,
                     color: colors.ink,
                     backgroundColor: colors.hairline,
@@ -286,7 +286,7 @@ class _TopBar extends StatelessWidget {
                       StudyStyle.progressHeight,
                     ),
                     semanticsLabel: l10n.studyProgressSemantics(
-                      progress.answered,
+                      progress.done,
                       progress.total,
                     ),
                   ),
@@ -295,7 +295,7 @@ class _TopBar extends StatelessWidget {
                   padding: const EdgeInsets.only(right: AppSpace.s12),
                   child: ExcludeSemantics(
                     child: Text(
-                      l10n.studyProgress(progress.answered, progress.total),
+                      l10n.studyProgress(progress.done, progress.total),
                       style: AppType.secondary.copyWith(
                         color: colors.ink,
                         fontWeight: FontWeight.w700,

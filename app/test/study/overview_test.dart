@@ -3,6 +3,8 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/overview.dart';
 import 'package:smartman/study/src/queue.dart';
+import 'package:smartman/study/src/rust/api/engine.dart';
+import 'package:smartman/study/src/today.dart';
 
 import 'fixtures.dart';
 
@@ -114,32 +116,48 @@ void main() {
   });
 
   group('daily goal', () {
-    const a = CardId('a');
-    const b = CardId('b');
-    const c = CardId('c');
     final day = StudyDay.at(_now, firstAnswers: const [], offsetAt: _utc);
-    ({CardId card, DateTime at}) answered(CardId card, DateTime at) =>
-        (card: card, at: at);
+    final tomorrow = DateTime.utc(2026, 10, 15, 9);
+    Card card(String name) =>
+        textCard(name, createdAt: DateTime.utc(2026, 9, 1));
+    DayAnswer know(String name, DateTime at) =>
+        (card: CardId(name), answer: Answer.know, at: at);
+    DayAnswer dontKnow(String name, DateTime at) =>
+        (card: CardId(name), answer: Answer.dontKnow, at: at);
 
-    test('the goal is the cards answered today and those left, each once; done are those no longer left', () {
-      // a answered and done; b answered "Don't know" and due again; c left.
+    test("the goal is the day's cards done and left as today's list places them, a card on Don't know left until Know", () {
+      final cards = [card('a'), card('b'), card('c')];
+      final states = {
+        const CardId('a'): dueAt(tomorrow),
+        const CardId('b'): dueAt(tomorrow),
+        const CardId('c'): dueAt(_now),
+      };
+      // a done; b answered "Don't know", which its state makes due tomorrow;
+      // c due and not answered.
       final goal = DailyGoal.of(
-        [answered(a, _now), answered(b, _now), answered(b, _now)],
-        [b, c],
-        day,
+        dayPlanOf(cards, states, day, [know('a', _now), dontKnow('b', _now)]),
       );
       expect((goal.done, goal.goal, goal.reached), (1, 3, false));
+      // Answered "Know" later, b is done.
+      final later = DailyGoal.of(
+        dayPlanOf(cards, states, day, [
+          know('a', _now),
+          dontKnow('b', _now),
+          know('b', _now.add(const Duration(minutes: 1))),
+        ]),
+      );
+      expect((later.done, later.goal), (2, 3));
     });
 
     test('an answer counts from 04:00, not at 03:59, and before the next day starts', () {
+      final cards = [card('a'), card('b'), card('c')];
+      final states = {for (final card in cards) card.id: dueAt(tomorrow)};
       final goal = DailyGoal.of(
-        [
-          answered(a, DateTime.utc(2026, 10, 14, 3, 59)),
-          answered(b, DateTime.utc(2026, 10, 14, 4)),
-          answered(c, DateTime.utc(2026, 10, 15, 4)),
-        ],
-        [],
-        day,
+        dayPlanOf(cards, states, day, [
+          know('a', DateTime.utc(2026, 10, 14, 3, 59)),
+          know('b', DateTime.utc(2026, 10, 14, 4)),
+          know('c', DateTime.utc(2026, 10, 15, 4)),
+        ]),
       );
       expect((goal.done, goal.goal), (1, 1));
     });
@@ -158,28 +176,30 @@ void main() {
           firstAnswers: const [],
           offsetAt: pacific,
         );
+        final cards = [card('a'), card('b')];
+        final states = {
+          for (final card in cards) card.id: dueAt(DateTime.utc(2026, 11, 3)),
+        };
         final goal = DailyGoal.of(
-          [
+          dayPlanOf(cards, states, november, [
             // 03:00 PST: the day before, which a fixed UTC-7 would count.
-            answered(a, DateTime.utc(2026, 11, 1, 11)),
-            answered(b, DateTime.utc(2026, 11, 1, 12)),
-          ],
-          [],
-          november,
+            know('a', DateTime.utc(2026, 11, 1, 11)),
+            know('b', DateTime.utc(2026, 11, 1, 12)),
+          ]),
         );
         expect((goal.done, goal.goal), (1, 1));
       },
     );
 
-    test('the goal is reached when every card of it is answered and none is left, and not on a day with none', () {
+    test('the goal is reached when every card of it is done and none is left, and not on a day with none', () {
+      final cards = [card('a'), card('b')];
+      final states = {for (final card in cards) card.id: dueAt(tomorrow)};
       final done = DailyGoal.of(
-        [answered(a, _now), answered(b, _now)],
-        [],
-        day,
+        dayPlanOf(cards, states, day, [know('a', _now), know('b', _now)]),
       );
       expect((done.done, done.goal, done.reached), (2, 2, true));
       // Control: a day that held no card has reached nothing.
-      final empty = DailyGoal.of([], [], day);
+      final empty = DailyGoal.of(dayPlanOf(const [], const {}, day, const []));
       expect((empty.done, empty.goal, empty.reached), (0, 0, false));
     });
   });

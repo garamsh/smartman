@@ -7,11 +7,21 @@ import {
   ReadFailure,
   readLibrary,
 } from "@/features/decks";
-import { type CardStates, newCards, readToday, selectQueue, StudyScreen } from "@/features/study";
+import {
+  type CardStates,
+  dayPlanOf,
+  newCards,
+  readToday,
+  readyServerEngine,
+  StudyScreen,
+} from "@/features/study";
+
+import { StudySkeleton } from "./study-skeleton";
 
 /**
  * Opens a session over the decks [searchParams] names: reads their cards, their states and
- * today's answers on the server and selects the cards left today and the new cards past them.
+ * today's answers on the server and selects the cards left today, through today's list, and the
+ * new cards past them.
  * Decks that do not exist are left out; with none left, the page is not found.
  */
 export async function Study({
@@ -36,26 +46,40 @@ export async function Study({
     text: { front: describeContent(card.front), back: describeContent(card.back) },
   }));
   const { day, answers, states, readAt, pace, streakBefore } = today.today;
-  const queue = selectQueue(cards, states, day);
-  const taken = new Set(queue.cards.map((card) => card.id));
-  const more = newCards(cards, states).filter((card) => !taken.has(card.id));
-  const before: CardStates = {};
-  for (const card of queue.cards) {
-    const state = states[card.id];
-    if (state) before[card.id] = state;
-  }
   const ids = new Set(cards.map((card) => card.id));
   const own = answers.filter((answer) => ids.has(answer.cardId));
+  // Today's list keeps a card answered "모른다" last today, which its state no longer makes due.
+  const engine = await readyServerEngine();
+  if ("failure" in engine) return <Failure failure={engine.failure} />;
+  const plan = dayPlanOf(cards, states, day, own);
+  const taken = new Set([...plan.selected.cards, ...plan.relearn].map((card) => card.id));
+  const more = newCards(cards, states).filter((card) => !taken.has(card.id));
+  // The state of every card the session may write, and of every card answered today, which the
+  // session's count reads.
+  const before: CardStates = {};
+  for (const id of [...taken, ...own.map((answer) => answer.cardId)]) {
+    const state = states[id];
+    if (state) before[id] = state;
+  }
   return (
     <StudyScreen
+      loading={<StudySkeleton />}
       plan={{
         startedAt: readAt,
-        queue,
+        day: { start: day.start, end: day.end },
+        queue: plan.selected,
+        relearn: plan.relearn,
+        resumed: plan.done.size > 0,
         more,
         before,
         pace,
         today: {
-          answers: own.map(({ answer, durationMs }) => ({ answer, durationMs })),
+          answers: own.map(({ cardId, answer, reviewedAt, durationMs }) => ({
+            cardId,
+            answer,
+            reviewedAt,
+            durationMs,
+          })),
           answeredAnyDeck: answers.length > 0,
           streakBefore,
         },

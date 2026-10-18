@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 import type { CardId } from "@/features/decks";
 
 import {
-  dailyGoal,
   deckProgress,
   forecast,
   forecastDays,
@@ -61,20 +60,6 @@ describe("the forecast", () => {
       { stability: 1, difficulty: 5, lastReview: now, due: tomorrow + 6 * day },
     ];
     expect(forecast(states, today, 9, "UTC")).toEqual([9, 1, 0, 0, 0, 0, 0]);
-  });
-});
-
-describe("the daily goal", () => {
-  it("is the cards answered today and those left, each once; done are those no longer left", () => {
-    const answers = [
-      { cardId: id("a"), reviewedAt: today.start + 1000 },
-      { cardId: id("a"), reviewedAt: today.start + 2000 },
-      { cardId: id("b"), reviewedAt: today.start + 3000 },
-      // Yesterday's answer is no part of today's goal.
-      { cardId: id("z"), reviewedAt: today.start - 1000 },
-    ];
-    // b was answered "모른다" and is due again today: left, not done.
-    expect(dailyGoal(answers, [id("b"), id("c")], today)).toEqual({ done: 1, goal: 3 });
   });
 });
 

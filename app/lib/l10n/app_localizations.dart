@@ -379,6 +379,12 @@ abstract class AppLocalizations {
   /// **'오늘 {cards}장 · 약 {minutes}분'**
   String guideSize(int cards, int minutes);
 
+  /// The session's start guide, first line, when the session opens on a study day that already has cards done: it goes on with the day, with the cards left and the minutes they take.
+  ///
+  /// In ko, this message translates to:
+  /// **'이어서 해요 · 남은 {cards}장 · 약 {minutes}분'**
+  String guideResume(int cards, int minutes);
+
   /// The session's start guide, first line, in place of the session's size when it opened with no card left today: today's cards are done.
   ///
   /// In ko, this message translates to:
