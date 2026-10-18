@@ -12,7 +12,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it.
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
    - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
-   - 덱 tab: "새 덱 만들기" under the rows, before "공개 덱 둘러보기", its ways in a sheet, and nothing in the top bar but the title; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, `BottomActions`; rename and delete sit in the deck screen's menu.
+   - 덱 tab: "새 덱 만들기" under the rows, before "공개 덱 둘러보기", its ways in a sheet, and nothing in the top bar but the title; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, or, while the deck holds no card, "카드 추가" alone as the primary ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), `BottomActions`; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
@@ -46,7 +46,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study's coach: the card moves out with an ease, holds and springs back under a finger; under reduce motion each step is a still image, the card held out ([ADR 0064](adr/0064-teach-study-with-a-first-use-finger-coach-and-show-the-day-s-last-card-and-a-brief-notice-when-a-day-resumes.md)). The notice that a day goes on slides in and out, or fades.
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences, in the voice below.
-   - First-run home and deck screen: an empty list says how to start, and a search with no match, on the 덱 tab or the deck screen, says to try other words.
+   - First-run home, a cardless 오늘 tab and deck screen: an empty list says how to start, and leads there with its one primary, and a search with no match, on the 덱 tab or the deck screen, says to try other words.
    - 오늘 tab and deck screen: in a backlog, one sentence says new cards wait until the reviews are caught up ([`study.md`](study.md)).
    - Study: with no card left and none answered today, one sentence says there is nothing to study today.
    - 기록: a chart with nothing to show says so in one sentence: no review in the period, no card reviewed, no card mastered.
