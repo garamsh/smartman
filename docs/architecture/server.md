@@ -1,6 +1,6 @@
 # Server
 
-The Supabase schema the app syncs to, and the extraction count beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
+The Supabase schema the app syncs to, and the extraction count and the admin area's role, audit log and functions beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
 
 ## Current decisions
 
@@ -50,7 +50,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - `decks.hidden` and `decks.import_count` are the server's: clients read them and cannot write them.
 - `public.profiles` holds one display name per user, 2 to 20 characters with no surrounding whitespace. Users insert and update their own; anyone signed in reads the name of a user with a visible public deck.
 - `public.deck_reports` holds one report per reporter and deck, with a reason: `inappropriate`, `spam`, `copyright` or `other`. A user inserts a report only as itself, on a visible public deck of another user, and reads none back.
-- A trigger hides a deck once three distinct users reported it, under an advisory lock on the deck seeded with 2, so concurrent reports are counted one after another. The lock's key hashes the deck's id as text, so the key a deck took before the ids were `uuid` is the key it takes now. The project's owner unhides it in the dashboard.
+- A trigger hides a deck once three distinct users reported it, under an advisory lock on the deck seeded with 2, so concurrent reports are counted one after another. The lock's key hashes the deck's id as text, so the key a deck took before the ids were `uuid` is the key it takes now. An admin unhides it in the web admin area, which can also make a deck private and dismiss its reports (§Admin area).
 - `public.user_blocks` holds a user's blocks; users select, insert and delete their own.
 - `list_public_decks(search, sort, page_size, page_offset)` runs as the caller and lists visible public decks not of a user the caller blocked, whose name or description holds the search ignoring case, newest first or most copied first, with the owner's display name and live card count. It returns each deck's id as `uuid`.
 - `record_deck_import(deck_id uuid)` runs as its owner: it returns false for a deck that is not visibly public, and otherwise true. A caller's first copy of a deck it does not own inserts a row in `public.deck_imports` and adds one to `import_count`; a later copy by that caller, or a copy by the owner, changes neither (issue #67).
@@ -77,7 +77,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - Every policy names `to authenticated` and reads `(select auth.uid())`. A pull therefore filters on its account's `user_id` ([`sync.md`](sync.md)).
 - The privileges are granted in the migration, not left to the project's default privileges.
 - `record_deck_import` runs as `security definer` and `authenticated` may execute it, which the Security Advisor reports as lint `0029_authenticated_security_definer_function_executable`. That is intended: it writes `deck_imports` and `import_count`, which no client may write, and [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §7 lists it among the `security definer` functions, granted to the one role that calls it (issue #113).
-- The app does not use the service role.
+- The app does not use the service role, and neither does the web: the admin area reads and writes through the functions of §Admin area with the user's session.
 
 ### Extraction usage
 
@@ -88,11 +88,21 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - The lock's key is the hash of the user id seeded with 1, never the revision lock's seed 0.
 - The migration adding it is additive: it creates the table, its index and the function, and changes nothing that existed.
 
+### Admin area
+
+- The admin role is the table `private.admins`, one row per admin with who granted it and when; a user without a row is not an admin ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md)). It sits in `private`, which the API does not expose, and no client role holds a privilege on it, so no email, id or list in code or configuration names an admin.
+- The first admin is a row the PM inserts on the production project after the migration deploys: `insert into private.admins (user_id) select id from auth.users where email = 'sauce@garam.sh';`. Every later grant and revoke goes through the admin area.
+- `private.admin_audit` records every admin write: the admin's id, set null when that account is deleted so the row stays, and a snapshot of the email, a snake-case `action` and `target_kind`, a `target_id`, a JSON `detail` object and the time. The writing function names the action; a later one adds its own names with no schema change.
+- Every admin read and write is a `security definer` function in `public` with an empty `search_path`, executable by `authenticated` and not `anon`. Each first calls `private.require_admin()`, which raises `42501` unless the caller has a row in `private.admins`, and each write records itself through `private.audit()` in its transaction. A write that changes nothing records nothing. `public.is_admin()` answers the caller's role.
+- The functions: `admin_overview` and `admin_extractions_by_day` (users, study and extractions per UTC day); `admin_reported_decks`, `admin_public_decks`, `admin_deck` and `admin_deck_cards` (a deck is readable only when public or reported); `admin_find_users` and `admin_user`; `admin_admins` and `admin_audit_log`; and the writes `admin_set_deck_hidden`, `admin_unpublish_deck`, which sets the deck private with an edit time of now so the owner's devices pull it, `admin_dismiss_reports`, which leaves a hidden deck hidden, `admin_grant_admin` by an existing user's email, and `admin_revoke_admin`, which refuses the caller's own role and runs one at a time under an advisory lock seeded with 3, checking the caller's role again once the lock is held, so two admins revoking each other at once cannot leave none.
+- The overview's counts across users scan the live reviews in range and `extraction_usage` without an index of their own; the PM adds one when `supabase inspect db outliers` lists either function among the ten statements of highest total time.
+- Migration `20261019120000_admin.sql` is additive: it creates the two tables, their indexes and the functions, and changes no existing row or object.
+
 ### Account deletion
 
 - The `delete-account` Edge Function deletes the caller's user from `auth.users` through Supabase Auth's admin API, with the service-role key, which stays in the function ([`account.md`](account.md), [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). The deletion is hard, so the cascade runs.
-- Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. Another user's copy of a deleted user's deck stays theirs.
-- A new table holding a user id references `auth.users` with `on delete cascade`.
+- Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. In `private`, `admins` deletes with the admin and `admins.granted_by` is set null; `admin_audit` keeps the admin's rows with `admin_id` set null. Another user's copy of a deleted user's deck stays theirs.
+- A new table holding a user id references `auth.users` with `on delete cascade`, except `private.admin_audit`, whose rows outlive the admin who wrote them ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md)).
 - Merging the pull request that adds or changes the function deploys it (§Edge Function deploys).
 
 ### Integrity
@@ -194,6 +204,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
   - `extraction_usage_test.sql` — users read only their own usage rows and write none, and `consume_extraction` lets a user through until the daily limit, under that user's lock alone;
   - `fuzz_factor_test.sql` — a review's fuzz factor is checked to `[0, 1)` and inserted by its client, which cannot update it, with an update of the rating as control;
   - `public_decks_test.sql` — another user reads a public deck, its live cards and its owner's name, and no private or hidden deck; non-owners' writes are refused, with the owner's as control; the listing searches, sorts and leaves out blocked users' decks; copies are counted once per user, and never the owner's;
+  - `admin_test.sql` — every admin function refuses a signed-in user who is not an admin and refuses `anon`, with an admin as control; no client reads or writes the role or the log directly; the overview, the extractions by UTC day, the reported and public decks, a deck readable only while public or reported, the user search and a user's counts; hiding, unhiding, unpublishing with a new revision and edit time, and dismissing, each recorded once and a no-op not at all; granting by email, refusing one's own revoke, a revoke taking the admins lock, against none held before, a revoked admin refused at once, the audit log newest first with its paging, and a deleted admin's rows kept by email with no admin id;
   - `deck_imports_test.sql` — a second copy by the same user adds nothing while another user's adds one, the owner's adds nothing, a count kept from before is added to, and clients reach no row;
   - `deck_reports_test.sql` — reports are insert-only by their reporter, once per deck, and the third distinct reporter hides the deck;
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
@@ -226,6 +237,7 @@ The Supabase schema the app syncs to, and the extraction count beside it: its ta
 - [ADR 0043](adr/0043-set-each-day-s-new-cards-from-the-user-s-recency-weighted-study-time-and-pace-and-count-an-answer-s-time-only-in-the-foreground.md) records why the web reads a day's study days through `study_days_before`.
 - [ADR 0047](adr/0047-read-the-web-record-through-two-server-functions-and-fold-it-through-the-engine-on-the-server.md) records why the web's 기록 reads through `study_record_days` and `study_record_cards`, and folds the cards through the engine on the server.
 - [ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md) records why the purge was built before any store release, why its migration enables `pg_cron`, and why a run locks `cards` and `reviews`; issue #108 records the owner's decision.
+- [ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md) records why the admin role and the audit log are tables in `private`, why every admin read and write is a function that checks the role, and why the web needs no service-role key; issue #223 records the owner's request and the PM's scope, and #224 what builds on it.
 - [ADR 0048](adr/0048-name-each-new-migration-after-every-migration-on-main-and-check-it-in-make-lint.md) records how the integration treats an older migration, with its source, and why a new migration is named after every one on `main`; issue #149 records the finding.
 - Issue #104 records the uuid conversion, issue #105 the checks and the merged select policies, issue #103 the streak function, issue #106 the horizon and the watermark, issue #107 the web's version 7 ids, and issue #113 the advisor lints read after #112.
 - Issue #177 records that merging deployed `extract-cards`, with its timestamps; the PM decided the function gate in the dispatch of #177 on 2026-10-18.

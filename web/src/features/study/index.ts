@@ -29,4 +29,4 @@ export { countDay, dayPlanOf } from "./today-list";
 export { recordDays } from "./stats";
 export { sessionMinutes } from "./study-time";
 export type { SessionPlan } from "./session";
-export { timeZoneScript } from "./time-zone";
+export { parseTimeZone, timeZoneCookie, timeZoneScript } from "./time-zone";
