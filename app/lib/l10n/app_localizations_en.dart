@@ -184,24 +184,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changingToDontKnow => 'Change to Don\'t know';
 
   @override
-  String guideSize(int cards, int minutes) {
-    return 'Today $cards cards · about $minutes min';
-  }
+  String get previousPlaceholder => 'Answered cards stack up here';
 
   @override
-  String guideResume(int cards, int minutes) {
+  String get earlierCard => 'Last card last time';
+
+  @override
+  String resumeToast(int cards, int minutes) {
     return 'Picking up · $cards left · about $minutes min';
   }
 
   @override
-  String get guideDone => 'You\'ve done today\'s cards';
+  String get studyCoachKnow => 'Swipe right if you know it';
 
   @override
-  String get guideSwipe => 'Swipe right if you know it, left if you don\'t';
+  String get studyCoachDontKnow => 'Swipe left if you don\'t';
 
   @override
-  String get guideRise =>
-      'Answered cards come up here with their meaning. Swipe one to change it';
+  String get studyCoachRedecide =>
+      'Answered cards come up here. Swipe one to change its answer';
+
+  @override
+  String get studyCoachReplay => 'Show the guide again';
+
+  @override
+  String get studyCoachSampleFront => 'deadline';
+
+  @override
+  String get studyCoachSampleBack => 'the date by which it is due';
 
   @override
   String get answerNotSaved =>

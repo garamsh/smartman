@@ -14,9 +14,18 @@ import { AnswerList } from "./answer-list";
 import { CardDetail } from "./card-detail";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
-import { SessionGuide } from "./session-guide";
+import { PreviousPlaceholder } from "./previous-placeholder";
 import { GradedCard } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
+import {
+  CoachCaption,
+  CoachDemo,
+  CoachSample,
+  coachAnnouncement,
+  type CoachStep,
+  coachShownKey,
+  coachSteps,
+} from "./study-coach";
 
 const button =
   "flex min-h-button items-center justify-center gap-2 rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
@@ -56,6 +65,27 @@ function shortcut(
   if (event.code === "KeyZ") return answered ? "toggleLast" : null;
   return null;
 }
+
+/** Whether the browser keeps that the coach has shown; where it keeps nothing, it has not. */
+function coachShown(): boolean {
+  try {
+    return window.localStorage.getItem(coachShownKey) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Keeps in the browser that the coach has shown, where it keeps anything. */
+function markCoachShown() {
+  try {
+    window.localStorage.setItem(coachShownKey, "true");
+  } catch {
+    // Storage is blocked: the coach shows again next time.
+  }
+}
+
+/** How long, in milliseconds, the notice that a session goes on with the day stays. */
+const noticeMs = 3000;
 
 /**
  * The study screen: the progress bar, and two cards of one size, the card answered just before,
@@ -121,12 +151,56 @@ function Session({ plan }: { plan: SessionPlan }) {
   const helpButton = useRef<HTMLButtonElement>(null);
   const closeLink = useRef<HTMLAnchorElement>(null);
   const status = useSyncExternalStore(writes.subscribe, writes.getStatus, writes.getStatus);
-
+  /** The coach's step; null while it does not show. */
+  const [coach, setCoach] = useState<CoachStep | null>(null);
+  /** Whether a card has been on screen, after which the coach no longer starts on its own. */
+  const studied = useRef(false);
+  // On a device's first session the coach starts the first time a card is on screen, at the
+  // page's start or after "학습하기", as on the phone. It starts after the screen has mounted, so
+  // the live region that announces it is already there, empty.
+  useEffect(() => {
+    if (view.kind !== "studying" || studied.current) return;
+    studied.current = true;
+    if (coachShown()) return;
+    const timer = window.setTimeout(() => {
+      setCoach("know");
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      studied.current = false;
+    };
+  }, [view.kind]);
+  // The browser keeps that the coach has shown once it shows.
+  useEffect(() => {
+    if (coach) markCoachShown();
+  }, [coach]);
+  /**
+   * That the session goes on with the day, said for a moment as it opens: set after the status
+   * region has mounted empty, so a screen reader announces it, and cleared after [noticeMs].
+   */
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const { resumed, cards, minutes } = session.size;
+    if (!resumed || cards === 0) return;
+    const shown = window.setTimeout(() => {
+      setNotice(`이어서 해요 · 남은 ${String(cards)}장 · 약 ${String(minutes)}분`);
+    }, 0);
+    const gone = window.setTimeout(() => {
+      setNotice(null);
+    }, noticeMs);
+    return () => {
+      window.clearTimeout(shown);
+      window.clearTimeout(gone);
+    };
+  }, [session]);
+  /** Applies an action and queues its write. */
   function apply(write: AnswerWrite | null) {
     setView(session.view());
     if (write) writes.push(write);
   }
+  /** Answers the current card, which ends the coach. */
   function answer(choice: Answer) {
+    setCoach(null);
     apply(session.answer(choice));
   }
   function toggle(position: number) {
@@ -230,16 +304,25 @@ function Session({ plan }: { plan: SessionPlan }) {
   }, [unsaved]);
 
   const newest = view.previous.at(-1);
+  /** The card the previous card's place shows, which a click opens whole. */
+  const shown = newest ?? view.earlier;
+  const demo = coach === "know" || coach === "dontKnow" ? coach : null;
   const current: ReactNode =
     view.kind === "studying" ? (
-      <CurrentCard front={view.current.front} />
+      demo ? (
+        <CoachDemo answer={demo}>
+          <CurrentCard front={view.current.front} />
+        </CoachDemo>
+      ) : (
+        <CurrentCard front={view.current.front} />
+      )
     ) : view.kind === "complete" ? (
       <CompletionCard completion={view.completion} onStudyOn={view.more ? studyOn : null} />
     ) : null;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-6 px-gutter py-6">
-      <header className="flex items-center gap-4">
+      <header className="relative flex items-center gap-4">
         <Link
           ref={closeLink}
           href="/"
@@ -286,6 +369,20 @@ function Session({ plan }: { plan: SessionPlan }) {
         >
           단축키 <Hint>?</Hint>
         </button>
+        <div
+          role="status"
+          className="pointer-events-none absolute inset-x-0 top-full z-10 mt-2 flex justify-center"
+        >
+          {notice && (
+            <p className="rounded-full bg-hero px-4 py-2 text-secondary text-on-hero shadow-card motion-safe:animate-resume-notice">
+              {notice}
+            </p>
+          )}
+        </div>
+        {/* Mounted empty, so the coach's steps are announced as they show. */}
+        <p aria-live="polite" className="sr-only">
+          {coach ? coachAnnouncement(coach) : ""}
+        </p>
       </header>
 
       {status.failure !== null && (
@@ -312,31 +409,63 @@ function Session({ plan }: { plan: SessionPlan }) {
             <p className="py-16 text-center text-body text-muted">오늘은 학습할 카드가 없어요</p>
           ) : (
             <>
-              {/* Two rows of one height: before the session's first answer its guide, otherwise
-                  the previous card; and the current card. */}
+              {/* Two rows of one height: the previous card's place and the current card. The
+                  place holds the coach's sample in its last step; otherwise the card answered
+                  last, or the day's last card from an earlier session, or while studying an
+                  outline. */}
               <div className="grid w-full max-w-study auto-rows-fr gap-7">
-                {view.kind === "studying" && view.guide ? (
-                  <SessionGuide size={view.guide} />
-                ) : newest ? (
-                  <GradedCard
-                    key={newest.position}
-                    answer={newest}
-                    openRef={previousButton}
-                    onOpen={() => {
-                      setDetailOpen(true);
-                    }}
-                    onRedecide={(choice) => {
-                      redecide(newest.position, choice);
-                    }}
-                  />
-                ) : (
-                  <div aria-hidden />
-                )}
+                <div className={`grid motion-safe:transition-opacity ${demo ? "opacity-45" : ""}`}>
+                  {view.kind === "studying" && coach === "redecide" ? (
+                    <CoachSample />
+                  ) : newest ? (
+                    <GradedCard
+                      key={newest.position}
+                      answer={newest}
+                      openRef={previousButton}
+                      onOpen={() => {
+                        setDetailOpen(true);
+                      }}
+                      onRedecide={(choice) => {
+                        redecide(newest.position, choice);
+                      }}
+                    />
+                  ) : view.earlier ? (
+                    <GradedCard
+                      answer={view.earlier}
+                      label="지난번 마지막 카드"
+                      openRef={previousButton}
+                      onOpen={() => {
+                        setDetailOpen(true);
+                      }}
+                    />
+                  ) : view.kind === "studying" ? (
+                    <PreviousPlaceholder />
+                  ) : (
+                    <div aria-hidden />
+                  )}
+                </div>
                 {current}
               </div>
               {view.kind === "studying" && (
                 <div className="w-full max-w-study">
-                  <AnswerButtons onAnswer={answer} />
+                  {coach ? (
+                    <CoachCaption
+                      step={coach}
+                      onNext={() => {
+                        setCoach(coachSteps[coachSteps.indexOf(coach) + 1] ?? null);
+                      }}
+                      onSkip={() => {
+                        setCoach(null);
+                      }}
+                    />
+                  ) : (
+                    <AnswerButtons
+                      onAnswer={answer}
+                      onGuide={() => {
+                        setCoach("know");
+                      }}
+                    />
+                  )}
                 </div>
               )}
             </>
@@ -358,7 +487,7 @@ function Session({ plan }: { plan: SessionPlan }) {
       )}
 
       {helpOpen && <ShortcutHelp onClose={closeHelp} />}
-      {detailOpen && newest && <CardDetail answer={newest} onClose={closeDetail} />}
+      {detailOpen && shown && <CardDetail answer={shown} onClose={closeDetail} />}
     </main>
   );
 }
@@ -381,8 +510,14 @@ function CurrentCard({ front }: { front: PreviousAnswer["card"]["front"] }) {
   );
 }
 
-/** "모른다" and "안다" under the current card, each with its keys. */
-function AnswerButtons({ onAnswer }: { onAnswer: (answer: Answer) => void }) {
+/** "모른다" and "안다" under the current card, each with its keys, and the coach's replay between. */
+function AnswerButtons({
+  onAnswer,
+  onGuide,
+}: {
+  onAnswer: (answer: Answer) => void;
+  onGuide: () => void;
+}) {
   const answerButton = `${button} min-h-cta flex-1 text-body-strong`;
   return (
     <div className="flex gap-3">
@@ -396,6 +531,13 @@ function AnswerButtons({ onAnswer }: { onAnswer: (answer: Answer) => void }) {
       >
         <ChevronLeft aria-hidden className="size-small-icon" strokeWidth={2.4} />
         모른다 <Hint>← J</Hint>
+      </button>
+      <button
+        type="button"
+        onClick={onGuide}
+        className="min-h-tap-target shrink-0 rounded-button px-2 text-caption text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        안내 다시 보기
       </button>
       <button
         type="button"

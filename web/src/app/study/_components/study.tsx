@@ -54,6 +54,12 @@ export async function Study({
   const plan = dayPlanOf(cards, states, day, own);
   const taken = new Set([...plan.selected.cards, ...plan.relearn].map((card) => card.id));
   const more = newCards(cards, states).filter((card) => !taken.has(card.id));
+  // The day's last answer, shown in the previous card's place until the session's first.
+  const last = own.reduce<(typeof own)[number] | undefined>(
+    (latest, answer) => (latest && latest.reviewedAt > answer.reviewedAt ? latest : answer),
+    undefined,
+  );
+  const lastCard = last && cards.find((card) => card.id === last.cardId);
   // The state of every card the session may write, and of every card answered today, which the
   // session's count reads.
   const before: CardStates = {};
@@ -70,6 +76,7 @@ export async function Study({
         queue: plan.selected,
         relearn: plan.relearn,
         resumed: plan.done.size > 0,
+        earlier: last && lastCard ? { card: lastCard, answer: last.answer } : null,
         more,
         before,
         pace,

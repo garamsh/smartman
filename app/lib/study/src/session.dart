@@ -47,7 +47,7 @@ final class SessionStudying extends SessionState {
     this.current,
     this.previous,
     this.progress, {
-    this.guide,
+    this.earlier,
   });
 
   final Card current;
@@ -56,14 +56,24 @@ final class SessionStudying extends SessionState {
   final List<PreviousCard> previous;
   final SessionProgress progress;
 
-  /// Before the session's first answer, the session's size the guide in the
-  /// previous card's place shows; otherwise null, and no guide shows.
-  final SessionSize? guide;
+  /// Before the session's first answer, the day's last answer given in an
+  /// earlier session; otherwise null.
+  final EarlierAnswer? earlier;
+}
+
+/// The day's last answer to a card of the session's decks, given before the
+/// session opened: shown in the previous card's place until the session's
+/// first answer, and not changed from there.
+final class EarlierAnswer {
+  const EarlierAnswer(this.card, this.answer);
+
+  final Card card;
+  final Answer answer;
 }
 
 /// How many cards a session opened with, and the whole minutes they take at
 /// the user's pace, as the today card counts them, and whether it [resumed] a
-/// study day that already had cards done.
+/// study day that already had cards done, which the screen announces.
 final class SessionSize {
   const SessionSize({
     required this.cards,
@@ -97,9 +107,14 @@ final class SessionComplete extends SessionState {
     this.previous,
     this.progress, {
     required this.more,
+    this.earlier,
   });
 
   final Completion completion;
+
+  /// With no answer of the session's own, the day's last answer given in an
+  /// earlier session; otherwise null.
+  final EarlierAnswer? earlier;
 
   /// Whether new cards are left past today's, which [StudySession.studyOn]
   /// goes on with; otherwise no card is left to take.
@@ -270,6 +285,12 @@ class StudySession extends ChangeNotifier {
   /// The session's size when it opened.
   var _size = const SessionSize(cards: 0, minutes: 0);
 
+  /// The session's size when it opened; zero cards until it has loaded.
+  SessionSize get size => _size;
+
+  /// The day's last answer stored before the session opened, if any.
+  EarlierAnswer? _earlier;
+
   SessionState get state {
     if (_loadFailure case final failure?) return failure;
     if (!_loaded) return const SessionLoading();
@@ -298,12 +319,13 @@ class StudySession extends ChangeNotifier {
       today.values.where((place) => place == Today.done).length,
       _dayCards.length,
     );
+    final earlier = _answers.isEmpty ? _earlier : null;
     if (_queue.isNotEmpty) {
       return SessionStudying(
         _queue.first,
         previous,
         progress,
-        guide: _answers.isEmpty ? _size : null,
+        earlier: earlier,
       );
     }
     if (_answeredToday.isEmpty && _answers.isEmpty) return const SessionEmpty();
@@ -312,6 +334,7 @@ class StudySession extends ChangeNotifier {
       previous,
       progress,
       more: _more.isNotEmpty,
+      earlier: earlier,
     );
   }
 
@@ -478,6 +501,9 @@ class StudySession extends ChangeNotifier {
         for (final id in {for (final stored in _storedToday) stored.card})
           byId[id]!,
       ];
+      if (_storedToday.lastOrNull case final last?) {
+        _earlier = EarlierAnswer(byId[last.card]!, last.answer);
+      }
       _openedDay = start;
       _day = day;
       _storedTimes = [for (final stored in storedSince) stored.at];

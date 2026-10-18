@@ -14,6 +14,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_coach.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/theme_choice.dart';
@@ -33,6 +34,7 @@ import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import '../sharing/sharing_service_test.dart' show publicCard, publicDeck;
 import '../sync/fake_sync_server.dart';
+import '../study/study_storage.dart';
 
 /// Screenshots of every screen and sheet in both themes, for review. They are
 /// written, not compared, and only when asked for:
@@ -166,7 +168,11 @@ void main() {
       final storage = (await tester.runAsync(
         () => SharedPreferencesWithCache.create(
           cacheOptions: const SharedPreferencesWithCacheOptions(
-            allowList: {...themeStorageKeys, ...photoImportStorageKeys},
+            allowList: {
+              ...themeStorageKeys,
+              ...photoImportStorageKeys,
+              ...studyStorageKeys,
+            },
           ),
         ),
       ))!;
@@ -281,9 +287,27 @@ void main() {
       await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text('영단어 기본'));
 
-      await tap(tester, find.text(ko.studyDeck));
-      // The session's start, with its guide above the card.
-      await shot(tester, '12-study-start');
+      await tester.tap(find.text(ko.studyDeck));
+      // The device's first session: the coach. Its demonstration repeats, so
+      // the screen is pumped a fixed time into its cycle rather than settled.
+      for (
+        var tries = 0;
+        tries < 20 && find.byType(AppCoach).evaluate().isEmpty;
+        tries++
+      ) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.pump(const Duration(milliseconds: 1500));
+      await shot(tester, '12-study-coach');
+      for (var step = 0; step < 2; step++) {
+        await tester.tap(find.text(ko.coachNext));
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 2800));
+      await shot(tester, '12b-study-coach-change');
+      await tap(tester, find.text(ko.coachSkip));
+      // A day's first session: the empty previous card's place.
+      await shot(tester, '12c-study-start');
       Future<void> answer(String label) =>
           tap(tester, find.widgetWithText(TextButton, label));
       for (final label in [ko.know, ko.dontKnow, ko.know, ko.know]) {
@@ -310,6 +334,13 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '14-whole-card-sheet');
       await dismissSheet(tester);
+      // Reopened the same day: the day's last card from the earlier session,
+      // and for a moment the notice that the session goes on with the day.
+      await tap(tester, find.byTooltip(ko.close));
+      await tap(tester, find.text(ko.studyDeck));
+      await shot(tester, '13d-study-resumed');
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
       for (
         var tries = 0;
         tries < 10 && find.text(ko.studyComplete).evaluate().isEmpty;
@@ -404,11 +435,12 @@ void main() {
           }
         }
       });
+      final storage = await openStudyStorage(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             deckRepositoryProvider.overrideWithValue(repository),
-            ...homeOverrides(db),
+            ...homeOverrides(db, storage: storage),
           ],
           child: MaterialApp(
             theme: lightTheme,
@@ -734,12 +766,13 @@ void main() {
         reachability: FakeReachability(),
         clock: DateTime.now,
       );
+      final storage = await openStudyStorage(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             deckRepositoryProvider.overrideWithValue(repository),
             sharingServiceProvider.overrideWithValue(sharing),
-            ...homeOverrides(db),
+            ...homeOverrides(db, storage: storage),
           ],
           child: MaterialApp(
             theme: lightTheme,

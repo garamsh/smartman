@@ -12,6 +12,8 @@ import 'package:smartman/study/study.dart';
 
 import '../account/fake_account_service.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 /// The time the home screens' study reads: 09:00 on 15 October 2026, in a
 /// zone at UTC, so the study day runs from 04:00 that day to 04:00 the next.
 final homeNow = DateTime.utc(2026, 10, 15, 9);
@@ -20,7 +22,11 @@ final homeNow = DateTime.utc(2026, 10, 15, 9);
 /// study over [db] at [homeNow], whose count never finishes reading when
 /// [stalled]. Counting and opening a session schedule nothing, so the
 /// scheduler only answers the 기록 tab's folds and recall.
-List<Override> homeOverrides(AppDatabase db, {bool stalled = false}) => [
+List<Override> homeOverrides(
+  AppDatabase db, {
+  required SharedPreferencesWithCache storage,
+  bool stalled = false,
+}) => [
   accountServiceProvider.overrideWithValue(
     FakeAccountService(
       const SignedIn(
@@ -38,6 +44,7 @@ List<Override> homeOverrides(AppDatabase db, {bool stalled = false}) => [
   studyClockProvider.overrideWithValue(() => homeNow),
   studyZoneProvider.overrideWithValue((_) => Duration.zero),
   studyRandomProvider.overrideWithValue((_) => Random(0)),
+  studyStorageProvider.overrideWithValue(storage),
 ];
 
 var _reviews = 0;

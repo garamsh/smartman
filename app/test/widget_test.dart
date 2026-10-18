@@ -22,6 +22,8 @@ import 'account/fake_account_service.dart';
 import 'sharing/fakes.dart';
 import 'sync/fake_sync_server.dart';
 
+import 'package:smartman/study/src/providers.dart' show studyCoachShownKey;
+
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// An extraction client the test never calls.
@@ -50,11 +52,18 @@ void main() {
     SharingServer? sharing,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.withData({'themeMode': ?themeMode});
+        InMemorySharedPreferencesAsync.withData({
+          'themeMode': ?themeMode,
+          studyCoachShownKey: true,
+        });
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: {...themeStorageKeys, ...photoImportStorageKeys},
+          allowList: {
+            ...themeStorageKeys,
+            ...photoImportStorageKeys,
+            ...studyStorageKeys,
+          },
         ),
       ),
     ))!;

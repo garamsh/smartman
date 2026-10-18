@@ -7,7 +7,13 @@ import { CardSide } from "./card-side";
 import { GradeChip, grades } from "./graded-card";
 
 /** The whole of a card answered earlier, front and back, over the screen until it is closed. */
-export function CardDetail({ answer, onClose }: { answer: PreviousAnswer; onClose: () => void }) {
+export function CardDetail({
+  answer,
+  onClose,
+}: {
+  answer: Pick<PreviousAnswer, "card" | "answer">;
+  onClose: () => void;
+}) {
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     close.current?.focus();

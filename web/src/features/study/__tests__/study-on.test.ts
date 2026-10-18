@@ -21,13 +21,19 @@ const card = (front: string): StudyCard => ({
  * A session over today's new cards [today] and the new cards past them [more], with [stored]
  * answers given today before it opened.
  */
-function session(today: string[], more: string[], stored = 0): StudySession {
+function session(
+  today: string[],
+  more: string[],
+  stored = 0,
+  earlier: SessionPlan["earlier"] = null,
+): StudySession {
   const plan: SessionPlan = {
     startedAt: start,
     day: { start: start - 43_200_000, end: start + 43_200_000 },
     queue: { cards: today.map(card), backlog: false },
     relearn: [],
     resumed: false,
+    earlier,
     more: more.map(card),
     before: {},
     pace: unknownPace,
@@ -88,22 +94,23 @@ describe("studying past today's cards", () => {
     expect(study.view()).toMatchObject({ kind: "complete", more: false });
   });
 
-  it("opens straight on the new cards past today's when none is left today, under a guide whose size holds no card", () => {
-    // Control: a session with a card left today opens on it, its guide sized.
-    const withToday = session(["a"], ["b"]).view();
-    expect(withToday).toMatchObject({ kind: "studying", guide: { cards: 1 } });
+  it("opens straight on the new cards past today's when none is left today, its size holding no card, under the plan's earlier answer until its first", () => {
+    // Control: a session with a card left today opens on it, sized.
+    expect(session(["a"], ["b"]).size.cards).toBe(1);
 
-    const study = session([], ["b", "c"], 1);
+    const earlier = { card: card("stored0"), answer: "know" as const };
+    const study = session([], ["b", "c"], 1, earlier);
+    expect(study.size.cards).toBe(0);
     expect(study.view()).toMatchObject({
       kind: "studying",
-      guide: { cards: 0 },
+      earlier,
       // The day's count goes on from the card answered "안다" today.
       done: 1,
       total: 3,
     });
     expect(current(study)).toBe("b");
     study.answer("know");
-    expect(study.view()).toMatchObject({ kind: "studying", guide: null });
+    expect(study.view()).toMatchObject({ kind: "studying", earlier: null });
   });
 
   it("with no card left to take opens on the completion card when today holds an answer, and on nothing to study otherwise", () => {
@@ -125,6 +132,7 @@ describe("today's list in the session", () => {
       queue: { cards: queue.map(card), backlog },
       relearn: relearn.map(card),
       resumed: true,
+      earlier: null,
       more: [],
       before: {},
       pace: unknownPace,

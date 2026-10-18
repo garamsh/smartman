@@ -23,6 +23,7 @@ import 'package:smartman/study/src/study_screen.dart';
 import 'package:smartman/study/src/study_style.dart';
 
 import 'fixtures.dart';
+import 'study_storage.dart';
 
 // Pretendard is loaded here, in a file of its own: a loaded font stays
 // registered for the rest of the file, and the other study tests measure
@@ -141,6 +142,7 @@ void main() {
                     key: ValueKey(front),
                     card: _card(front),
                     onAnswer: (_) {},
+                    onGuide: () {},
                   ),
                 ),
               ),
@@ -254,6 +256,7 @@ void main() {
         );
         return deck;
       }))!;
+      final storage = await openStudyStorage(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -267,6 +270,7 @@ void main() {
             ),
             studyZoneProvider.overrideWithValue((_) => Duration.zero),
             studyRandomProvider.overrideWithValue((_) => FirstDraw()),
+            studyStorageProvider.overrideWithValue(storage),
           ],
           child: MaterialApp(
             theme: lightTheme,
