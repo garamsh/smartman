@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 
@@ -32,6 +33,27 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   const cards = {'Chat': 'cat', 'Chien': 'dog', 'Hund': 'DOG'};
+
+  testWidgets(
+    'a deck with no card offers adding one as its one primary action, and no Study',
+    (tester) async {
+      AppButton button(String label) =>
+          tester.widget<AppButton>(find.widgetWithText(AppButton, label));
+      // Control: a deck with a card offers Study, and adding a card is quieter.
+      var screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.widgetWithText(AppButton, 'Study'), findsOneWidget);
+      expect(button('Add card').variant, AppButtonVariant.secondary);
+      await screens.close();
+
+      screens = await DeckScreens.open(tester);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+      expect(find.widgetWithText(AppButton, 'Study'), findsNothing);
+      expect(button('Add card').variant, AppButtonVariant.primary);
+      await screens.close();
+    },
+  );
 
   testWidgets(
     "the header names the deck, counts its cards and today's, and Study opens a session over it",
@@ -108,7 +130,7 @@ void main() {
         ),
         (
           'no count yet',
-          () => DeckScreens.open(tester, stalled: true),
+          () => DeckScreens.open(tester, cards: cards, stalled: true),
           false,
           false,
         ),

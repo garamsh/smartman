@@ -1189,6 +1189,30 @@ abstract class AppLocalizations {
   /// **'오늘 할 카드'**
   String get todayTitle;
 
+  /// 오늘 tab heading while the user has decks but no card in any.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 카드를 만들어 볼까요?'**
+  String get noCardsTitle;
+
+  /// 오늘 tab line under the no-cards heading.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱에 카드를 추가해 시작해요'**
+  String get noCardsBody;
+
+  /// Quiet button on the 오늘 tab's no-cards state that opens the user's one deck.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 열기'**
+  String get openDeck;
+
+  /// Button on the 오늘 tab's no-cards state, with several decks, that shows the 덱 tab.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱에서 카드 추가하기'**
+  String get addCardsInDecks;
+
   /// Home screen heading before the user has any deck.
   ///
   /// In ko, this message translates to:

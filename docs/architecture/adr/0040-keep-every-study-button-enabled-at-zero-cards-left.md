@@ -1,6 +1,6 @@
 # ADR 0040: Keep every study button enabled at zero cards left, and offer 계속 학습 on the done today card
 
-> Status: accepted
+> Status: accepted; its study button on a deck that holds no card superseded by ADR-0066
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

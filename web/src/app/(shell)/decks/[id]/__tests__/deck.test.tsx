@@ -129,6 +129,18 @@ describe("the deck page", () => {
     }
   });
 
+  it("offers no 학습하기 on a deck with no card, which has nothing to study", async () => {
+    // Control: the deck with cards links it.
+    await open("d-fr");
+    expect(screen.getByRole("link", { name: "학습하기" })).toBeInTheDocument();
+    cleanup();
+
+    postgrest.seed("decks", deckRow("d-empty", "Empty"));
+    await open("d-empty");
+    expect(screen.getByRole("heading", { name: "Empty" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "학습하기" })).not.toBeInTheDocument();
+  });
+
   it("marks a deck its owner published with 공개 under its name", async () => {
     // Control: the private deck carries no chip.
     await open("d-fr");

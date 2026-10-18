@@ -4,12 +4,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
-import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
 import 'decks_tab.dart';
+import 'first_run.dart';
 import 'new_deck_sheet.dart';
 import 'record_tab.dart';
 import 'today_tab.dart';
@@ -67,7 +67,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   body: IndexedStack(
                     index: _tab,
                     children: [
-                      TodayTab(decks: decks),
+                      TodayTab(
+                        decks: decks,
+                        counts: counts,
+                        onShowDecks: () => setState(() => _tab = 1),
+                      ),
                       DecksTab(decks: decks, counts: counts),
                       if (_recordShown)
                         RecordTab(decks: decks)
@@ -190,61 +194,31 @@ class _EmptyHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
     final onPhoto = this.onPhoto;
     final onBrowse = this.onBrowse;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.gutter,
-        AppSpace.s40,
-        AppSpace.gutter,
-        AppSpace.s24,
-      ),
-      children: [
-        Center(
-          child: Mascot(size: AppSize.mascotLarge, fill: colors.surface),
-        ),
-        const SizedBox(height: AppSpace.s24),
-        Semantics(
-          header: true,
-          child: Text(
-            l10n.emptyHomeTitle,
-            textAlign: TextAlign.center,
-            style: AppType.title,
+    return FirstRun(
+      title: l10n.emptyHomeTitle,
+      body: l10n.emptyHomeBody,
+      actions: [
+        if (onPhoto != null)
+          AppButton(
+            label: l10n.createFromPhoto,
+            icon: LucideIcons.camera,
+            size: AppButtonSize.cta,
+            onPressed: onPhoto,
           ),
+        AppButton(
+          label: l10n.createManually,
+          variant: AppButtonVariant.secondary,
+          size: AppButtonSize.cta,
+          onPressed: onCreate,
         ),
-        const SizedBox(height: AppSpace.s8),
-        Text(
-          l10n.emptyHomeBody,
-          textAlign: TextAlign.center,
-          style: AppType.secondary.copyWith(color: colors.muted),
-        ),
-        const SizedBox(height: AppSpace.s32),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: AppSpace.s8,
-          children: [
-            if (onPhoto != null)
-              AppButton(
-                label: l10n.createFromPhoto,
-                icon: LucideIcons.camera,
-                size: AppButtonSize.cta,
-                onPressed: onPhoto,
-              ),
-            AppButton(
-              label: l10n.createManually,
-              variant: AppButtonVariant.secondary,
-              size: AppButtonSize.cta,
-              onPressed: onCreate,
-            ),
-            if (onBrowse != null)
-              AppButton(
-                label: l10n.browsePublicDecks,
-                variant: AppButtonVariant.text,
-                onPressed: onBrowse,
-              ),
-          ],
-        ),
+        if (onBrowse != null)
+          AppButton(
+            label: l10n.browsePublicDecks,
+            variant: AppButtonVariant.text,
+            onPressed: onBrowse,
+          ),
       ],
     );
   }

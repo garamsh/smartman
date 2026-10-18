@@ -20,11 +20,16 @@ import '../../study/study.dart';
 /// it, and its cards under a pinned row whose "뜻 보기" switch shows or hides
 /// every answer, each answer also toggled by a tap, searchable from the top
 /// bar; adds a card, opens one for editing, and the deck for renaming or
-/// deleting.
+/// deleting. While the deck holds no card, adding one is its one primary
+/// action and there is nothing to study.
 class DeckScreen extends ConsumerStatefulWidget {
-  const DeckScreen({super.key, required this.deck});
+  const DeckScreen({super.key, required this.deck, this.addingCard = false});
 
   final Deck deck;
+
+  /// Whether the screen opens on adding a card, as when the 오늘 tab's
+  /// "카드 추가" opened it.
+  final bool addingCard;
 
   @override
   ConsumerState<DeckScreen> createState() => _DeckScreenState();
@@ -45,6 +50,18 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   final Set<CardId> _flipped = {};
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.addingCard) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final photoImport = ref.read(photoImportProvider);
+        photoImport == null ? _open(null) : _addCard(photoImport);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
@@ -61,6 +78,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       _ => widget.deck,
     };
     final public = current.visibility is PublicDeck;
+    final empty = switch (cards) {
+      AsyncData(:final value) => value.isEmpty,
+      _ => false,
+    };
     final query = _query;
     return Scaffold(
       appBar: AppBar(
@@ -152,7 +173,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                     ],
                   ),
                   const SizedBox(height: AppSpace.s16),
-                  _DeckTodayCard(deck: widget.deck.id, onStudy: _study),
+                  _DeckTodayCard(
+                    deck: widget.deck.id,
+                    onStudy: empty ? null : _study,
+                  ),
                   const SizedBox(height: AppSpace.s12),
                 ],
               ),
@@ -187,7 +211,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         secondary: AppButton(
           label: l10n.newCard,
           icon: LucideIcons.plus,
-          variant: AppButtonVariant.secondary,
+          // With no card, adding one is the screen's one primary action.
+          variant: empty
+              ? AppButtonVariant.primary
+              : AppButtonVariant.secondary,
           size: AppButtonSize.cta,
           onPressed: photoImport == null
               ? () => _open(null)
@@ -420,12 +447,13 @@ class _CardListHeader extends StatelessWidget {
 }
 
 /// The deck's navy card: today's count and its minutes, how many cards are
-/// mastered, the progress bar, and the button that studies the deck.
+/// mastered, the progress bar, and the button that studies the deck, which
+/// shows unless [onStudy] is null.
 class _DeckTodayCard extends StatelessWidget {
   const _DeckTodayCard({required this.deck, required this.onStudy});
 
   final DeckId deck;
-  final VoidCallback onStudy;
+  final VoidCallback? onStudy;
 
   @override
   Widget build(BuildContext context) {
@@ -491,12 +519,13 @@ class _DeckTodayCard extends StatelessWidget {
                         ],
                       ),
               ),
-              AppButton(
-                label: l10n.studyDeck,
-                icon: LucideIcons.play,
-                variant: AppButtonVariant.onHero,
-                onPressed: onStudy,
-              ),
+              if (onStudy case final onStudy?)
+                AppButton(
+                  label: l10n.studyDeck,
+                  icon: LucideIcons.play,
+                  variant: AppButtonVariant.onHero,
+                  onPressed: onStudy,
+                ),
             ],
           ),
         ),

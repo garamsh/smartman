@@ -645,8 +645,11 @@ describe("the 오늘 and 덱 pages", () => {
     const title = "첫 덱을 만들어 볼까요?";
     const pointer =
       "덱은 휴대폰 앱에서 만들어요. 단어장 사진을 찍거나 직접 입력하면 여기에도 보여요.";
-    // Control: a user with one deck sees the today card and the list, and no invitation.
+    // Control: a user with one deck, its card not due, sees the done card and the list, and no
+    // invitation.
     postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
+    postgrest.seed("card_states", stateRow("c-chat", notDue));
     await renderBoth();
     expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
@@ -668,5 +671,27 @@ describe("the 오늘 and 덱 pages", () => {
       expect(screen.queryByRole("button")).not.toBeInTheDocument();
       cleanup();
     }
+  });
+
+  it("shows how to start in place of a finished day on 오늘 when the decks hold no card", async () => {
+    const title = "첫 카드를 만들어 볼까요?";
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    await render(Today, {});
+
+    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(
+      screen.getByText("카드는 휴대폰 앱에서 덱에 추가해요. 추가한 카드는 여기에도 보여요."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
+    ).not.toBeInTheDocument();
+    // The web adds no card, so it offers no action.
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    cleanup();
+
+    // Control: with a card in the deck, the day shows.
+    postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
+    await render(Today, {});
+    expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
   });
 });
