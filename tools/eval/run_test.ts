@@ -325,7 +325,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v3",
+    note: "prompt v4",
   }]);
 });
 
@@ -683,8 +683,10 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
     assert.deepEqual(
       sample.notes.lines,
       [
-        documents[language].title,
-        ...documents[language].lines.map((line: { text: string }) => line.text),
+        documents[documentOf(sample.name)].title,
+        ...documents[documentOf(sample.name)].lines.map((
+          line: { text: string },
+        ) => line.text),
       ],
       `${sample.name} holds every line its page prints`,
     );

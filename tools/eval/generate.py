@@ -374,6 +374,7 @@ def main() -> None:
                     "fonts": [face],
                     "facts": doc["facts"],
                     "examples": doc["examples"],
+                    "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
                 }
                 (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                         encoding="utf-8")
