@@ -216,6 +216,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 ## Open questions
 
+- Whether photo import becomes a two-step conversation, what becomes cards and then how each kind is memorised, in a survey call and a make call counted as one extraction: proposed in [ADR 0057](adr/0057-make-photo-import-a-two-step-conversation-in-two-model-calls-what-becomes-cards-then-how-each-kind-is-memorised.md), for the owner's review before any implementation (issue #182).
 - On Android, the system may end the app while the photo picker is open; the picked photo is then lost and the user picks again. `image_picker`'s `retrieveLostData` could recover it.
 - Which model `CARD_MODEL` names, how well each covers a notes page's facts step by step, and how often each invents a fact, a part of speech or an example. The eval has not run, with any prompt: it waits for the owner's run on their machine, so `docs/eval/` holds no report yet.
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.
