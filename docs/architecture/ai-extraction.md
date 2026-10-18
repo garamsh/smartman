@@ -108,13 +108,13 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 ### App: the `photo_import` domain
 
 - The app side is the domain `app/lib/photo_import/`; its public surface is `app/lib/photo_import/photo_import.dart`, with internals under `app/lib/photo_import/src/` ([`structure.md`](structure.md)). It exports:
-  - `PhotoImportScreen`, and `photoImportProvider`, which builds it for a deck or for a new one, null while the app has no extraction client; the composition site overrides it with a builder over the client, and `home/`'s screens read it for their photo buttons ([`home.md`](home.md));
+  - `importFromPhoto`, which starts an import over a context and resolves to the deck saved into, and `photoImportProvider`, which provides it as a `PhotoImport` for a deck or for a new one, null while the app has no extraction client; the composition site overrides it with a function over the client, and `home/`'s screens read it for their photo buttons ([`home.md`](home.md));
   - `ExtractionClient`, the seam to the function, `CandidateCard` with its `CandidateKind`, and `HttpExtractionClient`;
   - `DetailStep`, and `detailStepStorageKeys`, the keys the device storage it is given must cache;
-  - `PhotoSource` and `CameraSession`, the seam to the camera and the photo library, and `DevicePhotoSource`;
+  - `PhotoSource`, the seam to the system camera, the photo library and the app's settings page, and `DevicePhotoSource`;
   - `JpegPhoto`, and the failures: `PhotoImportFailure` and its cases.
 - It depends on `deck`'s surface for the decks, the card key and the import save. `deck` does not import it, and `home/` opens its screen.
-- The screen receives its client, its photo source, and the device storage the detail step is kept in; it constructs none of them.
+- The import receives its client, its photo source, and the device storage the detail step is kept in; it constructs none of them.
 - The composition site, `app/lib/main.dart`, builds the client from the Supabase client `connectAccount` returns ([`account.md`](account.md)), without importing `supabase_flutter`:
   - the URL is `extractCardsUrl` of the client's public PostgREST URL, which swaps its `/rest/v1` suffix for `/functions/v1/extract-cards`, as the Supabase client builds both from the project URL;
   - the token is read from the client's current session at each request;
@@ -140,30 +140,29 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 #### Flow
 
-- **Capture** — a full-screen camera view in the dark theme:
-  - a page-frame guide, and the hint "단어장이나 책 한 페이지를 틀 안에 맞춰 찍어 주세요";
-  - a top chip "추가할 덱 · <name>" that opens a sheet of every deck and "새 덱";
-  - under it, "카드에 담을 내용" with the current step's name, over a slider of the five steps with 핵심 and 세부 under its ends, read by a screen reader as one node with the step's name and number;
-  - the album button bottom-left and the shutter in the centre.
+- **Source** — the photo button opens the sheet "사진 가져오기" over the screen it is on, with "사진 찍기", the system camera, and "앨범에서 고르기", the library ([ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md)):
+  - the photo import screen opens only with a photo, at Extracting, or with the failure that came instead of one;
+  - a sheet dismissed or a picker cancelled opens nothing and shows no error.
 - **Extracting** — the photo's thumbnail, "카드를 찾고 있어요", an indeterminate bar, skeleton rows, and "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요":
-  - "취소", or leaving the screen, aborts the request;
+  - "취소" aborts the request and closes the screen, as leaving it does;
   - the skeleton rows shimmer, and hold still under reduce motion.
-- **Review** — "카드 n개를 찾았어요", n the rows the step offers, and "눌러서 고치고, 뺄 카드는 체크를 끄세요 · <deck>":
-  - the same "카드에 담을 내용" slider at the top; a move changes the rows offered and recomposes every answer at once;
+- **Review** — "카드 n개를 찾았어요", n the rows the step offers, and "눌러서 고치고, 뺄 카드는 체크를 끄세요":
+  - a chip "추가할 덱 · <name>" that opens a sheet of every deck and "새 덱"; choosing another deck reads its card keys and regroups the duplicates against them;
+  - "카드에 담을 내용" with the current step's name, over a slider of the five steps with 핵심 and 세부 under its ends, read by a screen reader as one node with the step's name and number; a move changes the rows offered and recomposes every answer at once;
   - a row a step hides keeps its checkbox, its typed answer and its duplicate option, and comes back with them;
   - each candidate is a row with a checkbox and its front and back split by a divider, each centred vertically in its side and breaking lines only between words through `keepWords` ([`design.md`](design.md)), while a screen reader hears it as written;
   - a tap on a side edits it in place, and a side left empty keeps its previous text;
   - an answer typed by hand stays as typed through every move, marked "직접 고침" under it;
   - candidates with one card key on the photo are combined into one before review, their backs joined by `deck`'s merge-back rule;
   - candidates whose key the deck holds are grouped below under "이미 있는 카드 n개", each with its own option chip: 건너뛰기 (the default), 뒷면 합치기 or 새 카드로 추가 ([`deck.md`](deck.md));
-  - "다시 찍기" at the top right returns to the camera;
+  - "다시 찍기" at the top right opens the source sheet over the review; a cancel keeps the review, and a photo replaces it;
   - "카드 n개 추가" counts the offered rows checked and not set to skip, and is disabled at 0.
 - **Saving** — one `DeckRepository.importCards` call over the rows the step offers, each answer as the review shows it, plain text as every import writes. For a new deck, the name sheet asks for its name first. The screen then pops with the deck saved into, and the home and deck screens open that deck's screen.
 - Nothing is written before "카드 n개 추가": not the deck, not a card.
 
 #### Photo
 
-- The camera is `camera`'s back camera without audio, released while the app is out of the foreground and opened again when it returns, after a refusal too, so access allowed in Settings takes effect. One open runs at a time, and a lifecycle change during one is applied when it lands. The library is `image_picker`'s picker, asked for at most 2048 px per side, without full metadata so no photo-library permission is needed.
+- The camera and the library are `image_picker`'s system camera and picker, each asked for at most 2048 px per side, without full metadata so the library needs no photo-library permission. The settings page is iOS's `app-settings:` address, opened through `url_launcher`.
 - Every photo is decoded, turned upright by its EXIF orientation, scaled so its long side is at most 2048 px keeping its aspect ratio, and encoded as JPEG at quality 85, stepping down to 40 until it is at most 6 MiB. This runs on a background isolate with the pure-Dart `image` package.
 - A file `image` cannot decode, such as a HEIC photo, is `PhotoUnreadable`.
 
@@ -185,22 +184,23 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 | `SignInRequired` | `401`, or no session | close |
 | `ServiceFailed` | any other status, or a `200` outside the contract | retry, retake |
 | `PhotoUnreadable` | the photo cannot be decoded | retake |
-| `CameraDenied`, `CameraUnavailable` | the camera is refused or missing | shown in place of the preview; the album still works |
+| `PhotoAccessDenied` | camera or photo access is refused or restricted | retake, "설정 열기"; a snack bar when the settings page does not open |
+| `CameraUnavailable` | the device has no camera | retake, where the album still works |
 
 - A `DeckFailure` while reading the deck or saving is shown in a snack bar, as the deck screens show one; `DeckDeleted` says the deck was deleted meanwhile.
 
 #### Permissions
 
-- `app/ios/Runner/Info.plist` holds `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` and `NSMicrophoneUsageDescription` in English, and `app/ios/Runner/ko.lproj/InfoPlist.strings` and `en.lproj/InfoPlist.strings` hold them in Korean and English. The microphone key is there because `camera`'s setup asks for it; the app never opens audio.
-- `app/android/app/src/main/AndroidManifest.xml` declares `CAMERA` and removes the `RECORD_AUDIO` that `camera_android_camerax` merges in.
+- `app/ios/Runner/Info.plist` holds `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in English, and `app/ios/Runner/ko.lproj/InfoPlist.strings` and `en.lproj/InfoPlist.strings` hold them in Korean and English. It holds no microphone description: the system camera takes photos without sound.
+- `app/android/app/src/main/AndroidManifest.xml` declares neither `CAMERA` nor `RECORD_AUDIO`. `image_picker` asks for the camera permission only when the manifest declares it, so its camera intent and photo picker ask for none, and Android never reports a refusal.
 
 #### App tests
 
-- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database: the deck chip, cancel, edits, exclusions, the three duplicate options, the saved count, each failure, the camera across a lifecycle change or a departure during an open, reduce motion, nothing written before adding, the default step, a drag along the slider, each step's answers as shown, saved and remembered, the notes cards each step offers and saves, a hidden row keeping its typed answer, checkbox and duplicate option, a move on review keeping a typed answer marked edited, combined candidates at a step, a stored level mapped to its step, an example that repeats its answer left out, each side breaking lines only between words, the slider as a screen reader hears it, and the accessibility guidelines in both themes.
+- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database: the source sheet, each source, a cancel of the sheet, the camera or the album, a refused permission with its way to Settings, a device without a camera, the deck chip on review and the duplicates it regroups, a retake cancelled or taken, cancel while extracting, edits, exclusions, the three duplicate options, the saved count, each failure, reduce motion, nothing written before adding, the default step, a drag along the slider, each step's answers as shown, saved and remembered, the notes cards each step offers and saves, a hidden row keeping its typed answer, checkbox and duplicate option, a move on review keeping a typed answer marked edited, combined candidates at a step, a stored level mapped to its step, an example that repeats its answer left out, each side breaking lines only between words, the slider as a screen reader hears it, and the accessibility guidelines in both themes. It starts each import from a button, as the home and deck screens do.
 - `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, the fields of both kinds with `kind`, a card without `kind` read as vocabulary at step 1, an answer without the fields, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
 - `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.
 - `app/test/photo_import/photo_test.dart` checks the downscaling: aspect ratio, long side, size limit and orientation.
-- `app/test/photo_import/permissions_test.dart` reads `Info.plist`, both `InfoPlist.strings`, the Xcode project and the Android manifest.
+- `app/test/photo_import/permissions_test.dart` reads `Info.plist`, both `InfoPlist.strings`, the Xcode project and the Android manifest: the camera and library descriptions present, the microphone's absent, and no camera or microphone permission on Android.
 - No test or CI job calls the deployed function.
 
 ## Rationale
@@ -209,6 +209,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - [ADR 0028](adr/0028-extract-each-card-in-fields-and-compose-its-answer-at-a-detail-level-in-the-app.md) records why one extraction returns each card's fields and the app composes the answer, why `back` stays, and why prompt v1 was removed.
 - [ADR 0051](adr/0051-extract-each-card-with-a-question-a-fullest-and-a-short-answer-and-a-detail-step-and-eval-notes-pages-by-terms.md) records the notes cards, the fullest and short answers and the detail step, why `back` stays readable, prompt v3, the notes samples and metrics, and why the eval scores notes by terms rather than a judge model; issue #148 records the owner's request.
 - [ADR 0052](adr/0052-choose-a-photo-s-cards-and-how-full-their-answers-are-on-a-five-step-slider-in-the-app.md) records the five-step slider, which rows each step offers and how full their answers are, why a hidden row is not saved, the reading of the old response, and why a stored level maps to a step.
+- [ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md) records the system camera and the library in place of the in-app camera view, why the source sheet comes before the screen, the deck chip on review, the refusal and its way to Settings, why Android declares no camera permission, and the black screen's cause; issue #174 records the owner's report and choice.
 - Issue #73 records the fields, the no-invention rule, the three levels and where the user chooses them, as decided by the PM on 2026-10-15.
 - Issue #25 records the contract, limits, privacy rule and eval method as decided by the PM, and issue #30 the app flow, its errors and its screens.
 
