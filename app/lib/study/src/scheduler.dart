@@ -11,9 +11,10 @@ import 'rust/frb_generated.dart';
 class Scheduler {
   const Scheduler._();
 
-  /// Loads the engine library; the returned scheduler is ready to call.
+  /// Loads the engine library, unless it is loaded already; the returned
+  /// scheduler is ready to call.
   static Future<Scheduler> load() async {
-    await RustLib.init();
+    if (!RustLib.instance.initialized) await RustLib.init();
     return const Scheduler._();
   }
 

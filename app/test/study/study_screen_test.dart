@@ -560,7 +560,8 @@ void main() {
         _label(tester, _previous('b front')),
         endsWith("Answer: Don't know"),
       );
-      expect(find.text('2/3'), findsOneWidget);
+      // Done counts the cards whose latest answer today is "Know".
+      expect(find.text('1/3'), findsOneWidget);
     },
   );
 
@@ -1243,7 +1244,7 @@ void main() {
   );
 
   testWidgets(
-    "a session reopened the same day counts the day's cards from today's answers, each card once, and goes on with those left",
+    "a session reopened the same day counts the day's cards from today's list, done being those answered Know last today",
     (tester) async {
       final study = await _open(tester, ['a', 'b', 'c', 'd', 'e', 'f']);
       expect(find.text('0/6'), findsOneWidget);
@@ -1251,22 +1252,48 @@ void main() {
       await study.dontKnow();
       await study.know();
       await study.know();
-      expect(find.text('4/6'), findsOneWidget);
+      expect(find.text('3/6'), findsOneWidget);
 
       await study.reopen();
-      // a to d were answered today, b with Don't know, and only e and f are
-      // left: the count goes on at 4 of the same 6, not 0 of 2.
-      expect(find.text('4/6'), findsOneWidget);
-      expect(_guideText(_guide(2, 1).first), findsOneWidget);
+      // a, c and d are done; b, answered Don't know, is left with e and f:
+      // the count goes on at 3 of the same 6, not 0 of 3.
+      expect(find.text('3/6'), findsOneWidget);
+      expect(_guideText(_guide(3, 1).first), findsOneWidget);
       expect(study.current, 'e front');
       await study.know();
-      expect(find.text('5/6'), findsOneWidget);
+      expect(find.text('4/6'), findsOneWidget);
 
-      // Changing that answer counts the card once still.
+      // Changing that answer to Don't know makes the card left again.
       final semantics = tester.ensureSemantics();
       await _act(tester, _previous('e front').last, "Change to Don't know");
       semantics.dispose();
-      expect(find.text('5/6'), findsOneWidget);
+      expect(find.text('3/6'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    "a card answered Don't know stays in today's list across a reopen until it is answered Know",
+    (tester) async {
+      final study = await _open(tester, ['a', 'b']);
+      await study.dontKnow();
+      expect(study.current, 'b front');
+
+      await study.reopen();
+      // a falls due tomorrow by its state, and today's list keeps it.
+      expect(find.text('0/2'), findsOneWidget);
+      final shown = <String?>[];
+      while (study.current != null) {
+        shown.add(study.current);
+        await study.know();
+      }
+      expect(shown, containsAll(['a front', 'b front']));
+      expect(find.text('2/2'), findsOneWidget);
+
+      // Answered Know, it leaves today's list: a reopen finds nothing left.
+      await study.reopen();
+      expect(study.current, isNull);
+      expect(find.text('Done for today'), findsOneWidget);
+      expect(find.text('2/2'), findsOneWidget);
     },
   );
 

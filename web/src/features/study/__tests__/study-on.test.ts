@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { CardId, DeckId } from "@/features/decks";
 
+import { loadEngine } from "../engine";
 import { type SessionPlan, type StudyCard, StudySession } from "../session";
 import { unknownPace } from "../study-time";
 
@@ -23,12 +24,18 @@ const card = (front: string): StudyCard => ({
 function session(today: string[], more: string[], stored = 0): StudySession {
   const plan: SessionPlan = {
     startedAt: start,
+    day: { start: start - 43_200_000, end: start + 43_200_000 },
     queue: { cards: today.map(card), backlog: false },
     more: more.map(card),
     before: {},
     pace: unknownPace,
     today: {
-      answers: Array.from({ length: stored }, () => ({ answer: "know" as const, durationMs: 0 })),
+      answers: Array.from({ length: stored }, (_, index) => ({
+        cardId: `stored${String(index)}` as CardId,
+        answer: "know" as const,
+        reviewedAt: start - 1000,
+        durationMs: 0,
+      })),
       answeredAnyDeck: stored > 0,
       streakBefore: 0,
     },
@@ -47,6 +54,8 @@ function current(study: StudySession): string {
   if (view.kind !== "studying") throw new Error(`no card is on screen: ${view.kind}`);
   return view.current.id;
 }
+
+beforeAll(loadEngine);
 
 describe("studying past today's cards", () => {
   it("goes on from the completion card with the new cards past today's, oldest first, each answer written and counted", () => {
@@ -86,8 +95,9 @@ describe("studying past today's cards", () => {
     expect(study.view()).toMatchObject({
       kind: "studying",
       guide: { cards: 0 },
-      answered: 0,
-      total: 2,
+      // The day's count goes on from the card answered "안다" today.
+      answered: 1,
+      total: 3,
     });
     expect(current(study)).toBe("b");
     study.answer("know");

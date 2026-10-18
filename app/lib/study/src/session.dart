@@ -10,6 +10,7 @@ import 'rust/api/engine.dart';
 import 'scheduler.dart';
 import 'study_repository.dart';
 import 'study_time.dart';
+import 'today.dart';
 
 /// What a session shows.
 sealed class SessionState {
@@ -121,11 +122,13 @@ final class PreviousCard {
   final bool changed;
 }
 
-/// How many of the day's cards have been answered at least once today, in
-/// this session or an earlier one.
+/// How many of the day's cards are done, out of the day's cards: done and
+/// left, as today's list (`todayOf`) places them.
 final class SessionProgress {
   const SessionProgress(this.answered, this.total);
 
+  /// The day's cards whose latest answer today, in this session or an
+  /// earlier one, is "Know".
   final int answered;
 
   /// The day's cards: those of the decks answered today before the session
@@ -242,6 +245,9 @@ class StudySession extends ChangeNotifier {
   /// When the study day the session opened in started.
   late DateTime _openedDay;
 
+  /// The study day the session opened in, which today's list reads.
+  late StudyDay _day;
+
   /// The time of every stored answer given since [_openedDay], in any deck,
   /// for the streak.
   var _storedTimes = const <DateTime>[];
@@ -264,11 +270,18 @@ class StudySession extends ChangeNotifier {
           changed: answered.answer != answered.first,
         ),
     ];
+    final today = todayOf(_dayCards, _before, [
+      for (final stored in _storedToday)
+        (card: stored.card, answer: stored.answer, at: stored.at),
+      for (final answered in _answers)
+        (
+          card: answered.card.id,
+          answer: answered.answer,
+          at: answered.review.reviewedAt,
+        ),
+    ], _day);
     final progress = SessionProgress(
-      {
-        for (final card in _answeredToday) card.id,
-        for (final answered in _answers) answered.card.id,
-      }.length,
+      today.values.where((place) => place == Today.done).length,
       _dayCards.length,
     );
     if (_queue.isNotEmpty) {
@@ -446,6 +459,7 @@ class StudySession extends ChangeNotifier {
           byId[id]!,
       ];
       _openedDay = start;
+      _day = day;
       _storedTimes = [for (final stored in storedSince) stored.at];
       _daysBefore = await studyDaysBefore(
         start,
@@ -453,7 +467,32 @@ class StudySession extends ChangeNotifier {
         _offsetAt,
       );
       _before.addAll(states);
-      _queue.addAll(orderQueue(selectQueue(read, states, day), _random));
+      // Today's list keeps a card answered "Don't know" last today, which its
+      // state no longer makes due, until it is answered "Know".
+      final today = todayOf(
+        [for (final card in read) card.id],
+        states,
+        [
+          for (final stored in _storedToday)
+            (card: stored.card, answer: stored.answer, at: stored.at),
+        ],
+        day,
+      );
+      final selected = selectQueue(read, states, day);
+      final chosen = {for (final card in selected.cards) card.id};
+      final todays = [
+        ...selected.cards,
+        for (final card in read)
+          if (today[card.id] == Today.left && !chosen.contains(card.id)) card,
+      ];
+      _queue.addAll(
+        orderQueue(
+          selected.backlog
+              ? SelectedQueue.backlog(todays)
+              : SelectedQueue.current(todays),
+          _random,
+        ),
+      );
       _dayCards.addAll([
         for (final card in _answeredToday) card.id,
         for (final card in _queue) card.id,

@@ -4,6 +4,7 @@ import type { Answer, AnswerWrite, SessionReview } from "./answer-write";
 import { type CardStates, orderQueue, reinsert, type SelectedQueue } from "./queue";
 import { type Random, seededRandom } from "./random";
 import { type Pace, sessionMinutes } from "./study-time";
+import { todayOf } from "./today-list";
 
 /**
  * A card of the session: `decks`' card with each side as the one line of text `decks` describes
@@ -12,13 +13,16 @@ import { type Pace, sessionMinutes } from "./study-time";
 export type StudyCard = Card & { text: { front: string; back: string } };
 
 /**
- * What a study page opens with, built on the server: the cards the queue rules selected for
- * today, in the order selected, whether they are a backlog, the new cards past them, each one's
- * stored state, the start time, which also seeds the session's random source, the user's pace,
- * and what today already holds. Times are milliseconds since the epoch.
+ * What a study page opens with, built on the server: the cards left in today's list, those the
+ * queue rules selected and those answered "모른다" last today, whether they are a backlog, the
+ * new cards past them, the stored state of each and of each card answered today, the start time,
+ * which also seeds the session's random source, the study day, the user's pace, and what today
+ * already holds. Times are milliseconds since the epoch.
  */
 export type SessionPlan = {
   startedAt: number;
+  /** The study day the session opened in, which today's list reads. */
+  day: { start: number; end: number };
   queue: SelectedQueue<StudyCard>;
   /** The new cards past today's, oldest first, which `studyOn` goes on with. */
   more: StudyCard[];
@@ -26,7 +30,7 @@ export type SessionPlan = {
   pace: Pace;
   today: {
     /** The answers stored today for the decks' cards before the session opened. */
-    answers: { answer: Answer; durationMs: number }[];
+    answers: { cardId: CardId; answer: Answer; reviewedAt: number; durationMs: number }[];
     /** Whether an answer is stored today in any deck. */
     answeredAnyDeck: boolean;
     /** Study days in a row before today holding an answer. */
@@ -72,8 +76,9 @@ export type SessionView = {
   /** Oldest first. */
   previous: PreviousAnswer[];
   /**
-   * Cards answered at least once, of the cards in the queue when the session opened and those
-   * taken past today's since.
+   * The day's cards whose latest answer today, in this session or an earlier one, is "안다", of
+   * the day's cards: those answered today before the session opened, the queue it opened with,
+   * and those taken past today's since.
    */
   answered: number;
   total: number;
@@ -110,7 +115,8 @@ type Answered = { card: StudyCard; answer: Answer; first: Answer; review: Sessio
 export class StudySession {
   private readonly random: Random;
   private readonly queue: StudyCard[];
-  private total: number;
+  /** The day's cards, each once: answered today before the session, queued, or taken since. */
+  private readonly dayCards: Set<CardId>;
   /** The new cards past today's, oldest first, not yet taken. */
   private more: StudyCard[];
   /** The session's size when it opened. */
@@ -130,11 +136,14 @@ export class StudySession {
   ) {
     this.random = seededRandom(plan.startedAt);
     this.queue = orderQueue(plan.queue, this.random);
-    this.total = this.queue.length;
+    this.dayCards = new Set([
+      ...plan.today.answers.map((answer) => answer.cardId),
+      ...this.queue.map((card) => card.id),
+    ]);
     const fresh = this.queue.filter((card) => !plan.before[card.id]).length;
     this.size = {
-      cards: this.total,
-      minutes: sessionMinutes(this.total - fresh, fresh, plan.pace),
+      cards: this.queue.length,
+      minutes: sessionMinutes(this.queue.length - fresh, fresh, plan.pace),
     };
     this.more = [...plan.more];
     // Opening the page with no card left today is the choice to go on.
@@ -209,7 +218,7 @@ export class StudySession {
   /** Moves the new cards past today's into the queue. */
   private takeMore(): void {
     this.queue.push(...this.more);
-    this.total += this.more.length;
+    for (const card of this.more) this.dayCards.add(card.id);
     this.more = [];
   }
 
@@ -298,8 +307,21 @@ export class StudySession {
       answer: answered.answer,
       changed: answered.answer !== answered.first,
     }));
-    const answered = new Set(this.answers.map((entry) => entry.card.id)).size;
-    const counts = { previous, answered, total: this.total };
+    const places = todayOf(
+      this.dayCards,
+      this.plan.before,
+      [
+        ...this.plan.today.answers,
+        ...this.answers.map(({ card, review }) => ({
+          cardId: card.id,
+          answer: review.answer,
+          reviewedAt: review.reviewedAt,
+        })),
+      ],
+      this.plan.day,
+    );
+    const answered = [...places.values()].filter((place) => place === "done").length;
+    const counts = { previous, answered, total: this.dayCards.size };
     const current = this.queue[0];
     if (current) {
       const guide = this.answers.length === 0 ? this.size : null;

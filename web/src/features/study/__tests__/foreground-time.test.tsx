@@ -1,6 +1,6 @@
 import { render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CardId, DeckId } from "@/features/decks";
 import { day, start } from "@/testing/library";
@@ -10,6 +10,7 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 
 import { StudyScreen } from "../components/study-screen";
+import { loadEngine } from "../engine";
 import { type SessionPlan, type StudyCard, StudySession } from "../session";
 import { unknownPace } from "../study-time";
 
@@ -27,6 +28,7 @@ const card = (front: string): StudyCard => ({
 /** A session over two new cards, opened at [start]. */
 const plan: SessionPlan = {
   startedAt: start,
+  day: { start: start - day / 2, end: start + day / 2 },
   queue: { cards: [card("a"), card("b")], backlog: false },
   more: [],
   before: {},
@@ -37,6 +39,8 @@ const plan: SessionPlan = {
     streakBefore: 0,
   },
 };
+
+beforeAll(loadEngine);
 
 describe("an answer's duration", () => {
   it("counts only the time the page was visible", () => {
@@ -111,7 +115,7 @@ describe("the study screen", () => {
   }
 
   it("stops the answer clock while the page is hidden", async () => {
-    render(<StudyScreen plan={plan} />);
+    render(<StudyScreen plan={plan} loading={null} />);
 
     vi.setSystemTime(start + 2000);
     set("hidden");

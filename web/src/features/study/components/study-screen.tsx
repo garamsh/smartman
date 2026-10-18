@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } fro
 import { v7 } from "uuid";
 
 import type { Answer, AnswerWrite } from "../answer-write";
-import { loadEngine } from "../engine";
+import { engineLoaded, loadEngine } from "../engine";
 import { saveAnswer } from "../save-answer";
 import { type PreviousAnswer, type SessionPlan, StudySession } from "../session";
 import { WriteQueue } from "../write-queue";
@@ -68,7 +68,38 @@ function shortcut(
  * its answer stays. Each action has a keyboard shortcut, listed by "단축키", and a visible
  * control.
  */
-export function StudyScreen({ plan }: { plan: SessionPlan }) {
+export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: ReactNode }) {
+  // The session places its cards through the engine's today's list, a synchronous call, so it
+  // starts once the engine's module has loaded in the browser.
+  const [engine, setEngine] = useState<"loading" | "ready" | "failed">(() =>
+    engineLoaded() ? "ready" : "loading",
+  );
+  useEffect(() => {
+    if (engine !== "loading") return;
+    loadEngine().then(
+      () => {
+        setEngine("ready");
+      },
+      () => {
+        setEngine("failed");
+      },
+    );
+  }, [engine]);
+  if (engine === "failed") {
+    return (
+      <main className="mx-auto flex min-h-dvh w-full max-w-3xl items-center justify-center px-gutter">
+        <p role="alert" className="text-body text-ink-2">
+          학습 화면을 불러오지 못했어요. 새로고침해 주세요.
+        </p>
+      </main>
+    );
+  }
+  if (engine === "loading") return loading;
+  return <Session plan={plan} />;
+}
+
+/** The study screen over a session that has started, the engine loaded. */
+function Session({ plan }: { plan: SessionPlan }) {
   const [session] = useState(() => new StudySession(plan, Date.now, () => v7()));
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
@@ -173,12 +204,6 @@ export function StudyScreen({ plan }: { plan: SessionPlan }) {
       document.removeEventListener("visibilitychange", listener);
     };
   }, [session]);
-
-  // The first write needs the engine; fetching it now keeps that write from waiting on it. A
-  // failure here is not shown: the write that needs the engine fetches it again and reports it.
-  useEffect(() => {
-    loadEngine().catch(() => undefined);
-  }, []);
 
   // Leaving the page drops the writes still waiting, so the browser asks first.
   const unsaved = status.pending > 0;

@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -430,6 +430,10 @@ describe("the 오늘 and 덱 pages", () => {
       cleanup();
       await render(Study, {
         searchParams: Promise.resolve(Object.fromEntries(new URLSearchParams(href?.split("?")[1]))),
+      });
+      // The study screen starts once the browser's engine has loaded, under the skeleton.
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
       });
       if (answered === "yesterday") {
         expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();

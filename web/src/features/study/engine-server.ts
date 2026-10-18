@@ -31,7 +31,7 @@ export const wasmPath = "src/features/study/engine-wasm/smartman_engine_wasm_bg.
 let loaded: Promise<void> | undefined;
 
 /** Loads the engine once per server process; a failed load is tried again by the next call. */
-function loadEngine(): Promise<void> {
+export function loadServerEngine(): Promise<void> {
   loaded ??= readFile(path.join(process.cwd(), wasmPath))
     .then((bytes) => init({ module_or_path: bytes }))
     .then(
@@ -51,7 +51,7 @@ function loadEngine(): Promise<void> {
 export async function foldStates(
   answers: readonly FoldedAnswer[],
 ): Promise<{ states: CardState[] } | { error: EngineError }> {
-  await loadEngine();
+  await loadServerEngine();
   const states: CardState[] = [];
   for (const answer of answers) {
     const previous = states[states.length - 1];
@@ -76,7 +76,7 @@ export async function recallAt(
   state: CardState,
   now: number,
 ): Promise<{ recall: number } | { error: EngineError }> {
-  await loadEngine();
+  await loadServerEngine();
   const outcome = retrievability(toParts(state), toSeconds(now));
   return "error" in outcome ? { error: outcome.error } : { recall: outcome.ok };
 }

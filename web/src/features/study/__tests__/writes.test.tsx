@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CardId, DeckId } from "@/features/decks";
 import { day, start } from "@/testing/library";
@@ -11,6 +11,7 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 
 import { StudyScreen } from "../components/study-screen";
+import { loadEngine } from "../engine";
 import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
 import type { CardState } from "../queue";
 import type { StudyCard } from "../session";
@@ -76,6 +77,8 @@ function storedFactor(postgrest: FakePostgrest): number {
   return factor;
 }
 
+beforeAll(loadEngine);
+
 describe("a study session's writes", () => {
   let postgrest: FakePostgrest;
   beforeEach(async () => {
@@ -99,8 +102,10 @@ describe("a study session's writes", () => {
     };
     render(
       <StudyScreen
+        loading={null}
         plan={{
           startedAt: start,
+          day: { start: start - day / 2, end: start + day / 2 },
           queue: { cards: [card], backlog: false },
           more: [],
           before: { [card.id]: before },
@@ -148,8 +153,10 @@ describe("a study session's writes", () => {
 
     render(
       <StudyScreen
+        loading={null}
         plan={{
           startedAt: start,
+          day: { start: start - day / 2, end: start + day / 2 },
           queue: { cards: [card], backlog: false },
           more: [],
           before: {},
@@ -175,8 +182,10 @@ describe("a study session's writes", () => {
   it("schedules a new card's first answer from no state", async () => {
     render(
       <StudyScreen
+        loading={null}
         plan={{
           startedAt: start,
+          day: { start: start - day / 2, end: start + day / 2 },
           queue: { cards: [card], backlog: false },
           more: [],
           before: {},
@@ -211,8 +220,10 @@ describe("a study session's writes", () => {
     };
     render(
       <StudyScreen
+        loading={null}
         plan={{
           startedAt: start,
+          day: { start: start - day / 2, end: start + day / 2 },
           queue: { cards: [card], backlog: false },
           more: [],
           before: { [card.id]: before },
