@@ -41,7 +41,66 @@ Map<CardId, Today> todayOf(
     dayStart: _seconds(day.start),
     dayEnd: _seconds(day.end),
   );
+  if (list.length != ids.length) {
+    throw StateError(
+      "today's list placed ${list.length} cards of the ${ids.length} given",
+    );
+  }
   return {for (final (index, id) in ids.indexed) id: list[index]};
 }
 
 int _seconds(DateTime time) => time.millisecondsSinceEpoch ~/ 1000;
+
+/// A study day over a selection of decks, as today's list places its cards:
+/// the queue the rules select, the cards still on "Don't know" that the rules
+/// did not select, and the cards done. The session, `TodayCounter` and the 오늘
+/// tab's daily goal all count from it, so they agree.
+final class DayPlan {
+  const DayPlan({
+    required this.selected,
+    required this.relearn,
+    required this.done,
+  });
+
+  /// What the queue rules select ([selectQueue]).
+  final SelectedQueue selected;
+
+  /// The cards today's list keeps left that the rules did not select: those
+  /// answered "Don't know" last today, which their state no longer makes due.
+  final List<Card> relearn;
+
+  /// The cards answered "Know" last today.
+  final Set<CardId> done;
+
+  /// The cards left today: the selection and those still on "Don't know".
+  int get left => selected.cards.length + relearn.length;
+}
+
+/// The [DayPlan] of [day] over [cards], from their stored [states] and the
+/// [answers] given to them in it.
+DayPlan dayPlanOf(
+  List<Card> cards,
+  Map<CardId, CardState> states,
+  StudyDay day,
+  Iterable<DayAnswer> answers,
+) {
+  final places = todayOf(
+    [for (final card in cards) card.id],
+    states,
+    answers,
+    day,
+  );
+  final selected = selectQueue(cards, states, day);
+  final chosen = {for (final card in selected.cards) card.id};
+  return DayPlan(
+    selected: selected,
+    relearn: [
+      for (final card in cards)
+        if (places[card.id] == Today.left && !chosen.contains(card.id)) card,
+    ],
+    done: {
+      for (final MapEntry(:key, :value) in places.entries)
+        if (value == Today.done) key,
+    },
+  );
+}

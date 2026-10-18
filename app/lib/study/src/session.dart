@@ -62,19 +62,31 @@ final class SessionStudying extends SessionState {
 }
 
 /// How many cards a session opened with, and the whole minutes they take at
-/// the user's pace, as the today card counts them.
+/// the user's pace, as the today card counts them, and whether it [resumed] a
+/// study day that already had cards done.
 final class SessionSize {
-  const SessionSize({required this.cards, required this.minutes});
+  const SessionSize({
+    required this.cards,
+    required this.minutes,
+    this.resumed = false,
+  });
 
   final int cards;
   final int minutes;
 
-  @override
-  bool operator ==(Object other) =>
-      other is SessionSize && other.cards == cards && other.minutes == minutes;
+  /// Whether a card of the day was done when the session opened, so the
+  /// session goes on with the day rather than starting it.
+  final bool resumed;
 
   @override
-  int get hashCode => Object.hash(cards, minutes);
+  bool operator ==(Object other) =>
+      other is SessionSize &&
+      other.cards == cards &&
+      other.minutes == minutes &&
+      other.resumed == resumed;
+
+  @override
+  int get hashCode => Object.hash(cards, minutes, resumed);
 }
 
 /// No card is left today: the completion card takes the current card's
@@ -125,11 +137,11 @@ final class PreviousCard {
 /// How many of the day's cards are done, out of the day's cards: done and
 /// left, as today's list (`todayOf`) places them.
 final class SessionProgress {
-  const SessionProgress(this.answered, this.total);
+  const SessionProgress(this.done, this.total);
 
   /// The day's cards whose latest answer today, in this session or an
   /// earlier one, is "Know".
-  final int answered;
+  final int done;
 
   /// The day's cards: those of the decks answered today before the session
   /// opened, the queue it opened with, and those taken past today's since.
@@ -273,11 +285,13 @@ class StudySession extends ChangeNotifier {
     final today = todayOf(_dayCards, _before, [
       for (final stored in _storedToday)
         (card: stored.card, answer: stored.answer, at: stored.at),
+      // The session's own answers count in the day it opened in, whatever
+      // their time, so a session open across 04:00 goes on counting.
       for (final answered in _answers)
         (
           card: answered.card.id,
           answer: answered.answer,
-          at: answered.review.reviewedAt,
+          at: _inDay(answered.review.reviewedAt),
         ),
     ], _day);
     final progress = SessionProgress(
@@ -328,6 +342,12 @@ class StudySession extends ChangeNotifier {
       ),
     );
   }
+
+  /// [at], or the last second of the study day the session opened in when [at]
+  /// is past it.
+  DateTime _inDay(DateTime at) => at.isBefore(_day.end)
+      ? at
+      : _day.end.subtract(const Duration(seconds: 1));
 
   /// Completes when every answer and toggle given so far has been written or
   /// reported.
@@ -467,32 +487,17 @@ class StudySession extends ChangeNotifier {
         _offsetAt,
       );
       _before.addAll(states);
-      // Today's list keeps a card answered "Don't know" last today, which its
-      // state no longer makes due, until it is answered "Know".
-      final today = todayOf(
-        [for (final card in read) card.id],
-        states,
-        [
-          for (final stored in _storedToday)
-            (card: stored.card, answer: stored.answer, at: stored.at),
-        ],
-        day,
-      );
-      final selected = selectQueue(read, states, day);
-      final chosen = {for (final card in selected.cards) card.id};
-      final todays = [
-        ...selected.cards,
-        for (final card in read)
-          if (today[card.id] == Today.left && !chosen.contains(card.id)) card,
-      ];
-      _queue.addAll(
-        orderQueue(
-          selected.backlog
-              ? SelectedQueue.backlog(todays)
-              : SelectedQueue.current(todays),
-          _random,
-        ),
-      );
+      final plan = dayPlanOf(read, states, day, [
+        for (final stored in _storedToday)
+          (card: stored.card, answer: stored.answer, at: stored.at),
+      ]);
+      _queue.addAll(orderQueue(plan.selected, _random));
+      // The cards still on "Don't know" come back as a re-show does: after a
+      // gap drawn from the session's random source, or at the end, in a
+      // backlog as out of one.
+      for (final card in plan.relearn) {
+        reinsert(_queue, card, _random);
+      }
       _dayCards.addAll([
         for (final card in _answeredToday) card.id,
         for (final card in _queue) card.id,
@@ -506,6 +511,7 @@ class StudySession extends ChangeNotifier {
       _size = SessionSize(
         cards: _queue.length,
         minutes: pace.minutes(reviews: _queue.length - fresh, fresh: fresh),
+        resumed: plan.done.isNotEmpty,
       );
       // Opening the screen with no card left today is the choice to go on.
       if (_queue.isEmpty) _takeMore();

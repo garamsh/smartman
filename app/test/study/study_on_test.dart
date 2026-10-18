@@ -11,6 +11,7 @@ import 'package:smartman/study/src/queue.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
 import 'package:smartman/study/src/scheduler.dart';
 import 'package:smartman/study/src/session.dart';
+import 'package:smartman/study/src/today.dart';
 import 'package:smartman/study/src/study_repository.dart';
 
 import 'fixtures.dart';
@@ -158,19 +159,31 @@ void main() {
 
     final done = session.state as SessionComplete;
     expect(done.more, isFalse);
-    expect(
-      (done.progress.answered, done.progress.total),
-      (_today + 2, _today + 2),
-    );
+    expect((done.progress.done, done.progress.total), (_today + 2, _today + 2));
     final (reviews, states) = await deck.rows();
     expect(reviews, hasLength(_today + 2));
     expect(states, hasLength(_today + 2));
     // Recorded answers, so the day's goal counts them done.
     final stored = await deck.study.answersSince(DateTime.utc(2026, 10, 14, 4));
+    final (cards, cardStates) = await readCards(
+      DeckSelection(deck.id),
+      deck.cards,
+      deck.study,
+    );
     final goal = DailyGoal.of(
-      [for (final answer in stored) (card: answer.card, at: answer.at)],
-      const [],
-      StudyDay.at(_now, firstAnswers: const [], offsetAt: _utc),
+      dayPlanOf(
+        cards,
+        cardStates,
+        StudyDay.at(
+          _now,
+          firstAnswers: [for (final answer in stored) answer.at],
+          offsetAt: _utc,
+        ),
+        [
+          for (final answer in stored)
+            (card: answer.card, answer: answer.answer, at: answer.at),
+        ],
+      ),
     );
     expect((goal.done, goal.goal), (_today + 2, _today + 2));
   });
@@ -209,10 +222,7 @@ void main() {
     );
     expect(state.guide?.cards, 0);
     // The day's count goes on from today's answered cards.
-    expect(
-      (state.progress.answered, state.progress.total),
-      (_today, _today + 2),
-    );
+    expect((state.progress.done, state.progress.total), (_today, _today + 2));
   });
 
   test('with no new card left past today\'s, the completion card offers none and 학습하기 does nothing', () async {

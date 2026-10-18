@@ -181,6 +181,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String guideResume(int cards, int minutes) {
+    return '이어서 해요 · 남은 $cards장 · 약 $minutes분';
+  }
+
+  @override
   String get guideDone => '오늘 할 카드를 다 했어요';
 
   @override

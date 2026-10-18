@@ -3,6 +3,7 @@ import 'dart:math';
 import '../../deck/deck.dart';
 import 'model.dart';
 import 'queue.dart';
+import 'today.dart';
 
 /// The interval from which a reviewed card counts as mastered (익힘).
 const masteredInterval = Duration(days: 21);
@@ -93,25 +94,12 @@ List<int> forecast(
 final class DailyGoal {
   const DailyGoal({required this.done, required this.goal});
 
-  /// The goal of the study [day] from the recorded [answers] and the cards
-  /// [left] to study in it: every card answered within the day or left, each
-  /// once, as the load stood when the day started; done are those no longer
-  /// left. A card answered "Don't know" and due again today is left, so not
-  /// yet done.
-  factory DailyGoal.of(
-    Iterable<({CardId card, DateTime at})> answers,
-    Iterable<CardId> left,
-    StudyDay day,
-  ) {
-    final remaining = left.toSet();
-    final goal = {
-      for (final answer in answers)
-        if (!answer.at.isBefore(day.start) && answer.at.isBefore(day.end))
-          answer.card,
-      ...remaining,
-    }.length;
-    return DailyGoal(done: goal - remaining.length, goal: goal);
-  }
+  /// The goal of a study day from its [plan], as today's list places the
+  /// cards: those done, answered "Know" last today, and those left, the
+  /// selection and the cards still on "Don't know". A card answered "Don't
+  /// know" is left until it is answered "Know".
+  factory DailyGoal.of(DayPlan plan) =>
+      DailyGoal(done: plan.done.length, goal: plan.done.length + plan.left);
 
   final int done;
   final int goal;
