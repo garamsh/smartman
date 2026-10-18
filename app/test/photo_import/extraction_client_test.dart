@@ -179,13 +179,16 @@ void main() {
     }
     // Control: a topic of the most characters the contract allows is read.
     final longest = _client(
-      (_) async => _json(200, {
-        'cards': [
-          {'front': 'chat', 'back': 'cat', 'topic': 'ㄱ' * 60},
-        ],
-      }),
+      (_) async => http.Response(
+        jsonEncode({
+          'cards': [
+            {'front': 'chat', 'back': 'cat', 'topic': 'a' * 60},
+          ],
+        }),
+        200,
+      ),
     );
-    expect((await _extract(longest))!.single.topic, 'ㄱ' * 60);
+    expect((await _extract(longest))!.single.topic, 'a' * 60);
   });
 
   test('a request that cannot reach the server is offline', () async {

@@ -6,7 +6,7 @@ import 'failure.dart';
 import 'photo.dart';
 
 /// The most characters (code points) a card's topic has.
-const maxTopicLength = 60;
+const maxTopicChars = 60;
 
 /// A card the model read off the page, before the user reviews it: its
 /// headword or question, its fullest answer, the part of speech the page
@@ -121,7 +121,7 @@ List<CandidateCard> _parseCards(String body) {
 /// A card of non-empty `front` and `back`. Its answer is its `answer`, else
 /// its `meaning`, else, from a function deployed before the fields, its
 /// `back`; with the optional `partOfSpeech` and a `topic` of 1 to
-/// [maxTopicLength] characters. Other fields are not read.
+/// [maxTopicChars] characters. Other fields are not read.
 CandidateCard _parseCard(Object? card) {
   if (card
       case final Map<String, Object?> fields &&
@@ -130,7 +130,7 @@ CandidateCard _parseCard(Object? card) {
     String? optional(String key) =>
         fields.containsKey(key) ? _text(fields[key]) : null;
     final topic = optional('topic');
-    if (topic != null && topic.runes.length > maxTopicLength) {
+    if (topic != null && topic.runes.length > maxTopicChars) {
       throw const ServiceFailed("a card's topic is too long");
     }
     return CandidateCard(

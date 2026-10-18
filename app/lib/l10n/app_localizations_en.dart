@@ -463,6 +463,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String reviewDroppedCard(String front, String back) {
+    return '$front, $back. Left out with its topic';
+  }
+
+  @override
   String get reviewRemove => 'Remove';
 
   @override

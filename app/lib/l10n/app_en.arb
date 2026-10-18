@@ -118,6 +118,7 @@
   "reviewTopicSwitch": "Keep {topic}, {count, plural, =1{1 card} other{{count} cards}}",
   "reviewCard": "{front}, {back}. Tap to edit, swipe left to remove",
   "reviewRemovedCard": "{front}, {back}. Removed. Swipe right to put it back",
+  "reviewDroppedCard": "{front}, {back}. Left out with its topic",
   "reviewRemove": "Remove",
   "reviewRestore": "Put back",
   "reviewRemoveCard": "Remove this card",

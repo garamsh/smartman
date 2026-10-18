@@ -43,6 +43,18 @@ final class ReviewRow {
   }
 }
 
+/// Whether a row will be written, and if not, why.
+enum RowState {
+  /// Its topic is on and it is not removed.
+  kept,
+
+  /// Removed on its own: by the user, or because the deck holds its key.
+  removed,
+
+  /// Its topic is switched off, whatever the row's own state.
+  dropped,
+}
+
 /// The rows of one topic, which the user keeps or drops as a whole.
 final class ReviewTopic {
   ReviewTopic(this.name);
@@ -89,11 +101,26 @@ final class Review {
   ReviewTopic topicOf(ReviewRow row) =>
       topics.firstWhere((topic) => topic.rows.contains(row));
 
-  /// Whether [row] will be written: its topic is on and it is not removed.
-  bool isKept(ReviewRow row) => topicOf(row).on && !isRemoved(row);
+  RowState stateOf(ReviewRow row) => !topicOf(row).on
+      ? RowState.dropped
+      : isRemoved(row)
+      ? RowState.removed
+      : RowState.kept;
 
   /// The rows that will be written.
-  Iterable<ReviewRow> get saved => rows.where(isKept);
+  Iterable<ReviewRow> get saved =>
+      rows.where((row) => stateOf(row) == RowState.kept);
+
+  /// Applies what the user typed for [row], keeping a side left empty as it
+  /// was. The row keeps the state it had, so an edit whose front the deck
+  /// holds is not removed: it merges back when saved.
+  void edit(ReviewRow row, {required String front, required String back}) {
+    row.removed = isRemoved(row);
+    if (front.trim().isNotEmpty) row.front = front.trim();
+    if (back.trim().isNotEmpty && back.trim() != row.back) {
+      row.editedBack = back.trim();
+    }
+  }
 
   /// The cards to import, each answer as shown. Each merges back into a card
   /// with its key, the deck's or one written before it, so none is doubled.

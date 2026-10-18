@@ -423,6 +423,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String reviewDroppedCard(String front, String back) {
+    return '$front, $back. 주제를 꺼서 뺀 카드';
+  }
+
+  @override
   String get reviewRemove => '빼기';
 
   @override

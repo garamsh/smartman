@@ -811,6 +811,12 @@ abstract class AppLocalizations {
   /// **'{front}, {back}. 뺀 카드. 오른쪽으로 밀면 다시 넣어요'**
   String reviewRemovedCard(String front, String back);
 
+  /// What a screen reader reads for a card whose topic is switched off, which cannot be edited or swiped.
+  ///
+  /// In ko, this message translates to:
+  /// **'{front}, {back}. 주제를 꺼서 뺀 카드'**
+  String reviewDroppedCard(String front, String back);
+
   /// Shown under a card dragged left, which removes it.
   ///
   /// In ko, this message translates to:

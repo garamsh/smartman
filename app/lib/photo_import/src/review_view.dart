@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/semantics.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
@@ -18,6 +19,20 @@ const _swipeThreshold = 48.0;
 /// How far the coach slides the first card to show a swipe.
 const _coachPeek = 84.0;
 
+/// The coach's steps, each teaching one gesture on the first card.
+enum _CoachStep {
+  remove,
+  restore,
+  edit;
+
+  /// The step after this one; null after the last.
+  _CoachStep? get next => switch (this) {
+    remove => restore,
+    restore => edit,
+    edit => null,
+  };
+}
+
 /// The cards made from the photo, grouped by topic, each topic with a switch
 /// that keeps or drops it: a swipe left removes a card and a swipe right puts
 /// it back, a tap edits it in place, and a removed card stays, struck
@@ -31,7 +46,6 @@ class ReviewView extends StatefulWidget {
     required this.onTarget,
     required this.saving,
     required this.coach,
-    required this.onCoachDone,
     required this.onChanged,
     required this.onRetake,
     required this.onSave,
@@ -51,9 +65,6 @@ class ReviewView extends StatefulWidget {
   /// Whether the coach shows when the screen opens.
   final bool coach;
 
-  /// Called once the coach ends, by its buttons or by any gesture.
-  final VoidCallback onCoachDone;
-
   /// Called after [review] changed in place.
   final VoidCallback onChanged;
 
@@ -65,31 +76,44 @@ class ReviewView extends StatefulWidget {
 }
 
 class _ReviewViewState extends State<ReviewView> {
-  /// The coach's step, from 1 to 3; 0 once it has ended or never showed.
-  late int _coach = widget.coach && widget.review.rows.isNotEmpty ? 1 : 0;
+  /// The coach's step; null once it has ended or when it never showed.
+  late _CoachStep? _coach = widget.coach && widget.review.rows.isNotEmpty
+      ? _CoachStep.remove
+      : null;
 
+  /// The row open for editing, and what is typed in its fields.
   ReviewRow? _editing;
+  String _draftFront = '';
+  String _draftBack = '';
 
   Review get _review => widget.review;
 
-  void _endCoach() {
-    if (_coach == 0) return;
-    setState(() => _coach = 0);
-    widget.onCoachDone();
-  }
-
-  /// Applies a user's change, which ends the coach.
+  /// Applies a user's change after committing an open edit, so no typed text
+  /// is lost; any change ends the coach.
   void _change(VoidCallback change) {
-    _endCoach();
-    setState(change);
+    setState(() {
+      _coach = null;
+      if (_editing case final row?) {
+        _review.edit(row, front: _draftFront, back: _draftBack);
+        _editing = null;
+      }
+      change();
+    });
     widget.onChanged();
   }
+
+  void _edit(ReviewRow row) => _change(() {
+    _editing = row;
+    _draftFront = row.front;
+    _draftBack = row.back;
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final count = _review.saved.length;
     final first = _review.rows.firstOrNull;
+    final coach = _coach;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -135,41 +159,31 @@ class _ReviewViewState extends State<ReviewView> {
           for (final topic in _review.topics) ...[
             const SizedBox(height: AppSpace.s24),
             if (topic.name case final name?)
-              _TopicHeading(
-                name: name,
-                count: topic.rows.length,
-                on: topic.on,
-                onChanged: (on) => _change(() {
-                  topic.on = on;
-                  _editing = null;
-                }),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpace.rowGap),
+                child: _TopicHeading(
+                  name: name,
+                  count: topic.rows.length,
+                  on: topic.on,
+                  onChanged: (on) => _change(() => topic.on = on),
+                ),
               ),
             for (final row in topic.rows)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpace.rowGap),
-                child: _ReviewCard(
-                  key: ObjectKey(row),
-                  row: row,
-                  removed: !_review.isKept(row),
-                  removedOnItsOwn: _review.isRemoved(row),
-                  inDeck: _review.isDuplicate(row),
-                  editable: topic.on,
-                  editing: identical(_editing, row),
-                  coachStep: identical(row, first) ? _coach : 0,
-                  dimmed: _coach > 0 && !identical(row, first),
-                  onRemoved: (removed) => _change(() {
-                    row.removed = removed;
-                    _editing = null;
-                  }),
-                  onEdit: () => _change(() => _editing = row),
-                  onEdited: (front, back) => _change(() {
-                    if (front.trim().isNotEmpty) row.front = front.trim();
-                    if (back.trim().isNotEmpty && back.trim() != row.back) {
-                      row.editedBack = back.trim();
-                    }
-                    _editing = null;
-                  }),
-                ),
+              _ReviewCard(
+                key: ObjectKey(row),
+                row: row,
+                state: _review.stateOf(row),
+                inDeck: _review.isDuplicate(row),
+                editing: identical(_editing, row),
+                coachStep: identical(row, first) ? coach : null,
+                dimmed: coach != null && !identical(row, first),
+                onRemoved: (removed) => _change(() => row.removed = removed),
+                onEdit: () => _edit(row),
+                onDraft: (front, back) {
+                  _draftFront = front;
+                  _draftBack = back;
+                },
+                onDone: () => _change(() {}),
               ),
           ],
         ],
@@ -182,18 +196,22 @@ class _ReviewViewState extends State<ReviewView> {
             AppSpace.gutter,
             AppSpace.s16,
           ),
-          child: _coach > 0
+          child: coach != null
               ? _Coach(
-                  step: _coach,
-                  onNext: () =>
-                      _coach == 3 ? _endCoach() : setState(() => _coach += 1),
-                  onSkip: _endCoach,
+                  step: coach,
+                  onNext: () => setState(() => _coach = coach.next),
+                  onSkip: () => setState(() => _coach = null),
                 )
               : AppButton(
                   label: l10n.reviewAdd(count),
                   size: AppButtonSize.cta,
                   loading: widget.saving,
-                  onPressed: count == 0 ? null : widget.onSave,
+                  onPressed: count == 0
+                      ? null
+                      : () {
+                          _change(() {});
+                          widget.onSave();
+                        },
                 ),
         ),
       ),
@@ -288,45 +306,42 @@ class _TopicHeading extends StatelessWidget {
 /// A card's front and answer side by side, moved by a horizontal drag that
 /// removes it past the threshold to the left and puts it back to the right,
 /// or, while [editing], its two fields with the remove or restore button.
+/// A screen reader opens it with a tap and removes or restores it with a
+/// custom action. A card whose topic is off takes neither gesture.
 class _ReviewCard extends StatefulWidget {
   const _ReviewCard({
     super.key,
     required this.row,
-    required this.removed,
-    required this.removedOnItsOwn,
+    required this.state,
     required this.inDeck,
-    required this.editable,
     required this.editing,
     required this.coachStep,
     required this.dimmed,
     required this.onRemoved,
     required this.onEdit,
-    required this.onEdited,
+    required this.onDraft,
+    required this.onDone,
   });
 
   final ReviewRow row;
-
-  /// Whether the card will not be written: removed, or its topic off.
-  final bool removed;
-
-  /// Whether the card is removed itself, whatever its topic.
-  final bool removedOnItsOwn;
+  final RowState state;
 
   /// Whether the deck already holds the card's key.
   final bool inDeck;
 
-  /// False while the card's topic is off.
-  final bool editable;
-
   final bool editing;
 
-  /// The coach step this card shows, from 1 to 3; 0 for none.
-  final int coachStep;
+  /// The coach step this card demonstrates; null for none.
+  final _CoachStep? coachStep;
 
   final bool dimmed;
   final ValueChanged<bool> onRemoved;
   final VoidCallback onEdit;
-  final void Function(String front, String back) onEdited;
+
+  /// Called with the fields' text as it is typed.
+  final void Function(String front, String back) onDraft;
+
+  final VoidCallback onDone;
 
   @override
   State<_ReviewCard> createState() => _ReviewCardState();
@@ -342,18 +357,20 @@ class _ReviewCardState extends State<_ReviewCard>
     duration: const Duration(milliseconds: 2800),
   );
 
+  bool get _editable => widget.state != RowState.dropped;
+
   @override
   void initState() {
     super.initState();
-    if (widget.coachStep > 0) _demo.repeat();
+    if (widget.coachStep != null) _demo.repeat();
   }
 
   @override
   void didUpdateWidget(_ReviewCard old) {
     super.didUpdateWidget(old);
-    if (widget.coachStep > 0 && !_demo.isAnimating) {
+    if (widget.coachStep != null && !_demo.isAnimating) {
       _demo.repeat();
-    } else if (widget.coachStep == 0 && _demo.isAnimating) {
+    } else if (widget.coachStep == null && _demo.isAnimating) {
       _demo.reset();
     }
   }
@@ -375,9 +392,9 @@ class _ReviewCardState extends State<_ReviewCard>
   /// to the peek, held, and back.
   double _peek(double t) {
     final direction = switch (widget.coachStep) {
-      1 => -1.0,
-      2 => 1.0,
-      _ => 0.0,
+      _CoachStep.remove => -1.0,
+      _CoachStep.restore => 1.0,
+      _CoachStep.edit || null => 0.0,
     };
     final out = Curves.easeOutCubic.transform(
       ((t - 0.2) / 0.26).clamp(0.0, 1.0),
@@ -391,16 +408,37 @@ class _ReviewCardState extends State<_ReviewCard>
   @override
   Widget build(BuildContext context) {
     if (widget.editing) {
-      return _CardEditor(
-        row: widget.row,
-        removed: widget.removedOnItsOwn,
-        onRemoved: widget.onRemoved,
-        onDone: widget.onEdited,
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpace.rowGap),
+        child: _CardEditor(
+          row: widget.row,
+          removed: widget.state == RowState.removed,
+          onRemoved: widget.onRemoved,
+          onDraft: widget.onDraft,
+          onDone: widget.onDone,
+        ),
       );
     }
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final row = widget.row;
+    final coachStep = widget.coachStep;
+    final label = switch (widget.state) {
+      RowState.kept => l10n.reviewCard(row.front, row.back),
+      RowState.removed => l10n.reviewRemovedCard(row.front, row.back),
+      RowState.dropped => l10n.reviewDroppedCard(row.front, row.back),
+    };
+    final actions = switch (widget.state) {
+      RowState.kept => {
+        CustomSemanticsAction(label: l10n.reviewRemove): () =>
+            widget.onRemoved(true),
+      },
+      RowState.removed => {
+        CustomSemanticsAction(label: l10n.reviewRestore): () =>
+            widget.onRemoved(false),
+      },
+      RowState.dropped => const <CustomSemanticsAction, VoidCallback>{},
+    };
     return Opacity(
       opacity: widget.dimmed ? 0.45 : 1,
       child: Column(
@@ -413,34 +451,43 @@ class _ReviewCardState extends State<_ReviewCard>
               return Stack(
                 children: [
                   if (offset != 0)
-                    Positioned.fill(child: _SwipeUnder(offset: offset)),
+                    Positioned.fill(
+                      bottom: AppSpace.rowGap,
+                      child: _SwipeUnder(offset: offset),
+                    ),
                   Transform.translate(offset: Offset(offset, 0), child: child),
-                  if (widget.coachStep > 0)
-                    _CoachFinger(step: widget.coachStep, progress: _demo.value),
+                  if (coachStep != null)
+                    _CoachFinger(step: coachStep, progress: _demo.value),
                 ],
               );
             },
             child: Semantics(
-              button: widget.editable,
-              label: widget.removed
-                  ? l10n.reviewRemovedCard(row.front, row.back)
-                  : l10n.reviewCard(row.front, row.back),
+              button: _editable,
+              label: label,
+              onTap: _editable ? widget.onEdit : null,
+              customSemanticsActions: actions,
               excludeSemantics: true,
               child: GestureDetector(
-                onTap: widget.editable ? widget.onEdit : null,
-                onHorizontalDragUpdate: (details) =>
-                    setState(() => _drag += details.delta.dx),
-                onHorizontalDragEnd: (_) => _dragEnd(),
-                onHorizontalDragCancel: () => setState(() => _drag = 0),
-                child: _CardFace(row: row, removed: widget.removed),
+                onTap: _editable ? widget.onEdit : null,
+                onHorizontalDragUpdate: _editable
+                    ? (details) => setState(() => _drag += details.delta.dx)
+                    : null,
+                onHorizontalDragEnd: _editable ? (_) => _dragEnd() : null,
+                onHorizontalDragCancel: _editable
+                    ? () => setState(() => _drag = 0)
+                    : null,
+                child: _CardFace(
+                  row: row,
+                  removed: widget.state != RowState.kept,
+                ),
               ),
             ),
           ),
-          if (widget.inDeck && widget.removedOnItsOwn)
+          if (widget.inDeck)
             Padding(
               padding: const EdgeInsets.only(
-                top: AppSpace.s4,
                 left: AppSpace.s4,
+                bottom: AppSpace.rowGap,
               ),
               child: Text(
                 l10n.reviewInDeck,
@@ -540,26 +587,23 @@ class _CardFace extends StatelessWidget {
     );
     final shape = BorderRadius.circular(AppRadius.row);
     return removed
-        ? CustomPaint(
-            foregroundPainter: _DashedOutline(
-              color: colors.muted,
-              radius: AppRadius.row,
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.ground,
-                borderRadius: shape,
+        ? Padding(
+            padding: const EdgeInsets.only(bottom: AppSpace.rowGap),
+            child: CustomPaint(
+              foregroundPainter: _DashedOutline(
+                color: colors.muted,
+                radius: AppRadius.row,
               ),
-              child: face,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.ground,
+                  borderRadius: shape,
+                ),
+                child: face,
+              ),
             ),
           )
-        : DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: shape,
-            ),
-            child: face,
-          );
+        : AppRowSurface(child: face);
   }
 }
 
@@ -598,21 +642,23 @@ class _DashedOutline extends CustomPainter {
       old.color != color || old.radius != radius;
 }
 
-/// A card opened for editing: its front and answer as fields, the button
-/// that removes it or puts it back, and "완료", which keeps a side left
-/// empty as it was.
+/// A card opened for editing: its front and answer as fields, reported as
+/// they are typed, the button that removes it or puts it back, and "완료".
+/// The review commits what is typed before either takes effect.
 class _CardEditor extends StatefulWidget {
   const _CardEditor({
     required this.row,
     required this.removed,
     required this.onRemoved,
+    required this.onDraft,
     required this.onDone,
   });
 
   final ReviewRow row;
   final bool removed;
   final ValueChanged<bool> onRemoved;
-  final void Function(String front, String back) onDone;
+  final void Function(String front, String back) onDraft;
+  final VoidCallback onDone;
 
   @override
   State<_CardEditor> createState() => _CardEditorState();
@@ -649,11 +695,13 @@ class _CardEditorState extends State<_CardEditor> {
             controller: _front,
             autofocus: true,
             maxLines: null,
+            onChanged: (_) => widget.onDraft(_front.text, _back.text),
           ),
           AppTextField(
             label: l10n.reviewBack,
             controller: _back,
             maxLines: null,
+            onChanged: (_) => widget.onDraft(_front.text, _back.text),
           ),
           Row(
             children: [
@@ -667,10 +715,7 @@ class _CardEditorState extends State<_CardEditor> {
                 onPressed: () => widget.onRemoved(!widget.removed),
               ),
               const Spacer(),
-              AppButton(
-                label: l10n.reviewDone,
-                onPressed: () => widget.onDone(_front.text, _back.text),
-              ),
+              AppButton(label: l10n.reviewDone, onPressed: widget.onDone),
             ],
           ),
         ],
@@ -684,7 +729,7 @@ class _CardEditorState extends State<_CardEditor> {
 class _CoachFinger extends StatelessWidget {
   const _CoachFinger({required this.step, required this.progress});
 
-  final int step;
+  final _CoachStep step;
   final double progress;
 
   @override
@@ -693,8 +738,8 @@ class _CoachFinger extends StatelessWidget {
     final visible = progress > 0.08 && progress < 0.68;
     return Positioned(
       top: AppSpace.s20,
-      left: step == 2 ? AppSpace.s32 : null,
-      right: step == 1 ? AppSpace.s32 : null,
+      left: step == _CoachStep.restore ? AppSpace.s32 : null,
+      right: step == _CoachStep.remove ? AppSpace.s32 : null,
       child: IgnorePointer(
         child: ExcludeSemantics(
           child: Opacity(
@@ -721,7 +766,7 @@ class _Coach extends StatelessWidget {
     required this.onSkip,
   });
 
-  final int step;
+  final _CoachStep step;
   final VoidCallback onNext;
   final VoidCallback onSkip;
 
@@ -730,14 +775,14 @@ class _Coach extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final line = switch (step) {
-      1 => l10n.coachRemove,
-      2 => l10n.coachRestore,
-      _ => l10n.coachEdit,
+      _CoachStep.remove => l10n.coachRemove,
+      _CoachStep.restore => l10n.coachRestore,
+      _CoachStep.edit => l10n.coachEdit,
     };
     return Semantics(
       container: true,
       liveRegion: true,
-      label: l10n.coachStep(step, 3),
+      label: l10n.coachStep(step.index + 1, _CoachStep.values.length),
       child: Container(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.s20,
@@ -761,7 +806,7 @@ class _Coach extends StatelessWidget {
                     style: AppType.bodyStrong.copyWith(color: colors.onHero),
                   ),
                 ),
-                for (final dot in [1, 2, 3])
+                for (final dot in _CoachStep.values)
                   Container(
                     width: dot == step ? 16 : 6,
                     height: 6,
@@ -778,14 +823,14 @@ class _Coach extends StatelessWidget {
             const SizedBox(height: AppSpace.s8),
             Row(
               children: [
-                TextButton(
+                AppButton(
+                  label: l10n.coachSkip,
+                  variant: AppButtonVariant.onHeroText,
                   onPressed: onSkip,
-                  style: TextButton.styleFrom(foregroundColor: colors.onHero),
-                  child: Text(l10n.coachSkip),
                 ),
                 const Spacer(),
                 AppButton(
-                  label: step == 3 ? l10n.coachStart : l10n.coachNext,
+                  label: step.next == null ? l10n.coachStart : l10n.coachNext,
                   variant: AppButtonVariant.onHero,
                   onPressed: onNext,
                 ),

@@ -24,6 +24,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
    - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다"; a horizontal drag on the previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기", and a tap on it opens the whole card; a drag on either card moves that card alone.
    - Deck screen: a long-press opens a card, and a screen reader reaches the same through the row's "카드 편집" action.
+   - Photo review: a swipe removes or puts back a card, with the custom actions "빼기" and "다시 넣기" and the edit view's button; a tap opens the card for editing, and a screen reader taps the same.
    - Every sheet: a drag or a tap outside dismisses it, and Android's back does the same.
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
    - Study: the next card is on screen before the answer's write finishes.
@@ -41,7 +42,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Every screen and sheet: the tokens below and the components that use them.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
    - Study: an answered card flies off and rises into the previous card's place while the next emerges from below; under reduce motion they cross-fade. A re-decided card springs back into place, at once under reduce motion.
-   - Photo review: a dragged card follows the finger and settles back; the coach's demonstration on the first card is not shown under reduce motion, nor is the coach.
+   - Photo review: a dragged card follows the finger and returns to place when let go; the coach's demonstration on the first card is not shown under reduce motion, nor is the coach.
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences, in the voice below.
    - First-run home and deck screen: an empty list says how to start, and a search with no match, on the 덱 tab or the deck screen, says to try other words.
@@ -121,7 +122,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 `app/lib/design/` holds the shared, domain-free components every screen builds from ([ADR 0021](adr/0021-type-and-spacing-scales-and-a-shared-component-layer.md)). A screen uses them rather than building the same pattern from Material widgets.
 
-- **`AppButton`** — every button in content and in bars. Variants: primary (the navy fill, inverted in the dark theme, the one primary action), onHero (a white fill with a navy label, on the navy cards), secondary (outlined), destructive (red text), destructiveFinal (red fill, the last step of a destructive action), and text (a quiet action, such as one in a top bar). An optional icon leads the label. Size cta (56) for the actions at the bottom of a screen or sheet, regular (52) elsewhere. States: pressed, disabled, and loading.
+- **`AppButton`** — every button in content and in bars. Variants: primary (the navy fill, inverted in the dark theme, the one primary action), onHero (a white fill with a navy label, on the navy cards), secondary (outlined), destructive (red text), destructiveFinal (red fill, the last step of a destructive action), text (a quiet action, such as one in a top bar), and onHeroText (a quiet action on the navy hero surface, such as the photo review coach's "건너뛰기"). An optional icon leads the label. Size cta (56) for the actions at the bottom of a screen or sheet, regular (52) elsewhere. States: pressed, disabled, and loading.
 - **`AppTextField`** — every text field: a label above, a hint inside, an error below, and a counter where a limit exists, 52 high, or 48 for a search, with a 2 px ink ring while focused. The label, field and error are read as one.
 - **`AppSheet`** with **`showAppSheet`** — every modal: a drag handle, a title, an optional body, content, and actions pinned at the bottom above the keyboard. Its actions follow one rule ([ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)):
   - every sheet is dismissed by a drag and by the scrim, so a sheet's actions hold no cancel;
@@ -135,7 +136,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
 - **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)); the previous card's sides, run together as one paragraph, are scaled the same way and then further, as far as the floor, until they fit their half's height, and cut there ([ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md)).
 
-Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Switch`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen and on each topic of the photo review, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes.
+Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox` (the publish sheet's `CheckboxListTile`), `Switch`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen and on each topic of the photo review, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes.
 
 ### Checks
 

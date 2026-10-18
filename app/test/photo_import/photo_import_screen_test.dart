@@ -797,6 +797,149 @@ void main() {
       expect(await import.deckNames(), ['French', 'Spanish']);
       await import.close();
     });
+    testWidgets(
+      'a screen reader opens a card with a tap and removes or restores it with a custom action, and a card whose topic is off has neither',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        final import = await _Import.open(tester);
+        await import.shoot();
+        import.client.answerCards(const [
+          CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
+        ]);
+        await tester.pumpAndSettle();
+        void perform(String label, String action) =>
+            tester.semantics.customAction(
+              find.semantics.byLabel(label),
+              CustomSemanticsAction(label: action),
+            );
+
+        const kept = 'chien, dog. Tap to edit, swipe left to remove';
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(kept)),
+          matchesSemantics(
+            label: kept,
+            isButton: true,
+            hasTapAction: true,
+            customActions: [const CustomSemanticsAction(label: 'Remove')],
+          ),
+        );
+        perform(kept, 'Remove');
+        await tester.pumpAndSettle();
+        expect(import.struck('chien'), isTrue);
+
+        const removed = 'chien, dog. Removed. Swipe right to put it back';
+        perform(removed, 'Put back');
+        await tester.pumpAndSettle();
+        expect(import.struck('chien'), isFalse);
+
+        tester.semantics.tap(find.semantics.byLabel(kept));
+        await tester.pumpAndSettle();
+        expect(_shown('Remove this card'), findsOneWidget);
+        await import.tap(_shown('Done'));
+
+        await import.tap(find.byType(Switch));
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel('chien, dog. Left out with its topic'),
+          ),
+          matchesSemantics(label: 'chien, dog. Left out with its topic'),
+        );
+        await import.close();
+        semantics.dispose();
+      },
+    );
+
+    testWidgets(
+      'a card whose topic is off takes no swipe, so switching the topic back keeps a duplicate removed',
+      (tester) async {
+        final import = await _Import.open(tester, french: {'chat': 'cat'});
+        await import.shoot();
+        import.client.answerCards(const [
+          CandidateCard(front: 'chat', answer: 'talk', topic: 'Verbs'),
+          CandidateCard(front: 'parler', answer: 'speak', topic: 'Verbs'),
+        ]);
+        await tester.pumpAndSettle();
+        expect(import.struck('chat'), isTrue);
+
+        await import.tap(find.byType(Switch));
+        await import.swipe('chat', 120);
+        await import.swipe('parler', -120);
+        await import.tap(find.byType(Switch));
+
+        expect(import.struck('chat'), isTrue, reason: 'still a duplicate');
+        expect(import.struck('parler'), isFalse, reason: 'swipe ignored');
+        // Control: with the topic on, the same swipe puts it back.
+        await import.swipe('chat', 120);
+        expect(import.struck('chat'), isFalse);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'what is typed is kept when the card is removed, another card is tapped, its topic is switched or the cards are added',
+      (tester) async {
+        // Tall enough that every card is on screen.
+        await tester.binding.setSurfaceSize(const Size(800, 2000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final import = await _Import.open(tester);
+        await import.shoot();
+        import.client.answerCards(const [
+          CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
+          CandidateCard(front: 'chat', answer: 'cat', topic: 'Animals'),
+          CandidateCard(front: 'cheval', answer: 'horse', topic: 'Farm'),
+        ]);
+        await tester.pumpAndSettle();
+        Future<void> type(String side, String text) async {
+          await import.tap(_shown(side));
+          await tester.enterText(find.byType(TextField).last, text);
+          await tester.pump();
+        }
+
+        await type('dog', 'puppy');
+        await import.tap(_shown('Remove this card'));
+        expect(_shown('puppy'), findsOneWidget);
+        expect(import.struck('puppy'), isTrue);
+
+        await type('cat', 'kitten');
+        await import.tap(_shown('cheval'));
+        expect(_shown('kitten'), findsOneWidget);
+        await tester.enterText(find.byType(TextField).last, 'pony');
+        await tester.pump();
+        // Its own topic, switched off and on again.
+        await import.tap(find.byType(Switch).last);
+        expect(_shown('pony'), findsOneWidget);
+        await import.tap(find.byType(Switch).last);
+
+        await type('kitten', 'kitty');
+        await import.tap(_shown('Add 2 cards to the deck'));
+        expect(await import.cards(import.french), [
+          ('chat', 'kitty', CardSource.import),
+          ('cheval', 'pony', CardSource.import),
+        ]);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      "an edit whose front the deck holds keeps the card, marked, and merges it into the deck's card",
+      (tester) async {
+        final import = await _Import.open(tester, french: {'chat': 'cat'});
+        await import.extract({'chien': 'dog'});
+        expect(_shown('Already in the deck'), findsNothing, reason: 'control');
+
+        await import.tap(_shown('chien'));
+        await tester.enterText(find.byType(TextField).first, 'chat');
+        await import.tap(_shown('Done'));
+
+        expect(import.struck('chat'), isFalse);
+        expect(_shown('Already in the deck'), findsOneWidget);
+        await import.tap(_shown('Add 1 card to the deck'));
+        expect(await import.cards(import.french), [
+          ('chat', 'cat / dog', CardSource.manual),
+        ]);
+        await import.close();
+      },
+    );
   });
 
   group('coach', () {
@@ -818,7 +961,8 @@ void main() {
         await tester.tap(_shown('Next'));
         await tester.pump();
         expect(_shown('Tap to edit'), findsOneWidget);
-        expect(import.preferences.getBool('photoReviewCoachShown'), isNull);
+        // Stored as shown when it first shows, not when it ends.
+        expect(import.preferences.getBool('photoReviewCoachShown'), isTrue);
         await tester.tap(_shown('Start'));
         await tester.pumpAndSettle();
 
@@ -830,19 +974,26 @@ void main() {
       },
     );
 
-    testWidgets('a gesture or Skip ends it', (tester) async {
-      for (final end in ['swipe', 'skip']) {
+    testWidgets('a swipe, a tap, a switch or Skip ends it', (tester) async {
+      for (final end in ['swipe', 'tap', 'switch', 'skip']) {
         final import = await _Import.open(tester, coach: true);
         await import.shoot();
-        import.client.answer({'chien': 'dog'});
+        import.client.answerCards(const [
+          CandidateCard(front: 'chien', answer: 'dog', topic: 'Animals'),
+        ]);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
         expect(_shown('Swipe left to remove'), findsOneWidget, reason: end);
 
-        if (end == 'swipe') {
-          await tester.drag(import.row('chien'), const Offset(-120, 0));
-        } else {
-          await tester.tap(_shown('Skip'));
+        switch (end) {
+          case 'swipe':
+            await tester.drag(import.row('chien'), const Offset(-120, 0));
+          case 'tap':
+            await tester.tap(import.row('chien'));
+          case 'switch':
+            await tester.tap(find.byType(Switch));
+          case _:
+            await tester.tap(_shown('Skip'));
         }
         await tester.pumpAndSettle();
 

@@ -298,6 +298,11 @@
     "description": "What a screen reader reads for a removed card on the review screen.",
     "placeholders": {"front": {"type": "String"}, "back": {"type": "String"}}
   },
+  "reviewDroppedCard": "{front}, {back}. 주제를 꺼서 뺀 카드",
+  "@reviewDroppedCard": {
+    "description": "What a screen reader reads for a card whose topic is switched off, which cannot be edited or swiped.",
+    "placeholders": {"front": {"type": "String"}, "back": {"type": "String"}}
+  },
   "reviewRemove": "빼기",
   "@reviewRemove": {"description": "Shown under a card dragged left, which removes it."},
   "reviewRestore": "다시 넣기",

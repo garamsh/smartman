@@ -138,7 +138,10 @@ final class _Failed extends _Stage {
 }
 
 final class _Reviewing extends _Stage {
-  const _Reviewing(this.review);
+  const _Reviewing(this.review, {required this.coach});
+
+  /// Whether Review opens with its coach.
+  final bool coach;
 
   final Review review;
 }
@@ -185,17 +188,13 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onRetake: _retake,
         onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
-      _Reviewing(:final review) => ReviewView(
+      _Reviewing(:final review, :final coach) => ReviewView(
         review: review,
         decks: decks.value ?? const [],
         target: target,
         onTarget: (deck) => _chooseTarget(review, deck),
         saving: _saving,
-        coach:
-            widget.preferences.getBool(_coachShownKey) != true &&
-            !MediaQuery.disableAnimationsOf(context),
-        onCoachDone: () =>
-            unawaited(widget.preferences.setBool(_coachShownKey, true)),
+        coach: coach,
         onChanged: () => setState(() {}),
         onRetake: _retake,
         onSave: () => _save(review),
@@ -221,8 +220,16 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       );
       if (cards == null || !current()) return;
       final existing = await _keysOf(repository, target);
-      if (!current()) return;
-      setState(() => _stage = _Reviewing(Review(cards, existing)));
+      if (!mounted || !identical(_stage, stage)) return;
+      // The coach shows once per device, so it is stored as shown when it
+      // first shows; under reduce motion it does not show.
+      final coach =
+          widget.preferences.getBool(_coachShownKey) != true &&
+          !MediaQuery.disableAnimationsOf(context);
+      if (coach) unawaited(widget.preferences.setBool(_coachShownKey, true));
+      setState(
+        () => _stage = _Reviewing(Review(cards, existing), coach: coach),
+      );
     } on PhotoImportFailure catch (failure) {
       if (current()) setState(() => _stage = _Failed(failure, stage.photo));
     } on DeckFailure catch (failure) {
