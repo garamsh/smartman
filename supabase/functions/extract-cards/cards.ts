@@ -4,6 +4,7 @@ export const MAX_CARDS = 100;
 export const MAX_FIELD_CHARS = 500;
 export const MAX_ANSWER_CHARS = 1000;
 export const MAX_EXAMPLES = 5;
+export const MAX_TOPIC_CHARS = 60;
 
 /** The detail steps of a page, from its core ideas (1) to every detail (5). */
 export const STEPS = [1, 2, 3, 4, 5] as const;
@@ -15,8 +16,9 @@ export type CardKind = (typeof KINDS)[number];
 
 /**
  * One candidate card, each text field plain, trimmed and non-empty. `front` is the headword or
- * a question; `answer` the fullest answer the page supports and `short` a shorter form of it;
- * `step` the detail step from which the card is offered. A vocabulary card also carries
+ * the name of the concept a note states; `answer` the fullest answer the page supports and
+ * `short` a shorter form of it; `step` the detail step from which the card is offered; `topic`
+ * the name of the page section the card comes from. A vocabulary card also carries
  * `meaning` (its answer), and `partOfSpeech` and `examples` when the page prints them; a note
  * card may carry `examples` the page prints. `back` is the answer an app that reads only
  * `front` and `back` shows: a vocabulary card's `composeBack`, or a note card's `answer`.
@@ -27,6 +29,7 @@ export type Card = {
   readonly answer: string;
   readonly short: string;
   readonly step: Step;
+  readonly topic: string;
   readonly back: string;
   readonly meaning?: string;
   readonly partOfSpeech?: string;
@@ -59,6 +62,7 @@ export const cardsSchema = {
           answer: { ...field, maxLength: MAX_ANSWER_CHARS },
           short: field,
           step: { type: "integer", enum: [...STEPS] },
+          topic: { ...field, maxLength: MAX_TOPIC_CHARS },
           partOfSpeech: { ...field, type: ["string", "null"] },
           examples: { type: "array", maxItems: MAX_EXAMPLES, items: field },
         },
@@ -68,6 +72,7 @@ export const cardsSchema = {
           "answer",
           "short",
           "step",
+          "topic",
           "partOfSpeech",
           "examples",
         ],
@@ -117,6 +122,7 @@ function parseCard(item: unknown): Card | null {
       "answer",
       "short",
       "step",
+      "topic",
       "partOfSpeech",
       "examples",
     ])
@@ -126,12 +132,14 @@ function parseCard(item: unknown): Card | null {
   const front = text(item.front, MAX_FIELD_CHARS);
   const answer = text(item.answer, MAX_ANSWER_CHARS);
   const short = text(item.short, MAX_FIELD_CHARS);
+  const topic = text(item.topic, MAX_TOPIC_CHARS);
   const partOfSpeech = item.partOfSpeech === null
     ? undefined
     : text(item.partOfSpeech, MAX_FIELD_CHARS);
   if (
     kind === undefined || step === undefined || front === null ||
-    answer === null || short === null || partOfSpeech === null ||
+    answer === null || short === null || topic === null ||
+    partOfSpeech === null ||
     !Array.isArray(item.examples) || item.examples.length > MAX_EXAMPLES
   ) return null;
   // The shorter form is never the longer one, and notes carry no part of speech.
@@ -149,6 +157,7 @@ function parseCard(item: unknown): Card | null {
     answer,
     short,
     step,
+    topic,
     ...(examples.length === 0 ? {} : { examples }),
   };
   return kind === "vocabulary"

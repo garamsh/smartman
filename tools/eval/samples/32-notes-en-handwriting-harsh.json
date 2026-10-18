@@ -36,6 +36,9 @@
         "income",
         "tastes",
         "expectations"
+      ],
+      "examples": [
+        "coffee price rises -> demand for tea rises (substitutes)"
       ]
     },
     {
@@ -52,6 +55,9 @@
       "terms": [
         "inferior good",
         "income"
+      ],
+      "examples": [
+        "income rises -> fewer bus rides (inferior good)"
       ]
     },
     {
@@ -94,26 +100,7 @@
         "surplus",
         "above"
       ]
-    },
-    {
-      "id": "substitutes-example",
-      "step": 5,
-      "terms": [
-        "tea",
-        "substitutes"
-      ]
-    },
-    {
-      "id": "inferior-example",
-      "step": 5,
-      "terms": [
-        "bus"
-      ]
     }
-  ],
-  "examples": [
-    "coffee price rises -> demand for tea rises (substitutes)",
-    "income rises -> fewer bus rides (inferior good)"
   ],
   "lines": [
     "Econ 101 - Week 3: Supply and Demand",

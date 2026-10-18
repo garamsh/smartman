@@ -241,18 +241,33 @@ Deno.test("an unmatched candidate's fields are not counted", () => {
   assert.deepEqual(r.fields, NO_FIELDS);
 });
 
-// Notes pages: a page teaching four facts at steps 1, 2, 3 and 5, and printing one example.
+// Notes pages: a page teaching four rules at steps 1, 2, 3 and 5, the first with a worked example.
 const notesTruth = {
   facts: [
-    { id: "deduction", step: 1 as const, terms: ["연역", "반드시"] },
-    { id: "induction", step: 2 as const, terms: ["귀납", "개연"] },
-    { id: "premise", step: 3 as const, terms: ["전제", "근거"] },
-    { id: "example", step: 5 as const, terms: ["652788"] },
+    {
+      id: "deduction",
+      step: 1 as const,
+      terms: ["연역", "반드시"],
+      examples: ["253+4637+647898=652788 -> 연역"],
+    },
+    {
+      id: "induction",
+      step: 2 as const,
+      terms: ["귀납", "개연"],
+      examples: [],
+    },
+    { id: "premise", step: 3 as const, terms: ["전제", "근거"], examples: [] },
+    {
+      id: "indicators",
+      step: 5 as const,
+      terms: ["결론 지시어", "따라서"],
+      examples: [],
+    },
   ],
-  examples: ["253+4637+647898=652788 -> 연역"],
   lines: [
     "5. 연역과 귀납",
     "연역 논증: 전제가 참이면 결론이 반드시 참",
+    "결론 지시어: 따라서, 그러므로",
     "'하다'는 '-여'가 붙는다: 하+여 -> 하여(해)",
     "예) 253+4637+647898=652788 -> 연역",
   ],
@@ -281,26 +296,27 @@ Deno.test("a card covers a fact when its front and answer hold every term after 
   assert.equal(
     covers(
       noteCard("Law  of DEMAND", "falls"),
-      { id: "x", step: 1, terms: ["law of demand"] },
+      { id: "x", step: 1, terms: ["law of demand"], examples: [] },
     ),
     true,
     "case and whitespace are normalized",
   );
 });
 
-Deno.test("a worked example kept as the example of the card it illustrates covers its fact", () => {
+Deno.test("a card's examples do not cover a rule, whose terms its front and answer must hold", () => {
   const fact = notesTruth.facts[3];
-  const rule = noteCard("연역 논증이란?", "전제가 참이면 결론이 반드시 참", 1);
-  // Control: the rule alone holds none of the example's terms.
-  assert.equal(covers(rule, fact), false);
+  const card = {
+    ...noteCard("연역 논증", "전제가 참이면 결론이 반드시 참", 1),
+    examples: ["결론 지시어 따라서 -> 연역"],
+  };
+  assert.equal(covers(card, fact), false);
   assert.equal(
-    covers({ ...rule, examples: ["253+4637+647898=652788 -> 연역"] }, fact),
+    covers(noteCard("결론 지시어", "따라서, 그러므로"), fact),
     true,
+    "control: the same terms in the front and answer",
   );
-  const notes = scoreNotes([
-    { ...rule, examples: ["253+4637+647898=652788 -> 연역"] },
-  ], notesTruth);
-  assert.equal(notes.coverage[4], 2 / 4, "the rule and its example");
+  const notes = scoreNotes([card], notesTruth);
+  assert.equal(notes.coverage[4], 1 / 4, "the deduction rule alone");
   assert.equal(notes.unsupported, 0);
 });
 
@@ -361,7 +377,7 @@ Deno.test("step order counts the pairs of covered facts the returned steps order
     noteCard("귀납", "결론이 개연적으로 참", 3),
     // Placed above the induction card, though the page puts it at step 3.
     noteCard("전제", "근거가 되는 문장", 2),
-    noteCard("예", "652788", 3),
+    noteCard("결론 지시어", "따라서, 그러므로", 3),
   ], notesTruth);
   // Pairs: (1,2) alike, (1,3) alike, (1,5) alike, (2,3) reversed, (2,5) tie, (3,5) alike.
   assert.equal(notes.pairs, 6);
@@ -382,7 +398,10 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
     noteCard("연역", "결론이 반드시 참", 1),
     noteCard("귀납", "결론이 개연적으로 참", 2),
     noteCard("전제", "근거가 되는 문장", 3),
-    { ...noteCard("예", "652788", 5), examples: ["652788 -> 연역"] },
+    {
+      ...noteCard("결론 지시어", "따라서, 그러므로", 5),
+      examples: ["652788 -> 연역"],
+    },
   ], notesTruth);
   const empty = scoreNotes([], notesTruth);
   const row = summarize("m", [
@@ -456,6 +475,7 @@ Deno.test("a returned card without a meaning is matched on a vocabulary page by 
     answer: "사과",
     short: "사과",
     step: 1,
+    topic: "과일",
     back: "사과",
   });
   assert.deepEqual(asNote, { front: "apple", meaning: "사과" });
@@ -466,6 +486,7 @@ Deno.test("a returned card without a meaning is matched on a vocabulary page by 
     answer: "사과, 능금",
     short: "사과",
     step: 1,
+    topic: "과일",
     back: "n. 사과",
     meaning: "사과",
     partOfSpeech: "n.",

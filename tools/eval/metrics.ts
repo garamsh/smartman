@@ -125,20 +125,20 @@ function cardKey(card: Entry): string {
 }
 
 /**
- * A fact a notes page teaches: the step from which it is worth learning, and the page terms a
- * card's front and answer must all hold, after `normalize`, to cover it.
+ * A rule or exception a notes page teaches: the step from which it is worth learning, the page
+ * terms a card's front and answer must all hold, after `normalize`, to cover it, and the worked
+ * examples the page prints for it, each as printed.
  */
 export type Fact = {
   readonly id: string;
   readonly step: Step;
   readonly terms: readonly string[];
+  readonly examples: readonly string[];
 };
 
-/** A notes page's ground truth: its facts, and the examples it prints. */
+/** A notes page's ground truth: its rules and exceptions, and every line it prints. */
 export type NotesTruth = {
   readonly facts: readonly Fact[];
-  /** The examples the page prints on lines of their own. */
-  readonly examples: readonly string[];
   /** Every line the page prints, its title included. */
   readonly lines: readonly string[];
 };
@@ -168,14 +168,11 @@ export type NotesScore = {
 };
 
 /**
- * Whether [card] covers [fact]: its front, answer and examples together hold every one of the
- * fact's terms, so a worked example kept as the example of the card it illustrates covers its
- * fact as a card of its own would.
+ * Whether [card] covers [fact]: its front and answer hold every one of the fact's terms. A
+ * card's examples do not count, since another rule's worked example can hold a rule's terms.
  */
 export function covers(card: NoteCandidate, fact: Fact): boolean {
-  const text = normalize(
-    [card.front, card.answer, ...(card.examples ?? [])].join(" "),
-  );
+  const text = normalize(`${card.front} ${card.answer}`);
   return fact.terms.every((term) => text.includes(normalize(term)));
 }
 
@@ -197,13 +194,12 @@ export function scoreNotes(
   const unsupported =
     candidates.filter((card) => !truth.facts.some((fact) => covers(card, fact)))
       .length;
-  const printed = truth.examples.map(normalize);
+  const printed = truth.facts.flatMap((fact) => fact.examples).map(normalize);
   const lines = truth.lines.map(normalize);
   const returned = candidates.flatMap((card) => card.examples ?? []);
-  // The page prints an example after a label such as "예)" or "e.g.", which a card may keep
-  // or drop, so a returned example counts as printed when it and a printed one contain each
-  // other after normalization. A rule's own worked example sits inside the rule's line, so an
-  // example any printed line contains counts as printed too.
+  // The page may print an example after a label such as "예)" or "e.g.", which a card may keep
+  // or drop, so a returned example counts as printed when it and one of the page's worked
+  // examples contain each other after normalization, or when a line the page prints holds it.
   const inventedExamples = returned.filter((example) => {
     const text = normalize(example);
     return !printed.some((page) =>

@@ -13,8 +13,8 @@ tools/eval/fonts/, then photographed synthetically: perspective, rotation, uneve
 blur, and JPEG noise. Every random choice comes from SEED and the sample's index, so a rerun
 with the locked dependencies writes the same files. The cards a vocabulary page shows, with the
 parts of speech and examples it prints, are written beside its image as the ground truth; a notes
-page's truth is the facts it teaches, each with its step and the terms that cover it, the
-examples it prints on lines of their own, and every line it prints, from tools/eval/notes.json.
+page's truth is the rules and exceptions it teaches, each with its step, the terms that cover it
+and the worked examples the page prints for it, and every line it prints, from tools/eval/notes.json.
 """
 
 import json
@@ -344,7 +344,6 @@ def main() -> None:
                     "distortion": distortion,
                     "fonts": [face],
                     "facts": doc["facts"],
-                    "examples": doc["examples"],
                     "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
                 }
                 (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
@@ -373,7 +372,6 @@ def main() -> None:
                     "distortion": distortion,
                     "fonts": [face],
                     "facts": doc["facts"],
-                    "examples": doc["examples"],
                     "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
                 }
                 (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
