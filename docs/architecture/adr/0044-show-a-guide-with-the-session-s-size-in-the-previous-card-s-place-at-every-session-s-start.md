@@ -1,6 +1,6 @@
 # ADR 0044: Show a guide with the session's size in the previous card's place at every session's start
 
-> Status: accepted; its exclusion of practice and its line on revealing superseded by ADR-0049; its guide text for a session that resumes a day superseded by ADR-0062; its guide superseded by ADR-0063
+> Status: accepted; its exclusion of practice and its line on revealing superseded by ADR-0049; its guide text for a session that resumes a day superseded by ADR-0062; its guide superseded by ADR-0064
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

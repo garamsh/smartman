@@ -1,4 +1,4 @@
-# ADR 0063: Teach study with a first-use finger coach, and show the day's last card and a brief notice when a day resumes
+# ADR 0064: Teach study with a first-use finger coach, and show the day's last card and a brief notice when a day resumes
 
 > Status: accepted
 > Date: 2026-10-18

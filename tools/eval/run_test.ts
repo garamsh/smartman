@@ -19,18 +19,24 @@ const truth = [{ front: "apple", meaning: "사과", partOfSpeech: "n." }, {
 const modelCards = [
   {
     kind: "vocabulary",
+    type: "concept",
     front: "apple",
-    answer: "사과",
+    answer: null,
     topic: "Unit 1",
-    partOfSpeech: "n.",
+    senses: [{ pos: "n.", meaning: "사과" }],
+    extras: [],
+    pronunciation: null,
     examples: ["She ate an apple."],
   },
   {
     kind: "vocabulary",
+    type: "concept",
     front: "river",
-    answer: "강",
+    answer: null,
     topic: "Unit 1",
-    partOfSpeech: null,
+    senses: [{ pos: null, meaning: "강" }],
+    extras: [],
+    pronunciation: null,
     examples: [],
   },
 ];
@@ -54,10 +60,13 @@ const notesTruth = {
 };
 const noteCards = [{
   kind: "note",
+  type: "concept",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
   topic: "연역과 귀납",
-  partOfSpeech: null,
+  senses: [],
+  extras: [],
+  pronunciation: null,
   examples: ["253+4637+647898=652788 -> 연역"],
 }];
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
@@ -278,7 +287,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v5",
+    note: "prompt v6",
   });
   assert.ok(
     w.printed.includes(
@@ -289,7 +298,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   const table = w.files.get(PATHS.report) ?? "";
   assert.match(
     table,
-    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 0\.0 \| 50\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
+    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 100\.0 \| 100\.0 \| 0\.0 \| 50\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
   );
   assert.match(
     table,
@@ -326,7 +335,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v5",
+    note: "prompt v6",
   }]);
 });
 
@@ -418,7 +427,7 @@ Deno.test("a candidate stops after two model errors in a row, its error bodies k
   );
 });
 
-Deno.test("a notes sample is scored by coverage, unsupported cards and invented examples, with no step order", async () => {
+Deno.test("a notes sample is scored by coverage, unsupported cards, invented examples and long answers, with no step order", async () => {
   const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
   w.files.set(
     `${PATHS.samples}/03-notes.json`,
@@ -435,9 +444,9 @@ Deno.test("a notes sample is scored by coverage, unsupported cards and invented 
   // The one note card covers one of the page's two facts.
   assert.match(
     table,
-    /\| Configuration \| Coverage \| Unsupported \| Invented examples \|\n/,
+    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \|\n/,
   );
-  assert.match(table, /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \|\n/);
+  assert.match(table, /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \|\n/);
   assert.doesNotMatch(table, /Step order|Coverage at/);
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
@@ -646,15 +655,45 @@ function documentOf(name: string): string {
   );
 }
 
+Deno.test("the committed word-book samples give each entry its senses in page order, several with labels, and a pronunciation per part of speech", async () => {
+  const books = (await committedSamples()).flatMap((sample) =>
+    sample.kind === "vocabulary" && sample.name.includes("-word-book-")
+      ? [sample]
+      : []
+  );
+  assert.equal(books.length, 3, "print, handwriting and harsh");
+  const vocabulary = JSON.parse(
+    await Deno.readTextFile(new URL("./vocabulary.json", import.meta.url)),
+  )["word-book"];
+  for (const book of books) {
+    assert.deepEqual(
+      book.cards.map((card) => card.senses),
+      vocabulary.map((entry: { senses: unknown }) => entry.senses),
+      `${book.name} reads each entry's senses in order`,
+    );
+    const face = book.cards.find((card) => card.front === "face");
+    assert.equal(face?.meaning, "직면하다, 마주하다; 표면, 겉면; 얼굴, 생김새");
+  }
+  assert.ok(
+    vocabulary.some((entry: { pronunciation: string }) =>
+      entry.pronunciation.startsWith("명 ") &&
+      entry.pronunciation.includes(" / ")
+    ),
+    "a pronunciation that varies by part of speech",
+  );
+});
+
 Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step from 1 to 4, and only terms and examples their page prints", async () => {
   const notes = (await committedSamples()).flatMap((sample) =>
     sample.kind === "notes" ? [sample] : []
   );
-  assert.equal(notes.length, 16);
+  assert.equal(notes.length, 20);
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
   );
-  for (const document of ["ko", "en", "ko-grammar", "ko-auxiliary"]) {
+  for (
+    const document of ["ko", "en", "ko-grammar", "ko-auxiliary", "ko-numerals"]
+  ) {
     const drawn = notes.filter((sample) =>
       documentOf(sample.name) === document
     );
@@ -699,6 +738,45 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
       ],
       `${sample.name} holds every line its page prints`,
     );
+  }
+});
+
+Deno.test("the page for prompt v6 has a classification table, judgment rules, starred handwritten tips and a side box, and its truth makes each table cell a fact", async () => {
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  type Line = { text: string; kind: string; mark?: string; hand?: boolean };
+  const page = documents["ko-numerals"];
+  const lines: Line[] = page.lines;
+  const rows = lines.filter((line) => line.kind === "row");
+  assert.ok(rows.length >= 3, "a table of a header and rows");
+  assert.ok(
+    lines.some((line) => line.text.startsWith("구별:")),
+    "a judgment rule",
+  );
+  assert.equal(
+    lines.filter((line) => line.hand && line.mark === "star").length,
+    2,
+    "two starred handwritten tips",
+  );
+  assert.equal(lines.filter((line) => line.kind === "box").length, 1);
+  // Every body cell of the table is covered by a fact of its own: the fact's terms hold its row
+  // name and every item of the cell, or, for a cell whose items are single syllables, one of
+  // them with the row name and the column name.
+  type Fact = { id: string; terms: string[] };
+  const facts: Fact[] = page.facts;
+  const [, ...body] = rows.map((row) => row.text.split(" | "));
+  const columns = rows[0].text.split(" | ");
+  for (const [name, ...cells] of body) {
+    cells.forEach((cell, i) => {
+      const owners = facts.filter((fact) =>
+        fact.terms.includes(name) &&
+        (cell.split(", ").every((item) => fact.terms.includes(item)) ||
+          (fact.terms.includes(columns[i + 1]) &&
+            cell.split(", ").some((item) => fact.terms.includes(item))))
+      );
+      assert.equal(owners.length, 1, `${name} ${columns[i + 1]}: ${cell}`);
+    });
   }
 });
 

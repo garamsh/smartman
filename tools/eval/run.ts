@@ -11,7 +11,10 @@
  * `tools/eval/replies/` named for the run's start, which git ignores.
  */
 
-import { STEPS } from "../../supabase/functions/extract-cards/cards.ts";
+import {
+  type Sense,
+  STEPS,
+} from "../../supabase/functions/extract-cards/cards.ts";
 import {
   extractCards,
   type Extraction,
@@ -19,7 +22,7 @@ import {
   type Models,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v5.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v6.ts";
 import type {
   Image,
   LanguageHints,
@@ -42,6 +45,8 @@ import {
   entryOf,
   type Fact,
   type ImageResult,
+  MAX_LISTED_ITEMS,
+  meaningOf,
   type NotesTruth,
   recommend,
   type Row,
@@ -462,11 +467,30 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
   return { facts: parsed, lines };
 }
 
+/**
+ * A truth card: `front`, and its `meaning` with an optional `partOfSpeech`, or its `senses`
+ * of `{pos, meaning}`, where `pos` may be null; `examples` when the page prints any.
+ */
 function parseEntry(card: unknown): Entry | null {
-  if (
-    !isRecord(card) || typeof card.front !== "string" ||
-    typeof card.meaning !== "string"
-  ) return null;
+  if (!isRecord(card) || typeof card.front !== "string") return null;
+  if (card.senses !== undefined) {
+    const senses = parseSenses(card.senses);
+    const { examples } = card;
+    if (
+      senses === null || card.meaning !== undefined ||
+      card.partOfSpeech !== undefined ||
+      (examples !== undefined &&
+        !(Array.isArray(examples) && examples.length > 0 &&
+          examples.every((example) => typeof example === "string")))
+    ) return null;
+    return {
+      front: card.front,
+      meaning: meaningOf(senses),
+      senses,
+      ...(examples === undefined ? {} : { examples }),
+    };
+  }
+  if (typeof card.meaning !== "string") return null;
   const { partOfSpeech, examples } = card;
   if (partOfSpeech !== undefined && typeof partOfSpeech !== "string") {
     return null;
@@ -482,6 +506,19 @@ function parseEntry(card: unknown): Entry | null {
     ...(partOfSpeech === undefined ? {} : { partOfSpeech }),
     ...(examples === undefined ? {} : { examples }),
   };
+}
+
+function parseSenses(value: unknown): Sense[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const senses: Sense[] = [];
+  for (const sense of value) {
+    if (
+      !isRecord(sense) || typeof sense.meaning !== "string" ||
+      !(sense.pos === null || typeof sense.pos === "string")
+    ) return null;
+    senses.push({ pos: sense.pos, meaning: sense.meaning });
+  }
+  return senses;
 }
 
 function languages(value: unknown): LanguageHints {
@@ -519,8 +556,9 @@ export function report(
     `- Run on ${date} with prompt ${PROMPT_VERSION}, over ${sampleCount} images in \`tools/eval/samples/\`.`,
     "- The samples are synthetic: printed and handwritten-style pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
-    "- Over the matched cards of every image, in percent: part of speech and examples are the share equal to the page's after the same normalization; invented is the share of present parts of speech and example lists on an entry whose page prints none. A dash means the configuration returned no such field.",
-    "- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed.",
+    "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in part of speech and meaning, and senses R the share of the entry's senses so returned. A truth written before senses is one sense of its meaning and part of speech.",
+    "- Over the matched cards of every image, in percent: part of speech is the share of returned senses' labels equal to the page's for that sense, and examples the share of returned examples the page prints, after the same normalization; invented is the share of present labels and example lists where the page prints none. A dash means the configuration returned no such field.",
+    `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards.`,
     "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -535,14 +573,16 @@ export function report(
     "",
     "## Vocabulary pages",
     "",
-    "| Configuration | Precision | Recall | F1 | Part of speech | Examples | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
-    "|---|---|---|---|---|---|---|---|---|---|---|",
+    "| Configuration | Precision | Recall | F1 | Senses P | Senses R | Part of speech | Examples | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ...rows.map((row) =>
       `| ${row.label} | ${pct(row.precision)} | ${pct(row.recall)} | ${
         pct(row.f1)
-      } | ${pctOrNone(row.partOfSpeechPrecision)} | ${
-        pctOrNone(row.examplesPrecision)
-      } | ${pctOrNone(row.inventedRate)} | ${seconds(row.p50Ms)} | ` +
+      } | ${pctOrNone(row.sensePrecision)} | ${pctOrNone(row.senseRecall)} | ${
+        pctOrNone(row.partOfSpeechPrecision)
+      } | ${pctOrNone(row.examplesPrecision)} | ${
+        pctOrNone(row.inventedRate)
+      } | ${seconds(row.p50Ms)} | ` +
       `${seconds(row.p90Ms)} | ${usd(row.costPerImageUsd)} | ${
         usd(row.spentUsd)
       } |`
@@ -575,13 +615,15 @@ function notesSection(rows: readonly Row[]): string[] {
   return [
     "## Notes pages",
     "",
-    "| Configuration | Coverage | Unsupported | Invented examples |",
-    "|---|---|---|---|",
+    "| Configuration | Coverage | Unsupported | Invented examples | Long answers |",
+    "|---|---|---|---|---|",
     ...rows.map((row) => {
       const notes = row.notes;
       return `| ${row.label} | ${pct(notes?.coverage)} | ${
         pct(notes?.unsupportedRate)
-      } | ${pct(notes?.inventedExamplesRate)} |`;
+      } | ${pct(notes?.inventedExamplesRate)} | ${
+        pct(notes?.longAnswerRate)
+      } |`;
     }),
     "",
   ];
