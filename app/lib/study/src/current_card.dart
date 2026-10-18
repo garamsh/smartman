@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../design/app_coach.dart';
+import 'study_coach.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
@@ -247,7 +247,7 @@ class _Demo extends StatelessWidget {
           child: Transform.translate(
             offset: Offset(offset, StudyStyle.coachFingerDrop),
             child: Center(
-              child: AppCoachFinger(shown: coachFingerShown(progress)),
+              child: StudyCoachFinger(shown: coachFingerShown(progress)),
             ),
           ),
         ),

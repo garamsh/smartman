@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../l10n/app_localizations.dart';
-import 'app_button.dart';
-import 'theme.dart';
+import '../../l10n/app_localizations.dart';
+import '../../design/app_button.dart';
+import '../../design/theme.dart';
 
 /// One cycle of a coach's demonstration: the card moves out, holds, and
 /// springs back.
@@ -28,8 +28,8 @@ bool coachFingerShown(double t) => t > 0.08 && t < 0.68;
 
 /// A coach's finger over the card it demonstrates on, hidden from screen
 /// readers, which read the coach's caption instead.
-class AppCoachFinger extends StatelessWidget {
-  const AppCoachFinger({super.key, required this.shown});
+class StudyCoachFinger extends StatelessWidget {
+  const StudyCoachFinger({super.key, required this.shown});
 
   final bool shown;
 
@@ -56,8 +56,8 @@ class AppCoachFinger extends StatelessWidget {
 /// screen's main action: the step's [line], a dot for each of [steps] with
 /// [step] (from 0) drawn long, "건너뛰기" and "다음", the last step's
 /// "시작하기". A screen reader hears the step of how many as it changes.
-class AppCoach extends StatelessWidget {
-  const AppCoach({
+class StudyCoach extends StatelessWidget {
+  const StudyCoach({
     super.key,
     required this.line,
     required this.step,

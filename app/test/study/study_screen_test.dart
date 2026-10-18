@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/app_coach.dart';
+import 'package:smartman/study/src/study_coach.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
@@ -329,7 +329,7 @@ Future<_Study> _open(
   } else {
     // The coach's demonstration repeats, so the screen never settles: it is
     // pumped until the session has loaded and the route is in.
-    for (var i = 0; i < 20 && find.byType(AppCoach).evaluate().isEmpty; i++) {
+    for (var i = 0; i < 20 && find.byType(StudyCoach).evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await tester.pump(const Duration(milliseconds: 500));
@@ -1667,7 +1667,7 @@ void main() {
         expect(find.widgetWithText(TextButton, 'Know'), findsNothing);
         expect(find.widgetWithText(AppButton, 'Skip'), findsOneWidget);
         final semantics = tester.ensureSemantics();
-        final caption = tester.getSemantics(find.byType(AppCoach));
+        final caption = tester.getSemantics(find.byType(StudyCoach));
         expect(caption, isSemantics(isLiveRegion: true));
         expect(caption.label, startsWith('How to use, step 1 of 3'));
         semantics.dispose();
@@ -1721,7 +1721,7 @@ void main() {
 
         await tester.tap(find.widgetWithText(AppButton, 'Start'));
         await tester.pumpAndSettle();
-        expect(find.byType(AppCoach), findsNothing);
+        expect(find.byType(StudyCoach), findsNothing);
         expect(find.text('deadline'), findsNothing);
         expect(find.widgetWithText(TextButton, 'Know'), findsOneWidget);
         expect(find.byType(PreviousPlaceholder), findsOneWidget);
@@ -1733,15 +1733,15 @@ void main() {
       'skipping ends it at once, and a later session on the device shows none',
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c'], coachShown: false);
-        expect(find.byType(AppCoach), findsOneWidget);
+        expect(find.byType(StudyCoach), findsOneWidget);
 
         await tester.tap(find.widgetWithText(AppButton, 'Skip'));
         await tester.pumpAndSettle();
-        expect(find.byType(AppCoach), findsNothing);
+        expect(find.byType(StudyCoach), findsNothing);
         expect(find.widgetWithText(TextButton, 'Know'), findsOneWidget);
 
         await study.reopen();
-        expect(find.byType(AppCoach), findsNothing);
+        expect(find.byType(StudyCoach), findsNothing);
         expect(find.widgetWithText(TextButton, 'Know'), findsOneWidget);
       },
     );
@@ -1751,7 +1751,7 @@ void main() {
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c'], coachShown: false);
         await study.know();
-        expect(find.byType(AppCoach), findsNothing);
+        expect(find.byType(StudyCoach), findsNothing);
         expect(_label(tester, _previous('a front')), endsWith('Answer: Know'));
 
         // "Show the guide again" starts it again at its first step.
@@ -1782,7 +1782,7 @@ void main() {
 
         // A drag of the current card answers it and ends the coach.
         await study.know();
-        expect(find.byType(AppCoach), findsNothing);
+        expect(find.byType(StudyCoach), findsNothing);
         expect(_previous('b front'), findsOneWidget);
       },
     );
@@ -1791,14 +1791,14 @@ void main() {
       'a replay shows the sample in the previous card\'s place for its last step, and the card answered last once it ends',
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c']);
-        expect(find.byType(AppCoach), findsNothing);
+        expect(find.byType(StudyCoach), findsNothing);
         await study.know();
 
         await tester.tap(
           find.widgetWithText(TextButton, 'Show the guide again'),
         );
         await tester.pump();
-        expect(find.byType(AppCoach), findsOneWidget);
+        expect(find.byType(StudyCoach), findsOneWidget);
         await tester.tap(find.widgetWithText(AppButton, 'Next'));
         await tester.pump();
         await tester.tap(find.widgetWithText(AppButton, 'Next'));
@@ -1825,15 +1825,15 @@ void main() {
           coachShown: false,
           disableAnimations: true,
         );
-        expect(find.byType(AppCoach), findsOneWidget);
+        expect(find.byType(StudyCoach), findsOneWidget);
         final held =
             StudyStyle.coachCurrentPeek * coachPeek(StudyStyle.coachStill);
         expect(
           tester.getCenter(find.text('a front')).dx - centre,
           closeTo(held, 0.5),
         );
-        final finger = find.byType(AppCoachFinger);
-        expect(tester.widget<AppCoachFinger>(finger).shown, isTrue);
+        final finger = find.byType(StudyCoachFinger);
+        expect(tester.widget<StudyCoachFinger>(finger).shown, isTrue);
         // It stays there: nothing repeats, so the screen settles.
         await tester.pumpAndSettle();
         expect(

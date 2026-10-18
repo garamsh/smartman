@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
-import '../../design/app_coach.dart';
+import 'study_coach.dart';
 import '../../design/app_section_label.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
@@ -254,7 +254,7 @@ class PreviousCardDemo extends StatelessWidget {
           Positioned(
             right: StudyStyle.coachFingerInset - offset,
             bottom: StudyStyle.coachFingerLift,
-            child: AppCoachFinger(shown: coachFingerShown(progress)),
+            child: StudyCoachFinger(shown: coachFingerShown(progress)),
           ),
         ],
       ),
