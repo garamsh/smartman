@@ -171,14 +171,14 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 #### Flow
 
-- **Source** — the photo button opens the sheet "사진 가져오기" over the screen it is on, with "사진 찍기", the system camera, and "앨범에서 고르기", the library ([ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md)):
+- **Source** — the new-deck sheet and the deck screen's "카드 추가" sheet each hold "사진 찍기", the system camera, and "앨범에서 고르기", the library; the row chosen starts photo import from that source at once, as `PhotoImport`'s `PhotoOrigin` ([ADR 0054](adr/0054-take-the-photo-with-the-system-camera-or-from-the-library-and-remove-the-in-app-camera-view.md), [ADR 0067](adr/0067-start-a-deck-or-a-card-from-one-sheet-that-holds-the-photo-source-and-name-public-decks-once.md)):
   - the photo import screen opens only with a photo, at Extracting, or with the failure that came instead of one;
-  - a sheet dismissed or a picker cancelled opens nothing and shows no error.
+  - a picker cancelled opens nothing and shows no error.
 - **Extracting** — the photo's thumbnail, "카드를 찾고 있어요", an indeterminate bar, skeleton rows, and "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요":
   - "취소" aborts the request and closes the screen, as leaving it does;
   - the skeleton rows shimmer, and hold still under reduce motion.
 - **The list** ([ADR 0065](adr/0065-import-a-photo-s-cards-from-one-list-of-sections-each-with-its-form-menu-row-checks-and-an-edit-sheet.md)), as the canvas board "후보 D. iOS 기본 목록 + 묶음 메뉴" draws it:
-  - "취소" at the top left closes the screen, writing nothing; "다시 찍기" at the top right opens the source sheet over the list, a cancel keeping the list and a photo replacing it;
+  - "취소" at the top left closes the screen, writing nothing; at the top right the retake, "다시 찍기" for a camera photo and "다른 사진 고르기" for an album one, takes another photo from the same source, a cancel keeping the list and a photo replacing it;
   - the title "단어 n개를 찾았어요" when every row is vocabulary, else "카드 n장을 만들었어요", n the rows once candidates of one card key are combined; under it "덱 '<name>'에 추가돼요", whose name opens a sheet of every deck and "새 덱". The deck's card keys are read once the cards arrive, a failure to read them showing in a snack bar with no row marked as held;
   - one inset grouped section per topic, its header the topic and its row count, and on the right its form, which opens its menu;
   - each row with a leading circular check that includes or leaves it out, its front on the left at 44% and its back on the right one line per sense, each breaking lines only between words through `keepWords` ([`design.md`](design.md)); a screen reader hears the check as "<front> 넣기", checked or not, and the row as its sides with "눌러서 고쳐요";
@@ -206,20 +206,20 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - The answer is parsed at the boundary: a `200` must hold a non-empty `cards` list, each card a non-empty `front` and `back`, and a non-empty `answer`, `meaning`, `partOfSpeech`, `topic` and list of non-empty `examples` where present, the topic at most 60 characters.
   - A card's answer is its `answer`, else its `meaning`, else its `back`, so a function deployed before the fields still reads.
   - The app reads no other field.
-- Each failure is a `PhotoImportFailure`, shown in place of the screen with its ARB message:
+- Each failure is a `PhotoImportFailure`, shown in place of the screen with its ARB message. Its top bar's close is its one way out; the bottom bar holds what the table offers besides, and is absent where it offers nothing else ([ADR 0067](adr/0067-start-a-deck-or-a-card-from-one-sheet-that-holds-the-photo-source-and-name-public-decks-once.md)). The retake takes another photo from the photo's source, named as on the list:
 
 | Failure | When | Offers |
 |---|---|---|
 | `ExtractionOffline` | the request could not reach the server | retry, retake |
 | `PhotoRefused` | `413` or `415` | retake |
 | `NoCardsFound` | `422` | retake |
-| `DailyLimitReached` | `429` | close |
+| `DailyLimitReached` | `429` | the top bar's close |
 | `ModelFailed` | `502` | retry, retake |
-| `SignInRequired` | `401`, or no session | close |
+| `SignInRequired` | `401`, or no session | the top bar's close |
 | `ServiceFailed` | any other status, or a `200` outside the contract | retry, retake |
 | `PhotoUnreadable` | the photo cannot be decoded | retake |
 | `PhotoAccessDenied` | camera or photo access is refused or restricted | retake, "설정 열기"; a snack bar when the settings page does not open |
-| `CameraUnavailable` | the device has no camera | retake, where the album still works |
+| `CameraUnavailable` | the device has no camera | "앨범에서 고르기", which picks from the album, as later retakes do |
 
 - A `DeckFailure` while reading the deck or saving is shown in a snack bar, as the deck screens show one; `DeckDeleted` says the deck was deleted meanwhile.
 
@@ -230,7 +230,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 #### App tests
 
-- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database, finding rows by what a screen reader hears: the source sheet, each source, a cancel of the sheet, the camera or the album, a refused permission with its way to Settings, a device without a camera, cancel while extracting, the skeleton under reduce motion; on the list a word page's title, deck, sections, forms and senses one per line, a notes page with its identify section left out, a row's check out and back, a swipe left against a short drag and with no swipe back, each direction and both ways counted, first meaning only and the part of speech, pronunciation and extras offered only where printed, a note section swapped, a section left out and included, a duplicate that starts left out and merges back, the deck chooser and the duplicates it decides again, a new deck named on saving, the forms remembered per deck and topic, combined candidates with their senses and cards without a topic, the add button disabled at 0, a retake cancelled or taken, cancel, a deck that cannot be read, the menu's last item read as an action and a choice with its state, forms that cannot be stored, a card from a function before senses, and "양쪽 다" over a deck holding a meaning; the edit sheet's front and senses applied by "완료" and none on a dismissal, a sense dropped and "완료" disabled with none, a sense reordered by its handle, a note's back, and an edit whose front the deck holds; each failure; the accessibility guidelines in both themes; and a screen reader's labels, check state and taps. It starts each import from a button, as the home and deck screens do.
+- `app/test/photo_import/photo_import_screen_test.dart` drives the screen with a substitute photo source and extraction client, and device storage in memory (`app/test/photo_import/fakes.dart`), over an in-memory database, finding rows by what a screen reader hears: nothing taken before the import starts, each source, the retake going back to the photo's source as "Retake" or "Pick another photo", a cancel of the camera or the album, a refused permission with its way to Settings, a device without a camera, whose retake picks from the album, a failure with nothing else to offer leaving the top bar's close alone, cancel while extracting, the skeleton under reduce motion; on the list a word page's title, deck, sections, forms and senses one per line, a notes page with its identify section left out, a row's check out and back, a swipe left against a short drag and with no swipe back, each direction and both ways counted, first meaning only and the part of speech, pronunciation and extras offered only where printed, a note section swapped, a section left out and included, a duplicate that starts left out and merges back, the deck chooser and the duplicates it decides again, a new deck named on saving, the forms remembered per deck and topic, combined candidates with their senses and cards without a topic, the add button disabled at 0, a retake cancelled or taken, cancel, a deck that cannot be read, the menu's last item read as an action and a choice with its state, forms that cannot be stored, a card from a function before senses, and "양쪽 다" over a deck holding a meaning; the edit sheet's front and senses applied by "완료" and none on a dismissal, a sense dropped and "완료" disabled with none, a sense reordered by its handle, a note's back, and an edit whose front the deck holds; each failure; the accessibility guidelines in both themes; and a screen reader's labels, check state and taps. It starts each import from a button, as the home and deck screens do.
 - `app/test/photo_import/import_list_test.dart` checks the list's model: under "양쪽 다" the word's card alone deciding a duplicate and the reversed card merging back, the count by card key, an edit kept through a form change, a swapped note keeping a handwritten card's star, stored forms applied and corrupt ones ignored, and identify rows and section toggles.
 - `app/test/photo_import/extraction_client_test.dart` runs `HttpExtractionClient` over `package:http`'s `MockClient`: the request, the answer from `answer`, `meaning` or `back` as one sense with its part of speech, the kind, type, senses in order, extras and pronunciation, an unknown kind or type, a vocabulary card with no sense and a malformed sense or extra, the topic and the examples and their absence, the fields no longer read, each status, malformed answers, offline, no session, and abort; and `extractCardsUrl` over project URLs with a trailing slash and a path prefix.
 - `app/test/widget_test.dart` composes the app with and without an extraction client and checks that the photo button follows.

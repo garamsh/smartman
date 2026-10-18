@@ -1,6 +1,6 @@
 # ADR 0054: Take the photo with the system camera or from the library, and remove the in-app camera view
 
-> Status: accepted
+> Status: accepted; its source sheet and the retake that reopened it superseded by ADR-0067
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
