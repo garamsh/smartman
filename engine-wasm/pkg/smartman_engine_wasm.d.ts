@@ -1,6 +1,21 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * A card as today's list reads it: when it is due, absent for a card never reviewed, and its
+ * reviews, in any order, those outside the study day included or not.
+ */
+export interface TodayCard {
+    /**
+     * When the card is due.
+     */
+    due: bigint | null;
+    /**
+     * The card's reviews.
+     */
+    reviews: ReviewRecord[];
+}
+
+/**
  * A card's state after a review, and when it is next due.
  */
 export interface Scheduled {
@@ -62,6 +77,11 @@ export interface MemoryStateParts {
 export type Outcome<T> = { ok: T } | { error: EngineError };
 
 /**
+ * Where a card stands in today's list.
+ */
+export type Today = "absent" | "left" | "done";
+
+/**
  * Why the engine refused its input; one variant per engine `Error` variant, told apart by `kind`.
  */
 export type EngineError = { kind: "reviewBeforeLastReview"; lastReview: bigint; review: bigint } | { kind: "unknownRating"; value: number } | { kind: "nonFinite"; quantity: Quantity } | { kind: "outOfRange"; quantity: Quantity; value: number };
@@ -89,6 +109,12 @@ export function reviewCard(state: MemoryStateParts, answer: Answer, at: bigint, 
  */
 export function reviewNewCard(answer: Answer, at: bigint, fuzzFactor?: number | null): Outcome<Scheduled>;
 
+/**
+ * Where each card stands in the list of the study day from `dayStart`, inclusive, to `dayEnd`,
+ * exclusive, in the order given.
+ */
+export function todaysList(cards: TodayCard[], dayStart: bigint, dayEnd: bigint): Today[];
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -97,9 +123,12 @@ export interface InitOutput {
     readonly retrievability: (a: number, b: number, c: bigint) => void;
     readonly reviewCard: (a: number, b: number, c: number, d: bigint, e: number, f: number) => void;
     readonly reviewNewCard: (a: number, b: number, c: bigint, d: number, e: number) => void;
+    readonly todaysList: (a: number, b: number, c: number, d: bigint, e: bigint) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_export3: (a: number) => void;
     readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+    readonly __wbindgen_export4: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
