@@ -3,8 +3,6 @@
 import { Check, X } from "lucide-react";
 import { type PointerEvent, type Ref, useRef, useState } from "react";
 
-import { isWholeCard, spokenContent, WholeCard } from "@/features/decks";
-
 import type { Answer } from "../answer-write";
 import type { PreviousAnswer } from "../session";
 
@@ -34,7 +32,7 @@ type Graded = Pick<PreviousAnswer, "card" | "answer"> & { changed?: boolean };
  * blanks as "빈칸", and its grade.
  */
 export function answerLabel(answer: Graded): string {
-  const front = spokenContent(answer.card.front, false);
+  const front = answer.card.whole?.question ?? answer.card.text.front;
   const changed = answer.changed ? ". 수정됨" : "";
   return `앞면: ${front}. 뒷면: ${answer.card.text.back}. 답: ${grades[answer.answer].name}${changed}`;
 }
@@ -90,8 +88,8 @@ type Touch = {
 
 /**
  * The card answered just before the current one, with both sides shown at the current card's
- * sizes, or a whole card's front with its blanks filled, on its grade's fill inside its grade's line, and its grade's chip on its top edge. A
- * click opens the whole card. A horizontal touch swipe follows the finger, shows the answer it
+ * sizes, or a whole card's front with its blanks filled, on its grade's fill inside its grade's
+ * line, and its grade's chip on its top edge. A click opens the whole card. A horizontal touch swipe follows the finger, shows the answer it
  * would give behind it, and released past [commitDistance], or flung, toward the other answer
  * changes to it; a vertical one scrolls the page. Without [onRedecide] it is not changed from
  * here, and [label] names it above its sides.
@@ -217,9 +215,9 @@ export function GradedCard({
             {label}
           </span>
         )}
-        {isWholeCard(answer.card.front) ? (
-          <span className="col-span-3 flex items-center justify-center p-4 text-ink lg:p-6">
-            <WholeCard blocks={answer.card.front} revealed className="text-answer" />
+        {answer.card.whole ? (
+          <span className="col-span-3 flex items-center justify-center p-4 text-answer text-ink lg:p-6">
+            {answer.card.whole.filled}
           </span>
         ) : (
           <>

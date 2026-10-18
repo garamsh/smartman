@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-import { isWholeCard, WholeCard } from "@/features/decks";
-
 import type { PreviousAnswer } from "../session";
 import { CardSide } from "./card-side";
 import { GradeChip, grades } from "./graded-card";
@@ -39,8 +37,8 @@ export function CardDetail({
           <GradeChip answer={answer.answer} />
           <span className="sr-only">답: {grades[answer.answer].name}</span>
         </div>
-        {isWholeCard(answer.card.front) ? (
-          <WholeCard blocks={answer.card.front} revealed className="text-answer" />
+        {answer.card.whole ? (
+          <div className="text-answer">{answer.card.whole.filled}</div>
         ) : (
           <>
             <section aria-labelledby="card-detail-front" className="flex flex-col gap-2">

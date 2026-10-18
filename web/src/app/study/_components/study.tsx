@@ -4,9 +4,12 @@ import { notFound } from "next/navigation";
 import {
   type DeckId,
   describeContent,
+  isWholeCard,
   type LibraryFailure,
   ReadFailure,
   readLibrary,
+  spokenContent,
+  WholeCard,
 } from "@/features/decks";
 import {
   type CardStates,
@@ -41,10 +44,18 @@ export async function Study({
   if ("failure" in today) return <Failure failure={today.failure} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
-  // Each side's text for the client, which cannot import decks' entry point.
+  // Each side's text, and a whole card's faces, for the client, which cannot import decks' entry
+  // point.
   const cards = read.library.cards.map((card) => ({
     ...card,
     text: { front: describeContent(card.front), back: describeContent(card.back) },
+    ...(isWholeCard(card.front) && {
+      whole: {
+        question: spokenContent(card.front, false),
+        empty: <WholeCard blocks={card.front} revealed={false} />,
+        filled: <WholeCard blocks={card.front} revealed />,
+      },
+    }),
   }));
   const { day, answers, states, readAt, pace, streakBefore } = today.today;
   const ids = new Set(cards.map((card) => card.id));
