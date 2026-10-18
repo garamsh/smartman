@@ -13,6 +13,7 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 
 import 'home_data.dart';
+import '../study/study_storage.dart';
 
 /// The home screen over decks named "Alpha", "Beta" and "Gamma", opening on
 /// the 오늘 tab.
@@ -153,11 +154,12 @@ Future<_List> _open(
   }))!;
   repository.unreadable.addAll([for (final name in unreadable) created[name]!]);
   final list = _List(tester, repository, created);
+  final storage = await openStudyStorage(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         deckRepositoryProvider.overrideWithValue(repository),
-        ...homeOverrides(db),
+        ...homeOverrides(db, storage: storage),
         if (photoImport != null) photoImportProvider.overrideWithValue(pushed),
       ],
       child: MaterialApp(

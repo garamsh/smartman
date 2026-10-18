@@ -373,35 +373,59 @@ abstract class AppLocalizations {
   /// **'모른다로 바꿔요'**
   String get changingToDontKnow;
 
-  /// The session's start guide, first line: how many cards the session opened with and the minutes they take.
+  /// In the previous card's empty place, under an up arrow, before a session's first answer when no card of the day was answered earlier: answered cards stack up here.
   ///
   /// In ko, this message translates to:
-  /// **'오늘 {cards}장 · 약 {minutes}분'**
-  String guideSize(int cards, int minutes);
+  /// **'답한 카드가 여기에 쌓여요'**
+  String get previousPlaceholder;
 
-  /// The session's start guide, first line, when the session opens on a study day that already has cards done: it goes on with the day, with the cards left and the minutes they take.
+  /// Label on the card in the previous card's place when a session opens on a study day with answers: the last card answered in an earlier session.
+  ///
+  /// In ko, this message translates to:
+  /// **'지난번 마지막 카드'**
+  String get earlierCard;
+
+  /// Brief notice under the progress bar when a session opens on a study day that already has cards done: it goes on with the day, with the cards left and the minutes they take.
   ///
   /// In ko, this message translates to:
   /// **'이어서 해요 · 남은 {cards}장 · 약 {minutes}분'**
-  String guideResume(int cards, int minutes);
+  String resumeToast(int cards, int minutes);
 
-  /// The session's start guide, first line, in place of the session's size when it opened with no card left today: today's cards are done.
+  /// First step of the study screen's coach: swipe the card right when you know it.
   ///
   /// In ko, this message translates to:
-  /// **'오늘 할 카드를 다 했어요'**
-  String get guideDone;
+  /// **'알면 오른쪽으로 밀어요'**
+  String get studyCoachKnow;
 
-  /// The session's start guide: swipe right when you know it, left when you don't.
+  /// Second step of the study screen's coach: swipe the card left when you don't know it.
   ///
   /// In ko, this message translates to:
-  /// **'알면 오른쪽, 모르면 왼쪽으로 밀어요'**
-  String get guideSwipe;
+  /// **'모르면 왼쪽으로 밀어요'**
+  String get studyCoachDontKnow;
 
-  /// The session's start guide, in the previous card's place: an answered card comes up here showing its meaning, and a swipe changes its answer.
+  /// Third step of the study screen's coach: an answered card comes up above, and a swipe changes its answer.
   ///
   /// In ko, this message translates to:
-  /// **'답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요'**
-  String get guideRise;
+  /// **'답한 카드는 위로 올라와요. 밀어서 답을 바꿀 수 있어요'**
+  String get studyCoachRedecide;
+
+  /// Small text button between the answer buttons that shows the study screen's coach again.
+  ///
+  /// In ko, this message translates to:
+  /// **'안내 다시 보기'**
+  String get studyCoachReplay;
+
+  /// Front of the sample answered card the study screen's coach shows in its third step: an English word.
+  ///
+  /// In ko, this message translates to:
+  /// **'deadline'**
+  String get studyCoachSampleFront;
+
+  /// Back of the sample answered card the study screen's coach shows in its third step: the word's meaning.
+  ///
+  /// In ko, this message translates to:
+  /// **'마감 기한'**
+  String get studyCoachSampleBack;
 
   /// Shown when an answer could not be written to the local database.
   ///

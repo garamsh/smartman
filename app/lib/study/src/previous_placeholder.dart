@@ -6,35 +6,21 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
-import 'session.dart';
 import 'study_style.dart';
 
-/// In the previous card's place from a session's start until its first
-/// answer: a panel with a dashed outline and no fill, so it never reads as a
-/// card, holding the session's [size], as a continuation of the day where it
-/// [SessionSize.resumed] one, or that today's cards are done where it holds
-/// none, and two lines on how to study. It is read as one block.
-class SessionGuide extends StatelessWidget {
-  const SessionGuide({super.key, required this.size});
-
-  final SessionSize size;
+/// The previous card's place while it holds no card: a dashed outline with no
+/// fill, so it never reads as a card, around an up arrow and a line saying
+/// that answered cards stack here.
+class PreviousPlaceholder extends StatelessWidget {
+  const PreviousPlaceholder({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final heading = size.cards == 0
-        ? l10n.guideDone
-        : size.resumed
-        ? l10n.guideResume(size.cards, size.minutes)
-        : l10n.guideSize(size.cards, size.minutes);
-    final lines = [
-      (LucideIcons.moveHorizontal, l10n.guideSwipe),
-      (LucideIcons.arrowUp, l10n.guideRise),
-    ];
     return Semantics(
       container: true,
-      label: [heading, for (final (_, text) in lines) text].join('\n'),
+      label: l10n.previousPlaceholder,
       child: ExcludeSemantics(
         child: CustomPaint(
           painter: _DashedOutline(colors.outline),
@@ -42,33 +28,15 @@ class SessionGuide extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpace.s20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                spacing: AppSpace.s12,
+                spacing: AppSpace.s8,
                 children: [
+                  Icon(LucideIcons.arrowUp, color: colors.muted),
                   Text(
-                    keepWords(heading),
-                    style: AppType.body.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    keepWords(l10n.previousPlaceholder),
+                    textAlign: TextAlign.center,
+                    style: AppType.secondary.copyWith(color: colors.muted),
                   ),
-                  for (final (icon, text) in lines)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: AppSpace.s12,
-                      children: [
-                        Icon(icon, size: AppSize.smallIcon, color: colors.ink2),
-                        Expanded(
-                          child: Text(
-                            keepWords(text),
-                            style: AppType.secondary.copyWith(
-                              color: colors.ink2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                 ],
               ),
             ),
@@ -90,8 +58,8 @@ class _DashedOutline extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = StudyStyle.guideOutline;
-    final inset = StudyStyle.guideOutline / 2;
+      ..strokeWidth = StudyStyle.placeholderOutline;
+    final inset = StudyStyle.placeholderOutline / 2;
     final outline = Path()
       ..addRRect(
         RRect.fromRectAndRadius(
@@ -105,9 +73,13 @@ class _DashedOutline extends CustomPainter {
         ),
       );
     for (final PathMetric metric in outline.computeMetrics()) {
-      for (var at = 0.0; at < metric.length; at += 2 * StudyStyle.guideDash) {
+      for (
+        var at = 0.0;
+        at < metric.length;
+        at += 2 * StudyStyle.placeholderDash
+      ) {
         canvas.drawPath(
-          metric.extractPath(at, at + StudyStyle.guideDash),
+          metric.extractPath(at, at + StudyStyle.placeholderDash),
           paint,
         );
       }

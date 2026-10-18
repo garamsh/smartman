@@ -8,6 +8,8 @@ export 'src/providers.dart'
         studyClockProvider,
         studyRandomProvider,
         studyRepositoryProvider,
+        studyStorageKeys,
+        studyStorageProvider,
         studyZoneProvider;
 export 'src/overview.dart'
     show

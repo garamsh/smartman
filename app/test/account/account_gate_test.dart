@@ -31,6 +31,8 @@ import '../sync/fake_sync_server.dart';
 import 'fake_account_service.dart';
 import 'fake_google_sign_in.dart';
 
+import 'package:smartman/study/src/providers.dart' show studyCoachShownKey;
+
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// A session stored by an earlier run, whose access token expired an hour
@@ -85,11 +87,15 @@ void main() {
     FakeSyncServer? server,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
+        InMemorySharedPreferencesAsync.withData({studyCoachShownKey: true});
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: {...themeStorageKeys, ...photoImportStorageKeys},
+          allowList: {
+            ...themeStorageKeys,
+            ...photoImportStorageKeys,
+            ...studyStorageKeys,
+          },
         ),
       ),
     ))!;

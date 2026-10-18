@@ -176,23 +176,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changingToDontKnow => '모른다로 바꿔요';
 
   @override
-  String guideSize(int cards, int minutes) {
-    return '오늘 $cards장 · 약 $minutes분';
-  }
+  String get previousPlaceholder => '답한 카드가 여기에 쌓여요';
 
   @override
-  String guideResume(int cards, int minutes) {
+  String get earlierCard => '지난번 마지막 카드';
+
+  @override
+  String resumeToast(int cards, int minutes) {
     return '이어서 해요 · 남은 $cards장 · 약 $minutes분';
   }
 
   @override
-  String get guideDone => '오늘 할 카드를 다 했어요';
+  String get studyCoachKnow => '알면 오른쪽으로 밀어요';
 
   @override
-  String get guideSwipe => '알면 오른쪽, 모르면 왼쪽으로 밀어요';
+  String get studyCoachDontKnow => '모르면 왼쪽으로 밀어요';
 
   @override
-  String get guideRise => '답한 카드는 뜻과 함께 여기로 올라와요. 밀어서 바꿀 수 있어요';
+  String get studyCoachRedecide => '답한 카드는 위로 올라와요. 밀어서 답을 바꿀 수 있어요';
+
+  @override
+  String get studyCoachReplay => '안내 다시 보기';
+
+  @override
+  String get studyCoachSampleFront => 'deadline';
+
+  @override
+  String get studyCoachSampleBack => '마감 기한';
 
   @override
   String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart' hide Card;
@@ -5,22 +6,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
+import '../../design/app_coach.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'completion_card.dart';
 import 'current_card.dart';
 import 'failure.dart';
 import 'failure_message.dart';
 import 'providers.dart';
-import 'session.dart';
-import 'session_guide.dart';
 import 'previous_card.dart';
+import 'previous_placeholder.dart';
+import 'rust/api/engine.dart';
+import 'session.dart';
 import 'study_style.dart';
+
+/// The study coach's steps: answering "Know", answering "Don't know", and
+/// changing an answered card.
+enum _CoachStep {
+  know,
+  dontKnow,
+  redecide;
+
+  /// The step after this one; null after the last.
+  _CoachStep? get next => switch (this) {
+    know => dontKnow,
+    dontKnow => redecide,
+    redecide => null,
+  };
+}
+
+/// How long the notice that a session goes on with the day stays.
+const _resumeShown = Duration(seconds: 3);
 
 /// Studies the cards of [decks] left today in one session, one card at a time,
 /// answered by swiping, below the card answered just before it; then shows the
 /// completion card, from which the new cards past today's go on in the same
 /// session.
+///
+/// On a device's first session, a coach teaches the swipes on the cards, and
+/// "안내 다시 보기" shows it again. A session that goes on with a day that has
+/// cards done says so for a moment under the progress bar.
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.decks});
 
@@ -30,8 +56,27 @@ class StudyScreen extends ConsumerStatefulWidget {
   ConsumerState<StudyScreen> createState() => _StudyScreenState();
 }
 
-class _StudyScreenState extends ConsumerState<StudyScreen> {
+class _StudyScreenState extends ConsumerState<StudyScreen>
+    with SingleTickerProviderStateMixin {
   late final StudySession _session;
+
+  /// The coach's step; null while it does not show.
+  _CoachStep? _coach;
+
+  /// Drives the coach's demonstration, one cycle after another.
+  late final _demo = AnimationController(vsync: this, duration: coachCycle);
+
+  /// Whether the session has been studied on screen, after which the coach
+  /// is no longer started on its own.
+  var _studied = false;
+
+  /// Whether the session has loaded, after which the notice is not offered
+  /// again.
+  var _loaded = false;
+
+  /// The notice that the session goes on with the day, while it shows.
+  String? _resume;
+  Timer? _resumeTimer;
   late final AppLifecycleListener _lifecycle;
   late ScaffoldMessengerState _messenger;
   late AppLocalizations _l10n;
@@ -49,7 +94,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       random: ref.read(studyRandomProvider)(clock()),
       onFailure: _report,
       offsetAt: ref.read(studyZoneProvider),
-    );
+    )..addListener(_onSession);
     // An answer counts only the time the app is resumed.
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) => state == AppLifecycleState.resumed
@@ -68,9 +113,60 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   @override
   void dispose() {
+    _resumeTimer?.cancel();
+    _demo.dispose();
     _lifecycle.dispose();
     _session.dispose();
     super.dispose();
+  }
+
+  /// Once the session has loaded, says for a moment that it goes on with the
+  /// day where it does; the first time a card is on screen, starts the coach
+  /// unless it has shown on this device, and stores it as shown.
+  void _onSession() {
+    final state = _session.state;
+    if (!_loaded && state is! SessionLoading) {
+      _loaded = true;
+      final size = _session.size;
+      if (size.resumed && size.cards > 0) {
+        _resume = _l10n.resumeToast(size.cards, size.minutes);
+        _resumeTimer = Timer(_resumeShown, () {
+          if (mounted) setState(() => _resume = null);
+        });
+      }
+    }
+    if (!_studied && state is SessionStudying) {
+      _studied = true;
+      final storage = ref.read(studyStorageProvider);
+      if (storage.getBool(studyCoachShownKey) != true) {
+        unawaited(storage.setBool(studyCoachShownKey, true));
+        _startCoach();
+      }
+    }
+  }
+
+  /// Starts the coach at its first step; its demonstration moves unless
+  /// reduce motion is on, where each step holds still.
+  void _startCoach() {
+    _coach = _CoachStep.know;
+    if (!MediaQuery.disableAnimationsOf(context) && !_demo.isAnimating) {
+      _demo.repeat();
+    }
+  }
+
+  void _setCoach(_CoachStep? step) {
+    if (step == null && _coach == null) return;
+    setState(() => step == null ? _endCoach() : _coach = step);
+  }
+
+  void _endCoach() {
+    _coach = null;
+    _demo.reset();
+  }
+
+  void _answer(Answer answer) {
+    _setCoach(null);
+    _session.answer(answer);
   }
 
   void _report(StudyFailure failure) => _messenger.showSnackBar(
@@ -96,7 +192,19 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                   },
                   onClose: () => Navigator.of(context).maybePop(),
                 ),
-                Expanded(child: _body(context, state)),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _body(context, state)),
+                      Positioned(
+                        top: AppSpace.s8,
+                        left: StudyStyle.cardMargin,
+                        right: StudyStyle.cardMargin,
+                        child: _ResumeNotice(text: _resume),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -122,11 +230,23 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       ),
       SessionStudying(:final current, :final previous) => (
         previous,
-        CurrentCard(
+        AnimatedBuilder(
           // A new key for each card shown, a re-shown card included.
           key: ValueKey(('card', previous.length)),
-          card: current,
-          onAnswer: _session.answer,
+          animation: _demo,
+          builder: (context, _) => CurrentCard(
+            card: current,
+            onAnswer: _answer,
+            onGuide: () => setState(_startCoach),
+            onDragStart: () => _setCoach(null),
+            demo: switch (_coach) {
+              _CoachStep.know => Answer.know,
+              _CoachStep.dontKnow => Answer.dontKnow,
+              _ => null,
+            },
+            demoProgress: _demoProgress(context),
+            coach: _coachCaption(),
+          ),
         ),
       ),
       SessionEmpty() => (
@@ -172,19 +292,49 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       child: child,
     );
     final newest = previous.lastOrNull;
-    // The previous card's place holds the session's guide while the session
-    // gives one, before its first answer, and otherwise the card answered last.
-    final above = switch (state) {
-      SessionStudying(guide: final size?) => SessionGuide(size: size),
-      _ when newest != null => PreviousCardView(
+    final earlier = switch (state) {
+      SessionStudying(:final earlier) ||
+      SessionComplete(:final earlier) => earlier,
+      _ => null,
+    };
+    // The previous card's place holds the coach's sample in its last step;
+    // otherwise the card answered last in the session, or the day's last card
+    // from an earlier session, or, while studying, the empty place's outline.
+    final Widget? above = switch (state) {
+      SessionStudying() when _coach == _CoachStep.redecide => AnimatedBuilder(
+        key: const ValueKey('coach'),
+        animation: _demo,
+        builder: (context, _) => PreviousCardDemo(
+          front: [TextContent(l10n.studyCoachSampleFront)],
+          back: [TextContent(l10n.studyCoachSampleBack)],
+          progress: _demoProgress(context),
+        ),
+      ),
+      _ when newest != null => Listener(
         // A new key for each answer, so the card answered just now rises in
         // and a change of its answer leaves it in place.
         key: ValueKey(newest.position),
-        card: newest,
-        onRedecide: (answer) => _session.redecide(newest.position, answer),
+        onPointerMove: (_) => _setCoach(null),
+        child: PreviousCardView(
+          card: newest,
+          onRedecide: (answer) {
+            _setCoach(null);
+            _session.redecide(newest.position, answer);
+          },
+        ),
+      ),
+      _ when earlier != null => EarlierCardView(
+        key: const ValueKey('earlier'),
+        earlier: earlier,
+      ),
+      SessionStudying() => const PreviousPlaceholder(
+        key: ValueKey('placeholder'),
       ),
       _ => null,
     };
+    // While the coach shows the current card's answers, what is above it
+    // steps back.
+    final dimmed = _coach == _CoachStep.know || _coach == _CoachStep.dontKnow;
     return LayoutBuilder(
       builder: (context, constraints) {
         // The two cards share the height between the top bar and the answer
@@ -209,7 +359,14 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: card, child: switcher(above, _rise)),
+              SizedBox(
+                height: card,
+                child: AnimatedOpacity(
+                  opacity: dimmed ? StudyStyle.coachDim : 1,
+                  duration: StudyStyle.fadeDuration,
+                  child: switcher(above, _rise),
+                ),
+              ),
               const SizedBox(height: StudyStyle.cardGap),
               // The completion card may take the answer buttons' place too,
               // so its actions stay in reach.
@@ -218,6 +375,30 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// The coach's progress through its cycle: held where the card is out under
+  /// reduce motion, so each step is a still image.
+  double _demoProgress(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context)
+      ? StudyStyle.coachStill
+      : _demo.value;
+
+  /// The coach's caption in the answer buttons' place while it shows.
+  Widget? _coachCaption() {
+    final step = _coach;
+    if (step == null) return null;
+    return AppCoach(
+      line: keepWords(switch (step) {
+        _CoachStep.know => _l10n.studyCoachKnow,
+        _CoachStep.dontKnow => _l10n.studyCoachDontKnow,
+        _CoachStep.redecide => _l10n.studyCoachRedecide,
+      }),
+      step: step.index,
+      steps: _CoachStep.values.length,
+      onNext: () => _setCoach(step.next),
+      onSkip: () => _setCoach(null),
     );
   }
 }
@@ -309,6 +490,66 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The notice that the session goes on with the day, [text], centred under
+/// the progress bar on the navy surface while it is not null, and announced
+/// to a screen reader as it appears. It slides in and out, or fades under
+/// reduce motion.
+class _ResumeNotice extends StatelessWidget {
+  const _ResumeNotice({required this.text});
+
+  final String? text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final text = this.text;
+    return AnimatedSwitcher(
+      duration: StudyStyle.settleDuration,
+      switchInCurve: Curves.easeOutCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: reduceMotion
+            ? child
+            : SlideTransition(
+                position: Tween(
+                  begin: const Offset(0, -0.3),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+      ),
+      child: text == null
+          ? const SizedBox.shrink()
+          : Center(
+              key: ValueKey(text),
+              child: Semantics(
+                container: true,
+                liveRegion: true,
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: colors.hero,
+                    shape: const StadiumBorder(),
+                    shadows: StudyStyle.currentShadow(colors),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.s16,
+                      vertical: AppSpace.s8,
+                    ),
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: AppType.secondary.copyWith(color: colors.onHero),
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

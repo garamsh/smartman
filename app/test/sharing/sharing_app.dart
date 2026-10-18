@@ -12,6 +12,7 @@ import 'package:smartman/sharing/sharing.dart';
 
 import '../home/home_data.dart';
 import 'fakes.dart';
+import '../study/study_storage.dart';
 
 /// The home screen over an in-memory database, with sharing through a
 /// substituted server and network state, and study over the same database.
@@ -73,12 +74,13 @@ class SharingApp {
       reachability: app.network,
       clock: () => DateTime.utc(2026, 10, 15, 12),
     );
+    final storage = await openStudyStorage(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           deckRepositoryProvider.overrideWithValue(decks),
           sharingServiceProvider.overrideWithValue(sharing),
-          ...homeOverrides(db),
+          ...homeOverrides(db, storage: storage),
         ],
         child: MaterialApp(
           theme: lightTheme,

@@ -206,11 +206,13 @@ void main() {
     expect((session.state as SessionComplete).more, isFalse);
   });
 
-  test('a session opened with no card left today starts on the next new cards, under a guide whose size holds no card', () async {
+  test('a session opened with no card left today starts on the next new cards, its size holding no card, under the day\'s last card answered earlier', () async {
     final deck = await _Deck.open(_names(_today + 2));
     final first = await deck.session();
-    // Control: a session with today's cards opens on them, its guide sized.
-    expect((first.state as SessionStudying).guide?.cards, _today);
+    // Control: a session with today's cards opens on them, sized, with no
+    // earlier answer of the day.
+    expect(first.size.cards, _today);
+    expect((first.state as SessionStudying).earlier, isNull);
     _answerAll(first);
     await first.settled;
 
@@ -220,7 +222,8 @@ void main() {
       plainText(state.current.front),
       'c${_today.toString().padLeft(2, '0')}',
     );
-    expect(state.guide?.cards, 0);
+    expect(again.size.cards, 0);
+    expect(state.earlier?.answer, Answer.know);
     // The day's count goes on from today's answered cards.
     expect((state.progress.done, state.progress.total), (_today, _today + 2));
   });

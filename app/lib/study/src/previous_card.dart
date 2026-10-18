@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
+import '../../design/app_coach.dart';
 import '../../design/app_section_label.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
@@ -144,8 +145,117 @@ class _PreviousCardViewState extends State<PreviousCardView>
               ],
             );
           },
-          child: _GradedCard(card: card),
+          child: _GradedCard(
+            front: card.card.front,
+            back: card.card.back,
+            answer: card.answer,
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// The day's last answer from an earlier session, in the previous card's
+/// place: graded as a previous card is, with "지난번 마지막 카드", and opened
+/// whole by a tap. Its answer is not changed from here.
+class EarlierCardView extends StatelessWidget {
+  const EarlierCardView({super.key, required this.earlier});
+
+  final EarlierAnswer earlier;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final card = earlier.card;
+    return Semantics(
+      container: true,
+      label: [
+        l10n.earlierCard,
+        l10n.previousCardSemantics(
+          describeContent(l10n, card.front),
+          describeContent(l10n, card.back),
+          _answerName(l10n, earlier.answer),
+          'no',
+        ),
+      ].join('. '),
+      button: true,
+      onTapHint: l10n.showWholeCard,
+      onTap: () => _showWholeCard(context, card),
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () => _showWholeCard(context, card),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: _GradedCard(
+                front: card.front,
+                back: card.back,
+                answer: earlier.answer,
+              ),
+            ),
+            // At the bottom, clear of the notice that may show over the top.
+            Positioned(
+              bottom: AppSpace.s12,
+              left: StudyStyle.cardPadding,
+              child: Text(
+                l10n.earlierCard,
+                style: AppType.micro.copyWith(color: colors.muted),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The coach's third step in the previous card's place: a sample card,
+/// [front] and [back], answered "Know", dragged toward "Don't know" by a finger and sprung back,
+/// [progress] through one [coachCycle], over what the drag shows behind it.
+/// Hidden from screen readers, which read the coach's caption.
+class PreviousCardDemo extends StatelessWidget {
+  const PreviousCardDemo({
+    super.key,
+    required this.front,
+    required this.back,
+    required this.progress,
+  });
+
+  final List<Content> front;
+  final List<Content> back;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final offset = -StudyStyle.coachPreviousPeek * coachPeek(progress);
+    return ExcludeSemantics(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (offset != 0)
+            const Positioned.fill(child: _Reveal(answer: Answer.dontKnow)),
+          Positioned.fill(
+            child: Transform.translate(
+              offset: Offset(offset, 0),
+              child: Transform.rotate(
+                angle: offset * StudyStyle.tiltPerPixel,
+                child: _GradedCard(
+                  front: front,
+                  back: back,
+                  answer: Answer.know,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: StudyStyle.coachFingerInset - offset,
+            bottom: StudyStyle.coachFingerLift,
+            child: AppCoachFinger(shown: coachFingerShown(progress)),
+          ),
+        ],
       ),
     );
   }
@@ -224,14 +334,20 @@ class _Reveal extends StatelessWidget {
 /// line, at the current card's sizes and shrunk as far as their floors to fit
 /// their halves, then cut, and the grade's chip on its top edge.
 class _GradedCard extends StatelessWidget {
-  const _GradedCard({required this.card});
+  const _GradedCard({
+    required this.front,
+    required this.back,
+    required this.answer,
+  });
 
-  final PreviousCard card;
+  final List<Content> front;
+  final List<Content> back;
+  final Answer answer;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final (fill, line) = switch (card.answer) {
+    final (fill, line) = switch (answer) {
       Answer.know => (colors.knowCard, colors.knowLine),
       Answer.dontKnow => (colors.dontKnowCard, colors.dontKnowLine),
     };
@@ -254,7 +370,7 @@ class _GradedCard extends StatelessWidget {
               stackBelow: StudyStyle.minHalfWidth,
               front: (context, width) => LayoutBuilder(
                 builder: (context, constraints) => ContentView(
-                  card.card.front,
+                  front,
                   style: AppType.question.copyWith(color: colors.ink),
                   fit: (
                     minFontSize: AppType.questionFloor,
@@ -265,7 +381,7 @@ class _GradedCard extends StatelessWidget {
               ),
               back: (context, width) => LayoutBuilder(
                 builder: (context, constraints) => ContentView(
-                  card.card.back,
+                  back,
                   style: AppType.answer.copyWith(color: colors.ink2),
                   fit: (
                     minFontSize: AppType.answerFloor,
@@ -280,7 +396,7 @@ class _GradedCard extends StatelessWidget {
         Positioned(
           top: -StudyStyle.chipHeight / 2,
           right: StudyStyle.chipInset,
-          child: _GradeChip(answer: card.answer),
+          child: _GradeChip(answer: answer),
         ),
       ],
     );
