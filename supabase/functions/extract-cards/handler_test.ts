@@ -455,6 +455,36 @@ Deno.test("the model call asks for the cards schema from providers that honour i
   assert.equal(call.provider.require_parameters, true);
 });
 
+Deno.test("the model is asked to cover everything a notes page teaches at step 5, inventing nothing", async () => {
+  const r = await run({ replies: [cardsReply(twoCards)] });
+  const system = r.modelCalls[0].messages[0].content;
+  for (
+    const asked of [
+      "cover everything the page teaches",
+      "every definition and every rule, each on its own card",
+      "each member of a list or table",
+      "each worked example",
+      "each exception, and each line the writer marked as important, such as with a star, a circle",
+      "Do not merge separate rules into one card",
+      "so step 5 offers every card",
+      "keep every card of steps 1 to 4 and leave out the last cards of step 5",
+    ]
+  ) {
+    assert.ok(system.includes(asked), `asks: ${asked}`);
+  }
+  // The steps keep their meaning, and nothing outside the page enters a card.
+  for (
+    const kept of [
+      "1 is the page's core ideas",
+      "Every vocabulary entry is step 1.",
+      "never add a fact, a meaning, a part of speech or an example the page does not show",
+      "Never write an example of your own.",
+    ]
+  ) {
+    assert.ok(system.includes(kept), `keeps: ${kept}`);
+  }
+});
+
 Deno.test("a user over the daily limit is refused with 429 and no model call", async () => {
   const refused = await run({
     allowed: false,

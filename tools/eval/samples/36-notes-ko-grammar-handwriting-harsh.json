@@ -1,0 +1,242 @@
+{
+  "image": "36-notes-ko-grammar-handwriting-harsh.jpg",
+  "kind": "notes",
+  "layout": "notes",
+  "languages": {
+    "front": "ko",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "facts": [
+    {
+      "id": "harmony",
+      "step": 1,
+      "terms": [
+        "모음조화",
+        "양성모음",
+        "음성모음"
+      ]
+    },
+    {
+      "id": "bright-vowels",
+      "step": 3,
+      "terms": [
+        "양성모음",
+        "ㅏ",
+        "ㅗ",
+        "ㅑ",
+        "ㅛ"
+      ]
+    },
+    {
+      "id": "dark-vowels",
+      "step": 3,
+      "terms": [
+        "음성모음",
+        "ㅓ",
+        "ㅜ",
+        "ㅡ",
+        "ㅣ"
+      ]
+    },
+    {
+      "id": "harmony-example",
+      "step": 5,
+      "terms": [
+        "졸졸",
+        "줄줄"
+      ]
+    },
+    {
+      "id": "harmony-exception",
+      "step": 4,
+      "terms": [
+        "깡충깡충"
+      ]
+    },
+    {
+      "id": "a-eo-choice",
+      "step": 1,
+      "terms": [
+        "ㅏ",
+        "ㅗ",
+        "-아",
+        "-어"
+      ]
+    },
+    {
+      "id": "a-eo-example",
+      "step": 5,
+      "terms": [
+        "잡아",
+        "먹어"
+      ]
+    },
+    {
+      "id": "hada",
+      "step": 2,
+      "terms": [
+        "하다",
+        "-여"
+      ]
+    },
+    {
+      "id": "contraction",
+      "step": 1,
+      "terms": [
+        "축약",
+        "한 음절"
+      ]
+    },
+    {
+      "id": "contraction-wa",
+      "step": 3,
+      "terms": [
+        "ㅘ",
+        "봐라"
+      ]
+    },
+    {
+      "id": "contraction-wo",
+      "step": 3,
+      "terms": [
+        "ㅝ",
+        "줘서"
+      ]
+    },
+    {
+      "id": "contraction-yeo",
+      "step": 3,
+      "terms": [
+        "ㅕ",
+        "가져"
+      ]
+    },
+    {
+      "id": "contraction-wae",
+      "step": 3,
+      "terms": [
+        "ㅙ",
+        "돼"
+      ]
+    },
+    {
+      "id": "oda",
+      "step": 4,
+      "terms": [
+        "오다",
+        "와라"
+      ]
+    },
+    {
+      "id": "same-vowel",
+      "step": 2,
+      "terms": [
+        "같은 모음",
+        "가라"
+      ]
+    },
+    {
+      "id": "eu-deletion",
+      "step": 1,
+      "terms": [
+        "ㅡ",
+        "탈락"
+      ]
+    },
+    {
+      "id": "eu-example",
+      "step": 5,
+      "terms": [
+        "써",
+        "커"
+      ]
+    },
+    {
+      "id": "eu-bright",
+      "step": 3,
+      "terms": [
+        "양성모음",
+        "바빠"
+      ]
+    },
+    {
+      "id": "rieul-deletion",
+      "step": 2,
+      "terms": [
+        "ㄹ",
+        "탈락",
+        "ㄴ"
+      ]
+    },
+    {
+      "id": "rieul-example",
+      "step": 5,
+      "terms": [
+        "사는",
+        "놉니다"
+      ]
+    },
+    {
+      "id": "reu-irregular",
+      "step": 4,
+      "terms": [
+        "르",
+        "불규칙",
+        "흘러"
+      ]
+    },
+    {
+      "id": "reo-irregular",
+      "step": 4,
+      "terms": [
+        "러",
+        "불규칙",
+        "이르러"
+      ]
+    },
+    {
+      "id": "bieup-irregular",
+      "step": 2,
+      "terms": [
+        "ㅂ",
+        "불규칙",
+        "우"
+      ]
+    },
+    {
+      "id": "bieup-example",
+      "step": 5,
+      "terms": [
+        "더워",
+        "구워"
+      ]
+    },
+    {
+      "id": "dopda",
+      "step": 4,
+      "terms": [
+        "돕다",
+        "도와"
+      ]
+    },
+    {
+      "id": "bieup-regular",
+      "step": 4,
+      "terms": [
+        "잡다",
+        "규칙"
+      ]
+    }
+  ],
+  "examples": [
+    "졸졸 / 줄줄, 찰랑찰랑 / 출렁출렁",
+    "잡+아 -> 잡아, 먹+어 -> 먹어",
+    "쓰+어 -> 써, 크+어 -> 커",
+    "살+는 -> 사는, 놀+ㅂ니다 -> 놉니다"
+  ]
+}

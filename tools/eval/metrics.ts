@@ -167,9 +167,15 @@ export type NotesScore = {
   readonly ties: number;
 };
 
-/** Whether [card] covers [fact]: its front and answer hold every one of the fact's terms. */
+/**
+ * Whether [card] covers [fact]: its front, answer and examples together hold every one of the
+ * fact's terms, so a worked example kept as the example of the card it illustrates covers its
+ * fact as a card of its own would.
+ */
 export function covers(card: NoteCandidate, fact: Fact): boolean {
-  const text = normalize(`${card.front} ${card.answer}`);
+  const text = normalize(
+    [card.front, card.answer, ...(card.examples ?? [])].join(" "),
+  );
   return fact.terms.every((term) => text.includes(normalize(term)));
 }
 
@@ -255,6 +261,15 @@ export type NotesRow = {
   readonly inventedExamplesRate: number | null;
   /** The share of pairs of covered facts ordered alike by their steps, a tie counting half. */
   readonly stepAgreement: number | null;
+  /**
+   * Each notes image's coverage at step 5, every card offered, and the completion tokens its
+   * calls used, in the order the images ran.
+   */
+  readonly pages: readonly {
+    readonly name: string;
+    readonly coverage: number | null;
+    readonly completionTokens: number;
+  }[];
 };
 
 /** One configuration's results over every image. */
@@ -282,10 +297,13 @@ export type Row = {
 
 /** One image's outcome for one configuration: a vocabulary score or a notes score. */
 export type ImageResult = {
+  readonly name: string;
   readonly score: Score | null;
   readonly notes: NotesScore | null;
   readonly latencyMs: number;
   readonly costUsd: number;
+  /** The completion tokens of every call for the image, retry included. */
+  readonly completionTokens: number;
 };
 
 export function summarize(label: string, images: readonly ImageResult[]): Row {
@@ -293,7 +311,11 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
     image.score === null ? [] : [image.score]
   );
   const notes = images.flatMap((image) =>
-    image.notes === null ? [] : [image.notes]
+    image.notes === null ? [] : [{
+      name: image.name,
+      score: image.notes,
+      completionTokens: image.completionTokens,
+    }]
   );
   const mean = (pick: (score: Score) => number) =>
     scores.length === 0
@@ -325,7 +347,14 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
   };
 }
 
-function summarizeNotes(notes: readonly NotesScore[]): NotesRow {
+function summarizeNotes(
+  images: readonly {
+    name: string;
+    score: NotesScore;
+    completionTokens: number;
+  }[],
+): NotesRow {
+  const notes = images.map((image) => image.score);
   const total = (pick: (score: NotesScore) => number) =>
     notes.reduce((sum, score) => sum + pick(score), 0);
   const coverage = [0, 1, 2, 3, 4].map((at) => {
@@ -348,6 +377,11 @@ function summarizeNotes(notes: readonly NotesScore[]): NotesRow {
       total((s) => s.concordant + s.ties / 2),
       total((s) => s.pairs),
     ),
+    pages: images.map((image) => ({
+      name: image.name,
+      coverage: image.score.coverage[4] ?? null,
+      completionTokens: image.completionTokens,
+    })),
   };
 }
 

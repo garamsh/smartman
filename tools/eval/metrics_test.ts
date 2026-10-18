@@ -86,6 +86,7 @@ Deno.test("percentile takes the nearest rank", () => {
 Deno.test("summarize averages per-image scores and sums the spend", () => {
   const row = summarize("m", [
     {
+      name: "01",
       score: {
         precision: 1,
         recall: 0.5,
@@ -100,12 +101,15 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
       notes: null,
       latencyMs: 1000,
       costUsd: 0.01,
+      completionTokens: 0,
     },
     {
+      name: "02",
       score: { precision: 0, recall: 0, f1: 0, fields: NO_FIELDS },
       notes: null,
       latencyMs: 3000,
       costUsd: 0.03,
+      completionTokens: 0,
     },
   ]);
   assert.equal(row.precision, 0.5);
@@ -284,6 +288,22 @@ Deno.test("a card covers a fact when its front and answer hold every term after 
   );
 });
 
+Deno.test("a worked example kept as the example of the card it illustrates covers its fact", () => {
+  const fact = notesTruth.facts[3];
+  const rule = noteCard("연역 논증이란?", "전제가 참이면 결론이 반드시 참", 1);
+  // Control: the rule alone holds none of the example's terms.
+  assert.equal(covers(rule, fact), false);
+  assert.equal(
+    covers({ ...rule, examples: ["253+4637+647898=652788 -> 연역"] }, fact),
+    true,
+  );
+  const notes = scoreNotes([
+    { ...rule, examples: ["253+4637+647898=652788 -> 연역"] },
+  ], notesTruth);
+  assert.equal(notes.coverage[4], 2 / 4, "the rule and its example");
+  assert.equal(notes.unsupported, 0);
+});
+
 Deno.test("coverage at a step counts the facts of that step or below covered by cards of that step or below", () => {
   const notes = scoreNotes([
     noteCard("연역 논증", "전제가 참이면 결론이 반드시 참", 1),
@@ -351,10 +371,12 @@ Deno.test("step order counts the pairs of covered facts the returned steps order
 
 Deno.test("summarize averages notes coverage over the notes images and pools their counts", () => {
   const vocabulary = {
+    name: "01-vocabulary",
     score: { precision: 1, recall: 1, f1: 1, fields: NO_FIELDS },
     notes: null,
     latencyMs: 1000,
     costUsd: 0.01,
+    completionTokens: 50,
   };
   const full = scoreNotes([
     noteCard("연역", "결론이 반드시 참", 1),
@@ -365,8 +387,22 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
   const empty = scoreNotes([], notesTruth);
   const row = summarize("m", [
     vocabulary,
-    { score: null, notes: full, latencyMs: 2000, costUsd: 0.02 },
-    { score: null, notes: empty, latencyMs: 3000, costUsd: 0.03 },
+    {
+      name: "02-notes",
+      score: null,
+      notes: full,
+      latencyMs: 2000,
+      costUsd: 0.02,
+      completionTokens: 900,
+    },
+    {
+      name: "03-notes",
+      score: null,
+      notes: empty,
+      latencyMs: 3000,
+      costUsd: 0.03,
+      completionTokens: 0,
+    },
   ]);
   assert.equal(row.f1, 1, "vocabulary scores average over vocabulary images");
   assert.deepEqual(row.notes, {
@@ -374,6 +410,10 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
     unsupportedRate: 0,
     inventedExamplesRate: 0,
     stepAgreement: 1,
+    pages: [
+      { name: "02-notes", coverage: 1, completionTokens: 900 },
+      { name: "03-notes", coverage: 0, completionTokens: 0 },
+    ],
   });
   assert.ok(Math.abs(row.costPerImageUsd - 0.02) < 1e-12, "over every image");
 });
@@ -383,6 +423,7 @@ const notesRow = (coverage5: number): NotesRow => ({
   unsupportedRate: null,
   inventedExamplesRate: null,
   stepAgreement: null,
+  pages: [],
 });
 
 Deno.test("with notes results, the recommendation must also be within 5 points of the best coverage at step 5", () => {
