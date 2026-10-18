@@ -246,6 +246,12 @@ const notesTruth = {
     { id: "example", step: 5 as const, terms: ["652788"] },
   ],
   examples: ["253+4637+647898=652788 -> 연역"],
+  lines: [
+    "5. 연역과 귀납",
+    "연역 논증: 전제가 참이면 결론이 반드시 참",
+    "'하다'는 '-여'가 붙는다: 하+여 -> 하여(해)",
+    "예) 253+4637+647898=652788 -> 연역",
+  ],
 };
 const noteCard = (
   front: string,
@@ -314,6 +320,19 @@ Deno.test("an example the page does not print is invented, and one printed with 
   }], notesTruth);
   assert.equal(notes.examples, 3);
   assert.equal(notes.inventedExamples, 1);
+});
+
+Deno.test("an example printed inside a rule's line is not invented, and one no line prints is", () => {
+  const notes = scoreNotes([{
+    ...noteCard("'하다'의 어미는?", "'-여'가 붙는다", 2),
+    examples: ["하+여 -> 하여(해)", "하+어 -> 해어"],
+  }], notesTruth);
+  assert.equal(notes.examples, 2);
+  assert.equal(
+    notes.inventedExamples,
+    1,
+    "the rule line holds the first; control: no line holds the second",
+  );
 });
 
 Deno.test("step order counts the pairs of covered facts the returned steps order alike, and their ties", () => {

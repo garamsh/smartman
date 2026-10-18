@@ -137,7 +137,10 @@ export type Fact = {
 /** A notes page's ground truth: its facts, and the examples it prints. */
 export type NotesTruth = {
   readonly facts: readonly Fact[];
+  /** The examples the page prints on lines of their own. */
   readonly examples: readonly string[];
+  /** Every line the page prints, its title included. */
+  readonly lines: readonly string[];
 };
 
 /** The fields of a returned card the notes metrics read. */
@@ -189,13 +192,18 @@ export function scoreNotes(
     candidates.filter((card) => !truth.facts.some((fact) => covers(card, fact)))
       .length;
   const printed = truth.examples.map(normalize);
+  const lines = truth.lines.map(normalize);
   const returned = candidates.flatMap((card) => card.examples ?? []);
   // The page prints an example after a label such as "예)" or "e.g.", which a card may keep
   // or drop, so a returned example counts as printed when it and a printed one contain each
-  // other after normalization.
+  // other after normalization. A rule's own worked example sits inside the rule's line, so an
+  // example any printed line contains counts as printed too.
   const inventedExamples = returned.filter((example) => {
     const text = normalize(example);
-    return !printed.some((page) => page.includes(text) || text.includes(page));
+    return !printed.some((page) =>
+      page.includes(text) || text.includes(page)
+    ) &&
+      !lines.some((line) => line.includes(text));
   }).length;
   // Each covered fact's returned step is the lowest step of a card covering it.
   const placed = truth.facts.flatMap((fact) => {

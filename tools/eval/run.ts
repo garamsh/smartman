@@ -411,7 +411,7 @@ export async function loadSamples(
       const notes = parseNotes(truth);
       if (notes === null) {
         throw new Error(
-          `${name} is not a notes ground truth of {facts: [{id, step, terms}], examples}`,
+          `${name} is not a notes ground truth of {facts: [{id, step, terms}], examples, lines}`,
         );
       }
       samples.push({ ...photo, kind: "notes", notes });
@@ -435,10 +435,12 @@ export async function loadSamples(
 }
 
 function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
-  const { facts, examples } = truth;
+  const { facts, examples, lines } = truth;
   if (
     !Array.isArray(facts) || facts.length === 0 || !Array.isArray(examples) ||
-    !examples.every((example) => typeof example === "string")
+    !examples.every((example) => typeof example === "string") ||
+    !Array.isArray(lines) || lines.length === 0 ||
+    !lines.every((line) => typeof line === "string")
   ) return null;
   const parsed: Fact[] = [];
   for (const fact of facts) {
@@ -451,7 +453,7 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
     ) return null;
     parsed.push({ id: fact.id, step, terms });
   }
-  return { facts: parsed, examples };
+  return { facts: parsed, examples, lines };
 }
 
 function parseEntry(card: unknown): Entry | null {

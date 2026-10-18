@@ -8,8 +8,13 @@
     },
     {
       "date": "2026-10-18",
-      "spentUsd": 1.269192,
-      "note": "prompt v4"
+      "spentUsd": 0.3988,
+      "note": "prompt v4, 4 configurations x the 12 notes pages; spend read from OpenRouter's key usage ($1.1240 less $0.7252); the eval recorded $1.269192, pricing Gemini Flash's 12 unbilled failed calls at the worst case (#184)"
+    },
+    {
+      "date": "2026-10-18",
+      "spentUsd": 0.1184,
+      "note": "prompt v4, Claude Sonnet 5.5 and Gemini Flash on the 4 grammar pages, to keep their replies for #184; spend read from OpenRouter's key usage ($1.2424 less $1.1240)"
     }
   ]
 }

@@ -61,6 +61,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 
 - `CARD_MODEL` is the OpenRouter model ID of every first call. Changing the secret switches the model with no code change.
 - `CARD_RETRY_MODEL`, when set, is the model of the retry, so a cheap model can fall back to a stronger one; unset, the retry uses `CARD_MODEL`.
+- On 2026-10-18 the owner chose Claude Sonnet 5.5 from the eval's report, and the PM set `CARD_MODEL` to `anthropic/claude-sonnet-5.5`; `CARD_RETRY_MODEL` already named it (issue #184).
 - `OPENROUTER_API_KEY` is a Supabase secret. Locally it is in `supabase/functions/.env`, which git ignores; creating that file is an owner action.
 
 ### Privacy
@@ -93,19 +94,25 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
   - each is shown as a dash when the configuration returned no such field.
 - Notes pages: a card covers a fact when its front and answer hold every one of the fact's terms after the same normalization.
   - Coverage at step s is the share of the page's facts of step s or below that a card of step s or below covers, per image and then averaged.
-  - Unsupported cards are the share of returned cards that cover no fact, and invented examples the share of returned examples the page does not print; a returned example counts as printed when it and a printed one contain each other.
+  - Unsupported cards are the share of returned cards that cover no fact, and invented examples the share of returned examples the page does not print. A returned example counts as printed when it and an example the page prints on a line of its own contain each other, or when a line the page prints contains it, as a rule's own worked example sits in the rule's line.
   - Step order is the share of pairs of covered facts with different steps that the returned steps order alike, a tie counting half; a covered fact's returned step is the lowest step of a card covering it.
   - Term matching undercounts a fact the model paraphrased past its terms, in coverage and as an unsupported card: the cost of scoring with no judge model.
 - The recommendation is the cheapest configuration per image whose vocabulary F1 is within 2 points of the best and whose notes coverage at step 5 is within 5 points of the best; none when no configuration is within both.
 - Spend is capped at $10 across all runs, recorded in `tools/eval/spend.json`, which each run appends to.
   - A run starts only when a dry estimate fits the remaining budget; `--dry-run` prints the estimate and calls no model. The estimate prices every image as a call and a retry, a vocabulary card's reply at 45 tokens and a note card's at 120. On 2026-10-18 it came to $7.82 for the 32 samples and seven configurations, with $10 remaining.
   - Before each image it checks that the worst case of a call and its retry still fits, and stops otherwise.
+  - A call's spend is the cost OpenRouter reports. A call that reports no usage, which a failed call does, records none: OpenRouter's key usage shows the 2026-10-18 run's failed calls were not billed (issue #184).
+  - A candidate whose calls fail two images in a row runs no further image, and the report says how many it ran. OpenRouter's model list cannot exclude such a candidate before the run: it lists `structured_outputs` for Gemini Flash, which Google refused on every call (below).
   - After the calls it prints the run's spend and the total, writes the report, then appends the run to the ledger, the ledger even when the report's write fails. A failed write therefore loses at most one of them, and the printed spend survives both.
-  - A write creates its directory only when the directory is missing, so the grant in `run.ts`'s header command, `tools/eval/spend.json` and `docs/eval`, covers every write. Issue #180 records the 2026-10-18 run, which failed with `NotCapable` on its first write after every call had completed.
+  - A write creates its directory only when the directory is missing, so the grant in `run.ts`'s header command, `tools/eval/spend.json` and `docs/eval`, covers every write; the grant also names `tools/eval/replies`. Issue #180 records the 2026-10-18 run, which failed with `NotCapable` on its first write after every call had completed.
   - A run whose spend never reached the ledger is entered by hand: append `{ "date": "YYYY-MM-DD", "spentUsd": <cost>, "note": "<source>" }` to `runs` in `tools/eval/spend.json`, with the cost OpenRouter's activity page shows for the run's calls and a note naming that page. The PM enters the 2026-10-18 run this way.
+- Every reply is kept as each image completes, in `tools/eval/replies/<UTC start>/<configuration>/<sample>.json`, which git ignores, and the report names the folder. A reply holds the outcome, the parsed cards, and each call's model with its HTTP status and body, or the error that ended it.
+- The 2026-10-18 run's report, prompt v4 over the 12 notes pages of #179's branch, is `docs/eval/extract-cards.md`, and its spend is in the ledger as OpenRouter's key usage shows it (issue #184). The report's spend lines are the eval's pricing at the time, and it notes the correction.
+  - Its invented-examples rates of 61–83% counted a rule's worked example, printed in the rule's line, as invented, since the ground truth then listed only the examples on lines of their own. Sonnet's kept replies on the four grammar pages hold 81 examples: 63 counted as invented then, and 1 under the rule above, a misread of "졸졸" as "촐촐" on a harsh page.
+  - Google Gemini Flash (`google/gemini-3.8-flash`) failed every call. Its kept replies show Google answering `400 INVALID_ARGUMENT`, "Request contains an invalid argument.", through both providers OpenRouter tried, Google AI Studio and Google Vertex, so it is not routing; the answer names no argument.
 - The samples are `tools/eval/samples/`: 32 synthetic photos and their ground truth, written by `tools/eval/generate.py` from `tools/eval/vocabulary.json`, `tools/eval/notes.json` and the OFL fonts in `tools/eval/fonts/`. Provenance and licences are in `tools/eval/samples/provenance.md`.
 - The 24 vocabulary pages: a ground-truth card holds `front` and `meaning`, and the `partOfSpeech` and `examples` its page prints: the six dictionary pages print a part of speech for every entry — `n.`, `v.`, `adj.` or `adv.` for English, a bracket notation such as `[동]` for Japanese — and an example under each English entry; the other layouts print neither.
-- The 8 notes pages, `kind` "notes": a Korean page of logic notes and an English page of economics notes, each in a print and a handwriting face under the mild and the harsh distortion. A ground truth holds 12 facts, each with its `step` (every step from 1 to 5 has one) and the page `terms` that cover it, and the `examples` the page prints. None is a real photo; the owner's own notes photo was not used.
+- The 8 notes pages, `kind` "notes": a Korean page of logic notes and an English page of economics notes, each in a print and a handwriting face under the mild and the harsh distortion. A ground truth holds 12 facts, each with its `step` (every step from 1 to 5 has one) and the page `terms` that cover it, the `examples` the page prints on lines of their own, and its `lines`, every line it prints. None is a real photo; the owner's own notes photo was not used.
 - The eval needs `supabase/functions/.env`, so it runs on the owner's machine, not in CI.
 - `tools/eval/*_test.ts`, run by `make test` through `deno.sh`, test the eval with OpenRouter replaced by a fake `fetch`. `run_test.ts` substitutes the file system too. `run_io_test.ts` runs the eval through `denoIo`, its real I/O, as a subprocess under the header command's permission flags, with only `fetch` replaced (`run_fake_openrouter.ts`). `deno.sh` runs it apart from the other tests, with write access only to a temporary directory it removes, and permission to run `deno`.
 
@@ -220,6 +227,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 ## Open questions
 
 - On Android, the system may end the app while the photo picker is open; the picked photo is then lost and the user picks again. `image_picker`'s `retrieveLostData` could recover it.
-- Which model `CARD_MODEL` names, how well each covers a notes page's facts step by step, and how often each invents a fact, a part of speech or an example. The eval has not run, with any prompt: it waits for the owner's run on their machine, so `docs/eval/` holds no report yet.
+- How well each model covers a notes page's facts step by step under prompt v3, and how often each invents a fact, a part of speech or an example: the only report, of 2026-10-18, measured prompt v4 on #179's branch, which `main` does not hold.
+- Which argument Google refuses in Gemini Flash's request.
 - The samples are rendered pages, not phone photos. Real photos can be added to `tools/eval/samples/` with a ground-truth file each.
 - `SUPABASE_SERVICE_ROLE_KEY` is Supabase's legacy key form. A project that disables legacy keys would need the function to read `SUPABASE_SECRET_KEYS` instead.

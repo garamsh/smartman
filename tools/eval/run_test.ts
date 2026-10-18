@@ -44,6 +44,11 @@ const notesTruth = {
     { id: "induction", step: 2, terms: ["귀납", "개연"] },
   ],
   examples: ["253+4637+647898=652788 -> 연역"],
+  lines: [
+    "5. 연역과 귀납",
+    "연역 논증: 전제가 참이면 결론이 반드시 참",
+    "예) 253+4637+647898=652788 -> 연역",
+  ],
 };
 const noteCards = [{
   kind: "note",
@@ -405,6 +410,11 @@ Deno.test("a candidate stops after two model errors in a row, its error bodies k
     /- Broken stopped after 2 model errors in a row: its row covers 2 of 3 images\./,
   );
   assert.doesNotMatch(table, /- Flaky stopped/);
+  assert.equal(
+    JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).spentUsd,
+    2 * w.replyCost,
+    "a failed call reports no usage and records no spend; control: Flaky's two replies do",
+  );
 });
 
 Deno.test("a notes sample is scored by coverage per step, unsupported cards, invented examples and step order", async () => {
@@ -429,7 +439,7 @@ Deno.test("a notes sample is scored by coverage per step, unsupported cards, inv
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
 
-Deno.test("a notes ground truth without facts, or with a step outside 1 to 5, is refused", async () => {
+Deno.test("a notes ground truth without facts, with a step outside 1 to 5, or without its lines, is refused", async () => {
   for (const facts of [[], [{ id: "a", step: 6, terms: ["x"] }]]) {
     const w = world();
     w.files.set(
@@ -437,6 +447,17 @@ Deno.test("a notes ground truth without facts, or with a step outside 1 to 5, is
       JSON.stringify({ image: "03-notes.jpg", ...notesTruth, facts }),
     );
     await assert.rejects(loadSamples(io(w)), /notes ground truth/);
+  }
+  for (const lines of [undefined, [], [1]]) {
+    const w = world();
+    w.files.set(
+      `${PATHS.samples}/03-notes.json`,
+      JSON.stringify({ image: "03-notes.jpg", ...notesTruth, lines }),
+    );
+    await assert.rejects(
+      loadSamples(io(w)),
+      /notes ground truth of \{facts: \[\{id, step, terms\}\], examples, lines\}/,
+    );
   }
   const control = world();
   control.files.set(
@@ -621,6 +642,14 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
     for (const example of sample.notes.examples) {
       assert.ok(page.includes(normalize(example)), `${example} is printed`);
     }
+    assert.deepEqual(
+      sample.notes.lines,
+      [
+        documents[language].title,
+        ...documents[language].lines.map((line: { text: string }) => line.text),
+      ],
+      `${sample.name} holds every line its page prints`,
+    );
   }
 });
 

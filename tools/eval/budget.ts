@@ -91,7 +91,11 @@ export function estimateUsd(
   return total;
 }
 
-/** The cost of a call as OpenRouter reported it, or priced from its tokens when it reported none. */
+/**
+ * The cost of a call as OpenRouter reported it, or priced from its tokens when it reported no
+ * cost. A call that reported no usage, which a failed call does, costs nothing: OpenRouter did not
+ * bill the failed calls of the 2026-10-18 run.
+ */
 export function callUsd(
   pricing: Pricing,
   usage: {
@@ -100,7 +104,7 @@ export function callUsd(
     costUsd: number | null;
   } | null,
 ): number {
-  if (usage === null) return worstCallUsd(pricing);
+  if (usage === null) return 0;
   return usage.costUsd ??
     cost(pricing, usage.promptTokens, usage.completionTokens);
 }
