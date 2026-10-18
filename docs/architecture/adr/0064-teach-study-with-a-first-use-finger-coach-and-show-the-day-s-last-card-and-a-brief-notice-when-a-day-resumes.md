@@ -28,7 +28,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A finger moves with the card. Steps 1 and 2 dim what is above the current card.
   - The caption is Review's: a navy panel in the answer buttons' place with the step's line, step dots, "건너뛰기" and "다음", the last step "시작하기". A screen reader hears "사용 방법, 3단계 중 n단계" as it changes. The caption, the finger and the demonstration's curve are one shared component, which Review uses too.
   - **Motion.** The card moves out with an ease, holds, and springs back over 2.8 s, as in Review. Under reduce motion each step is a still image, the card held out under the finger.
-  - **Once per device.** The device stores that the coach has shown as soon as it shows. Any answer, or a swipe of either card, ends it.
+  - **Once per device.** The device stores that the coach has shown as soon as it shows. Only an answer, or a drag of the current card, ends it; a drag or a tap of the previous card leaves it running.
   - **Replay.** "안내 다시 보기", a small text button between the answer buttons, starts it again.
 - **A resumed day.**
   - **The day's last card.** While the session has no answer of its own, the previous card's place shows the day's last answer to the decks' cards from an earlier session: graded as a previous card is, with its chip, and labelled "지난번 마지막 카드". A tap opens it whole. It has no swipe and no change action, and no stored review of an earlier session is rewritten. The session's first answer replaces it.
