@@ -5,19 +5,24 @@ import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
 import '../../design/app_list_row.dart';
-import '../../design/app_section_label.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
-import 'detail_step.dart';
 
-/// The deck the cards go into and the detail step, over the candidates the
-/// step offers to check, edit or leave out, with those whose key the deck
-/// already holds grouped below with a duplicate option each.
-class ReviewView extends StatelessWidget {
+/// How far a card is dragged before it is removed or put back.
+const _swipeThreshold = 48.0;
+
+/// How far the coach slides the first card to show a swipe.
+const _coachPeek = 84.0;
+
+/// The cards made from the photo, grouped by topic, each topic with a switch
+/// that keeps or drops it: a swipe left removes a card and a swipe right puts
+/// it back, a tap edits it in place, and a removed card stays, struck
+/// through. On first use a coach teaches the three gestures.
+class ReviewView extends StatefulWidget {
   const ReviewView({
     super.key,
     required this.review,
@@ -25,7 +30,8 @@ class ReviewView extends StatelessWidget {
     required this.target,
     required this.onTarget,
     required this.saving,
-    required this.onStep,
+    required this.coach,
+    required this.onCoachDone,
     required this.onChanged,
     required this.onRetake,
     required this.onSave,
@@ -42,30 +48,48 @@ class ReviewView extends StatelessWidget {
 
   final bool saving;
 
-  /// Chooses the detail step, which changes the rows offered and recomposes
-  /// every answer not typed.
-  final ValueChanged<DetailStep> onStep;
+  /// Whether the coach shows when the screen opens.
+  final bool coach;
 
-  /// Called after a row of [review] changed in place.
+  /// Called once the coach ends, by its buttons or by any gesture.
+  final VoidCallback onCoachDone;
+
+  /// Called after [review] changed in place.
   final VoidCallback onChanged;
 
   final VoidCallback onRetake;
   final VoidCallback onSave;
 
   @override
+  State<ReviewView> createState() => _ReviewViewState();
+}
+
+class _ReviewViewState extends State<ReviewView> {
+  /// The coach's step, from 1 to 3; 0 once it has ended or never showed.
+  late int _coach = widget.coach && widget.review.rows.isNotEmpty ? 1 : 0;
+
+  ReviewRow? _editing;
+
+  Review get _review => widget.review;
+
+  void _endCoach() {
+    if (_coach == 0) return;
+    setState(() => _coach = 0);
+    widget.onCoachDone();
+  }
+
+  /// Applies a user's change, which ends the coach.
+  void _change(VoidCallback change) {
+    _endCoach();
+    setState(change);
+    widget.onChanged();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final offered = review.offered.toList();
-    final fresh = [
-      for (final row in offered)
-        if (!review.isDuplicate(row)) row,
-    ];
-    final duplicates = [
-      for (final row in offered)
-        if (review.isDuplicate(row)) row,
-    ];
-    final count = review.saved.length;
+    final count = _review.saved.length;
+    final first = _review.rows.firstOrNull;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -79,7 +103,7 @@ class ReviewView extends StatelessWidget {
             child: AppButton(
               label: l10n.retake,
               variant: AppButtonVariant.text,
-              onPressed: onRetake,
+              onPressed: widget.onRetake,
             ),
           ),
         ],
@@ -87,50 +111,65 @@ class ReviewView extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.gutter,
-          0,
+          AppSpace.s8,
           AppSpace.gutter,
-          AppSpace.s16,
+          AppSpace.s24,
         ),
         children: [
           Semantics(
             header: true,
-            child: Text(l10n.reviewTitle(offered.length), style: AppType.title),
-          ),
-          const SizedBox(height: AppSpace.s4),
-          Text(
-            l10n.reviewHint,
-            style: AppType.secondary.copyWith(color: colors.muted),
+            child: Text(
+              l10n.reviewMade(_review.rows.length),
+              textAlign: TextAlign.center,
+              style: AppType.title,
+            ),
           ),
           const SizedBox(height: AppSpace.s12),
-          Align(
-            alignment: Alignment.centerLeft,
+          Center(
             child: AppChip(
-              label: l10n.photoTarget(target?.name ?? l10n.newDeck),
+              label: l10n.photoTarget(widget.target?.name ?? l10n.newDeck),
               icon: LucideIcons.chevronDown,
               onPressed: () => _chooseTarget(context),
             ),
           ),
-          const SizedBox(height: AppSpace.s16),
-          DetailStepSlider(step: review.step, onChanged: onStep),
-          const SizedBox(height: AppSpace.s16),
-          for (final row in fresh)
-            _CandidateRow(
-              key: ObjectKey(row),
-              row: row,
-              step: review.step,
-              duplicate: false,
-              onChanged: onChanged,
-            ),
-          if (duplicates.isNotEmpty) ...[
-            const SizedBox(height: AppSpace.s16),
-            AppSectionLabel(l10n.reviewDuplicates(duplicates.length)),
-            for (final row in duplicates)
-              _CandidateRow(
-                key: ObjectKey(row),
-                row: row,
-                step: review.step,
-                duplicate: true,
-                onChanged: onChanged,
+          for (final topic in _review.topics) ...[
+            const SizedBox(height: AppSpace.s24),
+            if (topic.name case final name?)
+              _TopicHeading(
+                name: name,
+                count: topic.rows.length,
+                on: topic.on,
+                onChanged: (on) => _change(() {
+                  topic.on = on;
+                  _editing = null;
+                }),
+              ),
+            for (final row in topic.rows)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpace.rowGap),
+                child: _ReviewCard(
+                  key: ObjectKey(row),
+                  row: row,
+                  removed: !_review.isKept(row),
+                  removedOnItsOwn: _review.isRemoved(row),
+                  inDeck: _review.isDuplicate(row),
+                  editable: topic.on,
+                  editing: identical(_editing, row),
+                  coachStep: identical(row, first) ? _coach : 0,
+                  dimmed: _coach > 0 && !identical(row, first),
+                  onRemoved: (removed) => _change(() {
+                    row.removed = removed;
+                    _editing = null;
+                  }),
+                  onEdit: () => _change(() => _editing = row),
+                  onEdited: (front, back) => _change(() {
+                    if (front.trim().isNotEmpty) row.front = front.trim();
+                    if (back.trim().isNotEmpty && back.trim() != row.back) {
+                      row.editedBack = back.trim();
+                    }
+                    _editing = null;
+                  }),
+                ),
               ),
           ],
         ],
@@ -143,12 +182,19 @@ class ReviewView extends StatelessWidget {
             AppSpace.gutter,
             AppSpace.s16,
           ),
-          child: AppButton(
-            label: l10n.addCards(count),
-            size: AppButtonSize.cta,
-            loading: saving,
-            onPressed: count == 0 ? null : onSave,
-          ),
+          child: _coach > 0
+              ? _Coach(
+                  step: _coach,
+                  onNext: () =>
+                      _coach == 3 ? _endCoach() : setState(() => _coach += 1),
+                  onSkip: _endCoach,
+                )
+              : AppButton(
+                  label: l10n.reviewAdd(count),
+                  size: AppButtonSize.cta,
+                  loading: widget.saving,
+                  onPressed: count == 0 ? null : widget.onSave,
+                ),
         ),
       ),
     );
@@ -160,6 +206,7 @@ class ReviewView extends StatelessWidget {
     Widget check(bool chosen) => chosen
         ? Icon(LucideIcons.check, color: colors.know)
         : const SizedBox.shrink();
+    final target = widget.target;
     final chosen = await showAppSheet<_TargetChoice>(
       context,
       builder: (context) => AppSheet(
@@ -167,7 +214,7 @@ class ReviewView extends StatelessWidget {
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final deck in decks)
+            for (final deck in widget.decks)
               AppListRow(
                 title: deck.name,
                 onSheet: true,
@@ -187,7 +234,7 @@ class ReviewView extends StatelessWidget {
         ),
       ),
     );
-    if (chosen != null) onTarget(chosen.deck);
+    if (chosen != null) widget.onTarget(chosen.deck);
   }
 }
 
@@ -198,86 +245,206 @@ final class _TargetChoice {
   final DeckId? deck;
 }
 
-/// A candidate: its checkbox, its front and its answer at [step] split by a
-/// divider, each edited in place on a tap, an answer typed by hand marked
-/// edited, and its duplicate option when [duplicate].
-class _CandidateRow extends StatelessWidget {
-  const _CandidateRow({
-    super.key,
-    required this.row,
-    required this.step,
-    required this.duplicate,
+/// A topic's name and card count, muted while off, beside its switch.
+class _TopicHeading extends StatelessWidget {
+  const _TopicHeading({
+    required this.name,
+    required this.count,
+    required this.on,
     required this.onChanged,
   });
 
-  final ReviewRow row;
-  final DetailStep step;
-  final bool duplicate;
-  final VoidCallback onChanged;
+  final String name;
+  final int count;
+  final bool on;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    return AppRowSurface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Checkbox(
-                    semanticLabel: l10n.includeCard,
-                    value: row.included,
-                    onChanged: (value) {
-                      row.included = value ?? false;
-                      onChanged();
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: _EditableSide(
-                    label: l10n.cardFront,
-                    text: row.front,
-                    style: AppType.body,
-                    onSubmitted: (text) {
-                      row.front = text;
-                      onChanged();
-                    },
-                  ),
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: _EditableSide(
-                    label: l10n.cardBack,
-                    text: row.backAt(step),
-                    mark: row.edited ? l10n.candidateEdited : null,
-                    style: AppType.body.copyWith(color: colors.muted),
-                    onSubmitted: (text) {
-                      row.editedBack = text;
-                      onChanged();
-                    },
-                  ),
-                ),
-              ],
+    return Row(
+      children: [
+        Expanded(
+          child: ExcludeSemantics(
+            child: Text(
+              keepWords(l10n.reviewTopic(name, count)),
+              style: AppType.label.copyWith(
+                color: on ? colors.ink : colors.muted,
+              ),
             ),
           ),
-          if (duplicate)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpace.s12,
-                0,
-                AppSpace.s12,
-                AppSpace.s12,
+        ),
+        const SizedBox(width: AppSpace.s12),
+        Semantics(
+          label: l10n.reviewTopicSwitch(name, count),
+          child: Switch(value: on, onChanged: onChanged),
+        ),
+      ],
+    );
+  }
+}
+
+/// A card's front and answer side by side, moved by a horizontal drag that
+/// removes it past the threshold to the left and puts it back to the right,
+/// or, while [editing], its two fields with the remove or restore button.
+class _ReviewCard extends StatefulWidget {
+  const _ReviewCard({
+    super.key,
+    required this.row,
+    required this.removed,
+    required this.removedOnItsOwn,
+    required this.inDeck,
+    required this.editable,
+    required this.editing,
+    required this.coachStep,
+    required this.dimmed,
+    required this.onRemoved,
+    required this.onEdit,
+    required this.onEdited,
+  });
+
+  final ReviewRow row;
+
+  /// Whether the card will not be written: removed, or its topic off.
+  final bool removed;
+
+  /// Whether the card is removed itself, whatever its topic.
+  final bool removedOnItsOwn;
+
+  /// Whether the deck already holds the card's key.
+  final bool inDeck;
+
+  /// False while the card's topic is off.
+  final bool editable;
+
+  final bool editing;
+
+  /// The coach step this card shows, from 1 to 3; 0 for none.
+  final int coachStep;
+
+  final bool dimmed;
+  final ValueChanged<bool> onRemoved;
+  final VoidCallback onEdit;
+  final void Function(String front, String back) onEdited;
+
+  @override
+  State<_ReviewCard> createState() => _ReviewCardState();
+}
+
+class _ReviewCardState extends State<_ReviewCard>
+    with SingleTickerProviderStateMixin {
+  double _drag = 0;
+
+  /// Drives the coach's demonstration: a peek left, a peek right, or a press.
+  late final _demo = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2800),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.coachStep > 0) _demo.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_ReviewCard old) {
+    super.didUpdateWidget(old);
+    if (widget.coachStep > 0 && !_demo.isAnimating) {
+      _demo.repeat();
+    } else if (widget.coachStep == 0 && _demo.isAnimating) {
+      _demo.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _demo.dispose();
+    super.dispose();
+  }
+
+  void _dragEnd() {
+    final drag = _drag;
+    setState(() => _drag = 0);
+    if (drag <= -_swipeThreshold) widget.onRemoved(true);
+    if (drag >= _swipeThreshold) widget.onRemoved(false);
+  }
+
+  /// The coach's offset of the card at the demonstration's progress [t]: out
+  /// to the peek, held, and back.
+  double _peek(double t) {
+    final direction = switch (widget.coachStep) {
+      1 => -1.0,
+      2 => 1.0,
+      _ => 0.0,
+    };
+    final out = Curves.easeOutCubic.transform(
+      ((t - 0.2) / 0.26).clamp(0.0, 1.0),
+    );
+    final back = Curves.easeOutBack.transform(
+      ((t - 0.62) / 0.18).clamp(0.0, 1.0),
+    );
+    return direction * _coachPeek * (out - back);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.editing) {
+      return _CardEditor(
+        row: widget.row,
+        removed: widget.removedOnItsOwn,
+        onRemoved: widget.onRemoved,
+        onDone: widget.onEdited,
+      );
+    }
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final row = widget.row;
+    return Opacity(
+      opacity: widget.dimmed ? 0.45 : 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AnimatedBuilder(
+            animation: _demo,
+            builder: (context, child) {
+              final offset = _drag + _peek(_demo.value);
+              return Stack(
+                children: [
+                  if (offset != 0)
+                    Positioned.fill(child: _SwipeUnder(offset: offset)),
+                  Transform.translate(offset: Offset(offset, 0), child: child),
+                  if (widget.coachStep > 0)
+                    _CoachFinger(step: widget.coachStep, progress: _demo.value),
+                ],
+              );
+            },
+            child: Semantics(
+              button: widget.editable,
+              label: widget.removed
+                  ? l10n.reviewRemovedCard(row.front, row.back)
+                  : l10n.reviewCard(row.front, row.back),
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: widget.editable ? widget.onEdit : null,
+                onHorizontalDragUpdate: (details) =>
+                    setState(() => _drag += details.delta.dx),
+                onHorizontalDragEnd: (_) => _dragEnd(),
+                onHorizontalDragCancel: () => setState(() => _drag = 0),
+                child: _CardFace(row: row, removed: widget.removed),
               ),
-              child: _DuplicateChoiceChip(
-                choice: row.choice,
-                onSelected: (choice) {
-                  row.choice = choice;
-                  onChanged();
-                },
+            ),
+          ),
+          if (widget.inDeck && widget.removedOnItsOwn)
+            Padding(
+              padding: const EdgeInsets.only(
+                top: AppSpace.s4,
+                left: AppSpace.s4,
+              ),
+              child: Text(
+                l10n.reviewInDeck,
+                style: AppType.caption.copyWith(color: colors.muted),
               ),
             ),
         ],
@@ -286,146 +453,345 @@ class _CandidateRow extends StatelessWidget {
   }
 }
 
-/// The current duplicate option; a tap offers the three.
-class _DuplicateChoiceChip extends StatelessWidget {
-  const _DuplicateChoiceChip({required this.choice, required this.onSelected});
+/// What shows under a card dragged by [offset]: "다시 넣기" on the green to the
+/// left as it moves right, "빼기" on the red to the right as it moves left.
+class _SwipeUnder extends StatelessWidget {
+  const _SwipeUnder({required this.offset});
 
-  final DuplicateChoice choice;
-  final ValueChanged<DuplicateChoice> onSelected;
+  final double offset;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    String label(DuplicateChoice choice) => switch (choice) {
-      DuplicateChoice.skip => l10n.duplicateSkip,
-      DuplicateChoice.mergeBack => l10n.duplicateMergeBack,
-      DuplicateChoice.addNew => l10n.duplicateAddNew,
-    };
-    return MenuAnchor(
-      menuChildren: [
-        for (final option in DuplicateChoice.values)
-          MenuItemButton(
-            leadingIcon: option == choice
-                ? const Icon(LucideIcons.check)
-                : const SizedBox.square(dimension: AppSpace.s24),
-            onPressed: () => onSelected(option),
-            child: Text(label(option)),
+    final colors = AppColors.of(context);
+    final restoring = offset > 0;
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: restoring ? colors.know : colors.dontKnowText,
+          borderRadius: BorderRadius.circular(AppRadius.row),
+        ),
+        child: Align(
+          alignment: restoring ? Alignment.centerLeft : Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.s16),
+            child: Text(
+              restoring ? l10n.reviewRestore : l10n.reviewRemove,
+              style: AppType.bodyStrong.copyWith(
+                color: restoring ? colors.onKnow : colors.onDontKnowText,
+              ),
+            ),
           ),
-      ],
-      builder: (context, controller, _) => AppChip(
-        label: label(choice),
-        icon: LucideIcons.chevronDown,
-        onPressed: () =>
-            controller.isOpen ? controller.close() : controller.open(),
+        ),
       ),
     );
   }
 }
 
-/// A card side as text that becomes a field on a tap, with [mark] under it
-/// when there is one. The text breaks lines only between words, and is read
-/// as written. Leaving the field keeps its text, or the previous text
-/// when it was left empty.
-class _EditableSide extends StatefulWidget {
-  const _EditableSide({
-    required this.label,
-    required this.text,
-    this.mark,
-    required this.style,
-    required this.onSubmitted,
-  });
+/// A card's front and answer in two halves; struck through inside a dashed
+/// outline while [removed].
+class _CardFace extends StatelessWidget {
+  const _CardFace({required this.row, required this.removed});
 
-  final String label;
-  final String text;
-  final String? mark;
-  final TextStyle? style;
-  final ValueChanged<String> onSubmitted;
+  final ReviewRow row;
+  final bool removed;
 
   @override
-  State<_EditableSide> createState() => _EditableSideState();
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    TextStyle side(TextStyle style) => removed
+        ? style.copyWith(
+            color: colors.muted,
+            decoration: TextDecoration.lineThrough,
+            decorationColor: colors.muted,
+          )
+        : style;
+    final face = IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  keepWords(row.front),
+                  style: side(AppType.bodyStrong.copyWith(color: colors.ink)),
+                ),
+              ),
+            ),
+          ),
+          VerticalDivider(width: 1, color: colors.hairline),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.s16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  keepWords(row.back),
+                  style: side(AppType.body.copyWith(color: colors.ink2)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    final shape = BorderRadius.circular(AppRadius.row);
+    return removed
+        ? CustomPaint(
+            foregroundPainter: _DashedOutline(
+              color: colors.muted,
+              radius: AppRadius.row,
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.ground,
+                borderRadius: shape,
+              ),
+              child: face,
+            ),
+          )
+        : DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: shape,
+            ),
+            child: face,
+          );
+  }
 }
 
-class _EditableSideState extends State<_EditableSide> {
-  late final _controller = TextEditingController(text: widget.text);
-  late final _focus = FocusNode()..addListener(_onFocus);
-  bool _editing = false;
+/// A dashed rounded outline, for a removed card.
+class _DashedOutline extends CustomPainter {
+  const _DashedOutline({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  static const _dash = 6.0;
+  static const _gap = 4.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final outline = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Offset.zero & size,
+          Radius.circular(radius),
+        ).deflate(0.5),
+      );
+    for (final metric in outline.computeMetrics()) {
+      for (var at = 0.0; at < metric.length; at += _dash + _gap) {
+        canvas.drawPath(metric.extractPath(at, at + _dash), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedOutline old) =>
+      old.color != color || old.radius != radius;
+}
+
+/// A card opened for editing: its front and answer as fields, the button
+/// that removes it or puts it back, and "완료", which keeps a side left
+/// empty as it was.
+class _CardEditor extends StatefulWidget {
+  const _CardEditor({
+    required this.row,
+    required this.removed,
+    required this.onRemoved,
+    required this.onDone,
+  });
+
+  final ReviewRow row;
+  final bool removed;
+  final ValueChanged<bool> onRemoved;
+  final void Function(String front, String back) onDone;
+
+  @override
+  State<_CardEditor> createState() => _CardEditorState();
+}
+
+class _CardEditorState extends State<_CardEditor> {
+  late final _front = TextEditingController(text: widget.row.front);
+  late final _back = TextEditingController(text: widget.row.back);
 
   @override
   void dispose() {
-    _focus.dispose();
-    _controller.dispose();
+    _front.dispose();
+    _back.dispose();
     super.dispose();
-  }
-
-  void _onFocus() {
-    if (!_focus.hasFocus && _editing) _commit();
-  }
-
-  void _commit() {
-    final text = _controller.text.trim();
-    setState(() => _editing = false);
-    if (text.isEmpty) {
-      _controller.text = widget.text;
-    } else if (text != widget.text) {
-      widget.onSubmitted(text);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_editing) {
-      return Padding(
-        padding: const EdgeInsets.all(AppSpace.s8),
-        child: AppTextField(
-          label: widget.label,
-          controller: _controller,
-          focusNode: _focus,
-          autofocus: true,
-          maxLines: null,
-          style: widget.style,
-          textInputAction: TextInputAction.done,
-          errorText: _controller.text.trim().isEmpty
-              ? AppLocalizations.of(context).cardSideRequired
-              : null,
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (_) => _commit(),
-        ),
-      );
-    }
-    void edit() {
-      _controller.text = widget.text;
-      setState(() => _editing = true);
-    }
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.s12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.row),
+        border: Border.all(color: colors.ink, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppSpace.s8,
+        children: [
+          AppTextField(
+            label: l10n.reviewFront,
+            controller: _front,
+            autofocus: true,
+            maxLines: null,
+          ),
+          AppTextField(
+            label: l10n.reviewBack,
+            controller: _back,
+            maxLines: null,
+          ),
+          Row(
+            children: [
+              AppButton(
+                label: widget.removed
+                    ? l10n.reviewRestore
+                    : l10n.reviewRemoveCard,
+                variant: widget.removed
+                    ? AppButtonVariant.secondary
+                    : AppButtonVariant.destructive,
+                onPressed: () => widget.onRemoved(!widget.removed),
+              ),
+              const Spacer(),
+              AppButton(
+                label: l10n.reviewDone,
+                onPressed: () => widget.onDone(_front.text, _back.text),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    final mark = widget.mark;
-    return Semantics(
-      button: true,
-      label: ['${widget.label}: ${widget.text}', ?mark].join(', '),
-      onTap: edit,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: edit,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.s16),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(keepWords(widget.text), style: widget.style),
-                if (mark != null) ...[
-                  const SizedBox(height: AppSpace.s4),
-                  Text(
-                    mark,
-                    style: AppType.caption.copyWith(
-                      color: AppColors.of(context).muted,
-                    ),
-                  ),
-                ],
-              ],
+/// The coach's finger on the first card: dragging it for a swipe, or tapping
+/// for an edit.
+class _CoachFinger extends StatelessWidget {
+  const _CoachFinger({required this.step, required this.progress});
+
+  final int step;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final visible = progress > 0.08 && progress < 0.68;
+    return Positioned(
+      top: AppSpace.s20,
+      left: step == 2 ? AppSpace.s32 : null,
+      right: step == 1 ? AppSpace.s32 : null,
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: Opacity(
+            opacity: visible ? 1 : 0,
+            child: Icon(
+              LucideIcons.pointer,
+              size: 34,
+              color: colors.ink,
+              shadows: [Shadow(color: colors.shadow, blurRadius: 6)],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The coach's caption over the add button: the step's line, its dots,
+/// "건너뛰기" and "다음", the last "시작하기".
+class _Coach extends StatelessWidget {
+  const _Coach({
+    required this.step,
+    required this.onNext,
+    required this.onSkip,
+  });
+
+  final int step;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final line = switch (step) {
+      1 => l10n.coachRemove,
+      2 => l10n.coachRestore,
+      _ => l10n.coachEdit,
+    };
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: l10n.coachStep(step, 3),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.s20,
+          AppSpace.s16,
+          AppSpace.s16,
+          AppSpace.s12,
+        ),
+        decoration: BoxDecoration(
+          color: colors.hero,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    line,
+                    style: AppType.bodyStrong.copyWith(color: colors.onHero),
+                  ),
+                ),
+                for (final dot in [1, 2, 3])
+                  Container(
+                    width: dot == step ? 16 : 6,
+                    height: 6,
+                    margin: const EdgeInsets.only(left: AppSpace.s4),
+                    decoration: BoxDecoration(
+                      color: colors.onHero.withValues(
+                        alpha: dot == step ? 1 : 0.4,
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpace.s8),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: onSkip,
+                  style: TextButton.styleFrom(foregroundColor: colors.onHero),
+                  child: Text(l10n.coachSkip),
+                ),
+                const Spacer(),
+                AppButton(
+                  label: step == 3 ? l10n.coachStart : l10n.coachNext,
+                  variant: AppButtonVariant.onHero,
+                  onPressed: onNext,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

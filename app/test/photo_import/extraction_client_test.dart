@@ -64,124 +64,62 @@ void main() {
     },
   );
 
+  test('a card takes its answer from answer, else meaning, else back, with the '
+      'part of speech the page prints', () async {
+    final client = _client(
+      (_) async => _json(200, {
+        'cards': [
+          {
+            'front': 'run',
+            'back': '[동] 달리다, 운영하다',
+            'answer': ' 달리다, 운영하다 ',
+            'meaning': '달리다, 운영하다',
+            'partOfSpeech': '[동]',
+          },
+          {'front': 'river', 'back': '강', 'meaning': ' 강 '},
+          {'front': 'chat', 'back': 'n. cat'},
+        ],
+      }),
+    );
+
+    final [run, river, chat] = (await _extract(client))!;
+
+    expect(
+      (run.front, run.answer, run.partOfSpeech, run.back),
+      ('run', '달리다, 운영하다', '[동]', '[동] 달리다, 운영하다'),
+    );
+    expect((river.answer, river.partOfSpeech, river.back), ('강', null, '강'));
+    expect((chat.answer, chat.back), ('n. cat', 'n. cat'));
+  });
+
   test(
-    'a card from a function before kind takes its meaning as its answer and '
-    'short form, as vocabulary at step 1, with its part of speech and examples',
+    "a card reads its topic, none from a function that names none, and no "
+    "longer checks the step, short form or examples it does not show",
     () async {
       final client = _client(
         (_) async => _json(200, {
           'cards': [
             {
-              'front': 'run',
-              'back': '[동] 달리다',
-              'meaning': ' 달리다 ',
-              'partOfSpeech': '[동]',
-              'examples': ['I run every morning.', ' run a shop '],
+              'kind': 'note',
+              'front': '양성모음',
+              'answer': 'ㅏ ㅗ ㅑ ㅛ',
+              'short': 'ㅏ ㅗ',
+              'step': 9,
+              'examples': 'not a list',
+              'back': 'ㅏ ㅗ ㅑ ㅛ',
+              'topic': ' 모음조화 ',
             },
-            {'front': 'river', 'back': '강', 'meaning': '강'},
+            {'front': 'chat', 'back': 'cat'},
           ],
         }),
       );
 
-      final [run, river] = (await _extract(client))!;
+      final [vowels, chat] = (await _extract(client))!;
 
-      expect(
-        (run.front, run.answer, run.short, run.partOfSpeech),
-        ('run', '달리다', '달리다', '[동]'),
-      );
-      expect(run.examples, ['I run every morning.', 'run a shop']);
-      expect((river.answer, river.partOfSpeech), ('강', null));
-      expect(river.examples, isEmpty);
-      for (final card in [run, river]) {
-        expect(
-          (card.kind, card.step),
-          (CandidateKind.vocabulary, DetailStep.core),
-        );
-      }
+      expect((vowels.topic, vowels.answer), ('모음조화', 'ㅏ ㅗ ㅑ ㅛ'));
+      expect(chat.topic, isNull);
     },
   );
-
-  test(
-    'a card from a function that sends back alone takes back as its answer',
-    () async {
-      final client = _client(
-        (_) async => _json(200, {
-          'cards': [
-            {'front': 'chat', 'back': 'n. cat'},
-          ],
-        }),
-      );
-
-      final [card] = (await _extract(client))!;
-
-      expect(
-        (card.answer, card.short, card.partOfSpeech),
-        ('n. cat', 'n. cat', null),
-      );
-      expect(
-        (card.kind, card.step),
-        (CandidateKind.vocabulary, DetailStep.core),
-      );
-      expect(card.examples, isEmpty);
-    },
-  );
-
-  test('a card with kind reads its kind, answer, short form and step, and a '
-      'vocabulary card its part of speech and examples', () async {
-    final client = _client(
-      (_) async => _json(200, {
-        'cards': [
-          {
-            'kind': 'vocabulary',
-            'front': 'run',
-            'answer': ' 달리다, 운영하다 ',
-            'short': '달리다',
-            'step': 1,
-            'back': '[동] 달리다, 운영하다',
-            'meaning': '달리다, 운영하다',
-            'partOfSpeech': '[동]',
-            'examples': ['I run every morning.'],
-          },
-          {
-            'kind': 'note',
-            'front': '연역 논증이란?',
-            'answer': '전제가 참이면 결론이 반드시 참인 논증',
-            'short': '결론이 반드시 참',
-            'step': 4,
-            'back': '전제가 참이면 결론이 반드시 참인 논증',
-            'examples': ['253+4637+647898=652788 -> 연역'],
-          },
-        ],
-      }),
-    );
-
-    final [run, deduction] = (await _extract(client))!;
-
-    expect(
-      (run.kind, run.answer, run.short, run.step, run.partOfSpeech),
-      (CandidateKind.vocabulary, '달리다, 운영하다', '달리다', DetailStep.core, '[동]'),
-    );
-    expect(run.examples, ['I run every morning.']);
-    expect(
-      (
-        deduction.kind,
-        deduction.front,
-        deduction.answer,
-        deduction.short,
-        deduction.step,
-        deduction.partOfSpeech,
-      ),
-      (
-        CandidateKind.note,
-        '연역 논증이란?',
-        '전제가 참이면 결론이 반드시 참인 논증',
-        '결론이 반드시 참',
-        DetailStep.detailed,
-        null,
-      ),
-    );
-    expect(deduction.examples, ['253+4637+647898=652788 -> 연역']);
-  });
 
   test('each refusal the contract names maps to its failure', () async {
     final cases = <(int, String), Matcher>{
@@ -216,55 +154,21 @@ void main() {
         ],
       }),
       for (final field in <String, Object?>{
+        'answer': ' ',
         'meaning': ' ',
         'partOfSpeech': 1,
-        'examples': 'a cat',
       }.entries)
         jsonEncode({
           'cards': [
             {'front': 'chat', 'back': 'cat', field.key: field.value},
           ],
         }),
-      jsonEncode({
-        'cards': [
-          {
-            'front': 'chat',
-            'back': 'cat',
-            'examples': ['a cat', ''],
-          },
-        ],
-      }),
-      for (final field in <String, Object?>{
-        'kind': 'word',
-        'answer': ' ',
-        'short': null,
-        'step': 6,
-      }.entries)
+      for (final topic in <Object?>['', '  ', 7, 'a' * 61])
         jsonEncode({
           'cards': [
-            {
-              'kind': 'note',
-              'front': 'What is an argument?',
-              'answer': 'Premises and a conclusion',
-              'short': 'Premises',
-              'step': 2,
-              'back': 'Premises and a conclusion',
-              field.key: field.value,
-            },
+            {'front': 'chat', 'back': 'cat', 'topic': topic},
           ],
         }),
-      jsonEncode({
-        'cards': [
-          {
-            'kind': 'note',
-            'front': 'What is an argument?',
-            'answer': 'Premises and a conclusion',
-            'short': 'Premises',
-            'step': 0,
-            'back': 'Premises and a conclusion',
-          },
-        ],
-      }),
     ]) {
       final client = _client((_) async => http.Response(body, 200));
       await expectLater(
@@ -273,6 +177,15 @@ void main() {
         reason: body,
       );
     }
+    // Control: a topic of the most characters the contract allows is read.
+    final longest = _client(
+      (_) async => _json(200, {
+        'cards': [
+          {'front': 'chat', 'back': 'cat', 'topic': 'ㄱ' * 60},
+        ],
+      }),
+    );
+    expect((await _extract(longest))!.single.topic, 'ㄱ' * 60);
   });
 
   test('a request that cannot reach the server is offline', () async {

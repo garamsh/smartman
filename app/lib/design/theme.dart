@@ -735,20 +735,6 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
             states.contains(WidgetState.selected) ? colors.ink : colors.muted,
       ),
     ),
-    // The photo import's detail steps: the chosen part of the track and the
-    // thumb in ink, the rest in muted, each at least 3:1 on the ground and the
-    // surface; the steps' ticks in the colour opposite their part. No side
-    // padding, so the track's ends sit under the names of the end steps.
-    sliderTheme: SliderThemeData(
-      padding: EdgeInsets.zero,
-      activeTrackColor: colors.ink,
-      inactiveTrackColor: colors.muted,
-      thumbColor: colors.ink,
-      overlayColor: colors.ink.withValues(alpha: 0.12),
-      activeTickMarkColor: colors.onPrimary,
-      inactiveTickMarkColor: colors.surface,
-      showValueIndicator: ShowValueIndicator.never,
-    ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: control,

@@ -398,46 +398,78 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
-  String reviewTitle(int count) {
-    return '카드 $count개를 찾았어요';
+  String reviewMade(int count) {
+    return '카드 $count장을 만들었어요';
   }
 
   @override
-  String get reviewHint => '눌러서 고치고, 뺄 카드는 체크를 끄세요';
-
-  @override
-  String get detailStepLabel => '카드에 담을 내용';
-
-  @override
-  String get detailStepCore => '핵심';
-
-  @override
-  String get detailStepKeyPoints => '요점';
-
-  @override
-  String get detailStepBasic => '기본';
-
-  @override
-  String get detailStepDetailed => '자세히';
-
-  @override
-  String get detailStepFull => '세부';
-
-  @override
-  String detailStepValue(String name, int step) {
-    return '$name, 5단계 중 $step단계';
+  String reviewTopic(String topic, int count) {
+    return '$topic · $count장';
   }
 
   @override
-  String get candidateEdited => '직접 고침';
-
-  @override
-  String reviewDuplicates(int count) {
-    return '이미 있는 카드 $count개';
+  String reviewTopicSwitch(String topic, int count) {
+    return '$topic 주제 넣기, $count장';
   }
 
   @override
-  String get includeCard => '포함';
+  String reviewCard(String front, String back) {
+    return '$front, $back. 눌러서 고치고, 왼쪽으로 밀면 빼요';
+  }
+
+  @override
+  String reviewRemovedCard(String front, String back) {
+    return '$front, $back. 뺀 카드. 오른쪽으로 밀면 다시 넣어요';
+  }
+
+  @override
+  String get reviewRemove => '빼기';
+
+  @override
+  String get reviewRestore => '다시 넣기';
+
+  @override
+  String get reviewRemoveCard => '이 카드 빼기';
+
+  @override
+  String get reviewDone => '완료';
+
+  @override
+  String get reviewFront => '앞면';
+
+  @override
+  String get reviewBack => '뒷면';
+
+  @override
+  String get reviewInDeck => '이미 덱에 있어요';
+
+  @override
+  String reviewAdd(int count) {
+    return '덱에 $count장 추가';
+  }
+
+  @override
+  String get coachRemove => '왼쪽으로 밀면 빼요';
+
+  @override
+  String get coachRestore => '오른쪽으로 밀면 다시 넣어요';
+
+  @override
+  String get coachEdit => '눌러서 바로 고쳐요';
+
+  @override
+  String coachStep(int step, int total) {
+    return '사용 방법, $total단계 중 $step단계';
+  }
+
+  @override
+  String get coachSkip => '건너뛰기';
+
+  @override
+  String get coachNext => '다음';
+
+  @override
+  String get coachStart => '시작하기';
 
   @override
   String get duplicateSkip => '건너뛰기';
@@ -453,11 +485,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get retry => '다시 시도';
-
-  @override
-  String addCards(int count) {
-    return '카드 $count개 추가';
-  }
 
   @override
   String get extractionOffline => '인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.';

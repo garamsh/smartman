@@ -2,76 +2,41 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../deck/deck.dart';
-import 'detail_step.dart';
 import 'failure.dart';
 import 'photo.dart';
 
-/// What a candidate was read from: an entry of a vocabulary page, or a point
-/// of notes.
-enum CandidateKind { vocabulary, note }
+/// The most characters (code points) a card's topic has.
+const maxTopicLength = 60;
 
 /// A card the model read off the page, before the user reviews it: its
-/// headword or question, its fullest answer and a shorter form, the step from
-/// which it is offered, and the part of speech and examples the page prints.
+/// headword or question, its fullest answer, the part of speech the page
+/// prints, and the topic of the page it belongs to.
 final class CandidateCard {
   const CandidateCard({
     required this.front,
     required this.answer,
-    String? short,
-    this.kind = CandidateKind.vocabulary,
-    this.step = DetailStep.core,
     this.partOfSpeech,
-    this.examples = const [],
-  }) : short = short ?? answer;
+    this.topic,
+  });
 
-  final CandidateKind kind;
   final String front;
 
   /// The fullest answer the page supports.
   final String answer;
 
-  /// A shorter form of [answer]; [answer] itself when none was given.
-  final String short;
-
-  /// The step from which the card is offered.
-  final DetailStep step;
-
   /// The page's own notation, such as "[동]"; null when it prints none.
   final String? partOfSpeech;
 
-  /// Empty when the page prints none.
-  final List<String> examples;
+  /// The part of the page the card comes from, such as "모음조화"; null from
+  /// a function that names none.
+  final String? topic;
 
-  /// Whether the card is offered at [at]: from its own step upward.
-  bool offeredAt(DetailStep at) => step.value <= at.value;
-
-  /// The answer at [at]: the short form at 핵심, the answer at 요점, with the
-  /// part of speech and a space before it from 기본, and from 자세히 each
-  /// example on a line of its own, but one that repeats the answer: whose
-  /// text, normalized as a card key is, contains the answer's or is
-  /// contained in it.
-  String backAt(DetailStep at) {
-    final basic = switch (partOfSpeech) {
-      final partOfSpeech? => '$partOfSpeech $answer',
-      null => answer,
-    };
-    return switch (at) {
-      DetailStep.core => short,
-      DetailStep.keyPoints => answer,
-      DetailStep.basic => basic,
-      DetailStep.detailed || DetailStep.full => [
-        basic,
-        ...examples.where((example) => !_repeatsAnswer(example)),
-      ].join('\n'),
-    };
-  }
-
-  bool _repeatsAnswer(String example) {
-    final text = CardKey.fromFront(example).value;
-    final answer = CardKey.fromFront(this.answer).value;
-    return text.contains(answer) || answer.contains(text);
-  }
+  /// The answer as Review shows and saves it: the part of speech and a space
+  /// before [answer] when the page prints one.
+  String get back => switch (partOfSpeech) {
+    final partOfSpeech? => '$partOfSpeech $answer',
+    null => answer,
+  };
 }
 
 /// Sends a photo to `extract-cards` and returns the cards it found.
@@ -153,52 +118,26 @@ List<CandidateCard> _parseCards(String body) {
   throw const ServiceFailed('the success body holds no card list');
 }
 
-/// A card of non-empty `front` and `back`. With `kind`, as `extract-cards`
-/// answers since prompt v3: its `kind`, `answer`, `short` and `step`, and the
-/// optional `partOfSpeech` and `examples`. Without it, as a function deployed
-/// before answers: a vocabulary card at step 1, its answer its `meaning` or,
-/// before the fields, its `back`, which is also its short form.
+/// A card of non-empty `front` and `back`. Its answer is its `answer`, else
+/// its `meaning`, else, from a function deployed before the fields, its
+/// `back`; with the optional `partOfSpeech` and a `topic` of 1 to
+/// [maxTopicLength] characters. Other fields are not read.
 CandidateCard _parseCard(Object? card) {
   if (card
       case final Map<String, Object?> fields &&
           {'front': final String front, 'back': final String back}
       when front.trim().isNotEmpty && back.trim().isNotEmpty) {
-    final partOfSpeech = fields.containsKey('partOfSpeech')
-        ? _text(fields['partOfSpeech'])
-        : null;
-    final examples = switch (fields['examples']) {
-      null => const <String>[],
-      final List<Object?> list => [for (final item in list) _text(item)],
-      _ => throw const ServiceFailed('examples is not a list'),
-    };
-    if (!fields.containsKey('kind')) {
-      return CandidateCard(
-        front: front.trim(),
-        answer: fields.containsKey('meaning')
-            ? _text(fields['meaning'])
-            : back.trim(),
-        partOfSpeech: partOfSpeech,
-        examples: examples,
-      );
+    String? optional(String key) =>
+        fields.containsKey(key) ? _text(fields[key]) : null;
+    final topic = optional('topic');
+    if (topic != null && topic.runes.length > maxTopicLength) {
+      throw const ServiceFailed("a card's topic is too long");
     }
-    final kind = switch (fields['kind']) {
-      'vocabulary' => CandidateKind.vocabulary,
-      'note' => CandidateKind.note,
-      _ => throw const ServiceFailed('a card has an unknown kind'),
-    };
-    final step = switch (fields['step']) {
-      final int value when value >= 1 && value <= 5 =>
-        DetailStep.values[value - 1],
-      _ => throw const ServiceFailed('a card has no step from 1 to 5'),
-    };
     return CandidateCard(
-      kind: kind,
       front: front.trim(),
-      answer: _text(fields['answer']),
-      short: _text(fields['short']),
-      step: step,
-      partOfSpeech: partOfSpeech,
-      examples: examples,
+      answer: optional('answer') ?? optional('meaning') ?? back.trim(),
+      partOfSpeech: optional('partOfSpeech'),
+      topic: topic,
     );
   }
   throw const ServiceFailed('a card is not two non-empty sides');

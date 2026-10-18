@@ -29,7 +29,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
    - Account: a theme choice applies at once and is stored after.
-   - Photo import: a move of the detail step slider changes the cards offered and recomposes every answer at once, and is stored after.
+   - Photo import: a swipe removes or puts back a card at once, and a topic's switch drops or keeps its cards at once; nothing is written until the cards are added.
    - Account and photo review: `AppButton`'s loading state shows progress in the button the user pressed, and the button cannot be pressed twice.
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation sheet. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account.
    - Study: any answer of the session is corrected by a drag on the centred card, or its action, with no confirmation.
@@ -41,6 +41,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Every screen and sheet: the tokens below and the components that use them.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
    - Study: an answered card flies off and rises into the previous card's place while the next emerges from below; under reduce motion they cross-fade. A re-decided card springs back into place, at once under reduce motion.
+   - Photo review: a dragged card follows the finger and settles back; the coach's demonstration on the first card is not shown under reduce motion, nor is the coach.
    - Every sheet: `showAppSheet` slides it up with the platform's sheet motion, and shows it at once under reduce motion. Every `AppButton` shows pressed feedback, and a filled one gives a light haptic on iOS.
 8. **Plain-language states.** Empty, offline and error states say what happened and what to do next, in one or two short sentences, in the voice below.
    - First-run home and deck screen: an empty list says how to start, and a search with no match, on the 덱 tab or the deck screen, says to try other words.
@@ -127,14 +128,14 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   - a confirmation of an action that cannot be undone keeps an explicit cancel, and puts its destructive button last, at the bottom;
   - actions are always full width, with the primary one last.
 - **`showAppConfirm`** — every irreversible action: a sheet that states the consequence in one sentence, with a cancel and, last, a red final button. It is the one sheet with a cancel.
-- **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the option sheets' rows, the browse rows, the photo import source sheet and deck chooser, and the account screen's sign-out and deletion. A destructive row, the deletion, draws its title and leading icon in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the photo review rows, the skeleton rows and the account screen's theme control. On a sheet a row takes the ground colour.
-- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "이미 있는 카드 n개", "화면", "계정", the import sheet's duplicate options, and the answer in the whole-card sheet.
+- **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the option sheets' rows, the browse rows, the photo import source sheet and deck chooser, and the account screen's sign-out and deletion. A destructive row, the deletion, draws its title and leading icon in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the skeleton rows and the account screen's theme control. On a sheet a row takes the ground colour.
+- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "화면", "계정", the import sheet's duplicate options, and the answer in the whole-card sheet.
 - **`BottomActions`** — a screen's bottom bar: a secondary action, and a primary one beside it when the screen offers one: the deck screen and the card editor.
-- **`AppChip`** — a fully rounded label, or a button when it has an action: the brand-tint "오늘 n" chip, the "공개" chip, the photo review's deck chip, and the duplicate option chip.
+- **`AppChip`** — a fully rounded label, or a button when it has an action: the brand-tint "오늘 n" chip, the "공개" chip, the photo review's deck chip, and the import sheet's duplicate option chip.
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
 - **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (question 30 to 18, answer 20 to 15) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)); the previous card's sides, run together as one paragraph, are scaled the same way and then further, as far as the floor, until they fit their half's height, and cut there ([ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md)).
 
-Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Checkbox`, `Switch`, `Slider`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes. The slider, photo import's detail step, is an ink thumb and an ink track up to it, a muted track after it, and ticks at each step, with no side padding so its ends sit under the names of the end steps and no value bubble; the same test checks its thumb and both parts of its track at 3:1 on the ground and the surface in both themes.
+Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `SegmentedButton`, `Switch`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The switch, on the deck screen and on each topic of the photo review, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes.
 
 ### Checks
 

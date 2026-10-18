@@ -781,77 +781,125 @@ abstract class AppLocalizations {
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
 
-  /// Title of the review screen: how many candidate cards were found.
+  /// Title of the review screen: how many cards were made from the photo.
   ///
   /// In ko, this message translates to:
-  /// **'카드 {count}개를 찾았어요'**
-  String reviewTitle(int count);
+  /// **'카드 {count}장을 만들었어요'**
+  String reviewMade(int count);
 
-  /// Line under the review title.
+  /// Heading of a topic's section on the review screen, with its card count.
   ///
   /// In ko, this message translates to:
-  /// **'눌러서 고치고, 뺄 카드는 체크를 끄세요'**
-  String get reviewHint;
+  /// **'{topic} · {count}장'**
+  String reviewTopic(String topic, int count);
 
-  /// Label of the slider of how much of a photo becomes cards, on the review screen.
+  /// What a screen reader reads for a topic's switch, which keeps or drops all its cards.
   ///
   /// In ko, this message translates to:
-  /// **'카드에 담을 내용'**
-  String get detailStepLabel;
+  /// **'{topic} 주제 넣기, {count}장'**
+  String reviewTopicSwitch(String topic, int count);
 
-  /// Detail step 1: the page's core ideas, each answer in its short form.
+  /// What a screen reader reads for a kept card on the review screen.
   ///
   /// In ko, this message translates to:
-  /// **'핵심'**
-  String get detailStepCore;
+  /// **'{front}, {back}. 눌러서 고치고, 왼쪽으로 밀면 빼요'**
+  String reviewCard(String front, String back);
 
-  /// Detail step 2: the key points, each answer in full.
+  /// What a screen reader reads for a removed card on the review screen.
   ///
   /// In ko, this message translates to:
-  /// **'요점'**
-  String get detailStepKeyPoints;
+  /// **'{front}, {back}. 뺀 카드. 오른쪽으로 밀면 다시 넣어요'**
+  String reviewRemovedCard(String front, String back);
 
-  /// Detail step 3, the default: a vocabulary entry's part of speech before its answer.
+  /// Shown under a card dragged left, which removes it.
   ///
   /// In ko, this message translates to:
-  /// **'기본'**
-  String get detailStepBasic;
+  /// **'빼기'**
+  String get reviewRemove;
 
-  /// Detail step 4: step 3, then each example the page prints on its own line.
+  /// Shown under a card dragged right, and the edit view's button, which put a removed card back.
   ///
   /// In ko, this message translates to:
-  /// **'자세히'**
-  String get detailStepDetailed;
+  /// **'다시 넣기'**
+  String get reviewRestore;
 
-  /// Detail step 5: every detail of the page offered as cards.
+  /// Button of a card's edit view that removes the card.
   ///
   /// In ko, this message translates to:
-  /// **'세부'**
-  String get detailStepFull;
+  /// **'이 카드 빼기'**
+  String get reviewRemoveCard;
 
-  /// What a screen reader reads as the slider's value: the step's name and its number.
+  /// Button that closes a card's edit view, keeping what was typed.
   ///
   /// In ko, this message translates to:
-  /// **'{name}, 5단계 중 {step}단계'**
-  String detailStepValue(String name, int step);
+  /// **'완료'**
+  String get reviewDone;
 
-  /// Mark on a candidate whose answer the user edited, which a detail level switch leaves as typed.
+  /// Label of a card's front field in its edit view.
   ///
   /// In ko, this message translates to:
-  /// **'직접 고침'**
-  String get candidateEdited;
+  /// **'앞면'**
+  String get reviewFront;
 
-  /// Heading of the candidates whose card key matches a card in the deck.
+  /// Label of a card's back field in its edit view.
   ///
   /// In ko, this message translates to:
-  /// **'이미 있는 카드 {count}개'**
-  String reviewDuplicates(int count);
+  /// **'뒷면'**
+  String get reviewBack;
 
-  /// Semantic label of a candidate's checkbox.
+  /// Line under a card whose question the deck already holds, which starts removed.
   ///
   /// In ko, this message translates to:
-  /// **'포함'**
-  String get includeCard;
+  /// **'이미 덱에 있어요'**
+  String get reviewInDeck;
+
+  /// Primary button of the review screen, with how many cards it adds or merges.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱에 {count}장 추가'**
+  String reviewAdd(int count);
+
+  /// First step of the review screen's coach.
+  ///
+  /// In ko, this message translates to:
+  /// **'왼쪽으로 밀면 빼요'**
+  String get coachRemove;
+
+  /// Second step of the review screen's coach.
+  ///
+  /// In ko, this message translates to:
+  /// **'오른쪽으로 밀면 다시 넣어요'**
+  String get coachRestore;
+
+  /// Third step of the review screen's coach.
+  ///
+  /// In ko, this message translates to:
+  /// **'눌러서 바로 고쳐요'**
+  String get coachEdit;
+
+  /// What a screen reader reads for the coach: its step of how many.
+  ///
+  /// In ko, this message translates to:
+  /// **'사용 방법, {total}단계 중 {step}단계'**
+  String coachStep(int step, int total);
+
+  /// Button that ends the review screen's coach.
+  ///
+  /// In ko, this message translates to:
+  /// **'건너뛰기'**
+  String get coachSkip;
+
+  /// Button that moves the review screen's coach to its next step.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음'**
+  String get coachNext;
+
+  /// Button on the coach's last step, which ends it.
+  ///
+  /// In ko, this message translates to:
+  /// **'시작하기'**
+  String get coachStart;
 
   /// Duplicate option: write nothing for this candidate.
   ///
@@ -882,12 +930,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'다시 시도'**
   String get retry;
-
-  /// Primary button of the review screen, with how many cards it adds or merges.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드 {count}개 추가'**
-  String addCards(int count);
 
   /// Photo import failure: the server could not be reached.
   ///
