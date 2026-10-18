@@ -2,14 +2,8 @@
 /// reviews and saves into a deck.
 library;
 
-export 'src/detail_step.dart' show DetailStep, detailStepStorageKeys;
 export 'src/extraction_client.dart'
-    show
-        CandidateCard,
-        CandidateKind,
-        ExtractionClient,
-        extractCardsUrl,
-        HttpExtractionClient;
+    show CandidateCard, ExtractionClient, extractCardsUrl, HttpExtractionClient;
 export 'src/failure.dart'
     show
         CameraUnavailable,
@@ -24,6 +18,7 @@ export 'src/failure.dart'
         ServiceFailed,
         SignInRequired;
 export 'src/photo.dart' show JpegPhoto;
-export 'src/photo_import_screen.dart' show importFromPhoto;
+export 'src/photo_import_screen.dart'
+    show importFromPhoto, photoImportStorageKeys;
 export 'src/photo_source.dart' show DevicePhotoSource, PhotoSource;
 export 'src/providers.dart' show PhotoImport, photoImportProvider;

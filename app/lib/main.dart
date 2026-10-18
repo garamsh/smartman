@@ -29,7 +29,7 @@ Future<void> main() async {
   final package = await PackageInfo.fromPlatform();
   final preferences = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
-      allowList: {...themeStorageKeys, ...detailStepStorageKeys},
+      allowList: {...themeStorageKeys, ...photoImportStorageKeys},
     ),
   );
   runApp(

@@ -10,7 +10,6 @@ import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import 'candidates.dart';
-import 'detail_step.dart';
 import 'extracting_view.dart';
 import 'extraction_client.dart';
 import 'failure.dart';
@@ -20,6 +19,12 @@ import 'photo.dart';
 import 'photo_source.dart';
 import 'review_view.dart';
 
+/// The keys the storage given to photo import must be opened to cache.
+const photoImportStorageKeys = {_coachShownKey};
+
+/// Set once the review's coach has shown on this device.
+const _coachShownKey = 'photoReviewCoachShown';
+
 /// Every deck, kept current, for the target chip.
 final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
   (ref) => ref.watch(deckRepositoryProvider).watchDecks(),
@@ -28,8 +33,8 @@ final _decksProvider = StreamProvider.autoDispose<List<Deck>>(
 /// Offers the camera and the library over [context], and with the photo
 /// taken or picked opens the screen that extracts candidate cards from it and
 /// saves the ones the user keeps into [deck], or into a new deck when it is
-/// null, the rows offered and their answers composed at the detail step kept
-/// in [preferences], opened to cache [detailStepStorageKeys]. A cancel opens
+/// null. [preferences], opened to cache [photoImportStorageKeys], keeps
+/// whether the review's coach has shown on this device. A cancel opens
 /// nothing. Nothing is written before the user confirms; resolves to the
 /// [Deck] saved into, or to null.
 Future<Deck?> importFromPhoto(
@@ -133,7 +138,10 @@ final class _Failed extends _Stage {
 }
 
 final class _Reviewing extends _Stage {
-  const _Reviewing(this.review);
+  const _Reviewing(this.review, {required this.coach});
+
+  /// Whether Review opens with its coach.
+  final bool coach;
 
   final Review review;
 }
@@ -143,8 +151,6 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
 
   /// The deck the cards go into; null for a new deck.
   late DeckId? _target = widget.deck;
-
-  late DetailStep _step = readDetailStep(widget.preferences);
 
   bool _saving = false;
 
@@ -182,13 +188,13 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onRetake: _retake,
         onOpenSettings: failure is PhotoAccessDenied ? _openSettings : null,
       ),
-      _Reviewing(:final review) => ReviewView(
+      _Reviewing(:final review, :final coach) => ReviewView(
         review: review,
         decks: decks.value ?? const [],
         target: target,
         onTarget: (deck) => _chooseTarget(review, deck),
         saving: _saving,
-        onStep: _chooseStep,
+        coach: coach,
         onChanged: () => setState(() {}),
         onRetake: _retake,
         onSave: () => _save(review),
@@ -214,8 +220,16 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       );
       if (cards == null || !current()) return;
       final existing = await _keysOf(repository, target);
-      if (!current()) return;
-      setState(() => _stage = _Reviewing(Review(cards, existing, step: _step)));
+      if (!mounted || !identical(_stage, stage)) return;
+      // The coach shows once per device, so it is stored as shown when it
+      // first shows; under reduce motion it does not show.
+      final coach =
+          widget.preferences.getBool(_coachShownKey) != true &&
+          !MediaQuery.disableAnimationsOf(context);
+      if (coach) unawaited(widget.preferences.setBool(_coachShownKey, true));
+      setState(
+        () => _stage = _Reviewing(Review(cards, existing), coach: coach),
+      );
     } on PhotoImportFailure catch (failure) {
       if (current()) setState(() => _stage = _Failed(failure, stage.photo));
     } on DeckFailure catch (failure) {
@@ -245,15 +259,6 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
     } on DeckFailure catch (failure) {
       _showDeckFailure(failure);
     }
-  }
-
-  /// Applies [step] at once, to the review too, then stores it.
-  void _chooseStep(DetailStep step) {
-    setState(() {
-      _step = step;
-      if (_stage case _Reviewing(:final review)) review.step = step;
-    });
-    unawaited(storeDetailStep(widget.preferences, step));
   }
 
   void _cancel() {

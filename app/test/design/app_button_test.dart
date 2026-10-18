@@ -27,7 +27,10 @@ void main() {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: AppSpace.s8,
             children: [
-              for (final variant in AppButtonVariant.values)
+              // onHeroText is drawn on the hero surface, tested below.
+              for (final variant in AppButtonVariant.values.where(
+                (variant) => variant != AppButtonVariant.onHeroText,
+              ))
                 AppButton(
                   label: variant.name,
                   variant: variant,
@@ -70,6 +73,55 @@ void main() {
               .style
               .color,
           colors.dontKnowText,
+        );
+        await meetsGuidelines(tester);
+      },
+    );
+  }
+
+  for (final MapEntry(key: mode, value: colors) in themeModes.entries) {
+    testWidgets(
+      'in ${mode.name} the quiet action on the hero draws its colour there and meets the guidelines',
+      (tester) async {
+        await pumpComponent(
+          tester,
+          ColoredBox(
+            color: colors.hero,
+            child: AppButton(
+              label: 'skip',
+              variant: AppButtonVariant.onHeroText,
+              onPressed: () {},
+            ),
+          ),
+          themeMode: mode,
+        );
+
+        expect(
+          tester
+              .widget<DefaultTextStyle>(
+                find
+                    .ancestor(
+                      of: find.text('skip'),
+                      matching: find.byType(DefaultTextStyle),
+                    )
+                    .first,
+              )
+              .style
+              .color,
+          colors.onHero,
+        );
+        expect(
+          tester
+              .getSize(
+                find
+                    .ancestor(
+                      of: find.text('skip'),
+                      matching: find.byType(Material),
+                    )
+                    .first,
+              )
+              .height,
+          AppSize.tapTarget,
         );
         await meetsGuidelines(tester);
       },
