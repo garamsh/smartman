@@ -139,7 +139,7 @@ The web app in `web/`: its stack, the rules that keep it portable between Vercel
 
 ### Checks
 
-- `web.sh`, at the repository root, implements the `web/` part of `make lint`, `format`, `test` and `build`. Where `node` is missing it prints that it skipped; where the host's Node.js differs from `web/.nvmrc` it fails. It installs the locked packages when they are missing or older than the lock file.
+- `web.sh`, at the repository root, implements the `web/` part of `make lint`, `format`, `test` and `build`. Where `node` is missing it prints that it skipped; where the host's Node.js differs from `web/.nvmrc` it fails. It installs the locked packages when they are missing or older than the lock file. It builds the image quietly, and on a failure prints the build's whole log, so the failing step's own error, such as `next build`'s, reaches the output and CI's log (#229).
 - `make lint`: ESLint with typescript-eslint's type-checked strict rules, `tsc --noEmit`, the portability check and the Node.js release check.
 - `make format`: Prettier, over the files git tracks or would track.
 - `make test`: the Vitest suite (`web/src/**/__tests__/`), then, where Docker and buildx answer, the image built and run, its health and non-root uid asserted, and the Playwright specs in `web/e2e/` run against it; `web/e2e/study.spec.ts` skips there. Then `supabase/test-web.sh` runs that spec against a throwaway local stack (below).
