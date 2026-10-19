@@ -10,7 +10,11 @@ ImportedCard _card(
   String front,
   String back, [
   DuplicateChoice onDuplicate = DuplicateChoice.skip,
-]) => ImportedCard(front: front, back: back, onDuplicate: onDuplicate);
+]) => ImportedCard(
+  front: _text(front),
+  back: _text(back),
+  onDuplicate: onDuplicate,
+);
 
 void main() {
   late AppDatabase db;

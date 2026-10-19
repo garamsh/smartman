@@ -90,10 +90,7 @@ class _PublicDeckScreenState extends State<PublicDeckScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final card in data)
-                    CardSplitRow(
-                      front: describeContent(l10n, card.front),
-                      back: describeContent(l10n, card.back),
-                    ),
+                    CardSplitRow(front: card.front, back: card.back),
                   if (deck.cardCount > data.length)
                     Padding(
                       padding: const EdgeInsets.only(top: AppSpace.s8),

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { Card, CardId } from "@/features/decks";
 
 import type { Answer, AnswerWrite, SessionReview } from "./answer-write";
@@ -8,9 +10,16 @@ import { todayOf } from "./today-list";
 
 /**
  * A card of the session: `decks`' card with each side as the one line of text `decks` describes
- * it as, which the server adds, since a client module cannot import `decks`' entry point.
+ * it as and, for a table or cloze card, its [WholeFaces], which the server adds, since a client
+ * module cannot import `decks`' entry point.
  */
-export type StudyCard = Card & { text: { front: string; back: string } };
+export type StudyCard = Card & { text: { front: string; back: string }; whole?: WholeFaces };
+
+/**
+ * A table or cloze card as `decks` draws it whole: its front as a screen reader reads it with its
+ * blanks empty, and the front drawn with its blanks empty and filled (ADR 0068).
+ */
+export type WholeFaces = { question: string; empty: ReactNode; filled: ReactNode };
 
 /**
  * What a study page opens with, built on the server: the cards left in today's list, those the
