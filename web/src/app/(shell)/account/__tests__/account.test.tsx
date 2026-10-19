@@ -36,6 +36,11 @@ describe("the account page", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
     );
+    // The next step, and the theme choice, which needs no server.
+    expect(
+      within(screen.getByRole("alert")).getByRole("button", { name: "다시 시도" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "화면" })).toBeInTheDocument();
   });
 
   it("redirects to /login without a session", async () => {
