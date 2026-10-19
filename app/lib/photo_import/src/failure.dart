@@ -32,6 +32,14 @@ final class NoCardsFound extends PhotoImportFailure {
   String toString() => 'NoCardsFound';
 }
 
+/// An admin suspended the account, so it extracts nothing (`403`, `suspended`).
+final class AccountSuspendedFailure extends PhotoImportFailure {
+  const AccountSuspendedFailure();
+
+  @override
+  String toString() => 'AccountSuspendedFailure';
+}
+
 /// The user has made today's extractions (`429`): [dailyLimit] photos a day
 /// on the user's plan, or null from a function that does not state it.
 final class DailyLimitReached extends PhotoImportFailure {

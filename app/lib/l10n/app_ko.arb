@@ -308,6 +308,8 @@
   "@noCardsFound": {"description": "Photo import failure: the model found no card on the page."},
   "dailyLimitReached": "오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.",
   "@dailyLimitReached": {"description": "Photo import failure: the daily extraction limit was reached."},
+  "accountSuspended": "이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.",
+  "@accountSuspended": {"description": "Shown when a suspended account tries to sign in or make cards from a photo."},
   "dailyLimitReachedOf": "오늘 사진으로 만들 수 있는 {limit}장을 다 썼어요. 내일 다시 시도해 주세요.",
   "@dailyLimitReachedOf": {"description": "Photo import failure: the user's plan's daily extraction limit, which the server states, was reached.", "placeholders": {"limit": {"type": "int"}}},
   "modelFailed": "카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.",

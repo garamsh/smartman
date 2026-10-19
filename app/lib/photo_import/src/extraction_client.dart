@@ -146,12 +146,26 @@ List<CandidateCard> parseExtraction(int status, String body) =>
     switch (status) {
       200 => _parseCards(body),
       401 => throw const SignInRequired(),
+      403 when _errorCode(body) == 'suspended' =>
+        throw const AccountSuspendedFailure(),
       413 || 415 => throw PhotoRefused(status),
       422 => throw const NoCardsFound(),
       429 => throw DailyLimitReached(dailyLimit: _dailyLimit(body)),
       502 => throw const ModelFailed(),
       _ => throw ServiceFailed('HTTP $status'),
     };
+
+/// The `error` code a refusal's [body] names, or null when it names none.
+String? _errorCode(String body) {
+  try {
+    return switch (jsonDecode(body)) {
+      {'error': final String code} => code,
+      _ => null,
+    };
+  } on FormatException {
+    return null;
+  }
+}
 
 /// The daily limit a `429` [body] states, or null when it states none.
 int? _dailyLimit(String body) {

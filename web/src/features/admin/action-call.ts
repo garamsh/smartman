@@ -2,6 +2,7 @@ import "server-only";
 
 import { revalidatePath } from "next/cache";
 
+import { parseDeckId } from "@/features/decks";
 import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
 import { createClient } from "@/supabase/server";
 
@@ -30,8 +31,9 @@ export async function deckAction(
   message: (changed: boolean) => string,
 ): Promise<ActionResult> {
   // The argument crossed the network, whatever its declared type.
-  if (!isUuid(deckId)) return refused("malformed");
-  const result = await call(name, { deck_id: deckId, ...args });
+  const id = parseDeckId(deckId);
+  if (id === null) return refused("malformed");
+  const result = await call(name, { deck_id: id, ...args });
   if ("failure" in result) return refused(result.failure);
   if (typeof result.data !== "boolean") return refused("unreadable");
   if (result.data) revalidatePath("/admin", "layout");
@@ -55,7 +57,11 @@ export function refused(failure: keyof typeof failureMessages): ActionResult {
   return { changed: false, message: failureMessages[failure] };
 }
 
-/** Whether [value], which crossed the network, is an id in canonical uuid form. */
-export function isUuid(value: unknown): value is string {
-  return typeof value === "string" && uuid.test(value);
+/**
+ * [value], which crossed the network or an address, as a user's id: a uuid in canonical form, as
+ * `auth.users` keys users; null otherwise. A deck's or card's id goes through `parseDeckId` or
+ * `parseCardId` instead.
+ */
+export function parseUserId(value: unknown): string | null {
+  return typeof value === "string" && uuid.test(value) ? value : null;
 }

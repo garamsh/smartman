@@ -26,6 +26,8 @@ const cardsReply = (cards: unknown): Reply => ({
 type Fake = {
   replies: Reply[];
   allowed: boolean;
+  /** Whether the caller is suspended, as user_suspended answers. */
+  suspended: boolean;
   /** The row start_extraction answers for the caller's plan, or none when its settings are missing. */
   plan: { plan: string; model: string; daily_limit: number } | null;
   calls: { url: string; init: RequestInit | undefined }[];
@@ -48,6 +50,9 @@ function fakeFetch(fake: Fake): typeof fetch {
         );
       }
       return Promise.resolve(Response.json({ code: 403 }, { status: 403 }));
+    }
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/user_suspended`) {
+      return Promise.resolve(Response.json(fake.suspended));
     }
     if (url === `${SUPABASE_URL}/rest/v1/rpc/start_extraction`) {
       return Promise.resolve(
@@ -139,6 +144,7 @@ async function run(
     method?: string;
     replies?: Reply[];
     allowed?: boolean;
+    suspended?: boolean;
     plan?: Fake["plan"];
     env?: Record<string, string | undefined>;
   } = {},
@@ -146,6 +152,7 @@ async function run(
   const fake: Fake = {
     replies: options.replies ?? [],
     allowed: options.allowed ?? true,
+    suspended: options.suspended ?? false,
     plan: options.plan === undefined
       ? { plan: "free", model: "vendor/primary-model", daily_limit: 30 }
       : options.plan,
@@ -791,6 +798,31 @@ Deno.test("a user at the daily limit of its plan is refused with 429 stating tha
     headers.get("Authorization"),
     "Bearer service-role-key",
     "read and recorded with the service role",
+  );
+});
+
+Deno.test("a suspended user is refused with 403 before its plan, the count or a model call", async () => {
+  const r = await run({ suspended: true, replies: [cardsReply(twoCards)] });
+  assert.equal(r.status, 403);
+  assert.deepEqual(r.body, { error: "suspended" });
+  assert.equal(r.modelCalls.length, 0);
+  assert.equal(usageCalls(r).length, 0, "nothing is counted");
+  assert.equal(r.logs[0].outcome, "suspended");
+  const suspension = r.fake.calls.find((call) =>
+    call.url.endsWith("/rpc/user_suspended")
+  );
+  assert.deepEqual(JSON.parse(String(suspension?.init?.body)), {
+    user_id: USER_ID,
+  });
+
+  const active = await run({
+    suspended: false,
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(
+    active.status,
+    200,
+    "control: the same request from an active user",
   );
 });
 

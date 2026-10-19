@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { studyDayEnd, studyDayStart } from "@/features/study";
 
-import { call, failureMessages, isUuid } from "./action-call";
+import { call, failureMessages, parseUserId } from "./action-call";
 import { adminTimeZone } from "./read-admin";
 
 /** What a user's plan form shows after an attempt. */
@@ -18,10 +18,10 @@ export async function grantPlan(
   _previous: GrantPlanState,
   form: FormData,
 ): Promise<GrantPlanState> {
-  const userId = form.get("user");
+  const userId = parseUserId(form.get("user"));
   const plan = form.get("plan");
   const endsOn = form.get("ends_on");
-  if (!isUuid(userId) || (plan !== "pro" && plan !== "special")) {
+  if (userId === null || (plan !== "pro" && plan !== "special")) {
     return { message: failureMessages.malformed };
   }
   let endsAt: string | null = null;

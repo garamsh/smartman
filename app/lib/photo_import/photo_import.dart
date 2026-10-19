@@ -13,6 +13,7 @@ export 'src/extraction_client.dart'
         HttpExtractionClient;
 export 'src/failure.dart'
     show
+        AccountSuspendedFailure,
         CameraUnavailable,
         DailyLimitReached,
         ExtractionOffline,

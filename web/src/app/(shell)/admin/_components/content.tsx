@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
 
+import { parseDeckId } from "@/features/decks";
+
 import {
   AdminFailureMessage,
   AdminList,
   adminTimeZone,
   AuditLog,
   DeckView,
-  findUsers,
   GrantAdminForm,
   OverviewView,
+  parseUserId,
   PlansView,
   PublicDecks,
   readAdmins,
@@ -19,13 +21,12 @@ import {
   readPublicDecks,
   readReportedDecks,
   readUser,
+  searchUsers,
   ReportedDecks,
   UserSearch,
   UserView,
   usdPerPhoto,
 } from "@/features/admin";
-
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** The text of a search parameter, or "" when it is absent or repeated. */
 function searchText(value: string | string[] | undefined): string {
@@ -92,11 +93,12 @@ export async function PublicDecksContent({
 
 export async function DeckContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!uuid.test(id)) notFound();
-  const read = await readDeck(id);
+  const deckId = parseDeckId(id);
+  if (deckId === null) notFound();
+  const [read, timeZone] = await Promise.all([readDeck(deckId), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
-  return <DeckView deck={read.data} />;
+  return <DeckView deck={read.data} timeZone={timeZone} />;
 }
 
 export async function UsersContent({
@@ -106,23 +108,25 @@ export async function UsersContent({
 }) {
   const query = searchText((await searchParams).q);
   const timeZone = await adminTimeZone();
-  if (query === "") return <UserSearch query="" matches={null} timeZone={timeZone} />;
-  const read = await findUsers(query);
-  if ("failure" in read) {
-    return (
-      <>
-        <UserSearch query={query} matches={null} timeZone={timeZone} />
-        <AdminFailureMessage failure={read.failure} />
-      </>
-    );
-  }
-  return <UserSearch query={query} matches={read.data} timeZone={timeZone} />;
+  // An address with a query opens on its first page, read on the server.
+  const read = query === "" ? null : await searchUsers(query, 0);
+  return (
+    <>
+      <UserSearch
+        initialQuery={query}
+        initialPage={read === null || "failure" in read ? null : read.data}
+        timeZone={timeZone}
+      />
+      {read !== null && "failure" in read && <AdminFailureMessage failure={read.failure} />}
+    </>
+  );
 }
 
 export async function UserContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!uuid.test(id)) notFound();
-  const [read, timeZone] = await Promise.all([readUser(id), adminTimeZone()]);
+  const userId = parseUserId(id);
+  if (userId === null) notFound();
+  const [read, timeZone] = await Promise.all([readUser(userId), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
   return <UserView user={read.data} timeZone={timeZone} />;

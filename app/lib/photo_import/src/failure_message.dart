@@ -9,6 +9,7 @@ String describePhotoImportFailure(
   ExtractionOffline() => l10n.extractionOffline,
   PhotoRefused() => l10n.photoRefused,
   NoCardsFound() => l10n.noCardsFound,
+  AccountSuspendedFailure() => l10n.accountSuspended,
   DailyLimitReached(:final dailyLimit) =>
     dailyLimit == null
         ? l10n.dailyLimitReached
@@ -27,6 +28,7 @@ bool isRetryable(PhotoImportFailure failure) => switch (failure) {
   PhotoRefused() ||
   NoCardsFound() ||
   DailyLimitReached() ||
+  AccountSuspendedFailure() ||
   SignInRequired() ||
   PhotoUnreadable() ||
   PhotoAccessDenied() ||
@@ -35,7 +37,7 @@ bool isRetryable(PhotoImportFailure failure) => switch (failure) {
 
 /// Whether a new photo can succeed where this one failed.
 bool isRetakeable(PhotoImportFailure failure) => switch (failure) {
-  DailyLimitReached() || SignInRequired() => false,
+  DailyLimitReached() || SignInRequired() || AccountSuspendedFailure() => false,
   ExtractionOffline() ||
   ModelFailed() ||
   ServiceFailed() ||

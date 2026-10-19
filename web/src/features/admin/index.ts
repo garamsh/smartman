@@ -1,3 +1,4 @@
+export { parseUserId } from "./action-call";
 export { AdminFailureMessage } from "./components/admin-failure";
 export { AdminList } from "./components/admin-list";
 export { AdminNav } from "./components/admin-nav";
@@ -15,7 +16,6 @@ export {
   type AdminFailure,
   type AdminRead,
   adminTimeZone,
-  findUsers,
   readAdmins,
   readAuditLog,
   readDeck,
@@ -25,4 +25,6 @@ export {
   readPublicDecks,
   readReportedDecks,
   readUser,
+  searchUsers,
+  userPageSize,
 } from "./read-admin";

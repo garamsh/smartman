@@ -446,6 +446,8 @@ void main() {
       (429, 'rate_limited'): isA<DailyLimitReached>(),
       (502, 'model_error'): isA<ModelFailed>(),
       (503, 'not_configured'): isA<ServiceFailed>(),
+      (403, 'suspended'): isA<AccountSuspendedFailure>(),
+      (403, 'forbidden'): isA<ServiceFailed>(),
       (400, 'bad_request'): isA<ServiceFailed>(),
       (500, 'internal'): isA<ServiceFailed>(),
     };
