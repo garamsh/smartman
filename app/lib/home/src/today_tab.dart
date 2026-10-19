@@ -294,6 +294,8 @@ class _TodayCard extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             if (streak > 0) _StreakChip(days: streak, onHero: true),
+            if (overview.extra > 0)
+              _ExtraPill(count: overview.extra, onHero: true),
             Text(
               keepWords(switch (TodayStatus.of(goal, streak: streak)) {
                 StatusStreak(:final days) => l10n.statusStreak(days),
@@ -507,6 +509,29 @@ class _StreakChip extends StatelessWidget {
   );
 }
 
+/// "오늘 n장 더 했어요" after a plus: the cards studied past the day's plan,
+/// which its goal never counts.
+class _ExtraPill extends StatelessWidget {
+  const _ExtraPill({required this.count, required this.onHero});
+
+  final int count;
+  final bool onHero;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return _Pill(
+      onHero: onHero,
+      icon: Icon(
+        LucideIcons.plus,
+        size: AppSpace.s16,
+        color: onHero ? colors.onHero : colors.ink,
+      ),
+      label: AppLocalizations.of(context).todayExtra(count),
+    );
+  }
+}
+
 /// A small rounded label after an icon: on the navy card an outline in its
 /// faint white, on the done card the surface.
 class _Pill extends StatelessWidget {
@@ -617,6 +642,8 @@ class _DoneCard extends StatelessWidget {
                     ),
                     label: l10n.goalReached(overview.goal.goal),
                   ),
+                if (overview.extra > 0)
+                  _ExtraPill(count: overview.extra, onHero: false),
               ],
             ),
           ],

@@ -369,6 +369,13 @@ function Session({ plan }: { plan: SessionPlan }) {
               <span aria-hidden className="text-secondary font-bold text-ink tabular-nums">
                 {view.done}/{view.total}
               </span>
+              {/* Cards past the day's plan are counted apart, so the day's bar never shrinks. */}
+              {view.extra > 0 && (
+                <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-micro font-bold whitespace-nowrap text-ink">
+                  <span aria-hidden>추가 {view.extra}장</span>
+                  <span className="sr-only">오늘 계획 밖으로 {view.extra}장 더 공부함</span>
+                </span>
+              )}
             </>
           )}
         </div>

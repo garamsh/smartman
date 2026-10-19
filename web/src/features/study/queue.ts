@@ -74,6 +74,11 @@ export type StudyDay = {
   end: number;
   /** How many new cards the day still takes: its new cards less those first answered in it. */
   newCardsLeft: number;
+  /**
+   * The cards first answered in the day past its new cards: studied on past the day's plan, they
+   * are counted apart from it, never in its goal (ADR 0087).
+   */
+  extra: ReadonlySet<CardId>;
 };
 
 const formats = new Map<string, Intl.DateTimeFormat>();
@@ -136,19 +141,28 @@ export function studyDayEnd(start: number, timeZone: string): number {
 
 /**
  * The study day holding [now] in [timeZone], which takes [newCards] new cards, and in which the
- * user first answered a card at each of [firstAnswers], across every deck.
+ * user first answered each card of [firstAnswers] at its time, across every deck, in the order
+ * given. The day's new cards are those first answered in it in the order answered, up to
+ * [newCards]; any first answered after them is `extra` (ADR 0087).
  */
 export function studyDay(
   now: number,
-  firstAnswers: Iterable<number>,
+  firstAnswers: Iterable<{ cardId: CardId; at: number }>,
   timeZone: string,
   newCards: number,
 ): StudyDay {
   const start = studyDayStart(now, timeZone);
   const end = studyDayEnd(start, timeZone);
-  let taken = 0;
-  for (const answer of firstAnswers) if (answer >= start && answer < end) taken += 1;
-  return { start, end, newCardsLeft: Math.max(0, newCards - taken) };
+  // A stable sort, so answers at the same instant keep the order they were given in.
+  const taken = [...firstAnswers]
+    .filter(({ at }) => at >= start && at < end)
+    .sort((a, b) => a.at - b.at);
+  return {
+    start,
+    end,
+    newCardsLeft: Math.max(0, newCards - taken.length),
+    extra: new Set(taken.slice(newCards).map(({ cardId }) => cardId)),
+  };
 }
 
 /**

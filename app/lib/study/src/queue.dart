@@ -105,26 +105,38 @@ final class StudyDay {
     required this.start,
     required this.end,
     required this.newCardsLeft,
+    required this.extra,
   });
 
   /// The study day holding [now], which takes [newCards] new cards, and in
-  /// which the user first answered a card at each of [firstAnswers], across
-  /// every deck.
+  /// which the user first answered each card of [firstAnswers] at its time,
+  /// across every deck, in the order given. The day's new cards are those
+  /// first answered in it in the order answered, up to [newCards]; any first
+  /// answered after them is [extra] (ADR 0087).
   factory StudyDay.at(
     DateTime now, {
-    required Iterable<DateTime> firstAnswers,
+    required Map<CardId, DateTime> firstAnswers,
     required int newCards,
     UtcOffsetAt offsetAt = localOffsetAt,
   }) {
     final start = studyDayStart(now, offsetAt);
     final end = studyDayEnd(start, offsetAt);
-    final taken = firstAnswers
-        .where((answer) => !answer.isBefore(start) && answer.isBefore(end))
-        .length;
+    final taken =
+        [
+          for (final (index, MapEntry(key: card, value: at))
+              in firstAnswers.entries.indexed)
+            if (!at.isBefore(start) && at.isBefore(end))
+              (card: card, at: at, index: index),
+        ]..sort((a, b) {
+          // Answers at the same instant keep the order they were given in.
+          final byTime = a.at.compareTo(b.at);
+          return byTime != 0 ? byTime : a.index.compareTo(b.index);
+        });
     return StudyDay(
       start: start,
       end: end,
-      newCardsLeft: max(0, newCards - taken),
+      newCardsLeft: max(0, newCards - taken.length),
+      extra: {for (final first in taken.skip(newCards)) first.card},
     );
   }
 
@@ -136,6 +148,10 @@ final class StudyDay {
   /// How many new cards the day still takes: its new cards less the cards
   /// first answered in it, never below zero.
   final int newCardsLeft;
+
+  /// The cards first answered in the day past its new cards: studied on past
+  /// the day's plan, they are counted apart from it, never in its goal.
+  final Set<CardId> extra;
 
   /// Whether a card due at [due] is due by the end of this day.
   bool holds(DateTime due) => due.isBefore(end);

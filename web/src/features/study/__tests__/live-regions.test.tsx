@@ -28,6 +28,7 @@ function plan(resumed: boolean): SessionPlan {
     resumed,
     earlier: null,
     more: [],
+    extra: [],
     before: {},
     pace: unknownPace,
     today: {

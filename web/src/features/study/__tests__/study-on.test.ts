@@ -19,13 +19,15 @@ const card = (front: string): StudyCard => ({
 
 /**
  * A session over today's new cards [today] and the new cards past them [more], with [stored]
- * answers given today before it opened.
+ * answers given today before it opened, "stored0" first, those named in [extra] past the day's
+ * plan and answered "모른다".
  */
 function session(
   today: string[],
   more: string[],
   stored = 0,
   earlier: SessionPlan["earlier"] = null,
+  extra: string[] = [],
 ): StudySession {
   const plan: SessionPlan = {
     startedAt: start,
@@ -35,12 +37,15 @@ function session(
     resumed: false,
     earlier,
     more: more.map(card),
+    extra: extra as CardId[],
     before: {},
     pace: unknownPace,
     today: {
       answers: Array.from({ length: stored }, (_, index) => ({
         cardId: `stored${String(index)}` as CardId,
-        answer: "know" as const,
+        answer: extra.includes(`stored${String(index)}`)
+          ? ("dontKnow" as const)
+          : ("know" as const),
         reviewedAt: start - 1000,
         durationMs: 0,
       })),
@@ -66,7 +71,7 @@ function current(study: StudySession): string {
 beforeAll(loadEngine);
 
 describe("studying past today's cards", () => {
-  it("goes on from the completion card with the new cards past today's, oldest first, each answer written and counted", () => {
+  it("goes on from the completion card with the new cards past today's, oldest first, each answer written and counted apart from the day's", () => {
     const study = session(["a", "b"], ["c", "d"]);
     study.answer("know");
     study.answer("know");
@@ -78,7 +83,14 @@ describe("studying past today's cards", () => {
     expect(study.answer("know")?.cardId).toBe("c");
     expect(current(study)).toBe("d");
     expect(study.answer("know")?.cardId).toBe("d");
-    expect(study.view()).toMatchObject({ kind: "complete", more: false, done: 4, total: 4 });
+    // The day's count stays at its plan; the two past it are counted apart.
+    expect(study.view()).toMatchObject({
+      kind: "complete",
+      more: false,
+      done: 2,
+      total: 2,
+      extra: 2,
+    });
   });
 
   it("shows a card answered past today's again only as the re-show after 모른다", () => {
@@ -104,13 +116,21 @@ describe("studying past today's cards", () => {
     expect(study.view()).toMatchObject({
       kind: "studying",
       earlier,
-      // The day's count goes on from the card answered "안다" today.
+      // The day's count stays at the card answered "안다" today.
       done: 1,
-      total: 3,
+      total: 1,
+      extra: 0,
     });
     expect(current(study)).toBe("b");
     study.answer("know");
-    expect(study.view()).toMatchObject({ kind: "studying", earlier: null });
+    expect(study.view()).toMatchObject({ kind: "studying", earlier: null, extra: 1 });
+  });
+
+  it("leaves a card answered past the day's plan before it opened out of the day's count, its 모른다 included", () => {
+    const study = session([], [], 2, null, ["stored1"]);
+    expect(study.view()).toMatchObject({ kind: "complete", done: 1, total: 1, extra: 1 });
+    // Control: with neither past the plan, both count in the day's.
+    expect(session([], [], 2).view()).toMatchObject({ done: 2, total: 2, extra: 0 });
   });
 
   it("with no card left to take opens on the completion card when today holds an answer, and on nothing to study otherwise", () => {
@@ -134,6 +154,7 @@ describe("today's list in the session", () => {
       resumed: true,
       earlier: null,
       more: [],
+      extra: [],
       before: {},
       pace: unknownPace,
       today: {

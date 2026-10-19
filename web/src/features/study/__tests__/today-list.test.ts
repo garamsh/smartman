@@ -5,13 +5,17 @@ import type { CardId } from "@/features/decks";
 import { loadEngine } from "../engine";
 import { dailyGoal } from "../overview";
 import { studyDay } from "../queue";
-import { countDay, dayPlanOf, todayOf } from "../today-list";
+import { countDay, dayPlanOf, leftOf, todayOf } from "../today-list";
 
 beforeAll(loadEngine);
 
 const hour = 3_600_000;
 /** 2026-10-18 04:00 UTC to 2026-10-19 04:00 UTC. */
-const day = { start: Date.UTC(2026, 9, 18, 4), end: Date.UTC(2026, 9, 19, 4) };
+const day = {
+  start: Date.UTC(2026, 9, 18, 4),
+  end: Date.UTC(2026, 9, 19, 4),
+  extra: new Set<CardId>(),
+};
 const id = (name: string) => name as CardId;
 const state = (due: number) => ({ stability: 1, difficulty: 5, lastReview: day.start, due });
 
@@ -87,6 +91,34 @@ describe("today's list, through the engine's WebAssembly", () => {
     );
     return { cards: [...reviewed, card("new0"), card("new1")], states };
   }
+
+  it("keeps the cards studied past the day's plan out of it: neither left nor done, whatever their answer", () => {
+    const card = (name: string) => ({ id: id(name), createdAt: day.start - 86_400_000 });
+    const cards = ["failed", "passed"].map(card);
+    // Each first answered today; "모른다" makes "failed" due again within the day.
+    const states = {
+      [id("failed")]: state(day.start + 2 * hour),
+      [id("passed")]: state(day.end + hour),
+    };
+    const answers = [
+      { cardId: id("failed"), answer: "dontKnow" as const, reviewedAt: day.start + hour },
+      { cardId: id("passed"), answer: "know" as const, reviewedAt: day.start + hour },
+    ];
+    const past = dayPlanOf(
+      cards,
+      states,
+      { ...day, newCardsLeft: 0, extra: new Set([id("failed"), id("passed")]) },
+      answers,
+    );
+    expect(leftOf(past)).toBe(0);
+    expect(past.done.size).toBe(0);
+    expect([...past.extra].sort()).toEqual([id("failed"), id("passed")]);
+    // Control: as the day's own cards, the one answered "모른다" is left and the other done.
+    const own = dayPlanOf(cards, states, { ...day, newCardsLeft: 0 }, answers);
+    expect(leftOf(own)).toBe(1);
+    expect([...own.done]).toEqual([id("passed")]);
+    expect(own.extra.size).toBe(0);
+  });
 
   it("counts a backlog's due cards as reviews and no new card, and below it takes the new cards", () => {
     const over = reviewedDay(10);

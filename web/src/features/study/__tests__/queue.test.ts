@@ -28,6 +28,9 @@ const today = studyDay(now, [], "UTC", quota);
 type TestCard = { id: CardId; createdAt: number };
 
 const card = (id: string): TestCard => ({ id: id as CardId, createdAt: now });
+/** First answers to distinct cards at each of [times], in order. */
+const firsts = (times: readonly number[]) =>
+  times.map((at, index) => ({ cardId: `first${String(index)}` as CardId, at }));
 const ids = (cards: readonly TestCard[]) => cards.map((each) => each.id as string);
 
 /** A state due at [due] after an interval of [days] days. */
@@ -169,7 +172,7 @@ describe("the study day", () => {
       Date.UTC(2026, 9, 15),
       Date.UTC(2026, 9, 14, 18, 59),
     ];
-    const day = studyDay(at, firstAnswers, seoul, quota);
+    const day = studyDay(at, firsts(firstAnswers), seoul, quota);
     const cards = Array.from({ length: 30 }, (_, index) => card(`new${String(index)}`));
 
     expect(day.newCardsLeft).toBe(18);
@@ -182,37 +185,45 @@ describe("the study day", () => {
     // 11:00 in Seoul, 19:00 the day before in Los Angeles.
     const at = Date.UTC(2026, 9, 15, 2);
 
-    expect(studyDay(at, answered, seoul, quota).newCardsLeft).toBe(20);
-    expect(studyDay(at, answered, losAngeles, quota).newCardsLeft).toBe(19);
+    expect(studyDay(at, firsts(answered), seoul, quota).newCardsLeft).toBe(20);
+    expect(studyDay(at, firsts(answered), losAngeles, quota).newCardsLeft).toBe(19);
   });
 
   it("carries no unused quota to the next day, and does not count the day before's new cards", () => {
     const yesterday = Array.from({ length: 5 }, () => now - day);
     const cards = Array.from({ length: 50 }, (_, index) => card(`new${String(index)}`));
-    const next = studyDay(now, yesterday, "UTC", quota);
+    const next = studyDay(now, firsts(yesterday), "UTC", quota);
 
     expect(next.newCardsLeft).toBe(20);
     expect(selectQueue(cards, {}, next).cards).toHaveLength(20);
   });
 
+  it("counts the cards first answered past the day's new cards, in the order answered, as extra", () => {
+    const morning = Date.UTC(2026, 0, 15, 5);
+    const answered = firsts(Array.from({ length: 25 }, (_, index) => morning + index * 1000));
+    // Given out of order, the five answered last are the extras.
+    const over = studyDay(now, [...answered].reverse(), "UTC", quota);
+    expect([...over.extra].sort()).toEqual(
+      answered
+        .slice(quota)
+        .map(({ cardId }) => cardId)
+        .sort(),
+    );
+    // Answers at the same instant keep the order given.
+    const same = studyDay(now, firsts(Array.from({ length: 22 }, () => morning)), "UTC", quota);
+    expect([...same.extra]).toEqual(["first20", "first21"]);
+    // Control: within the day's new cards, none is extra.
+    expect(studyDay(now, answered.slice(0, quota), "UTC", quota).extra.size).toBe(0);
+  });
+
   it("never leaves fewer than zero cards once more than 20 new cards were answered", () => {
     const morning = Date.UTC(2026, 0, 15, 5);
-    const over = studyDay(
-      now,
-      Array.from({ length: 25 }, () => morning),
-      "UTC",
-      quota,
-    );
+    const over = studyDay(now, firsts(Array.from({ length: 25 }, () => morning)), "UTC", quota);
 
     expect(over.newCardsLeft).toBe(0);
     expect(selectQueue([card("new")], {}, over).cards).toEqual([]);
     // Control: with 19 answered, one new card is left.
-    const fewer = studyDay(
-      now,
-      Array.from({ length: 19 }, () => morning),
-      "UTC",
-      quota,
-    );
+    const fewer = studyDay(now, firsts(Array.from({ length: 19 }, () => morning)), "UTC", quota);
     expect(ids(selectQueue([card("new")], {}, fewer).cards)).toEqual(["new"]);
   });
 

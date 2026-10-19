@@ -73,7 +73,7 @@ void main() {
     test('today is the load, and each later day counts the cards due within it, from 04:00 to 04:00', () {
       final day = StudyDay.at(
         _now,
-        firstAnswers: const [],
+        firstAnswers: const {},
         newCards: _quota,
         offsetAt: _utc,
       );
@@ -107,7 +107,7 @@ void main() {
       final now = DateTime.utc(2026, 10, 30, 18); // 11:00 on the 30th.
       final day = StudyDay.at(
         now,
-        firstAnswers: const [],
+        firstAnswers: const {},
         newCards: _quota,
         offsetAt: pacific,
       );
@@ -132,7 +132,7 @@ void main() {
   group('daily goal', () {
     final day = StudyDay.at(
       _now,
-      firstAnswers: const [],
+      firstAnswers: const {},
       newCards: _quota,
       offsetAt: _utc,
     );
@@ -192,7 +192,7 @@ void main() {
             : const Duration(hours: -8);
         final november = StudyDay.at(
           DateTime.utc(2026, 11, 1, 20),
-          firstAnswers: const [],
+          firstAnswers: const {},
           newCards: _quota,
           offsetAt: pacific,
         );

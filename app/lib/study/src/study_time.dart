@@ -184,10 +184,10 @@ readStudyDay(
     if (!firstToday.containsKey(card) && state.due.isBefore(end)) due++;
   }
   final pace = paceOf(days);
-  final firstAnswers = [
+  final firstAnswers = {
     for (final MapEntry(key: card, value: at) in firstToday.entries)
-      if (!earlier.containsKey(card)) at,
-  ];
+      if (!earlier.containsKey(card)) card: at,
+  };
   final minutes = await repository.dailyMinutes() ?? defaultDailyMinutes;
   final day = StudyDay.at(
     now,

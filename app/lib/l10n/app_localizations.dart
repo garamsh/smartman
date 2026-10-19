@@ -2418,6 +2418,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'공부'**
   String get settingsStudy;
+
+  /// The study top bar's count of the cards studied past the day's plan, beside the day's count.
+  ///
+  /// In ko, this message translates to:
+  /// **'추가 {count}장'**
+  String studyExtra(int count);
+
+  /// What a screen reader reads for the top bar's count of cards past the day's plan.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 계획 밖으로 {count}장 더 공부함'**
+  String studyExtraSemantics(int count);
+
+  /// On the 오늘 tab: how many cards were studied past the day's plan, never in its goal.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 {count}장 더 했어요'**
+  String todayExtra(int count);
 }
 
 class _AppLocalizationsDelegate

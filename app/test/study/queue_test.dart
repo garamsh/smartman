@@ -28,7 +28,7 @@ Duration _utc(DateTime _) => Duration.zero;
 /// The study day holding [_now] in UTC, with no new card answered in it.
 final _today = StudyDay.at(
   _now,
-  firstAnswers: const [],
+  firstAnswers: const {},
   newCards: _quota,
   offsetAt: _utc,
 );
@@ -487,7 +487,7 @@ void main() {
         // 02:00 PST on 1 November, still in the day of 31 October.
         final day = StudyDay.at(
           DateTime.utc(2026, 11, 1, 10),
-          firstAnswers: const [],
+          firstAnswers: const {},
           newCards: _quota,
           offsetAt: pacific,
         );
@@ -552,7 +552,9 @@ void main() {
       // The day itself counts only its own first answers, whatever it is given.
       final given = StudyDay.at(
         _now,
-        firstAnswers: List.filled(5, yesterday),
+        firstAnswers: {
+          for (var index = 0; index < 5; index++) CardId('y$index'): yesterday,
+        },
         newCards: _quota,
         offsetAt: _utc,
       );
@@ -573,7 +575,9 @@ void main() {
       // Control: with 19 answered, one new card is left.
       final fewer = StudyDay.at(
         _now,
-        firstAnswers: List.filled(19, morning),
+        firstAnswers: {
+          for (var index = 0; index < 19; index++) CardId('m$index'): morning,
+        },
         newCards: _quota,
         offsetAt: _utc,
       );

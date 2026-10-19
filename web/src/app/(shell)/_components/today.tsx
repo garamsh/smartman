@@ -1,4 +1,4 @@
-import { Flame, Play } from "lucide-react";
+import { Flame, Play, Plus } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -141,6 +141,12 @@ export async function Today() {
                     ? "밀린 복습을 마칠 때까지 새 카드는 쉬어요."
                     : statusLine(todayStatus(goal, streak))}
               </span>
+              {plan.extra.size > 0 && (
+                <span className="flex items-center gap-1 rounded-full border border-on-hero/40 px-2.5 py-1 font-bold">
+                  <Plus aria-hidden className="size-4" strokeWidth={2} />
+                  오늘 {plan.extra.size}장 더 했어요
+                </span>
+              )}
             </p>
             <DailyMinutes
               minutes={dailyMinutes}
