@@ -450,9 +450,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noCardsFound => '카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요.';
 
   @override
-  String get dailyLimitReached => '오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.';
-
-  @override
   String get accountSuspended => '이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.';
 
   @override
@@ -1056,9 +1053,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String importSection(String topic, int count) {
     return '$topic $count';
   }
-
-  @override
-  String get importTopicNone => '이 페이지';
 
   @override
   String importIdentifySection(String topic) {
