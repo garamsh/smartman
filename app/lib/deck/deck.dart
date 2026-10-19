@@ -14,6 +14,7 @@ export 'src/add_cards.dart'
         AddTarget,
         mergeBack;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
+export 'src/card_kind.dart' show deckStorageKeys, deckStorageProvider;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart'
     show CardBackRow, CardSplitRow, describeContent, spokenContent;

@@ -59,9 +59,9 @@ function shortcut(
 ): "help" | "leave" | "know" | "dontKnow" | "toggleLast" | null {
   if (event.key === "?") return "help";
   if (event.key === "Escape") return "leave";
-  // Letters by their physical key, so they work whatever the keyboard's input language.
-  if (event.key === "ArrowRight" || event.code === "KeyK") return studying ? "know" : null;
-  if (event.key === "ArrowLeft" || event.code === "KeyJ") return studying ? "dontKnow" : null;
+  if (event.key === "ArrowRight") return studying ? "know" : null;
+  if (event.key === "ArrowLeft") return studying ? "dontKnow" : null;
+  // A letter by its physical key, so it works whatever the keyboard's input language.
   if (event.code === "KeyZ") return answered ? "toggleLast" : null;
   return null;
 }
@@ -540,11 +540,11 @@ function AnswerButtons({
         onClick={() => {
           onAnswer("dontKnow");
         }}
-        aria-keyshortcuts="ArrowLeft J"
+        aria-keyshortcuts="ArrowLeft"
         className={`${answerButton} bg-tint-red text-on-dont-know-tint`}
       >
         <ChevronLeft aria-hidden className="size-small-icon" strokeWidth={2.4} />
-        모른다 <Hint>← J</Hint>
+        모른다 <Hint>←</Hint>
       </button>
       <button
         type="button"
@@ -558,10 +558,10 @@ function AnswerButtons({
         onClick={() => {
           onAnswer("know");
         }}
-        aria-keyshortcuts="ArrowRight K"
+        aria-keyshortcuts="ArrowRight"
         className={`${answerButton} bg-tint-green text-on-know-tint`}
       >
-        안다 <Hint>→ K</Hint>
+        안다 <Hint>→</Hint>
         <ChevronRight aria-hidden className="size-small-icon" strokeWidth={2.4} />
       </button>
     </div>

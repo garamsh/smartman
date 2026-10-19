@@ -194,7 +194,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "03-study-front");
   const second = first === "chat" ? "chien" : "chat";
   await untilReacted(
-    () => page.keyboard.press("k"),
+    () => page.keyboard.press("ArrowRight"),
     async () => (await front.textContent()) === second,
   );
   await expect(
@@ -219,7 +219,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(page.getByRole("complementary", { name: "이번 학습" })).toBeHidden();
   await shot(page, "05c-study-phone-width");
   if (desktop) await page.setViewportSize(desktop);
-  await page.keyboard.press("k");
+  await page.keyboard.press("ArrowRight");
   // No card is left today: the completion card takes the current card's place, below the stack.
   const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
   await expect(completion).toBeVisible();
@@ -779,7 +779,7 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
     await expect(page.getByRole("group", { name: "앞면", exact: true })).toHaveText("lundi");
     const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
     await untilReacted(
-      () => page.keyboard.press("k"),
+      () => page.keyboard.press("ArrowRight"),
       async () => (await completion.count()) > 0,
     );
     await expect(completion.getByText("연속 3일", { exact: true })).toBeVisible();

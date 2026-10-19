@@ -125,7 +125,7 @@ describe("the study screen", () => {
     vi.setSystemTime(start + 3_602_000);
     set("visible");
     vi.setSystemTime(start + 3_605_000);
-    await userEvent.setup().keyboard("k");
+    await userEvent.setup().keyboard("{ArrowRight}");
 
     await waitFor(() => {
       expect(postgrest.rows.reviews).toHaveLength(1);

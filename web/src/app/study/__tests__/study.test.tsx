@@ -130,12 +130,12 @@ describe("the study page", () => {
 
     it("orders the cards by the session's seeded random source", async () => {
       await openFresh();
-      const first = await answerAll("k", fronts.length);
+      const first = await answerAll("{ArrowRight}", fronts.length);
       await openFresh();
-      const again = await answerAll("k", fronts.length);
+      const again = await answerAll("{ArrowRight}", fronts.length);
       // Control: a session started at another time draws another order.
       await openFresh(start + 1);
-      const other = await answerAll("k", fronts.length);
+      const other = await answerAll("{ArrowRight}", fronts.length);
 
       expect([...first].sort()).toEqual([...fronts].sort());
       expect(again).toEqual(first);
@@ -146,8 +146,8 @@ describe("the study page", () => {
       const gaps: number[] = [];
       for (const at of [start, start]) {
         await openFresh(at);
-        const [missed] = await answerAll("j", 1);
-        const shown = await answerAll("k", fronts.length);
+        const [missed] = await answerAll("{ArrowLeft}", 1);
+        const shown = await answerAll("{ArrowRight}", fronts.length);
         gaps.push(missed === undefined ? -1 : shown.indexOf(missed));
       }
 
@@ -167,7 +167,7 @@ describe("the study page", () => {
       );
 
       await open("d1");
-      const shown = await answerAll("k", 21);
+      const shown = await answerAll("{ArrowRight}", 21);
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toHaveAttribute(
         "aria-valuemax",
@@ -185,7 +185,7 @@ describe("the study page", () => {
       const first = currentFront();
       const release = postgrest.hold("reviews");
 
-      await userEvent.setup().keyboard("k");
+      await userEvent.setup().keyboard("{ArrowRight}");
 
       expect(currentFront()).not.toBe(first);
       expect(stack()).toHaveLength(1);
@@ -203,8 +203,8 @@ describe("the study page", () => {
       const user = userEvent.setup();
       const stop = postgrest.fail("reviews", 500);
 
-      await user.keyboard("k");
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
+      await user.keyboard("{ArrowRight}");
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "응답을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
@@ -264,9 +264,9 @@ describe("the study page", () => {
       expect(screen.getByText("1/3")).toBeInTheDocument();
       const user = userEvent.setup();
       const fronts = [currentFront()];
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
       fronts.push(currentFront());
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
       expect(fronts.sort()).toEqual(["deux", "un"]);
       expect(screen.getByText("3/3")).toBeInTheDocument();
     });
@@ -307,10 +307,10 @@ describe("the study page", () => {
       const user = userEvent.setup();
       // un and deux, new, and trois, answered 모른다 this morning, which today's list keeps until
       // it is answered 안다.
-      await user.keyboard("k");
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
+      await user.keyboard("{ArrowRight}");
       expect(screen.getByRole("group", { name: "앞면" })).toBeInTheDocument();
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
 
       expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
       const completion = screen.getByRole("region", { name: "오늘 학습 완료" });
@@ -339,7 +339,7 @@ describe("the study page", () => {
         reviewRow("r-4", "d1-0", start - 4 * day, 1_000),
       );
       await open("d1");
-      await userEvent.setup().keyboard("k");
+      await userEvent.setup().keyboard("{ArrowRight}");
 
       expect(completionLine()).toMatch(/연속 3일$/);
       expect(
@@ -354,7 +354,7 @@ describe("the study page", () => {
       const fronts = past(coldStartNewCards + 2);
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
-      await answerAll("k", coldStartNewCards);
+      await answerAll("{ArrowRight}", coldStartNewCards);
       await waitFor(() => {
         expect(postgrest.rows.reviews).toHaveLength(coldStartNewCards);
       });
@@ -363,7 +363,7 @@ describe("the study page", () => {
       const progress = screen.getByRole("progressbar", { name: "진행" });
 
       await userEvent.setup().click(studyOn);
-      expect(await answerAll("k", 2)).toEqual(fronts.slice(coldStartNewCards));
+      expect(await answerAll("{ArrowRight}", 2)).toEqual(fronts.slice(coldStartNewCards));
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toBe(progress);
       expect(progress.getAttribute("aria-valuetext")).toBe(
@@ -412,7 +412,7 @@ describe("the study page", () => {
     async function answerThree() {
       const user = userEvent.setup();
       const answered: string[] = [];
-      for (const key of ["k", "j", "k"]) {
+      for (const key of ["{ArrowRight}", "{ArrowLeft}", "{ArrowRight}"]) {
         answered.push(currentFront());
         await user.keyboard(key);
       }
@@ -614,8 +614,14 @@ describe("the study page", () => {
       const user = userEvent.setup();
 
       for (const [key, answer, fill, line, chip] of [
-        ["k", "안다", "bg-know-card", "border-know-line", "bg-know"],
-        ["j", "모른다", "bg-dont-know-card", "border-dont-know-line", "bg-dont-know-text"],
+        ["{ArrowRight}", "안다", "bg-know-card", "border-know-line", "bg-know"],
+        [
+          "{ArrowLeft}",
+          "모른다",
+          "bg-dont-know-card",
+          "border-dont-know-line",
+          "bg-dont-know-text",
+        ],
       ] as const) {
         const front = currentFront();
         await user.keyboard(key);
@@ -641,11 +647,11 @@ describe("the study page", () => {
       expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
       expect(screen.getByRole("status")).toBeEmptyDOMElement();
       const user = userEvent.setup();
-      await user.keyboard("j");
+      await user.keyboard("{ArrowLeft}");
       expect(placeholder()).not.toBeInTheDocument();
       expect(shown()).toHaveLength(1);
       // A "모른다" puts its card back; the outline does not return.
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
       expect(placeholder()).not.toBeInTheDocument();
     });
 
@@ -678,7 +684,7 @@ describe("the study page", () => {
       // No card of the day's is left, so nothing goes on to say.
       expect(screen.getByRole("status")).toBeEmptyDOMElement();
 
-      await userEvent.setup().keyboard("k");
+      await userEvent.setup().keyboard("{ArrowRight}");
       expect(currentFront()).toBe(fronts[coldStartNewCards + 1]);
       expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
     });
@@ -715,15 +721,13 @@ describe("the study page", () => {
       expect(card).not.toHaveTextContent(`${front} back`);
       expect(currentFront()).toBe(front);
       // Control: the answer shows once answered, on the previous card.
-      await userEvent.setup().keyboard("k");
+      await userEvent.setup().keyboard("{ArrowRight}");
       expect(stack()).toEqual([`앞면: ${front}. 뒷면: ${front} back. 응답: 안다`]);
     });
 
     it.each([
       ["→", "{ArrowRight}", "안다"],
-      ["K", "k", "안다"],
       ["←", "{ArrowLeft}", "모른다"],
-      ["J", "j", "모른다"],
     ])("answers with %s", async (_name, key, answer) => {
       const front = currentFront();
 
@@ -733,10 +737,23 @@ describe("the study page", () => {
       expect(currentFront()).not.toBe(front);
     });
 
+    it("answers nothing with J or K, while → does", async () => {
+      const user = userEvent.setup();
+      const front = currentFront();
+
+      await user.keyboard("jkJK");
+
+      expect(shown()).toEqual([]);
+      expect(currentFront()).toBe(front);
+      // Control: the arrow key answers the same card.
+      await user.keyboard("{ArrowRight}");
+      expect(stack()).toEqual([`앞면: ${front}. 뒷면: ${front} back. 응답: 안다`]);
+    });
+
     it("toggles the last answer on Z or 마지막 응답 바꾸기, shown at every width", async () => {
       const user = userEvent.setup();
-      await user.keyboard("k");
-      await user.keyboard("j");
+      await user.keyboard("{ArrowRight}");
+      await user.keyboard("{ArrowLeft}");
 
       await user.keyboard("z");
 
@@ -756,7 +773,7 @@ describe("the study page", () => {
         event.preventDefault();
         followed();
       });
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
 
       await user.keyboard("{Escape}");
 
@@ -770,16 +787,29 @@ describe("the study page", () => {
       await user.keyboard("?");
 
       const help = screen.getByRole("dialog", { name: "단축키" });
-      for (const action of ["안다", "모른다", "마지막 응답 바꾸기", "그만하기", "단축키 보기"]) {
-        expect(within(help).getByText(action)).toBeInTheDocument();
-      }
+      const listed = within(help)
+        .getAllByRole("definition")
+        .map((action) => [
+          action.textContent,
+          Array.from(
+            action.previousElementSibling?.querySelectorAll("kbd") ?? [],
+            (key) => key.textContent,
+          ),
+        ]);
+      expect(listed).toEqual([
+        ["안다", ["→"]],
+        ["모른다", ["←"]],
+        ["마지막 응답 바꾸기", ["Z"]],
+        ["그만하기", ["Esc"]],
+        ["단축키 보기", ["?"]],
+      ]);
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByRole("group", { name: "앞면" })).toBeInTheDocument();
     });
 
     it("mirrors each shortcut with a visible control", async () => {
-      await userEvent.setup().keyboard("k");
+      await userEvent.setup().keyboard("{ArrowRight}");
 
       const controls = Object.fromEntries(
         ["안다", "모른다", "마지막 응답 바꾸기", "그만하기", "단축키"].map((name) => [
@@ -791,8 +821,8 @@ describe("the study page", () => {
       );
 
       expect(controls).toEqual({
-        안다: "ArrowRight K",
-        모른다: "ArrowLeft J",
+        안다: "ArrowRight",
+        모른다: "ArrowLeft",
         "마지막 응답 바꾸기": "Z",
         그만하기: "Escape",
         단축키: "?",
@@ -896,7 +926,7 @@ describe("the study page", () => {
       expect(answerButton("안다")).toBeInTheDocument();
 
       // An answer by its key, with the coach skipped, gives a previous card.
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
       expect(shown()).toHaveLength(1);
 
       await user.click(screen.getByRole("button", { name: "안내 다시 보기" }));
@@ -906,7 +936,7 @@ describe("the study page", () => {
       expect(shown()).toEqual([expect.stringMatching(/응답: 모른다\. 수정됨$/)]);
       expect(announced()).toContain("3단계 중 1단계");
       // An answer by its key ends it.
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
       expect(caption()).not.toBeInTheDocument();
     });
 
@@ -979,7 +1009,7 @@ describe("the study page", () => {
     await user.keyboard("{Escape}");
 
     // The first answer takes its place.
-    await user.keyboard("k");
+    await user.keyboard("{ArrowRight}");
     expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
     expect(shown()).toEqual([expect.stringMatching(/^앞면: trois\. /)]);
   });
@@ -1010,7 +1040,7 @@ describe("the study page", () => {
     });
     await open("d1");
     const user = userEvent.setup();
-    await user.keyboard("k");
+    await user.keyboard("{ArrowRight}");
 
     const card = within(cards()).getByRole("article");
     const drawn = [
@@ -1070,7 +1100,7 @@ describe("the study page", () => {
       expect(screen.getByText("0/1")).toBeInTheDocument();
 
       const user = userEvent.setup();
-      await user.keyboard("k");
+      await user.keyboard("{ArrowRight}");
 
       expect(screen.getByText("1/1")).toBeInTheDocument();
       expect(shown()).toEqual([
@@ -1095,7 +1125,7 @@ describe("the study page", () => {
       }
       expect(blanksUnder(current)).toEqual({ Paris: false, Berlin: false });
 
-      await userEvent.setup().keyboard("k");
+      await userEvent.setup().keyboard("{ArrowRight}");
 
       expect(screen.getByText("1/1")).toBeInTheDocument();
       expect(blanksUnder(within(cards()).getByRole("article"))).toEqual({

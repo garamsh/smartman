@@ -80,7 +80,98 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sensesEditNote =>
-      'Editing the back saves labels such as [명] as plain text.';
+      'Editing the front saves labels such as [명] as plain text.';
+
+  @override
+  String get cardKindBasic => 'Basic';
+
+  @override
+  String get cardKindWord => 'Word';
+
+  @override
+  String get cardKindLabel => 'Card kind';
+
+  @override
+  String senseHeading(int number) {
+    return 'Meaning $number';
+  }
+
+  @override
+  String get senseMeaning => 'Meaning';
+
+  @override
+  String get senseExamples => 'Examples';
+
+  @override
+  String get senseExamplesHint => 'One per line, or leave it empty';
+
+  @override
+  String get senseMeaningRequired => 'Enter the meaning';
+
+  @override
+  String get addSense => 'Add meaning';
+
+  @override
+  String moveSenseUp(int number) {
+    return 'Move meaning $number up';
+  }
+
+  @override
+  String moveSenseDown(int number) {
+    return 'Move meaning $number down';
+  }
+
+  @override
+  String deleteSense(int number) {
+    return 'Delete meaning $number';
+  }
+
+  @override
+  String get addLabel => 'Add label';
+
+  @override
+  String removeLabel(String label) {
+    return 'Remove label [$label]';
+  }
+
+  @override
+  String get labelSheetBody => 'Pick a part of speech or type another label.';
+
+  @override
+  String get otherLabel => 'Other label';
+
+  @override
+  String get otherLabelHint => 'e.g. object';
+
+  @override
+  String get addOtherLabel => 'Add this label';
+
+  @override
+  String partOfSpeechChoice(String short, String name) {
+    return '[$short] $name';
+  }
+
+  @override
+  String partOfSpeechName(String category) {
+    String _temp0 = intl.Intl.selectLogic(category, {
+      'noun': 'noun',
+      'verb': 'verb',
+      'adjective': 'adjective',
+      'adverb': 'adverb',
+      'pronoun': 'pronoun',
+      'preposition': 'preposition',
+      'conjunction': 'conjunction',
+      'interjection': 'interjection',
+      'determiner': 'determiner',
+      'numeral': 'numeral',
+      'particle': 'particle',
+      'auxiliary': 'auxiliary',
+      'classifier': 'classifier',
+      'phrase': 'phrase',
+      'other': '',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get duplicateTitle => 'This deck already has this card';

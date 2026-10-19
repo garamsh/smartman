@@ -77,7 +77,98 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCardReadOnly => '표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
 
   @override
-  String get sensesEditNote => '뒷면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
+  String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
+
+  @override
+  String get cardKindBasic => '기본';
+
+  @override
+  String get cardKindWord => '단어';
+
+  @override
+  String get cardKindLabel => '카드 종류';
+
+  @override
+  String senseHeading(int number) {
+    return '뜻 $number';
+  }
+
+  @override
+  String get senseMeaning => '뜻';
+
+  @override
+  String get senseExamples => '예문';
+
+  @override
+  String get senseExamplesHint => '한 줄에 하나씩, 없으면 비워 두세요';
+
+  @override
+  String get senseMeaningRequired => '뜻을 적어 주세요';
+
+  @override
+  String get addSense => '뜻 추가';
+
+  @override
+  String moveSenseUp(int number) {
+    return '$number번째 뜻을 위로';
+  }
+
+  @override
+  String moveSenseDown(int number) {
+    return '$number번째 뜻을 아래로';
+  }
+
+  @override
+  String deleteSense(int number) {
+    return '$number번째 뜻 지우기';
+  }
+
+  @override
+  String get addLabel => '표시 추가';
+
+  @override
+  String removeLabel(String label) {
+    return '[$label] 표시 지우기';
+  }
+
+  @override
+  String get labelSheetBody => '품사를 고르거나 다른 표시를 적어요.';
+
+  @override
+  String get otherLabel => '다른 표시';
+
+  @override
+  String get otherLabelHint => '예: 사물';
+
+  @override
+  String get addOtherLabel => '이 표시 추가';
+
+  @override
+  String partOfSpeechChoice(String short, String name) {
+    return '[$short] $name';
+  }
+
+  @override
+  String partOfSpeechName(String category) {
+    String _temp0 = intl.Intl.selectLogic(category, {
+      'noun': '명사',
+      'verb': '동사',
+      'adjective': '형용사',
+      'adverb': '부사',
+      'pronoun': '대명사',
+      'preposition': '전치사',
+      'conjunction': '접속사',
+      'interjection': '감탄사',
+      'determiner': '관사',
+      'numeral': '수사',
+      'particle': '조사',
+      'auxiliary': '조동사',
+      'classifier': '양사',
+      'phrase': '구',
+      'other': '',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get duplicateTitle => '이 덱에 이미 있는 카드예요';
