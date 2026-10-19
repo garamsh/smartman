@@ -15,9 +15,20 @@ export 'src/card_import.dart'
         mergeBack;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
 export 'src/card_key.dart' show CardKey;
-export 'src/card_list.dart' show CardAnswerRow, CardSplitRow, describeContent;
+export 'src/card_list.dart'
+    show CardAnswerRow, CardSplitRow, describeContent, spokenContent;
 export 'src/content.dart'
-    show Content, TextContent, UnsupportedContent, decodeContent, plainText;
+    show
+        ClozeContent,
+        Content,
+        TableBlank,
+        TableContent,
+        TextContent,
+        UnsupportedContent,
+        clozeBlank,
+        decodeContent,
+        isWholeCard,
+        plainText;
 export 'src/content_view.dart' show ContentView;
 export 'src/deck_repository.dart'
     show CardSaved, DeckRepository, DuplicateFront, SaveCardResult;
@@ -46,3 +57,4 @@ export 'src/providers.dart'
         deckRepositoryProvider,
         decksProvider;
 export 'src/split_card.dart' show SideBuilder, SplitCard;
+export 'src/whole_card_view.dart' show WholeCardView;

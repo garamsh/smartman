@@ -316,10 +316,10 @@ function Session({ plan }: { plan: SessionPlan }) {
     view.kind === "studying" ? (
       demo ? (
         <CoachDemo answer={demo}>
-          <CurrentCard front={view.current.front} />
+          <CurrentCard card={view.current} />
         </CoachDemo>
       ) : (
-        <CurrentCard front={view.current.front} />
+        <CurrentCard card={view.current} />
       )
     ) : view.kind === "complete" ? (
       <CompletionCard completion={view.completion} onStudyOn={view.more ? studyOn : null} />
@@ -497,8 +497,11 @@ function Session({ plan }: { plan: SessionPlan }) {
   );
 }
 
-/** The card under study: its question alone, centred; its answer shows once answered, above. */
-function CurrentCard({ front }: { front: PreviousAnswer["card"]["front"] }) {
+/**
+ * The card under study: its question alone, centred, or a whole card's front with its blanks
+ * empty; its answer shows once answered, above.
+ */
+function CurrentCard({ card }: { card: PreviousAnswer["card"] }) {
   return (
     <section
       aria-label="현재 카드"
@@ -509,7 +512,11 @@ function CurrentCard({ front }: { front: PreviousAnswer["card"]["front"] }) {
         role="group"
         className="flex flex-1 items-center justify-center p-6 text-center"
       >
-        <CardSide blocks={front} size="question" />
+        {card.whole ? (
+          <div className="w-full text-question">{card.whole.empty}</div>
+        ) : (
+          <CardSide blocks={card.front} size="question" />
+        )}
       </div>
     </section>
   );

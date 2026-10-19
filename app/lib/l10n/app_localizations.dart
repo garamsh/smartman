@@ -194,6 +194,24 @@ abstract class AppLocalizations {
   /// **'내용을 입력하세요'**
   String get cardSideRequired;
 
+  /// How a screen reader reads an empty blank of a table or cloze card.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸'**
+  String get blank;
+
+  /// Title of the sheet that shows a table or cloze card whole, its blanks filled.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드'**
+  String get wholeCard;
+
+  /// In the card editor under a table or cloze card, which it shows read-only.
+  ///
+  /// In ko, this message translates to:
+  /// **'표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
+  String get wholeCardReadOnly;
+
   /// Title of the sheet shown when a card's front duplicates another in the deck.
   ///
   /// In ko, this message translates to:

@@ -8,7 +8,6 @@ import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'card_list.dart';
 import 'card_preview.dart';
 import 'content.dart';
 import 'deck_repository.dart';
@@ -17,7 +16,8 @@ import 'model.dart';
 import 'providers.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
-/// of the card as the study screen shows it.
+/// of the card as the study screen shows it. A table or cloze card is shown
+/// read-only, with a note, as it cannot be edited yet (ADR 0068).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -137,6 +137,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final card = widget.card;
+    // A table or cloze card cannot be edited yet, so it is shown read-only.
+    final readOnly = card != null && isWholeCard(card.front);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -163,42 +165,52 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpace.gutter),
-        children: [
-          CardPreview(
-            front: describeContent(
-              l10n,
-              _replaceText(card?.front ?? const [], _front.text),
+      body: readOnly
+          ? ListView(
+              padding: const EdgeInsets.all(AppSpace.gutter),
+              children: [
+                CardPreview(front: card.front, back: card.back),
+                const SizedBox(height: AppSpace.s24),
+                Text(
+                  l10n.wholeCardReadOnly,
+                  style: AppType.secondary.copyWith(
+                    color: AppColors.of(context).muted,
+                  ),
+                ),
+              ],
+            )
+          : ListView(
+              padding: const EdgeInsets.all(AppSpace.gutter),
+              children: [
+                CardPreview(
+                  front: _replaceText(card?.front ?? const [], _front.text),
+                  back: _replaceText(card?.back ?? const [], _back.text),
+                ),
+                const SizedBox(height: AppSpace.s24),
+                AppTextField(
+                  label: l10n.cardFront,
+                  controller: _front,
+                  focusNode: _frontFocus,
+                  autofocus: _isNew,
+                  minLines: 2,
+                  maxLines: null,
+                  errorText: _requiredError(l10n, _front),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: AppSpace.s16),
+                AppTextField(
+                  label: l10n.cardBack,
+                  controller: _back,
+                  minLines: 2,
+                  maxLines: null,
+                  errorText: _requiredError(l10n, _back),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
             ),
-            back: describeContent(
-              l10n,
-              _replaceText(card?.back ?? const [], _back.text),
-            ),
-          ),
-          const SizedBox(height: AppSpace.s24),
-          AppTextField(
-            label: l10n.cardFront,
-            controller: _front,
-            focusNode: _frontFocus,
-            autofocus: _isNew,
-            minLines: 2,
-            maxLines: null,
-            errorText: _requiredError(l10n, _front),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: AppSpace.s16),
-          AppTextField(
-            label: l10n.cardBack,
-            controller: _back,
-            minLines: 2,
-            maxLines: null,
-            errorText: _requiredError(l10n, _back),
-            onChanged: (_) => setState(() {}),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _isNew
+      bottomNavigationBar: readOnly
+          ? null
+          : _isNew
           ? BottomActions(
               secondary: AppButton(
                 label: l10n.save,
@@ -237,10 +249,7 @@ class _DuplicateSheet extends StatelessWidget {
     return AppSheet(
       title: l10n.duplicateTitle,
       body: l10n.duplicateBody,
-      content: CardPreview(
-        front: describeContent(l10n, existing.front),
-        back: describeContent(l10n, existing.back),
-      ),
+      content: CardPreview(front: existing.front, back: existing.back),
       actions: [
         AppButton(
           label: l10n.openExistingCard,

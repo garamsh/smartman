@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 /// [minFontSize] until its widest word fits [width], so lines break only
 /// between words. Only a word wider than [width] at [minFontSize] breaks
 /// inside itself. With [maxLines] the text is cut to that many lines with an
-/// ellipsis.
+/// ellipsis. With [span], that is drawn in place of [text] at the size [text]
+/// fits: a whole card's sentence with its blanks.
 ///
 /// [width] is the width the text is laid out in; the caller passes it, since
 /// a card measures its halves' intrinsic heights, which a layout builder here
@@ -19,9 +20,11 @@ class CardText extends StatelessWidget {
     required this.minFontSize,
     required this.width,
     this.maxLines,
+    this.span,
   });
 
   final String text;
+  final InlineSpan? span;
   final TextStyle style;
   final double minFontSize;
   final double width;
@@ -37,13 +40,24 @@ class CardText extends StatelessWidget {
       textScaler: MediaQuery.textScalerOf(context),
       textDirection: Directionality.of(context),
     );
-    return Text(
-      text,
-      style: style.copyWith(fontSize: size),
-      textAlign: TextAlign.center,
-      maxLines: maxLines,
-      overflow: maxLines == null ? null : TextOverflow.ellipsis,
-    );
+    final fitted = style.copyWith(fontSize: size);
+    final overflow = maxLines == null ? null : TextOverflow.ellipsis;
+    final span = this.span;
+    return span == null
+        ? Text(
+            text,
+            style: fitted,
+            textAlign: TextAlign.center,
+            maxLines: maxLines,
+            overflow: overflow,
+          )
+        : Text.rich(
+            span,
+            style: fitted,
+            textAlign: TextAlign.center,
+            maxLines: maxLines,
+            overflow: overflow,
+          );
   }
 }
 

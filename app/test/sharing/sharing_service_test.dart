@@ -192,6 +192,36 @@ void main() {
       },
     );
 
+    test("keeps a table card's blocks as the source stores them, beside a text "
+        'card', () async {
+      const front = [
+        TextContent('Capitals'),
+        TableContent(
+          columns: ['Capital', 'Country'],
+          rows: [
+            ['Paris', 'France'],
+          ],
+          blanks: [(row: 0, column: 0)],
+        ),
+      ];
+      server.cards = {
+        source.id: [
+          const PublicCard(
+            front: front,
+            back: [TextContent('Capital | Country\nParis | France')],
+          ),
+          publicCard('perro', 'dog'),
+        ],
+      };
+
+      final imported = await sharing.copy(source, const CopyIntoNewDeck());
+
+      final [table, text] = await decks.listCards(imported.deck.id);
+      expect(table.front, front);
+      // Control: a text card is copied as its text.
+      expect(text.front, [const TextContent('perro')]);
+    });
+
     Future<Deck> mine() async {
       final deck = await decks.createDeck('Mine');
       await decks.addCard(
