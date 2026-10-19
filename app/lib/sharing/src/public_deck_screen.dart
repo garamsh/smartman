@@ -7,7 +7,7 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
-import 'import_sheet.dart';
+import 'copy_sheet.dart';
 import 'model.dart';
 import 'sharing_service.dart';
 
@@ -72,7 +72,7 @@ class _PublicDeckScreenState extends State<PublicDeckScreen> {
             l10n.publicDeckLine(
               deck.ownerName.value,
               deck.cardCount,
-              deck.importCount,
+              deck.copyCount,
             ),
             style: AppType.secondary.copyWith(color: colors.muted),
           ),
@@ -136,18 +136,18 @@ class _PublicDeckScreenState extends State<PublicDeckScreen> {
             AppSpace.s16,
           ),
           child: AppButton(
-            label: l10n.importToMyDecks,
+            label: l10n.copyToMyDecks,
             size: AppButtonSize.cta,
-            onPressed: _import,
+            onPressed: _copy,
           ),
         ),
       ),
     );
   }
 
-  Future<void> _import() async {
+  Future<void> _copy() async {
     final messenger = ScaffoldMessenger.of(context);
-    final message = await showImportSheet(
+    final message = await showCopySheet(
       context,
       sharing: widget.sharing,
       deck: widget.deck,

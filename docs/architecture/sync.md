@@ -21,14 +21,15 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 - Schema v4 gives `decks`, `cards`, `reviews` and `card_states` the columns `updated_at`, `deleted_at` (a tombstone, which schema v7 drops from `reviews` and `card_states`) and `dirty` (not yet pushed). `dirty` defaults to set, so every local insert is unsynced; the v3 to v4 migration leaves every existing row unsynced, and dates a review's `updated_at` by its `reviewed_at` and a card state's by its `last_review`.
 - `sync_state` holds at most one row: the owning account's id, and per table the pull cursor, the highest server `revision` applied. No row means no account owns the database.
-- Schema v5 adds `visibility`, `published_at` and `description` to `decks` and `origin_deck_id` to `cards`, and lets `source` be `shared`. The v4 to v5 migration leaves every deck private and rebuilds `cards` for its check, keeping every row ([`sharing.md`](sharing.md)).
+- Schema v5 adds `visibility`, `published_at` and `description` to `decks` and `origin_deck_id` to `cards`, and lets `source` take a copied card's value, `shared` until schema v8. The v4 to v5 migration leaves every deck private and rebuilds `cards` for its check, keeping every row ([`sharing.md`](sharing.md)).
 - Schema v6 stores every `DateTime` column as ISO-8601 text in UTC (drift's `store_date_time_values_as_text`, in `app/build.yaml`). Every column writes through `StoredTime` (`app/lib/database/database.dart`), which converts to UTC and truncates to the millisecond, so every value has one length and one zone, its text order is its time order, and its precision is the web's ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §2).
   - The v5 to v6 migration rebuilds `decks`, `cards`, `reviews` and `card_states` with `TableMigration`, converting each time column from Unix seconds. It keeps every row and its `dirty` flag, with foreign keys off, as the earlier rebuilds did.
   - Its migration test starts from v5 rows that are unsynced and tombstoned, and reads them back unchanged, times included.
 - Schema v7 drops `deleted_at` from `reviews` and `card_states`, which nothing wrote, so only decks and cards have tombstones ([ADR 0077](adr/0077-drop-the-review-and-card-state-tombstones-that-nothing-writes.md)).
   - The v6 to v7 migration drops the partial index `reviews_live_reviewed_at`, whose term names the column, then rebuilds both tables with `TableMigration`, keeping every row and its `dirty` flag, and creates `reviews_reviewed_at`.
   - Its migration test starts from v6 reviews and a card state, unsynced and synced, reads them back unchanged, and finds the index on `reviewed_at` whole.
-- Schema v7 indexes:
+- Schema v8 renames a copied card's `source` from `shared` to `copy` ([ADR 0082](adr/0082-name-copying-a-public-deck-copy-and-keep-import-for-photo-import.md)). The v7 to v8 migration rebuilds `cards` for its check with each such row remapped, keeping every row, its origin and its `dirty` flag; the server remaps its own rows. Its migration test reads a copied, a photo and a typed card back, the copied one as `copy`.
+- Schema v7 indexes, which v8 keeps:
   - `cards_deck_id_created_at` on `(deck_id, created_at)`;
   - `cards_deck_id_card_key`, partial where `deleted_at IS NULL` since v6;
   - `reviews_card_id_reviewed_at` on `(card_id, reviewed_at)`, which also covers the cascade from `cards`;

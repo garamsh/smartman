@@ -582,7 +582,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckNoLongerPublic => 'This deck is no longer public.';
 
   @override
-  String get importToMyDecks => 'Add to my decks';
+  String get copyToMyDecks => 'Add to my decks';
 
   @override
   String previewFirstCards(int shown, int total) {
@@ -633,24 +633,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get importAsNewDeck => 'As a new deck';
+  String get copyAsNewDeck => 'As a new deck';
 
   @override
-  String get importIntoExistingDeck => 'Into a deck';
+  String get copyIntoExistingDeck => 'Into a deck';
 
   @override
-  String importNewDeckHint(String name) {
+  String copyNewDeckHint(String name) {
     return 'Creates the deck \"$name\" with every card.';
   }
 
   @override
-  String get importTargetDeck => 'Deck';
+  String get copyTargetDeck => 'Deck';
 
   @override
-  String get importDuplicates => 'Cards already in the deck';
+  String get copyDuplicates => 'Cards already in the deck';
 
   @override
-  String get importConfirm => 'Add';
+  String get copyConfirm => 'Add';
 
   @override
   String copiedCards(String deck, int count) {

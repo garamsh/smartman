@@ -1,5 +1,5 @@
--- The owner writes a deck's publishing columns but never hidden or import_count, which only the
--- server sets; a copied card carries source 'shared' and its origin; a display name is 2 to 20
+-- The owner writes a deck's publishing columns but never hidden or copy_count, which only the
+-- server sets; a copied card carries source 'copy' and its origin; a display name is 2 to 20
 -- characters.
 begin;
 select plan(12);
@@ -22,8 +22,8 @@ select throws_ok(
   $$update public.decks set hidden = false where id = 'd0000000-0000-4000-8000-00000000000a'$$,
   '42501', null, 'the owner cannot update hidden');
 select throws_ok(
-  $$update public.decks set import_count = 100 where id = 'd0000000-0000-4000-8000-00000000000a'$$,
-  '42501', null, 'the owner cannot update import_count');
+  $$update public.decks set copy_count = 100 where id = 'd0000000-0000-4000-8000-00000000000a'$$,
+  '42501', null, 'the owner cannot update copy_count');
 -- Control: the same owner updates the writable columns of the same deck.
 select lives_ok(
   $$update public.decks set visibility = 'private', published_at = null, description = null,
@@ -38,8 +38,8 @@ select throws_ok(
 
 select lives_ok(
   $$insert into public.cards (id, deck_id, front, back, card_key, source, origin_deck_id, created_at, updated_at)
-    values ('c0000000-0000-4000-8000-00000000000a', 'd0000000-0000-4000-8000-00000000000a', '[]', '[]', 'a', 'shared', 'd0000000-0000-4000-8000-000000000012', now(), now())$$,
-  'a copied card is stored with source shared and its origin deck');
+    values ('c0000000-0000-4000-8000-00000000000a', 'd0000000-0000-4000-8000-00000000000a', '[]', '[]', 'a', 'copy', 'd0000000-0000-4000-8000-000000000012', now(), now())$$,
+  'a copied card is stored with source copy and its origin deck');
 
 select throws_ok(
   $$insert into public.profiles (display_name) values ('A')$$,
@@ -53,9 +53,9 @@ select lives_ok(
 
 reset role;
 select results_eq(
-  $$select name, visibility, hidden, import_count from public.decks where id = 'd0000000-0000-4000-8000-00000000000a'$$,
+  $$select name, visibility, hidden, copy_count from public.decks where id = 'd0000000-0000-4000-8000-00000000000a'$$,
   $$values ('Renamed', 'private', false, 0)$$,
-  'the deck holds the owner''s writes, with hidden and import_count at their defaults');
+  'the deck holds the owner''s writes, with hidden and copy_count at their defaults');
 
 select * from finish();
 rollback;

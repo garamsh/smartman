@@ -6,11 +6,11 @@ import 'package:smartman/deck/deck.dart';
 
 List<Content> _text(String text) => [TextContent(text)];
 
-ImportedCard _card(
+IncomingCard _card(
   String front,
   String back, [
   DuplicateChoice onDuplicate = DuplicateChoice.skip,
-]) => ImportedCard(
+]) => IncomingCard(
   front: _text(front),
   back: _text(back),
   onDuplicate: onDuplicate,
@@ -41,10 +41,10 @@ void main() {
   }
 
   test('an import into a new deck creates it and saves import cards', () async {
-    final result = await repository.importCards(
-      const ImportIntoNewDeck('Page 12'),
-      [_card('chien', 'dog'), _card('oiseau', 'bird')],
-    );
+    final result = await repository.addCards(const AddToNewDeck('Page 12'), [
+      _card('chien', 'dog'),
+      _card('oiseau', 'bird'),
+    ]);
 
     expect(result.deck.name, 'Page 12');
     expect(result.added, 2);
@@ -68,14 +68,13 @@ void main() {
       "BEGIN SELECT RAISE(ABORT, 'refused'); END",
     );
     // Control: the trigger lets an ordinary import through.
-    final control = await repository.importCards(
-      const ImportIntoNewDeck('Accepted'),
-      [_card('chien', 'dog')],
-    );
+    final control = await repository.addCards(const AddToNewDeck('Accepted'), [
+      _card('chien', 'dog'),
+    ]);
     expect(control.added, 1);
 
     await expectLater(
-      repository.importCards(const ImportIntoNewDeck('Refused'), [
+      repository.addCards(const AddToNewDeck('Refused'), [
         _card('oiseau', 'bird'),
         _card('poisson', 'refused'),
       ]),
@@ -90,7 +89,7 @@ void main() {
   test('skip writes nothing for a colliding card', () async {
     final deck = await french();
 
-    final result = await repository.importCards(ImportIntoDeck(deck.id), [
+    final result = await repository.addCards(AddToDeck(deck.id), [
       _card(' Chat ', 'talk', DuplicateChoice.skip),
       _card('chien', 'dog', DuplicateChoice.skip),
     ]);
@@ -109,7 +108,7 @@ void main() {
       final deck = await french();
       final before = (await repository.listCards(deck.id)).single;
 
-      final result = await repository.importCards(ImportIntoDeck(deck.id), [
+      final result = await repository.addCards(AddToDeck(deck.id), [
         _card('CHAT', 'talk', DuplicateChoice.mergeBack),
       ]);
 
@@ -128,7 +127,7 @@ void main() {
       final deck = await french();
       final before = (await repository.listCards(deck.id)).single;
 
-      final result = await repository.importCards(ImportIntoDeck(deck.id), [
+      final result = await repository.addCards(AddToDeck(deck.id), [
         _card('chat', '  CAT ', DuplicateChoice.mergeBack),
         // Control: a back the card does not hold is merged.
         _card('chat', 'talk', DuplicateChoice.mergeBack),
@@ -144,7 +143,7 @@ void main() {
   test('add as new keeps the existing card and adds another', () async {
     final deck = await french();
 
-    final result = await repository.importCards(ImportIntoDeck(deck.id), [
+    final result = await repository.addCards(AddToDeck(deck.id), [
       _card('Chat', 'talk', DuplicateChoice.addNew),
     ]);
 
@@ -163,7 +162,7 @@ void main() {
     () async {
       final deck = await repository.createDeck('French');
 
-      final result = await repository.importCards(ImportIntoDeck(deck.id), [
+      final result = await repository.addCards(AddToDeck(deck.id), [
         _card('chat', 'cat', DuplicateChoice.mergeBack),
         _card('chat', 'talk', DuplicateChoice.mergeBack),
       ]);
@@ -186,7 +185,7 @@ void main() {
         false,
       ]);
 
-      await repository.importCards(ImportIntoDeck(deck.id), [
+      await repository.addCards(AddToDeck(deck.id), [
         _card('chat', 'talk', DuplicateChoice.mergeBack),
         _card('chien', 'dog'),
       ]);
@@ -205,11 +204,11 @@ void main() {
     await repository.deleteDeck(deck.id);
 
     await expectLater(
-      repository.importCards(ImportIntoDeck(deck.id), [_card('chien', 'dog')]),
+      repository.addCards(AddToDeck(deck.id), [_card('chien', 'dog')]),
       throwsA(isA<DeckDeleted>()),
     );
     // Control: the same import into a deck that stands is saved.
-    final control = await repository.importCards(ImportIntoDeck(spanish.id), [
+    final control = await repository.addCards(AddToDeck(spanish.id), [
       _card('chien', 'dog'),
     ]);
     expect(control.added, 1);

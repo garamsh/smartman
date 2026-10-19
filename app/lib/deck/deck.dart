@@ -1,17 +1,17 @@
 /// The deck domain: decks, the cards inside them, and the duplicate rule.
 library;
 
-export 'src/card_import.dart'
+export 'src/add_cards.dart'
     show
-        CardsImported,
+        CardsAdded,
         DuplicateChoice,
         FromPhoto,
-        FromPublicDeck,
-        ImportedCard,
-        ImportSource,
-        ImportIntoDeck,
-        ImportIntoNewDeck,
-        ImportTarget,
+        FromCopy,
+        IncomingCard,
+        AddSource,
+        AddToDeck,
+        AddToNewDeck,
+        AddTarget,
         mergeBack;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
 export 'src/card_key.dart' show CardKey;

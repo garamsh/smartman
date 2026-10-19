@@ -10,7 +10,7 @@ final class PublicDeckSummary {
     required this.name,
     required this.description,
     required this.cardCount,
-    required this.importCount,
+    required this.copyCount,
     required this.publishedAt,
   });
 
@@ -24,7 +24,7 @@ final class PublicDeckSummary {
   final int cardCount;
 
   /// How many times other users copied the deck.
-  final int importCount;
+  final int copyCount;
   final DateTime publishedAt;
 }
 

@@ -25,7 +25,7 @@ PublicDeckSummary publicDeck(
   name: name,
   description: description,
   cardCount: cards,
-  importCount: copies,
+  copyCount: copies,
   publishedAt: publishedAt ?? _published,
 );
 
@@ -184,9 +184,9 @@ void main() {
         expect(imported.deck.name, 'Spanish');
         expect(imported.added, 3);
         expect(await cardsOf(imported.deck.id), [
-          ('perro', 'dog', CardSource.shared, 'public'),
-          ('gato', 'cat', CardSource.shared, 'public'),
-          ('Perro', 'hound', CardSource.shared, 'public'),
+          ('perro', 'dog', CardSource.copy, 'public'),
+          ('gato', 'cat', CardSource.copy, 'public'),
+          ('Perro', 'hound', CardSource.copy, 'public'),
         ]);
         expect(server.imports, [source.id]);
       },
@@ -243,7 +243,7 @@ void main() {
       expect([imported.added, imported.merged], [1, 0]);
       expect(await cardsOf(deck.id), [
         ('perro', 'dog', CardSource.manual, null),
-        ('gato', 'cat', CardSource.shared, 'public'),
+        ('gato', 'cat', CardSource.copy, 'public'),
       ]);
     });
 
@@ -258,7 +258,7 @@ void main() {
       expect([imported.added, imported.merged], [1, 1]);
       expect(await cardsOf(deck.id), [
         ('perro', 'dog\nhound', CardSource.manual, null),
-        ('gato', 'cat', CardSource.shared, 'public'),
+        ('gato', 'cat', CardSource.copy, 'public'),
       ]);
     });
 
