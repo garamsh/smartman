@@ -1,6 +1,6 @@
 # ADR 0075: Store a vocabulary card's senses as a typed block, and show each label in brackets before its meaning
 
-> Status: accepted
+> Status: accepted; its edited senses side becoming a text block superseded by ADR-0083 for a word's back
 > Date: 2026-10-19
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

@@ -1,6 +1,6 @@
 # ADR 0068: Store a table or cloze card as typed content blocks, and draw it whole, its blanks filled in place once answered
 
-> Status: accepted
+> Status: accepted; its read-only card editor and "a card the user types is a text card" superseded by ADR-0083
 > Date: 2026-10-19
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
