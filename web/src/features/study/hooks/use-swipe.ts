@@ -123,7 +123,7 @@ export function useSwipe({
       },
     },
     /** Whether a click is the end of a swipe, which it then consumes. */
-    endsSwipe(): boolean {
+    endsSwipe: (): boolean => {
       if (!swiped.current) return false;
       swiped.current = false;
       return true;
