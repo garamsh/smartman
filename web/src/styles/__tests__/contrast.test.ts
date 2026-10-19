@@ -57,6 +57,7 @@ const pairs: [string, string, string][] = [
   ["the today card's button on white", "brand", "on-hero"],
   ["the forecast's days and a deck's progress on the surface", "muted", "surface"],
   ["the date and the breadcrumb on the ground", "muted", "ground"],
+  ["the admin's red final button's label on its fill", "on-dont-know-text", "dont-know-text"],
 ];
 
 describe("the text the login, account and empty home pages draw", () => {
