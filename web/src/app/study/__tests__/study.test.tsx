@@ -608,6 +608,93 @@ describe("the study page", () => {
       expect(face.style.transform).toContain("translateX(0px)");
     });
 
+    /** The current card on screen. */
+    const currentCard = () => within(cards()).getByRole("region", { name: "현재 카드" });
+
+    it("answers the current card on a touch swipe past 100 or a fling, and not on a short, slow, vertical or mouse drag", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const first = currentFront();
+
+      // Short of 100 and slow, toward 안다: nothing is answered.
+      swipe(
+        currentCard(),
+        [
+          [210, 100],
+          [220, 100],
+          [230, 100],
+          [240, 100],
+          [250, 100],
+          [260, 100],
+          [270, 100],
+          [280, 100],
+        ],
+        100,
+      );
+      // Vertical: the page scrolls, and nothing is answered.
+      swipe(currentCard(), [
+        [200, 200],
+        [200, 400],
+      ]);
+      // A mouse drags nothing.
+      fireEvent.pointerDown(currentCard(), { pointerId: 2, pointerType: "mouse", clientX: 200 });
+      fireEvent.pointerMove(currentCard(), { pointerId: 2, pointerType: "mouse", clientX: 400 });
+      fireEvent.pointerUp(currentCard(), { pointerId: 2, pointerType: "mouse", clientX: 400 });
+      expect(currentFront()).toBe(first);
+      expect(shown()).toEqual([]);
+
+      // Control: past 100 toward 안다, it is answered 안다 and rises into the previous card's place.
+      vi.setSystemTime(Date.now() + 60_000);
+      swipe(currentCard(), [
+        [260, 100],
+        [320, 100],
+      ]);
+      expect(shown()).toEqual([label(first, "안다")]);
+      const second = currentFront();
+      expect(second).not.toBe(first);
+      await waitFor(() => {
+        expect(postgrest.rows.reviews).toHaveLength(1);
+      });
+
+      // A fling: 40 in a millisecond, toward 모른다.
+      swipe(currentCard(), [
+        [190, 100],
+        [150, 100],
+      ]);
+      expect(shown()).toEqual([label(second, "모른다")]);
+      // The swipe on the current card moved it alone: the earlier answer stays 안다.
+      expect(stack()).toEqual([label(first, "안다"), label(second, "모른다")]);
+    });
+
+    it("shows the answer a swipe on the current card would give behind it, and springs back short of it", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const card = currentCard();
+      const front = currentFront();
+
+      fireEvent.pointerDown(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 200,
+        clientY: 100,
+      });
+      fireEvent.pointerMove(card, {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 250,
+        clientY: 100,
+      });
+      expect(within(card).getByText("안다")).toBeInTheDocument();
+      const face = within(card).getByRole("group", { name: "앞면" }).parentElement;
+      expect(face?.style.transform).toContain("translateX(50px)");
+      expect(card.className.split(" ")).toContain("touch-pan-y");
+      vi.setSystemTime(Date.now() + 500);
+      fireEvent.pointerUp(card, { pointerId: 1, pointerType: "touch", clientX: 250, clientY: 100 });
+      expect(within(card).queryByText("안다")).not.toBeInTheDocument();
+      expect(face?.style.transform).toContain("translateX(0px)");
+      expect(currentFront()).toBe(front);
+    });
+
     it("grades the previous card by its fill, its line and a chip naming the answer", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
@@ -840,6 +927,36 @@ describe("the study page", () => {
     beforeEach(() => {
       // A device's first session.
       window.localStorage.removeItem("studyCoachShown");
+    });
+
+    it("names the swipes in the phone's words where the page is used by touch", async () => {
+      vi.stubGlobal("matchMedia", (query: string): MediaQueryList => ({
+        matches: query === "(pointer: coarse)",
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }));
+      try {
+        seedDeck(postgrest, "d1", ["un", "deux"]);
+        await open("d1");
+        await screen.findByRole("region", { name: "학습 사용 방법" });
+        const user = userEvent.setup();
+
+        expect(announced()).toBe("사용 방법, 3단계 중 1단계. 알면 오른쪽으로 밀어요");
+        expect(caption()).toHaveTextContent("알면 오른쪽으로 밀어요");
+        await user.click(screen.getByRole("button", { name: "다음" }));
+        expect(caption()).toHaveTextContent("모르면 왼쪽으로 밀어요");
+        await user.click(screen.getByRole("button", { name: "다음" }));
+        expect(caption()).toHaveTextContent(
+          "응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요",
+        );
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
 
     it("on a device's first session shows three steps on the cards under a caption in the answer buttons' place, kept as shown once it shows", async () => {
