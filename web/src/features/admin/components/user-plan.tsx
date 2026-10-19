@@ -1,6 +1,6 @@
 import { studyDayStart } from "@/features/study";
 
-import { revokePlan } from "../admin-actions";
+import { revokePlan } from "../revoke-plan";
 import { formatDate, formatTime } from "../format";
 import { planLabels } from "../labels";
 import type { UserPlan as Plan } from "../read-admin";

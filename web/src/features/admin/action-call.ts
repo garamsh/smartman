@@ -1,0 +1,61 @@
+import "server-only";
+
+import { revalidatePath } from "next/cache";
+
+import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
+import { createClient } from "@/supabase/server";
+
+/** What an admin action shows when it returns: whether it changed something, and the sentence. */
+export type ActionResult = { changed: boolean; message: string };
+
+/** The sentence an admin action returns for each way it can fail. */
+export const failureMessages: Record<ServerFailure | "unreadable" | "malformed", string> = {
+  rejected: "관리자만 할 수 있어요.",
+  unreachable: "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
+  failed: "하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  unreadable: "하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  malformed: "하지 못했어요. 잠시 후 다시 시도해 주세요.",
+};
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * Calls the deck function [name] for [deckId] with [args], which answers whether it changed the
+ * deck, and returns [message]'s sentence for that.
+ */
+export async function deckAction(
+  name: string,
+  deckId: string,
+  args: Record<string, unknown>,
+  message: (changed: boolean) => string,
+): Promise<ActionResult> {
+  // The argument crossed the network, whatever its declared type.
+  if (!isUuid(deckId)) return refused("malformed");
+  const result = await call(name, { deck_id: deckId, ...args });
+  if ("failure" in result) return refused(result.failure);
+  if (typeof result.data !== "boolean") return refused("unreadable");
+  if (result.data) revalidatePath("/admin", "layout");
+  return { changed: result.data, message: message(result.data) };
+}
+
+/** Calls the server function [name] with [args] as the signed-in user. */
+export async function call(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ data: unknown } | { failure: ServerFailure }> {
+  const supabase = await createClient();
+  const result = await supabase.rpc(name, args).abortSignal(AbortSignal.timeout(requestTimeoutMs));
+  if (result.error) return { failure: classifyFailure(result.error, result.status) };
+  const data: unknown = result.data;
+  return { data };
+}
+
+/** An action's result for [failure]: nothing changed, and its sentence. */
+export function refused(failure: keyof typeof failureMessages): ActionResult {
+  return { changed: false, message: failureMessages[failure] };
+}
+
+/** Whether [value], which crossed the network, is an id in canonical uuid form. */
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && uuid.test(value);
+}
