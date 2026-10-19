@@ -13,67 +13,163 @@
   "cards": [
     {
       "front": "garden",
-      "meaning": "정원"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "정원",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "young",
-      "meaning": "젊은"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "젊은",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "ticket",
-      "meaning": "표"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "표",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "memory",
-      "meaning": "기억"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기억",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "reason",
-      "meaning": "이유"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이유",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "quickly",
-      "meaning": "빨리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빨리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "empty",
-      "meaning": "빈"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빈",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "friendship",
-      "meaning": "우정"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "우정",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "repeat",
-      "meaning": "반복하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "반복하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "gentle",
-      "meaning": "온화한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "온화한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "cheap",
-      "meaning": "싼"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "싼",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "habit",
-      "meaning": "습관"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "습관",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "careful",
-      "meaning": "조심스러운"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "조심스러운",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "prepare",
-      "meaning": "준비하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "준비하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "direction",
-      "meaning": "방향"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "방향",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "mirror",
-      "meaning": "거울"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "거울",
+          "examples": []
+        }
+      ]
     }
   ]
 }

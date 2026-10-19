@@ -4,6 +4,7 @@ import type {
   Card,
   CardType,
   Cloze,
+  Extra,
   Sense,
   Step,
   Table,
@@ -18,24 +19,16 @@ export function normalize(text: string): string {
 }
 
 /**
- * A vocabulary entry's fields as the page prints them: the shape of a ground-truth card. An
- * entry with `senses` lists each meaning with its label; one without is a single sense of its
- * `meaning` and `partOfSpeech`, as the truths written before senses are. `meaning` is the
- * senses' meanings joined by "; ".
+ * A vocabulary entry's fields as the page prints them: the shape of a ground-truth card. Each
+ * sense holds the labels and examples printed for it; `examples` are those printed for the entry
+ * as a whole, and `extras` what else it prints under its own labels.
  */
 export type Entry = {
   readonly front: string;
-  readonly meaning: string;
-  readonly partOfSpeech?: string;
-  readonly senses?: readonly Sense[];
+  readonly senses: readonly Sense[];
   readonly examples?: readonly string[];
+  readonly extras?: readonly Extra[];
 };
-
-/** An entry's senses: its own, or the single sense of its meaning and part of speech. */
-export function sensesOf(entry: Entry): readonly Sense[] {
-  return entry.senses ??
-    [{ pos: entry.partOfSpeech ?? null, meaning: entry.meaning }];
-}
 
 /** The meaning an entry of [senses] matches on: their meanings joined by "; ". */
 export function meaningOf(senses: readonly Sense[]): string {
@@ -43,34 +36,56 @@ export function meaningOf(senses: readonly Sense[]): string {
 }
 
 /**
- * A returned card as a vocabulary entry: a vocabulary card's senses and their meanings, or a
- * note's answer as one sense.
+ * A returned card as a vocabulary entry: a vocabulary card's senses, examples and extras, or a
+ * note's answer as one sense with no label.
  */
 export function entryOf(card: Card): Entry {
   const examples = card.examples === undefined
     ? {}
     : { examples: card.examples };
-  return card.kind === "vocabulary"
-    ? {
+  if (card.kind === "note") {
+    return {
       front: card.front,
-      meaning: meaningOf(card.senses),
-      senses: card.senses,
+      senses: [{ labels: [], meaning: card.answer, examples: [] }],
       ...examples,
-    }
-    : { front: card.front, meaning: card.answer, ...examples };
+    };
+  }
+  return {
+    front: card.front,
+    senses: card.senses,
+    ...examples,
+    ...(card.extras === undefined ? {} : { extras: card.extras }),
+  };
 }
 
 /**
- * Counts of the optional fields over the matched cards. A sense's part of speech, or a card's
- * examples, is a field present in the candidate; it is invented when the page prints no such
- * field for that sense or entry. A matched card's senses pair with the page's in order, since
- * their meanings matched.
+ * Counts over the matched cards, whose senses pair with the page's in order, since their
+ * meanings matched. Texts compare after `normalize`.
  */
 export type FieldCounts = {
-  readonly partOfSpeech: number;
-  readonly partOfSpeechCorrect: number;
+  /** Labels returned, and those equal in text to one the page prints for that sense. */
+  readonly labels: number;
+  readonly labelsCorrect: number;
+  /** Labels the page prints for the matched senses. */
+  readonly pageLabels: number;
+  /** Of the labels equal in text, those of the page's kind and category too. */
+  readonly categoriesCorrect: number;
+  /** Senses the page prints no label for, and those of them a label was returned for. */
+  readonly unlabelledSenses: number;
+  readonly unprintedLabels: number;
+  /** Examples returned, on the card or a sense, and those the page prints for the entry. */
   readonly examples: number;
   readonly examplesCorrect: number;
+  /** Examples the page prints under a sense, and those returned under that sense. */
+  readonly senseExamples: number;
+  readonly senseExamplesReturned: number;
+  /** Extras the page prints, and those returned with an equal label and text. */
+  readonly extras: number;
+  readonly extrasReturned: number;
+  /**
+   * Fields returned, a sense's labels, a card's or a sense's examples, or a card's extras, and
+   * those the page prints no such field for.
+   */
   readonly fields: number;
   readonly invented: number;
 };
@@ -78,7 +93,7 @@ export type FieldCounts = {
 /**
  * Over the candidates whose front matches an entry's after `normalize`, each entry matching at
  * most one: the senses returned, the page's senses, and the returned senses equal to one of the
- * page's for that entry in both part of speech and meaning, after `normalize`.
+ * page's for that entry in both labels and meaning, after `normalize`.
  */
 export type SenseCounts = {
   readonly returned: number;
@@ -140,8 +155,8 @@ function countSenses(
       normalize(entry.front) === normalize(card.front)
     );
     if (at < 0) continue;
-    const page = sensesOf(unmatched.splice(at, 1)[0]).map(senseKey);
-    const returned = sensesOf(card).map(senseKey);
+    const page = unmatched.splice(at, 1)[0].senses.map(senseKey);
+    const returned = card.senses.map(senseKey);
     counts.returned += returned.length;
     counts.page += page.length;
     for (const sense of returned) {
@@ -155,42 +170,103 @@ function countSenses(
 }
 
 function senseKey(sense: Sense): string {
-  return JSON.stringify([normalize(sense.pos ?? ""), normalize(sense.meaning)]);
+  return JSON.stringify([
+    sense.labels.map((label) => normalize(label.text)),
+    normalize(sense.meaning),
+  ]);
+}
+
+/** How many of [returned] equal one of [page] after `normalize`, each page text used once. */
+function countEqual(
+  returned: readonly string[],
+  page: readonly string[],
+): number {
+  const left = page.map(normalize);
+  return returned.filter((text) => {
+    const at = left.indexOf(normalize(text));
+    if (at >= 0) left.splice(at, 1);
+    return at >= 0;
+  }).length;
 }
 
 function countFields(pairs: readonly [Entry, Entry][]): FieldCounts {
   const counts = {
-    partOfSpeech: 0,
-    partOfSpeechCorrect: 0,
+    labels: 0,
+    labelsCorrect: 0,
+    pageLabels: 0,
+    categoriesCorrect: 0,
+    unlabelledSenses: 0,
+    unprintedLabels: 0,
     examples: 0,
     examplesCorrect: 0,
+    senseExamples: 0,
+    senseExamplesReturned: 0,
+    extras: 0,
+    extrasReturned: 0,
     fields: 0,
     invented: 0,
   };
   for (const [candidate, page] of pairs) {
-    const printed = sensesOf(page);
-    sensesOf(candidate).forEach((sense, i) => {
-      if (sense.pos === null) return;
-      counts.partOfSpeech += 1;
-      counts.fields += 1;
-      const label = printed[i]?.pos ?? null;
-      if (label === null) {
-        counts.invented += 1;
-      } else if (normalize(label) === normalize(sense.pos)) {
-        counts.partOfSpeechCorrect += 1;
+    const allExamples = (entry: Entry) => [
+      ...entry.examples ?? [],
+      ...entry.senses.flatMap((sense) => sense.examples),
+    ];
+    const pageExamples = allExamples(page);
+    page.senses.forEach((printed, i) => {
+      const sense = candidate.senses[i];
+      counts.pageLabels += printed.labels.length;
+      counts.senseExamples += printed.examples.length;
+      if (printed.labels.length === 0) {
+        counts.unlabelledSenses += 1;
+        if ((sense?.labels.length ?? 0) > 0) counts.unprintedLabels += 1;
+      }
+      if (sense === undefined) return;
+      counts.senseExamplesReturned += countEqual(
+        sense.examples,
+        printed.examples,
+      );
+      const left = [...printed.labels];
+      for (const label of sense.labels) {
+        const at = left.findIndex((page) =>
+          normalize(page.text) === normalize(label.text)
+        );
+        if (at < 0) continue;
+        const [match] = left.splice(at, 1);
+        counts.labelsCorrect += 1;
+        // Only a part of speech has a category, so an equal category is an equal kind too.
+        if (match.category === label.category) {
+          counts.categoriesCorrect += 1;
+        }
       }
     });
-    const examples = candidate.examples ?? [];
-    if (examples.length === 0) continue;
+    candidate.senses.forEach((sense, i) => {
+      counts.labels += sense.labels.length;
+      if (sense.labels.length > 0) {
+        counts.fields += 1;
+        if ((page.senses[i]?.labels.length ?? 0) === 0) counts.invented += 1;
+      }
+    });
+    const exampleLists = [
+      candidate.examples ?? [],
+      ...candidate.senses.map((sense) => sense.examples),
+    ].filter((list) => list.length > 0);
+    counts.fields += exampleLists.length;
+    if (pageExamples.length === 0) counts.invented += exampleLists.length;
+    const examples = allExamples(candidate);
     counts.examples += examples.length;
-    counts.fields += 1;
-    if (page.examples === undefined) counts.invented += 1;
-    const pageExamples = (page.examples ?? []).map(normalize);
-    for (const example of examples) {
-      const at = pageExamples.indexOf(normalize(example));
-      if (at < 0) continue;
-      pageExamples.splice(at, 1);
-      counts.examplesCorrect += 1;
+    counts.examplesCorrect += countEqual(examples, pageExamples);
+    const extraText = (extra: Extra) =>
+      JSON.stringify([extra.label, extra.text].map(normalize));
+    const pageExtras = page.extras ?? [];
+    const extras = candidate.extras ?? [];
+    counts.extras += pageExtras.length;
+    counts.extrasReturned += countEqual(
+      extras.map(extraText),
+      pageExtras.map(extraText),
+    );
+    if (extras.length > 0) {
+      counts.fields += 1;
+      if (pageExtras.length === 0) counts.invented += 1;
     }
   }
   return counts;
@@ -199,7 +275,7 @@ function countFields(pairs: readonly [Entry, Entry][]): FieldCounts {
 function cardKey(card: Entry): string {
   return JSON.stringify([
     normalize(card.front),
-    normalize(meaningOf(sensesOf(card))),
+    normalize(meaningOf(card.senses)),
   ]);
 }
 
@@ -416,28 +492,49 @@ export type NotesRow = {
   }[];
 };
 
+/**
+ * The vocabulary shares over a set of images' matched cards (`FieldCounts`), each null where
+ * its whole is 0: no such field returned, or none printed.
+ */
+export type VocabularyRates = {
+  /** Returned labels equal in text to the page's for their sense, and printed labels so returned. */
+  readonly labelPrecision: number | null;
+  readonly labelRecall: number | null;
+  /** Of the labels equal in text, the share of the page's kind and category too. */
+  readonly categoryAccuracy: number | null;
+  /** Of the senses the page prints no label for, the share given one: 0 is required (#228). */
+  readonly unprintedLabelRate: number | null;
+  /** Returned examples the page prints for the entry. */
+  readonly examplesPrecision: number | null;
+  /** Examples printed under a sense that the matching returned sense holds. */
+  readonly senseExamplesRecall: number | null;
+  /** Printed extras returned with an equal label and text. */
+  readonly extrasRecall: number | null;
+  /** Returned fields the page prints no such field for. */
+  readonly inventedRate: number | null;
+  /**
+   * Over the entries matched by front: the share of returned senses equal to a page sense in
+   * labels and meaning, and the share of page senses so returned.
+   */
+  readonly sensePrecision: number | null;
+  readonly senseRecall: number | null;
+};
+
+/** One vocabulary image's F1 and shares. */
+export type VocabularyPage = VocabularyRates & {
+  readonly name: string;
+  readonly f1: number;
+};
+
 /** One configuration's results over every image. */
-export type Row = {
+export type Row = VocabularyRates & {
   readonly label: string;
   /** Means of the per-image scores over the vocabulary images, each 0-1. */
   readonly precision: number;
   readonly recall: number;
   readonly f1: number;
-  /**
-   * Over every vocabulary image's matched cards: the share of parts of speech and of examples
-   * equal to the page's, and the share of present fields the page does not print. Null when
-   * the configuration returned no such field.
-   */
-  readonly partOfSpeechPrecision: number | null;
-  readonly examplesPrecision: number | null;
-  readonly inventedRate: number | null;
-  /**
-   * Over every vocabulary image's entries matched by front: the share of returned senses equal
-   * to a page sense in part of speech and meaning, and the share of page senses so returned.
-   * Null when no sense was returned, or the pages held none.
-   */
-  readonly sensePrecision: number | null;
-  readonly senseRecall: number | null;
+  /** Each vocabulary image's results, its shares over its own cards. */
+  readonly vocabularyPages: readonly VocabularyPage[];
   /** The notes results, null without a notes image. */
   readonly notes: NotesRow | null;
   readonly p50Ms: number;
@@ -461,6 +558,13 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
   const scores = images.flatMap((image) =>
     image.score === null ? [] : [image.score]
   );
+  const vocabularyPages = images.flatMap((image) =>
+    image.score === null ? [] : [{
+      name: image.name,
+      f1: image.score.f1,
+      ...vocabularyRates([image.score]),
+    }]
+  );
   const notes = images.flatMap((image) =>
     image.notes === null ? [] : [{
       name: image.name,
@@ -474,34 +578,53 @@ export function summarize(label: string, images: readonly ImageResult[]): Row {
       : scores.reduce((total, score) => total + pick(score), 0) / scores.length;
   const latencies = images.map((image) => image.latencyMs);
   const spentUsd = images.reduce((total, image) => total + image.costUsd, 0);
-  const sum = (pick: (fields: FieldCounts) => number) =>
-    scores.reduce((total, score) => total + pick(score.fields), 0);
-  const senses = (pick: (senses: SenseCounts) => number) =>
-    scores.reduce((total, score) => total + pick(score.senses), 0);
   return {
     label,
     precision: mean((score) => score.precision),
     recall: mean((score) => score.recall),
     f1: mean((score) => score.f1),
-    partOfSpeechPrecision: share(
-      sum((f) => f.partOfSpeechCorrect),
-      sum((f) => f.partOfSpeech),
+    ...vocabularyRates(scores),
+    vocabularyPages,
+    notes: notes.length === 0 ? null : summarizeNotes(notes),
+    p50Ms: percentile(latencies, 50),
+    p90Ms: percentile(latencies, 90),
+    costPerImageUsd: spentUsd / images.length,
+    spentUsd,
+  };
+}
+
+/** The shares of [scores]' counts pooled. */
+function vocabularyRates(scores: readonly Score[]): VocabularyRates {
+  const sum = (pick: (fields: FieldCounts) => number) =>
+    scores.reduce((total, score) => total + pick(score.fields), 0);
+  const senses = (pick: (senses: SenseCounts) => number) =>
+    scores.reduce((total, score) => total + pick(score.senses), 0);
+  return {
+    labelPrecision: share(sum((f) => f.labelsCorrect), sum((f) => f.labels)),
+    labelRecall: share(sum((f) => f.labelsCorrect), sum((f) => f.pageLabels)),
+    categoryAccuracy: share(
+      sum((f) => f.categoriesCorrect),
+      sum((f) => f.labelsCorrect),
+    ),
+    unprintedLabelRate: share(
+      sum((f) => f.unprintedLabels),
+      sum((f) => f.unlabelledSenses),
     ),
     examplesPrecision: share(
       sum((f) => f.examplesCorrect),
       sum((f) => f.examples),
     ),
+    senseExamplesRecall: share(
+      sum((f) => f.senseExamplesReturned),
+      sum((f) => f.senseExamples),
+    ),
+    extrasRecall: share(sum((f) => f.extrasReturned), sum((f) => f.extras)),
     inventedRate: share(sum((f) => f.invented), sum((f) => f.fields)),
     sensePrecision: share(
       senses((s) => s.matched),
       senses((s) => s.returned),
     ),
     senseRecall: share(senses((s) => s.matched), senses((s) => s.page)),
-    notes: notes.length === 0 ? null : summarizeNotes(notes),
-    p50Ms: percentile(latencies, 50),
-    p90Ms: percentile(latencies, 90),
-    costPerImageUsd: spentUsd / images.length,
-    spentUsd,
   };
 }
 

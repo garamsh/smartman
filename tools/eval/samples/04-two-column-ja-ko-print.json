@@ -14,55 +14,133 @@
   "cards": [
     {
       "front": "泣く",
-      "meaning": "울다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "울다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "話す",
-      "meaning": "말하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "말하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "習う",
-      "meaning": "배우다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "배우다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "お茶",
-      "meaning": "차"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "차",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "きれい",
-      "meaning": "예쁘다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "예쁘다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "料理",
-      "meaning": "요리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "요리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "長い",
-      "meaning": "길다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "길다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "高い",
-      "meaning": "비싸다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "비싸다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "寝る",
-      "meaning": "자다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "閉める",
-      "meaning": "닫다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "닫다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "売る",
-      "meaning": "팔다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "팔다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "送る",
-      "meaning": "보내다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "보내다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "始める",
-      "meaning": "시작하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "시작하다",
+          "examples": []
+        }
+      ]
     }
   ]
 }

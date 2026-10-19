@@ -14,79 +14,193 @@
   "cards": [
     {
       "front": "静か",
-      "meaning": "조용하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "조용하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "歩く",
-      "meaning": "걷다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "걷다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "買う",
-      "meaning": "사다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "사다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "小さい",
-      "meaning": "작다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "작다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "雪",
-      "meaning": "눈"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "눈",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "話す",
-      "meaning": "말하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "말하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "教える",
-      "meaning": "가르치다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가르치다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "いつも",
-      "meaning": "항상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "항상",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "暑い",
-      "meaning": "덥다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "덥다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "部屋",
-      "meaning": "방"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "방",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "机",
-      "meaning": "책상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "책상",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "休む",
-      "meaning": "쉬다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "쉬다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "空",
-      "meaning": "하늘"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "하늘",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "約束",
-      "meaning": "약속"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "약속",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "明るい",
-      "meaning": "밝다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "밝다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "閉める",
-      "meaning": "닫다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "닫다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "雨",
-      "meaning": "비"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "비",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "旅行",
-      "meaning": "여행"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "여행",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "先生",
-      "meaning": "선생님"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "선생님",
+          "examples": []
+        }
+      ]
     }
   ]
 }

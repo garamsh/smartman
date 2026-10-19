@@ -13,59 +13,143 @@
   "cards": [
     {
       "front": "example",
-      "meaning": "예시"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "예시",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "always",
-      "meaning": "항상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "항상",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "fresh",
-      "meaning": "신선한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "신선한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "slowly",
-      "meaning": "천천히"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "천천히",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "never",
-      "meaning": "결코"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "결코",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "decide",
-      "meaning": "결정하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "결정하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "friendship",
-      "meaning": "우정"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "우정",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "window",
-      "meaning": "창문"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "창문",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "hungry",
-      "meaning": "배고픈"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "배고픈",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "simple",
-      "meaning": "간단한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "간단한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "explain",
-      "meaning": "설명하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "설명하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "holiday",
-      "meaning": "휴일"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "휴일",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "weather",
-      "meaning": "날씨"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "날씨",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "experience",
-      "meaning": "경험"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "경험",
+          "examples": []
+        }
+      ]
     }
   ]
 }

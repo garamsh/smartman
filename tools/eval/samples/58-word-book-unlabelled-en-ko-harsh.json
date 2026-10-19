@@ -1,0 +1,134 @@
+{
+  "image": "58-word-book-unlabelled-en-ko-harsh.jpg",
+  "layout": "word-book",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "face",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "직면하다, 마주하다",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "표면, 겉면",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "얼굴, 생김새",
+          "examples": []
+        }
+      ],
+      "pronunciation": "['feis]",
+      "extras": [
+        {
+          "label": "유의어",
+          "text": "confront"
+        }
+      ]
+    },
+    {
+      "front": "content",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "내용, 목차",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "만족하는",
+          "examples": []
+        }
+      ],
+      "pronunciation": "명 ['kantent] / 형 [kan'tent]",
+      "extras": [
+        {
+          "label": "반의어",
+          "text": "discontent"
+        }
+      ]
+    },
+    {
+      "front": "present",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "선물",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "현재의, 참석한",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "주다, 제시하다",
+          "examples": []
+        }
+      ],
+      "pronunciation": "명·형 ['preznt] / 동 [pri'zent]",
+      "extras": [
+        {
+          "label": "파생어",
+          "text": "presentation"
+        }
+      ]
+    },
+    {
+      "front": "record",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기록",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "기록하다, 녹음하다",
+          "examples": []
+        }
+      ],
+      "pronunciation": "명 ['rekord] / 동 [ri'kord]"
+    },
+    {
+      "front": "light",
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빛",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "가벼운",
+          "examples": []
+        },
+        {
+          "labels": [],
+          "meaning": "불을 붙이다",
+          "examples": []
+        }
+      ],
+      "pronunciation": "['lait]",
+      "extras": [
+        {
+          "label": "반의어",
+          "text": "heavy"
+        }
+      ]
+    }
+  ]
+}

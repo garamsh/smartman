@@ -999,15 +999,21 @@
       "pronunciation": "['feis]",
       "senses": [
         {
-          "pos": "[동]",
+          "labels": [
+            "[동]"
+          ],
           "meaning": "직면하다, 마주하다"
         },
         {
-          "pos": "[명]",
+          "labels": [
+            "[명]"
+          ],
           "meaning": "표면, 겉면"
         },
         {
-          "pos": "[명]",
+          "labels": [
+            "[명]"
+          ],
           "meaning": "얼굴, 생김새"
         }
       ],
@@ -1023,11 +1029,15 @@
       "pronunciation": "명 ['kantent] / 형 [kan'tent]",
       "senses": [
         {
-          "pos": "[명]",
+          "labels": [
+            "[명]"
+          ],
           "meaning": "내용, 목차"
         },
         {
-          "pos": "[형]",
+          "labels": [
+            "[형]"
+          ],
           "meaning": "만족하는"
         }
       ],
@@ -1043,15 +1053,21 @@
       "pronunciation": "명·형 ['preznt] / 동 [pri'zent]",
       "senses": [
         {
-          "pos": "[명]",
+          "labels": [
+            "[명]"
+          ],
           "meaning": "선물"
         },
         {
-          "pos": "[형]",
+          "labels": [
+            "[형]"
+          ],
           "meaning": "현재의, 참석한"
         },
         {
-          "pos": "[동]",
+          "labels": [
+            "[동]"
+          ],
           "meaning": "주다, 제시하다"
         }
       ],
@@ -1067,11 +1083,15 @@
       "pronunciation": "명 ['rekord] / 동 [ri'kord]",
       "senses": [
         {
-          "pos": "[명]",
+          "labels": [
+            "[명]"
+          ],
           "meaning": "기록"
         },
         {
-          "pos": "[동]",
+          "labels": [
+            "[동]"
+          ],
           "meaning": "기록하다, 녹음하다"
         }
       ]
@@ -1081,15 +1101,21 @@
       "pronunciation": "['lait]",
       "senses": [
         {
-          "pos": "[명]",
+          "labels": [
+            "[명]"
+          ],
           "meaning": "빛"
         },
         {
-          "pos": "[형]",
+          "labels": [
+            "[형]"
+          ],
           "meaning": "가벼운"
         },
         {
-          "pos": "[동]",
+          "labels": [
+            "[동]"
+          ],
           "meaning": "불을 붙이다"
         }
       ],
@@ -1097,6 +1123,330 @@
         {
           "label": "반의어",
           "text": "heavy"
+        }
+      ]
+    }
+  ],
+  "word-book-examples": [
+    {
+      "front": "run",
+      "pronunciation": "['ran]",
+      "senses": [
+        {
+          "labels": [
+            "[동]"
+          ],
+          "meaning": "달리다",
+          "examples": [
+            "I run every morning."
+          ]
+        },
+        {
+          "labels": [
+            "[동]"
+          ],
+          "meaning": "운영하다",
+          "examples": [
+            "She runs a small shop."
+          ]
+        },
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "달리기",
+          "examples": [
+            "We went for a run."
+          ]
+        }
+      ]
+    },
+    {
+      "front": "book",
+      "pronunciation": "['buk]",
+      "senses": [
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "책",
+          "examples": [
+            "I read a book on the train."
+          ]
+        },
+        {
+          "labels": [
+            "[동]"
+          ],
+          "meaning": "예약하다",
+          "examples": [
+            "Book a table for two."
+          ]
+        }
+      ]
+    },
+    {
+      "front": "fair",
+      "pronunciation": "['fear]",
+      "senses": [
+        {
+          "labels": [
+            "[형]"
+          ],
+          "meaning": "공정한",
+          "examples": [
+            "That is a fair price."
+          ]
+        },
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "박람회",
+          "examples": [
+            "They met at a book fair."
+          ]
+        }
+      ]
+    },
+    {
+      "front": "watch",
+      "pronunciation": "['wach]",
+      "senses": [
+        {
+          "labels": [
+            "[동]"
+          ],
+          "meaning": "보다, 지켜보다",
+          "examples": [
+            "We watch the game together."
+          ]
+        },
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "손목시계",
+          "examples": [
+            "My watch is five minutes slow."
+          ]
+        }
+      ]
+    }
+  ],
+  "dictionary-ko": [
+    {
+      "front": "기차",
+      "senses": [
+        {
+          "labels": [
+            "[사물]"
+          ],
+          "meaning": "철도 위를 다니는 긴 차"
+        }
+      ]
+    },
+    {
+      "front": "사과",
+      "senses": [
+        {
+          "labels": [
+            "「명사」",
+            "[식물]"
+          ],
+          "meaning": "사과나무의 열매"
+        }
+      ]
+    },
+    {
+      "front": "달리다",
+      "senses": [
+        {
+          "labels": [
+            "「동사」"
+          ],
+          "meaning": "빨리 뛰어가다"
+        }
+      ]
+    },
+    {
+      "front": "책상",
+      "senses": [
+        {
+          "labels": [
+            "[사물]"
+          ],
+          "meaning": "책을 읽거나 글을 쓸 때 앞에 놓는 상"
+        }
+      ]
+    },
+    {
+      "front": "의사",
+      "senses": [
+        {
+          "labels": [
+            "「명사」",
+            "[직업]"
+          ],
+          "meaning": "병을 고치는 일을 하는 사람"
+        }
+      ]
+    },
+    {
+      "front": "조용하다",
+      "senses": [
+        {
+          "labels": [
+            "「형용사」"
+          ],
+          "meaning": "아무 소리도 들리지 않다"
+        }
+      ]
+    },
+    {
+      "front": "눈",
+      "senses": [
+        {
+          "labels": [
+            "「명사」",
+            "[신체]"
+          ],
+          "meaning": "물체를 보는 감각 기관"
+        },
+        {
+          "labels": [
+            "「명사」",
+            "[날씨]"
+          ],
+          "meaning": "하늘에서 내리는 하얀 얼음 결정"
+        }
+      ]
+    }
+  ],
+  "word-book-de": [
+    {
+      "front": "Tisch",
+      "senses": [
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "책상, 탁자"
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "der"
+        },
+        {
+          "label": "복수",
+          "text": "die Tische"
+        }
+      ]
+    },
+    {
+      "front": "Lampe",
+      "senses": [
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "램프, 전등"
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "die"
+        },
+        {
+          "label": "복수",
+          "text": "die Lampen"
+        }
+      ]
+    },
+    {
+      "front": "Kind",
+      "senses": [
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "아이, 어린이"
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "das"
+        },
+        {
+          "label": "복수",
+          "text": "die Kinder"
+        }
+      ]
+    },
+    {
+      "front": "Fenster",
+      "senses": [
+        {
+          "labels": [
+            "[명]"
+          ],
+          "meaning": "창문"
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "das"
+        },
+        {
+          "label": "복수",
+          "text": "die Fenster"
+        }
+      ]
+    },
+    {
+      "front": "fahren",
+      "senses": [
+        {
+          "labels": [
+            "[동]"
+          ],
+          "meaning": "타고 가다, 운전하다"
+        }
+      ],
+      "extras": [
+        {
+          "label": "과거",
+          "text": "fuhr"
+        },
+        {
+          "label": "과거분사",
+          "text": "gefahren"
+        }
+      ]
+    },
+    {
+      "front": "gehen",
+      "senses": [
+        {
+          "labels": [
+            "[동]"
+          ],
+          "meaning": "가다, 걷다"
+        }
+      ],
+      "extras": [
+        {
+          "label": "과거",
+          "text": "ging"
+        },
+        {
+          "label": "과거분사",
+          "text": "gegangen"
         }
       ]
     }

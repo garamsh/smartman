@@ -1,0 +1,158 @@
+{
+  "image": "64-dictionary-ko-harsh.jpg",
+  "layout": "word-book",
+  "languages": {
+    "front": "ko",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "기차",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "other",
+              "category": null,
+              "text": "사물"
+            }
+          ],
+          "meaning": "철도 위를 다니는 긴 차",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "사과",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명사"
+            },
+            {
+              "kind": "other",
+              "category": null,
+              "text": "식물"
+            }
+          ],
+          "meaning": "사과나무의 열매",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "달리다",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동사"
+            }
+          ],
+          "meaning": "빨리 뛰어가다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "책상",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "other",
+              "category": null,
+              "text": "사물"
+            }
+          ],
+          "meaning": "책을 읽거나 글을 쓸 때 앞에 놓는 상",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "의사",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명사"
+            },
+            {
+              "kind": "other",
+              "category": null,
+              "text": "직업"
+            }
+          ],
+          "meaning": "병을 고치는 일을 하는 사람",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "조용하다",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형용사"
+            }
+          ],
+          "meaning": "아무 소리도 들리지 않다",
+          "examples": []
+        }
+      ]
+    },
+    {
+      "front": "눈",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명사"
+            },
+            {
+              "kind": "other",
+              "category": null,
+              "text": "신체"
+            }
+          ],
+          "meaning": "물체를 보는 감각 기관",
+          "examples": []
+        },
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명사"
+            },
+            {
+              "kind": "other",
+              "category": null,
+              "text": "날씨"
+            }
+          ],
+          "meaning": "하늘에서 내리는 하얀 얼음 결정",
+          "examples": []
+        }
+      ]
+    }
+  ]
+}

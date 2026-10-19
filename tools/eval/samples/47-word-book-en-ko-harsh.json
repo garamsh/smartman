@@ -16,16 +16,37 @@
       "front": "face",
       "senses": [
         {
-          "pos": "[동]",
-          "meaning": "직면하다, 마주하다"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "직면하다, 마주하다",
+          "examples": []
         },
         {
-          "pos": "[명]",
-          "meaning": "표면, 겉면"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "표면, 겉면",
+          "examples": []
         },
         {
-          "pos": "[명]",
-          "meaning": "얼굴, 생김새"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "얼굴, 생김새",
+          "examples": []
         }
       ],
       "pronunciation": "['feis]",
@@ -40,12 +61,26 @@
       "front": "content",
       "senses": [
         {
-          "pos": "[명]",
-          "meaning": "내용, 목차"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "내용, 목차",
+          "examples": []
         },
         {
-          "pos": "[형]",
-          "meaning": "만족하는"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "만족하는",
+          "examples": []
         }
       ],
       "pronunciation": "명 ['kantent] / 형 [kan'tent]",
@@ -60,16 +95,37 @@
       "front": "present",
       "senses": [
         {
-          "pos": "[명]",
-          "meaning": "선물"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "선물",
+          "examples": []
         },
         {
-          "pos": "[형]",
-          "meaning": "현재의, 참석한"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "현재의, 참석한",
+          "examples": []
         },
         {
-          "pos": "[동]",
-          "meaning": "주다, 제시하다"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "주다, 제시하다",
+          "examples": []
         }
       ],
       "pronunciation": "명·형 ['preznt] / 동 [pri'zent]",
@@ -84,12 +140,26 @@
       "front": "record",
       "senses": [
         {
-          "pos": "[명]",
-          "meaning": "기록"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "기록",
+          "examples": []
         },
         {
-          "pos": "[동]",
-          "meaning": "기록하다, 녹음하다"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "기록하다, 녹음하다",
+          "examples": []
         }
       ],
       "pronunciation": "명 ['rekord] / 동 [ri'kord]"
@@ -98,16 +168,37 @@
       "front": "light",
       "senses": [
         {
-          "pos": "[명]",
-          "meaning": "빛"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "빛",
+          "examples": []
         },
         {
-          "pos": "[형]",
-          "meaning": "가벼운"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "가벼운",
+          "examples": []
         },
         {
-          "pos": "[동]",
-          "meaning": "불을 붙이다"
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "불을 붙이다",
+          "examples": []
         }
       ],
       "pronunciation": "['lait]",
