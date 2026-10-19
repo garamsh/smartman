@@ -261,20 +261,14 @@ class SyncStore {
     }
   }
 
-  /// Purges the local tombstones once nothing is unsynced: a card state
-  /// tombstone is deleted, and a card or deck tombstone loses its content in
-  /// place, a card its sides and key, a deck its name and description, made
-  /// private. The rows stay, so a review that arrives later still finds its
+  /// Purges the local tombstones once nothing is unsynced: a card or deck
+  /// tombstone loses its content in place, a card its sides and key, a deck
+  /// its name and description, made private. The rows stay, so a review that arrives later still finds its
   /// card, and nothing cascades to a review. Nothing is marked unsynced, since
   /// the server strips its own copy.
   Future<void> purge() => _guard(
     () => _db.transaction(() async {
       if (await hasUnsynced()) return;
-      await _db.customUpdate(
-        'DELETE FROM card_states WHERE deleted_at IS NOT NULL',
-        updates: {_db.cardStates},
-        updateKind: UpdateKind.delete,
-      );
       await _db.customUpdate(
         "UPDATE cards SET front = '[]', back = '[]', card_key = '' "
         "WHERE deleted_at IS NOT NULL "
@@ -303,12 +297,9 @@ class SyncStore {
   /// one.
   Future<void> recompute(Set<String> cards) => _guard(() async {
     for (final card in cards) {
-      final reviews =
-          await (_db.select(_db.reviews)..where(
-                (review) =>
-                    review.cardId.equals(card) & review.deletedAt.isNull(),
-              ))
-              .get();
+      final reviews = await (_db.select(
+        _db.reviews,
+      )..where((review) => review.cardId.equals(card))).get();
       final state = await _scheduler.fold(reviews);
       if (state == null) continue;
       await _db.transaction(() async {
@@ -316,7 +307,6 @@ class SyncStore {
           _db.cardStates,
         )..where((row) => row.cardId.equals(card))).getSingleOrNull();
         if (stored != null &&
-            stored.deletedAt == null &&
             stored.stability == state.stability &&
             stored.difficulty == state.difficulty &&
             stored.lastReview.isAtSameMomentAs(state.lastReview) &&
@@ -333,7 +323,6 @@ class SyncStore {
                 lastReview: state.lastReview,
                 due: state.due,
                 updatedAt: _clock(),
-                deletedAt: null,
                 dirty: true,
               ),
             );

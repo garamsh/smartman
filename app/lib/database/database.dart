@@ -86,10 +86,7 @@ class Cards extends Table {
   name: 'reviews_card_id_reviewed_at',
   columns: {#cardId, #reviewedAt},
 )
-@TableIndex.sql(
-  'CREATE INDEX reviews_live_reviewed_at ON reviews (reviewed_at) '
-  'WHERE deleted_at IS NULL',
-)
+@TableIndex(name: 'reviews_reviewed_at', columns: {#reviewedAt})
 @TableIndex.sql('CREATE INDEX reviews_unsynced ON reviews (id) WHERE "dirty"')
 class Reviews extends Table {
   TextColumn get id => text()();
@@ -106,8 +103,6 @@ class Reviews extends Table {
     const CustomExpression('fuzz_factor >= 0 AND fuzz_factor < 1'),
   )();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
-  DateTimeColumn get deletedAt =>
-      dateTime().nullable().map(const StoredTime())();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
@@ -128,8 +123,6 @@ class CardStates extends Table {
   DateTimeColumn get lastReview => dateTime().map(const StoredTime())();
   DateTimeColumn get due => dateTime().map(const StoredTime())();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
-  DateTimeColumn get deletedAt =>
-      dateTime().nullable().map(const StoredTime())();
   BoolColumn get dirty => boolean().withDefault(const Constant(true))();
 
   @override
@@ -158,7 +151,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -284,6 +277,15 @@ class AppDatabase extends _$AppDatabase {
         ]) {
           await m.create(index);
         }
+      },
+      // Reviews and card states lose deleted_at, which nothing wrote, so every
+      // row is kept as it was. The partial index naming the column goes first,
+      // since a rebuild restores the indexes the table had.
+      from6To7: (m, schema) async {
+        await m.drop(Index('reviews_live_reviewed_at', ''));
+        await m.alterTable(TableMigration(schema.reviews));
+        await m.alterTable(TableMigration(schema.cardStates));
+        await m.create(schema.reviewsReviewedAt);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

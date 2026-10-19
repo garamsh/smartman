@@ -24,9 +24,7 @@ class StudyRepository {
     try {
       final query = _db.select(_db.cardStates)
         ..where(
-          (row) =>
-              row.cardId.isIn([for (final card in cards) card.value]) &
-              row.deletedAt.isNull(),
+          (row) => row.cardId.isIn([for (final card in cards) card.value]),
         );
       return {
         for (final row in await query.get()) CardId(row.cardId): _toState(row),
@@ -84,19 +82,17 @@ class StudyRepository {
   }
 
   // The reads by time below are written in SQL: drift compares text times
-  // through julianday(), which no index on reviewed_at serves. Each repeats
-  // the partial index's term, `deleted_at IS NULL`, so SQLite can use it.
+  // through julianday(), which no index on reviewed_at serves.
 
   /// The stored state of every reviewed card, across every deck.
   Future<Map<CardId, CardState>> allStates() => _read(() async {
-    final query = _db.select(_db.cardStates)
-      ..where((row) => row.deletedAt.isNull());
+    final query = _db.select(_db.cardStates);
     return {
       for (final row in await query.get()) CardId(row.cardId): _toState(row),
     };
   });
 
-  /// The time of the latest answer not deleted given before [end] to each of
+  /// The time of the latest answer given before [end] to each of
   /// [cards] that has one.
   Future<Map<CardId, DateTime>> latestAnswersBefore(
     List<CardId> cards,
@@ -106,7 +102,7 @@ class StudyRepository {
     final rows = await _db
         .customSelect(
           'SELECT card_id, max(reviewed_at) AS latest FROM reviews '
-          'WHERE deleted_at IS NULL AND reviewed_at < ? '
+          'WHERE reviewed_at < ? '
           'AND card_id IN (${List.filled(cards.length, '?').join(', ')}) '
           'GROUP BY card_id',
           variables: [
@@ -122,18 +118,17 @@ class StudyRepository {
     };
   });
 
-  /// Every answer not deleted given at or after [from] and before [to],
-  /// oldest first, each with whether it is its card's first answer not
-  /// deleted.
+  /// Every answer given at or after [from] and before [to],
+  /// oldest first, each with whether it is its card's first answer.
   Future<List<TimedAnswer>> answersBetween(DateTime from, DateTime to) =>
       _read(() async {
         final rows = await _db
             .customSelect(
               'SELECT r.reviewed_at, r.duration_ms, NOT EXISTS ('
               'SELECT 1 FROM reviews AS e WHERE e.card_id = r.card_id '
-              'AND e.deleted_at IS NULL AND e.reviewed_at < r.reviewed_at'
+              'AND e.reviewed_at < r.reviewed_at'
               ') AS first FROM reviews AS r '
-              'WHERE r.deleted_at IS NULL AND r.reviewed_at >= ? '
+              'WHERE r.reviewed_at >= ? '
               'AND r.reviewed_at < ? ORDER BY r.reviewed_at',
               variables: [
                 Variable<DateTime>(storedTime(from)),
@@ -152,11 +147,11 @@ class StudyRepository {
         ];
       });
 
-  /// Every answer not deleted given at or after [since], oldest first.
+  /// Every answer given at or after [since], oldest first.
   Future<List<StoredAnswer>> answersSince(DateTime since) => _read(() async {
     final rows = await _db
         .customSelect(
-          'SELECT * FROM reviews WHERE deleted_at IS NULL AND reviewed_at >= ? '
+          'SELECT * FROM reviews WHERE reviewed_at >= ? '
           'ORDER BY reviewed_at',
           variables: [Variable<DateTime>(storedTime(since))],
           readsFrom: {_db.reviews},
@@ -174,13 +169,13 @@ class StudyRepository {
     ];
   });
 
-  /// The time of the latest answer not deleted given before [end], or null
+  /// The time of the latest answer given before [end], or null
   /// when there is none: one probe of the index on `reviewed_at`.
   Future<DateTime?> latestAnswerBefore(DateTime end) => _read(() async {
     final row = await _db
         .customSelect(
           'SELECT max(reviewed_at) AS latest FROM reviews '
-          'WHERE deleted_at IS NULL AND reviewed_at < ?',
+          'WHERE reviewed_at < ?',
           variables: [Variable<DateTime>(storedTime(end))],
           readsFrom: {_db.reviews},
         )
@@ -188,14 +183,12 @@ class StudyRepository {
     return row.readNullable<DateTime>('latest');
   });
 
-  /// Every review not deleted, oldest first, whether or not its card is
+  /// Every review, oldest first, whether or not its card is
   /// live.
   Future<List<ReviewRow>> reviews() => _read(
-    () =>
-        (_db.select(_db.reviews)
-              ..where((row) => row.deletedAt.isNull())
-              ..orderBy([(row) => OrderingTerm.asc(row.reviewedAt)]))
-            .get(),
+    () => (_db.select(
+      _db.reviews,
+    )..orderBy([(row) => OrderingTerm.asc(row.reviewedAt)])).get(),
   );
 
   Future<T> _read<T>(Future<T> Function() read) async {

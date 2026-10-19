@@ -3,7 +3,7 @@
 -- each live card of a live deck with its state and its live answers in order; both read only the
 -- caller's rows and run as the caller.
 begin;
-select plan(18);
+select plan(16);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000001', 'retention@example.com'),
@@ -16,20 +16,18 @@ language sql as $$
   select (repeat(name, 8) || '-0000-4000-8000-000000000000')::uuid
 $$;
 
--- Stores an answer of [who] to the card named [card] at [at], "good" when [know], tombstoned when
--- [deleted], with [fuzz]. Written in replica mode, which skips the foreign keys and the revision
+-- Stores an answer of [who] to the card named [card] at [at], "good" when [know], with [fuzz]. Written in replica mode, which skips the foreign keys and the revision
 -- trigger, since study_record_days reads only the answer's card, rating and time.
 create function pg_temp.answer(
-  who uuid, card char, at timestamptz, know boolean default true, deleted boolean default false,
-  fuzz double precision default null
+  who uuid, card char, at timestamptz, know boolean default true, fuzz double precision default null
 ) returns void
 language plpgsql as $$
 begin
   set local session_replication_role = replica;
   insert into public.reviews (id, user_id, card_id, rating, reviewed_at, duration_ms, fuzz_factor,
-    updated_at, deleted_at, revision)
+    updated_at, revision)
   values (gen_random_uuid(), who, pg_temp.card(card), case when know then 'good' else 'again' end,
-    at, 6000, fuzz, at, case when deleted then at end, 0);
+    at, 6000, fuzz, at, 0);
   set local session_replication_role = origin;
 end;
 $$;
@@ -91,13 +89,6 @@ select is(
     '2026-10-12 04:00:00+00 4/3/2'],
   'a card''s first answer of a later study day is scheduled, from 04:00; its first answer ever, a re-show and a second answer the same day are not');
 
--- A deleted answer is read for nothing: b's re-show deleted leaves the same count.
-select pg_temp.answer('00000000-0000-4000-8000-000000000001', 'e', '2026-10-13 09:00Z', true, true);
-select is(
-  pg_temp.days_of('00000000-0000-4000-8000-000000000001', 'UTC', '2026-10-14 09:00Z'),
-  array['2026-10-10 04:00:00+00 2/0/0', '2026-10-11 04:00:00+00 1/0/0',
-    '2026-10-12 04:00:00+00 4/3/2'],
-  'a deleted answer is not counted');
 select is(
   pg_temp.days_of('00000000-0000-4000-8000-000000000001', 'UTC', '2026-10-12 04:00Z'),
   array['2026-10-10 04:00:00+00 2/0/0', '2026-10-11 04:00:00+00 1/0/0'],
@@ -129,8 +120,7 @@ select throws_ok(
   '22023', null, 'a zone Postgres does not know raises');
 
 -- User 3's library: a live deck with cards a (state, two answers, one fuzzed), b (no state), c
--- (deleted), d (no answer) and e (one answer deleted beside a live one); and a deleted deck with
--- card f.
+-- (deleted), d (no answer) and e (one answer); and a deleted deck with card f.
 insert into public.decks (id, user_id, name, created_at, updated_at, deleted_at) values
   ('d0000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000003', 'Live',
     now(), now(), null),
@@ -151,11 +141,10 @@ insert into public.card_states
   (user_id, card_id, stability, difficulty, last_review, due, updated_at)
 select '00000000-0000-4000-8000-000000000003', pg_temp.card(name), 3, 5, now(), now(), now()
 from (values ('a'), ('c'), ('f')) as v (name);
-select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'a', '2026-10-12 09:00Z', true, false, 0.25);
+select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'a', '2026-10-12 09:00Z', true, 0.25);
 select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'a', '2026-10-10 09:00Z', false);
 select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'b', '2026-10-11 09:00Z');
 select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'c', '2026-10-11 09:00Z');
-select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'e', '2026-10-11 09:00Z', true, true);
 select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'e', '2026-10-12 09:00Z');
 select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'f', '2026-10-11 09:00Z');
 select is(
@@ -164,7 +153,7 @@ select is(
     'a 3 {again,good} {"2026-10-10 09:00:00+00","2026-10-12 09:00:00+00"} {NULL,0.25}',
     'b  {good} {"2026-10-11 09:00:00+00"} {NULL}',
     'e  {good} {"2026-10-12 09:00:00+00"} {NULL}'],
-  'each live card of a live deck with an answer: its state or none, and its live answers oldest first with their fuzz factors');
+  'each live card of a live deck with an answer: its state or none, and its answers oldest first with their fuzz factors');
 
 -- Controls: the cards left out are left out for the reason named.
 update public.cards set deleted_at = null, card_key = 'c' where id = pg_temp.card('c');
@@ -180,10 +169,6 @@ select pg_temp.answer('00000000-0000-4000-8000-000000000003', 'd', '2026-10-12 0
 select is(
   array_length(pg_temp.cards_of('00000000-0000-4000-8000-000000000003'), 1), 6,
   'control: card d answered once is read');
-update public.card_states set deleted_at = now() where card_id = pg_temp.card('a');
-select ok(
-  (pg_temp.cards_of('00000000-0000-4000-8000-000000000003'))[1] like 'a  %',
-  'a deleted state is read as none');
 
 select is(pg_temp.cards_of('00000000-0000-4000-8000-000000000001'), null,
   'another user''s cards are not read');

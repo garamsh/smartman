@@ -1,6 +1,6 @@
 # ADR 0041: Raise each pull cursor to a watermark read under the user's lock, and strip local tombstones in place
 
-> Status: accepted
+> Status: accepted; the local purge's deletion of card state tombstones superseded by ADR-0077
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

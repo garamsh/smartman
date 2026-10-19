@@ -41,8 +41,8 @@ values
   (pg_temp.id('d', 3), '00000000-0000-4000-8000-0000000000a1', 'Studied', 'shared once',
     'public', now(), now(), now(), now());
 
--- Card 1 is a studied tombstone, card 2 an unstudied one with a state tombstone, card 3 live with
--- a state tombstone, card 7 live with a live state; card 5 in deck 2, card 6 studied in deck 3.
+-- Card 1 is a studied tombstone with a state, card 2 an unstudied one, card 3 live without a
+-- state, card 7 live with a state; card 5 in deck 2, card 6 studied in deck 3.
 select pg_temp.card(1, 1, true), pg_temp.card(2, 1, true), pg_temp.card(3, 1, false),
   pg_temp.card(7, 1, false), pg_temp.card(5, 2, true), pg_temp.card(6, 3, true);
 insert into public.reviews (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at)
@@ -50,10 +50,9 @@ select pg_temp.id('e', n), '00000000-0000-4000-8000-0000000000a1', pg_temp.id('c
   now(), 4000, now()
 from (values (1), (6)) as v (n);
 insert into public.card_states (user_id, card_id, stability, difficulty, last_review, due,
-  updated_at, deleted_at)
-select '00000000-0000-4000-8000-0000000000a1', pg_temp.id('c', n), 3, 5, now(), now(), now(),
-  case when n = 7 then null else now() end
-from (values (2), (3), (7)) as v (n);
+  updated_at)
+select '00000000-0000-4000-8000-0000000000a1', pg_temp.id('c', n), 3, 5, now(), now(), now()
+from (values (1), (7)) as v (n);
 
 -- Run details of another job, past and within 30 days.
 insert into cron.job_run_details (jobid, runid, status, start_time, end_time) values
@@ -62,17 +61,15 @@ insert into cron.job_run_details (jobid, runid, status, start_time, end_time) va
 
 create temp table tombstones_before as
   select (select count(*) from public.decks where deleted_at is not null)
-    + (select count(*) from public.cards where deleted_at is not null)
-    + (select count(*) from public.card_states where deleted_at is not null) as n;
-select is((select n from tombstones_before), 8::bigint, 'the setup stored eight tombstones');
+    + (select count(*) from public.cards where deleted_at is not null) as n;
+select is((select n from tombstones_before), 6::bigint, 'the setup stored six tombstones');
 
 -- The first run: no mark is 90 days old.
 select private.purge_tombstones();
 
 select is(
   (select count(*) from public.decks where deleted_at is not null)
-    + (select count(*) from public.cards where deleted_at is not null)
-    + (select count(*) from public.card_states where deleted_at is not null),
+    + (select count(*) from public.cards where deleted_at is not null),
   (select n from tombstones_before),
   'a run with no mark 90 days old purges no tombstone');
 select is((select revision from private.sync_horizon), 0::bigint,
@@ -116,16 +113,16 @@ select cmp_ok(
   'the strip draws a revision above the horizon, so devices pull it');
 select ok(not exists (select from public.cards where id = pg_temp.id('c', 2)),
   'an unstudied card''s tombstone is deleted');
-select ok(not exists (select from public.card_states where card_id = pg_temp.id('c', 2)),
-  'its state tombstone is deleted');
-select ok(not exists (select from public.card_states where card_id = pg_temp.id('c', 3)),
-  'a live card''s state tombstone is deleted');
+select ok(exists (select from public.card_states where card_id = pg_temp.id('c', 1)),
+  'the stripped card''s state is kept');
+select is((select count(*) from public.card_states), 2::bigint,
+  'the purge deletes no card state');
 select results_eq(
-  $$select c.card_key, c.deleted_at is null, s.deleted_at is null
+  $$select c.card_key, c.deleted_at is null
     from public.cards as c join public.card_states as s on s.card_id = c.id
     where c.id in (pg_temp.id('c', 3), pg_temp.id('c', 7)) order by c.card_key$$,
-  $$values ('key 7', true, true)$$,
-  'control: live cards and live states stay; card 3 keeps no state');
+  $$values ('key 7', true)$$,
+  'control: live cards and their states stay; card 3 has no state');
 select is(
   (select card_key from public.cards where id = pg_temp.id('c', 4)), 'key 4',
   'control: a tombstone above the horizon keeps its row and content');

@@ -1,6 +1,6 @@
 # ADR 0015: Sync in the background by pull then push per table, with last-writer-wins edits, winning tombstones, unioned reviews and recomputed card states
 
-> Status: accepted; its `syncStatusProvider` superseded by ADR-0039
+> Status: accepted; its `syncStatusProvider` superseded by ADR-0039; the local `deleted_at` on `reviews` and `card_states` superseded by ADR-0077
 > Date: 2026-10-15
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

@@ -26,7 +26,6 @@ export async function readCardStates(): Promise<
       .from("card_states")
       .select("card_id, stability, difficulty, last_review, due", counted ? { count: "exact" } : {})
       .eq("user_id", session.userId)
-      .is("deleted_at", null)
       .order("card_id")
       .range(from, to)
       .abortSignal(AbortSignal.timeout(requestTimeoutMs)),

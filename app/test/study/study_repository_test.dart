@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
@@ -30,9 +30,8 @@ void main() {
 
   var reviews = 0;
 
-  /// Stores an answer to [card] at [at], creating the card on first use;
-  /// tombstoned when [deleted].
-  Future<void> answer(String card, DateTime at, {bool deleted = false}) async {
+  /// Stores an answer to [card] at [at], creating the card on first use.
+  Future<void> answer(String card, DateTime at) async {
     await db
         .into(db.cards)
         .insertOnConflictUpdate(
@@ -57,27 +56,15 @@ void main() {
             reviewedAt: at,
             durationMs: 1000,
             updatedAt: at,
-            deletedAt: Value(deleted ? at : null),
           ),
         );
   }
 
-  test('the answers between two times are the live ones from the first up to the second, each marked when it is its card\'s first live answer', () async {
+  test('the answers between two times are the ones from the first up to the second, each marked when it is its card\'s first answer', () async {
     await answer('new today', day.add(const Duration(hours: 2)));
     await answer('new today', day.add(const Duration(hours: 3)));
     await answer('answered before', day.subtract(const Duration(days: 1)));
     await answer('answered before', day.add(const Duration(hours: 1)));
-    await answer(
-      'deleted before',
-      day.subtract(const Duration(days: 1)),
-      deleted: true,
-    );
-    await answer('deleted before', day.add(const Duration(hours: 4)));
-    await answer(
-      'only deleted',
-      day.add(const Duration(hours: 5)),
-      deleted: true,
-    );
     await answer('at the end', day.add(const Duration(days: 1)));
 
     final between = await study.answersBetween(
@@ -91,16 +78,15 @@ void main() {
         (day.add(const Duration(hours: 1)), false),
         (day.add(const Duration(hours: 2)), true),
         (day.add(const Duration(hours: 3)), false),
-        (day.add(const Duration(hours: 4)), true),
       ],
     );
   });
 
-  test('the latest answers before a time are each named card\'s last live one before it, for those that have one', () async {
+  test('the latest answers before a time are each named card\'s last one before it, for those that have one', () async {
     await answer('a', day.subtract(const Duration(days: 2)));
     await answer('a', day.subtract(const Duration(days: 1)));
     await answer('a', day.add(const Duration(hours: 1)));
-    await answer('b', day.subtract(const Duration(hours: 1)), deleted: true);
+    await answer('b', day.add(const Duration(hours: 1)));
     await answer('c', day.subtract(const Duration(hours: 3)));
 
     final latest = await study.latestAnswersBefore([
@@ -125,11 +111,11 @@ void main() {
   });
 
   test(
-    'the latest answer before a time is the last live one before it, or none',
+    'the latest answer before a time is the last one before it, or none',
     () async {
       await answer('a', day);
       await answer('b', day.add(const Duration(hours: 1)));
-      await answer('c', day.add(const Duration(hours: 2)), deleted: true);
+      await answer('c', day.add(const Duration(hours: 3)));
 
       expect(
         await study.latestAnswerBefore(day.add(const Duration(hours: 3))),

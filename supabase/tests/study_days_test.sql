@@ -17,19 +17,18 @@ language sql as $$
   select (repeat(name, 8) || '-0000-4000-8000-000000000000')::uuid
 $$;
 
--- Stores an answer of [who] to the card named [card] at [at], taking [ms], tombstoned when [deleted]. Written in
--- replica mode, which skips the foreign keys and the revision trigger, since the function reads
+-- Stores an answer of [who] to the card named [card] at [at], taking [ms]. Written in replica
+-- mode, which skips the foreign keys and the revision trigger, since the function reads
 -- only the answer's card, time and duration.
 create function pg_temp.answer(
-  who uuid, card char, at timestamptz, ms integer default 6000, deleted boolean default false
+  who uuid, card char, at timestamptz, ms integer default 6000
 ) returns void
 language plpgsql as $$
 begin
   set local session_replication_role = replica;
   insert into public.reviews
-    (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at, deleted_at, revision)
-  values (gen_random_uuid(), who, pg_temp.card(card), 'good', at, ms, at,
-    case when deleted then at end, 0);
+    (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at, revision)
+  values (gen_random_uuid(), who, pg_temp.card(card), 'good', at, ms, at, 0);
   set local session_replication_role = origin;
 end;
 $$;
@@ -101,14 +100,13 @@ select is(
   array['2026-10-13 19:00:00+00 0/0 6000/1', '2026-10-14 19:00:00+00 0/0 6000/1'],
   'an answer at 03:59 in Seoul belongs to the day before, one at 04:00 to its own');
 
--- A first answer later deleted: the next live answer is the card's first.
-select pg_temp.answer('00000000-0000-4000-8000-000000000004', 'a', '2026-10-10 12:00Z', 6000, true);
+-- A card's first answer and its second the same day.
 select pg_temp.answer('00000000-0000-4000-8000-000000000004', 'a', '2026-10-11 12:00Z');
 select pg_temp.answer('00000000-0000-4000-8000-000000000004', 'a', '2026-10-11 12:01Z', 4000);
 select is(
   pg_temp.days_of('00000000-0000-4000-8000-000000000004', 'UTC', '2026-10-14 04:00Z', 30),
   array['2026-10-11 04:00:00+00 4000/1 6000/1'],
-  'a deleted answer is read for nothing, so the next live answer is the card''s first');
+  'a card''s first answer is a first answer, and its next a review');
 select is(
   pg_temp.days_of('00000000-0000-4000-8000-000000000004', 'UTC', '2026-10-11 12:01Z', 30),
   array['2026-10-11 04:00:00+00 0/0 6000/1'],
