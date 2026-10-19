@@ -586,6 +586,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
+  String readingTitle(int current, int total) {
+    return '사진 $current/$total 읽는 중';
+  }
+
+  @override
+  String readingFailed(int count) {
+    return '사진 $count장을 읽지 못했어요';
+  }
+
+  @override
+  String photosLeftToday(int count) {
+    return '오늘 $count장 더 만들 수 있어요. 처음 $count장만 읽어요.';
+  }
+
+  @override
+  String photoNumber(int number) {
+    return '사진 $number';
+  }
+
+  @override
+  String get photoWaiting => '기다리는 중';
+
+  @override
+  String get photoReading => '읽는 중';
+
+  @override
+  String get photoDrop => '빼기';
+
+  @override
+  String get addPhotos => '사진 더 추가';
+
+  @override
   String get duplicateSkip => '건너뛰기';
 
   @override

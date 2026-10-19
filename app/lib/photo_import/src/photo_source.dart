@@ -21,9 +21,11 @@ abstract interface class PhotoSource {
   /// [PhotoUnreadable].
   Future<JpegPhoto?> takePhoto();
 
-  /// Lets the user pick one photo; null when they cancel. Throws
-  /// [PhotoAccessDenied] or [PhotoUnreadable].
-  Future<JpegPhoto?> pickFromLibrary();
+  /// Lets the user pick up to [limit] photos, in the order they picked them;
+  /// null when they cancel. Each resolves to its photo, or throws
+  /// [PhotoUnreadable] when it cannot be read, so one unreadable photo leaves
+  /// the others. Throws [PhotoAccessDenied].
+  Future<List<Future<JpegPhoto>>?> pickFromLibrary({int limit = 1});
 
   /// Opens this app's page in the system settings, where camera and photo
   /// access are allowed; false when it could not.
@@ -44,10 +46,36 @@ final class DevicePhotoSource implements PhotoSource {
   };
 
   @override
-  Future<JpegPhoto?> takePhoto() => _pick(ImageSource.camera);
+  Future<JpegPhoto?> takePhoto() async {
+    final XFile? file;
+    try {
+      file = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        maxWidth: maxLongSide.toDouble(),
+        maxHeight: maxLongSide.toDouble(),
+        requestFullMetadata: false,
+      );
+    } on PlatformException catch (error) {
+      throw _failureOf(error);
+    }
+    return file == null ? null : _prepare(file);
+  }
 
   @override
-  Future<JpegPhoto?> pickFromLibrary() => _pick(ImageSource.gallery);
+  Future<List<Future<JpegPhoto>>?> pickFromLibrary({int limit = 1}) async {
+    final List<XFile> files;
+    try {
+      files = await ImagePicker().pickMultiImage(
+        maxWidth: maxLongSide.toDouble(),
+        maxHeight: maxLongSide.toDouble(),
+        limit: limit,
+        requestFullMetadata: false,
+      );
+    } on PlatformException catch (error) {
+      throw _failureOf(error);
+    }
+    return files.isEmpty ? null : [for (final file in files) _prepare(file)];
+  }
 
   /// iOS's address of this app's settings page. Android never reports a
   /// refusal: the app declares no camera permission, so its camera intent
@@ -61,23 +89,13 @@ final class DevicePhotoSource implements PhotoSource {
     }
   }
 
-  static Future<JpegPhoto?> _pick(ImageSource source) async {
-    final XFile? file;
-    try {
-      file = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: maxLongSide.toDouble(),
-        maxHeight: maxLongSide.toDouble(),
-        requestFullMetadata: false,
-      );
-    } on PlatformException catch (error) {
-      throw switch (error.code) {
+  static PhotoImportFailure _failureOf(PlatformException error) =>
+      switch (error.code) {
         final code when _deniedCodes.contains(code) => PhotoAccessDenied(error),
         'no_available_camera' => CameraUnavailable(error),
         _ => PhotoUnreadable(error),
       };
-    }
-    if (file == null) return null;
-    return preparePhoto(await file.readAsBytes());
-  }
+
+  static Future<JpegPhoto> _prepare(XFile file) async =>
+      preparePhoto(await file.readAsBytes());
 }

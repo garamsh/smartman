@@ -368,6 +368,34 @@
   "@extractingTitle": {"description": "Title while the photo is sent for extraction."},
   "extractingNote": "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요",
   "@extractingNote": {"description": "Privacy note shown while cards are extracted."},
+  "readingTitle": "사진 {current}/{total} 읽는 중",
+  "@readingTitle": {
+    "description": "Heading while several photos are read, announced to screen readers: the photo being read now and how many there are.",
+    "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "readingFailed": "사진 {count}장을 읽지 못했어요",
+  "@readingFailed": {
+    "description": "Heading once every photo that could be read is read and some failed; each failed photo offers retry or remove.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "photosLeftToday": "오늘 {count}장 더 만들 수 있어요. 처음 {count}장만 읽어요.",
+  "@photosLeftToday": {
+    "description": "Shown before reading when fewer photos are left in today's limit than were picked.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "photoNumber": "사진 {number}",
+  "@photoNumber": {
+    "description": "One photo of an import, by its place in the order picked.",
+    "placeholders": {"number": {"type": "int"}}
+  },
+  "photoWaiting": "기다리는 중",
+  "@photoWaiting": {"description": "A photo waiting for its turn to be read."},
+  "photoReading": "읽는 중",
+  "@photoReading": {"description": "A photo being read now."},
+  "photoDrop": "빼기",
+  "@photoDrop": {"description": "Leaves a photo that failed out of the import."},
+  "addPhotos": "사진 더 추가",
+  "@addPhotos": {"description": "Adds more photos to the import, from the camera or the album."},
   "duplicateSkip": "건너뛰기",
   "@duplicateSkip": {"description": "Duplicate option: write nothing for this candidate."},
   "duplicateMergeBack": "뒷면 합치기",

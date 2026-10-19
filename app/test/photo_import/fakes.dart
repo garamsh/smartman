@@ -27,6 +27,13 @@ final class FakePhotoSource implements PhotoSource {
   /// What the library returns; null is a cancelled pick.
   JpegPhoto? libraryPhoto = testPhoto;
 
+  /// What a pick of several returns in place of [libraryPhoto], each a
+  /// photo or its failure; null picks [libraryPhoto] alone.
+  List<Future<JpegPhoto>>? libraryPhotos;
+
+  /// The limit of each library pick, in order.
+  final libraryLimits = <int>[];
+
   /// Thrown by [pickFromLibrary] instead of returning, when set.
   PhotoImportFailure? libraryFailure;
 
@@ -45,10 +52,15 @@ final class FakePhotoSource implements PhotoSource {
   }
 
   @override
-  Future<JpegPhoto?> pickFromLibrary() async {
+  Future<List<Future<JpegPhoto>>?> pickFromLibrary({int limit = 1}) async {
     libraryCalls++;
+    libraryLimits.add(limit);
     if (libraryFailure case final failure?) throw failure;
-    return libraryPhoto;
+    if (libraryPhotos case final photos?) return photos.take(limit).toList();
+    return switch (libraryPhoto) {
+      final photo? => [Future.value(photo)],
+      null => null,
+    };
   }
 
   @override
@@ -72,6 +84,16 @@ final class PendingExtraction {
 /// An extraction client whose every call waits for the test to answer it.
 final class FakeExtractionClient implements ExtractionClient {
   final calls = <PendingExtraction>[];
+
+  /// What [allowance] resolves to; null is one that cannot be read.
+  ExtractionAllowance? todayAllowance;
+
+  @override
+  Future<ExtractionAllowance?> allowance() async => todayAllowance;
+
+  /// The calls not yet answered or cancelled.
+  Iterable<PendingExtraction> get open =>
+      calls.where((call) => !call.answer.isCompleted && !call.cancelled);
 
   @override
   Future<List<CandidateCard>?> extract(

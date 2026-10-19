@@ -1174,6 +1174,86 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets('several photos in $mode', skip: !_capture, (tester) async {
+      final semantics = tester.ensureSemantics();
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: DateTime.now,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      final client = FakeExtractionClient()
+        ..todayAllowance = (dailyLimit: 30, used: 27);
+      final photos = FakePhotoSource()
+        ..libraryPhotos = [for (var i = 0; i < 4; i++) Future.value(testPhoto)];
+      final preferences = await openPreferences(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [deckRepositoryProvider.overrideWithValue(repository)],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => importFromPhoto(
+                      context,
+                      deck: deck.id,
+                      origin: PhotoOrigin.album,
+                      client: client,
+                      photos: photos,
+                      preferences: preferences,
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      /// Pumps frames past what a read changes, as the bar never settles.
+      Future<void> frames() async {
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+      }
+
+      await tester.tap(find.text('open'));
+      await frames();
+      client.calls[0].answer.complete([
+        word(front: 'face', meaning: '직면하다', partOfSpeech: '[동]'),
+        word(front: 'include', meaning: '포함하다', partOfSpeech: '[동]'),
+      ]);
+      await frames();
+      client.calls[1].answer.completeError(const ModelFailed());
+      await frames();
+      await shot(tester, '26-photo-reading');
+
+      client.calls[2].answer.complete([
+        word(front: 'strategy', meaning: '전략, 계획', partOfSpeech: '[명]'),
+        word(front: 'in addition', meaning: '~뿐만 아니라', topic: '빈출 숙어'),
+      ]);
+      await frames();
+      await tester.tap(find.text(ko.photoDrop));
+      await tester.pumpAndSettle();
+      await shot(tester, '26a-photo-groups');
+
+      await unmount(tester);
+      semantics.dispose();
+    });
+
     testWidgets('sharing in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());

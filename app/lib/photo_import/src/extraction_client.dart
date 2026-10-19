@@ -69,6 +69,10 @@ final class CandidateCard {
   final List<Content>? wholeFront;
 }
 
+/// The photos the user's plan lets through a UTC day, and those counted
+/// against it today.
+typedef ExtractionAllowance = ({int dailyLimit, int used});
+
 /// Sends a photo to `extract-cards` and returns the cards it found.
 abstract interface class ExtractionClient {
   /// The cards on [photo]'s page, or null once [cancel] completes before the
@@ -77,6 +81,10 @@ abstract interface class ExtractionClient {
     JpegPhoto photo, {
     required Future<void> cancel,
   });
+
+  /// Today's allowance, or null when it cannot be read, offline among other
+  /// cases; each photo's own refusal then says when the limit is reached.
+  Future<ExtractionAllowance?> allowance();
 }
 
 /// Calls the deployed function over HTTP with the signed-in user's token.
@@ -85,7 +93,23 @@ final class HttpExtractionClient implements ExtractionClient {
     this._http, {
     required this.functionUrl,
     required this.accessToken,
+    required this.readAllowance,
   });
+
+  /// Calls `public.extraction_allowance()` and resolves to its rows as
+  /// PostgREST answers them.
+  final Future<Object?> Function() readAllowance;
+
+  @override
+  Future<ExtractionAllowance?> allowance() async {
+    final Object? rows;
+    try {
+      rows = await readAllowance();
+    } on Exception {
+      return null;
+    }
+    return parseAllowance(rows);
+  }
 
   final http.Client _http;
 
@@ -301,3 +325,12 @@ Uri extractCardsUrl(String restUrl) {
   final project = restUrl.substring(0, restUrl.length - rest.length);
   return Uri.parse('$project/functions/v1/extract-cards');
 }
+
+/// The allowance `extraction_allowance()`'s [rows] hold: one row of a
+/// `daily_limit` and a `used`, neither below 0; null for anything else.
+ExtractionAllowance? parseAllowance(Object? rows) => switch (rows) {
+  [{'daily_limit': final int dailyLimit, 'used': final int used}]
+      when dailyLimit >= 0 && used >= 0 =>
+    (dailyLimit: dailyLimit, used: used),
+  _ => null,
+};

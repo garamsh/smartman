@@ -49,6 +49,7 @@ Future<void> main() async {
           http.Client(),
           functionUrl: extractCardsUrl(client.rest.url),
           accessToken: () async => client.auth.currentSession?.accessToken,
+          readAllowance: () => client.rpc<Object?>('extraction_allowance'),
         ),
         null => null,
       },

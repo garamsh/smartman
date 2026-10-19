@@ -33,6 +33,10 @@ final class _NoExtraction implements ExtractionClient {
     JpegPhoto photo, {
     required Future<void> cancel,
   }) => throw UnimplementedError('not called');
+
+  @override
+  Future<ExtractionAllowance?> allowance() =>
+      throw UnimplementedError('not called');
 }
 
 void main() {
