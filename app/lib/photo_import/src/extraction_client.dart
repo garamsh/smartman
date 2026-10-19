@@ -155,10 +155,22 @@ List<CandidateCard> parseExtraction(int status, String body) =>
       401 => throw const SignInRequired(),
       413 || 415 => throw PhotoRefused(status),
       422 => throw const NoCardsFound(),
-      429 => throw const DailyLimitReached(),
+      429 => throw DailyLimitReached(dailyLimit: _dailyLimit(body)),
       502 => throw const ModelFailed(),
       _ => throw ServiceFailed('HTTP $status'),
     };
+
+/// The daily limit a `429` [body] states, or null when it states none.
+int? _dailyLimit(String body) {
+  try {
+    return switch (jsonDecode(body)) {
+      {'daily_limit': final int limit} when limit >= 0 => limit,
+      _ => null,
+    };
+  } on FormatException {
+    return null;
+  }
+}
 
 List<CandidateCard> _parseCards(String body) {
   final Object? decoded;

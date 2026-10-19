@@ -14,7 +14,6 @@ const ENV: Record<string, string> = {
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
   OPENROUTER_API_KEY: "openrouter-key",
-  CARD_MODEL: "vendor/primary-model",
 };
 
 /** A model reply: the message text OpenRouter returns, or an HTTP failure. */
@@ -27,6 +26,8 @@ const cardsReply = (cards: unknown): Reply => ({
 type Fake = {
   replies: Reply[];
   allowed: boolean;
+  /** The row start_extraction answers for the caller's plan, or none when its settings are missing. */
+  plan: { plan: string; model: string; daily_limit: number } | null;
   calls: { url: string; init: RequestInit | undefined }[];
 };
 
@@ -48,8 +49,12 @@ function fakeFetch(fake: Fake): typeof fetch {
       }
       return Promise.resolve(Response.json({ code: 403 }, { status: 403 }));
     }
-    if (url === `${SUPABASE_URL}/rest/v1/rpc/consume_extraction`) {
-      return Promise.resolve(Response.json(fake.allowed));
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/start_extraction`) {
+      return Promise.resolve(
+        Response.json(
+          fake.plan === null ? [] : [{ ...fake.plan, allowed: fake.allowed }],
+        ),
+      );
     }
     if (url === OPENROUTER_URL) {
       const reply = fake.replies.shift();
@@ -134,12 +139,16 @@ async function run(
     method?: string;
     replies?: Reply[];
     allowed?: boolean;
+    plan?: Fake["plan"];
     env?: Record<string, string | undefined>;
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
     replies: options.replies ?? [],
     allowed: options.allowed ?? true,
+    plan: options.plan === undefined
+      ? { plan: "free", model: "vendor/primary-model", daily_limit: 30 }
+      : options.plan,
     calls: [],
   };
   const env = { ...ENV, ...options.env };
@@ -190,7 +199,7 @@ async function run(
 }
 
 const usageCalls = (r: Run) =>
-  r.fake.calls.filter((call) => call.url.endsWith("/rpc/consume_extraction"));
+  r.fake.calls.filter((call) => call.url.endsWith("/rpc/start_extraction"));
 /**
  * Three cards as the model writes them: a vocabulary entry with a part of speech and an example,
  * one with neither, and a point of notes with the page's own example.
@@ -393,16 +402,7 @@ Deno.test("a method other than POST is refused with 405", async () => {
   assert.equal(r.fake.calls.length, 0);
 });
 
-Deno.test("invalid JSON from the model is retried once, and a valid retry is returned", async () => {
-  const r = await run({
-    replies: [{ content: "Here are your cards: [" }, cardsReply(twoCards)],
-  });
-  assert.equal(r.status, 200);
-  assert.deepEqual(r.body, { cards: twoAnswered });
-  assert.equal(r.modelCalls.length, 2);
-});
-
-Deno.test("invalid output twice answers 502 after exactly one retry", async () => {
+Deno.test("invalid output answers 502 after one call, with no retry", async () => {
   const card = twoCards[2];
   const tooLong = [{ ...card, answer: "a".repeat(1001) }];
   const sixExamples = [{ ...card, examples: ["a", "b", "c", "d", "e", "f"] }];
@@ -414,33 +414,53 @@ Deno.test("invalid output twice answers 502 after exactly one retry", async () =
     examples: [],
   }];
   for (
-    const replies of [
-      [{ content: "{" }, { content: "not json" }],
-      [cardsReply(tooLong), { content: "{}" }],
-      [cardsReply(sixExamples), cardsReply(oldShape)],
+    const reply of [
+      { content: "{" },
+      { content: "Here are your cards: [" },
+      cardsReply(tooLong),
+      cardsReply(sixExamples),
+      cardsReply(oldShape),
     ]
   ) {
-    const r = await run({ replies: [...replies, cardsReply(twoCards)] });
+    const r = await run({ replies: [reply, cardsReply(twoCards)] });
     assert.equal(r.status, 502);
     assert.deepEqual(r.body, { error: "model_error" });
     assert.equal(
       r.modelCalls.length,
-      2,
-      "one call and one retry, the third reply never asked for",
+      1,
+      "the valid second reply is never asked for",
     );
+  }
+  const control = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(control.status, 200, "control: a valid first reply");
+});
+
+Deno.test("the call uses the model of the caller's plan", async () => {
+  for (const plan of ["free", "pro", "special"]) {
+    const r = await run({
+      plan: { plan, model: `vendor/${plan}-model`, daily_limit: 30 },
+      replies: [cardsReply(twoCards)],
+    });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.modelCalls.map((call) => call.model), [
+      `vendor/${plan}-model`,
+    ]);
+    assert.equal(r.logs[0].plan, plan);
   }
 });
 
-Deno.test("the retry uses CARD_RETRY_MODEL when it is set", async () => {
-  const r = await run({
-    env: { CARD_RETRY_MODEL: "vendor/retry-model" },
-    replies: [{ content: "{" }, cardsReply(twoCards)],
-  });
-  assert.equal(r.status, 200);
-  assert.deepEqual(r.modelCalls.map((call) => call.model), [
-    "vendor/primary-model",
-    "vendor/retry-model",
-  ]);
+Deno.test("missing plan settings, or a plan naming no model, answer 503 without a model call", async () => {
+  for (
+    const plan of [
+      null,
+      { plan: "free", model: "not a model id", daily_limit: 30 },
+    ]
+  ) {
+    const r = await run({ plan, replies: [cardsReply(twoCards)] });
+    assert.equal(r.status, 503, JSON.stringify(plan));
+    assert.deepEqual(r.body, { error: "not_configured" });
+    assert.equal(r.modelCalls.length, 0);
+  }
 });
 
 Deno.test("a model HTTP error answers 502 without a retry", async () => {
@@ -595,14 +615,16 @@ Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, 
   }
 });
 
-Deno.test("a user over the daily limit is refused with 429 and no model call", async () => {
+Deno.test("a user at the daily limit of its plan is refused with 429 stating that limit, and no model call", async () => {
   const refused = await run({
     allowed: false,
+    plan: { plan: "pro", model: "vendor/pro-model", daily_limit: 100 },
     replies: [cardsReply(twoCards)],
   });
   assert.equal(refused.status, 429);
-  assert.deepEqual(refused.body, { error: "rate_limited" });
+  assert.deepEqual(refused.body, { error: "rate_limited", daily_limit: 100 });
   assert.equal(refused.modelCalls.length, 0);
+  assert.equal(refused.logs[0].plan, "pro");
 
   const allowed = await run({ allowed: true, replies: [cardsReply(twoCards)] });
   assert.equal(
@@ -614,23 +636,20 @@ Deno.test("a user over the daily limit is refused with 429 and no model call", a
   assert.equal(usage.length, 1);
   assert.deepEqual(JSON.parse(String(usage[0].init?.body)), {
     user_id: USER_ID,
-    daily_limit: 30,
   });
   const headers = new Headers(usage[0].init?.headers);
   assert.equal(
     headers.get("Authorization"),
     "Bearer service-role-key",
-    "recorded with the service role",
+    "read and recorded with the service role",
   );
 });
 
-Deno.test("a missing OpenRouter key or model answers 503", async () => {
+Deno.test("a missing OpenRouter key answers 503, and no model secret is read", async () => {
   for (
     const env of [
       { OPENROUTER_API_KEY: undefined },
       { OPENROUTER_API_KEY: " " },
-      { CARD_MODEL: undefined },
-      { CARD_RETRY_MODEL: "not a model id" },
     ]
   ) {
     const r = await run({ env, replies: [cardsReply(twoCards)] });
@@ -638,18 +657,22 @@ Deno.test("a missing OpenRouter key or model answers 503", async () => {
     assert.deepEqual(r.body, { error: "not_configured" });
     assert.equal(r.fake.calls.length, 0);
   }
-  const control = await run({ replies: [cardsReply(twoCards)] });
-  assert.equal(control.status, 200, "control: the full configuration");
+  const control = await run({
+    env: { CARD_MODEL: undefined, CARD_RETRY_MODEL: "not a model id" },
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(
+    control.status,
+    200,
+    "control: the key alone configures it, whatever CARD_MODEL and CARD_RETRY_MODEL hold",
+  );
 });
 
 Deno.test("each request logs one line of the allowed fields and never the image", async () => {
   const photo = image(PNG, 4096);
   const outcomes = [
     await run({ body: { image: photo }, replies: [cardsReply(twoCards)] }),
-    await run({
-      body: { image: photo },
-      replies: [{ content: "{" }, { content: "{" }],
-    }),
+    await run({ body: { image: photo }, replies: [{ content: "{" }] }),
     await run({ body: { image: photo }, replies: [{ status: 503 }] }),
     await run({ body: { image: photo }, allowed: false }),
     await run({ body: { image: photo }, authorization: null }),
@@ -661,6 +684,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
       "latency_ms",
       "model",
       "outcome",
+      "plan",
       "prompt_tokens",
       "user_id",
     ]);
@@ -686,16 +710,18 @@ Deno.test("each request logs one line of the allowed fields and never the image"
   ]);
   assert.deepEqual(outcomes[0].logs[0], {
     user_id: USER_ID,
+    plan: "free",
     model: "vendor/primary-model",
     latency_ms: 0,
     prompt_tokens: 1200,
     completion_tokens: 80,
     outcome: "ok",
   });
-  assert.equal(
-    outcomes[1].logs[0].prompt_tokens,
-    2400,
-    "tokens are summed over the retry",
-  );
+  assert.equal(outcomes[1].logs[0].prompt_tokens, 1200, "one call's tokens");
   assert.equal(outcomes[4].logs[0].user_id, null);
+  assert.equal(
+    outcomes[4].logs[0].plan,
+    null,
+    "no plan is read without a user",
+  );
 });

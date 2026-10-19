@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
 import { normalize } from "./metrics.ts";
-import { MODELS_URL, newest, parseModels } from "./models.ts";
+import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
 import {
   estimateUsd,
@@ -129,9 +129,8 @@ function world(
       PATHS.candidates,
       JSON.stringify(
         candidates ?? [{ label: "Cheap", primary: "^vendor/cheap" }, {
-          label: "Dear with cheap retry",
+          label: "Dear",
           primary: "^vendor/dear$",
-          retry: "^vendor/cheap$",
         }],
       ),
     ],
@@ -226,13 +225,27 @@ Deno.test("only models taking images with structured outputs are candidates, the
   assert.equal(newest("^vendor/text-only$", models), null);
 });
 
+Deno.test("a candidate naming a retry is refused, since the function makes one call per photo", () => {
+  assert.throws(
+    () =>
+      parseSelectors([{ label: "Haiku", primary: "^a/b$", retry: "^a/c$" }]),
+    /malformed candidate/,
+  );
+  assert.deepEqual(
+    parseSelectors([{ label: "Haiku", primary: "^a/b$" }]),
+    [{ label: "Haiku", primary: "^a/b$" }],
+    "control: the same candidate without a retry",
+  );
+});
+
 Deno.test("a dry run prints the resolved models and the estimate, and calls no model", async () => {
   const w = world();
   assert.equal(await main(["--dry-run"], io(w, {})), 0);
   assert.equal(w.chatCalls.length, 0);
   assert.ok(
     w.printed.some((line) =>
-      line.includes("`vendor/dear`") && line.includes("retry `vendor/cheap`")
+      line.startsWith("Dear: ") && line.includes("`vendor/dear`") &&
+      !line.includes("retry")
     ),
   );
   assert.ok(
@@ -302,11 +315,11 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   );
   assert.match(
     table,
-    /\| Dear with cheap retry \| 100\.0 \| 100\.0 \| 100\.0 \|/,
+    /\| Dear \| 100\.0 \| 100\.0 \| 100\.0 \|/,
   );
   assert.match(
     table,
-    /- Dear with cheap retry: the cheapest configuration whose vocabulary F1 is within 2 points/,
+    /- Dear: the cheapest configuration whose vocabulary F1 is within 2 points/,
   );
   assert.match(table, /All runs: \$1\.0040 of the \$10\.0000 budget/);
   assert.doesNotMatch(table, /## Notes pages/, "no notes image ran");
@@ -364,8 +377,8 @@ Deno.test("a run keeps each image's reply in a folder named for its start, and t
   assert.deepEqual(kept, [
     `${folder}/cheap/01-a.json`,
     `${folder}/cheap/02-b.json`,
-    `${folder}/dear-with-cheap-retry/01-a.json`,
-    `${folder}/dear-with-cheap-retry/02-b.json`,
+    `${folder}/dear/01-a.json`,
+    `${folder}/dear/02-b.json`,
   ]);
   const reply = JSON.parse(w.files.get(`${folder}/cheap/01-a.json`) ?? "");
   assert.equal(reply.candidate, "Cheap");
@@ -515,7 +528,7 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
 Deno.test("the dry estimate prices a note card above a vocabulary card", () => {
   const cheap = newest("^vendor/cheap$", parseModels(MODEL_LIST));
   assert.ok(cheap !== null);
-  const candidate = [{ label: "Cheap", primary: cheap, retry: cheap }];
+  const candidate = [{ label: "Cheap", primary: cheap }];
   const vocabulary = estimateUsd(candidate, [{
     cards: 10,
     tokensPerCard: TYPICAL_VOCABULARY_TOKENS_PER_CARD,
@@ -533,11 +546,12 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
   const models = parseModels(MODEL_LIST);
   const cheap = newest("^vendor/cheap$", models);
   assert.ok(cheap !== null);
-  const worst = 2 * worstCallUsd(cheap.pricing);
+  // One call per image, so its worst case is one call's.
+  const worst = worstCallUsd(cheap.pricing);
   // Room for the worst case of the first image, and not for it again once that image spent its reply cost.
   const ledger = { budgetUsd: worst + w.replyCost / 2, runs: [] };
   const run = await runEval(
-    [{ label: "Cheap", primary: cheap, retry: cheap }],
+    [{ label: "Cheap", primary: cheap }],
     samples,
     ledger,
     {
@@ -557,7 +571,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
   assert.ok(run.spentUsd <= ledger.budgetUsd);
 
   const roomy = await runEval(
-    [{ label: "Cheap", primary: cheap, retry: cheap }],
+    [{ label: "Cheap", primary: cheap }],
     samples,
     {
       budgetUsd: worst + 3 * w.replyCost,

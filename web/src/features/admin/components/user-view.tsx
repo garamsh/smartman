@@ -1,7 +1,7 @@
-import { dailyExtractionLimit } from "../extraction";
 import { formatDate, formatTime } from "../format";
 import type { AdminUser } from "../read-admin";
 import { PublicDecks } from "./public-decks";
+import { UserPlan } from "./user-plan";
 
 /** One user, read-only: sign-up, last study, decks and cards, public decks and today's photos. */
 export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string }) {
@@ -15,7 +15,9 @@ export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string
     ["카드", `${String(user.cards)}장`],
     [
       "오늘 사진 추출 (UTC)",
-      `${String(user.extractionsToday)}장 / 하루 ${String(dailyExtractionLimit)}장`,
+      user.plan.dailyLimit === null
+        ? `${String(user.extractionsToday)}장`
+        : `${String(user.extractionsToday)}장 / 하루 ${String(user.plan.dailyLimit)}장`,
     ],
   ] as const;
   return (
@@ -36,6 +38,7 @@ export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string
           </div>
         ))}
       </dl>
+      <UserPlan userId={user.id} email={user.email} plan={user.plan} timeZone={timeZone} />
       <section aria-label="공개 덱" className="flex flex-col gap-3">
         <h2 className="text-section">공개 덱</h2>
         <PublicDecks decks={user.publicDecks} timeZone={timeZone} empty="공개한 덱이 없어요." />

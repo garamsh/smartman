@@ -1211,6 +1211,12 @@ void main() {
         false,
       ),
       (
+        const DailyLimitReached(dailyLimit: 50),
+        "You've used today's 50 photos. Try again tomorrow.",
+        false,
+        false,
+      ),
+      (
         const ModelFailed(),
         "Couldn't read the cards. Please try again in a moment.",
         true,

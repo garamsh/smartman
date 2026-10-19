@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatTime } from "../format";
-import { actionLabels, labelOf } from "../labels";
+import { actionLabels, labelOf, planLabels } from "../labels";
 import type { AuditEntry } from "../read-admin";
 
 /** What an entry acted on: the deck's name or the user's email it recorded, linked where it can be opened. */
@@ -9,13 +9,21 @@ function Target({ entry }: { entry: AuditEntry }) {
   const name = entry.detail.name;
   const email = entry.detail.email;
   const words =
-    typeof name === "string" ? name : typeof email === "string" ? email : entry.targetId;
+    typeof name === "string"
+      ? name
+      : typeof email === "string"
+        ? email
+        : entry.targetKind === "plan"
+          ? labelOf(planLabels, entry.targetId)
+          : entry.targetId;
   const href =
     entry.targetKind === "deck"
       ? `/admin/decks/${entry.targetId}`
       : entry.targetKind === "user"
         ? `/admin/users/${entry.targetId}`
-        : null;
+        : entry.targetKind === "plan"
+          ? "/admin/plans"
+          : null;
   return href === null ? (
     <span>{words}</span>
   ) : (
@@ -38,6 +46,12 @@ export function AuditLog({ entries, timeZone }: { entries: AuditEntry[]; timeZon
           <span className="text-body-strong">
             {labelOf(actionLabels, entry.action)} · <Target entry={entry} />
             {typeof entry.detail.reports === "number" ? ` · ${String(entry.detail.reports)}건` : ""}
+            {typeof entry.detail.plan === "string"
+              ? ` · ${labelOf(planLabels, entry.detail.plan)}`
+              : ""}
+            {typeof entry.detail.model === "string" && typeof entry.detail.daily_limit === "number"
+              ? ` · ${entry.detail.model} · 하루 ${String(entry.detail.daily_limit)}장`
+              : ""}
           </span>
           <span className="text-caption text-muted">
             {formatTime(entry.at, timeZone)} · {entry.adminEmail}

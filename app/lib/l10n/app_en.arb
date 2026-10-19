@@ -128,6 +128,7 @@
   "photoRefused": "This photo can't be sent. Retake it or choose another.",
   "noCardsFound": "No cards found. Try a brighter, straighter photo.",
   "dailyLimitReached": "You've reached today's limit for photos. Try again tomorrow.",
+  "dailyLimitReachedOf": "You've used today's {limit} photos. Try again tomorrow.",
   "modelFailed": "Couldn't read the cards. Please try again in a moment.",
   "signInRequired": "You need to sign in. Sign in again from the account screen.",
   "serviceFailed": "Can't make cards from photos right now. Please try again in a moment.",
