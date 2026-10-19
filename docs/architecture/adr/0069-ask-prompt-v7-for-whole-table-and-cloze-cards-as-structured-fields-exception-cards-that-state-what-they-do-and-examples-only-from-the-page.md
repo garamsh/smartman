@@ -30,7 +30,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **Apps in use.**
   - The app on `main` refuses a card whose `type` it does not know: `app/lib/photo_import/src/extraction_client.dart` throws `ServiceFailed('a card has an unknown type')`. It ignores keys it does not know.
   - [`server.md`](../server.md) §Edge Function deploys does not merge "a response the apps in use cannot read".
-  - The coordinator ruled, on the worker's question, that this change waits for an app that reads `type: table` (#212 part 1). #212 part 1 also makes the parser read an unknown type as a plain card.
+  - The coordinator first ruled, on the worker's question, that this change waits for an app that reads `type: table` (#212 part 1). #212 part 1 also makes the parser read an unknown type as a plain card.
+  - On 2026-10-19 the owner decided that, as nothing is released, no compatibility with older app builds is kept until the first store release (#250). The PM recorded on this PR the same day that the order after #226, #212 part 1's PR, no longer binds.
 - **The PM's first run of v7**, on #225 at `2b3f1a2ea573277b4fd8331e8a94058710d8749c`, Claude Haiku 5.5 over the 55 samples:
   - Table blanks were 95.8, bare exceptions 0.0, the typical notes pages 100 and vocabulary F1 99.5.
   - Cloze blanks were 0.0. On samples 52 to 55, each list line, such as "주성분: 주어, 서술어, 목적어, 보어", came back as a concept card naming the group and answering the list.
@@ -75,11 +76,11 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
     - A header or cell the page leaves empty is `""`. Each is at most 500 characters.
   - `cloze` — `{answers}`: 1 to 10 answers, one for each `___` in the card's front, in order.
   - Only a note's `table` card has a `table`, and only its `cloze` card a `cloze`, and neither card has an `answer` from the model. A vocabulary card is neither.
-  - The parser refuses every other combination as invalid output, which is retried once. It also refuses ragged rows, a blank outside the table, on an empty cell or given twice, a table with no blank, and a cloze whose answers do not match its blanks one for one.
+  - The parser refuses every other combination as invalid output, which answers `502` after the one call ([ADR 0071](0071-give-each-user-a-plan-whose-model-and-daily-limit-an-admin-sets-in-the-database-and-make-one-model-call-per-photo.md)). It also refuses ragged rows, a blank outside the table, on an empty cell or given twice, a table with no blank, and a cloze whose answers do not match its blanks one for one.
 - **For apps that read only `front`, `answer` and `back`:**
   - A table card's `answer`, `short` and `back` are the table as plain text: the headers on the first line, then one line per row, cells joined by ` | `.
   - A cloze card's are its answers, one per line.
-- **Merge order.** This change merges only once the app that reads `type: table` is the one in use: #212 part 1, which also reads an unknown type as a plain card. Until then, a v7 response holding a table card would fail the whole extraction in the app on `main`.
+- **Merge order.** This change does not wait for an app that reads `type: table` (#250). Until #226 merges, a v7 response holding a table card fails the whole extraction in the app on `main`, and the owner's development install takes a build with #226 when that merges.
 - **The eval:**
   - `ko-honorifics` is samples 48 to 51. It has a classification table whose six body cells are table blanks.
   - `ko-components` is samples 52 to 55. It has list lines whose seven listed words are cloze blanks.
@@ -99,7 +100,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
     - bare exceptions on pages 33 to 36;
     - table and cloze blanks;
     - the cost per photo.
-  - The merge waits for the owner's approval of that cost, since merging deploys the function.
+  - Merging deploys the function, so the merge waited for the owner's approval of that cost. The owner approved it on 2026-10-19, as the PM recorded on this PR: prompt v7 on Claude Haiku 5.5 at $0.0022 per photo, against $0.0018 on v6.
 - **Supersessions.**
   - This replaces ADR 0063's prompt v6, its tables cell by cell, its cloze of one blank, its type of three values and its cap order.
   - It replaces [ADR 0059](0059-keep-one-sonnet-call-per-photo-after-measuring-an-outline-then-fill-pipeline-and-the-newest-models.md)'s eight candidate configurations.
@@ -108,7 +109,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - A page's table reaches the app as one card with its structure, ready for #212's whole-card rendering. A list line reaches it as one card with all its blanks.
 - An app that reads only `front`, `answer` and `back` still shows each new card readably: a table as rows of text, and a cloze as its line and its answers.
-- Until #212 part 1 is in use, this change cannot merge, since the app on `main` refuses the `table` type.
+- Until #226 merges, a photo whose page yields a table card fails in the app on `main`, which refuses the `table` type; the owner accepted that for builds before the first release (#250).
 - Cell-by-cell cards stop for tables to memorise, so a page gives fewer cards, but a table card's reply is larger. How the cost changes is unmeasured until the PM's run.
 - The eval scores whether a model uses the new types where the page calls for them, and whether exception cards state their rule. It no longer compares models, until a later change adds candidates back.
 
