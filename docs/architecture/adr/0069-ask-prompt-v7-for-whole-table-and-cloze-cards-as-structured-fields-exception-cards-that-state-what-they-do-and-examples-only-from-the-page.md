@@ -28,7 +28,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - The eval's candidates are Claude Haiku 5.5 alone, without a retry, since the owner has decided to drop the Sonnet retry.
   - The ledger takes two entries: the PM's v6 runs, and the key usage left unattributed after them.
 - **Apps in use.**
-  - The app on `main` refuses a card whose `type` it does not know: `app/lib/photo_import/src/extraction_client.dart` throws `ServiceFailed('a card has an unknown type')`. It ignores keys it does not know.
+  - When this change was written, the app on `main` refused a card whose `type` it did not know: `app/lib/photo_import/src/extraction_client.dart` threw `ServiceFailed('a card has an unknown type')`. #226 merged as `42d9132b4e9c15135844afc57771f6709f6f050e`, and since then the app reads `type: table` and the `table` and `cloze` fields into its typed blocks, and an unknown type as a concept card.
   - [`server.md`](../server.md) §Edge Function deploys does not merge "a response the apps in use cannot read".
   - The coordinator first ruled, on the worker's question, that this change waits for an app that reads `type: table` (#212 part 1). #212 part 1 also makes the parser read an unknown type as a plain card.
   - On 2026-10-19 the owner decided that, as nothing is released, no compatibility with older app builds is kept until the first store release (#250). The PM recorded on this PR the same day that the order after #226, #212 part 1's PR, no longer binds.
@@ -80,7 +80,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **For apps that read only `front`, `answer` and `back`:**
   - A table card's `answer`, `short` and `back` are the table as plain text: the headers on the first line, then one line per row, cells joined by ` | `.
   - A cloze card's are its answers, one per line.
-- **Merge order.** This change does not wait for an app that reads `type: table` (#250). Until #226 merges, a v7 response holding a table card fails the whole extraction in the app on `main`, and the owner's development install takes a build with #226 when that merges.
+- **Merge order.** This change does not wait for an app that reads `type: table` (#250). #226, which reads it, merged first as `42d9132b4e9c15135844afc57771f6709f6f050e`.
 - **The eval:**
   - `ko-honorifics` is samples 48 to 51. It has a classification table whose six body cells are table blanks.
   - `ko-components` is samples 52 to 55. It has list lines whose seven listed words are cloze blanks.
@@ -109,7 +109,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - A page's table reaches the app as one card with its structure, ready for #212's whole-card rendering. A list line reaches it as one card with all its blanks.
 - An app that reads only `front`, `answer` and `back` still shows each new card readably: a table as rows of text, and a cloze as its line and its answers.
-- Until #226 merges, a photo whose page yields a table card fails in the app on `main`, which refuses the `table` type; the owner accepted that for builds before the first release (#250).
+- An app build older than #226 fails a photo whose page yields a table card, refusing the `table` type; the owner accepted that for builds before the first release (#250).
 - Cell-by-cell cards stop for tables to memorise, so a page gives fewer cards, but a table card's reply is larger. How the cost changes is unmeasured until the PM's run.
 - The eval scores whether a model uses the new types where the page calls for them, and whether exception cards state their rule. It no longer compares models, until a later change adds candidates back.
 
