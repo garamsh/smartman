@@ -21,7 +21,7 @@ abstract interface class SharingServer {
   Future<List<PublicCard>> listCards(DeckId deck, {int? limit});
 
   /// Records a copy of [deck]; false when it is no longer public.
-  Future<bool> recordImport(DeckId deck);
+  Future<bool> recordCopy(DeckId deck);
 
   Future<ReportOutcome> report(DeckId deck, ReportReason reason);
 

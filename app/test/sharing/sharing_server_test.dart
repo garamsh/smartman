@@ -161,17 +161,14 @@ void main() {
         for (final card in copied)
           (plainText(card.front), card.source, card.originDeckId),
       },
-      {
-        ('perro', CardSource.shared, deck.id),
-        ('gato', CardSource.shared, deck.id),
-      },
+      {('perro', CardSource.copy, deck.id), ('gato', CardSource.copy, deck.id)},
     );
     final after = await listOurs(
       ada,
       search: 'span',
       sort: BrowseSort.mostCopied,
     );
-    expect(after.single.importCount, 1);
+    expect(after.single.copyCount, 1);
 
     // The copy syncs as Ada's own cards, with their source and origin.
     await ada.sync();
@@ -180,7 +177,7 @@ void main() {
     await again.sync(ada.id);
     final synced = await again.deck.listCards(imported.deck.id);
     expect(synced.map((card) => (card.source, card.originDeckId)).toSet(), {
-      (CardSource.shared, deck.id),
+      (CardSource.copy, deck.id),
     });
   }, skip: skip);
 

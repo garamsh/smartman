@@ -156,7 +156,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   subtitle: l10n.publicDeckLine(
                     deck.ownerName.value,
                     deck.cardCount,
-                    deck.importCount,
+                    deck.copyCount,
                   ),
                   trailing: Icon(
                     LucideIcons.chevronRight,

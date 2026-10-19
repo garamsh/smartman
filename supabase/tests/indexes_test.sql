@@ -22,9 +22,9 @@ select is(pg_temp.definition('deck_reports_reporter_id'),
 select is(pg_temp.definition('user_blocks_blocked_id'),
   'CREATE INDEX user_blocks_blocked_id ON public.user_blocks USING btree (blocked_id)',
   'user_blocks_blocked_id indexes blocks by the blocked user');
-select is(pg_temp.definition('deck_imports_user_id'),
-  'CREATE INDEX deck_imports_user_id ON public.deck_imports USING btree (user_id)',
-  'deck_imports_user_id indexes imports by the copying user');
+select is(pg_temp.definition('deck_copies_user_id'),
+  'CREATE INDEX deck_copies_user_id ON public.deck_copies USING btree (user_id)',
+  'deck_copies_user_id indexes copies by the copying user');
 select is(pg_temp.definition('decks_tombstone_revision'),
   'CREATE INDEX decks_tombstone_revision ON public.decks USING btree (revision) WHERE (deleted_at IS NOT NULL)',
   'decks_tombstone_revision indexes deck tombstones by revision');

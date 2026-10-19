@@ -308,12 +308,12 @@ final class ImportList {
 
   /// The cards to import, each as its section's form shows it. Each merges
   /// back into a card with its key, the deck's or one written before it.
-  List<ImportedCard> toImport() => [
+  List<IncomingCard> toImport() => [
     for (final section in sections)
       for (final row in section.rows)
         if (isIncluded(row))
           for (final card in row.cards(section.form))
-            ImportedCard(
+            IncomingCard(
               front: card.front,
               back: card.back,
               onDuplicate: DuplicateChoice.mergeBack,

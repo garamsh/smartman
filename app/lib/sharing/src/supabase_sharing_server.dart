@@ -83,13 +83,13 @@ final class SupabaseSharingServer implements SharingServer {
       });
 
   @override
-  Future<bool> recordImport(DeckId deck) => _request(() async {
+  Future<bool> recordCopy(DeckId deck) => _request(() async {
     final counted = await _client.rpc<Object?>(
-      'record_deck_import',
+      'record_deck_copy',
       params: {'deck_id': deck.value},
     );
     if (counted is! bool) {
-      throw const FormatException('record_deck_import returned no boolean');
+      throw const FormatException('record_deck_copy returned no boolean');
     }
     return counted;
   });
@@ -229,7 +229,7 @@ PublicDeckSummary _decodeSummary(_Fields row) => PublicDeckSummary(
   name: row.string('name'),
   description: row.stringOrNull('description'),
   cardCount: row.integer('card_count'),
-  importCount: row.integer('import_count'),
+  copyCount: row.integer('copy_count'),
   publishedAt: DateTime.parse(row.string('published_at')),
 );
 

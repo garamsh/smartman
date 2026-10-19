@@ -12,6 +12,7 @@ import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
+import 'generated/schema_v8.dart' as v8;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -674,6 +675,64 @@ void main() {
     );
   });
 
+  test("a copied card's source becomes copy in the upgrade from 7 to 8, and every other card, its dirty flag and its origin are kept", () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    v7.CardsData card(String id, String source, int dirty, [String? origin]) =>
+        v7.CardsData(
+          id: id,
+          deckId: 'deck',
+          front: '[]',
+          back: '[]',
+          cardKey: id,
+          source: source,
+          originDeckId: origin,
+          createdAt: at,
+          updatedAt: at,
+          dirty: dirty,
+        );
+    await verifier.testWithDataIntegrity(
+      oldVersion: 7,
+      newVersion: 8,
+      createOld: v7.DatabaseAtV7.new,
+      createNew: v8.DatabaseAtV8.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v7.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+        batch.insertAll(old.cards, [
+          card('copied', 'shared', 0, 'origin'),
+          card('photo', 'import', 1),
+          card('typed', 'manual', 0),
+        ]);
+      },
+      validateItems: (db) async {
+        final cards = await (db.select(
+          db.cards,
+        )..orderBy([(row) => OrderingTerm.asc(row.id)])).get();
+        expect(
+          [
+            for (final row in cards)
+              (row.id, row.source, row.dirty, row.originDeckId),
+          ],
+          [
+            ('copied', 'copy', 0, 'origin'),
+            ('photo', 'import', 1, null),
+            ('typed', 'manual', 0, null),
+          ],
+        );
+      },
+    );
+  });
+
   test('the database reads a migrated time back as the instant it stored, and writes every time in UTC at the millisecond', () async {
     final schema = await verifier.schemaAt(5);
     final old = v5.DatabaseAtV5(schema.newConnection());
@@ -716,7 +775,7 @@ void main() {
     expect(stored.read<String>('updated_at'), endsWith('.123Z'));
   });
 
-  test('a card row takes the source shared with its origin, and refuses an unknown source', () async {
+  test('a card row takes the source copy with its origin, and refuses an unknown source and the old shared', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final at = DateTime.utc(2026, 10, 1);
@@ -741,13 +800,16 @@ void main() {
       createdAt: at,
       updatedAt: at,
     );
-    await db.into(db.cards).insert(card('copied', 'shared'));
-    await expectLater(
-      db.into(db.cards).insert(card('unknown', 'borrowed')),
-      throwsA(isA<SqliteException>()),
-    );
+    await db.into(db.cards).insert(card('copied', 'copy'));
+    for (final (id, source) in [('unknown', 'borrowed'), ('old', 'shared')]) {
+      await expectLater(
+        db.into(db.cards).insert(card(id, source)),
+        throwsA(isA<SqliteException>()),
+        reason: source,
+      );
+    }
     final stored = await db.select(db.cards).getSingle();
-    expect([stored.source, stored.originDeckId], ['shared', 'origin']);
+    expect([stored.source, stored.originDeckId], ['copy', 'origin']);
   });
 
   test('a review row refuses a fuzz factor outside 0 to 1', () async {

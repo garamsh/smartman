@@ -22,7 +22,7 @@ insert into public.cards
    now(), now()),
   ('c0000000-0000-4000-8000-00000000000b', '00000000-0000-4000-8000-00000000000b', 'd0000000-0000-4000-8000-00000000000b', '[]', '[]', 'b', 'manual', null,
    now(), now()),
-  ('c0000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-00000000000b', 'd0000000-0000-4000-8000-00000000000b', '[]', '[]', 'c', 'shared',
+  ('c0000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-00000000000b', 'd0000000-0000-4000-8000-00000000000b', '[]', '[]', 'c', 'copy',
    'd0000000-0000-4000-8000-00000000000a', now(), now());
 insert into public.reviews
   (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at) values
@@ -41,7 +41,7 @@ insert into public.deck_reports (deck_id, reporter_id, reason) values
 insert into public.user_blocks (blocker_id, blocked_id) values
   ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000b'),
   ('00000000-0000-4000-8000-00000000000b', '00000000-0000-4000-8000-00000000000a');
-insert into public.deck_imports (deck_id, user_id) values
+insert into public.deck_copies (deck_id, user_id) values
   ('d0000000-0000-4000-8000-00000000000b', '00000000-0000-4000-8000-00000000000a'),
   ('d0000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000b');
 
@@ -69,7 +69,7 @@ $$;
 
 select results_eq(
   $$select tablename::text collate "default" from pg_tables where schemaname = 'public' order by 1$$,
-  array['card_states', 'cards', 'deck_imports', 'deck_reports', 'decks', 'extraction_usage',
+  array['card_states', 'cards', 'deck_copies', 'deck_reports', 'decks', 'extraction_usage',
     'profiles', 'reviews', 'user_blocks'],
   'these are every table in public, so a new table fails here until this test covers it');
 
@@ -81,7 +81,7 @@ select is_empty(
 
 select results_eq(
   $$select pg_temp.columns_holding('00000000-0000-4000-8000-00000000000a')$$,
-  array['card_states.user_id', 'cards.user_id', 'deck_imports.user_id', 'deck_reports.reporter_id',
+  array['card_states.user_id', 'cards.user_id', 'deck_copies.user_id', 'deck_reports.reporter_id',
     'decks.user_id', 'extraction_usage.user_id', 'profiles.user_id', 'reviews.user_id', 'user_blocks.blocked_id',
     'user_blocks.blocker_id'],
   'before deletion, A''s id is in every table, in each column that can hold it');

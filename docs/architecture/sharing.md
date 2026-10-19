@@ -14,7 +14,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
   - `Reachability`, the network state, and `DeviceReachability`, over `connectivity_plus`;
   - the model: `PublicDeckSummary`, `PublicCard`, `DisplayName`, `BrowseSort`, `ReportReason`, `ReportOutcome`;
   - the failures: `SharingFailure`, `SharingOffline`, `SharingRejected`, `SharingFailed`, `DeckNoLongerPublic`.
-- It depends on `deck` (the repository, the model, `importCards`, `CardSplitRow`) and `account` (`UserId`) through their surfaces. `deck` does not reach it: `home/`'s screens read `sharingServiceProvider`, which the composition site overrides with the service it constructs ([`home.md`](home.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)). It imports `supabase_flutter` for PostgREST, beside `account` and `sync` ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
+- It depends on `deck` (the repository, the model, `addCards`, `CardSplitRow`) and `account` (`UserId`) through their surfaces. `deck` does not reach it: `home/`'s screens read `sharingServiceProvider`, which the composition site overrides with the service it constructs ([`home.md`](home.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)). It imports `supabase_flutter` for PostgREST, beside `account` and `sync` ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
 - `main.dart` builds `SupabaseSharingServer` over `connectAccount`'s client; a build that cannot sign in has no client, so no sharing and no entries for it.
 
 ### Publishing
@@ -36,7 +36,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 
 - A tap opens the preview: the name, the owner's display name with the counts, the description, and the first 20 cards as split rows, with "카드 n장 중 처음 20장" when there are more.
 - "내 덱으로 가져오기" opens a sheet: "새 덱으로", the default, creates a deck named after the public one; "기존 덱에 추가" takes one of the user's decks and a duplicate option, "건너뛰기" by default, or "뒷면 합치기" or "새 카드로 추가".
-- A copy reads every live card of the deck, calls `record_deck_import`, which counts the user's first copy of the deck and no later one, and refuses with `DeckNoLongerPublic` when the deck is no longer public. It then saves through `DeckRepository.importCards` with `FromPublicDeck`, so each added card is an ordinary card with `source = shared` and `origin_deck_id`, and the duplicate rule of [`deck.md`](deck.md) applies. A copy into a new deck adds every card, duplicates included. Nothing links the copy to the source afterwards.
+- A copy reads every live card of the deck, calls `record_deck_copy`, which counts the user's first copy of the deck and no later one, and refuses with `DeckNoLongerPublic` when the deck is no longer public. It then saves through `DeckRepository.addCards` with `FromCopy`, so each added card is an ordinary card with `source = copy` and `origin_deck_id`, and the duplicate rule of [`deck.md`](deck.md) applies. A copy into a new deck adds every card, duplicates included. Nothing links the copy to the source afterwards.
 - Copies hold the text of each side, as imports do.
 
 ### Reporting and blocking

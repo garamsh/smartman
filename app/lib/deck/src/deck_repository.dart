@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 
 import '../../database/database.dart';
-import 'card_import.dart';
+import 'add_cards.dart';
 import 'card_key.dart';
 import 'content.dart';
 import 'failure.dart';
@@ -272,17 +272,17 @@ class DeckRepository {
   /// Saves [cards] from [source] into [target] in one transaction, creating
   /// the deck first when the target is a new one. A card whose key collides
   /// with a card already in the deck, or with one saved earlier in [cards],
-  /// does what its [ImportedCard.onDuplicate] says; no card is overwritten or
+  /// does what its [IncomingCard.onDuplicate] says; no card is overwritten or
   /// deleted.
-  Future<CardsImported> importCards(
-    ImportTarget target,
-    List<ImportedCard> cards, {
-    ImportSource source = const FromPhoto(),
+  Future<CardsAdded> addCards(
+    AddTarget target,
+    List<IncomingCard> cards, {
+    AddSource source = const FromPhoto(),
   }) => _guard(
     () => _db.transaction(() async {
       final deck = switch (target) {
-        ImportIntoDeck(:final deck) => await getDeck(deck),
-        ImportIntoNewDeck(:final name) => await createDeck(name),
+        AddToDeck(:final deck) => await getDeck(deck),
+        AddToNewDeck(:final name) => await createDeck(name),
       };
       var added = 0;
       var merged = 0;
@@ -303,11 +303,11 @@ class DeckRepository {
                     cardKey: key.value,
                     source: switch (source) {
                       FromPhoto() => CardSource.import.name,
-                      FromPublicDeck() => CardSource.shared.name,
+                      FromCopy() => CardSource.copy.name,
                     },
                     originDeckId: switch (source) {
                       FromPhoto() => null,
-                      FromPublicDeck(:final origin) => origin.value,
+                      FromCopy(:final origin) => origin.value,
                     },
                     createdAt: now,
                     updatedAt: now,
@@ -333,7 +333,7 @@ class DeckRepository {
             break;
         }
       }
-      return CardsImported(deck: deck, added: added, merged: merged);
+      return CardsAdded(deck: deck, added: added, merged: merged);
     }),
   );
 

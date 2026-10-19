@@ -526,7 +526,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckNoLongerPublic => '이 덱은 더 이상 공개되어 있지 않아요.';
 
   @override
-  String get importToMyDecks => '내 덱으로 가져오기';
+  String get copyToMyDecks => '내 덱으로 가져오기';
 
   @override
   String previewFirstCards(int shown, int total) {
@@ -577,24 +577,24 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get importAsNewDeck => '새 덱으로';
+  String get copyAsNewDeck => '새 덱으로';
 
   @override
-  String get importIntoExistingDeck => '기존 덱에 추가';
+  String get copyIntoExistingDeck => '기존 덱에 추가';
 
   @override
-  String importNewDeckHint(String name) {
+  String copyNewDeckHint(String name) {
     return '\"$name\" 덱을 새로 만들어 모든 카드를 가져와요.';
   }
 
   @override
-  String get importTargetDeck => '덱';
+  String get copyTargetDeck => '덱';
 
   @override
-  String get importDuplicates => '이미 있는 카드는';
+  String get copyDuplicates => '이미 있는 카드는';
 
   @override
-  String get importConfirm => '가져오기';
+  String get copyConfirm => '가져오기';
 
   @override
   String copiedCards(String deck, int count) {

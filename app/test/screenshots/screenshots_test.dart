@@ -938,8 +938,8 @@ void main() {
       await shot(tester, '29-browse');
       await tap(tester, find.text('스페인어 동물'));
       await shot(tester, '30-public-deck');
-      await tap(tester, find.text(ko.importToMyDecks));
-      await tap(tester, find.text(ko.importIntoExistingDeck));
+      await tap(tester, find.text(ko.copyToMyDecks));
+      await tap(tester, find.text(ko.copyIntoExistingDeck));
       await shot(tester, '31-import-sheet');
       // Above a tall sheet, where the barrier's centre is not.
       await tester.tapAt(const Offset(20, 100));

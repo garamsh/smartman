@@ -187,7 +187,7 @@ export class FakeAdmin {
             ...this.owner(deck),
             hidden: deck.hidden,
             cards: deck.cards.length,
-            import_count: deck.copies,
+            copy_count: deck.copies,
             reports: deck.reports.length,
             published_at: deck.publishedAt,
           }));
@@ -291,7 +291,7 @@ export class FakeAdmin {
             visibility: deck.visibility,
             hidden: deck.hidden,
             deleted: deck.deleted,
-            import_count: deck.copies,
+            copy_count: deck.copies,
             reports: deck.reports.length,
             reasons: this.reasons(deck),
             removal_reason: removal ?? null,

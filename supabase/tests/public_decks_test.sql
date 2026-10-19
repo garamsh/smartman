@@ -118,12 +118,12 @@ select throws_ok(
 
 -- A copy counts on someone else's deck, not on one's own, and not on a deck that is not public.
 select results_eq(
-  $$select public.record_deck_import('d0000000-0000-4000-8000-00000000007a'), public.record_deck_import('d0000000-0000-4000-8000-00000000007a'),
-    public.record_deck_import('d0000000-0000-4000-8000-00000000008a'), public.record_deck_import('d0000000-0000-4000-8000-00000000009a')$$,
+  $$select public.record_deck_copy('d0000000-0000-4000-8000-00000000007a'), public.record_deck_copy('d0000000-0000-4000-8000-00000000007a'),
+    public.record_deck_copy('d0000000-0000-4000-8000-00000000008a'), public.record_deck_copy('d0000000-0000-4000-8000-00000000009a')$$,
   $$values (true, true, false, false)$$,
-  'record_deck_import accepts a public deck and refuses a private or hidden one');
+  'record_deck_copy accepts a public deck and refuses a private or hidden one');
 select results_eq(
-  $$select id, import_count from public.list_public_decks(sort => 'copied')$$,
+  $$select id, copy_count from public.list_public_decks(sort => 'copied')$$,
   $$values ('d0000000-0000-4000-8000-00000000007a'::uuid, 1), ('d0000000-0000-4000-8000-00000000007c'::uuid, 0)$$,
   'B''s two copies counted once, and the most copied deck lists first');
 
@@ -131,12 +131,12 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-00000000000c","role":"authenticated"}';
 select results_eq(
-  $$select public.record_deck_import('d0000000-0000-4000-8000-00000000007c')$$,
+  $$select public.record_deck_copy('d0000000-0000-4000-8000-00000000007c')$$,
   $$values (true)$$,
   'the owner may copy its own public deck');
 reset role;
 select results_eq(
-  $$select import_count from public.decks where id = 'd0000000-0000-4000-8000-00000000007c'$$,
+  $$select copy_count from public.decks where id = 'd0000000-0000-4000-8000-00000000007c'$$,
   $$values (0)$$,
   'the owner''s copy of its own deck is not counted');
 

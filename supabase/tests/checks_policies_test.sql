@@ -1,7 +1,7 @@
 -- Checks and policies: the five row checks refuse what they name and admit their controls, each is
 -- validated, and decks, cards and profiles each have one select policy, the owner's condition first.
 begin;
-select plan(22);
+select plan(23);
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.com');
@@ -59,18 +59,22 @@ select lives_ok($$select pg_temp.card_state(1, 1)$$, 'a difficulty of 1 is accep
 select lives_ok($$select pg_temp.card_state(1, 10)$$, 'a difficulty of 10 is accepted');
 
 select throws_ok(
-  $$select pg_temp.card('c0000000-0000-4000-8000-000000000003', 'b', 'shared', null, null)$$,
-  '23514', null, 'a shared card without an origin is refused');
+  $$select pg_temp.card('c0000000-0000-4000-8000-000000000003', 'b', 'copy', null, null)$$,
+  '23514', null, 'a copied card without an origin is refused');
 select throws_ok(
   $$select pg_temp.card('c0000000-0000-4000-8000-000000000004', 'b', 'manual',
     'd0000000-0000-4000-8000-000000000012', null)$$,
   '23514', null, 'a manual card with an origin is refused');
 select lives_ok(
-  $$select pg_temp.card('c0000000-0000-4000-8000-000000000005', 'b', 'shared',
+  $$select pg_temp.card('c0000000-0000-4000-8000-000000000005', 'b', 'copy',
     'd0000000-0000-4000-8000-000000000012', null)$$,
-  'a shared card with an origin is accepted');
+  'a copied card with an origin is accepted');
 select lives_ok($$select pg_temp.card('c0000000-0000-4000-8000-000000000006', 'b', 'import', null, null)$$,
-  'an imported card without an origin is accepted');
+  'a photo card without an origin is accepted');
+select throws_ok(
+  $$select pg_temp.card('c0000000-0000-4000-8000-000000000007', 'b', 'shared',
+    'd0000000-0000-4000-8000-000000000012', null)$$,
+  '23514', null, 'the source a copied card had before ADR 0082, shared, is refused');
 
 select results_eq(
   $$select conname::text collate "default", convalidated from pg_constraint

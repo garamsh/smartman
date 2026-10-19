@@ -245,7 +245,7 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
   const description = field(row, "description");
   const owner = parseOwner(row);
   const state = parseState(row);
-  const copies = count(field(row, "import_count"));
+  const copies = count(field(row, "copy_count"));
   const reports = count(field(row, "reports"));
   const reasons = strings(field(row, "reasons"));
   const removalReason = field(row, "removal_reason");
@@ -569,7 +569,7 @@ function parsePublicDeck(row: unknown): PublicDeck | null {
   const owner = parseOwner(row);
   const hidden = field(row, "hidden");
   const cards = count(field(row, "cards"));
-  const copies = count(field(row, "import_count"));
+  const copies = count(field(row, "copy_count"));
   const reports = count(field(row, "reports"));
   const published = field(row, "published_at");
   const publishedAt = published === null ? null : parseTime(published);
