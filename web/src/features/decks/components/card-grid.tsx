@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { describeContent, isWholeCard, spokenContent } from "../card-content";
 import type { Card } from "../library";
 import { SideText } from "./side-text";
+import { EmptyDeck } from "./empty-home";
 import { WholeCard } from "./whole-card";
 
 /**
@@ -37,7 +38,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
     : rows;
 
   if (cards.length === 0) {
-    return <p className="text-muted">아직 카드가 없어요. 휴대폰 앱에서 카드를 추가해 주세요.</p>;
+    return <EmptyDeck />;
   }
   return (
     <section aria-label="카드" className="flex flex-col gap-3">
@@ -73,7 +74,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
               setAll(!all);
               setApart(new Set());
             }}
-            className={`relative my-2 h-7 w-12 rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${all ? "bg-ink" : "bg-outline"}`}
+            className={`pressable relative my-2 h-7 w-12 rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${all ? "bg-ink" : "bg-outline"}`}
           >
             <span
               aria-hidden
@@ -106,7 +107,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                     else next.add(row.id);
                     setApart(next);
                   }}
-                  className="flex min-h-23 w-full flex-col gap-2 rounded-row bg-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  className="pressable flex min-h-23 w-full flex-col gap-2 rounded-row bg-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   {isWholeCard(row.blocks) ? (
                     <WholeCard blocks={row.blocks} revealed={open} className="text-headline" />

@@ -17,7 +17,7 @@ export function SignOutForm() {
         type="submit"
         disabled={pending}
         aria-busy={pending}
-        className="flex min-h-button items-center gap-3 rounded-row bg-surface px-4 py-3 text-left text-body-strong text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+        className="pressable flex min-h-button items-center gap-3 rounded-row bg-surface px-4 py-3 text-left text-body-strong text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
       >
         {pending ? (
           <LoaderCircle aria-hidden className="size-5 motion-safe:animate-spin" strokeWidth={2} />

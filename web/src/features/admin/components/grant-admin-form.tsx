@@ -26,7 +26,7 @@ export function GrantAdminForm() {
         <button
           type="submit"
           disabled={pending}
-          className="flex min-h-button items-center justify-center rounded-button bg-ink px-5 text-label font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+          className="pressable flex min-h-button items-center justify-center rounded-button bg-ink px-5 text-label font-semibold text-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
         >
           지정
         </button>

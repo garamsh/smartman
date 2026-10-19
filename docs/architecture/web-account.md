@@ -13,7 +13,7 @@ The web's `account` feature: the sign-in page with Google's button, the code exc
 
 ### Account page and sign-out
 
-- `/account` reads the session on the server and shows the account's initial and email and "로그아웃", or that the server cannot be reached; the shell's account link opens it.
+- `/account` reads the session on the server and shows the account's initial and email and "로그아웃", or that the server cannot be reached with "다시 시도", which reads the page again, above "화면", which needs no server (#276); the shell's account link opens it.
 - `/account` shows "계정과 설정", the profile card, "화면" with the theme choice, "계정" with "로그아웃", and the mascot and the legal links at its foot;
 - Sign-out is the Server Action `signOut`, through the `account` feature's `actions.ts`; while it runs, the row shows progress in place of its icon and cannot be pressed again. It revokes this browser's session alone (`scope: "local"`), so the phone stays signed in, and opens `/login`. When Supabase cannot be reached it returns the sentence the form shows.
 
@@ -25,7 +25,7 @@ Each line names a file and what it covers; the file holds the cases.
 - `web/src/features/account/__tests__/sign-in-button.test.tsx` — the button's two marks, its pending state and its failures; `web/src/features/account/__tests__/google-mark.test.ts` — each web mark byte for byte the app's 4x PNG.
 - `web/src/app/auth/callback/__tests__/route.test.ts` — the code exchange and each error it opens `/login` with; `web/src/app/login/__tests__/` — the sentence `/login` shows for each.
 - `web/src/features/account/__tests__/` — sign-out.
-- `web/src/app/(shell)/account/__tests__/account.test.tsx` — the account page's profile, the shell's account link, the legal links, the unreachable state and the redirect without a session.
+- `web/src/app/(shell)/account/__tests__/account.test.tsx` — the account page's profile, the shell's account link, the legal links, the unreachable state with its retry and theme choice, and the redirect without a session.
 
 ## Rationale
 

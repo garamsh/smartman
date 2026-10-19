@@ -20,7 +20,7 @@ export function PromptVersions({
           <li key={version.id}>
             <Link
               href={`/admin/prompts/${String(version.id)}`}
-              className="flex min-h-13 flex-col gap-1 rounded-row bg-surface px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="pressable flex min-h-13 flex-col gap-1 rounded-row bg-surface px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               <span className="flex flex-wrap items-center gap-2">
                 <span className="text-body-strong">버전 {version.id}</span>

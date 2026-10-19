@@ -5,6 +5,7 @@ import { loadEngine } from "@/features/study";
 
 import { cardRow, day, deckRow, reviewRow, side, start, stateRow, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
+import { supabaseUnreachable } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
@@ -142,6 +143,35 @@ describe("the deck page", () => {
     await open("d-empty");
     expect(screen.getByRole("heading", { name: "Empty" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "학습하기" })).not.toBeInTheDocument();
+  });
+
+  it("shows an empty deck as the first run does, with the phone's words and where cards are added", async () => {
+    postgrest.seed("decks", deckRow("d-empty", "Empty"));
+    await open("d-empty");
+
+    const empty = screen.getByRole("region", { name: "아직 카드가 없어요" });
+    expect(empty).toHaveTextContent(
+      "카드는 휴대폰 앱에서 덱에 추가해요. 추가한 카드는 여기에도 보여요.",
+    );
+    expect(screen.queryByRole("searchbox", { name: "카드 검색" })).not.toBeInTheDocument();
+    // Control: a deck with cards lists them instead.
+    cleanup();
+    await open("d-fr");
+    expect(screen.queryByRole("region", { name: "아직 카드가 없어요" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the way back to 덱 and a heading above a failed read, with 다시 시도", async () => {
+    server.use(supabaseUnreachable);
+    await open("d-fr");
+
+    expect(
+      within(screen.getByRole("navigation", { name: "위치" })).getByRole("link", { name: "덱" }),
+    ).toHaveAttribute("href", "/decks");
+    const heading = screen.getByRole("heading", { level: 1, name: "덱을 불러오지 못했어요" });
+    const alert = screen.getByRole("alert");
+    expect(heading.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(alert).toHaveTextContent("서버에 연결할 수 없어요.");
+    expect(within(alert).getByRole("button", { name: "다시 시도" })).toBeInTheDocument();
   });
 
   it("marks a deck its owner published with 공개 under its name", async () => {
@@ -305,6 +335,19 @@ describe("the deck page", () => {
       "chien, 뒷면 chien back",
       "oiseau, 뒷면 oiseau back",
     ]);
+  });
+
+  it("leads back to 덱 with a chevron, on a target at least the tap target high and wide", async () => {
+    await open("d-fr");
+
+    const back = within(screen.getByRole("navigation", { name: "위치" })).getByRole("link", {
+      name: "덱",
+    });
+    expect(back).toHaveAttribute("href", "/decks");
+    expect(back.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(back.className.split(" ")).toEqual(
+      expect.arrayContaining(["min-h-tap-target", "min-w-tap-target"]),
+    );
   });
 
   it("is not found for a deleted deck, and found for a live one", async () => {
