@@ -66,6 +66,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         decks: decks,
                         counts: counts,
                         onShowDecks: () => setState(() => _tab = 1),
+                        onShowRecord: () => setState(() {
+                          _tab = 2;
+                          _recordShown = true;
+                        }),
                       ),
                       DecksTab(decks: decks, counts: counts),
                       if (_recordShown)

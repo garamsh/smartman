@@ -171,11 +171,13 @@ function count(value: unknown): number | null {
 
 /**
  * The signed-in user's study days with a scheduled review over the last 30 study days, for the
- * 오늘 page's retention card: one request, `study_record_days`, and no engine; or a server
- * failure, or `unreadable` for a row this version cannot read.
+ * 오늘 page's retention card, and every study day as read, which its last seven days count: one
+ * request, `study_record_days`, and no engine; or a server failure, or `unreadable` for a row this
+ * version cannot read.
  */
 export async function readRecentRetention(): Promise<
-  { days: RecordDay[]; timeZone: string } | { failure: ServerFailure | "unreadable" }
+  | { days: RecordDay[]; studyDays: RecordDay[]; timeZone: string }
+  | { failure: ServerFailure | "unreadable" }
 > {
   const supabase = await createClient();
   const session = await readUserId(supabase);
@@ -190,5 +192,5 @@ export async function readRecentRetention(): Promise<
   if (read.error) return { failure: classifyFailure(read.error, read.status) };
   const days = parseRows(read.data, parseDay);
   if (!days) return { failure: "unreadable" };
-  return { days: retentionIn(days, "month", now, timeZone), timeZone };
+  return { days: retentionIn(days, "month", now, timeZone), studyDays: days, timeZone };
 }

@@ -55,7 +55,7 @@ const pairs: [string, string, string][] = [
   ["the tab bar's other pages on the surface", "muted", "surface"],
   ["the today card's text on the navy", "on-hero", "hero"],
   ["the today card's button on white", "brand", "on-hero"],
-  ["the forecast's days and a deck's progress on the surface", "muted", "surface"],
+  ["the last seven days' labels and a deck's progress on the surface", "muted", "surface"],
   ["the date and the breadcrumb on the ground", "muted", "ground"],
   ["the admin's red final button's label on its fill", "on-dont-know-text", "dont-know-text"],
 ];

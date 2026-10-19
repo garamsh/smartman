@@ -65,29 +65,70 @@ final class DeckProgress {
   int get total => mastered + learning + fresh;
 }
 
-/// How many study days [forecast] covers, today included.
-const forecastDays = 7;
+/// How many study days the 오늘 tab's charts cover, today included: the last
+/// seven, and in a backlog the catch-up's seven.
+const chartDays = 7;
 
-/// The cards due on each of the [forecastDays] study days from [day]: today's
-/// [load], then, for each later day, the stored [states] that fall due within
-/// it, in the time zone [offsetAt] gives.
-List<int> forecast(
+/// The first study day after [day], within [chartDays] of it, on which one of
+/// the stored [states] falls due, in the time zone [offsetAt] gives: how many
+/// days after [day] it is, and how many cards fall due in it; null when none
+/// does.
+({int after, int cards})? nextReviewOf(
   Iterable<CardState> states,
   StudyDay day, {
-  required int load,
   UtcOffsetAt offsetAt = localOffsetAt,
 }) {
   final ends = <DateTime>[day.end];
-  while (ends.length < forecastDays) {
+  while (ends.length < chartDays) {
     ends.add(studyDayEnd(ends.last, offsetAt));
   }
-  final counts = List.filled(forecastDays, 0)..[0] = load;
+  final counts = List.filled(chartDays, 0);
   for (final state in states) {
-    if (state.due.isBefore(day.end)) continue;
+    // A card due before the day ends, today's or overdue, is on no later day.
     final index = ends.indexWhere(state.due.isBefore);
     if (index > 0) counts[index]++;
   }
-  return counts;
+  for (var after = 1; after < chartDays; after++) {
+    if (counts[after] > 0) return (after: after, cards: counts[after]);
+  }
+  return null;
+}
+
+/// One of the last [chartDays] study days: when it starts, the calendar date
+/// it starts on at midnight UTC, the cards answered in it, each once, and the
+/// time its answers took, each up to [answerCapMs].
+typedef WeekDay = ({DateTime start, DateTime date, int cards, Duration time});
+
+/// The last [chartDays] study days, oldest first, ending with the one starting
+/// at [todayStart], from the stored [answers] given in them, in the time zone
+/// [offsetAt] gives. A day without an answer has no cards and no time.
+List<WeekDay> lastWeek(
+  Iterable<StoredAnswer> answers,
+  DateTime todayStart, [
+  UtcOffsetAt offsetAt = localOffsetAt,
+]) {
+  final starts = [todayStart];
+  while (starts.length < chartDays) {
+    starts.insert(0, studyDayBefore(starts.first, offsetAt));
+  }
+  final cards = <DateTime, Set<CardId>>{};
+  final times = <DateTime, int>{};
+  for (final answer in answers) {
+    final start = studyDayStart(answer.at, offsetAt);
+    (cards[start] ??= {}).add(answer.card);
+    final ms = min(answer.duration.inMilliseconds, answerCapMs);
+    times.update(start, (sum) => sum + ms, ifAbsent: () => ms);
+  }
+  return [
+    for (final start in starts)
+      if (start.toUtc().add(offsetAt(start)) case final wall)
+        (
+          start: start,
+          date: DateTime.utc(wall.year, wall.month, wall.day),
+          cards: cards[start]?.length ?? 0,
+          time: Duration(milliseconds: times[start] ?? 0),
+        ),
+  ];
 }
 
 /// The daily goal: [done] of the [goal] cards the study day held.
@@ -161,9 +202,9 @@ final class StatusStarted extends TodayStatus {
   const StatusStarted();
 }
 
-/// The overdue reviews left at the start of each of the [forecastDays] study
+/// The overdue reviews left at the start of each of the [chartDays] study
 /// days from today, when [backlog] are overdue today and the user clears
 /// [perDay] of them a day: the catch-up a backlog card projects.
 List<int> catchUp(int backlog, int perDay) => [
-  for (var day = 0; day < forecastDays; day++) max(0, backlog - day * perDay),
+  for (var day = 0; day < chartDays; day++) max(0, backlog - day * perDay),
 ];

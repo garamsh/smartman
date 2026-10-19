@@ -15,6 +15,13 @@ const _quota = 20;
 final _now = DateTime.utc(2026, 10, 14, 9);
 
 /// UTC as the device's time zone.
+/// Los Angeles, which left daylight saving time at 02:00 on 2 November
+/// 2025.
+Duration _pacific(DateTime instant) =>
+    instant.isBefore(DateTime.utc(2025, 11, 2, 9))
+    ? const Duration(hours: -7)
+    : const Duration(hours: -8);
+
 Duration _utc(DateTime _) => Duration.zero;
 
 /// A state last reviewed at [lastReview] and due [interval] later.
@@ -69,63 +76,131 @@ void main() {
     });
   });
 
-  group('forecast', () {
-    test('today is the load, and each later day counts the cards due within it, from 04:00 to 04:00', () {
-      final day = StudyDay.at(
-        _now,
-        firstAnswers: const {},
-        newCards: _quota,
-        offsetAt: _utc,
-      );
-      final tomorrow = DateTime.utc(2026, 10, 15, 4);
-      final counts = forecast(
-        [
-          // Due today, before the day ends: in today's load, not counted again.
-          dueAt(DateTime.utc(2026, 10, 15, 3, 59)),
-          // 04:00 starts tomorrow's study day.
-          dueAt(tomorrow),
-          dueAt(DateTime.utc(2026, 10, 16, 3, 59)),
-          dueAt(DateTime.utc(2026, 10, 16, 4)),
-          // The last of the seven days ends at 04:00 on 21 October.
-          dueAt(DateTime.utc(2026, 10, 21, 3, 59)),
-          dueAt(DateTime.utc(2026, 10, 21, 4)),
-          dueAt(DateTime.utc(2026, 10, 22, 4)),
-        ],
-        day,
-        load: 9,
-        offsetAt: _utc,
-      );
-      expect(counts, [9, 2, 1, 0, 0, 0, 1]);
-    });
+  group('next review', () {
+    test(
+      'is the first later day with a card due, each day from 04:00 to 04:00',
+      () {
+        final day = StudyDay.at(
+          _now,
+          firstAnswers: const {},
+          newCards: _quota,
+          offsetAt: _utc,
+        );
+        expect(
+          nextReviewOf(
+            [
+              // Due today, before the day ends: not a later day's.
+              dueAt(DateTime.utc(2026, 10, 15, 3, 59)),
+              // 04:00 starts tomorrow's study day.
+              dueAt(DateTime.utc(2026, 10, 15, 4)),
+              dueAt(DateTime.utc(2026, 10, 16, 3, 59)),
+              dueAt(DateTime.utc(2026, 10, 16, 4)),
+            ],
+            day,
+            offsetAt: _utc,
+          ),
+          (after: 1, cards: 2),
+        );
+        // The last of the seven days ends at 04:00 on 21 October.
+        expect(
+          nextReviewOf(
+            [dueAt(DateTime.utc(2026, 10, 21, 3, 59))],
+            day,
+            offsetAt: _utc,
+          ),
+          (after: 6, cards: 1),
+        );
+        expect(
+          nextReviewOf(
+            [
+              dueAt(DateTime.utc(2026, 10, 15, 3, 59)),
+              dueAt(DateTime.utc(2026, 10, 21, 4)),
+            ],
+            day,
+            offsetAt: _utc,
+          ),
+          isNull,
+        );
+      },
+    );
 
-    test('the days follow 04:00 local time across a change of offset', () {
-      // Los Angeles leaves daylight saving time at 02:00 on 1 November 2026.
-      Duration pacific(DateTime instant) =>
-          instant.isBefore(DateTime.utc(2026, 11, 1, 9))
-          ? const Duration(hours: -7)
-          : const Duration(hours: -8);
-      final now = DateTime.utc(2026, 10, 30, 18); // 11:00 on the 30th.
+    test('follows 04:00 local time across a change of offset', () {
+      final now = DateTime.utc(2025, 10, 31, 18); // 11:00 on the 31st.
       final day = StudyDay.at(
         now,
         firstAnswers: const {},
         newCards: _quota,
-        offsetAt: pacific,
+        offsetAt: _pacific,
       );
-      final counts = forecast(
+      // 03:00 and 03:59 on 2 November, at UTC-8 after the change, are still
+      // 1 November's; a fixed UTC-7 would start 2 November an hour earlier.
+      expect(
+        nextReviewOf(
+          [
+            dueAt(DateTime.utc(2025, 11, 2, 11)),
+            dueAt(DateTime.utc(2025, 11, 2, 11, 59)),
+          ],
+          day,
+          offsetAt: _pacific,
+        ),
+        (after: 1, cards: 2),
+      );
+    });
+  });
+
+  group('the last seven days', () {
+    // The same history as web/src/app/(shell)/__tests__/today.test.tsx's
+    // last seven days, with the same figures.
+    test('count each study day\'s cards once and its time, each answer up to 30 s, across a gap, 04:00 and a change of offset, today partial', () {
+      StoredAnswer answer(String card, DateTime at, int seconds) => (
+        card: CardId(card),
+        answer: Answer.know,
+        at: at,
+        duration: Duration(seconds: seconds),
+      );
+      // 10:00 on 5 November 2025 in Los Angeles, after the change to UTC-8.
+      final now = DateTime.utc(2025, 11, 5, 18);
+      final week = lastWeek(
         [
-          // 03:00, 03:59 and 04:00 on 1 November, at UTC-8 after the change:
-          // a fixed UTC-7 would start the day an hour earlier.
-          dueAt(DateTime.utc(2026, 11, 1, 11)),
-          dueAt(DateTime.utc(2026, 11, 1, 11, 59)),
-          dueAt(DateTime.utc(2026, 11, 1, 12)),
+          // 29 October, before the seven days.
+          answer('a', DateTime.utc(2025, 10, 29, 15), 10),
+          // 30 October: a twice and b, whose 45 s count as 30.
+          answer('a', DateTime.utc(2025, 10, 30, 18), 10),
+          answer('b', DateTime.utc(2025, 10, 30, 18, 5), 45),
+          answer('a', DateTime.utc(2025, 10, 30, 18, 10), 5),
+          // 03:59 on 1 November is still 31 October's.
+          answer('c', DateTime.utc(2025, 11, 1, 10, 59), 20),
+          // 04:00 on 1 November starts its day.
+          answer('d', DateTime.utc(2025, 11, 1, 11), 20),
+          // 03:30 on 2 November at UTC-8 is still 1 November's.
+          answer('e', DateTime.utc(2025, 11, 2, 11, 30), 10),
+          // 04:30 on 2 November.
+          answer('f', DateTime.utc(2025, 11, 2, 12, 30), 10),
+          // 3 November; 4 November has none.
+          answer('a', DateTime.utc(2025, 11, 3, 20), 10),
+          answer('b', DateTime.utc(2025, 11, 3, 20, 1), 10),
+          // Today so far, 90 s counting as 30.
+          answer('g', DateTime.utc(2025, 11, 5, 17), 30),
+          answer('h', DateTime.utc(2025, 11, 5, 17, 30), 90),
         ],
-        day,
-        load: 0,
-        offsetAt: pacific,
+        studyDayStart(now, _pacific),
+        _pacific,
       );
-      // Today (30 October), then the days starting at 04:00 on 31 October
-      // and 1 November.
-      expect(counts, [0, 2, 1, 0, 0, 0, 0]);
+      expect([for (final day in week) day.date.day], [30, 31, 1, 2, 3, 4, 5]);
+      expect([for (final day in week) day.cards], [2, 1, 2, 1, 2, 0, 2]);
+      expect(
+        [for (final day in week) day.time.inSeconds],
+        [45, 20, 30, 10, 20, 0, 60],
+      );
+      // Control: at a fixed UTC-7, 03:30 on 2 November would be 04:30, its
+      // own day's.
+      Duration summer(DateTime _) => const Duration(hours: -7);
+      final fixed = lastWeek(
+        [answer('e', DateTime.utc(2025, 11, 2, 11, 30), 10)],
+        studyDayStart(now, summer),
+        summer,
+      );
+      expect([for (final day in fixed) day.cards], [0, 0, 0, 1, 0, 0, 0]);
     });
   });
 

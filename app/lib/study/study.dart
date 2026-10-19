@@ -29,7 +29,8 @@ export 'src/overview.dart'
         StatusStarted,
         StatusStreak,
         StatusWaiting,
-        TodayStatus;
+        TodayStatus,
+        WeekDay;
 export 'src/progress_counter.dart' show ProgressBuilder, ProgressCounter;
 export 'src/rust/api/engine.dart' show Answer;
 export 'src/queue.dart' show localOffsetAt;

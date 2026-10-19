@@ -18,10 +18,11 @@ import 'deck_screen.dart';
 import 'first_run.dart';
 import 'hero.dart';
 
-/// The 오늘 tab over [decks]: the today card, the next seven days, and the
-/// decks that hold cards for today; in a backlog, the backlog card and the
+/// The 오늘 tab over [decks]: the today card, the last seven study days, and
+/// the decks that hold cards for today; in a backlog, the backlog card and the
 /// catch-up at an average day's load; once today's cards are done, the done
-/// card, the seven days and 학습하기. While no deck holds a card, by
+/// card, the last seven days and 학습하기. The last seven days open 기록
+/// through [onShowRecord]. While no deck holds a card, by
 /// [counts], how to start: with one deck, adding cards to it; with more,
 /// [onShowDecks], which shows the 덱 tab. Showing a day with cards, it asks for
 /// the daily study minutes once ([FirstDailyMinutes]).
@@ -31,11 +32,13 @@ class TodayTab extends StatelessWidget {
     required this.decks,
     required this.counts,
     required this.onShowDecks,
+    required this.onShowRecord,
   });
 
   final List<Deck> decks;
   final Map<DeckId, int> counts;
   final VoidCallback onShowDecks;
+  final VoidCallback onShowRecord;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +70,7 @@ class TodayTab extends StatelessWidget {
                     const FirstDailyMinutes(),
                     _DoneCard(overview: overview),
                     const SizedBox(height: AppSpace.s12),
-                    _Forecast(overview: overview),
+                    _LastWeek(overview: overview, onOpen: onShowRecord),
                     const SizedBox(height: AppSpace.s12),
                     AppButton(
                       label: l10n.todayStudy,
@@ -92,7 +95,7 @@ class TodayTab extends StatelessWidget {
                       onStudy: () => _study(context, all),
                     ),
                     const SizedBox(height: AppSpace.s12),
-                    _Forecast(overview: overview),
+                    _LastWeek(overview: overview, onOpen: onShowRecord),
                     _TodayDecks(decks: decks),
                   ],
                   OverviewUnavailable(:final message) => [
@@ -614,7 +617,7 @@ class _DoneCard extends StatelessWidget {
                   ? l10n.noNextReview
                   : l10n.nextReview(
                       next.after == 1
-                          ? l10n.forecastTomorrow
+                          ? l10n.dayTomorrow
                           : DateFormat.EEEE(locale)
                                 .format(overview.days[next.after]),
                       next.cards,
@@ -708,44 +711,101 @@ List<String> _dayLabels(BuildContext context, TodayOverview overview) {
   return [
     for (final (index, day) in overview.days.indexed)
       switch (index) {
-        0 => l10n.forecastToday,
-        1 => l10n.forecastTomorrow,
+        0 => l10n.dayToday,
+        1 => l10n.dayTomorrow,
         _ => DateFormat.E(locale).format(day),
       },
   ];
 }
 
-/// The next seven study days on a card: the cards due on each as a bar,
-/// today's in ink, with tomorrow's count and the week's beside the heading.
-class _Forecast extends StatelessWidget {
-  const _Forecast({required this.overview});
+/// The last seven study days on a card: the cards answered on each as a bar,
+/// today's in ink and last, with the week's cards and minutes and the streak
+/// beside the heading; a tap opens 기록 through [onOpen].
+class _LastWeek extends StatelessWidget {
+  const _LastWeek({required this.overview, required this.onOpen});
 
   final TodayOverview overview;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final counts = overview.forecast;
-    final week = counts.fold(0, (sum, count) => sum + count);
-    final done = overview.count.total == 0;
-    final labels = _dayLabels(context, overview);
-    return _ChartCard(
-      title: l10n.forecastTitle,
-      trailing: done
-          ? l10n.forecastWeek(week)
-          : l10n.forecastSummary(counts[1], week),
-      chart: _DayBars(
-        counts: counts,
-        labels: labels,
-        // On the done card the next day with cards stands out; otherwise
-        // today.
-        emphasised: done ? (overview.nextReview?.after ?? -1) : 0,
-        ink: colors.ink,
-        semantics: [
-          for (final (index, count) in counts.indexed)
-            l10n.forecastDay(labels[index], count),
-        ].join(', '),
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final week = overview.week;
+    final cards = week.fold(0, (sum, day) => sum + day.cards);
+    final minutes =
+        (week.fold(Duration.zero, (sum, day) => sum + day.time).inSeconds / 60)
+            .ceil();
+    final labels = [
+      for (final (index, day) in week.indexed)
+        index == week.length - 1
+            ? l10n.dayToday
+            : DateFormat.E(locale).format(day.date),
+    ];
+    final summary = l10n.weekSemantics(cards, minutes);
+    return Semantics(
+      button: true,
+      label: [
+        summary,
+        for (final day in week)
+          l10n.dayCount(DateFormat.EEEE(locale).format(day.date), day.cards),
+      ].join(', '),
+      hint: l10n.weekOpenRecord,
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: BorderRadius.circular(AppRadius.previous),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onOpen,
+          child: _ChartCard(
+            title: l10n.weekTitle,
+            chart: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: AppSpace.s12,
+              children: [
+                Wrap(
+                  spacing: AppSpace.s8,
+                  runSpacing: AppSpace.s4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      l10n.weekSummary(cards, minutes),
+                      style: AppType.caption.copyWith(color: colors.ink2),
+                    ),
+                    if (overview.streak > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: AppSpace.s4,
+                        children: [
+                          Icon(
+                            LucideIcons.flame,
+                            size: AppSize.smallIcon,
+                            color: colors.streak,
+                          ),
+                          Text(
+                            l10n.streakDays(overview.streak),
+                            style: AppType.caption.copyWith(
+                              color: colors.ink2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                _DayBars(
+                  counts: [for (final day in week) day.cards],
+                  labels: labels,
+                  emphasised: week.length - 1,
+                  ink: colors.ink,
+                  semantics: summary,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -776,7 +836,7 @@ class _CatchUp extends StatelessWidget {
         semantics: l10n.catchUpSemantics(
           [
             for (final (index, count) in counts.indexed)
-              l10n.forecastDay(labels[index], count),
+              l10n.dayCount(labels[index], count),
           ].join(', '),
         ),
       ),
@@ -785,26 +845,19 @@ class _CatchUp extends StatelessWidget {
   }
 }
 
-/// A chart on the surface: its [title], an optional [trailing] line beside
-/// it, the [chart], and an optional [note] under it.
+/// A chart on the surface: its [title], the [chart], and an optional [note]
+/// under it.
 class _ChartCard extends StatelessWidget {
-  const _ChartCard({
-    required this.title,
-    required this.chart,
-    this.trailing,
-    this.note,
-  });
+  const _ChartCard({required this.title, required this.chart, this.note});
 
   final String title;
   final Widget chart;
-  final String? trailing;
   final String? note;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final quiet = AppType.caption.copyWith(color: colors.muted);
-    final trailing = this.trailing;
     final note = this.note;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -817,19 +870,7 @@ class _ChartCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: AppSpace.s12,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(title, style: AppType.label),
-                  ),
-                ),
-                if (trailing != null) Text(trailing, style: quiet),
-              ],
-            ),
+            Semantics(header: true, child: Text(title, style: AppType.label)),
             chart,
             if (note != null) Text(note, style: quiet),
           ],
