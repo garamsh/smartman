@@ -5,7 +5,7 @@ import type { Config } from "./config.ts";
 import { type Attempt, extractCards } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
-import { consumeExtraction } from "./supabase.ts";
+import { type Plan, startExtraction } from "./supabase.ts";
 
 /** How a request ended; the error body carries the same code, for the app to show. */
 export type Outcome =
@@ -27,10 +27,12 @@ export type Outcome =
  */
 export type LogEntry = {
   readonly user_id: UserId | null;
-  /** The model of the last call made, or null when none was. */
+  /** The caller's plan, or null when it was not read. */
+  readonly plan: Plan | null;
+  /** The model of the call made, or null when none was. */
   readonly model: string | null;
   readonly latency_ms: number;
-  /** Summed over the calls made; null when none reported usage. */
+  /** The call's usage; null when it made none or reported none. */
   readonly prompt_tokens: number | null;
   readonly completion_tokens: number | null;
   readonly outcome: Outcome;
@@ -74,6 +76,9 @@ export function status(outcome: Outcome): number {
 type Result = {
   readonly outcome: Outcome;
   readonly userId: UserId | null;
+  readonly plan?: Plan;
+  /** The plan's daily limit, which a `rate_limited` answer states. */
+  readonly dailyLimit?: number;
   readonly attempts: readonly Attempt[];
   readonly cards?: readonly Card[];
 };
@@ -93,6 +98,8 @@ export function createHandler(
     log(deps, started, result);
     const body = result.outcome === "ok"
       ? { cards: result.cards }
+      : result.outcome === "rate_limited"
+      ? { error: result.outcome, daily_limit: result.dailyLimit }
       : { error: result.outcome };
     return Response.json(body, { status: status(result.outcome) });
   };
@@ -121,14 +128,23 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
 
   const parsed = await parseRequest(request.body);
   if (!parsed.ok) return refused(parsed.failure, userId);
-  if (!await consumeExtraction(userId, supabase)) {
-    return refused("rate_limited", userId);
+  const start = await startExtraction(userId, supabase);
+  if (start.kind === "not_configured") return refused("not_configured", userId);
+  if (start.kind === "rate_limited") {
+    return {
+      outcome: "rate_limited",
+      userId,
+      plan: start.plan,
+      dailyLimit: start.dailyLimit,
+      attempts: [],
+    };
   }
+  const plan = start.plan;
 
   const extraction = await extractCards(
     parsed.request.image,
     parsed.request.languages,
-    config.models,
+    start.model,
     {
       apiKey: config.openRouterApiKey,
       fetch: deps.fetch,
@@ -140,14 +156,25 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
       return {
         outcome: "ok",
         userId,
+        plan,
         attempts: extraction.attempts,
         cards: extraction.cards,
       };
     case "no_cards":
-      return { outcome: "no_cards", userId, attempts: extraction.attempts };
+      return {
+        outcome: "no_cards",
+        userId,
+        plan,
+        attempts: extraction.attempts,
+      };
     case "invalid_output":
     case "model_error":
-      return { outcome: "model_error", userId, attempts: extraction.attempts };
+      return {
+        outcome: "model_error",
+        userId,
+        plan,
+        attempts: extraction.attempts,
+      };
   }
 }
 
@@ -161,6 +188,7 @@ function log(deps: HandlerDeps, started: number, result: Result): void {
       : usages.reduce((total, usage) => total + pick(usage), 0);
   deps.log({
     user_id: result.userId,
+    plan: result.plan ?? null,
     model: result.attempts.at(-1)?.model ?? null,
     latency_ms: Math.round(deps.now() - started),
     prompt_tokens: sum((usage) => usage.promptTokens),

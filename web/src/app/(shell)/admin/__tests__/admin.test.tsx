@@ -2,8 +2,13 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { http, HttpResponse } from "msw";
+
 import {
   dismissReports,
+  grantPlan,
+  revokePlan,
+  setPlan,
   grantAdmin,
   hideDeck,
   revokeAdmin,
@@ -23,6 +28,7 @@ import {
   AuditContent,
   DeckContent,
   OverviewContent,
+  PlansContent,
   PublicDecksContent,
   ReportsContent,
   UserContent,
@@ -86,7 +92,7 @@ describe("the admin area's gate", () => {
       within(menu)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["개요", "신고", "공개 덱", "사용자", "관리자", "작업 기록"]);
+    ).toEqual(["개요", "신고", "공개 덱", "사용자", "요금제", "관리자", "작업 기록"]);
     expect(within(menu).getByRole("link", { name: "신고" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -376,5 +382,214 @@ describe("the audit log", () => {
     await signIn(otherUser);
     await render(AuditContent, {});
     expect(screen.getByRole("alert")).toHaveTextContent("관리자만 볼 수 있어요.");
+  });
+});
+
+/** OpenRouter's public model list: Haiku takes images with structured outputs; the text model does not. */
+const openRouterModels = http.get("https://openrouter.ai/api/v1/models", () =>
+  HttpResponse.json({
+    data: [
+      {
+        id: "anthropic/claude-haiku-5.5",
+        architecture: { input_modalities: ["text", "image"] },
+        supported_parameters: ["structured_outputs", "max_tokens"],
+      },
+      {
+        id: "openai/gpt-6-luna",
+        architecture: { input_modalities: ["text", "image"] },
+        supported_parameters: ["structured_outputs"],
+      },
+      {
+        id: "vendor/text-only",
+        architecture: { input_modalities: ["text"] },
+        supported_parameters: ["structured_outputs"],
+      },
+      {
+        id: "vendor/no-schema",
+        architecture: { input_modalities: ["text", "image"] },
+        supported_parameters: ["max_tokens"],
+      },
+    ],
+  }),
+);
+
+/** A form of [fields], as the browser posts it. */
+function form(fields: Record<string, string>): FormData {
+  const data = new FormData();
+  for (const [name, value] of Object.entries(fields)) data.set(name, value);
+  return data;
+}
+
+describe("the plans page", () => {
+  it("shows each plan's model and daily limit, with the measured cost beside a measured model", async () => {
+    admin.plans[1] = { id: "pro", model: "openai/gpt-6-luna", daily_limit: 100, updated_by: null };
+    await render(PlansContent, {});
+    const free = within(screen.getByRole("region", { name: "무료" }));
+    expect(free.getByRole("textbox", { name: "모델" })).toHaveValue("anthropic/claude-haiku-5.5");
+    expect(free.getByRole("spinbutton", { name: "하루 사진 한도" })).toHaveValue(30);
+    expect(free.getByText("측정 비용 사진 한 장에 $0.0018")).toBeInTheDocument();
+    const pro = within(screen.getByRole("region", { name: "프로" }));
+    expect(pro.getByText("이 모델은 측정한 비용이 없어요.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "스페셜" })).toBeInTheDocument();
+    const measured = within(screen.getByRole("region", { name: "측정한 모델" }));
+    expect(measured.getAllByRole("listitem").map((row) => row.textContent)).toEqual([
+      "anthropic/claude-haiku-5.5$0.0018",
+      "anthropic/claude-sonnet-5.5$0.0267",
+    ]);
+  });
+
+  it("saves a plan's model and limit when OpenRouter lists the model with images and structured outputs, and records it", async () => {
+    server.use(openRouterModels);
+    const save = () =>
+      setPlan(
+        { message: null },
+        form({ plan: "pro", model: "openai/gpt-6-luna", daily_limit: "100" }),
+      );
+    expect(await save()).toEqual({ message: "저장했어요." });
+    expect(admin.plans[1]).toMatchObject({ model: "openai/gpt-6-luna", daily_limit: 100 });
+    expect(admin.audit).toMatchObject([
+      { action: "set_plan", target_kind: "plan", target_id: "pro" },
+    ]);
+    expect(revalidated).toEqual(["/admin"]);
+    expect(await save()).toEqual({ message: "바뀐 것이 없어요." });
+  });
+
+  it("cannot save a model OpenRouter does not list, one without images or structured outputs, a malformed id or limit, or any while OpenRouter cannot be reached", async () => {
+    server.use(openRouterModels);
+    const attempt = (model: string, limit = "30") =>
+      setPlan({ message: null }, form({ plan: "free", model, daily_limit: limit }));
+    expect(await attempt("vendor/unknown")).toEqual({
+      message: "OpenRouter에 없는 모델이에요. 모델 ID를 확인해 주세요.",
+    });
+    for (const model of ["vendor/text-only", "vendor/no-schema"]) {
+      expect(await attempt(model), model).toEqual({
+        message: "사진과 구조화된 답을 함께 지원하지 않는 모델이에요.",
+      });
+    }
+    expect(await attempt("not a model")).toEqual({
+      message: "모델 ID는 vendor/model 꼴로 적어 주세요.",
+    });
+    expect(await attempt("anthropic/claude-haiku-5.5", "1001")).toEqual({
+      message: "하루 한도는 0에서 1000 사이의 정수로 적어 주세요.",
+    });
+    server.use(
+      http.get(
+        "https://openrouter.ai/api/v1/models",
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    );
+    expect(await attempt("openai/gpt-6-luna")).toEqual({
+      message: "OpenRouter에 연결할 수 없어 모델을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
+    });
+    expect(admin.plans[0]).toMatchObject({ model: "anthropic/claude-haiku-5.5", daily_limit: 30 });
+    expect(admin.calls.some((call) => call.startsWith("admin_set_plan"))).toBe(false);
+  });
+
+  it("refuses a user who is not an admin, and changes nothing", async () => {
+    server.use(openRouterModels);
+    await signIn(otherUser);
+    expect(
+      await setPlan(
+        { message: null },
+        form({ plan: "free", model: "openai/gpt-6-luna", daily_limit: "5" }),
+      ),
+    ).toEqual({ message: "관리자만 할 수 있어요." });
+    expect(admin.plans[0]).toMatchObject({ model: "anthropic/claude-haiku-5.5", daily_limit: 30 });
+    await render(PlansContent, {});
+    expect(screen.getByRole("alert")).toHaveTextContent("관리자만 볼 수 있어요.");
+  });
+
+  it("estimates the overview's cost at the Free plan's model, and none for a model never measured", async () => {
+    admin.plans[0] = { id: "free", model: "openai/gpt-6-luna", daily_limit: 30, updated_by: null };
+    await render(OverviewContent, {});
+    const photos = screen.getByRole("region", { name: "사진 추출" });
+    expect(within(photos).getByText("오늘 예상 비용").nextSibling).toHaveTextContent("—");
+  });
+});
+
+describe("a user's plan", () => {
+  it("shows Free with its limit, grants Special until a day's end in the admin's zone, and goes back to Free", async () => {
+    await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
+    const plan = within(screen.getByRole("region", { name: "요금제" }));
+    expect(plan.getByText("무료 · anthropic/claude-haiku-5.5 · 하루 30장")).toBeInTheDocument();
+    expect(plan.queryByRole("button", { name: "무료로 되돌리기" })).not.toBeInTheDocument();
+
+    const ends = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    expect(
+      await grantPlan(
+        { message: null },
+        form({ user: otherUser.id, plan: "special", ends_on: ends }),
+      ),
+    ).toEqual({ message: "스페셜로 지정했어요." });
+    // The last day ends at the next study day's start, 04:00 in the admin's zone, UTC here.
+    const next = new Date(Date.parse(`${ends}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+    expect(admin.userPlans.get(otherUser.id)).toEqual({
+      plan: "special",
+      endsAt: `${next}T04:00:00.000Z`,
+      grantedBy: testUser.id,
+    });
+    expect(admin.audit).toMatchObject([{ action: "grant_plan", target_id: otherUser.id }]);
+
+    await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
+    const granted = within(screen.getAllByRole("region", { name: "요금제" }).at(-1) as HTMLElement);
+    expect(
+      granted.getByText("스페셜 · anthropic/claude-haiku-5.5 · 하루 30장"),
+    ).toBeInTheDocument();
+    // The grant's line carries its time and granter too, so a substring is right.
+    expect(granted.getByText(new RegExp(`${ends}까지`))).toBeInTheDocument();
+    expect(granted.getByRole("button", { name: "무료로 되돌리기" })).toBeInTheDocument();
+
+    expect(await revokePlan(otherUser.id)).toEqual({
+      changed: true,
+      message: "무료로 되돌렸어요.",
+    });
+    expect(await revokePlan(otherUser.id)).toEqual({ changed: false, message: "이미 무료예요." });
+    expect(admin.userPlans.has(otherUser.id)).toBe(false);
+  });
+
+  it("refuses an end on Pro and an end already past, and refuses a user who is not an admin", async () => {
+    expect(
+      await grantPlan(
+        { message: null },
+        form({ user: otherUser.id, plan: "pro", ends_on: "2030-01-01" }),
+      ),
+    ).toEqual({ message: "끝나는 날은 스페셜에만 정할 수 있어요." });
+    expect(
+      await grantPlan(
+        { message: null },
+        form({ user: otherUser.id, plan: "special", ends_on: "2020-01-01" }),
+      ),
+    ).toEqual({ message: "끝나는 날은 오늘 이후로 정해 주세요." });
+    expect(
+      await grantPlan({ message: null }, form({ user: otherUser.id, plan: "pro", ends_on: "" })),
+    ).toEqual({ message: "프로로 지정했어요." });
+
+    await signIn(otherUser);
+    expect(
+      await grantPlan(
+        { message: null },
+        form({ user: otherUser.id, plan: "special", ends_on: "" }),
+      ),
+    ).toEqual({ message: "관리자만 할 수 있어요." });
+    expect(await revokePlan(otherUser.id)).toEqual({
+      changed: false,
+      message: "관리자만 할 수 있어요.",
+    });
+    expect(admin.userPlans.get(otherUser.id)?.plan).toBe("pro");
+  });
+
+  it("names each plan change in the audit log", async () => {
+    server.use(openRouterModels);
+    await setPlan(
+      { message: null },
+      form({ plan: "pro", model: "openai/gpt-6-luna", daily_limit: "100" }),
+    );
+    await grantPlan({ message: null }, form({ user: otherUser.id, plan: "pro", ends_on: "" }));
+    await render(AuditContent, {});
+    expect(screen.getAllByRole("listitem").map((entry) => entry.firstChild?.textContent)).toEqual([
+      "요금제 지정 · other@example.com · 프로",
+      "요금제 설정 · 프로 · openai/gpt-6-luna · 하루 100장",
+    ]);
+    expect(screen.getByRole("link", { name: "프로" })).toHaveAttribute("href", "/admin/plans");
   });
 });

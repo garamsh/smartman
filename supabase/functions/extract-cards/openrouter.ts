@@ -1,11 +1,11 @@
-/** Extracts cards from an image through OpenRouter chat completions, retrying once on invalid output. */
+/** Extracts cards from an image through one OpenRouter chat completion. */
 
 import { type Card, cardsSchema, parseCards } from "./cards.ts";
 import { SYSTEM_PROMPT, userPrompt } from "./prompt_v6.ts";
 import type { Image, LanguageHints } from "./request.ts";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Bounds one call's cost; a reply cut off at it fails the schema and is retried.
+// Bounds one call's cost; a reply cut off at it fails the schema.
 export const MAX_OUTPUT_TOKENS = 16384;
 
 /** An OpenRouter model ID, such as `anthropic/claude-haiku-5.5`. */
@@ -14,9 +14,6 @@ export type ModelId = string & { readonly __brand: "ModelId" };
 export function modelId(value: string): ModelId | null {
   return /^[\w.-]+\/[\w.:-]+$/.test(value) ? value as ModelId : null;
 }
-
-/** The first call's model, and the model the one retry on invalid output uses. */
-export type Models = { readonly primary: ModelId; readonly retry: ModelId };
 
 /** What OpenRouter reported for one call; `costUsd` is null when it reported no cost. */
 export type Usage = {
@@ -49,24 +46,21 @@ export type ExtractDeps = {
   readonly now: () => number;
 };
 
+/** One call to [model]; output that is not the schema's is `invalid_output`, with no second call. */
 export async function extractCards(
   image: Image,
   languages: LanguageHints,
-  models: Models,
+  model: ModelId,
   deps: ExtractDeps,
 ): Promise<Extraction> {
-  const attempts: Attempt[] = [];
-  for (const model of [models.primary, models.retry]) {
-    const call = await callModel(model, image, languages, deps);
-    attempts.push(call.attempt);
-    if (call.reply === null) return { kind: "model_error", attempts };
-    const cards = parseCards(call.reply);
-    if (cards === null) continue;
-    return cards.length === 0
-      ? { kind: "no_cards", attempts }
-      : { kind: "cards", cards, attempts };
-  }
-  return { kind: "invalid_output", attempts };
+  const call = await callModel(model, image, languages, deps);
+  const attempts = [call.attempt];
+  if (call.reply === null) return { kind: "model_error", attempts };
+  const cards = parseCards(call.reply);
+  if (cards === null) return { kind: "invalid_output", attempts };
+  return cards.length === 0
+    ? { kind: "no_cards", attempts }
+    : { kind: "cards", cards, attempts };
 }
 
 type Call = { readonly attempt: Attempt; readonly reply: string | null };
@@ -124,7 +118,7 @@ async function callModel(
     usage: readUsage(body),
   };
   if (!response.ok) return { attempt, reply: null };
-  // A 200 whose body carries no message text is treated as invalid output, so it is retried.
+  // A 200 whose body carries no message text is treated as invalid output.
   return { attempt, reply: readReply(body) ?? "" };
 }
 

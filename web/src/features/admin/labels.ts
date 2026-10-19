@@ -14,6 +14,16 @@ export const actionLabels: Record<string, string> = {
   dismiss_reports: "신고 정리",
   grant_admin: "관리자 지정",
   revoke_admin: "관리자 해제",
+  set_plan: "요금제 설정",
+  grant_plan: "요금제 지정",
+  revoke_plan: "무료로 되돌리기",
+};
+
+/** Each plan's name in the admin area. */
+export const planLabels: Record<string, string> = {
+  free: "무료",
+  pro: "프로",
+  special: "스페셜",
 };
 
 /** [labels]' word for [key], or [key] itself when it has none. */

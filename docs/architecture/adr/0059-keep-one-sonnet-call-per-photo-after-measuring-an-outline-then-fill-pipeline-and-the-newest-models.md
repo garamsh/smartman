@@ -1,6 +1,6 @@
 # ADR 0059: Keep one Sonnet call per photo after measuring an outline-then-fill pipeline and the newest models
 
-> Status: accepted
+> Status: accepted; its Haiku-with-a-Sonnet-retry candidate superseded by ADR-0071
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

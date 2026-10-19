@@ -871,6 +871,12 @@ abstract class AppLocalizations {
   /// **'오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.'**
   String get dailyLimitReached;
 
+  /// Photo import failure: the user's plan's daily extraction limit, which the server states, was reached.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 사진으로 만들 수 있는 {limit}장을 다 썼어요. 내일 다시 시도해 주세요.'**
+  String dailyLimitReachedOf(int limit);
+
   /// Photo import failure: the model failed.
   ///
   /// In ko, this message translates to:
