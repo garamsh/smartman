@@ -385,5 +385,8 @@
   "completionTomorrow": "{minutes} min again tomorrow",
   "completionChange": "Change",
   "completionTomorrowSemantics": "{minutes} min again tomorrow, change",
-  "settingsStudy": "Study"
+  "settingsStudy": "Study",
+  "studyExtra": "+{count} extra",
+  "studyExtraSemantics": "{count, plural, =1{1 more card studied past today's plan} other{{count} more cards studied past today's plan}}",
+  "todayExtra": "{count, plural, =1{1 more card today} other{{count} more cards today}}"
 }

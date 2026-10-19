@@ -54,6 +54,8 @@ export type SessionPlan = {
   earlier: EarlierAnswer | null;
   /** The new cards past today's, oldest first, which `studyOn` goes on with. */
   more: StudyCard[];
+  /** The decks' cards answered today past the day's plan (`StudyDay.extra`), counted apart. */
+  extra: CardId[];
   before: CardStates;
   pace: Pace;
   today: {
@@ -111,11 +113,16 @@ export type SessionView = {
   previous: PreviousAnswer[];
   /**
    * The day's cards whose latest answer today, in this session or an earlier one, is "안다", of
-   * the day's cards: those answered today before the session opened, the queue it opened with,
-   * and those taken past today's since.
+   * the day's cards: those answered today within the day's plan before the session opened, and
+   * the queue it opened with.
    */
   done: number;
   total: number;
+  /**
+   * The cards answered today past the day's plan, in this session or an earlier one, counted
+   * apart so the day's count never grows with them.
+   */
+  extra: number;
   /** Before the session's first answer, the day's last answer from an earlier session. */
   earlier: EarlierAnswer | null;
 } & (
@@ -146,8 +153,10 @@ type Answered = { card: StudyCard; answer: Answer; first: Answer; review: Sessio
 export class StudySession {
   private readonly random: Random;
   private readonly queue: StudyCard[];
-  /** The day's cards, each once: answered today before the session, queued, or taken since. */
+  /** The day's cards, each once: answered today within the day's plan before the session, or queued. */
   private readonly dayCards: Set<CardId>;
+  /** The cards past the day's plan, each once: answered past it before the session, or taken since. */
+  private readonly extraCards: Set<CardId>;
   /** The new cards past today's, oldest first, not yet taken. */
   private more: StudyCard[];
   /** The session's size when it opened. */
@@ -170,8 +179,9 @@ export class StudySession {
     // The cards still on "모른다" come back as a re-show does: after a gap drawn from the session's
     // random source, or at the end, in a backlog as out of one.
     for (const card of plan.relearn) reinsert(this.queue, card, this.random);
+    this.extraCards = new Set(plan.extra);
     this.dayCards = new Set([
-      ...plan.today.answers.map((answer) => answer.cardId),
+      ...plan.today.answers.flatMap(({ cardId }) => (this.extraCards.has(cardId) ? [] : [cardId])),
       ...this.queue.map((card) => card.id),
     ]);
     const fresh = this.queue.filter((card) => !plan.before[card.id]).length;
@@ -253,7 +263,7 @@ export class StudySession {
   /** Moves the new cards past today's into the queue. */
   private takeMore(): void {
     this.queue.push(...this.more);
-    for (const card of this.more) this.dayCards.add(card.id);
+    for (const card of this.more) this.extraCards.add(card.id);
     this.more = [];
   }
 
@@ -359,7 +369,12 @@ export class StudySession {
     );
     const done = [...places.values()].filter((place) => place === "done").length;
     const earlier = this.answers.length === 0 ? this.plan.earlier : null;
-    const counts = { previous, done, total: this.dayCards.size, earlier };
+    const answered = new Set([
+      ...this.plan.today.answers.map(({ cardId }) => cardId),
+      ...this.answers.map(({ card }) => card.id),
+    ]);
+    const extra = [...this.extraCards].filter((id) => answered.has(id)).length;
+    const counts = { previous, done, total: this.dayCards.size, extra, earlier };
     const current = this.queue[0];
     if (current) return { ...counts, kind: "studying", current };
     if (this.plan.today.answers.length === 0 && this.answers.length === 0) {

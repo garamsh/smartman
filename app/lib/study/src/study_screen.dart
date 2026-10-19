@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../deck/deck.dart';
 import 'daily_minutes_sheet.dart';
 import 'study_coach.dart';
+import '../../design/app_chip.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -481,15 +482,32 @@ class _TopBar extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpace.s12),
-                  child: ExcludeSemantics(
-                    child: Text(
-                      l10n.studyProgress(progress.done, progress.total),
-                      style: AppType.secondary.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: AppSpace.s8,
+                    children: [
+                      ExcludeSemantics(
+                        child: Text(
+                          l10n.studyProgress(progress.done, progress.total),
+                          style: AppType.secondary.copyWith(
+                            color: colors.ink,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
                       ),
-                    ),
+                      // Cards past the day's plan are counted apart, so the
+                      // day's bar never shrinks as they are taken.
+                      if (progress.extra > 0)
+                        Semantics(
+                          label: l10n.studyExtraSemantics(progress.extra),
+                          excludeSemantics: true,
+                          child: AppChip(
+                            label: l10n.studyExtra(progress.extra),
+                            tone: AppChipTone.brand,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],

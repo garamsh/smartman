@@ -13,10 +13,12 @@ import 'package:smartman/study/src/scheduler.dart';
 import 'package:smartman/study/src/session.dart';
 import 'package:smartman/study/src/today.dart';
 import 'package:smartman/study/src/study_repository.dart';
+import 'package:smartman/study/src/study_time.dart';
 
 import 'fixtures.dart';
 
-/// Schedules every review one day out, at once.
+/// Schedules a review answered "Know" one day out and one answered "Don't
+/// know" ten minutes out, within the day, at once.
 class _InstantScheduler implements Scheduler {
   @override
   Future<CardState?> fold(List<ReviewRow> reviews) =>
@@ -40,7 +42,11 @@ class _InstantScheduler implements Scheduler {
     stability: 1,
     difficulty: 5,
     lastReview: at,
-    due: at.add(const Duration(days: 1)),
+    due: at.add(
+      answer == Answer.know
+          ? const Duration(days: 1)
+          : const Duration(minutes: 10),
+    ),
   );
 }
 
@@ -178,7 +184,7 @@ void _answerAll(StudySession session) {
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
-  test('past today\'s cards, 학습하기 goes on with the next new cards oldest first, each answer written and counted', () async {
+  test('past today\'s cards, 학습하기 goes on with the next new cards oldest first, each answer written and counted apart from the day\'s goal', () async {
     final deck = await _Deck.open(_names(_today + 2));
     final session = await deck.session();
     _answerAll(session);
@@ -200,34 +206,98 @@ void main() {
 
     final done = session.state as SessionComplete;
     expect(done.more, isFalse);
-    expect((done.progress.done, done.progress.total), (_today + 2, _today + 2));
+    // The day's count stays at its plan; the two past it are counted apart.
+    expect((done.progress.done, done.progress.total), (_today, _today));
+    expect(done.progress.extra, 2);
     final (reviews, states) = await deck.rows();
     expect(reviews, hasLength(_today + 2));
     expect(states, hasLength(_today + 2));
-    // Recorded answers, so the day's goal counts them done.
+    // Recorded answers, outside the day's goal.
     final stored = await deck.study.answersSince(DateTime.utc(2026, 10, 14, 4));
     final (cards, cardStates) = await readCards(
       DeckSelection(deck.id),
       deck.cards,
       deck.study,
     );
-    final goal = DailyGoal.of(
-      dayPlanOf(
-        cards,
-        cardStates,
-        StudyDay.at(
-          _now,
-          firstAnswers: [for (final answer in stored) answer.at],
-          newCards: _today,
-          offsetAt: _utc,
-        ),
-        [
-          for (final answer in stored)
-            (card: answer.card, answer: answer.answer, at: answer.at),
-        ],
+    final plan = dayPlanOf(
+      cards,
+      cardStates,
+      StudyDay.at(
+        _now,
+        firstAnswers: {for (final answer in stored) answer.card: answer.at},
+        newCards: _today,
+        offsetAt: _utc,
       ),
+      [
+        for (final answer in stored)
+          (card: answer.card, answer: answer.answer, at: answer.at),
+      ],
     );
-    expect((goal.done, goal.goal), (_today + 2, _today + 2));
+    final goal = DailyGoal.of(plan);
+    expect((goal.done, goal.goal), (_today, _today));
+    expect(plan.extra, hasLength(2));
+  });
+
+  test('ten cards past the day, five answered Don\'t know, leave the day done on return: its goal unchanged and the ten counted apart', () async {
+    final deck = await _Deck.open(_names(_today + 10));
+    final first = await deck.session();
+    _answerAll(first);
+    first.studyOn();
+    final seen = <String>{};
+    while (seen.length < 10) {
+      final front = _current(first);
+      // Each extra's first answer: Don't know for five, Know for the others;
+      // a re-show is answered Know.
+      final fresh = seen.add(front);
+      first.answer(fresh && seen.length.isOdd ? _dontKnow : _know);
+    }
+    await first.settled;
+
+    final again = await deck.session();
+    final state = again.state;
+    expect(state, isA<SessionComplete>());
+    final progress = (state as SessionComplete).progress;
+    expect((progress.done, progress.total), (_today, _today));
+    expect(progress.extra, 10);
+    final (:day, pace: _, due: _, started: _, dailyMinutes: _) =
+        await readStudyDay(deck.study, _now, _utc);
+    final (cards, states) = await readCards(
+      DeckSelection(deck.id),
+      deck.cards,
+      deck.study,
+    );
+    final plan = dayPlanOf(cards, states, day, [
+      for (final answer in await deck.study.answersSince(day.start))
+        (card: answer.card, answer: answer.answer, at: answer.at),
+    ]);
+    final goal = DailyGoal.of(plan);
+    expect((goal.done, goal.goal, goal.reached), (_today, _today, true));
+    expect(plan.left, 0);
+    expect(plan.extra, hasLength(10));
+  });
+
+  test('control: before the day is done, a planned card answered Don\'t know stays left on return', () async {
+    final deck = await _Deck.open(_names(_today + 10));
+    final first = await deck.session();
+    first.answer(_dontKnow);
+    await first.settled;
+
+    final again = await deck.session();
+    final progress = (again.state as SessionStudying).progress;
+    expect((progress.done, progress.total, progress.extra), (0, _today, 0));
+    final (:day, pace: _, due: _, started: _, dailyMinutes: _) =
+        await readStudyDay(deck.study, _now, _utc);
+    final (cards, states) = await readCards(
+      DeckSelection(deck.id),
+      deck.cards,
+      deck.study,
+    );
+    final plan = dayPlanOf(cards, states, day, [
+      for (final answer in await deck.study.answersSince(day.start))
+        (card: answer.card, answer: answer.answer, at: answer.at),
+    ]);
+    expect(plan.left, _today);
+    expect(plan.extra, isEmpty);
   });
 
   test('past today\'s cards, a card answered today comes back only as the re-show after Don\'t know', () async {
@@ -266,8 +336,14 @@ void main() {
     );
     expect(again.size.cards, 0);
     expect(state.earlier?.answer, Answer.know);
-    // The day's count goes on from today's answered cards.
-    expect((state.progress.done, state.progress.total), (_today, _today + 2));
+    // The day's count stays at today's answered cards; the new cards past
+    // them count apart once answered.
+    expect(
+      (state.progress.done, state.progress.total, state.progress.extra),
+      (_today, _today, 0),
+    );
+    again.answer(_know);
+    expect((again.state as SessionStudying).progress.extra, 1);
   });
 
   test('with no new card left past today\'s, the completion card offers none and 학습하기 does nothing', () async {

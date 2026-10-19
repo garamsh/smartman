@@ -360,7 +360,7 @@ describe("the study page", () => {
       });
     });
 
-    it("goes on with the new cards past today's on 학습하기, oldest first, each answer written", async () => {
+    it("goes on with the new cards past today's on 학습하기, oldest first, each answer written and counted apart from the day's", async () => {
       const fronts = past(todayNewCards + 2);
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
@@ -376,9 +376,12 @@ describe("the study page", () => {
       expect(await answerAll("{ArrowRight}", 2)).toEqual(fronts.slice(todayNewCards));
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toBe(progress);
+      // The day's bar stays full; the two past it are counted apart.
       expect(progress.getAttribute("aria-valuetext")).toBe(
-        `${String(todayNewCards + 2)}장 중 ${String(todayNewCards + 2)}장 끝냄`,
+        `${String(todayNewCards)}장 중 ${String(todayNewCards)}장 끝냄`,
       );
+      expect(screen.getByText("추가 2장")).toBeInTheDocument();
+      expect(screen.getByText("오늘 계획 밖으로 2장 더 공부함")).toHaveClass("sr-only");
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       await waitFor(() => {
         expect(postgrest.rows.reviews).toHaveLength(todayNewCards + 2);

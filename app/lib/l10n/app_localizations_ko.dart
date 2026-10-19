@@ -1412,4 +1412,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsStudy => '공부';
+
+  @override
+  String studyExtra(int count) {
+    return '추가 $count장';
+  }
+
+  @override
+  String studyExtraSemantics(int count) {
+    return '오늘 계획 밖으로 $count장 더 공부함';
+  }
+
+  @override
+  String todayExtra(int count) {
+    return '오늘 $count장 더 했어요';
+  }
 }

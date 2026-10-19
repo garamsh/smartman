@@ -42,6 +42,7 @@ const plan: SessionPlan = {
   resumed: false,
   earlier: null,
   more: [],
+  extra: [],
   before: {},
   pace: unknownPace,
   today: { answers: [], answeredAnyDeck: false, streakBefore: 0 },

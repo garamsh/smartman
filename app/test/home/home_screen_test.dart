@@ -81,7 +81,8 @@ class _List {
 /// [pace] is the time the user's answers took; [unreadable] names the decks
 /// whose cards cannot be read. The first-run daily minutes step has shown
 /// unless [minutesAsked] is false. The screen is a phone's unless [screen]
-/// says otherwise, in the light theme unless [theme] is another. [photoImport] stands in for the photo import
+/// says otherwise, in the light theme unless [theme] is another, with
+/// [dailyMinutes] stored when given. [photoImport] stands in for the photo import
 /// when given: a screen it pushes, which pops with what photo import resolves
 /// to.
 Future<_List> _open(
@@ -100,6 +101,7 @@ Future<_List> _open(
   Locale locale = const Locale('en'),
   Size screen = const Size(390, 844),
   ThemeData? theme,
+  int? dailyMinutes,
 }) async {
   Future<Deck?> pushed(
     BuildContext context,
@@ -129,6 +131,12 @@ Future<_List> _open(
     newId: () => 'deck${ids++}',
   );
   final created = (await tester.runAsync(() async {
+    if (dailyMinutes != null) {
+      await StudyRepository(
+        db,
+        newId: () => 'setting',
+      ).setDailyMinutes(dailyMinutes, at: homeNow);
+    }
     final created = {
       for (final name in decks) name: (await repository.createDeck(name)).id,
     };
@@ -335,6 +343,41 @@ void main() {
         await list.tap('Study all');
 
         expect(list.session, list.ids.values.toSet());
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'cards studied past the day\'s plan leave the done card and its goal as planned, and show apart as more cards today',
+      (tester) async {
+        // 5 minutes at the unknown pace of 10 s: 30 new cards a day, so the
+        // 35 first answered today are 30 planned and 5 past the plan.
+        final list = await _open(
+          tester,
+          decks: ['Alpha'],
+          answeredToday: {'Alpha': 35},
+          dailyMinutes: 5,
+        );
+
+        expect(find.text("You've done today's cards"), findsOneWidget);
+        expect(find.text('Goal of 30 reached'), findsOneWidget);
+        expect(find.text('5 more cards today'), findsOneWidget);
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'control: within the day\'s plan, no card is shown as more today',
+      (tester) async {
+        final list = await _open(
+          tester,
+          decks: ['Alpha'],
+          answeredToday: {'Alpha': 30},
+          dailyMinutes: 5,
+        );
+
+        expect(find.text('Goal of 30 reached'), findsOneWidget);
+        expect(find.textContaining('more card'), findsNothing);
         await list.close();
       },
     );

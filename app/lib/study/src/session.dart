@@ -150,17 +150,22 @@ final class PreviousCard {
 }
 
 /// How many of the day's cards are done, out of the day's cards: done and
-/// left, as today's list (`todayOf`) places them.
+/// left, as today's list (`todayOf`) places them; and apart from them, how
+/// many cards were studied past the day's plan.
 final class SessionProgress {
-  const SessionProgress(this.done, this.total);
+  const SessionProgress(this.done, this.total, {required this.extra});
 
   /// The day's cards whose latest answer today, in this session or an
   /// earlier one, is "Know".
   final int done;
 
   /// The day's cards: those of the decks answered today before the session
-  /// opened, the queue it opened with, and those taken past today's since.
+  /// opened and within the day's plan, and the queue it opened with.
   final int total;
+
+  /// The cards of the decks answered today past the day's plan, in this
+  /// session or an earlier one ([StudyDay.extra]).
+  final int extra;
 }
 
 /// What the completion card shows of today's study day over the session's
@@ -245,8 +250,12 @@ class StudySession extends ChangeNotifier {
   final _queue = <Card>[];
 
   /// The day's cards, each once: those answered today before the session
-  /// opened, the queue it opened with, and those taken past today's since.
+  /// opened within the day's plan, and the queue it opened with.
   final _dayCards = <CardId>{};
+
+  /// The cards past the day's plan, each once: those answered today before
+  /// the session opened past it, and those taken past today's since.
+  final _extraCards = <CardId>{};
 
   /// The new cards past today's, oldest first, not yet taken.
   var _more = const <Card>[];
@@ -322,9 +331,14 @@ class StudySession extends ChangeNotifier {
           at: _inDay(answered.review.reviewedAt),
         ),
     ], _day);
+    final answered = {
+      for (final stored in _storedToday) stored.card,
+      for (final answered in _answers) answered.card.id,
+    };
     final progress = SessionProgress(
       today.values.where((place) => place == Today.done).length,
       _dayCards.length,
+      extra: _extraCards.where(answered.contains).length,
     );
     final earlier = _answers.isEmpty ? _earlier : null;
     if (_queue.isNotEmpty) {
@@ -446,10 +460,11 @@ class StudySession extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Moves the new cards past today's into the queue.
+  /// Moves the new cards past today's into the queue, as cards past the
+  /// day's plan.
   void _takeMore() {
     _queue.addAll(_more);
-    _dayCards.addAll([for (final card in _more) card.id]);
+    _extraCards.addAll([for (final card in _more) card.id]);
     _more = const [];
   }
 
@@ -535,9 +550,11 @@ class StudySession extends ChangeNotifier {
         reinsert(_queue, card, _random);
       }
       _dayCards.addAll([
-        for (final card in _answeredToday) card.id,
+        for (final card in _answeredToday)
+          if (!plan.extra.contains(card.id)) card.id,
         for (final card in _queue) card.id,
       ]);
+      _extraCards.addAll(plan.extra);
       final taken = {for (final card in _queue) card.id};
       _more = [
         for (final card in newCards(read, states))

@@ -483,6 +483,76 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('study past the day\'s plan in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow.subtract(const Duration(days: 1)),
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        // 5 minutes a day at 10 s: 30 new cards, so of the 35 answered today
+        // five are past the plan, and five more are left to study on.
+        await StudyRepository(
+          db,
+          newId: () => 'setting',
+        ).setDailyMinutes(5, at: homeNow);
+        final deck = await repository.createDeck('영단어 기본');
+        for (var i = 0; i < 40; i++) {
+          final saved = await repository.addCard(
+            deck.id,
+            front: [TextContent('word $i')],
+            back: [TextContent('$i')],
+          );
+          if (saved case CardSaved(:final card) when i < 35) {
+            await storeState(
+              db,
+              card.id,
+              due: homeNow.add(const Duration(days: 1)),
+            );
+            await storeAnswerAt(
+              db,
+              card.id,
+              homeNow.subtract(Duration(minutes: 60 - i)),
+            );
+          }
+        }
+      });
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            ...homeOverrides(db, storage: storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await shot(tester, '16i-today-done-extra');
+      await tester.scrollUntilVisible(
+        find.text(ko.todayStudy),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tap(tester, find.text(ko.todayStudy));
+      await shot(tester, '15d-study-extra');
+      await unmount(tester);
+    });
+
     testWidgets('whole cards in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());

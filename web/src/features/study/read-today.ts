@@ -140,7 +140,7 @@ export async function readToday(
     if (!firstToday.has(answer.cardId)) firstToday.set(answer.cardId, answer.reviewedAt);
   }
   const firstAnswers = [...firstToday].flatMap(([cardId, at]) =>
-    lastBefore.has(cardId) ? [] : [at],
+    lastBefore.has(cardId) ? [] : [{ cardId, at }],
   );
   const pace = paceOf(window.days);
   const due = dueAtStart(states.states, firstToday, lastBefore, start, timeZone);

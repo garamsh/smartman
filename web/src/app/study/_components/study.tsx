@@ -95,6 +95,7 @@ export async function Study({
         resumed: plan.done.size > 0,
         earlier: last && lastCard ? { card: lastCard, answer: last.answer } : null,
         more,
+        extra: [...plan.extra],
         before,
         pace,
         today: {

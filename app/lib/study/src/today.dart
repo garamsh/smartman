@@ -53,13 +53,15 @@ int _seconds(DateTime time) => time.millisecondsSinceEpoch ~/ 1000;
 
 /// A study day over a selection of decks, as today's list places its cards:
 /// the queue the rules select, the cards still on "Don't know" that the rules
-/// did not select, and the cards done. The session, `TodayCounter` and the 오늘
-/// tab's daily goal all count from it, so they agree.
+/// did not select, and the cards done; and apart from them, the cards studied
+/// past the day's plan. The session, `TodayCounter` and the 오늘 tab's daily
+/// goal all count from it, so they agree.
 final class DayPlan {
   const DayPlan({
     required this.selected,
     required this.relearn,
     required this.done,
+    required this.extra,
   });
 
   /// What the queue rules select ([selectQueue]).
@@ -69,8 +71,12 @@ final class DayPlan {
   /// answered "Don't know" last today, which their state no longer makes due.
   final List<Card> relearn;
 
-  /// The cards answered "Know" last today.
+  /// The cards of the day's plan answered "Know" last today.
   final Set<CardId> done;
+
+  /// The cards studied past the day's plan ([StudyDay.extra]), whatever
+  /// their latest answer: neither done nor left, so they never reopen the day.
+  final Set<CardId> extra;
 
   /// The cards left today: the selection and those still on "Don't know".
   int get left => selected.cards.length + relearn.length;
@@ -90,17 +96,27 @@ DayPlan dayPlanOf(
     answers,
     day,
   );
-  final selected = selectQueue(cards, states, day);
+  // A card studied past the plan stays out of it, though a "Don't know" makes
+  // it due again within the day.
+  final planned = [
+    for (final card in cards)
+      if (!day.extra.contains(card.id)) card,
+  ];
+  final selected = selectQueue(planned, states, day);
   final chosen = {for (final card in selected.cards) card.id};
   return DayPlan(
     selected: selected,
     relearn: [
-      for (final card in cards)
+      for (final card in planned)
         if (places[card.id] == Today.left && !chosen.contains(card.id)) card,
     ],
     done: {
       for (final MapEntry(:key, :value) in places.entries)
-        if (value == Today.done) key,
+        if (value == Today.done && !day.extra.contains(key)) key,
+    },
+    extra: {
+      for (final card in cards)
+        if (day.extra.contains(card.id)) card.id,
     },
   );
 }

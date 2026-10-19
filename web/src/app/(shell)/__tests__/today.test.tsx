@@ -707,6 +707,59 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
   });
 
+  describe("study past the day's plan", () => {
+    const names = Array.from({ length: 45 }, (_, index) => `c${String(index).padStart(2, "0")}`);
+    /**
+     * One deck of [names], 5 minutes a day (30 new cards at 10 s), and today's first answers to
+     * the first [answered]: those at [dontKnow] positions answered "모른다", due again within the
+     * day, the others "안다", due tomorrow.
+     */
+    const seedDay = (answered: number, dontKnow: (index: number) => boolean) => {
+      postgrest.seed("decks", deckRow("d-fr", "French"));
+      postgrest.seed("cards", ...names.map((name) => cardRow(name, "d-fr", name)));
+      postgrest.studySettings.set(testUser.id, {
+        daily_minutes: 5,
+        updated_at: new Date(start).toISOString(),
+      });
+      const first = names.slice(0, answered);
+      postgrest.seed(
+        "reviews",
+        ...first.map((name, index) => ({
+          ...reviewRow(`r-${name}`, name, start - 2 * 3_600_000 + index * 60_000, 6_000),
+          rating: dontKnow(index) ? "again" : "good",
+        })),
+      );
+      postgrest.seed(
+        "card_states",
+        ...first.map((name, index) =>
+          stateRow(name, {
+            stability: 1,
+            difficulty: 5,
+            lastReview: start - 3_600_000,
+            due: dontKnow(index) ? start + 600_000 : start + day,
+          }),
+        ),
+      );
+    };
+
+    it("keeps the day done after ten cards past it, five answered 모른다: the goal stays the plan and the ten count apart", async () => {
+      seedDay(40, (index) => index >= 30 && index % 2 === 0);
+      await render(Today, {});
+
+      expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
+      expect(screen.getByText("목표 30장 달성")).toBeInTheDocument();
+      expect(screen.getByText("오늘 10장 더 했어요")).toBeInTheDocument();
+    });
+
+    it("control: before the day is done, a planned card answered 모른다 stays left", async () => {
+      seedDay(30, (index) => index === 0);
+      await render(Today, {});
+
+      expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+      expect(screen.queryByText(/더 했어요$/)).not.toBeInTheDocument();
+    });
+  });
+
   describe("the daily study minutes", () => {
     /** One deck holding [count] cards never answered. */
     const seedNew = (count: number) => {

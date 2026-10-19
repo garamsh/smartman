@@ -55,16 +55,21 @@ export function todayOf(
 
 /**
  * A study day over a selection of decks, as today's list places its cards: the queue the rules
- * select, the cards still on "모른다" that the rules did not select, and the cards done. The study
- * session, the 오늘 page's count and goal, and the deck pages all count from it, so they agree with
- * each other and with the phone's.
+ * select, the cards still on "모른다" that the rules did not select, and the cards done; and apart
+ * from them, the cards studied past the day's plan. The study session, the 오늘 page's count and
+ * goal, and the deck pages all count from it, so they agree with each other and with the phone's.
  */
 export type DayPlan<C> = {
   selected: SelectedQueue<C>;
   /** The cards answered "모른다" last today, which their state no longer makes due. */
   relearn: C[];
-  /** The cards answered "안다" last today. */
+  /** The cards of the day's plan answered "안다" last today. */
   done: Set<CardId>;
+  /**
+   * The cards studied past the day's plan (`StudyDay.extra`), whatever their latest answer:
+   * neither done nor left, so they never reopen the day.
+   */
+  extra: Set<CardId>;
 };
 
 /** The [DayPlan] of [day] over [cards], from their stored [states] and today's [answers] to them. */
@@ -80,12 +85,18 @@ export function dayPlanOf<C extends { id: CardId; createdAt: number }>(
     answers,
     day,
   );
-  const selected = selectQueue(cards, states, day);
+  // A card studied past the plan stays out of it, though a "모른다" makes it due again within the
+  // day.
+  const planned = cards.filter((card) => !day.extra.has(card.id));
+  const selected = selectQueue(planned, states, day);
   const chosen = new Set(selected.cards.map((card) => card.id));
   return {
     selected,
-    relearn: cards.filter((card) => places.get(card.id) === "left" && !chosen.has(card.id)),
-    done: new Set([...places].flatMap(([id, place]) => (place === "done" ? [id] : []))),
+    relearn: planned.filter((card) => places.get(card.id) === "left" && !chosen.has(card.id)),
+    done: new Set(
+      [...places].flatMap(([id, place]) => (place === "done" && !day.extra.has(id) ? [id] : [])),
+    ),
+    extra: new Set(cards.flatMap((card) => (day.extra.has(card.id) ? [card.id] : []))),
   };
 }
 

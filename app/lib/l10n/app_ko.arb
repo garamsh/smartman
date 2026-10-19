@@ -848,5 +848,11 @@
   "completionTomorrowSemantics": "내일도 하루 {minutes}분, 바꾸기",
   "@completionTomorrowSemantics": {"description": "What a screen reader reads for the completion card's minutes line.", "placeholders": {"minutes": {"type": "int"}}},
   "settingsStudy": "공부",
-  "@settingsStudy": {"description": "The account screen's section label over the daily study minutes."}
+  "@settingsStudy": {"description": "The account screen's section label over the daily study minutes."},
+  "studyExtra": "추가 {count}장",
+  "@studyExtra": {"description": "The study top bar's count of the cards studied past the day's plan, beside the day's count.", "placeholders": {"count": {"type": "int"}}},
+  "studyExtraSemantics": "오늘 계획 밖으로 {count}장 더 공부함",
+  "@studyExtraSemantics": {"description": "What a screen reader reads for the top bar's count of cards past the day's plan.", "placeholders": {"count": {"type": "int"}}},
+  "todayExtra": "오늘 {count}장 더 했어요",
+  "@todayExtra": {"description": "On the 오늘 tab: how many cards were studied past the day's plan, never in its goal.", "placeholders": {"count": {"type": "int"}}}
 }

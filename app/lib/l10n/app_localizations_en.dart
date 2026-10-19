@@ -1510,4 +1510,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsStudy => 'Study';
+
+  @override
+  String studyExtra(int count) {
+    return '+$count extra';
+  }
+
+  @override
+  String studyExtraSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more cards studied past today\'s plan',
+      one: '1 more card studied past today\'s plan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String todayExtra(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more cards today',
+      one: '1 more card today',
+    );
+    return '$_temp0';
+  }
 }

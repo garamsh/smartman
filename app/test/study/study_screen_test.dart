@@ -594,8 +594,10 @@ void main() {
 
       expect(find.text('Done for today'), findsNothing);
       expect(study.current, 'c30 front');
-      // The day's count goes on from the cards answered today.
-      expect(find.text('30/32'), findsOneWidget);
+      // The day's count stays at the cards answered today; the new cards
+      // past them count apart once answered.
+      expect(find.text('30/30'), findsOneWidget);
+      expect(find.text('+1 extra'), findsNothing);
       expect(_text(_earlier), findsOneWidget);
       expect(find.byType(PreviousPlaceholder), findsNothing);
       // No card is left of the day's, so nothing goes on to announce.
@@ -603,6 +605,8 @@ void main() {
 
       await study.know();
       expect(study.current, 'c31 front');
+      expect(find.text('30/30'), findsOneWidget);
+      expect(find.text('+1 extra'), findsOneWidget);
       expect(_text(_earlier), findsNothing);
       expect(_previous('c30 front'), findsOneWidget);
     },
@@ -1539,11 +1543,17 @@ void main() {
         same(route),
       );
       expect(route!.isCurrent, isTrue);
-      expect(find.text('30/32'), findsOneWidget);
+      expect(find.text('30/30'), findsOneWidget);
       await study.know();
       expect(study.current, 'c31 front');
       await study.know();
-      expect(find.text('32/32'), findsOneWidget);
+      // The day's bar stays full; the two past it are counted apart.
+      expect(find.text('30/30'), findsOneWidget);
+      expect(find.text('+2 extra'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('2 more cards studied past today\'s plan'),
+        findsOneWidget,
+      );
       expect(find.text('No more cards to study'), findsOneWidget);
       final reviews = await tester.runAsync(
         () => study.db.select(study.db.reviews).get(),
