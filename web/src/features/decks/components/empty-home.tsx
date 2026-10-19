@@ -28,6 +28,20 @@ export function EmptyHome() {
 }
 
 /**
+ * A deck's page while the deck holds no card, in the first run's layout with the phone's words
+ * for an empty deck, and where cards are added, since the web adds none.
+ */
+export function EmptyDeck() {
+  return (
+    <FirstRun
+      id="empty-deck-title"
+      title="아직 카드가 없어요"
+      body="카드는 휴대폰 앱에서 덱에 추가해요. 추가한 카드는 여기에도 보여요."
+    />
+  );
+}
+
+/**
  * The 오늘 page of a user whose decks hold no card, as the phone's 오늘 tab draws it: how to
  * start rather than a finished day, and where cards are added, since the web adds none.
  */

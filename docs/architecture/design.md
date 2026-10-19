@@ -70,7 +70,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - The theme, its tokens, the user's theme choice and the shared components are the app's foundation `app/lib/design/` ([`structure.md`](structure.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md)): `design/theme.dart` the tokens and the themes, `design/theme_choice.dart` the choice, `design/word_break.dart` the `keepWords` that lets a line break only between words, which the empty previous card's place, the study coach's lines, the today card's status line and both sides of a photo import row use, each read by a screen reader as written, and one file per component beside them, with their tests under `app/test/design/`. It imports no domain and holds nothing one domain alone uses.
 - `GoogleButtonStyle` is Google's, not the design system's, and only `account` draws it, so it is in `account/src/google_button.dart`; the colour check lists that file as its one exception beside the theme, and the size check as its one exception beside the theme and the components.
 - `CardText` serves `deck` alone, which draws every card, so it is in `deck/src/card_text.dart` ([`deck.md`](deck.md)); the size check lists it beside Google's button, as it sets the fitted size of the `AppType` style it is given.
-- On the web, the brand's marks, the skeleton and the theme choice with its store are the foundation `web/src/design/` ([`web.md`](web.md)).
+- On the web, the brand's marks, the skeleton, the theme choice with its store and "다시 시도" are the foundation `web/src/design/` ([`web.md`](web.md)).
 
 ### Theme
 
