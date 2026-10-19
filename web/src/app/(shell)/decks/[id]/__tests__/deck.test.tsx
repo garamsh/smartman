@@ -39,7 +39,7 @@ const summary = () => ({
 /** The cards on screen, each as its button names it: its front, and its answer or that it is hidden. */
 const rows = () =>
   within(screen.getByRole("region", { name: "카드" }))
-    .queryAllByRole("button", { name: /, 답 / })
+    .queryAllByRole("button", { name: /, 뒷면 / })
     .map((card) => card.getAttribute("aria-label"));
 
 describe("the deck page", () => {
@@ -82,7 +82,7 @@ describe("the deck page", () => {
       "Enter",
     );
     // Every answer hidden until it is asked for.
-    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+    expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐", "oiseau, 뒷면 가려짐"]);
     // Two learning and one new: the progress, read as one sentence.
     expect(
       screen.getByRole("img", { name: "익힘 0장, 학습 중 2장, 새 카드 1장" }),
@@ -191,10 +191,10 @@ describe("the deck page", () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByRole("searchbox", { name: "카드 검색" }), "CH");
-    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐"]);
+    expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐"]);
     // The results follow the switch.
     await user.click(screen.getByRole("switch", { name: "뜻 보기" }));
-    expect(rows()).toEqual(["Chat, 답 Chat back", "chien, 답 chien back"]);
+    expect(rows()).toEqual(["Chat, 뒷면 Chat back", "chien, 뒷면 chien back"]);
     expect(screen.getByRole("heading", { name: "카드 2" })).toBeInTheDocument();
 
     await user.clear(screen.getByRole("searchbox", { name: "카드 검색" }));
@@ -205,18 +205,18 @@ describe("the deck page", () => {
     );
   });
 
-  it("shows a card's answer on a click and hides it on the next, that card alone", async () => {
+  it("shows a card's back on a click and hides it on the next, that card alone", async () => {
     await open("d-fr");
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "chien, 답 가려짐" }));
-    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 chien back", "oiseau, 답 가려짐"]);
-    expect(screen.getByRole("button", { name: "chien, 답 chien back" })).toHaveAttribute(
+    await user.click(screen.getByRole("button", { name: "chien, 뒷면 가려짐" }));
+    expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 chien back", "oiseau, 뒷면 가려짐"]);
+    expect(screen.getByRole("button", { name: "chien, 뒷면 chien back" })).toHaveAttribute(
       "aria-expanded",
       "true",
     );
-    await user.click(screen.getByRole("button", { name: "chien, 답 chien back" }));
-    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+    await user.click(screen.getByRole("button", { name: "chien, 뒷면 chien back" }));
+    expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐", "oiseau, 뒷면 가려짐"]);
   });
 
   it("shows a vocabulary card's senses on a click, each label in brackets with a gap after it, a part of speech by its short form", async () => {
@@ -243,15 +243,15 @@ describe("the deck page", () => {
     });
     await open("d-fr");
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "train, 답 가려짐" }));
-    const card = screen.getByRole("button", { name: "train, 답 [명] [사물] 기차\n열차" });
+    await userEvent.setup().click(screen.getByRole("button", { name: "train, 뒷면 가려짐" }));
+    const card = screen.getByRole("button", { name: "train, 뒷면 [명] [사물] 기차\n열차" });
     expect(sensesUnder(card)).toEqual([
       { labels: ["[명]", "[사물]"], gapped: true, text: "[명][사물]기차" },
       { labels: [], gapped: true, text: "열차" },
     ]);
   });
 
-  it("shows a whole card's front with its blank empty in place of the answer bar, and fills it on a click", async () => {
+  it("shows a whole card's front with its blank empty in place of the bar over the back, and fills it on a click", async () => {
     postgrest.seed("cards", {
       ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
       front: [
@@ -263,19 +263,19 @@ describe("the deck page", () => {
     const user = userEvent.setup();
 
     const hidden = screen.getByRole("button", {
-      name: "The capital of France is 빈칸, 답 가려짐",
+      name: "The capital of France is 빈칸, 뒷면 가려짐",
     });
     expect(blanksUnder(hidden)).toEqual({ Paris: false });
     await user.click(hidden);
     const filledCard = screen.getByRole("button", {
-      name: "The capital of France is 빈칸, 답 The capital of France is Paris",
+      name: "The capital of France is 빈칸, 뒷면 The capital of France is Paris",
     });
     expect(blanksUnder(filledCard)).toEqual({ Paris: true });
     // Control: the split cards keep their answers hidden.
-    expect(rows()).toContain("Chat, 답 가려짐");
+    expect(rows()).toContain("Chat, 뒷면 가려짐");
   });
 
-  it("shows or hides every answer with 뜻 보기, off when the page opens, resetting a card set apart by a click", async () => {
+  it("shows or hides every back with 뜻 보기, off when the page opens, resetting a card set apart by a click", async () => {
     await open("d-fr");
     const user = userEvent.setup();
     const answers = screen.getByRole("switch", { name: "뜻 보기" });
@@ -285,21 +285,25 @@ describe("the deck page", () => {
     await user.click(answers);
     expect(answers).toHaveAttribute("aria-checked", "true");
     expect(rows()).toEqual([
-      "Chat, 답 Chat back",
-      "chien, 답 chien back",
-      "oiseau, 답 oiseau back",
+      "Chat, 뒷면 Chat back",
+      "chien, 뒷면 chien back",
+      "oiseau, 뒷면 oiseau back",
     ]);
     // A click after the switch sets that card alone apart.
-    await user.click(screen.getByRole("button", { name: "Chat, 답 Chat back" }));
-    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 chien back", "oiseau, 답 oiseau back"]);
+    await user.click(screen.getByRole("button", { name: "Chat, 뒷면 Chat back" }));
+    expect(rows()).toEqual([
+      "Chat, 뒷면 가려짐",
+      "chien, 뒷면 chien back",
+      "oiseau, 뒷면 oiseau back",
+    ]);
     // The switch then sets every card to its state, the one set apart included.
     await user.click(answers);
-    expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+    expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐", "oiseau, 뒷면 가려짐"]);
     await user.click(answers);
     expect(rows()).toEqual([
-      "Chat, 답 Chat back",
-      "chien, 답 chien back",
-      "oiseau, 답 oiseau back",
+      "Chat, 뒷면 Chat back",
+      "chien, 뒷면 chien back",
+      "oiseau, 뒷면 oiseau back",
     ]);
   });
 

@@ -13,9 +13,7 @@ import 'deck_screens.dart';
 
 /// The front of every card row on screen, top to bottom.
 List<String> _rowFronts(WidgetTester tester) => [
-  for (final row in tester.widgetList<CardAnswerRow>(
-    find.byType(CardAnswerRow),
-  ))
+  for (final row in tester.widgetList<CardBackRow>(find.byType(CardBackRow)))
     plainText(row.front),
 ];
 
@@ -23,11 +21,9 @@ List<String> _rowFronts(WidgetTester tester) => [
 Switch _switch(WidgetTester tester) =>
     tester.widget<Switch>(find.byType(Switch));
 
-/// The answer of every card row on screen that shows it, top to bottom.
+/// The back of every card row on screen that shows it, top to bottom.
 List<String> _answers(WidgetTester tester) => [
-  for (final row in tester.widgetList<CardAnswerRow>(
-    find.byType(CardAnswerRow),
-  ))
+  for (final row in tester.widgetList<CardBackRow>(find.byType(CardBackRow)))
     if (row.shown) plainText(row.back),
 ];
 
@@ -167,17 +163,17 @@ void main() {
   );
 
   testWidgets(
-    'each card shows its question with the answer hidden, a tap shows it and a second hides it',
+    'each card shows its front with the back hidden, a tap shows it and a second hides it',
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
       expect(_rowFronts(tester), ['Chat', 'Chien', 'Hund']);
       expect(find.text('dog'), findsNothing);
-      expect(find.bySemanticsLabel('Chien, answer hidden'), findsOneWidget);
+      expect(find.bySemanticsLabel('Chien, back hidden'), findsOneWidget);
 
       await screens.tap(find.text('Chien'));
       expect(find.text('dog'), findsOneWidget);
-      expect(find.bySemanticsLabel('Chien, answer dog'), findsOneWidget);
+      expect(find.bySemanticsLabel('Chien, back dog'), findsOneWidget);
       // Control: the other cards keep their answers hidden.
       expect(find.text('cat'), findsNothing);
 
@@ -189,7 +185,7 @@ void main() {
   );
 
   testWidgets(
-    'a cloze card shows its question with its blank empty in place of the answer bar, and a tap fills it in place',
+    'a cloze card shows its front with its blank empty in place of the bar over the back, and a tap fills it in place',
     (tester) async {
       const cloze = ClozeContent('The capital of France is ___', ['Paris']);
       final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
@@ -202,11 +198,11 @@ void main() {
       );
       await screens.push((deck) => DeckScreen(deck: deck));
       final row = find.byWidgetPredicate(
-        (widget) => widget is CardAnswerRow && widget.front.first == cloze,
+        (widget) => widget is CardBackRow && widget.front.first == cloze,
       );
       expect(row, findsOneWidget);
       expect(
-        find.bySemanticsLabel('The capital of France is blank, answer hidden'),
+        find.bySemanticsLabel('The capital of France is blank, back hidden'),
         findsOneWidget,
       );
       expect(blanksUnder(row), {'Paris': false});
@@ -216,18 +212,18 @@ void main() {
       expect(blanksUnder(row), {'Paris': true});
       expect(
         find.bySemanticsLabel(
-          'The capital of France is blank, answer The capital of France is Paris',
+          'The capital of France is blank, back The capital of France is Paris',
         ),
         findsOneWidget,
       );
-      // Control: the split card keeps its answer hidden.
+      // Control: the split card keeps its back hidden.
       expect(find.text('cat'), findsNothing);
       await screens.close();
     },
   );
 
   testWidgets(
-    'the Show answers switch is off on opening, on shows every answer and off hides them',
+    'the Show meanings switch is off on opening, on shows every back and off hides them',
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
@@ -286,7 +282,7 @@ void main() {
   });
 
   testWidgets(
-    'the switch is read as Show answers with its state, and stays pinned while the list scrolls',
+    'the switch is read as Show meanings with its state, and stays pinned while the list scrolls',
     (tester) async {
       final semantics = tester.ensureSemantics();
       final screens = await DeckScreens.open(
@@ -298,7 +294,7 @@ void main() {
       expect(
         tester.getSemantics(find.byType(Switch)),
         isSemantics(
-          label: 'Show answers',
+          label: 'Show meanings',
           hasToggledState: true,
           isToggled: false,
         ),
@@ -307,7 +303,7 @@ void main() {
       expect(
         tester.getSemantics(find.byType(Switch)),
         isSemantics(
-          label: 'Show answers',
+          label: 'Show meanings',
           hasToggledState: true,
           isToggled: true,
         ),
@@ -346,13 +342,13 @@ void main() {
       await tester.pumpAndSettle();
 
       final semantics = tester.ensureSemantics();
-      final node = tester.getSemantics(find.byType(CardAnswerRow).first);
+      final node = tester.getSemantics(find.byType(CardBackRow).first);
       final edit = CustomSemanticsAction.getIdentifier(
         const CustomSemanticsAction(label: 'Edit card'),
       );
       expect(node.getSemanticsData().customSemanticsActionIds, contains(edit));
       tester
-          .renderObject(find.byType(CardAnswerRow).first)
+          .renderObject(find.byType(CardBackRow).first)
           .owner!
           .semanticsOwner!
           .performAction(node.id, SemanticsAction.customAction, edit);

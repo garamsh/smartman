@@ -56,7 +56,7 @@ void main() {
       expect(_logo, findsOneWidget);
       expect(
         find.text(
-          'Swipe to answer,\nand meet each card again just before you forget',
+          'Swipe to respond,\nand meet each card again just before you forget',
         ),
         findsOneWidget,
       );

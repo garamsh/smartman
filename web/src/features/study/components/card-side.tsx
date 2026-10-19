@@ -1,15 +1,15 @@
 import type { Content } from "@/features/decks";
 
 /**
- * Every block of a card side, in the question's or the answer's size: text as written, and a
+ * Every block of a card side, in the front's or the back's size: text as written, and a
  * block of an unknown type as a placeholder. A cloze or a table is drawn only whole, through the
  * card's faces, and a senses block through the card's sides, so a split side shows none.
  */
-export function CardSide({ blocks, size }: { blocks: Content[]; size: "question" | "answer" }) {
+export function CardSide({ blocks, size }: { blocks: Content[]; size: "front" | "back" }) {
   return (
     <div
       className={`flex w-full flex-col gap-2 text-center break-words whitespace-pre-wrap ${
-        size === "question" ? "text-question" : "text-answer"
+        size === "front" ? "text-front" : "text-back"
       }`}
     >
       {blocks.map((block, index) =>

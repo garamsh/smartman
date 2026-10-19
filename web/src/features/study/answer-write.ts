@@ -47,8 +47,8 @@ export type SaveResult = { saved: true; state: CardState } | { saved: false; mes
 
 /** Why a write did not reach the server, as the user is told. */
 export const writeFailureMessages = {
-  unreachable: "답을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
-  rejected: "로그인이 끝나 답을 저장하지 못했어요. 다시 로그인한 뒤 다시 시도해 주세요.",
-  failed: "서버가 답을 받지 않았어요. 잠시 후 다시 시도해 주세요.",
+  unreachable: "응답을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+  rejected: "로그인이 끝나 응답을 저장하지 못했어요. 다시 로그인한 뒤 다시 시도해 주세요.",
+  failed: "서버가 응답을 받지 않았어요. 잠시 후 다시 시도해 주세요.",
   scheduling: "이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 바뀌지 않았어요.",
 } as const;

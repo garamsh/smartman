@@ -25,7 +25,7 @@ export function AnswerList({
         </span>
       </div>
       <p id="toggle-hint" className="sr-only">
-        누르면 답이 바뀌어요.
+        누르면 응답이 바뀌어요.
       </p>
       <ol className="flex flex-col gap-1">
         {answers.map((answer) => (
@@ -37,7 +37,7 @@ export function AnswerList({
               }}
               aria-label={answerLabel(answer)}
               aria-describedby="toggle-hint"
-              title="눌러서 답 바꾸기"
+              title="눌러서 응답 바꾸기"
               className="flex min-h-tap-target w-full items-center gap-3 rounded-field px-3 text-left hover:bg-ground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               <span className="flex-1 truncate text-secondary font-bold">

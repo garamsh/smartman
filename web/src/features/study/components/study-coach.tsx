@@ -14,12 +14,12 @@ export const coachShownKey = "studyCoachShown";
 
 /**
  * Each step's line, true to the web's controls: the answers by their buttons and keys, and a
- * change by "마지막 답 바꾸기" or Z, which work with a mouse as with a keyboard.
+ * change by "마지막 응답 바꾸기" or Z, which work with a mouse as with a keyboard.
  */
 export const coachLines: Record<CoachStep, string> = {
   know: "알면 안다(→)를 눌러요",
   dontKnow: "모르면 모른다(←)를 눌러요",
-  redecide: "답한 카드는 위로 올라와요. '마지막 답 바꾸기'나 Z로 답을 바꿀 수 있어요",
+  redecide: "응답한 카드는 위로 올라와요. '마지막 응답 바꾸기'나 Z로 응답을 바꿀 수 있어요",
 };
 
 const button =
@@ -136,11 +136,11 @@ export function CoachSample() {
         className={`relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center motion-safe:animate-coach-change motion-reduce:animate-coach-change-held ${grades.know.card}`}
       >
         <GradeChip answer="know" className="absolute -top-3 right-4" />
-        <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
+        <span className="flex items-center justify-center p-4 text-front text-ink lg:p-6">
           deadline
         </span>
         <span className={`my-7 w-px ${grades.know.line}`} />
-        <span className="flex items-center justify-center p-4 text-answer text-ink-2 lg:p-6">
+        <span className="flex items-center justify-center p-4 text-back text-ink-2 lg:p-6">
           마감 기한
         </span>
         <Finger className="right-16 bottom-8" />

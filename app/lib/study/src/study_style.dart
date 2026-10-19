@@ -35,7 +35,7 @@ abstract final class StudyStyle {
   static const answerRow = answerGap + kMinInteractiveDimension;
 
   /// A card half narrower than this, in logical pixels at text scale 1, puts
-  /// the answer under the question.
+  /// the back under the front.
   static const minHalfWidth = 140.0;
 
   /// A previous card's line around it.

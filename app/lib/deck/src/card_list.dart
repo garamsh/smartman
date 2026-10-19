@@ -51,12 +51,12 @@ class CardSplitRow extends StatelessWidget {
   }
 }
 
-/// A card's question on its row, with its answer behind a bar unless
+/// A card's front on its row, with its back behind a bar unless
 /// [shown], or a whole card's front with its blanks empty unless [shown]; a
 /// tap calls [onToggle], whose owner decides what [shown] becomes. A
 /// long-press, or a screen reader's action, opens the card with [onEdit].
-class CardAnswerRow extends StatelessWidget {
-  const CardAnswerRow({
+class CardBackRow extends StatelessWidget {
+  const CardBackRow({
     super.key,
     required this.front,
     required this.back,
@@ -75,15 +75,15 @@ class CardAnswerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final question = spokenContent(l10n, front, revealed: false);
-    final answer = describeContent(l10n, back);
+    final spokenFront = spokenContent(l10n, front, revealed: false);
+    final spokenBack = describeContent(l10n, back);
     return Semantics(
       container: true,
       button: true,
       label: shown
-          ? l10n.cardAnswerShown(question, answer)
-          : l10n.cardAnswerHidden(question),
-      onTapHint: shown ? l10n.hideAnswer : l10n.showAnswer,
+          ? l10n.cardBackShown(spokenFront, spokenBack)
+          : l10n.cardBackHidden(spokenFront),
+      onTapHint: shown ? l10n.hideBack : l10n.showBack,
       customSemanticsActions: {
         CustomSemanticsAction(label: l10n.editCard): onEdit,
       },

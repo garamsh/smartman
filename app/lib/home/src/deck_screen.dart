@@ -18,7 +18,7 @@ import '../../study/study.dart';
 
 /// A deck's page: its tile, name and card count, the navy card that studies
 /// it, and its cards under a pinned row whose "뜻 보기" switch shows or hides
-/// every answer, each answer also toggled by a tap, searchable from the top
+/// every back, each back also toggled by a tap, searchable from the top
 /// bar; adds a card, opens one for editing, and the deck for renaming or
 /// deleting. While the deck holds no card, adding one is its one primary
 /// action and there is nothing to study.
@@ -228,7 +228,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 
   /// The pinned "카드 n" row with its "뜻 보기" switch, then a row for each
-  /// card whose front or back holds the search, ignoring case, its answer
+  /// card whose front or back holds the search, ignoring case, its back
   /// shown as the switch and the card's own taps leave it.
   List<Widget> _cardList(AppLocalizations l10n, List<Card> cards) {
     final query = (_query ?? '').trim().toLowerCase();
@@ -277,7 +277,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
             : SliverList.list(
                 children: [
                   for (final row in rows)
-                    CardAnswerRow(
+                    CardBackRow(
                       key: ValueKey(row.card.id),
                       front: row.card.front,
                       back: row.card.back,

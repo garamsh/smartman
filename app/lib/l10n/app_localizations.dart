@@ -176,16 +176,16 @@ abstract class AppLocalizations {
   /// **'카드 삭제'**
   String get deleteCard;
 
-  /// Label of the card front field: the question side.
+  /// Label of the card front field.
   ///
   /// In ko, this message translates to:
-  /// **'문제'**
+  /// **'앞면'**
   String get cardFront;
 
-  /// Label of the card back field: the answer side.
+  /// Label of the card back field.
   ///
   /// In ko, this message translates to:
-  /// **'답'**
+  /// **'뒷면'**
   String get cardBack;
 
   /// Error shown when a card side is empty.
@@ -212,10 +212,10 @@ abstract class AppLocalizations {
   /// **'표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
   String get wholeCardReadOnly;
 
-  /// In the card editor under the answer of a vocabulary card whose senses carry labels.
+  /// In the card editor under the back of a vocabulary card whose senses carry labels.
   ///
   /// In ko, this message translates to:
-  /// **'답을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
+  /// **'뒷면을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
   String get sensesEditNote;
 
   /// Title of the sheet shown when a card's front duplicates another in the deck.
@@ -335,7 +335,7 @@ abstract class AppLocalizations {
   /// Accessibility label of the study progress: cards answered out of the cards in the session.
   ///
   /// In ko, this message translates to:
-  /// **'{total}장 중 {answered}장 답함'**
+  /// **'{total}장 중 {answered}장 응답함'**
   String studyProgressSemantics(int answered, int total);
 
   /// Accessibility label of the current card, which shows its front alone.
@@ -344,22 +344,22 @@ abstract class AppLocalizations {
   /// **'앞면: {front}'**
   String currentCardSemantics(String front);
 
-  /// Accessibility hint of tapping a card in the deck's card list while its answer is hidden.
+  /// Accessibility hint of tapping a card in the deck's card list while its back is hidden.
   ///
   /// In ko, this message translates to:
-  /// **'답 보기'**
-  String get showAnswer;
+  /// **'뒷면 보기'**
+  String get showBack;
 
-  /// Accessibility hint of tapping a card in the deck's card list while its answer is shown.
+  /// Accessibility hint of tapping a card in the deck's card list while its back is shown.
   ///
   /// In ko, this message translates to:
-  /// **'답 가리기'**
-  String get hideAnswer;
+  /// **'뒷면 가리기'**
+  String get hideBack;
 
   /// Accessibility label of a card answered earlier in the session; changed is 'yes' when the answer differs from the one first given.
   ///
   /// In ko, this message translates to:
-  /// **'앞면: {front}. 뒷면: {back}. 답: {answer}{changed, select, yes{. 수정됨} other{}}'**
+  /// **'앞면: {front}. 뒷면: {back}. 응답: {answer}{changed, select, yes{. 수정됨} other{}}'**
   String previousCardSemantics(
     String front,
     String back,
@@ -400,7 +400,7 @@ abstract class AppLocalizations {
   /// In the previous card's empty place, under an up arrow, before a session's first answer when no card of the day was answered earlier: answered cards stack up here.
   ///
   /// In ko, this message translates to:
-  /// **'답한 카드가 여기에 쌓여요'**
+  /// **'응답한 카드가 여기에 쌓여요'**
   String get previousPlaceholder;
 
   /// Label on the card in the previous card's place when a session opens on a study day with answers: the last card answered in an earlier session.
@@ -430,7 +430,7 @@ abstract class AppLocalizations {
   /// Third step of the study screen's coach: an answered card comes up above, and a swipe changes its answer.
   ///
   /// In ko, this message translates to:
-  /// **'답한 카드는 위로 올라와요. 밀어서 답을 바꿀 수 있어요'**
+  /// **'응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요'**
   String get studyCoachRedecide;
 
   /// Small text button between the answer buttons that shows the study screen's coach again.
@@ -454,7 +454,7 @@ abstract class AppLocalizations {
   /// Shown when an answer could not be written to the local database.
   ///
   /// In ko, this message translates to:
-  /// **'답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.'**
+  /// **'응답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.'**
   String get answerNotSaved;
 
   /// Heading of the completion card, shown in the current card's place once no card is left today.
@@ -526,7 +526,7 @@ abstract class AppLocalizations {
   /// Sign-in screen line under the logo, saying what the app does, in two lines.
   ///
   /// In ko, this message translates to:
-  /// **'밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드'**
+  /// **'밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드'**
   String get welcomeBody;
 
   /// Button that opens Google's account picker to sign in.
@@ -1450,7 +1450,7 @@ abstract class AppLocalizations {
   /// Under 직접 만들기 in the add-card sheet.
   ///
   /// In ko, this message translates to:
-  /// **'문제와 답을 하나씩 적어요'**
+  /// **'앞면과 뒷면을 하나씩 적어요'**
   String get addCardManuallyBody;
 
   /// The deck page's row pinned above its card list: how many cards the list shows.
@@ -1459,23 +1459,23 @@ abstract class AppLocalizations {
   /// **'카드 {count}'**
   String cardListTitle(int count);
 
-  /// The label of the deck page's switch that shows or hides every card's answer; it stays the same while the switch shows its state.
+  /// The label of the deck page's switch that shows or hides every card's back; it stays the same while the switch shows its state.
   ///
   /// In ko, this message translates to:
   /// **'뜻 보기'**
   String get showMeanings;
 
-  /// What a screen reader reads for a card row whose answer is hidden.
+  /// What a screen reader reads for a card row whose back is hidden.
   ///
   /// In ko, this message translates to:
-  /// **'{front}, 답 가려짐'**
-  String cardAnswerHidden(String front);
+  /// **'{front}, 뒷면 가려짐'**
+  String cardBackHidden(String front);
 
-  /// What a screen reader reads for a card row whose answer is shown.
+  /// What a screen reader reads for a card row whose back is shown.
   ///
   /// In ko, this message translates to:
-  /// **'{front}, 답 {back}'**
-  String cardAnswerShown(String front, String back);
+  /// **'{front}, 뒷면 {back}'**
+  String cardBackShown(String front, String back);
 
   /// What a screen reader reads for the today card's goal ring.
   ///

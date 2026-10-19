@@ -97,8 +97,8 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                   aria-expanded={open}
                   aria-label={
                     open
-                      ? `${spokenContent(row.blocks, false)}, 답 ${row.back}`
-                      : `${spokenContent(row.blocks, false)}, 답 가려짐`
+                      ? `${spokenContent(row.blocks, false)}, 뒷면 ${row.back}`
+                      : `${spokenContent(row.blocks, false)}, 뒷면 가려짐`
                   }
                   onClick={() => {
                     const next = new Set(apart);

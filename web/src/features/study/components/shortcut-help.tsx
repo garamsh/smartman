@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 export const shortcuts = [
   { keys: ["→", "K"], action: "안다" },
   { keys: ["←", "J"], action: "모른다" },
-  { keys: ["Z"], action: "마지막 답 바꾸기" },
+  { keys: ["Z"], action: "마지막 응답 바꾸기" },
   { keys: ["Esc"], action: "그만하기" },
   { keys: ["?"], action: "단축키 보기" },
 ] as const;

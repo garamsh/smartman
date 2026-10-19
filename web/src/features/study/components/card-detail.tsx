@@ -35,10 +35,10 @@ export function CardDetail({
             카드
           </h2>
           <GradeChip answer={answer.answer} />
-          <span className="sr-only">답: {grades[answer.answer].name}</span>
+          <span className="sr-only">응답: {grades[answer.answer].name}</span>
         </div>
         {answer.card.whole ? (
-          <div className="text-answer">{answer.card.whole.filled}</div>
+          <div className="text-back">{answer.card.whole.filled}</div>
         ) : (
           <>
             <section aria-labelledby="card-detail-front" className="flex flex-col gap-2">
@@ -46,11 +46,9 @@ export function CardDetail({
                 앞면
               </h3>
               {answer.card.sides ? (
-                <div className="text-center text-question break-words">
-                  {answer.card.sides.front}
-                </div>
+                <div className="text-center text-front break-words">{answer.card.sides.front}</div>
               ) : (
-                <CardSide blocks={answer.card.front} size="question" />
+                <CardSide blocks={answer.card.front} size="front" />
               )}
             </section>
             <section aria-labelledby="card-detail-back" className="flex flex-col gap-2">
@@ -58,9 +56,9 @@ export function CardDetail({
                 뒷면
               </h3>
               {answer.card.sides ? (
-                <div className="text-center text-answer break-words">{answer.card.sides.back}</div>
+                <div className="text-center text-back break-words">{answer.card.sides.back}</div>
               ) : (
-                <CardSide blocks={answer.card.back} size="answer" />
+                <CardSide blocks={answer.card.back} size="back" />
               )}
             </section>
           </>

@@ -50,7 +50,7 @@ export async function Study({
     text: { front: describeContent(card.front), back: describeContent(card.back) },
     ...(isWholeCard(card.front) && {
       whole: {
-        question: spokenContent(card.front, false),
+        spokenFront: spokenContent(card.front, false),
         empty: <WholeCard blocks={card.front} revealed={false} />,
         filled: <WholeCard blocks={card.front} revealed />,
       },

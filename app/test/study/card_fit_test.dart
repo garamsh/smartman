@@ -35,21 +35,21 @@ Card _card(String front) => Card(
   id: const CardId('c'),
   deckId: const DeckId('d'),
   front: [TextContent(front)],
-  back: const [TextContent('answer')],
+  back: const [TextContent('back')],
   cardKey: CardKey.fromFront(front),
   source: CardSource.manual,
   createdAt: DateTime.utc(2026, 10, 16),
   updatedAt: DateTime.utc(2026, 10, 16),
 );
 
-/// The widest word of [text] in the question's style at [size].
+/// The widest word of [text] in the front's style at [size].
 double _widest(String text, double size) => text
     .split(' ')
     .map(
       (word) => (TextPainter(
         text: TextSpan(
           text: word,
-          style: AppType.question.copyWith(fontSize: size),
+          style: AppType.front.copyWith(fontSize: size),
         ),
         textDirection: TextDirection.ltr,
       )..layout()).width,
@@ -84,7 +84,7 @@ class _InstantScheduler implements Scheduler {
   );
 }
 
-/// The text of the answer half's paragraph inside [card] that holds [text].
+/// The text of the back half's paragraph inside [card] that holds [text].
 RenderParagraph _paragraph(WidgetTester tester, Finder card, String text) =>
     tester.renderObject<RenderParagraph>(
       find.descendant(of: card, matching: find.textContaining(text)).last,
@@ -113,7 +113,7 @@ void main() {
   });
 
   testWidgets(
-    'a question shrinks until its widest word fits, breaks only between words above the floor, and sits centred on the current card',
+    'a front shrinks until its widest word fits, breaks only between words above the floor, and sits centred on the current card',
     (tester) async {
       tester.view.physicalSize = const Size(_phoneWidth, 844);
       tester.view.devicePixelRatio = 1;
@@ -163,9 +163,9 @@ void main() {
         final size = paragraph.text.style!.fontSize!;
         final width = card.width - StudyStyle.cardPadding * 2;
 
-        expect(size, lessThanOrEqualTo(AppType.question.fontSize!));
-        expect(size, greaterThanOrEqualTo(AppType.questionFloor));
-        if (_widest(front, AppType.questionFloor) <= width) {
+        expect(size, lessThanOrEqualTo(AppType.front.fontSize!));
+        expect(size, greaterThanOrEqualTo(AppType.frontFloor));
+        if (_widest(front, AppType.frontFloor) <= width) {
           // The widest word fits at this size, and every word sits on one
           // line.
           expect(_widest(front, size), lessThanOrEqualTo(width), reason: front);
@@ -186,7 +186,7 @@ void main() {
           }
         } else {
           // Past the floor a word may break, at the floor's size.
-          expect(size, AppType.questionFloor, reason: front);
+          expect(size, AppType.frontFloor, reason: front);
         }
         // Centred on the card, across and down.
         expect(
@@ -206,17 +206,17 @@ void main() {
       final width =
           _phoneWidth - 2 * StudyStyle.cardMargin - StudyStyle.cardPadding * 2;
       expect(
-        _widest('antidisestablishmentarianism', AppType.question.fontSize!),
+        _widest('antidisestablishmentarianism', AppType.front.fontSize!),
         greaterThan(width),
       );
       expect(
-        _widest('antidisestablishmentarianism', AppType.questionFloor),
+        _widest('antidisestablishmentarianism', AppType.frontFloor),
         lessThanOrEqualTo(width),
       );
       expect(
         _widest(
           'pneumonoultramicroscopicsilicovolcanoconiosis',
-          AppType.questionFloor,
+          AppType.frontFloor,
         ),
         greaterThan(width),
       );
@@ -224,9 +224,9 @@ void main() {
   );
 
   testWidgets(
-    'a long answer shows whole at the answer size on the previous card, on a 390 by 844 phone at the default text scale',
+    'a long back shows whole at the back size on the previous card, on a 390 by 844 phone at the default text scale',
     (tester) async {
-      const answer = '(결과·수익 등을) 내다, 산출하다; 양도하다';
+      const longBack = '(결과·수익 등을) 내다, 산출하다; 양도하다';
       // An iPhone of that size: its status bar and home indicator.
       tester.view.physicalSize = const Size(_phoneWidth, 844);
       tester.view.devicePixelRatio = 1;
@@ -245,7 +245,7 @@ void main() {
         await decks.addCard(
           deck.id,
           front: const [TextContent('yield')],
-          back: const [TextContent(answer)],
+          back: const [TextContent(longBack)],
         );
         return deck;
       }))!;
@@ -277,19 +277,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Answered "모른다", the card is shown again at once, under itself as
-      // the previous card, which shows the answer whole, uncut.
+      // the previous card, which shows the back whole, uncut.
       await tester.tap(find.widgetWithText(TextButton, '모른다'));
       await tester.pumpAndSettle();
       final previous = find.byType(PreviousCardView);
       expect(previous, findsOneWidget);
       final kept = _paragraph(tester, previous, '양도하다');
-      expect(kept.text.style!.fontSize, AppType.answer.fontSize);
-      expect(kept.text.toPlainText(), answer);
+      expect(kept.text.style!.fontSize, AppType.back.fontSize);
+      expect(kept.text.toPlainText(), longBack);
       expect(kept.didExceedMaxLines, isFalse);
       // Control: it wraps, so the room the card gives it is what fits it.
       expect(
         kept.size.height,
-        greaterThan(AppType.answer.fontSize! * AppType.answer.height!),
+        greaterThan(AppType.back.fontSize! * AppType.back.height!),
       );
       expect(
         tester.getSize(previous),

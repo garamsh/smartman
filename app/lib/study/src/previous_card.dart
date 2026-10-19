@@ -373,8 +373,8 @@ class _GradedCard extends StatelessWidget {
                         child: WholeCardView(
                           front,
                           revealed: true,
-                          style: AppType.question.copyWith(color: colors.ink),
-                          minFontSize: AppType.questionFloor,
+                          style: AppType.front.copyWith(color: colors.ink),
+                          minFontSize: AppType.frontFloor,
                           width: constraints.maxWidth,
                           height: constraints.maxHeight,
                         ),
@@ -389,9 +389,9 @@ class _GradedCard extends StatelessWidget {
                     front: (context, width) => LayoutBuilder(
                       builder: (context, constraints) => ContentView(
                         front,
-                        style: AppType.question.copyWith(color: colors.ink),
+                        style: AppType.front.copyWith(color: colors.ink),
                         fit: (
-                          minFontSize: AppType.questionFloor,
+                          minFontSize: AppType.frontFloor,
                           width: width,
                           height: constraints.maxHeight,
                         ),
@@ -400,9 +400,9 @@ class _GradedCard extends StatelessWidget {
                     back: (context, width) => LayoutBuilder(
                       builder: (context, constraints) => ContentView(
                         back,
-                        style: AppType.answer.copyWith(color: colors.ink2),
+                        style: AppType.back.copyWith(color: colors.ink2),
                         fit: (
-                          minFontSize: AppType.answerFloor,
+                          minFontSize: AppType.backFloor,
                           width: width,
                           height: constraints.maxHeight,
                         ),

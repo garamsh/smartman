@@ -29,7 +29,7 @@ export type SideViews = { front: ReactNode; back: ReactNode };
  * A table or cloze card as `decks` draws it whole: its front as a screen reader reads it with its
  * blanks empty, and the front drawn with its blanks empty and filled (ADR 0068).
  */
-export type WholeFaces = { question: string; empty: ReactNode; filled: ReactNode };
+export type WholeFaces = { spokenFront: string; empty: ReactNode; filled: ReactNode };
 
 /**
  * What a study page opens with, built on the server: the cards left in today's list, those the

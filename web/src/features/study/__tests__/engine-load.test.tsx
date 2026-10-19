@@ -54,11 +54,11 @@ describe("the study screen's engine", () => {
     expect(
       await screen.findByText("학습 화면을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요."),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "그만하기" })).toHaveAttribute("href", "/");
 
     await userEvent.setup().click(screen.getByRole("button", { name: "다시 시도" }));
 
-    expect(await screen.findByRole("group", { name: "문제" })).toHaveTextContent("a");
+    expect(await screen.findByRole("group", { name: "앞면" })).toHaveTextContent("a");
   });
 });

@@ -375,7 +375,7 @@ List<String> _built(WidgetTester tester) => [
           .byWidgetPredicate(
             (widget) =>
                 widget is Semantics &&
-                (widget.properties.label?.contains('. Answer: ') ?? false),
+                (widget.properties.label?.contains('. Response: ') ?? false),
             skipOffstage: false,
           )
           .evaluate())
@@ -490,14 +490,14 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Know'));
     await tester.pumpAndSettle();
     expect(study.current, 'b front');
-    expect(_label(tester, _previous('a front')), endsWith('Answer: Know'));
+    expect(_label(tester, _previous('a front')), endsWith('Response: Know'));
 
     await tester.tap(find.widgetWithText(TextButton, "Don't know"));
     await tester.pumpAndSettle();
     expect(study.current, 'c front');
     expect(
       _label(tester, _previous('b front')),
-      endsWith("Answer: Don't know"),
+      endsWith("Response: Don't know"),
     );
   });
 
@@ -545,7 +545,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('다음'));
       await tester.pump();
-      const rise = '답한 카드는 위로 올라와요. 밀어서 답을 바꿀 수 있어요';
+      const rise = '응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요';
       final paragraph = tester.renderObject<RenderParagraph>(
         find.descendant(of: _text(rise), matching: find.byType(RichText)),
       );
@@ -622,13 +622,13 @@ void main() {
 
       await study.swipe(StudyStyle.commitDistance + 10);
       expect(study.current, 'b front');
-      expect(_label(tester, _previous('a front')), endsWith('Answer: Know'));
+      expect(_label(tester, _previous('a front')), endsWith('Response: Know'));
 
       await study.swipe(-(StudyStyle.commitDistance + 10));
       expect(study.current, 'c front');
       expect(
         _label(tester, _previous('b front')),
-        endsWith("Answer: Don't know"),
+        endsWith("Response: Don't know"),
       );
       // Done counts the cards whose latest answer today is "Know".
       expect(find.text('1/3'), findsOneWidget);
@@ -679,7 +679,7 @@ void main() {
     expect(study.current, 'b front');
     expect(
       _label(tester, _previous('a front')),
-      endsWith("Answer: Don't know"),
+      endsWith("Response: Don't know"),
     );
 
     // Control: the same distance without the speed springs back.
@@ -691,7 +691,7 @@ void main() {
     'long content scrolls inside the current card, which keeps its size whatever its content',
     (tester) async {
       final long = [TextContent(_sentence * 12)];
-      // A few lines at the question's size, which fit the card.
+      // A few lines at the front's size, which fit the card.
       final medium = [
         const TextContent('This line wraps across a few lines here and there.'),
       ];
@@ -747,13 +747,13 @@ void main() {
             findsNothing,
           );
         }
-        final question = find.text('a front');
+        final front = find.text('a front');
         expect(
-          tester.getCenter(question).dx,
+          tester.getCenter(front).dx,
           closeTo(tester.getCenter(_face).dx, 1),
         );
         expect(
-          tester.getCenter(question).dy,
+          tester.getCenter(front).dy,
           closeTo(tester.getCenter(_face).dy, 1),
         );
       },
@@ -782,8 +782,8 @@ void main() {
           .toList();
       expect(paragraphs, hasLength(2));
       for (final (paragraph, floor) in [
-        (paragraphs[0], AppType.questionFloor),
-        (paragraphs[1], AppType.answerFloor),
+        (paragraphs[0], AppType.frontFloor),
+        (paragraphs[1], AppType.backFloor),
       ]) {
         expect(paragraph.text.style!.fontSize, floor);
         expect(paragraph.overflow, TextOverflow.ellipsis);
@@ -816,7 +816,7 @@ void main() {
       expect(study.current, 'b front', reason: 'a tap changes nothing');
       expect(
         _label(tester, _previous('long front $long')),
-        endsWith('Answer: Know'),
+        endsWith('Response: Know'),
       );
     },
   );
@@ -842,12 +842,12 @@ void main() {
       );
       expect(
         tester.renderObject<RenderParagraph>(dog).text.style!.fontSize,
-        AppType.question.fontSize,
+        AppType.front.fontSize,
       );
       for (final (card, front, back) in [(_previousCard, 'cat', 'chat')]) {
         for (final (side, size) in [
-          (front, AppType.question.fontSize),
-          (back, AppType.answer.fontSize),
+          (front, AppType.front.fontSize),
+          (back, AppType.back.fontSize),
         ]) {
           final text = find.descendant(of: card, matching: find.text(side));
           expect(
@@ -927,7 +927,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(_label(tester, _previous('b front')), endsWith('Answer: Know'));
+      expect(_label(tester, _previous('b front')), endsWith('Response: Know'));
       expect(scheduler.answers, isEmpty);
 
       // Dragged left, it shows what it would become behind it, and the
@@ -946,7 +946,7 @@ void main() {
 
       expect(
         _label(tester, _previous('b front')),
-        endsWith("Answer: Don't know. Changed"),
+        endsWith("Response: Don't know. Changed"),
       );
       expect(find.text("Change to Don't know"), findsNothing);
       expect(_dragOffset(tester, _previousCard), 0);
@@ -975,7 +975,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(_label(tester, _previous('c front')), endsWith('Answer: Know'));
+      expect(_label(tester, _previous('c front')), endsWith('Response: Know'));
     },
   );
 
@@ -988,14 +988,14 @@ void main() {
       await _act(tester, _previous('a front'), "Change to Don't know");
       expect(
         _label(tester, _previous('a front')),
-        endsWith("Answer: Don't know. Changed"),
+        endsWith("Response: Don't know. Changed"),
       );
 
       await study.dontKnow();
       await _act(tester, _previous('b front'), 'Change to Know');
       expect(
         _label(tester, _previous('b front')),
-        endsWith('Answer: Know. Changed'),
+        endsWith('Response: Know. Changed'),
       );
       semantics.dispose();
     },
@@ -1048,7 +1048,7 @@ void main() {
         final card = _previous('$name front');
         expect(
           _label(tester, card),
-          'Front: $name front. Back: $name back. Answer: $answer',
+          'Front: $name front. Back: $name back. Response: $answer',
         );
         final face =
             tester
@@ -1148,7 +1148,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           _label(tester, _previous('a front')),
-          endsWith("Answer: Don't know. Changed"),
+          endsWith("Response: Don't know. Changed"),
         );
 
         await tester.tap(find.widgetWithText(TextButton, 'Know'));
@@ -1244,14 +1244,14 @@ void main() {
       await act('모른다');
       expect(
         find.semantics
-            .byLabel('앞면: a front. 뒷면: a back. 답: 모른다')
+            .byLabel('앞면: a front. 뒷면: a back. 응답: 모른다')
             .evaluate()
             .single,
         isSemantics(isButton: true, hasTapAction: true),
       );
-      expect(actions('앞면: a front. 뒷면: a back. 답: 모른다'), '안다로 바꾸기');
+      expect(actions('앞면: a front. 뒷면: a back. 응답: 모른다'), '안다로 바꾸기');
       await act('안다');
-      expect(actions('앞면: b front. 뒷면: b back. 답: 안다'), '모른다로 바꾸기');
+      expect(actions('앞면: b front. 뒷면: b back. 응답: 안다'), '모른다로 바꾸기');
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(textContrastGuideline));
       semantics.dispose();
@@ -1556,7 +1556,7 @@ void main() {
 
     expect(
       find.text(
-        "Couldn't save your answer on this device. This card's schedule did not change.",
+        "Couldn't save your response on this device. This card's schedule did not change.",
       ),
       findsOneWidget,
     );
@@ -1701,7 +1701,9 @@ void main() {
         await tester.tap(find.widgetWithText(AppButton, 'Next'));
         await tester.pump();
         expect(
-          _text('Answered cards come up here. Swipe one to change its answer'),
+          _text(
+            'Cards you responded to come up here. Swipe one to change its response',
+          ),
           findsOneWidget,
         );
         // A sample answered card in the previous card's place, dragged
@@ -1753,7 +1755,10 @@ void main() {
         final study = await _open(tester, ['a', 'b', 'c'], coachShown: false);
         await study.know();
         expect(find.byType(StudyCoach), findsNothing);
-        expect(_label(tester, _previous('a front')), endsWith('Answer: Know'));
+        expect(
+          _label(tester, _previous('a front')),
+          endsWith('Response: Know'),
+        );
 
         // "Show the guide again" starts it again at its first step.
         await tester.tap(
@@ -1770,7 +1775,7 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
         expect(
           _label(tester, _previous('a front')),
-          endsWith("Answer: Don't know. Changed"),
+          endsWith("Response: Don't know. Changed"),
         );
         expect(_text('Swipe right if you know it'), findsOneWidget);
         // A tap opens it whole, and the coach runs on.
@@ -1865,7 +1870,7 @@ void main() {
       await study.reopen();
 
       final card = find.bySemanticsLabel(
-        "$_earlier. Front: b front. Back: b back. Answer: Know",
+        "$_earlier. Front: b front. Back: b back. Response: Know",
       );
       expect(card, findsOneWidget);
       expect(_text(_earlier), findsOneWidget);
@@ -1976,13 +1981,13 @@ void main() {
         expect(
           _label(tester, _previous('The capital of France is blank')),
           'Front: The capital of France is blank. '
-          'Back: The capital of France is Paris. Answer: Know',
+          'Back: The capital of France is Paris. Response: Know',
         );
 
         await tester.tap(_previousCard);
         await tester.pumpAndSettle();
         expect(find.text('Card'), findsOneWidget);
-        expect(find.text('Answer'), findsNothing);
+        expect(find.text('Back'), findsNothing);
         expect(blanksUnder(find.byType(BottomSheet)), {'Paris': true});
       },
     );
@@ -2047,7 +2052,7 @@ Finder _text(String line) => find.byWidgetPredicate(
 );
 
 /// The empty previous card's place's line, in English.
-const _placeholder = 'Answered cards stack up here';
+const _placeholder = 'Cards you responded to stack up here';
 
 /// The label on the day's last card from an earlier session, in English.
 const _earlier = 'Last card last time';
