@@ -9,7 +9,6 @@ import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/l10n/app_localizations_en.dart';
 import 'package:smartman/study/src/failure.dart';
-import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/rust/api/engine.dart'
     show EngineError, Quantity;
 import 'package:smartman/study/src/stats_style.dart';

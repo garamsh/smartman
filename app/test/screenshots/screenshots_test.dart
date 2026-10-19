@@ -14,7 +14,6 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/study/src/study_coach.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/theme_choice.dart';
@@ -23,8 +22,6 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/main.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/sharing/sharing.dart';
-import 'package:smartman/study/src/model.dart';
-import 'package:smartman/study/src/rust/api/engine.dart' show Answer;
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
@@ -301,7 +298,7 @@ void main() {
       // the screen is pumped a fixed time into its cycle rather than settled.
       for (
         var tries = 0;
-        tries < 20 && find.byType(StudyCoach).evaluate().isEmpty;
+        tries < 20 && find.text(ko.coachSkip).evaluate().isEmpty;
         tries++
       ) {
         await tester.pump(const Duration(milliseconds: 100));
