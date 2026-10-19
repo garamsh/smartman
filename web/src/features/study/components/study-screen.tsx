@@ -9,13 +9,14 @@ import type { Answer, AnswerWrite } from "../answer-write";
 import { engineLoaded, loadEngine } from "../engine";
 import { saveAnswer } from "../save-answer";
 import { type PreviousAnswer, type SessionPlan, StudySession } from "../session";
+import { useSwipe } from "../hooks/use-swipe";
 import { WriteQueue } from "../write-queue";
 import { AnswerList } from "./answer-list";
 import { CardDetail } from "./card-detail";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
 import { PreviousPlaceholder } from "./previous-placeholder";
-import { GradedCard } from "./graded-card";
+import { answerTints, GradedCard, grades, tiltPerPixel } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
 import {
   CoachCaption,
@@ -64,6 +65,11 @@ function shortcut(
   // A letter by its physical key, so it works whatever the keyboard's input language.
   if (event.code === "KeyZ") return answered ? "toggleLast" : null;
   return null;
+}
+
+/** Whether the page is used by touch, so the coach names the swipe the cards take. */
+function touchFirst(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
 }
 
 /** Whether the browser keeps that the coach has shown; where it keeps nothing, it has not. */
@@ -316,10 +322,10 @@ function Session({ plan }: { plan: SessionPlan }) {
     view.kind === "studying" ? (
       demo ? (
         <CoachDemo answer={demo}>
-          <CurrentCard card={view.current} />
+          <CurrentCard card={view.current} onAnswer={answer} />
         </CoachDemo>
       ) : (
-        <CurrentCard card={view.current} />
+        <CurrentCard card={view.current} onAnswer={answer} />
       )
     ) : view.kind === "complete" ? (
       <CompletionCard completion={view.completion} onStudyOn={view.more ? studyOn : null} />
@@ -386,7 +392,7 @@ function Session({ plan }: { plan: SessionPlan }) {
         </div>
         {/* Mounted empty, so the coach's steps are announced as they show. */}
         <p aria-live="polite" className="sr-only">
-          {coach ? coachAnnouncement(coach) : ""}
+          {coach ? coachAnnouncement(coach, touchFirst()) : ""}
         </p>
       </header>
 
@@ -456,6 +462,7 @@ function Session({ plan }: { plan: SessionPlan }) {
                   {coach ? (
                     <CoachCaption
                       step={coach}
+                      touch={touchFirst()}
                       onNext={() => {
                         setCoach(coachSteps[coachSteps.indexOf(coach) + 1] ?? null);
                       }}
@@ -499,26 +506,51 @@ function Session({ plan }: { plan: SessionPlan }) {
 
 /**
  * The card under study: its front alone, centred, or a whole card's front with its blanks
- * empty; its back shows once answered, above.
+ * empty; its back shows once answered, above. A horizontal touch swipe ([useSwipe]) moves and
+ * tilts it over the answer it would give, and released past the phone's distance, or flung,
+ * gives [onAnswer] that answer; a vertical one scrolls the page, and a mouse drags nothing.
  */
-function CurrentCard({ card }: { card: PreviousAnswer["card"] }) {
+function CurrentCard({
+  card,
+  onAnswer,
+}: {
+  card: PreviousAnswer["card"];
+  onAnswer: (answer: Answer) => void;
+}) {
+  const { offset, dragging, toward, handlers } = useSwipe({ onCommit: onAnswer });
   return (
     <section
       aria-label="현재 카드"
-      className="flex min-h-52 rounded-card bg-surface shadow-raised lg:min-h-75"
+      {...handlers}
+      className="relative flex min-h-52 touch-pan-y lg:min-h-75"
     >
+      {toward && (
+        <div
+          aria-hidden
+          className={`absolute inset-0 flex items-center rounded-card px-6 text-secondary font-bold ${answerTints[toward]}`}
+        >
+          {grades[toward].name}
+        </div>
+      )}
       <div
-        aria-label="앞면"
-        role="group"
-        className="flex flex-1 items-center justify-center p-6 text-center"
+        style={{
+          transform: `translateX(${String(offset)}px) rotate(${String(offset * tiltPerPixel)}rad)`,
+        }}
+        className={`relative flex flex-1 rounded-card bg-surface shadow-raised ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
       >
-        {card.whole ? (
-          <div className="w-full text-front">{card.whole.empty}</div>
-        ) : card.sides ? (
-          <div className="w-full text-front break-words">{card.sides.front}</div>
-        ) : (
-          <CardSide blocks={card.front} size="front" />
-        )}
+        <div
+          aria-label="앞면"
+          role="group"
+          className="flex flex-1 items-center justify-center p-6 text-center"
+        >
+          {card.whole ? (
+            <div className="w-full text-front">{card.whole.empty}</div>
+          ) : card.sides ? (
+            <div className="w-full text-front break-words">{card.sides.front}</div>
+          ) : (
+            <CardSide blocks={card.front} size="front" />
+          )}
+        </div>
       </div>
     </section>
   );

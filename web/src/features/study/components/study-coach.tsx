@@ -2,7 +2,7 @@ import { Pointer } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { Answer } from "../answer-write";
-import { GradeChip, grades } from "./graded-card";
+import { answerTints, GradeChip, grades } from "./graded-card";
 
 /** The coach's steps: answering "안다", answering "모른다", and changing an answered card. */
 export const coachSteps = ["know", "dontKnow", "redecide"] as const;
@@ -14,12 +14,20 @@ export const coachShownKey = "studyCoachShown";
 
 /**
  * Each step's line, true to the web's controls: the answers by their buttons and keys, and a
- * change by "마지막 응답 바꾸기" or Z, which work with a mouse as with a keyboard.
+ * change by "마지막 응답 바꾸기" or Z, which work with a mouse as with a keyboard; by touch, the
+ * phone's lines, since both cards take its swipes.
  */
-export const coachLines: Record<CoachStep, string> = {
-  know: "알면 안다(→)를 눌러요",
-  dontKnow: "모르면 모른다(←)를 눌러요",
-  redecide: "응답한 카드는 위로 올라와요. '마지막 응답 바꾸기'나 Z로 응답을 바꿀 수 있어요",
+export const coachLines: Record<"pointer" | "touch", Record<CoachStep, string>> = {
+  pointer: {
+    know: "알면 안다(→)를 눌러요",
+    dontKnow: "모르면 모른다(←)를 눌러요",
+    redecide: "응답한 카드는 위로 올라와요. '마지막 응답 바꾸기'나 Z로 응답을 바꿀 수 있어요",
+  },
+  touch: {
+    know: "알면 오른쪽으로 밀어요",
+    dontKnow: "모르면 왼쪽으로 밀어요",
+    redecide: "응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요",
+  },
 };
 
 const button =
@@ -33,10 +41,12 @@ const button =
  */
 export function CoachCaption({
   step,
+  touch,
   onNext,
   onSkip,
 }: {
   step: CoachStep;
+  touch: boolean;
   onNext: () => void;
   onSkip: () => void;
 }) {
@@ -47,7 +57,7 @@ export function CoachCaption({
       className="flex flex-col gap-2 rounded-card bg-hero px-5 pt-4 pb-3 text-on-hero shadow-card"
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="text-body-strong">{coachLines[step]}</p>
+        <p className="text-body-strong">{coachLines[touch ? "touch" : "pointer"][step]}</p>
         <div aria-hidden className="flex shrink-0 gap-1">
           {coachSteps.map((dot) => (
             <span
@@ -70,8 +80,8 @@ export function CoachCaption({
 }
 
 /** What a screen reader hears for [step]: the step of how many, and its line. */
-export function coachAnnouncement(step: CoachStep): string {
-  return `사용 방법, ${String(coachSteps.length)}단계 중 ${String(coachSteps.indexOf(step) + 1)}단계. ${coachLines[step]}`;
+export function coachAnnouncement(step: CoachStep, touch: boolean): string {
+  return `사용 방법, ${String(coachSteps.length)}단계 중 ${String(coachSteps.indexOf(step) + 1)}단계. ${coachLines[touch ? "touch" : "pointer"][step]}`;
 }
 
 /** The coach's finger, moving with the card it demonstrates on; hidden from screen readers. */
@@ -90,11 +100,11 @@ function Finger({ className }: { className: string }) {
 const demos = {
   know: {
     card: "motion-safe:animate-coach-know motion-reduce:animate-coach-know-held",
-    tint: "justify-start bg-tint-green text-on-know-tint",
+    tint: answerTints.know,
   },
   dontKnow: {
     card: "motion-safe:animate-coach-dont-know motion-reduce:animate-coach-dont-know-held",
-    tint: "justify-end bg-tint-red text-on-dont-know-tint",
+    tint: answerTints.dontKnow,
   },
 } as const;
 
