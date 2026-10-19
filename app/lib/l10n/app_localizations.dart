@@ -212,11 +212,131 @@ abstract class AppLocalizations {
   /// **'표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
   String get wholeCardReadOnly;
 
-  /// In the card editor under the back of a vocabulary card whose senses carry labels.
+  /// In the card editor under the front of a card whose front holds senses, such as a reversed vocabulary card: editing that front saves it as text.
   ///
   /// In ko, this message translates to:
-  /// **'뒷면을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
+  /// **'앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
   String get sensesEditNote;
+
+  /// The card editor's kind switch: a card of a text front and a text back.
+  ///
+  /// In ko, this message translates to:
+  /// **'기본'**
+  String get cardKindBasic;
+
+  /// The card editor's kind switch: a word with its senses, each with its labels, meaning and examples.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어'**
+  String get cardKindWord;
+
+  /// What a screen reader reads for the card editor's kind switch.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 종류'**
+  String get cardKindLabel;
+
+  /// Heading of one sense in the word form, numbered from 1.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻 {number}'**
+  String senseHeading(int number);
+
+  /// Label of a sense's meaning field in the word form.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻'**
+  String get senseMeaning;
+
+  /// Label of a sense's examples field in the word form.
+  ///
+  /// In ko, this message translates to:
+  /// **'예문'**
+  String get senseExamples;
+
+  /// Hint inside a sense's examples field: one example per line, optional.
+  ///
+  /// In ko, this message translates to:
+  /// **'한 줄에 하나씩, 없으면 비워 두세요'**
+  String get senseExamplesHint;
+
+  /// Error under a sense whose meaning is empty when the word is saved.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻을 적어 주세요'**
+  String get senseMeaningRequired;
+
+  /// Button under the senses of the word form that adds an empty sense.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻 추가'**
+  String get addSense;
+
+  /// Screen-reader name of the button that moves a sense up one place.
+  ///
+  /// In ko, this message translates to:
+  /// **'{number}번째 뜻을 위로'**
+  String moveSenseUp(int number);
+
+  /// Screen-reader name of the button that moves a sense down one place.
+  ///
+  /// In ko, this message translates to:
+  /// **'{number}번째 뜻을 아래로'**
+  String moveSenseDown(int number);
+
+  /// Screen-reader name of the button that removes a sense; a word keeps at least one.
+  ///
+  /// In ko, this message translates to:
+  /// **'{number}번째 뜻 지우기'**
+  String deleteSense(int number);
+
+  /// Button in a sense that opens the sheet for adding a label, and that sheet's title.
+  ///
+  /// In ko, this message translates to:
+  /// **'표시 추가'**
+  String get addLabel;
+
+  /// Screen-reader name of the button that removes a label from a sense.
+  ///
+  /// In ko, this message translates to:
+  /// **'[{label}] 표시 지우기'**
+  String removeLabel(String label);
+
+  /// The label sheet's one sentence: pick a part of speech or type another label.
+  ///
+  /// In ko, this message translates to:
+  /// **'품사를 고르거나 다른 표시를 적어요.'**
+  String get labelSheetBody;
+
+  /// Label of the field in the label sheet for a label that is not a part of speech, such as a semantic class.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 표시'**
+  String get otherLabel;
+
+  /// Hint inside the other-label field.
+  ///
+  /// In ko, this message translates to:
+  /// **'예: 사물'**
+  String get otherLabelHint;
+
+  /// The label sheet's button that adds the typed label; disabled while the field is empty.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 표시 추가'**
+  String get addOtherLabel;
+
+  /// A part of speech in the label sheet: its short form in brackets and its name.
+  ///
+  /// In ko, this message translates to:
+  /// **'[{short}] {name}'**
+  String partOfSpeechChoice(String short, String name);
+
+  /// The name of a part of speech of the closed list (ADR 0075), by its category.
+  ///
+  /// In ko, this message translates to:
+  /// **'{category, select, noun{명사} verb{동사} adjective{형용사} adverb{부사} pronoun{대명사} preposition{전치사} conjunction{접속사} interjection{감탄사} determiner{관사} numeral{수사} particle{조사} auxiliary{조동사} classifier{양사} phrase{구} other{}}'**
+  String partOfSpeechName(String category);
 
   /// Title of the sheet shown when a card's front duplicates another in the deck.
   ///

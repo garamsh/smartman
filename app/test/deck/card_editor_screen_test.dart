@@ -165,7 +165,7 @@ void main() {
   );
 
   testWidgets(
-    'a vocabulary card keeps its senses when saved as it was, and edited, its back becomes the text typed, as the note says',
+    'a reversed word, its senses on the front, edits as a basic card: saved as it was it keeps them, and edited its front becomes the text typed, as the note says',
     (tester) async {
       final screens = await DeckScreens.open(tester);
       const senses = SensesContent([
@@ -177,8 +177,8 @@ void main() {
       await tester.runAsync(
         () => screens.repository.addCard(
           screens.deck.id,
-          front: [const TextContent('apple')],
-          back: [senses],
+          front: [senses],
+          back: [const TextContent('apple')],
         ),
       );
       Future<Card> stored() async => (await screens.cards()).single;
@@ -186,13 +186,13 @@ void main() {
       final card = await stored();
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       expect(
-        find.text('Editing the back saves labels such as [명] as plain text.'),
+        find.text('Editing the front saves labels such as [명] as plain text.'),
         findsOneWidget,
       );
       expect(find.widgetWithText(TextField, '[명] 사과'), findsOneWidget);
-      // Control: saved as it was, the answer keeps its senses block.
+      // Control: saved as it was, the front keeps its senses block.
       await screens.tap(find.text('Save'));
-      expect((await stored()).back, [senses]);
+      expect((await stored()).front, [senses]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       await tester.enterText(
@@ -201,7 +201,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await screens.tap(find.text('Save'));
-      expect((await stored()).back, [const TextContent('[명] 사과, 능금')]);
+      expect((await stored()).front, [const TextContent('[명] 사과, 능금')]);
       await screens.close();
     },
   );

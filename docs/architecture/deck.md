@@ -12,7 +12,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - content: `Content`, `TextContent`, `ClozeContent` with `clozeBlank`, `TableContent` with `TableBlank`, `SensesContent` with `CardSense`, `SenseLabel`, `PartOfSpeechLabel`, `OtherLabel` and `PartOfSpeech`, `UnsupportedContent`, `decodeContent`, which reads the stored encoding, `decodeSense`, which reads one sense as the block and the extraction function write it, `plainText`, a side's text with its blanks filled, and `isWholeCard`, whether a front holds a cloze or a table;
   - `CardKey`, `describeContent`, the one line of text a card side shows, `spokenContent`, a side as a screen reader reads it, `CardSplitRow`, a card as a split row, and `CardBackRow`, a card's front with its back hidden or shown;
   - `WholeCardView`, which draws a whole card's front ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md));
-  - `DeckRow`, a deck on a row, `DeckTile`, its initial on a tinted tile, and `CardEditorScreen`, the card editor;
+  - `DeckRow`, a deck on a row, `DeckTile`, its initial on a tinted tile, and `CardEditorScreen`, the card editor, with `deckStorageProvider` and `deckStorageKeys`, the device storage in which it keeps each deck's last card kind;
   - the split card, drawn one way for every screen: `SplitCard`, given each side as a `SideBuilder` of the width its text is laid out in, which lays out a card's two halves divided by a line, side by side or, when a half would be too narrow at the text scale, stacked, each side centred or at the top left and, on the study card, scrolling inside its half once capped; and `ContentView`, which renders a side's content blocks, with an unsupported block as a labelled placeholder, fitting text through `CardText` in `app/lib/deck/src/card_text.dart`, or, given a height too, running the blocks together as one paragraph scaled down as far as the floor until it fits that height and cut there with an ellipsis. The study screen's cards, the card preview and `CardSplitRow` draw through them ([ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md), [ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md));
   - `DeckRepository` and its save results;
   - the batch save of incoming cards, from a photo or a copy: `AddTarget`, `AddToDeck`, `AddToNewDeck`, `IncomingCard`, `DuplicateChoice`, `CardsAdded`, `mergeBack`, and `AddSource` with `FromPhoto` and `FromCopy`;
@@ -99,10 +99,22 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 ### Card editor
 
 - The editor has a close button, the title "카드 추가" or "카드 편집", and the deck name on the right; when editing, also a delete button.
-- A live preview shows the card as the study screen's previous card shows it, front left and back right, each centred in its half and shrunk until its widest word fits, as the study card does, above the multi-line fields "앞면" and "뒷면".
-- Adding offers "저장", which saves and closes, and "저장하고 다음 카드", which saves and leaves the editor open and empty with the focus on "앞면". Editing offers "저장" alone.
-- A side holding a senses block keeps it while its field's text is left as it was. An edited side becomes a text block, its labels as typed, as "뒷면을 고치면 [명] 같은 표시도 글자로 저장돼요." under the back says ([ADR 0075](adr/0075-store-a-vocabulary-card-s-senses-as-a-typed-block-and-show-each-label-in-brackets-before-its-meaning.md)).
-- A whole card opens read-only ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md)): its preview filled, "표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요." under it, no field and no "저장", and the delete button. A card the user types is a text card; there is no table editor.
+- **Kinds** ([ADR 0083](adr/0083-write-every-card-kind-by-hand-in-a-form-of-its-own-chosen-by-a-kind-switch-each-deck-remembers.md)): a card is a cloze or a table when its front holds that block, a word when its back holds senses, and otherwise basic.
+  - A new card's editor opens with a segmented switch, "카드 종류", of "기본" and "단어", in the kind the deck's last new card was added in. It keeps that kind per deck on the device under `deckCardKinds`, and a write the device refuses shows a storage failure.
+  - An existing card opens in its own kind, with no switch.
+- A live preview shows the card as the study screen's previous card shows it, front left and back right, each centred in its half and shrunk until its widest word fits, as the study card does. Below it come the multi-line field "앞면" and the kind's form:
+  - **basic:** the multi-line field "뒷면";
+  - **word:** one bordered card per sense, "뜻 1" and on.
+    - Each holds its labels as chips, each with a remove button named "[명] 표시 지우기", and "표시 추가".
+    - "표시 추가" opens a sheet of the fourteen parts of speech, "[명] 명사" and so on, and a field "다른 표시" for any other label, added by "이 표시 추가".
+    - Each sense also has the fields "뜻" and "예문", one example per line.
+    - Its up, down and delete buttons are named "n번째 뜻을 위로", "n번째 뜻을 아래로" and "n번째 뜻 지우기", disabled where they cannot act, so a word keeps one sense. "뜻 추가" adds a sense under the last.
+- The editor is a scrolling column, so every field is built.
+- On save, an empty front reads "내용을 입력하세요" under it, as does an empty basic back, and a sense without a meaning reads "뜻을 적어 주세요" under its field; nothing is saved.
+- A word saves its front as text and its back as one senses block of its senses in order, each label as chosen, the meaning trimmed and each non-empty example line trimmed, followed by any other block the card's back held, such as its extras. Saved unchanged, it is stored as it was.
+- Adding offers "저장", which saves and closes, and "저장하고 다음 카드", which saves and leaves the editor open and empty, in the same kind, with the focus on "앞면". Editing offers "저장" alone.
+- A side holding a senses block in the basic form, a reversed word's front, keeps it while its field's text is left as it was. An edited one becomes a text block, its labels as typed, as "앞면을 고치면 [명] 같은 표시도 글자로 저장돼요." under the front says.
+- A whole card opens read-only ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md)): its preview filled, "표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요." under it, no field and no "저장", and the delete button. The cloze and table forms are the next steps of [ADR 0083](adr/0083-write-every-card-kind-by-hand-in-a-form-of-its-own-chosen-by-a-kind-switch-each-deck-remembers.md).
 
 ### State and composition
 

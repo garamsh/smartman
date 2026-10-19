@@ -17,6 +17,7 @@ import 'package:smartman/account/account.dart';
 import 'package:smartman/account/src/account_service.dart';
 import 'package:smartman/account/src/google_button.dart';
 import 'package:smartman/account/src/sign_in_screen.dart';
+import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
@@ -93,6 +94,7 @@ void main() {
             ...themeStorageKeys,
             ...photoImportStorageKeys,
             ...studyStorageKeys,
+            ...deckStorageKeys,
           },
         ),
       ),
