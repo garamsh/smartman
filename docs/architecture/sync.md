@@ -38,7 +38,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - drift's own comparison of two times is written through `julianday()`, which no index serves, so the reads by time are written in SQL comparing the text ([`study.md`](study.md)).
 - **No new local checks.** A check added on the device would have to hold for every stored row, or the table rebuild aborts and the database no longer opens. The server's checks are the authority, and a row they refuse fails the run as `SyncFailed`, as any constraint does.
 - Screens never show a tombstoned deck or card ([`deck.md`](deck.md), [`study.md`](study.md)).
-- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`. The web creates its new ids, each answer's review, with the `uuid` npm package's `v7()`, pinned exactly in `web/package.json` ([`web.md`](web.md)).
+- Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`. The web creates its new ids, each answer's review, with the `uuid` npm package's `v7()`, pinned exactly in `web/package.json` ([`web-study.md`](web-study.md)).
 
 ### A run
 
@@ -102,7 +102,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 ### The web app as a writer
 
-- The web app keeps no local database: it writes the server's `reviews` and `card_states` directly, with the user's session, the same rows a phone's push sends, so the phone merges them by the rules above ([`web.md`](web.md), [ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
+- The web app keeps no local database: it writes the server's `reviews` and `card_states` directly, with the user's session, the same rows a phone's push sends, so the phone merges them by the rules above ([`web-study.md`](web-study.md), [ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
 - An answer inserts its review, ignoring one already stored under its id, with `good` for "안다" and `again` for "모른다", its time, its duration on screen, a fuzz factor drawn for it, and `user_id`. A toggle changes that review's `rating` and `updated_at` only where the server's edit is older, as a push does.
 - Either then upserts the card's `card_states` row with the state the engine computes, replaying the card's answers of the web session, each with its factor, from the state the session opened with.
 - Every row takes the time of the edit as `updated_at`; the server sets `revision`. Neither table has a tombstone, and the web app deletes nothing.

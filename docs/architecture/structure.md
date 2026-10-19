@@ -84,6 +84,7 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
 - **A foundation sits below every feature**: `web/src/design/`, `web/src/supabase/` and `web/src/env.ts` import no feature and no route. What belongs to one feature's subject lives in it, and a sibling reaches it through that feature's entry points: the card content blocks in `decks`, as the app's are `deck`'s; the study day's time zone in `study`; the legal documents' layout and links in `legal`.
 - **A client module takes a sibling feature's values from the server.** A client module cannot import a feature's `index.ts` that carries server-only code (stack-nextjs §13), so the server component rendering it passes in what it needs, such as a card side described as text.
 - **The structural rules are checked by a test and by ESLint.** `web/src/__tests__/structure.test.ts` fails on an entry under `web/src/` outside the closed list. `web/eslint.config.mjs` fails on an import of `@/features/<name>/` other than its `index` or `actions`, and on an import of `@/features/` or `@/app/` from a foundation.
+- **Each web feature has its own responsibility document**, `web-<feature>.md` beside [`web.md`](web.md), which holds the stack, the foundations and the shell ([ADR 0080](adr/0080-document-each-web-feature-in-its-own-responsibility-document-beside-web-md-and-name-each-test-file-s-behaviour-in-one-line.md)): [`web-account.md`](web-account.md), [`web-admin.md`](web-admin.md), [`web-decks.md`](web-decks.md), [`web-study.md`](web-study.md) and [`web-legal.md`](web-legal.md). A new feature adds its document with it.
 - **The web app has no single composition site.** Next.js calls each route, Route Handler, Server Action and the proxy as an entry point of its own, per request. Each constructs the Supabase client it needs through `web/src/supabase/`, the one place that constructs one.
 
 ## Rationale
@@ -99,6 +100,7 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
 - [ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md) records why the app's home is the account gate.
 - [ADR 0019](adr/0019-web-app-stack-portability-and-sign-in.md) records why the web app is a project of its own and how it reaches the app's fonts.
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why sharing is a domain of its own and why it imports `supabase_flutter`.
+- [ADR 0080](adr/0080-document-each-web-feature-in-its-own-responsibility-document-beside-web-md-and-name-each-test-file-s-behaviour-in-one-line.md) records why each web feature has its own document beside `web.md`.
 
 ## Open questions
 
