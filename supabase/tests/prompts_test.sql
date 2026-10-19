@@ -100,7 +100,7 @@ select results_eq($$select id, note, created_by from private.prompt_versions whe
   'the migration seeds version 1, prompt v8, saved by no one');
 
 -- The store as the seed left it: version 1 active, no test version and an empty log. A later
--- migration activated prompt v9 (20261019230002_activate_prompt_v9.sql), which
+-- migration activated prompt v9 (20261019230003_activate_prompt_v9.sql), which
 -- prompt_v9_activation_test.sql covers.
 update private.prompt_labels set version_id = 1, set_by = null where label = 'active';
 delete from private.admin_audit;

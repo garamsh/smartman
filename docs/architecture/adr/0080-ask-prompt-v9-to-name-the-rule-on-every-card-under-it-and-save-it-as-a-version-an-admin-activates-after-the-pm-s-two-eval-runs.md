@@ -56,7 +56,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - The PM ran the eval twice on v9, and the dense grammar pages' mean was 89.3 and 90.5, over the issue's 85.
 - The owner delegated the activation to the PM. The PM cannot sign in to the admin area, so steps 2 to 4 of the Decision did not run there, and the "관리자만 테스트" try was not made.
-- In their place, migration `20261019230002_activate_prompt_v9.sql` does what the admin area's save and activation do:
+- In their place, migration `20261019230003_activate_prompt_v9.sql` does what the admin area's save and activation do:
   - it saves `prompt_v9.ts`'s `SYSTEM_PROMPT` as version 2, with the note "prompt v9 (#261, #266), PM eval 2026-10-19: dense 89.3/90.5";
   - it points the `active` label at version 2;
   - it records `activate_prompt` in the audit log, as `migration (owner delegated to PM, 2026-10-19)`.

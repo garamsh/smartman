@@ -25,7 +25,7 @@ Deno.test("the migration seeds version 1 with prompt v8's text, character for ch
 Deno.test("v9's activation saves prompt v9's text, and its pgTAP test expects it, character for character", async () => {
   for (
     const path of [
-      "supabase/migrations/20261019230002_activate_prompt_v9.sql",
+      "supabase/migrations/20261019230003_activate_prompt_v9.sql",
       "supabase/tests/prompt_v9_activation_test.sql",
     ]
   ) {

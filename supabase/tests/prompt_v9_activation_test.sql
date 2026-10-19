@@ -1,4 +1,4 @@
--- The activation of prompt v9 (20261019230002_activate_prompt_v9.sql, ADR 0080): a new version
+-- The activation of prompt v9 (20261019230003_activate_prompt_v9.sql, ADR 0080): a new version
 -- holding prompt_v9.ts's text, the active one, served to users and recorded in the audit log as
 -- the admin area's activation is, with version 1 kept, so activating it again serves prompt v8.
 begin;

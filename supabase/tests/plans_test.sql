@@ -5,7 +5,7 @@ begin;
 select plan(34);
 
 -- The log starts empty here: a migration may record a change of its own, as
--- 20261019230002_activate_prompt_v9.sql records prompt v9's activation.
+-- 20261019230003_activate_prompt_v9.sql records prompt v9's activation.
 delete from private.admin_audit;
 
 -- A is an admin, B a signed-in user who is not, C, D and E users on each plan.

@@ -45,7 +45,7 @@ test)
 		exit 1
 	fi
 	# shellcheck disable=SC2086
-	output=$(NO_COLOR=1 deno test --no-prompt --allow-read=tools/eval,supabase/migrations/20261019210000_prompts.sql,supabase/migrations/20261019230002_activate_prompt_v9.sql,supabase/tests/prompt_v9_activation_test.sql $tests 2>&1) || { echo "$output"; exit 1; }
+	output=$(NO_COLOR=1 deno test --no-prompt --allow-read=tools/eval,supabase/migrations/20261019210000_prompts.sql,supabase/migrations/20261019230003_activate_prompt_v9.sql,supabase/tests/prompt_v9_activation_test.sql $tests 2>&1) || { echo "$output"; exit 1; }
 	echo "$output"
 	passed=$(echo "$output" | sed -n 's/.*ok | \([0-9]*\) passed.*/\1/p' | tail -n 1)
 	if [ -z "$passed" ] || [ "$passed" -eq 0 ]; then
