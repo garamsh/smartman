@@ -1,6 +1,6 @@
 -- Reviews are insert-only for clients, except their rating and edit time, which a toggle changes.
 begin;
-select plan(8);
+select plan(7);
 
 -- Two users, A and B, each owning one row in every table.
 insert into auth.users (id, email) values
@@ -44,9 +44,6 @@ select throws_ok(
   $$update public.reviews set duration_ms = 0 where id = 'e0000000-0000-4000-8000-00000000000a'$$,
   '42501', null, 'A cannot change its own review''s duration');
 select throws_ok(
-  $$update public.reviews set deleted_at = now() where id = 'e0000000-0000-4000-8000-00000000000a'$$,
-  '42501', null, 'A cannot tombstone its own review');
-select throws_ok(
   $$delete from public.reviews where id = 'e0000000-0000-4000-8000-00000000000a'$$,
   '42501', null, 'A cannot delete its own review');
 select throws_ok(
@@ -55,8 +52,8 @@ select throws_ok(
 
 reset role;
 select results_eq(
-  $$select id, rating, deleted_at is null from public.reviews order by id$$,
-  $$values ('e0000000-0000-4000-8000-00000000000a'::uuid, 'again', true), ('e0000000-0000-4000-8000-00000000000b'::uuid, 'good', true)$$,
+  $$select id, rating from public.reviews order by id$$,
+  $$values ('e0000000-0000-4000-8000-00000000000a'::uuid, 'again'), ('e0000000-0000-4000-8000-00000000000b'::uuid, 'good')$$,
   'both reviews remain, with only A''s rating changed');
 
 select * from finish();

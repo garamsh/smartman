@@ -74,7 +74,6 @@ export function stateRow(
     last_review: iso(state.lastReview),
     due: iso(state.due),
     updated_at: iso(state.lastReview),
-    deleted_at: null,
   };
 }
 
@@ -89,7 +88,6 @@ export function reviewRow(id: string, cardId: string, reviewedAt: number, durati
     duration_ms: durationMs,
     fuzz_factor: null,
     updated_at: iso(reviewedAt),
-    deleted_at: null,
   };
 }
 

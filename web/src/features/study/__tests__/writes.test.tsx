@@ -179,8 +179,8 @@ describe("a study session's writes", () => {
       last_review: iso(state.lastReview),
       due: iso(state.due),
       updated_at: iso(start + 4000),
-      deleted_at: null,
     });
+    expect(Object.keys(postgrest.rows.card_states[0] ?? {})).not.toContain("deleted_at");
   });
 
   it("writes each answer's review under a version 7 id in canonical lowercase form, stamped with the answer's time", async () => {

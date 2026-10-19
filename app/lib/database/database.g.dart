@@ -1318,15 +1318,6 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         type: DriftSqlType.dateTime,
         requiredDuringInsert: true,
       ).withConverter<DateTime>($ReviewsTable.$converterupdatedAt);
-  @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> deletedAt =
-      GeneratedColumn<DateTime>(
-        'deleted_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      ).withConverter<DateTime?>($ReviewsTable.$converterdeletedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -1349,7 +1340,6 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     durationMs,
     fuzzFactor,
     updatedAt,
-    deletedAt,
     dirty,
   ];
   @override
@@ -1446,12 +1436,6 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
           data['${effectivePrefix}updated_at'],
         )!,
       ),
-      deletedAt: $ReviewsTable.$converterdeletedAtn.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime,
-          data['${effectivePrefix}deleted_at'],
-        ),
-      ),
       dirty: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}dirty'],
@@ -1468,10 +1452,6 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
       const StoredTime();
   static TypeConverter<DateTime, DateTime> $converterupdatedAt =
       const StoredTime();
-  static TypeConverter<DateTime, DateTime> $converterdeletedAt =
-      const StoredTime();
-  static TypeConverter<DateTime?, DateTime?> $converterdeletedAtn =
-      NullAwareTypeConverter.wrap($converterdeletedAt);
 }
 
 class ReviewRow extends DataClass implements Insertable<ReviewRow> {
@@ -1485,7 +1465,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
   /// before schema v3, which was scheduled without fuzz.
   final double? fuzzFactor;
   final DateTime updatedAt;
-  final DateTime? deletedAt;
   final bool dirty;
   const ReviewRow({
     required this.id,
@@ -1495,7 +1474,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     required this.durationMs,
     this.fuzzFactor,
     required this.updatedAt,
-    this.deletedAt,
     required this.dirty,
   });
   @override
@@ -1518,11 +1496,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
         $ReviewsTable.$converterupdatedAt.toSql(updatedAt),
       );
     }
-    if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(
-        $ReviewsTable.$converterdeletedAtn.toSql(deletedAt),
-      );
-    }
     map['dirty'] = Variable<bool>(dirty);
     return map;
   }
@@ -1538,9 +1511,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ? const Value.absent()
           : Value(fuzzFactor),
       updatedAt: Value(updatedAt),
-      deletedAt: deletedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(deletedAt),
       dirty: Value(dirty),
     );
   }
@@ -1558,7 +1528,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       durationMs: serializer.fromJson<int>(json['durationMs']),
       fuzzFactor: serializer.fromJson<double?>(json['fuzzFactor']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       dirty: serializer.fromJson<bool>(json['dirty']),
     );
   }
@@ -1573,7 +1542,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       'durationMs': serializer.toJson<int>(durationMs),
       'fuzzFactor': serializer.toJson<double?>(fuzzFactor),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
-      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'dirty': serializer.toJson<bool>(dirty),
     };
   }
@@ -1586,7 +1554,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     int? durationMs,
     Value<double?> fuzzFactor = const Value.absent(),
     DateTime? updatedAt,
-    Value<DateTime?> deletedAt = const Value.absent(),
     bool? dirty,
   }) => ReviewRow(
     id: id ?? this.id,
@@ -1596,7 +1563,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     durationMs: durationMs ?? this.durationMs,
     fuzzFactor: fuzzFactor.present ? fuzzFactor.value : this.fuzzFactor,
     updatedAt: updatedAt ?? this.updatedAt,
-    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     dirty: dirty ?? this.dirty,
   );
   ReviewRow copyWithCompanion(ReviewsCompanion data) {
@@ -1614,7 +1580,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ? data.fuzzFactor.value
           : this.fuzzFactor,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
   }
@@ -1629,7 +1594,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ..write('durationMs: $durationMs, ')
           ..write('fuzzFactor: $fuzzFactor, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt, ')
           ..write('dirty: $dirty')
           ..write(')'))
         .toString();
@@ -1644,7 +1608,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     durationMs,
     fuzzFactor,
     updatedAt,
-    deletedAt,
     dirty,
   );
   @override
@@ -1658,7 +1621,6 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           other.durationMs == this.durationMs &&
           other.fuzzFactor == this.fuzzFactor &&
           other.updatedAt == this.updatedAt &&
-          other.deletedAt == this.deletedAt &&
           other.dirty == this.dirty);
 }
 
@@ -1670,7 +1632,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
   final Value<int> durationMs;
   final Value<double?> fuzzFactor;
   final Value<DateTime> updatedAt;
-  final Value<DateTime?> deletedAt;
   final Value<bool> dirty;
   final Value<int> rowid;
   const ReviewsCompanion({
@@ -1681,7 +1642,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     this.durationMs = const Value.absent(),
     this.fuzzFactor = const Value.absent(),
     this.updatedAt = const Value.absent(),
-    this.deletedAt = const Value.absent(),
     this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1693,7 +1653,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     required int durationMs,
     this.fuzzFactor = const Value.absent(),
     required DateTime updatedAt,
-    this.deletedAt = const Value.absent(),
     this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1710,7 +1669,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Expression<int>? durationMs,
     Expression<double>? fuzzFactor,
     Expression<DateTime>? updatedAt,
-    Expression<DateTime>? deletedAt,
     Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
@@ -1722,7 +1680,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       if (durationMs != null) 'duration_ms': durationMs,
       if (fuzzFactor != null) 'fuzz_factor': fuzzFactor,
       if (updatedAt != null) 'updated_at': updatedAt,
-      if (deletedAt != null) 'deleted_at': deletedAt,
       if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1736,7 +1693,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Value<int>? durationMs,
     Value<double?>? fuzzFactor,
     Value<DateTime>? updatedAt,
-    Value<DateTime?>? deletedAt,
     Value<bool>? dirty,
     Value<int>? rowid,
   }) {
@@ -1748,7 +1704,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       durationMs: durationMs ?? this.durationMs,
       fuzzFactor: fuzzFactor ?? this.fuzzFactor,
       updatedAt: updatedAt ?? this.updatedAt,
-      deletedAt: deletedAt ?? this.deletedAt,
       dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
     );
@@ -1782,11 +1737,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
         $ReviewsTable.$converterupdatedAt.toSql(updatedAt.value),
       );
     }
-    if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(
-        $ReviewsTable.$converterdeletedAtn.toSql(deletedAt.value),
-      );
-    }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
     }
@@ -1806,7 +1756,6 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
           ..write('durationMs: $durationMs, ')
           ..write('fuzzFactor: $fuzzFactor, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt, ')
           ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1881,15 +1830,6 @@ class $CardStatesTable extends CardStates
         type: DriftSqlType.dateTime,
         requiredDuringInsert: true,
       ).withConverter<DateTime>($CardStatesTable.$converterupdatedAt);
-  @override
-  late final GeneratedColumnWithTypeConverter<DateTime?, DateTime> deletedAt =
-      GeneratedColumn<DateTime>(
-        'deleted_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      ).withConverter<DateTime?>($CardStatesTable.$converterdeletedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -1911,7 +1851,6 @@ class $CardStatesTable extends CardStates
     lastReview,
     due,
     updatedAt,
-    deletedAt,
     dirty,
   ];
   @override
@@ -1995,12 +1934,6 @@ class $CardStatesTable extends CardStates
           data['${effectivePrefix}updated_at'],
         )!,
       ),
-      deletedAt: $CardStatesTable.$converterdeletedAtn.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime,
-          data['${effectivePrefix}deleted_at'],
-        ),
-      ),
       dirty: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}dirty'],
@@ -2018,10 +1951,6 @@ class $CardStatesTable extends CardStates
   static TypeConverter<DateTime, DateTime> $converterdue = const StoredTime();
   static TypeConverter<DateTime, DateTime> $converterupdatedAt =
       const StoredTime();
-  static TypeConverter<DateTime, DateTime> $converterdeletedAt =
-      const StoredTime();
-  static TypeConverter<DateTime?, DateTime?> $converterdeletedAtn =
-      NullAwareTypeConverter.wrap($converterdeletedAt);
 }
 
 class CardStateRow extends DataClass implements Insertable<CardStateRow> {
@@ -2031,7 +1960,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
   final DateTime lastReview;
   final DateTime due;
   final DateTime updatedAt;
-  final DateTime? deletedAt;
   final bool dirty;
   const CardStateRow({
     required this.cardId,
@@ -2040,7 +1968,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     required this.lastReview,
     required this.due,
     required this.updatedAt,
-    this.deletedAt,
     required this.dirty,
   });
   @override
@@ -2064,11 +1991,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
         $CardStatesTable.$converterupdatedAt.toSql(updatedAt),
       );
     }
-    if (!nullToAbsent || deletedAt != null) {
-      map['deleted_at'] = Variable<DateTime>(
-        $CardStatesTable.$converterdeletedAtn.toSql(deletedAt),
-      );
-    }
     map['dirty'] = Variable<bool>(dirty);
     return map;
   }
@@ -2081,9 +2003,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
       lastReview: Value(lastReview),
       due: Value(due),
       updatedAt: Value(updatedAt),
-      deletedAt: deletedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(deletedAt),
       dirty: Value(dirty),
     );
   }
@@ -2100,7 +2019,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
       lastReview: serializer.fromJson<DateTime>(json['lastReview']),
       due: serializer.fromJson<DateTime>(json['due']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       dirty: serializer.fromJson<bool>(json['dirty']),
     );
   }
@@ -2114,7 +2032,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
       'lastReview': serializer.toJson<DateTime>(lastReview),
       'due': serializer.toJson<DateTime>(due),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
-      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'dirty': serializer.toJson<bool>(dirty),
     };
   }
@@ -2126,7 +2043,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     DateTime? lastReview,
     DateTime? due,
     DateTime? updatedAt,
-    Value<DateTime?> deletedAt = const Value.absent(),
     bool? dirty,
   }) => CardStateRow(
     cardId: cardId ?? this.cardId,
@@ -2135,7 +2051,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     lastReview: lastReview ?? this.lastReview,
     due: due ?? this.due,
     updatedAt: updatedAt ?? this.updatedAt,
-    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     dirty: dirty ?? this.dirty,
   );
   CardStateRow copyWithCompanion(CardStatesCompanion data) {
@@ -2150,7 +2065,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
           : this.lastReview,
       due: data.due.present ? data.due.value : this.due,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       dirty: data.dirty.present ? data.dirty.value : this.dirty,
     );
   }
@@ -2164,7 +2078,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
           ..write('lastReview: $lastReview, ')
           ..write('due: $due, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt, ')
           ..write('dirty: $dirty')
           ..write(')'))
         .toString();
@@ -2178,7 +2091,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
     lastReview,
     due,
     updatedAt,
-    deletedAt,
     dirty,
   );
   @override
@@ -2191,7 +2103,6 @@ class CardStateRow extends DataClass implements Insertable<CardStateRow> {
           other.lastReview == this.lastReview &&
           other.due == this.due &&
           other.updatedAt == this.updatedAt &&
-          other.deletedAt == this.deletedAt &&
           other.dirty == this.dirty);
 }
 
@@ -2202,7 +2113,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
   final Value<DateTime> lastReview;
   final Value<DateTime> due;
   final Value<DateTime> updatedAt;
-  final Value<DateTime?> deletedAt;
   final Value<bool> dirty;
   final Value<int> rowid;
   const CardStatesCompanion({
@@ -2212,7 +2122,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     this.lastReview = const Value.absent(),
     this.due = const Value.absent(),
     this.updatedAt = const Value.absent(),
-    this.deletedAt = const Value.absent(),
     this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2223,7 +2132,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     required DateTime lastReview,
     required DateTime due,
     required DateTime updatedAt,
-    this.deletedAt = const Value.absent(),
     this.dirty = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cardId = Value(cardId),
@@ -2239,7 +2147,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     Expression<DateTime>? lastReview,
     Expression<DateTime>? due,
     Expression<DateTime>? updatedAt,
-    Expression<DateTime>? deletedAt,
     Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
@@ -2250,7 +2157,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
       if (lastReview != null) 'last_review': lastReview,
       if (due != null) 'due': due,
       if (updatedAt != null) 'updated_at': updatedAt,
-      if (deletedAt != null) 'deleted_at': deletedAt,
       if (dirty != null) 'dirty': dirty,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2263,7 +2169,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
     Value<DateTime>? lastReview,
     Value<DateTime>? due,
     Value<DateTime>? updatedAt,
-    Value<DateTime?>? deletedAt,
     Value<bool>? dirty,
     Value<int>? rowid,
   }) {
@@ -2274,7 +2179,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
       lastReview: lastReview ?? this.lastReview,
       due: due ?? this.due,
       updatedAt: updatedAt ?? this.updatedAt,
-      deletedAt: deletedAt ?? this.deletedAt,
       dirty: dirty ?? this.dirty,
       rowid: rowid ?? this.rowid,
     );
@@ -2307,11 +2211,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
         $CardStatesTable.$converterupdatedAt.toSql(updatedAt.value),
       );
     }
-    if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(
-        $CardStatesTable.$converterdeletedAtn.toSql(deletedAt.value),
-      );
-    }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
     }
@@ -2330,7 +2229,6 @@ class CardStatesCompanion extends UpdateCompanion<CardStateRow> {
           ..write('lastReview: $lastReview, ')
           ..write('due: $due, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt, ')
           ..write('dirty: $dirty, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2787,9 +2685,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'reviews_card_id_reviewed_at',
     'CREATE INDEX reviews_card_id_reviewed_at ON reviews (card_id, reviewed_at)',
   );
-  late final Index reviewsLiveReviewedAt = Index(
-    'reviews_live_reviewed_at',
-    'CREATE INDEX reviews_live_reviewed_at ON reviews (reviewed_at) WHERE deleted_at IS NULL',
+  late final Index reviewsReviewedAt = Index(
+    'reviews_reviewed_at',
+    'CREATE INDEX reviews_reviewed_at ON reviews (reviewed_at)',
   );
   late final Index reviewsUnsynced = Index(
     'reviews_unsynced',
@@ -2814,7 +2712,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cardsDeckIdCreatedAt,
     cardsUnsynced,
     reviewsCardIdReviewedAt,
-    reviewsLiveReviewedAt,
+    reviewsReviewedAt,
     reviewsUnsynced,
     cardStatesUnsynced,
   ];
@@ -3853,7 +3751,6 @@ typedef $$ReviewsTableCreateCompanionBuilder = ReviewsCompanion Function({
   required int durationMs,
   Value<double?> fuzzFactor,
   required DateTime updatedAt,
-  Value<DateTime?> deletedAt,
   Value<bool> dirty,
   Value<int> rowid,
 });
@@ -3865,7 +3762,6 @@ typedef $$ReviewsTableUpdateCompanionBuilder = ReviewsCompanion Function({
   Value<int> durationMs,
   Value<double?> fuzzFactor,
   Value<DateTime> updatedAt,
-  Value<DateTime?> deletedAt,
   Value<bool> dirty,
   Value<int> rowid,
 });
@@ -3930,12 +3826,6 @@ class $$ReviewsTableFilterComposer
   ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
       $composableBuilder(
         column: $table.updatedAt,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime> get deletedAt =>
-      $composableBuilder(
-        column: $table.deletedAt,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
@@ -4007,11 +3897,6 @@ class $$ReviewsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get dirty => $composableBuilder(
     column: $table.dirty,
     builder: (column) => ColumnOrderings(column),
@@ -4075,9 +3960,6 @@ class $$ReviewsTableAnnotationComposer
   GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
-  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get deletedAt =>
-      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
-
   GeneratedColumn<bool> get dirty =>
       $composableBuilder(column: $table.dirty, builder: (column) => column);
 
@@ -4140,7 +4022,6 @@ class $$ReviewsTableTableManager
                 Value<int> durationMs = const Value.absent(),
                 Value<double?> fuzzFactor = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
-                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion(
@@ -4151,7 +4032,6 @@ class $$ReviewsTableTableManager
                 durationMs: durationMs,
                 fuzzFactor: fuzzFactor,
                 updatedAt: updatedAt,
-                deletedAt: deletedAt,
                 dirty: dirty,
                 rowid: rowid,
               ),
@@ -4164,7 +4044,6 @@ class $$ReviewsTableTableManager
                 required int durationMs,
                 Value<double?> fuzzFactor = const Value.absent(),
                 required DateTime updatedAt,
-                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion.insert(
@@ -4175,7 +4054,6 @@ class $$ReviewsTableTableManager
                 durationMs: durationMs,
                 fuzzFactor: fuzzFactor,
                 updatedAt: updatedAt,
-                deletedAt: deletedAt,
                 dirty: dirty,
                 rowid: rowid,
               ),
@@ -4252,7 +4130,6 @@ typedef $$CardStatesTableCreateCompanionBuilder = CardStatesCompanion Function({
   required DateTime lastReview,
   required DateTime due,
   required DateTime updatedAt,
-  Value<DateTime?> deletedAt,
   Value<bool> dirty,
   Value<int> rowid,
 });
@@ -4263,7 +4140,6 @@ typedef $$CardStatesTableUpdateCompanionBuilder = CardStatesCompanion Function({
   Value<DateTime> lastReview,
   Value<DateTime> due,
   Value<DateTime> updatedAt,
-  Value<DateTime?> deletedAt,
   Value<bool> dirty,
   Value<int> rowid,
 });
@@ -4324,12 +4200,6 @@ class $$CardStatesTableFilterComposer
   ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
       $composableBuilder(
         column: $table.updatedAt,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  ColumnWithTypeConverterFilters<DateTime?, DateTime, DateTime> get deletedAt =>
-      $composableBuilder(
-        column: $table.deletedAt,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
@@ -4396,11 +4266,6 @@ class $$CardStatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
-    column: $table.deletedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get dirty => $composableBuilder(
     column: $table.dirty,
     builder: (column) => ColumnOrderings(column),
@@ -4458,9 +4323,6 @@ class $$CardStatesTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<DateTime?, DateTime> get deletedAt =>
-      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get dirty =>
       $composableBuilder(column: $table.dirty, builder: (column) => column);
@@ -4523,7 +4385,6 @@ class $$CardStatesTableTableManager
                 Value<DateTime> lastReview = const Value.absent(),
                 Value<DateTime> due = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
-                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardStatesCompanion(
@@ -4533,7 +4394,6 @@ class $$CardStatesTableTableManager
                 lastReview: lastReview,
                 due: due,
                 updatedAt: updatedAt,
-                deletedAt: deletedAt,
                 dirty: dirty,
                 rowid: rowid,
               ),
@@ -4545,7 +4405,6 @@ class $$CardStatesTableTableManager
                 required DateTime lastReview,
                 required DateTime due,
                 required DateTime updatedAt,
-                Value<DateTime?> deletedAt = const Value.absent(),
                 Value<bool> dirty = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardStatesCompanion.insert(
@@ -4555,7 +4414,6 @@ class $$CardStatesTableTableManager
                 lastReview: lastReview,
                 due: due,
                 updatedAt: updatedAt,
-                deletedAt: deletedAt,
                 dirty: dirty,
                 rowid: rowid,
               ),

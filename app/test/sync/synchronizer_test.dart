@@ -391,15 +391,12 @@ void main() {
   });
 
   group('local purge', () {
-    test('after a run that leaves nothing unsynced, tombstones lose their content in place and card state tombstones go', () async {
+    test('after a run that leaves nothing unsynced, tombstones lose their content in place and the studied card keeps its state', () async {
       final deck = await a.deck.createDeck('French');
       final studied = await addCard(a, deck, 'chat');
       final unstudied = await addCard(a, deck, 'chien');
       await a.answer(studied.id, 'good');
       await a.sync(_ada);
-      await a.db
-          .update(a.db.cardStates)
-          .write(CardStatesCompanion(deletedAt: Value(a.now)));
       a.now = a.now.add(const Duration(minutes: 1));
       await a.deck.deleteDeck(deck.id);
 
@@ -422,7 +419,13 @@ void main() {
         ['', null, 'private', false],
       );
       expect(await a.db.select(a.db.reviews).get(), hasLength(1));
-      expect(await a.db.select(a.db.cardStates).get(), isEmpty);
+      expect(
+        [
+          for (final row in await a.db.select(a.db.cardStates).get())
+            row.cardId,
+        ],
+        [studied.id.value],
+      );
       // The server's copies keep their content until its own purge.
       expect(server.decks[deck.id.value]!.row.name, 'French');
     });

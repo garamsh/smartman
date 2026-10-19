@@ -11,6 +11,7 @@ import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
 import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
+import 'generated/schema_v7.dart' as v7;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -541,6 +542,133 @@ void main() {
         expect(
           await db.customSelect('PRAGMA foreign_key_check').get(),
           isEmpty,
+        );
+      },
+    );
+  });
+
+  test('every review and card state survives the upgrade from 6 to 7 with its dirty flag, without deleted_at, and the index on reviewed_at is whole', () async {
+    const created = '2026-10-01T00:00:00.000Z';
+    const edited = '2026-10-02T09:30:00.250Z';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 6,
+      newVersion: 7,
+      createOld: v6.DatabaseAtV6.new,
+      createNew: v7.DatabaseAtV7.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v6.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: created,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+        batch.insert(
+          old.cards,
+          const v6.CardsData(
+            id: 'card',
+            deckId: 'deck',
+            front: '[]',
+            back: '[]',
+            cardKey: 'chat',
+            source: 'manual',
+            createdAt: created,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        );
+        batch.insertAll(old.reviews, [
+          const v6.ReviewsData(
+            id: 'review',
+            cardId: 'card',
+            rating: 'good',
+            reviewedAt: edited,
+            durationMs: 1200,
+            fuzzFactor: 0.25,
+            updatedAt: edited,
+            dirty: 1,
+          ),
+          const v6.ReviewsData(
+            id: 'synced',
+            cardId: 'card',
+            rating: 'again',
+            reviewedAt: created,
+            durationMs: 900,
+            updatedAt: created,
+            dirty: 0,
+          ),
+        ]);
+        batch.insert(
+          old.cardStates,
+          const v6.CardStatesData(
+            cardId: 'card',
+            stability: 2.3065,
+            difficulty: 2.118,
+            lastReview: edited,
+            due: '2026-10-03T09:30:00.250Z',
+            updatedAt: edited,
+            dirty: 1,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        expect(
+          await (db.select(
+            db.reviews,
+          )..orderBy([(row) => OrderingTerm.asc(row.id)])).get(),
+          const [
+            v7.ReviewsData(
+              id: 'review',
+              cardId: 'card',
+              rating: 'good',
+              reviewedAt: edited,
+              durationMs: 1200,
+              fuzzFactor: 0.25,
+              updatedAt: edited,
+              dirty: 1,
+            ),
+            v7.ReviewsData(
+              id: 'synced',
+              cardId: 'card',
+              rating: 'again',
+              reviewedAt: created,
+              durationMs: 900,
+              updatedAt: created,
+              dirty: 0,
+            ),
+          ],
+        );
+        expect(await db.select(db.cardStates).get(), const [
+          v7.CardStatesData(
+            cardId: 'card',
+            stability: 2.3065,
+            difficulty: 2.118,
+            lastReview: edited,
+            due: '2026-10-03T09:30:00.250Z',
+            updatedAt: edited,
+            dirty: 1,
+          ),
+        ]);
+        final indexes = await db
+            .customSelect(
+              "SELECT name, sql FROM sqlite_master WHERE type = 'index' "
+              "AND tbl_name = 'reviews' AND name LIKE 'reviews_%reviewed_at'",
+            )
+            .get();
+        expect(
+          {
+            for (final row in indexes)
+              row.read<String>('name'): row.read<String>('sql'),
+          },
+          {
+            'reviews_card_id_reviewed_at': contains('(card_id, reviewed_at)'),
+            'reviews_reviewed_at': isNot(contains('WHERE')),
+          },
         );
       },
     );

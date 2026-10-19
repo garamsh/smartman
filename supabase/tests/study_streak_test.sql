@@ -2,7 +2,7 @@
 -- before, from 04:00 to 04:00 in the zone named, on the instants web/src/features/study's
 -- queue.test.ts counts; it reads only the caller's live answers and runs as the caller.
 begin;
-select plan(18);
+select plan(17);
 
 -- One user per case, so each case reads only its own answers.
 insert into auth.users (id, email) values
@@ -16,16 +16,15 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-000000000008', 'los-angeles-before-start@example.com'),
   ('00000000-0000-4000-8000-000000000009', 'other@example.com');
 
--- Stores an answer of [who] at [at], tombstoned when [deleted]. Written in replica mode, which
+-- Stores an answer of [who] at [at]. Written in replica mode, which
 -- skips the foreign keys and the revision trigger, since the streak reads only the answer's time.
-create function pg_temp.answer(who uuid, at timestamptz, deleted boolean default false) returns void
+create function pg_temp.answer(who uuid, at timestamptz) returns void
 language plpgsql as $$
 begin
   set local session_replication_role = replica;
   insert into public.reviews
-    (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at, deleted_at, revision)
-  values (gen_random_uuid(), who, gen_random_uuid(), 'good', at, 1000, at,
-    case when deleted then at end, 0);
+    (id, user_id, card_id, rating, reviewed_at, duration_ms, updated_at, revision)
+  values (gen_random_uuid(), who, gen_random_uuid(), 'good', at, 1000, at, 0);
   set local session_replication_role = origin;
 end;
 $$;
@@ -98,13 +97,10 @@ select is(
   pg_temp.streak_of('00000000-0000-4000-8000-000000000008', 'America/Los_Angeles', '2026-11-01 20:00Z'),
   0, '03:59 PDT on 31 October counts for 30 October, so 31 October has no answer');
 
--- Only the caller's live answers count.
-select pg_temp.answer('00000000-0000-4000-8000-000000000009', '2026-10-15 12:00Z', deleted => true);
-select is(pg_temp.streak_of('00000000-0000-4000-8000-000000000009', 'UTC', '2026-10-16 12:00Z'), 0,
-  'a tombstoned answer does not count');
+-- Only the caller's answers count.
 select pg_temp.answer('00000000-0000-4000-8000-000000000009', '2026-10-15 13:00Z');
 select is(pg_temp.streak_of('00000000-0000-4000-8000-000000000009', 'UTC', '2026-10-16 12:00Z'), 1,
-  'control: a live answer on the same day counts');
+  'an answer on the day before counts');
 select is(pg_temp.streak_of('00000000-0000-4000-8000-000000000009', 'UTC', '2026-10-15 20:00Z'), 0,
   'another user''s answers do not count: user 1''s 14th, 13th and 12th are not this user''s');
 

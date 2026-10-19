@@ -70,7 +70,6 @@ export async function recordAnswer(input: RecordedAnswer): Promise<WriteResult> 
         last_review: iso(state.lastReview),
         due: iso(state.due),
         updated_at: editedAt,
-        deleted_at: null,
       },
       { onConflict: "user_id,card_id" },
     )
