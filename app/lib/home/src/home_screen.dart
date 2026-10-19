@@ -140,9 +140,14 @@ class _TabBar extends StatelessWidget {
                     button: true,
                     child: InkWell(
                       onTap: () => onSelect(index),
-                      child: SizedBox(
-                        height: AppSize.cta + AppSpace.s8,
+                      // At least its height; taller where a larger text
+                      // size needs it, so the label is never cut.
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: AppSize.cta + AppSpace.s8,
+                        ),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           spacing: AppSpace.s4,
                           children: [
