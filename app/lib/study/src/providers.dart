@@ -46,9 +46,9 @@ final studyRandomProvider = Provider<Random Function(DateTime start)>(
   ),
 );
 
-/// The device storage that keeps whether the study screen's coach has shown.
-/// The composition site overrides it with the storage it opens, opened to
-/// cache [studyStorageKeys].
+/// The device storage that keeps whether the study screen's coach and the
+/// first-run daily minutes step have shown. The composition site overrides it
+/// with the storage it opens, opened to cache [studyStorageKeys].
 final studyStorageProvider = Provider<SharedPreferencesWithCache>(
   (ref) => throw UnimplementedError(
     'studyStorageProvider is overridden at the composition site',
@@ -56,7 +56,11 @@ final studyStorageProvider = Provider<SharedPreferencesWithCache>(
 );
 
 /// The keys [studyStorageProvider] must be opened to cache.
-const studyStorageKeys = {studyCoachShownKey};
+const studyStorageKeys = {studyCoachShownKey, dailyMinutesAskedKey};
 
 /// Set once the study screen's coach has shown on this device.
 const studyCoachShownKey = 'studyCoachShown';
+
+/// Set once the first-run step that asks for the daily study minutes has
+/// shown on this device.
+const dailyMinutesAskedKey = 'dailyMinutesAsked';

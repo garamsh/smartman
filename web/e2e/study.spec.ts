@@ -149,6 +149,20 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(page.getByText(email)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "로그아웃" })).toHaveCount(0);
   await shot(page, "01-today");
+  // The today card's control opens the daily study minutes' dialog, which saves on the server.
+  await page.getByRole("button", { name: "하루 공부 시간 20분, 바꾸기", exact: true }).click();
+  const minutes = page.getByRole("dialog", { name: "하루 공부 시간" });
+  await minutes.getByRole("button", { name: "30분", exact: true }).click();
+  await expect(minutes.getByRole("status")).toContainText("오늘 새 카드 약 2장 · 복습 0장");
+  await shot(page, "01c-daily-minutes");
+  await minutes.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "하루 공부 시간 30분, 바꾸기", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "하루 공부 시간 30분, 바꾸기", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("navigation", { name: "주 메뉴" })
     .getByRole("link", { name: "덱", exact: true })

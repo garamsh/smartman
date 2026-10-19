@@ -31,6 +31,7 @@ import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import '../sharing/sharing_service_test.dart' show publicCard, publicDeck;
 import '../sync/fake_sync_server.dart';
+import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
 
 /// Screenshots of every screen and sheet in both themes, for review. They are
@@ -290,7 +291,20 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.tabToday));
+      // Once a deck has cards, the first-run step asks for the daily minutes.
+      await waitForChoices(tester, choice: ko.dailyMinutesChoice(10));
+      await shot(tester, '16a0-daily-minutes-first');
+      await tap(tester, find.text(ko.dailyMinutesSkip));
       await shot(tester, '16a-today');
+      // The today card's control opens the sheet; a choice moves the preview.
+      await tap(tester, find.text(ko.dailyMinutesControl(20)));
+      await waitForChoices(tester, choice: ko.dailyMinutesChoice(10));
+      await tap(tester, find.text(ko.dailyMinutesChoice(30)));
+      await shot(tester, '16g-daily-minutes-sheet');
+      await tap(tester, find.text(ko.dailyMinutesCustom));
+      await shot(tester, '16h-daily-minutes-custom');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text('영단어 기본'));
 
@@ -389,7 +403,11 @@ void main() {
 
       await tap(tester, find.byTooltip(ko.account));
       await shot(tester, '18-account');
-      await tester.ensureVisible(find.text(ko.termsOfService));
+      await tester.scrollUntilVisible(
+        find.text(ko.termsOfService),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await shot(tester, '18b-account-footer');
       server.failure = const SyncOffline('no route to host');
@@ -819,6 +837,8 @@ void main() {
           }
         }
       });
+      // The 오늘 tab behind 기록 reads whether the minutes' step has shown.
+      final storage = await openStudyStorage(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -828,6 +848,7 @@ void main() {
                 const SignedIn(userId: _ada, email: 'ada@example.com'),
               ),
             ),
+            studyStorageProvider.overrideWithValue(storage),
             studyRepositoryProvider.overrideWithValue(study),
             schedulerProvider.overrideWithValue(scheduler),
             studyClockProvider.overrideWithValue(() => homeNow),

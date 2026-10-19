@@ -5,6 +5,7 @@ import { loadEngine } from "@/features/study";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { otherUser, testUser } from "@/testing/mocks/handlers";
+import { testRouter } from "@/testing/router";
 import { server } from "@/testing/mocks/server";
 import { cardRow, day, deckRow, reviewRow, start, stateRow, uuidOf } from "@/testing/library";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -34,6 +35,7 @@ beforeAll(async () => {
 }, 30_000);
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const due = { stability: 3, difficulty: 5, lastReview: start - 4 * day, due: start - day };
 const notDue = { stability: 30, difficulty: 5, lastReview: start - day, due: start + 9 * day };
@@ -703,5 +705,108 @@ describe("the 오늘 and 덱 pages", () => {
     postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
     await render(Today, {});
     expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
+  });
+
+  describe("the daily study minutes", () => {
+    /** One deck holding [count] cards never answered. */
+    const seedNew = (count: number) => {
+      postgrest.seed("decks", deckRow("d-fr", "French"));
+      postgrest.seed(
+        "cards",
+        ...Array.from({ length: count }, (_, index) =>
+          cardRow(`new-${String(index)}`, "d-fr", `new ${String(index)}`),
+        ),
+      );
+    };
+    const control = (minutes: number) =>
+      screen.getByRole("button", { name: `하루 공부 시간 ${String(minutes)}분, 바꾸기` });
+
+    it("show on the today card as a button reading 하루 20분, read as the time and a change", async () => {
+      seedNew(3);
+      await render(Today, {});
+
+      expect(control(20)).toHaveTextContent("하루 20분");
+      expect(control(20)).toHaveAttribute("aria-haspopup", "dialog");
+    });
+
+    it("open a dialog whose preview follows the choice, and saving stores them and reads the page again with today's new count", async () => {
+      seedNew(150);
+      await render(Today, {});
+      // 20 minutes at the unknown pace of 10 s: 120 new cards.
+      expect(todayLine()).toBe("120 장 · 약 20분");
+      const user = userEvent.setup();
+
+      await user.click(control(20));
+      const dialog = within(screen.getByRole("dialog", { name: "하루 공부 시간" }));
+      const preview = dialog.getByRole("status");
+      expect(dialog.getByRole("button", { name: "20분" })).toHaveAttribute("aria-pressed", "true");
+      expect(dialog.getByRole("button", { name: "20분" })).toHaveFocus();
+      expect(preview).toHaveTextContent("오늘 새 카드 약 120장 · 복습 0장");
+      // 120 today, the other 30 tomorrow.
+      expect(preview).toHaveTextContent("이대로면 남은 새 카드 150장을 1월 16일쯤 다 시작해요");
+
+      await user.click(dialog.getByRole("button", { name: "10분" }));
+      expect(dialog.getByRole("button", { name: "10분" })).toHaveAttribute("aria-pressed", "true");
+      expect(dialog.getByRole("button", { name: "20분" })).toHaveAttribute("aria-pressed", "false");
+      expect(preview).toHaveTextContent("오늘 새 카드 약 60장 · 복습 0장");
+      // 60 today, 60 tomorrow and 30 the day after.
+      expect(preview).toHaveTextContent("이대로면 남은 새 카드 150장을 1월 17일쯤 다 시작해요");
+      // Nothing is stored until 저장.
+      expect(postgrest.studySettings.has(testUser.id)).toBe(false);
+
+      await user.click(dialog.getByRole("button", { name: "직접 정하기" }));
+      await user.click(dialog.getByRole("button", { name: "5분 줄이기" }));
+      expect(dialog.getByRole("button", { name: "직접 · 5분" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(preview).toHaveTextContent("오늘 새 카드 약 30장 · 복습 0장");
+      // Five is the floor.
+      expect(dialog.getByRole("button", { name: "5분 줄이기" })).toBeDisabled();
+
+      await user.click(dialog.getByRole("button", { name: "저장" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+      expect(postgrest.studySettings.get(testUser.id)?.daily_minutes).toBe(5);
+      expect(testRouter.refresh).toHaveBeenCalledOnce();
+      expect(control(20)).toHaveFocus();
+
+      // The page read again counts today with the minutes saved.
+      cleanup();
+      await render(Today, {});
+      expect(todayLine()).toBe("30 장 · 약 5분");
+      expect(control(5)).toHaveTextContent("하루 5분");
+    });
+
+    it("give the control and every button of their dialog the shared hover and pressed state", async () => {
+      seedNew(3);
+      await render(Today, {});
+      expect(control(20)).toHaveClass("pressable");
+
+      await userEvent.setup().click(control(20));
+      await userEvent.setup().click(screen.getByRole("button", { name: "직접 정하기" }));
+      const dialog = within(screen.getByRole("dialog", { name: "하루 공부 시간" }));
+      for (const button of dialog.getAllByRole("button")) {
+        expect(button).toHaveClass("pressable");
+      }
+    });
+
+    it("close their dialog on Escape and on the close button, storing nothing", async () => {
+      seedNew(3);
+      await render(Today, {});
+      const user = userEvent.setup();
+
+      await user.click(control(20));
+      await user.click(screen.getByRole("button", { name: "30분" }));
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(control(20)).toHaveFocus();
+
+      await user.click(control(20));
+      await user.click(screen.getByRole("button", { name: "닫기" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(postgrest.studySettings.has(testUser.id)).toBe(false);
+    });
   });
 });

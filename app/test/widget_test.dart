@@ -21,6 +21,7 @@ import 'package:smartman/sync/sync.dart';
 
 import 'account/fake_account_service.dart';
 import 'sharing/fakes.dart';
+import 'study/minutes_sheet.dart';
 import 'sync/fake_sync_server.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
@@ -42,18 +43,21 @@ void main() {
   /// Composes the app over an in-memory database and theme storage holding
   /// [themeMode] when given, signed in through [account] when given and as a
   /// restored session otherwise, extracting cards through [extraction], and
-  /// sharing decks through [sharing].
+  /// sharing decks through [sharing]; the first-run daily minutes step has
+  /// shown unless [minutesAsked] is false.
   Future<void> pumpApp(
     WidgetTester tester, {
     String? themeMode,
     AccountService? account,
     ExtractionClient? extraction,
     SharingServer? sharing,
+    bool minutesAsked = true,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.withData({
           'themeMode': ?themeMode,
           studyCoachShownKey: true,
+          if (minutesAsked) dailyMinutesAskedKey: true,
         });
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
@@ -411,6 +415,37 @@ void main() {
   );
 
   testWidgets(
+    "the first-run daily minutes step waits for the 오늘 tab: none over the deck screen or on the 덱 tab when a deck gets its first card, then once on 오늘",
+    (tester) async {
+      await pumpApp(tester, minutesAsked: false);
+      await createDeckAndOpen(tester, 'French');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Decks'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('French'));
+      await tester.pumpAndSettle();
+      await addCard(tester, 'Chat', 'cat');
+      expect(find.byType(BottomSheet), findsNothing);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      // Back on the 덱 tab, the 오늘 tab behind it now has a card.
+      expect(find.text('My decks 1'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+      await waitForChoices(tester);
+      expect(
+        find.text('How many minutes a day will you study?'),
+        findsOneWidget,
+      );
+      await unmountApp(tester);
+    },
+  );
+
+  testWidgets(
     'with no card left and one answered today, the today card\'s Study and the deck\'s Study open the completion card',
     (tester) async {
       await pumpApp(tester);
@@ -450,6 +485,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text("You've done today's cards"), findsOneWidget);
+      // The done card's study button is below the rows the list builds first.
+      await tester.scrollUntilVisible(
+        find.text('Study'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('Done for today'), findsOneWidget);
@@ -633,7 +674,12 @@ void main() {
         await tester.tap(find.byTooltip('Account'));
         await tester.pumpAndSettle();
         await meetsGuidelines();
-        await tester.ensureVisible(find.text('Terms of Service'));
+        // The foot is below the rows the screen builds first.
+        await tester.scrollUntilVisible(
+          find.text('Terms of Service'),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.pumpAndSettle();
         await meetsGuidelines();
         await unmountApp(tester);

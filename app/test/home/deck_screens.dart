@@ -76,6 +76,7 @@ class DeckScreens {
     bool stalled = false,
     bool photoImport = false,
     ThemeMode themeMode = ThemeMode.light,
+    bool minutesAsked = true,
   }) async {
     // A phone's screen, so every card of a short deck is on it under the
     // pinned row.
@@ -126,7 +127,7 @@ class DeckScreens {
       deck,
       GlobalKey<NavigatorState>(),
     );
-    final storage = await openStudyStorage(tester);
+    final storage = await openStudyStorage(tester, minutesAsked: minutesAsked);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

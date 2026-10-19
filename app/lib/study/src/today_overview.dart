@@ -30,9 +30,9 @@ final class OverviewUnavailable extends TodayOverviewRead {
   final String message;
 }
 
-/// Today's [count], the daily [goal], the [streak] of study days, and the
+/// Today's [count], the daily [goal], the [streak] of study days, the
 /// [forecast] of the cards due on each of the next [forecastDays] study days,
-/// which start at [days].
+/// which start at [days], and the [dailyMinutes] the user studies a day.
 final class TodayOverview extends TodayOverviewRead {
   const TodayOverview({
     required this.count,
@@ -41,6 +41,7 @@ final class TodayOverview extends TodayOverviewRead {
     required this.forecast,
     required this.days,
     required this.load,
+    required this.dailyMinutes,
   });
 
   final TodayCounted count;
@@ -54,6 +55,9 @@ final class TodayOverview extends TodayOverviewRead {
   /// The reviews an average day asks for at the cards' current intervals,
   /// rounded up, at least one: the pace a backlog's catch-up is projected at.
   final int load;
+
+  /// The daily study minutes the day takes: the user's, or the default.
+  final int dailyMinutes;
 
   /// In a backlog, the overdue reviews left at the start of each day of
   /// [forecast] when the user clears [load] of them a day ([catchUp]).
@@ -135,6 +139,7 @@ class _TodayOverviewReaderState extends ConsumerState<TodayOverviewReader> {
         offsetAt: zone,
       ),
       load: max(1, dailyLoad(today.states.values).ceil()),
+      dailyMinutes: today.dailyMinutes,
       days: [
         for (final day in days)
           if (day.toUtc().add(zone(day)) case final wall)

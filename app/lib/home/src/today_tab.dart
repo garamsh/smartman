@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -22,7 +23,8 @@ import 'hero.dart';
 /// catch-up at an average day's load; once today's cards are done, the done
 /// card, the seven days and 학습하기. While no deck holds a card, by
 /// [counts], how to start: with one deck, adding cards to it; with more,
-/// [onShowDecks], which shows the 덱 tab.
+/// [onShowDecks], which shows the 덱 tab. Showing a day with cards, it asks for
+/// the daily study minutes once ([FirstDailyMinutes]).
 class TodayTab extends StatelessWidget {
   const TodayTab({
     super.key,
@@ -59,7 +61,10 @@ class TodayTab extends StatelessWidget {
                   AppSpace.s24,
                 ),
                 children: switch (overview) {
+                  // The first-run step asks for the minutes once a deck has
+                  // cards.
                   TodayOverview(count: TodayCounted(total: 0)) => [
+                    const FirstDailyMinutes(),
                     _DoneCard(overview: overview),
                     const SizedBox(height: AppSpace.s12),
                     _Forecast(overview: overview),
@@ -72,6 +77,7 @@ class TodayTab extends StatelessWidget {
                     ),
                   ],
                   TodayOverview(count: TodayCounted(backlog: true)) => [
+                    const FirstDailyMinutes(),
                     _BacklogCard(
                       overview: overview,
                       onStudy: () => _study(context, all),
@@ -80,6 +86,7 @@ class TodayTab extends StatelessWidget {
                     _CatchUp(overview: overview),
                   ],
                   TodayOverview() => [
+                    const FirstDailyMinutes(),
                     _TodayCard(
                       overview: overview,
                       onStudy: () => _study(context, all),
@@ -167,8 +174,8 @@ class _NoCards extends StatelessWidget {
   }
 }
 
-void _study(BuildContext context, DeckSelection decks) => Navigator.of(context)
-    .push(MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)));
+void _study(BuildContext context, DeckSelection decks) =>
+    unawaited(openStudy(context, decks));
 
 /// The horizontal lockup as the top bar's title, read as the app's name.
 class BrandTitle extends StatelessWidget {
@@ -200,7 +207,10 @@ class AccountButton extends StatelessWidget {
       icon: const AccountAvatar(size: AppSize.smallAvatar),
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => const AccountScreen(syncStatus: SyncStatusView()),
+          builder: (_) => const AccountScreen(
+            syncStatus: SyncStatusView(),
+            studySetting: DailyMinutesRow(),
+          ),
         ),
       ),
     ),
@@ -270,6 +280,13 @@ class _TodayCard extends StatelessWidget {
             ),
             _GoalRing(goal: goal),
           ],
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: DailyMinutesButton(
+            minutes: overview.dailyMinutes,
+            onHero: true,
+          ),
         ),
         Wrap(
           spacing: AppSpace.s8,
@@ -368,11 +385,16 @@ class _BacklogCard extends StatelessWidget {
             ),
           ],
         ),
-        if (overview.streak > 0)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _StreakChip(days: overview.streak, onHero: true),
-          ),
+        Wrap(
+          spacing: AppSpace.s8,
+          runSpacing: AppSpace.s8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            DailyMinutesButton(minutes: overview.dailyMinutes, onHero: true),
+            if (overview.streak > 0)
+              _StreakChip(days: overview.streak, onHero: true),
+          ],
+        ),
         AppButton(
           label: l10n.backlogStudy(count.total, count.minutes),
           icon: LucideIcons.play,
@@ -580,7 +602,9 @@ class _DoneCard extends StatelessWidget {
               spacing: AppSpace.s8,
               runSpacing: AppSpace.s8,
               alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                DailyMinutesButton(minutes: overview.dailyMinutes),
                 if (overview.streak > 0)
                   _StreakChip(days: overview.streak, onHero: false),
                 if (overview.goal.reached)

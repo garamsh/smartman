@@ -86,7 +86,10 @@ void main() {
     FakeSyncServer? server,
   }) async {
     SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.withData({studyCoachShownKey: true});
+        InMemorySharedPreferencesAsync.withData({
+          studyCoachShownKey: true,
+          dailyMinutesAskedKey: true,
+        });
     final themeStorage = (await tester.runAsync(
       () => SharedPreferencesWithCache.create(
         cacheOptions: const SharedPreferencesWithCacheOptions(

@@ -71,7 +71,10 @@ void main() {
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const AccountScreen(syncStatus: SyncStatusView()),
+          home: const AccountScreen(
+            syncStatus: SyncStatusView(),
+            studySetting: SizedBox.shrink(),
+          ),
         ),
       ),
     );

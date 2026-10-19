@@ -7,8 +7,10 @@ import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/photo_import/photo_import.dart';
+import 'package:smartman/study/study.dart' show StudyScreen;
 
 import '../deck/whole_cards.dart';
+import '../study/minutes_sheet.dart';
 import 'deck_screens.dart';
 
 /// The front of every card row on screen, top to bottom.
@@ -75,6 +77,38 @@ void main() {
 
       await screens.tap(find.text('Study'));
 
+      expect(screens.session, {screens.deck.id});
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a first session asks for the daily study minutes once, before it opens',
+    (tester) async {
+      final screens = await DeckScreens.open(
+        tester,
+        cards: cards,
+        minutesAsked: false,
+      );
+      await screens.push((deck) => DeckScreen(deck: deck));
+
+      await screens.tap(find.text('Study'));
+      expect(
+        find.text('How many minutes a day will you study?'),
+        findsOneWidget,
+      );
+      expect(find.byType(StudyScreen), findsNothing);
+      await waitForChoices(tester);
+      await screens.tap(find.text('Custom'));
+      await screens.tap(find.byTooltip('5 minutes less'));
+      await screens.tap(find.text('Save'));
+
+      expect(screens.session, {screens.deck.id});
+      // Control: once shown, the next session opens at once.
+      screens.navigator.currentState?.pop();
+      await tester.pumpAndSettle();
+      await screens.tap(find.text('Study'));
+      expect(find.byType(BottomSheet), findsNothing);
       expect(screens.session, {screens.deck.id});
       await screens.close();
     },

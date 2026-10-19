@@ -65,7 +65,9 @@ final class TodayUnavailable extends TodayCount {
 
 /// What [decks] hold for today, read through [ref]: their cards and the
 /// stored states of those reviewed, the study day, its [DayPlan] from today's
-/// list, and the count of the cards left at the user's pace.
+/// list, the count of the cards left at the user's pace, and, across every
+/// deck, the reviews [due] as the day stood when it started, the cards
+/// [started] in it and the [dailyMinutes] ([readStudyDay]).
 ///
 /// A failed read throws the [DeckFailure] or `StudyFailure` that reports it.
 Future<
@@ -75,6 +77,9 @@ Future<
     StudyDay day,
     DayPlan plan,
     TodayCounted count,
+    int due,
+    int started,
+    int dailyMinutes,
   })
 >
 readToday(DeckSelection decks, WidgetRef ref) async {
@@ -84,7 +89,7 @@ readToday(DeckSelection decks, WidgetRef ref) async {
     ref.read(deckRepositoryProvider),
     repository,
   );
-  final (day, pace) = await readStudyDay(
+  final (:day, :pace, :due, :started, :dailyMinutes) = await readStudyDay(
     repository,
     ref.read(studyClockProvider)(),
     ref.read(studyZoneProvider),
@@ -102,7 +107,16 @@ readToday(DeckSelection decks, WidgetRef ref) async {
   final count = plan.selected.backlog
       ? TodayCounted.backlog(review: plan.left, pace: pace)
       : TodayCounted(review: plan.left - fresh, fresh: fresh, pace: pace);
-  return (cards: cards, states: states, day: day, plan: plan, count: count);
+  return (
+    cards: cards,
+    states: states,
+    day: day,
+    plan: plan,
+    count: count,
+    due: due,
+    started: started,
+    dailyMinutes: dailyMinutes,
+  );
 }
 
 /// Builds what the caller shows of a [TodayCount].

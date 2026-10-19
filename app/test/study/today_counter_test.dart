@@ -65,7 +65,7 @@ class _UnreadableStates implements StudyRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<int> dailyMinutes() => throw UnimplementedError();
+  Future<int?> dailyMinutes() => throw UnimplementedError();
 
   @override
   Future<void> setDailyMinutes(int minutes, {required DateTime at}) =>

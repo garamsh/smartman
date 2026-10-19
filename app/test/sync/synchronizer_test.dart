@@ -521,10 +521,10 @@ void main() {
       expect(server.studySettings[_ada]?.dailyMinutes, 45);
       expect(await a.store.hasUnsynced(), isFalse);
       expect(await b.study.dailyMinutes(), 45);
-      // Control: a device that never synced still reads the default.
+      // Control: a device that never synced holds none.
       final fresh = Device('fresh', server, scheduler);
       addTearDown(fresh.close);
-      expect(await fresh.study.dailyMinutes(), 20);
+      expect(await fresh.study.dailyMinutes(), isNull);
     });
 
     test('the later edit wins: a later server setting replaces an older device one, and a later unsynced device one is kept and pushed', () async {
@@ -580,11 +580,11 @@ void main() {
 
       await a.sync(_grace);
 
-      expect(await a.study.dailyMinutes(), 20);
+      expect(await a.study.dailyMinutes(), isNull);
       expect(server.studySettings[_grace], isNull);
       await a.study.setDailyMinutes(15, at: a.now);
       await a.store.clear();
-      expect(await a.study.dailyMinutes(), 20);
+      expect(await a.study.dailyMinutes(), isNull);
     });
   });
 }

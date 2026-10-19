@@ -28,6 +28,7 @@ const shared = {
   defaultDailyMinutes: queue.defaultDailyMinutes,
   minDailyMinutes: queue.minDailyMinutes,
   maxDailyMinutes: queue.maxDailyMinutes,
+  dailyMinuteStep: queue.dailyMinuteStep,
   studyDayWindow: queue.studyDayWindow,
   paceHalfLife: queue.paceHalfLife,
   answerCapMs: queue.answerCapMs,
