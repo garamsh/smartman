@@ -404,6 +404,11 @@ const openRouterModels = http.get("https://openrouter.ai/api/v1/models", () =>
         architecture: { input_modalities: ["text"] },
         supported_parameters: ["structured_outputs"],
       },
+      {
+        id: "vendor/no-schema",
+        architecture: { input_modalities: ["text", "image"] },
+        supported_parameters: ["max_tokens"],
+      },
     ],
   }),
 );
@@ -456,9 +461,11 @@ describe("the plans page", () => {
     expect(await attempt("vendor/unknown")).toEqual({
       message: "OpenRouter에 없는 모델이에요. 모델 ID를 확인해 주세요.",
     });
-    expect(await attempt("vendor/text-only")).toEqual({
-      message: "사진과 구조화된 답을 함께 지원하지 않는 모델이에요.",
-    });
+    for (const model of ["vendor/text-only", "vendor/no-schema"]) {
+      expect(await attempt(model), model).toEqual({
+        message: "사진과 구조화된 답을 함께 지원하지 않는 모델이에요.",
+      });
+    }
     expect(await attempt("not a model")).toEqual({
       message: "모델 ID는 vendor/model 꼴로 적어 주세요.",
     });
