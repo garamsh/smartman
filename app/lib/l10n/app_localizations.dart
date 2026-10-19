@@ -709,6 +709,12 @@ abstract class AppLocalizations {
   /// **'응답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.'**
   String get answerNotSaved;
 
+  /// Shown when the daily study minutes could not be written to the local database.
+  ///
+  /// In ko, this message translates to:
+  /// **'공부 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.'**
+  String get settingNotSaved;
+
   /// Heading of the completion card, shown in the current card's place once no card is left today.
   ///
   /// In ko, this message translates to:

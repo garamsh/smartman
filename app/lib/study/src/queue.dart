@@ -4,32 +4,25 @@ import '../../deck/deck.dart';
 import 'model.dart';
 import 'study_repository.dart';
 
-/// How many never-reviewed cards a study day takes, across all the user's
-/// decks, while the window holds fewer than [coldStartStudyDays] study days.
-const coldStartNewCards = 20;
+/// The daily study minutes while the user has set none (ADR 0085).
+const defaultDailyMinutes = 20;
 
-/// The study days the window must hold before a day's new cards follow the
-/// user's own study time and pace.
-const coldStartStudyDays = 5;
+/// The fewest daily study minutes the user can set.
+const minDailyMinutes = 5;
 
-/// How many of the latest study days before today the study time and the pace
-/// are read from.
+/// The most daily study minutes the user can set.
+const maxDailyMinutes = 180;
+
+/// The daily study minutes offered as one-tap choices.
+const dailyMinutePresets = [10, 15, 20, 30, 45, 60];
+
+/// How many of the latest study days before today the pace is read from.
 const studyDayWindow = 30;
-
-/// The half-life, in study days, of a study day's weight in the study time.
-const studyTimeHalfLife = 7;
 
 /// The half-life, in study days, of an answer's weight in the pace.
 const paceHalfLife = 7;
 
-/// The most the study time moves from one study day's to the next, in percent.
-const studyTimeStepPercent = 10;
-
-/// Over how many days the reviews due beyond the daily load are spread.
-const reviewSpreadDays = 7;
-
-/// The most of one answer's duration the study time and the pace count, in
-/// milliseconds.
+/// The most of one answer's duration the pace counts, in milliseconds.
 const answerCapMs = 30000;
 
 /// The fewest answers of a kind the window must hold for its pace to be read.
@@ -117,7 +110,7 @@ final class StudyDay {
   factory StudyDay.at(
     DateTime now, {
     required Iterable<DateTime> firstAnswers,
-    int newCards = coldStartNewCards,
+    required int newCards,
     UtcOffsetAt offsetAt = localOffsetAt,
   }) {
     final start = studyDayStart(now, offsetAt);

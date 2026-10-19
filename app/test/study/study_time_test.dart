@@ -42,62 +42,60 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   group('the figure', () {
-    test('a steady history sets aside its reviews at the review pace and fills the rest of its study time with new cards at the first-answer pace', () {
-      expect(studyTime(_steady), 240000);
-      expect(paceOf(_steady), const Pace(reviewMs: 4000, firstMs: 8000));
-      // (240 s - 30 reviews at 4 s) / 8 s.
-      expect(dailyNewCards(_steady, due: 30, load: 30), 15);
+    test('new cards fill the daily minutes left after the due reviews, the reviews at the review pace and the new cards at the first-answer pace', () {
+      final pace = paceOf(_steady);
+      expect(pace, const Pace(reviewMs: 4000, firstMs: 8000));
+      // (20 min - 30 reviews at 4 s) / 8 s.
+      expect(dailyNewCards(minutes: 20, due: 30, pace: pace), 135);
+      // (4 min - 30 reviews at 4 s) / 8 s.
+      expect(dailyNewCards(minutes: 4, due: 30, pace: pace), 15);
+      expect(dailyNewCards(minutes: 4, due: 0, pace: pace), 30);
     });
 
-    test('reviews due beyond the daily load crowd out new cards, spread over a week, down to none', () {
-      expect(dailyNewCards(_steady, due: 30, load: 30), 15);
-      // 30 + 30 / 7 reviews set aside: (240 - 137.1) s / 8 s.
-      expect(dailyNewCards(_steady, due: 60, load: 30), 12);
-      expect(dailyNewCards(_steady, due: 90, load: 30), 10);
-      // The daily load alone fills the study time, and more leaves none.
-      expect(dailyNewCards(_steady, due: 60, load: 60), 0);
-      expect(dailyNewCards(_steady, due: 100, load: 70), 0);
-      // Fewer due than the daily load set aside the load.
-      expect(dailyNewCards(_steady, due: 0, load: 30), 15);
+    test('due reviews crowd out new cards, down to none and never below', () {
+      final pace = paceOf(_steady);
+      // 60 reviews at 4 s fill 4 minutes; more leave none.
+      expect(dailyNewCards(minutes: 4, due: 60, pace: pace), 0);
+      expect(dailyNewCards(minutes: 4, due: 100, pace: pace), 0);
+      // Control: one review fewer leaves room for half a card, rounded down.
+      expect(dailyNewCards(minutes: 4, due: 59, pace: pace), 0);
+      expect(dailyNewCards(minutes: 4, due: 58, pace: pace), 1);
     });
 
-    test(
-      'a cold start takes 20 new cards until the window holds five study days',
-      () {
-        expect(coldStartNewCards, 20);
-        expect(coldStartStudyDays, 5);
-        expect(dailyNewCards(_steady.sublist(0, 4), due: 0, load: 0), 20);
-        expect(dailyNewCards(const [], due: 0, load: 0), 20);
-        // Control: from five study days the figure is the user's own.
-        expect(dailyNewCards(_steady.sublist(0, 5), due: 30, load: 30), 15);
-      },
-    );
-
-    test('the study time moves at most 10% from one study day to the next', () {
-      // A day of 10 minutes after ten of 4: 50 reviews and 50 first answers.
-      final jump = [..._steady, _day(reviews: 50, firsts: 50)];
-
-      expect(studyTime(_steady), 240000);
-      expect(studyTime(jump), 264000);
-      // (264 s - 120 s) / 8 s.
-      expect(dailyNewCards(jump, due: 30, load: 30), 18);
+    test('the default is 20 minutes, the choices run from 5 to 180, and with no history every answer takes 10 s', () {
+      expect(defaultDailyMinutes, 20);
+      expect(dailyMinutePresets, [10, 15, 20, 30, 45, 60]);
+      expect((minDailyMinutes, maxDailyMinutes), (5, 180));
+      expect(paceOf(const []), Pace.unknown);
+      // 20 minutes of 10 s answers, from the first day: no cold start.
+      expect(
+        dailyNewCards(minutes: defaultDailyMinutes, due: 0, pace: Pace.unknown),
+        120,
+      );
     });
 
-    test(
-      'a recent long week outweighs an older short month in the study time',
-      () {
-        // 23 study days of 2 minutes, then 7 of 4.
-        final days = [
-          ...List.filled(23, _day(reviews: 10, firsts: 10)),
-          ...List.filled(7, _day()),
-        ];
-        final plainMean = (23 * 120000 + 7 * 240000) / 30;
+    test('the day the last new card is first answered: today when today takes them all, later at the daily figure, and never with none a day', () {
+      final today = studyDayStart(_now, _utc);
+      DateTime? last(int remaining, int todayTakes, int perDay) =>
+          lastNewCardDay(
+            remaining: remaining,
+            today: todayTakes,
+            perDay: perDay,
+            todayStart: today,
+            offsetAt: _utc,
+          );
 
-        expect(plainMean, 148000);
-        // Nearer the week's 4 minutes than the month's 2.
-        expect(studyTime(days), greaterThan(180000));
-      },
-    );
+      expect(last(10, 15, 15), today);
+      expect(last(15, 15, 15), today);
+      // 85 left after today, 15 a day: the sixth day after today.
+      expect(last(100, 15, 15), DateTime.utc(2026, 10, 20, 4));
+      expect(last(16, 15, 15), DateTime.utc(2026, 10, 15, 4));
+      // 30 left after today, 15 a day: exactly two more days.
+      expect(last(45, 15, 15), DateTime.utc(2026, 10, 16, 4));
+      // Control: none a day after today never takes them all.
+      expect(last(16, 15, 0), isNull);
+      expect(last(15, 15, 0), today);
+    });
 
     test(
       'a recent fast week outweighs an older slow month in the review pace',
@@ -190,32 +188,17 @@ void main() {
     /// 10:00 UTC [days] study days before [_now]'s.
     DateTime daysAgo(int days) => DateTime.utc(2026, 10, 14 - days, 10);
 
-    test(
-      'days without an answer are left out, so rest lowers no study time',
-      () async {
-        // An answer of 6 s on every other day: five study days, four rests.
-        for (final days in [9, 7, 5, 3, 1]) {
-          await answer('card $days', [daysAgo(days)]);
-        }
+    test('days without an answer are left out, so the window holds the latest study days whatever rest lies between them', () async {
+      // An answer of 6 s on every other day: five study days, four rests.
+      for (final days in [9, 7, 5, 3, 1]) {
+        await answer('card $days', [daysAgo(days)]);
+      }
 
-        final read = await readStudyDays(
-          study,
-          studyDayStart(_now, _utc),
-          _utc,
-        );
+      final read = await readStudyDays(study, studyDayStart(_now, _utc), _utc);
 
-        expect(read, hasLength(5));
-        expect(studyTime(read), 6000);
-        // Control: the same answers counted with the rests as days of no time.
-        final withRests = [
-          for (final day in read) ...[
-            day,
-            (reviewMs: 0, reviews: 0, firstMs: 0, firstAnswers: 0),
-          ],
-        ]..removeLast();
-        expect(studyTime(withRests), lessThan(6000));
-      },
-    );
+      expect(read, hasLength(5));
+      expect(read.first.firstMs, 6000);
+    });
 
     test('each answer counts at most 30 s, and the stored one keeps its whole time', () async {
       await answer('idle', [daysAgo(1)], duration: const Duration(minutes: 10));
@@ -244,8 +227,8 @@ void main() {
       );
       final (day, pace) = await readStudyDay(study, _now, _utc);
       expect(window, hasLength(30));
-      // (24 s - a load of 2 reviews at 6 s) / 6 s.
-      expect(day.newCardsLeft, 2);
+      // (20 min - the oldest day's 2 cards, due today, at 6 s) / 6 s.
+      expect(day.newCardsLeft, 198);
 
       // Ten earlier study days of 25 s answers, before the window: the longer
       // history another device holds, of a card with no state, so only the
@@ -334,6 +317,28 @@ void main() {
       // the same before and after, less that card.
       expect(before.newCardsLeft, greaterThan(1));
       expect(after.newCardsLeft, before.newCardsLeft - 1);
+    });
+
+    test('the daily minutes the user stores apply to today at once, and the default holds until then', () async {
+      await answer('known', [daysAgo(1)]);
+      final (unset, pace) = await readStudyDay(study, _now, _utc);
+      expect(await study.dailyMinutes(), defaultDailyMinutes);
+      expect(
+        unset.newCardsLeft,
+        dailyNewCards(minutes: defaultDailyMinutes, due: 0, pace: pace),
+      );
+
+      await study.setDailyMinutes(5, at: _now);
+      final (changed, _) = await readStudyDay(study, _now, _utc);
+
+      expect(await study.dailyMinutes(), 5);
+      expect(
+        changed.newCardsLeft,
+        dailyNewCards(minutes: 5, due: 0, pace: pace),
+      );
+      expect(changed.newCardsLeft, lessThan(unset.newCardsLeft));
+      final row = await db.select(db.studySettings).getSingle();
+      expect((row.dailyMinutes, row.dirty), (5, true));
     });
   });
 }

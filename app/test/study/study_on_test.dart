@@ -70,6 +70,10 @@ class _Deck {
       newId: () => 'id${ids++}',
     );
     final deck = await cards.createDeck('French');
+    await StudyRepository(
+      db,
+      newId: () => 'setting',
+    ).setDailyMinutes(5, at: created);
     for (final name in names) {
       await cards.addCard(
         deck.id,
@@ -154,9 +158,10 @@ String _current(StudySession session) => switch (session.state) {
 const _know = Answer.know;
 const _dontKnow = Answer.dontKnow;
 
-/// The first study day's new cards, which a deck of more cards stops short
-/// of.
-const _today = coldStartNewCards;
+/// The day's new cards: the 5 daily minutes [_Deck] stores, at 10 s a card,
+/// the pace while too few answers are stored. A deck of more cards stops short
+/// of them.
+const _today = 30;
 
 /// The fronts of a deck of [count] cards, created oldest first.
 List<String> _names(int count) => [
@@ -213,6 +218,7 @@ void main() {
         StudyDay.at(
           _now,
           firstAnswers: [for (final answer in stored) answer.at],
+          newCards: _today,
           offsetAt: _utc,
         ),
         [

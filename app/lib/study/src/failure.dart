@@ -26,6 +26,17 @@ final class AnswerNotSaved extends StudyFailure {
   String toString() => 'AnswerNotSaved: $cause';
 }
 
+/// The local database failed to store the daily study minutes; the stored
+/// setting is unchanged.
+final class SettingNotSaved extends StudyFailure {
+  const SettingNotSaved(this.cause);
+
+  final Exception cause;
+
+  @override
+  String toString() => 'SettingNotSaved: $cause';
+}
+
 /// The engine refused to schedule a review.
 final class SchedulingFailure extends StudyFailure {
   const SchedulingFailure(this.cause);

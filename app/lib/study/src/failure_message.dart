@@ -6,5 +6,6 @@ String describeStudyFailure(AppLocalizations l10n, StudyFailure failure) =>
     switch (failure) {
       StudyStorageFailure() => l10n.storageFailure,
       AnswerNotSaved() => l10n.answerNotSaved,
+      SettingNotSaved() => l10n.settingNotSaved,
       SchedulingFailure() => l10n.schedulingFailure,
     };

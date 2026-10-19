@@ -8,7 +8,6 @@ import {
   type CardState,
   type CardStates,
   dailyLoad,
-  coldStartNewCards,
   orderQueue,
   selectQueue,
   streak,
@@ -19,10 +18,12 @@ import {
 import { type Random, seededRandom } from "../random";
 
 const day = 86_400_000;
+/** The new cards a day takes in these cases, as the daily minutes would set them. */
+const quota = 20;
 const hour = 3_600_000;
 const now = Date.UTC(2026, 0, 15, 9);
 /** The study day holding [now] in UTC, with no new card answered in it. */
-const today = studyDay(now, [], "UTC");
+const today = studyDay(now, [], "UTC", quota);
 
 type TestCard = { id: CardId; createdAt: number };
 
@@ -154,14 +155,13 @@ describe("the study day", () => {
   it("runs from 04:00 to 04:00 local time across a change of offset", () => {
     // Clocks in Los Angeles go back from UTC-7 to UTC-8 at 09:00 UTC on 1 November 2026; at
     // 10:00 UTC it is 02:00 PST, still in the day of 31 October.
-    const day = studyDay(Date.UTC(2026, 10, 1, 10), [], losAngeles);
+    const day = studyDay(Date.UTC(2026, 10, 1, 10), [], losAngeles, quota);
 
     expect(day.start).toBe(Date.UTC(2026, 9, 31, 11));
     expect(day.end).toBe(Date.UTC(2026, 10, 1, 12));
   });
 
-  it("takes 20 new cards less those first answered in it, counting 04:00 and not 03:59", () => {
-    expect(coldStartNewCards).toBe(20);
+  it("takes its new cards less those first answered in it, counting 04:00 and not 03:59", () => {
     // 11:00 on 15 October in Seoul; the day began at 19:00 UTC on the 14th.
     const at = Date.UTC(2026, 9, 15, 2);
     const firstAnswers = [
@@ -169,7 +169,7 @@ describe("the study day", () => {
       Date.UTC(2026, 9, 15),
       Date.UTC(2026, 9, 14, 18, 59),
     ];
-    const day = studyDay(at, firstAnswers, seoul);
+    const day = studyDay(at, firstAnswers, seoul, quota);
     const cards = Array.from({ length: 30 }, (_, index) => card(`new${String(index)}`));
 
     expect(day.newCardsLeft).toBe(18);
@@ -182,14 +182,14 @@ describe("the study day", () => {
     // 11:00 in Seoul, 19:00 the day before in Los Angeles.
     const at = Date.UTC(2026, 9, 15, 2);
 
-    expect(studyDay(at, answered, seoul).newCardsLeft).toBe(20);
-    expect(studyDay(at, answered, losAngeles).newCardsLeft).toBe(19);
+    expect(studyDay(at, answered, seoul, quota).newCardsLeft).toBe(20);
+    expect(studyDay(at, answered, losAngeles, quota).newCardsLeft).toBe(19);
   });
 
   it("carries no unused quota to the next day, and does not count the day before's new cards", () => {
     const yesterday = Array.from({ length: 5 }, () => now - day);
     const cards = Array.from({ length: 50 }, (_, index) => card(`new${String(index)}`));
-    const next = studyDay(now, yesterday, "UTC");
+    const next = studyDay(now, yesterday, "UTC", quota);
 
     expect(next.newCardsLeft).toBe(20);
     expect(selectQueue(cards, {}, next).cards).toHaveLength(20);
@@ -201,6 +201,7 @@ describe("the study day", () => {
       now,
       Array.from({ length: 25 }, () => morning),
       "UTC",
+      quota,
     );
 
     expect(over.newCardsLeft).toBe(0);
@@ -210,6 +211,7 @@ describe("the study day", () => {
       now,
       Array.from({ length: 19 }, () => morning),
       "UTC",
+      quota,
     );
     expect(ids(selectQueue([card("new")], {}, fewer).cards)).toEqual(["new"]);
   });

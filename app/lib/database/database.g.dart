@@ -2657,6 +2657,310 @@ class SyncStateCompanion extends UpdateCompanion<SyncStateRow> {
   }
 }
 
+class $StudySettingsTable extends StudySettings
+    with TableInfo<$StudySettingsTable, StudySettingsRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StudySettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    check: () => const CustomExpression('id = 0'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dailyMinutesMeta = const VerificationMeta(
+    'dailyMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> dailyMinutes = GeneratedColumn<int>(
+    'daily_minutes',
+    aliasedName,
+    false,
+    check: () => const CustomExpression('daily_minutes BETWEEN 5 AND 180'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> updatedAt =
+      GeneratedColumn<DateTime>(
+        'updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($StudySettingsTable.$converterupdatedAt);
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, dailyMinutes, updatedAt, dirty];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'study_settings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StudySettingsRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('daily_minutes')) {
+      context.handle(
+        _dailyMinutesMeta,
+        dailyMinutes.isAcceptableOrUnknown(
+          data['daily_minutes']!,
+          _dailyMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_dailyMinutesMeta);
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StudySettingsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StudySettingsRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      dailyMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}daily_minutes'],
+      )!,
+      updatedAt: $StudySettingsTable.$converterupdatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}updated_at'],
+        )!,
+      ),
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
+    );
+  }
+
+  @override
+  $StudySettingsTable createAlias(String alias) {
+    return $StudySettingsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, DateTime> $converterupdatedAt =
+      const StoredTime();
+}
+
+class StudySettingsRow extends DataClass
+    implements Insertable<StudySettingsRow> {
+  final int id;
+  final int dailyMinutes;
+  final DateTime updatedAt;
+  final bool dirty;
+  const StudySettingsRow({
+    required this.id,
+    required this.dailyMinutes,
+    required this.updatedAt,
+    required this.dirty,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['daily_minutes'] = Variable<int>(dailyMinutes);
+    {
+      map['updated_at'] = Variable<DateTime>(
+        $StudySettingsTable.$converterupdatedAt.toSql(updatedAt),
+      );
+    }
+    map['dirty'] = Variable<bool>(dirty);
+    return map;
+  }
+
+  StudySettingsCompanion toCompanion(bool nullToAbsent) {
+    return StudySettingsCompanion(
+      id: Value(id),
+      dailyMinutes: Value(dailyMinutes),
+      updatedAt: Value(updatedAt),
+      dirty: Value(dirty),
+    );
+  }
+
+  factory StudySettingsRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StudySettingsRow(
+      id: serializer.fromJson<int>(json['id']),
+      dailyMinutes: serializer.fromJson<int>(json['dailyMinutes']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'dailyMinutes': serializer.toJson<int>(dailyMinutes),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'dirty': serializer.toJson<bool>(dirty),
+    };
+  }
+
+  StudySettingsRow copyWith({
+    int? id,
+    int? dailyMinutes,
+    DateTime? updatedAt,
+    bool? dirty,
+  }) => StudySettingsRow(
+    id: id ?? this.id,
+    dailyMinutes: dailyMinutes ?? this.dailyMinutes,
+    updatedAt: updatedAt ?? this.updatedAt,
+    dirty: dirty ?? this.dirty,
+  );
+  StudySettingsRow copyWithCompanion(StudySettingsCompanion data) {
+    return StudySettingsRow(
+      id: data.id.present ? data.id.value : this.id,
+      dailyMinutes: data.dailyMinutes.present
+          ? data.dailyMinutes.value
+          : this.dailyMinutes,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudySettingsRow(')
+          ..write('id: $id, ')
+          ..write('dailyMinutes: $dailyMinutes, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('dirty: $dirty')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, dailyMinutes, updatedAt, dirty);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StudySettingsRow &&
+          other.id == this.id &&
+          other.dailyMinutes == this.dailyMinutes &&
+          other.updatedAt == this.updatedAt &&
+          other.dirty == this.dirty);
+}
+
+class StudySettingsCompanion extends UpdateCompanion<StudySettingsRow> {
+  final Value<int> id;
+  final Value<int> dailyMinutes;
+  final Value<DateTime> updatedAt;
+  final Value<bool> dirty;
+  const StudySettingsCompanion({
+    this.id = const Value.absent(),
+    this.dailyMinutes = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
+  });
+  StudySettingsCompanion.insert({
+    this.id = const Value.absent(),
+    required int dailyMinutes,
+    required DateTime updatedAt,
+    this.dirty = const Value.absent(),
+  }) : dailyMinutes = Value(dailyMinutes),
+       updatedAt = Value(updatedAt);
+  static Insertable<StudySettingsRow> custom({
+    Expression<int>? id,
+    Expression<int>? dailyMinutes,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? dirty,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (dailyMinutes != null) 'daily_minutes': dailyMinutes,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (dirty != null) 'dirty': dirty,
+    });
+  }
+
+  StudySettingsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? dailyMinutes,
+    Value<DateTime>? updatedAt,
+    Value<bool>? dirty,
+  }) {
+    return StudySettingsCompanion(
+      id: id ?? this.id,
+      dailyMinutes: dailyMinutes ?? this.dailyMinutes,
+      updatedAt: updatedAt ?? this.updatedAt,
+      dirty: dirty ?? this.dirty,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (dailyMinutes.present) {
+      map['daily_minutes'] = Variable<int>(dailyMinutes.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(
+        $StudySettingsTable.$converterupdatedAt.toSql(updatedAt.value),
+      );
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StudySettingsCompanion(')
+          ..write('id: $id, ')
+          ..write('dailyMinutes: $dailyMinutes, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('dirty: $dirty')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2665,6 +2969,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ReviewsTable reviews = $ReviewsTable(this);
   late final $CardStatesTable cardStates = $CardStatesTable(this);
   late final $SyncStateTable syncState = $SyncStateTable(this);
+  late final $StudySettingsTable studySettings = $StudySettingsTable(this);
   late final Index decksUnsynced = Index(
     'decks_unsynced',
     'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
@@ -2707,6 +3012,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reviews,
     cardStates,
     syncState,
+    studySettings,
     decksUnsynced,
     cardsDeckIdCardKey,
     cardsDeckIdCreatedAt,
@@ -4710,6 +5016,197 @@ typedef $$SyncStateTableProcessedTableManager =
       SyncStateRow,
       PrefetchHooks Function()
     >;
+typedef $$StudySettingsTableCreateCompanionBuilder =
+    StudySettingsCompanion Function({
+      Value<int> id,
+      required int dailyMinutes,
+      required DateTime updatedAt,
+      Value<bool> dirty,
+    });
+typedef $$StudySettingsTableUpdateCompanionBuilder =
+    StudySettingsCompanion Function({
+      Value<int> id,
+      Value<int> dailyMinutes,
+      Value<DateTime> updatedAt,
+      Value<bool> dirty,
+    });
+
+class $$StudySettingsTableFilterComposer
+    extends Composer<_$AppDatabase, $StudySettingsTable> {
+  $$StudySettingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dailyMinutes => $composableBuilder(
+    column: $table.dailyMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get updatedAt =>
+      $composableBuilder(
+        column: $table.updatedAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$StudySettingsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StudySettingsTable> {
+  $$StudySettingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dailyMinutes => $composableBuilder(
+    column: $table.dailyMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$StudySettingsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StudySettingsTable> {
+  $$StudySettingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get dailyMinutes => $composableBuilder(
+    column: $table.dailyMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
+}
+
+class $$StudySettingsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StudySettingsTable,
+          StudySettingsRow,
+          $$StudySettingsTableFilterComposer,
+          $$StudySettingsTableOrderingComposer,
+          $$StudySettingsTableAnnotationComposer,
+          $$StudySettingsTableCreateCompanionBuilder,
+          $$StudySettingsTableUpdateCompanionBuilder,
+          (
+            StudySettingsRow,
+            BaseReferences<
+              _$AppDatabase,
+              $StudySettingsTable,
+              StudySettingsRow
+            >,
+          ),
+          StudySettingsRow,
+          PrefetchHooks Function()
+        > {
+  $$StudySettingsTableTableManager(_$AppDatabase db, $StudySettingsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StudySettingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StudySettingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StudySettingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> dailyMinutes = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
+              }) => StudySettingsCompanion(
+                id: id,
+                dailyMinutes: dailyMinutes,
+                updatedAt: updatedAt,
+                dirty: dirty,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int dailyMinutes,
+                required DateTime updatedAt,
+                Value<bool> dirty = const Value.absent(),
+              }) => StudySettingsCompanion.insert(
+                id: id,
+                dailyMinutes: dailyMinutes,
+                updatedAt: updatedAt,
+                dirty: dirty,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$StudySettingsTable, StudySettingsRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $StudySettingsTable,
+                    StudySettingsRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$StudySettingsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StudySettingsTable,
+      StudySettingsRow,
+      $$StudySettingsTableFilterComposer,
+      $$StudySettingsTableOrderingComposer,
+      $$StudySettingsTableAnnotationComposer,
+      $$StudySettingsTableCreateCompanionBuilder,
+      $$StudySettingsTableUpdateCompanionBuilder,
+      (
+        StudySettingsRow,
+        BaseReferences<_$AppDatabase, $StudySettingsTable, StudySettingsRow>,
+      ),
+      StudySettingsRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4724,4 +5221,6 @@ class $AppDatabaseManager {
       $$CardStatesTableTableManager(_db, _db.cardStates);
   $$SyncStateTableTableManager get syncState =>
       $$SyncStateTableTableManager(_db, _db.syncState);
+  $$StudySettingsTableTableManager get studySettings =>
+      $$StudySettingsTableTableManager(_db, _db.studySettings);
 }

@@ -5,8 +5,8 @@ import 'sync_store.dart';
 
 /// One sync run for the signed-in account: claim the database, read the
 /// horizon, pull every table, rebuilding one the horizon has passed, and
-/// recompute the states of cards whose reviews changed, then push what is
-/// unsynced and purge the local tombstones.
+/// recompute the states of cards whose reviews changed, and pull the study
+/// settings, then push what is unsynced and purge the local tombstones.
 class Synchronizer {
   Synchronizer(this._store, this._server, {this.pageSize = 500});
 
@@ -25,6 +25,8 @@ class Synchronizer {
     // Read before the pull starts, so the watermark covers what it returns.
     final horizon = await _server.horizon();
     await _pull(account, horizon);
+    // The study settings are one row a user, pulled whole each run.
+    await _store.applyStudySettings(await _server.pullStudySettings(account));
     await _push(account);
     await _store.purge();
   }
@@ -147,6 +149,10 @@ class Synchronizer {
       _store.acknowledgeCardStates,
       (row) => row.cardId,
     );
+    if (await _store.unsyncedStudySettings() case final settings?) {
+      await _server.pushStudySettings(account, settings);
+      await _store.acknowledgeStudySettings(settings);
+    }
   }
 
   Future<void> _pushTable<R>(

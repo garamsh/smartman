@@ -8,6 +8,10 @@ import 'package:smartman/study/src/today.dart';
 
 import 'fixtures.dart';
 
+/// The new cards a study day takes in these cases, as the daily minutes would
+/// set them.
+const _quota = 20;
+
 final _now = DateTime.utc(2026, 10, 14, 9);
 
 /// UTC as the device's time zone.
@@ -67,7 +71,12 @@ void main() {
 
   group('forecast', () {
     test('today is the load, and each later day counts the cards due within it, from 04:00 to 04:00', () {
-      final day = StudyDay.at(_now, firstAnswers: const [], offsetAt: _utc);
+      final day = StudyDay.at(
+        _now,
+        firstAnswers: const [],
+        newCards: _quota,
+        offsetAt: _utc,
+      );
       final tomorrow = DateTime.utc(2026, 10, 15, 4);
       final counts = forecast(
         [
@@ -96,7 +105,12 @@ void main() {
           ? const Duration(hours: -7)
           : const Duration(hours: -8);
       final now = DateTime.utc(2026, 10, 30, 18); // 11:00 on the 30th.
-      final day = StudyDay.at(now, firstAnswers: const [], offsetAt: pacific);
+      final day = StudyDay.at(
+        now,
+        firstAnswers: const [],
+        newCards: _quota,
+        offsetAt: pacific,
+      );
       final counts = forecast(
         [
           // 03:00, 03:59 and 04:00 on 1 November, at UTC-8 after the change:
@@ -116,7 +130,12 @@ void main() {
   });
 
   group('daily goal', () {
-    final day = StudyDay.at(_now, firstAnswers: const [], offsetAt: _utc);
+    final day = StudyDay.at(
+      _now,
+      firstAnswers: const [],
+      newCards: _quota,
+      offsetAt: _utc,
+    );
     final tomorrow = DateTime.utc(2026, 10, 15, 9);
     Card card(String name) =>
         textCard(name, createdAt: DateTime.utc(2026, 9, 1));
@@ -174,6 +193,7 @@ void main() {
         final november = StudyDay.at(
           DateTime.utc(2026, 11, 1, 20),
           firstAnswers: const [],
+          newCards: _quota,
           offsetAt: pacific,
         );
         final cards = [card('a'), card('b')];

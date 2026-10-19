@@ -101,4 +101,73 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets(
+    'a change of the daily study minutes is pushed after the edit delay',
+    (tester) async {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+      final storage = (await tester.runAsync(
+        () => SharedPreferencesWithCache.create(
+          cacheOptions: const SharedPreferencesWithCacheOptions(
+            allowList: {
+              ...themeStorageKeys,
+              ...photoImportStorageKeys,
+              ...studyStorageKeys,
+              ...deckStorageKeys,
+            },
+          ),
+        ),
+      ))!;
+      final server = FakeSyncServer(_ada);
+      await tester.pumpWidget(
+        composeApp(
+          NativeDatabase.memory(),
+          scheduler,
+          FakeAccountService(const SignedIn(userId: _ada, email: null)),
+          server,
+          storage,
+          null,
+          null,
+          FakeReachability(),
+          '1.0.0',
+        ),
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      );
+      final sync = container.read(syncControllerProvider);
+      Future<void> settle() async {
+        for (var i = 0; i < 200 && sync.status.value is! Synced; i++) {
+          await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+          await tester.pump();
+        }
+      }
+
+      // The run that started with the app has finished, its own writes' edit
+      // delay has passed, and nothing was pushed.
+      await settle();
+      await tester.pump(const Duration(seconds: 4));
+      await settle();
+      expect(sync.status.value, isA<Synced>());
+      expect(server.studySettings, isEmpty);
+      server.requests.clear();
+
+      await tester.runAsync(
+        () => container
+            .read(studyRepositoryProvider)
+            .setDailyMinutes(45, at: DateTime.now()),
+      );
+      await tester.pump(const Duration(seconds: 4));
+      await settle();
+
+      expect(server.requests, contains('pushStudySettings'));
+      expect(server.studySettings[_ada]?.dailyMinutes, 45);
+
+      sync.dispose();
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
 }

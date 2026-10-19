@@ -351,4 +351,30 @@ void main() {
       expect(cards.map((card) => card.cardKey.value).toSet(), {'chat'});
     }
   }, skip: skip);
+
+  test('the daily study minutes set on A reach B, the later edit wins on both, and each device reads them offline', () async {
+    a.now = a.now.add(const Duration(minutes: 1));
+    b.now = b.now.add(const Duration(minutes: 2));
+    await a.study.setDailyMinutes(45, at: a.now);
+    await b.study.setDailyMinutes(15, at: b.now);
+
+    // A pushes first; B's later edit then reaches the server and wins.
+    await a.sync(account);
+    await b.sync(account);
+    await a.sync(account);
+
+    for (final device in [a, b]) {
+      expect(await device.study.dailyMinutes(), 15, reason: device.name);
+      expect(await device.store.hasUnsynced(), isFalse, reason: device.name);
+    }
+    // Control: an older edit on A, synced after, changes neither.
+    await a.study.setDailyMinutes(
+      60,
+      at: b.now.subtract(const Duration(seconds: 30)),
+    );
+    await a.sync(account);
+    await b.sync(account);
+    expect(await b.study.dailyMinutes(), 15);
+    expect(await a.study.dailyMinutes(), 15);
+  }, skip: skip);
 }

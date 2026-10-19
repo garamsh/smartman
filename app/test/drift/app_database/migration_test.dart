@@ -13,6 +13,7 @@ import 'generated/schema_v5.dart' as v5;
 import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
 import 'generated/schema_v8.dart' as v8;
+import 'generated/schema_v9.dart' as v9;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -729,6 +730,35 @@ void main() {
             ('typed', 'manual', 0, null),
           ],
         );
+      },
+    );
+  });
+
+  test('the upgrade from 8 to 9 adds the study settings empty, so the default holds, and keeps every deck as it was', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 8,
+      newVersion: 9,
+      createOld: v8.DatabaseAtV8.new,
+      createNew: v9.DatabaseAtV9.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v8.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 1,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        expect(await db.select(db.studySettings).get(), isEmpty);
+        final deck = await db.select(db.decks).getSingle();
+        expect((deck.id, deck.name, deck.dirty), ('deck', 'French', 1));
       },
     );
   });

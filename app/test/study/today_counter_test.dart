@@ -65,6 +65,13 @@ class _UnreadableStates implements StudyRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<int> dailyMinutes() => throw UnimplementedError();
+
+  @override
+  Future<void> setDailyMinutes(int minutes, {required DateTime at}) =>
+      throw UnimplementedError();
+
+  @override
   Future<Map<CardId, CardState>> allStates() => throw UnimplementedError();
 
   @override
@@ -274,8 +281,11 @@ void main() {
     (tester) async {
       final decks = await _seed(tester);
       await tester.runAsync(() async {
+        // 5 minutes less the 2 reviews due, at 10 s each: 28 new cards today,
+        // all but 2 of them first answered in the other deck.
+        await decks.study.setDailyMinutes(5, at: DateTime.utc(2026, 10, 14));
         final other = (await decks.cards.createDeck('other')).id;
-        for (var index = 0; index < 18; index++) {
+        for (var index = 0; index < 26; index++) {
           await decks.add(other, 'other $index');
         }
         final answered = await decks.cards.listCards(other);

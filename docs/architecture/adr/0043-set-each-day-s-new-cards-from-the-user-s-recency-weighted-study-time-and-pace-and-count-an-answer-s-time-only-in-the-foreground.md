@@ -1,6 +1,6 @@
 # ADR 0043: Set each day's new cards from the user's recency-weighted study time and pace, and count an answer's time only in the foreground
 
-> Status: accepted
+> Status: accepted; its study time, cold start and reviews set aside superseded by ADR-0085
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

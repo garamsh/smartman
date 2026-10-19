@@ -400,6 +400,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save your response on this device. This card\'s schedule did not change.';
 
   @override
+  String get settingNotSaved =>
+      'Couldn\'t save your study time on this device. Please try again.';
+
+  @override
   String get studyComplete => 'Done for today';
 
   @override

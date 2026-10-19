@@ -225,6 +225,8 @@
   "studyCoachSampleBack": "마감 기한",
   "@studyCoachSampleBack": {"description": "Back of the sample answered card the study screen's coach shows in its third step: the word's meaning."},
   "answerNotSaved": "응답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.",
+  "settingNotSaved": "공부 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.",
+  "@settingNotSaved": {"description": "Shown when the daily study minutes could not be written to the local database."},
   "@answerNotSaved": {"description": "Shown when an answer could not be written to the local database."},
   "studyComplete": "오늘 학습 완료",
   "@studyComplete": {"description": "Heading of the completion card, shown in the current card's place once no card is left today."},

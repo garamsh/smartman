@@ -11,6 +11,9 @@ insert into auth.users (id, email) values
 insert into public.profiles (user_id, display_name) values
   ('00000000-0000-4000-8000-00000000000a', 'Alice'),
   ('00000000-0000-4000-8000-00000000000b', 'Bob');
+insert into public.study_settings (user_id, daily_minutes, updated_at) values
+  ('00000000-0000-4000-8000-00000000000a', 30, now()),
+  ('00000000-0000-4000-8000-00000000000b', 15, now());
 insert into public.decks
   (id, user_id, name, visibility, published_at, created_at, updated_at) values
   ('d0000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000a', 'A', 'public', now(), now(), now()),
@@ -70,7 +73,7 @@ $$;
 select results_eq(
   $$select tablename::text collate "default" from pg_tables where schemaname = 'public' order by 1$$,
   array['card_states', 'cards', 'deck_copies', 'deck_reports', 'decks', 'extraction_usage',
-    'profiles', 'reviews', 'user_blocks'],
+    'profiles', 'reviews', 'study_settings', 'user_blocks'],
   'these are every table in public, so a new table fails here until this test covers it');
 
 select is_empty(
@@ -82,7 +85,8 @@ select is_empty(
 select results_eq(
   $$select pg_temp.columns_holding('00000000-0000-4000-8000-00000000000a')$$,
   array['card_states.user_id', 'cards.user_id', 'deck_copies.user_id', 'deck_reports.reporter_id',
-    'decks.user_id', 'extraction_usage.user_id', 'profiles.user_id', 'reviews.user_id', 'user_blocks.blocked_id',
+    'decks.user_id', 'extraction_usage.user_id', 'profiles.user_id', 'reviews.user_id', 'study_settings.user_id',
+    'user_blocks.blocked_id',
     'user_blocks.blocker_id'],
   'before deletion, A''s id is in every table, in each column that can hold it');
 
@@ -99,7 +103,7 @@ select is_empty(
 select results_eq(
   $$select pg_temp.columns_holding('00000000-0000-4000-8000-00000000000b')$$,
   array['card_states.user_id', 'cards.user_id', 'decks.user_id', 'extraction_usage.user_id',
-    'profiles.user_id', 'reviews.user_id'],
+    'profiles.user_id', 'reviews.user_id', 'study_settings.user_id'],
   'B keeps its own rows; its report on and copy of A''s deck and its block of A go, and nothing else');
 
 select results_eq(

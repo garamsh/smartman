@@ -20,9 +20,11 @@ import { studyDay } from "../queue";
 // The cases of app/test/study/overview_test.dart, so the two clients define the same figures.
 
 const day = 86_400_000;
+/** The new cards a day takes in these cases, as the daily minutes would set them. */
+const quota = 20;
 /** 09:00 UTC on 14 October 2026, five hours into the study day in UTC. */
 const now = Date.UTC(2026, 9, 14, 9);
-const today = studyDay(now, [], "UTC");
+const today = studyDay(now, [], "UTC", quota);
 const id = (value: string) => value as CardId;
 
 describe("a card's progress", () => {

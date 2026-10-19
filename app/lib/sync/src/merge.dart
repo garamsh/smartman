@@ -73,3 +73,14 @@ Kept mergeReview(ReviewRow? local, ReviewRow remote) =>
 /// brings a review of its card.
 Kept mergeCardState(CardStateRow? local, CardStateRow remote) =>
     local != null && local.dirty ? Kept.local : Kept.remote;
+
+/// Study settings: the later edit wins, with the same tie rule.
+Kept mergeStudySettings(StudySettingsRow? local, StudySettingsRow remote) =>
+    local != null &&
+        _localIsLater(
+          localUpdatedAt: local.updatedAt,
+          localDirty: local.dirty,
+          remoteUpdatedAt: remote.updatedAt,
+        )
+    ? Kept.local
+    : Kept.remote;

@@ -5,31 +5,25 @@ import type { Random } from "./random";
 // The queue rules of study.md, in one place: which cards a session studies, in what order, and
 // when a "Don't know" comes back. The counts the deck screens show come from the same rules.
 
-/**
- * How many never-reviewed cards a study day takes, across all the user's decks, while the window
- * holds fewer than [coldStartStudyDays] study days.
- */
-export const coldStartNewCards = 20;
+/** The daily study minutes while the user has set none (ADR 0085). */
+export const defaultDailyMinutes = 20;
 
-/** The study days the window must hold before a day's new cards follow the user's own time and pace. */
-export const coldStartStudyDays = 5;
+/** The fewest daily study minutes the user can set. */
+export const minDailyMinutes = 5;
 
-/** How many of the latest study days before today the study time and the pace are read from. */
+/** The most daily study minutes the user can set. */
+export const maxDailyMinutes = 180;
+
+/** The daily study minutes offered as one-tap choices. */
+export const dailyMinutePresets = [10, 15, 20, 30, 45, 60] as const;
+
+/** How many of the latest study days before today the pace is read from. */
 export const studyDayWindow = 30;
-
-/** The half-life, in study days, of a study day's weight in the study time. */
-export const studyTimeHalfLife = 7;
 
 /** The half-life, in study days, of an answer's weight in the pace. */
 export const paceHalfLife = 7;
 
-/** The most the study time moves from one study day's to the next, in percent. */
-export const studyTimeStepPercent = 10;
-
-/** Over how many days the reviews due beyond the daily load are spread. */
-export const reviewSpreadDays = 7;
-
-/** The most of one answer's duration the study time and the pace count, in milliseconds. */
+/** The most of one answer's duration the pace counts, in milliseconds. */
 export const answerCapMs = 30000;
 
 /** The fewest answers of a kind the window must hold for its pace to be read. */
@@ -145,7 +139,7 @@ export function studyDay(
   now: number,
   firstAnswers: Iterable<number>,
   timeZone: string,
-  newCards: number = coldStartNewCards,
+  newCards: number,
 ): StudyDay {
   const start = studyDayStart(now, timeZone);
   const end = studyDayEnd(start, timeZone);

@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { coldStartNewCards, coldStartStudyDays } from "../queue";
+import {
+  dailyMinutePresets,
+  defaultDailyMinutes,
+  maxDailyMinutes,
+  minDailyMinutes,
+  studyDayStart,
+} from "../queue";
 import {
   dailyNewCards,
+  lastNewCardDay,
   paceOf,
   sessionMinutes,
   type StudyDayTotal,
-  studyTime,
+  unknownPace,
 } from "../study-time";
 
 // The fixed histories below are the same as those of app/test/study/study_time_test.dart, with
@@ -31,55 +38,50 @@ function studyDay({
 const steady = Array.from({ length: 10 }, () => studyDay());
 
 describe("the figure", () => {
-  it("sets aside a steady history's reviews at the review pace and fills the rest of its study time with new cards at the first-answer pace", () => {
-    expect(studyTime(steady)).toBe(240000);
-    expect(paceOf(steady)).toEqual({ reviewMs: 4000, firstMs: 8000 });
-    // (240 s - 30 reviews at 4 s) / 8 s.
-    expect(dailyNewCards(steady, { due: 30, load: 30 })).toBe(15);
+  it("fills the daily minutes left after the due reviews with new cards, the reviews at the review pace and the new cards at the first-answer pace", () => {
+    const pace = paceOf(steady);
+    expect(pace).toEqual({ reviewMs: 4000, firstMs: 8000 });
+    // (20 min - 30 reviews at 4 s) / 8 s.
+    expect(dailyNewCards({ minutes: 20, due: 30, pace })).toBe(135);
+    // (4 min - 30 reviews at 4 s) / 8 s.
+    expect(dailyNewCards({ minutes: 4, due: 30, pace })).toBe(15);
+    expect(dailyNewCards({ minutes: 4, due: 0, pace })).toBe(30);
   });
 
-  it("lets reviews due beyond the daily load crowd out new cards, spread over a week, down to none", () => {
-    expect(dailyNewCards(steady, { due: 30, load: 30 })).toBe(15);
-    // 30 + 30 / 7 reviews set aside: (240 - 137.1) s / 8 s.
-    expect(dailyNewCards(steady, { due: 60, load: 30 })).toBe(12);
-    expect(dailyNewCards(steady, { due: 90, load: 30 })).toBe(10);
-    // The daily load alone fills the study time, and more leaves none.
-    expect(dailyNewCards(steady, { due: 60, load: 60 })).toBe(0);
-    expect(dailyNewCards(steady, { due: 100, load: 70 })).toBe(0);
-    // Fewer due than the daily load set aside the load.
-    expect(dailyNewCards(steady, { due: 0, load: 30 })).toBe(15);
+  it("lets due reviews crowd out new cards, down to none and never below", () => {
+    const pace = paceOf(steady);
+    // 60 reviews at 4 s fill 4 minutes; more leave none.
+    expect(dailyNewCards({ minutes: 4, due: 60, pace })).toBe(0);
+    expect(dailyNewCards({ minutes: 4, due: 100, pace })).toBe(0);
+    // Control: one review fewer leaves room for half a card, rounded down.
+    expect(dailyNewCards({ minutes: 4, due: 59, pace })).toBe(0);
+    expect(dailyNewCards({ minutes: 4, due: 58, pace })).toBe(1);
   });
 
-  it("takes 20 new cards in a cold start until the window holds five study days", () => {
-    expect(coldStartNewCards).toBe(20);
-    expect(coldStartStudyDays).toBe(5);
-    expect(dailyNewCards(steady.slice(0, 4), { due: 0, load: 0 })).toBe(20);
-    expect(dailyNewCards([], { due: 0, load: 0 })).toBe(20);
-    // Control: from five study days the figure is the user's own.
-    expect(dailyNewCards(steady.slice(0, 5), { due: 30, load: 30 })).toBe(15);
+  it("defaults to 20 minutes, offers 5 to 180, and takes every answer at 10 s with no history", () => {
+    expect(defaultDailyMinutes).toBe(20);
+    expect(dailyMinutePresets).toEqual([10, 15, 20, 30, 45, 60]);
+    expect([minDailyMinutes, maxDailyMinutes]).toEqual([5, 180]);
+    expect(paceOf([])).toEqual(unknownPace);
+    // 20 minutes of 10 s answers, from the first day: no cold start.
+    expect(dailyNewCards({ minutes: defaultDailyMinutes, due: 0, pace: unknownPace })).toBe(120);
   });
 
-  it("moves the study time at most 10% from one study day to the next", () => {
-    // A day of 10 minutes after ten of 4: 50 reviews and 50 first answers.
-    const jump = [...steady, studyDay({ reviews: 50, firsts: 50 })];
+  it("names the day the last new card is first answered: today when today takes them all, later at the daily figure, and never with none a day", () => {
+    const today = studyDayStart(Date.UTC(2026, 9, 14, 9), "UTC");
+    const last = (remaining: number, todayTakes: number, perDay: number) =>
+      lastNewCardDay({ remaining, today: todayTakes, perDay, todayStart: today, timeZone: "UTC" });
 
-    expect(studyTime(steady)).toBe(240000);
-    expect(studyTime(jump)).toBe(264000);
-    // (264 s - 120 s) / 8 s.
-    expect(dailyNewCards(jump, { due: 30, load: 30 })).toBe(18);
-  });
-
-  it("lets a recent long week outweigh an older short month in the study time", () => {
-    // 23 study days of 2 minutes, then 7 of 4.
-    const days = [
-      ...Array.from({ length: 23 }, () => studyDay({ reviews: 10, firsts: 10 })),
-      ...Array.from({ length: 7 }, () => studyDay()),
-    ];
-    const plainMean = (23 * 120000 + 7 * 240000) / 30;
-
-    expect(plainMean).toBe(148000);
-    // Nearer the week's 4 minutes than the month's 2.
-    expect(studyTime(days)).toBeGreaterThan(180000);
+    expect(last(10, 15, 15)).toBe(today);
+    expect(last(15, 15, 15)).toBe(today);
+    // 85 left after today, 15 a day: the sixth day after today.
+    expect(last(100, 15, 15)).toBe(Date.UTC(2026, 9, 20, 4));
+    expect(last(16, 15, 15)).toBe(Date.UTC(2026, 9, 15, 4));
+    // 30 left after today, 15 a day: exactly two more days.
+    expect(last(45, 15, 15)).toBe(Date.UTC(2026, 9, 16, 4));
+    // Control: none a day after today never takes them all.
+    expect(last(16, 15, 0)).toBeNull();
+    expect(last(15, 15, 0)).toBe(today);
   });
 
   it("lets a recent fast week outweigh an older slow month in the review pace", () => {

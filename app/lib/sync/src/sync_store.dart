@@ -91,6 +91,7 @@ class SyncStore {
     await _db.delete(_db.cards).go();
     await _db.delete(_db.decks).go();
     await _db.delete(_db.syncState).go();
+    await _db.delete(_db.studySettings).go();
   }
 
   /// Whether any row is waiting to be pushed.
@@ -100,6 +101,7 @@ class SyncStore {
       _db.cards,
       _db.reviews,
       _db.cardStates,
+      _db.studySettings,
     ]) {
       final query = _db.customSelect(
         // The term repeats the partial index's, which SQLite needs to use it.
@@ -342,6 +344,44 @@ class SyncStore {
   Future<List<CardStateRow>> unsyncedCardStates() => _guard(
     () => (_db.select(_db.cardStates)..where((row) => row.dirty)).get(),
   );
+
+  /// Merges the server's study settings, [pulled], into the device's: the
+  /// later edit wins, and a device's copy kept stays unsynced so the next push
+  /// repairs the server's. No row on the server leaves the device's as it is.
+  Future<void> applyStudySettings(StudySettingsRow? pulled) => _guard(
+    () => _db.transaction(() async {
+      if (pulled == null) return;
+      final local = await _db.select(_db.studySettings).getSingleOrNull();
+      switch (mergeStudySettings(local, pulled)) {
+        case Kept.remote:
+          await _db
+              .into(_db.studySettings)
+              .insertOnConflictUpdate(pulled.copyWith(dirty: false));
+        case Kept.local:
+          await _db
+              .into(_db.studySettings)
+              .insertOnConflictUpdate(local!.copyWith(dirty: true));
+      }
+    }),
+  );
+
+  /// The study settings waiting to be pushed, or null.
+  Future<StudySettingsRow?> unsyncedStudySettings() => _guard(
+    () => (_db.select(
+      _db.studySettings,
+    )..where((row) => row.dirty)).getSingleOrNull(),
+  );
+
+  /// Clears the study settings' dirty flag while they are still as [pushed];
+  /// settings changed since stay unsynced.
+  Future<void> acknowledgeStudySettings(StudySettingsRow pushed) =>
+      _acknowledge(
+        [pushed],
+        current: (row) => _db.select(_db.studySettings).getSingleOrNull(),
+        clean: (row) => _db
+            .into(_db.studySettings)
+            .insertOnConflictUpdate(row.copyWith(dirty: false)),
+      );
 
   /// Clears the dirty flag of each [pushed] deck still as it was pushed; a
   /// deck edited since stays unsynced.
