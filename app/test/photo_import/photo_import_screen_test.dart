@@ -17,6 +17,7 @@ import '../home/home_data.dart';
 import 'package:smartman/photo_import/src/extraction_client.dart'
     show parseExtraction;
 
+import '../deck/whole_cards.dart';
 import 'fakes.dart';
 
 /// Photo import over decks "French" (holding [french]) and "Spanish", with a
@@ -733,6 +734,65 @@ void main() {
       ]);
       await import.close();
     });
+
+    testWidgets(
+      'a table row shows it whole and filled, opens no edit sheet, saves its blocks with their filled text as its back, and its section offers no swap',
+      (tester) async {
+        const table = TableContent(
+          columns: ['구분', '높임', '낮춤'],
+          rows: [
+            ['2인칭', '당신', '너'],
+          ],
+          blanks: [(row: 0, column: 1), (row: 0, column: 2)],
+        );
+        final import = await _Import.open(tester);
+        await import.extractCards(const [
+          CandidateCard(
+            front: '인칭 대명사',
+            answer: '구분 | 높임 | 낮춤\n2인칭 | 당신 | 너',
+            type: CardType.table,
+            topic: '대명사',
+            wholeFront: [TextContent('인칭 대명사'), table],
+          ),
+          CandidateCard(front: '양성모음', answer: 'ㅏ ㅗ', topic: '모음조화'),
+        ]);
+
+        final whole = import.row('인칭 대명사');
+        expect(blanksUnder(whole), {'당신': true, '너': true});
+        expect(
+          import.check('인칭 대명사. 구분, 높임, 낮춤. 2인칭, blank, blank'),
+          findsOneWidget,
+        );
+        await import.tap(_shown('인칭 대명사'));
+        expect(_shown('Edit card'), findsNothing);
+        // Control: the plain note's row opens the sheet.
+        await import.tap(_shown('양성모음'));
+        expect(_shown('Edit card'), findsOneWidget);
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
+
+        await import.menu('대명사');
+        expect(find.widgetWithText(MenuItemButton, 'Swap sides'), findsNothing);
+        // Control: the menu is open, with its other item.
+        expect(
+          find.widgetWithText(MenuItemButton, 'Leave out this group'),
+          findsOneWidget,
+        );
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
+
+        await import.tap(_shown('Add 2 cards'));
+        final saved = (await tester.runAsync(
+          () => import.repository.listCards(import.french.id),
+        ))!;
+        final card = saved.firstWhere((card) => isWholeCard(card.front));
+        expect(card.front, [const TextContent('인칭 대명사'), table]);
+        expect(card.back, [
+          const TextContent('인칭 대명사\n구분 | 높임 | 낮춤\n2인칭 | 당신 | 너'),
+        ]);
+        await import.close();
+      },
+    );
 
     testWidgets(
       "the menu's last item leaves out every row of a section, then includes them",
