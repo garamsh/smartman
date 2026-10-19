@@ -44,6 +44,7 @@ List<Override> homeOverrides(
   studyZoneProvider.overrideWithValue((_) => Duration.zero),
   studyRandomProvider.overrideWithValue((_) => Random(0)),
   studyStorageProvider.overrideWithValue(storage),
+  deckStorageProvider.overrideWithValue(storage),
 ];
 
 var _reviews = 0;
