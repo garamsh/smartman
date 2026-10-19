@@ -13,55 +13,133 @@
   "cards": [
     {
       "front": "already",
-      "meaning": "이미"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이미",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "choose",
-      "meaning": "고르다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "고르다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "bridge",
-      "meaning": "다리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "다리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "remember",
-      "meaning": "기억하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기억하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "forest",
-      "meaning": "숲"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "숲",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "careful",
-      "meaning": "조심스러운"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "조심스러운",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "voice",
-      "meaning": "목소리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "목소리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "forget",
-      "meaning": "잊다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잊다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "strange",
-      "meaning": "이상한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이상한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "repeat",
-      "meaning": "반복하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "반복하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "young",
-      "meaning": "젊은"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "젊은",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "answer",
-      "meaning": "대답"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "대답",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "future",
-      "meaning": "미래"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "미래",
+          "examples": []
+        }
+      ]
     }
   ]
 }

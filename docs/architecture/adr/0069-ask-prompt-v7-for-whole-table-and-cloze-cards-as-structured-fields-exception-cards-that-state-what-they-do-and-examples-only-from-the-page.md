@@ -1,6 +1,6 @@
 # ADR 0069: Ask prompt v7 for whole-table and cloze cards as structured fields, exception cards that state what they do, and examples only from the page
 
-> Status: accepted
+> Status: accepted; its prompt v7 superseded by ADR-0076
 > Date: 2026-10-19
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

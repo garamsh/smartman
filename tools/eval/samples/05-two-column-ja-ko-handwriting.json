@@ -14,55 +14,133 @@
   "cards": [
     {
       "front": "飲む",
-      "meaning": "마시다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "마시다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "暗い",
-      "meaning": "어둡다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "어둡다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "話す",
-      "meaning": "말하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "말하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "教える",
-      "meaning": "가르치다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가르치다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "静か",
-      "meaning": "조용하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "조용하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "小さい",
-      "meaning": "작다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "작다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "走る",
-      "meaning": "달리다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "달리다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "笑う",
-      "meaning": "웃다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "웃다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "短い",
-      "meaning": "짧다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "짧다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "木",
-      "meaning": "나무"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "나무",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "仕事",
-      "meaning": "일"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "일",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "花",
-      "meaning": "꽃"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "꽃",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "山",
-      "meaning": "산"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "산",
+          "examples": []
+        }
+      ]
     }
   ]
 }
