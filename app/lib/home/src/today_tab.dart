@@ -842,7 +842,7 @@ class _DayBars extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: emphasised == null || index == emphasised
                           ? ink
-                          : quietBar(ink),
+                          : AppColors.quiet(ink),
                       borderRadius: BorderRadius.circular(AppSpace.s8 - 2),
                     ),
                   ),
