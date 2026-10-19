@@ -74,12 +74,12 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **"품사 표시"** off saves the block without its part-of-speech labels, keeping every other label.
 - **The card editor** keeps a senses side while its text is left as it was. An edited side becomes a text block, its labels as typed, as a note under the answer says: "답을 고치면 [명] 같은 표시도 글자로 저장돼요."
 - **A merged back** is appended as a text block of the imported lines, drawn under the senses.
-- **Merge order** with PR 1 is either (#250).
+- **Merge order.** #228's PR 1, the function, merges first, and this change right after, as the coordinator decided on 2026-10-19. This change refuses the deployed function's `{pos, meaning}` senses, so merging it first would break vocabulary import on the owner's phone until PR 1 deploys.
 
 ## Consequences
 
 - One sense looks the same from every book, and the next display change is the app's alone.
-- Until PR 1 deploys, the deployed function's `{pos, meaning}` senses are refused, so an extraction that holds a vocabulary card fails with `ServiceFailed`; the owner's development build takes both, as #250 accepts.
+- Between PR 1's deploy and this change, an app build from `main` reads each new sense's `meaning` and ignores its `labels`, as its parser reads only `pos` and `meaning`: vocabulary imports work, without labels. From this change on, the labels are read and drawn.
 - A label's own text is kept, so a later display can use it.
 - Editing a vocabulary answer by hand loses its structure, by the note's warning.
 - Existing cards keep their text backs until #228's PR 3 migrates them.
