@@ -8,7 +8,8 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'package:smartman/account/account.dart';
-import 'package:smartman/deck/deck.dart' show deckRepositoryProvider;
+import 'package:smartman/deck/deck.dart'
+    show deckRepositoryProvider, deckStorageKeys;
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
@@ -61,6 +62,7 @@ void main() {
             ...themeStorageKeys,
             ...photoImportStorageKeys,
             ...studyStorageKeys,
+            ...deckStorageKeys,
           },
         ),
       ),

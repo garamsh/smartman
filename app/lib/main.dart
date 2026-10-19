@@ -33,6 +33,7 @@ Future<void> main() async {
         ...themeStorageKeys,
         ...photoImportStorageKeys,
         ...studyStorageKeys,
+        ...deckStorageKeys,
       },
     ),
   );
@@ -140,6 +141,7 @@ Widget composeApp(
       accountDataProvider.overrideWithValue(sync),
       syncControllerProvider.overrideWithValue(sync),
       themeStorageProvider.overrideWithValue(preferences),
+      deckStorageProvider.overrideWithValue(preferences),
     ],
     child: const SmartmanApp(),
   );

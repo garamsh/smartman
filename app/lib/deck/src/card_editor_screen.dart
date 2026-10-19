@@ -8,16 +8,21 @@ import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'card_kind.dart';
 import 'card_preview.dart';
 import 'content.dart';
 import 'deck_repository.dart';
 import 'failure_message.dart';
 import 'model.dart';
 import 'providers.dart';
+import 'word_form.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
-/// of the card as the study screen shows it. A table or cloze card is shown
-/// read-only, with a note, as it cannot be edited yet (ADR 0068).
+/// of the card as the study screen shows it, in the form of its kind: a text
+/// front and back, or a word with its senses. A new card starts in the kind
+/// the deck's last new card was added in, and a switch at the top changes it;
+/// a card being edited keeps its kind (ADR 0083). A table or cloze card is
+/// shown read-only, with a note, as it cannot be edited yet (ADR 0068).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -44,6 +49,15 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   final _frontFocus = FocusNode();
   bool _showRequired = false;
 
+  /// The kind the card is written in; a card being edited keeps its own.
+  late CardKind _kind = switch (widget.card) {
+    final card? => kindOf(card),
+    null => rememberedKind(ref.read(deckStorageProvider), widget.deck.id),
+  };
+
+  /// The word form's senses: those of the card's back, or one empty sense.
+  late final List<SenseDraft> _senses = _draftsOf(widget.card?.back);
+
   bool get _isNew => widget.card == null;
 
   @override
@@ -51,18 +65,55 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     _front.dispose();
     _back.dispose();
     _frontFocus.dispose();
+    for (final sense in _senses) {
+      sense.dispose();
+    }
     super.dispose();
   }
 
+  /// Whether every field the kind requires is filled.
+  bool get _isComplete =>
+      _front.text.trim().isNotEmpty &&
+      switch (_kind) {
+        CardKind.basic => _back.text.trim().isNotEmpty,
+        CardKind.word => !_senses.any((sense) => sense.isBlank),
+      };
+
+  /// The front as saved: the text typed, or the card's own blocks while their
+  /// text is left as it was.
+  List<Content> get _frontBlocks =>
+      _replaceText(widget.card?.front ?? const [], _front.text);
+
+  /// The back as saved: the text typed, as [_frontBlocks]; or a word's senses,
+  /// then any other block the card's back holds, such as its extras.
+  List<Content> get _backBlocks => switch (_kind) {
+    CardKind.basic => _replaceText(widget.card?.back ?? const [], _back.text),
+    CardKind.word => [
+      SensesContent([for (final sense in _senses) sense.sense]),
+      ...?widget.card?.back.where((block) => block is! SensesContent),
+    ],
+  };
+
+  Future<void> _chooseKind(CardKind kind) async {
+    setState(() {
+      _kind = kind;
+      _showRequired = false;
+    });
+    await reportingFailure(
+      context,
+      () => rememberKind(ref.read(deckStorageProvider), widget.deck.id, kind),
+    );
+  }
+
   Future<void> _save(_AfterSave after, {bool allowDuplicate = false}) async {
-    if (_front.text.trim().isEmpty || _back.text.trim().isEmpty) {
+    if (!_isComplete) {
       setState(() => _showRequired = true);
       return;
     }
     final repository = ref.read(deckRepositoryProvider);
     final card = widget.card;
-    final front = _replaceText(card?.front ?? const [], _front.text);
-    final back = _replaceText(card?.back ?? const [], _back.text);
+    final front = _frontBlocks;
+    final back = _backBlocks;
     await reportingFailure(context, () async {
       final result = card == null
           ? await repository.addCard(
@@ -85,6 +136,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           setState(() {
             _front.clear();
             _back.clear();
+            for (final sense in _senses) {
+              sense.dispose();
+            }
+            _senses
+              ..clear()
+              ..add(SenseDraft());
             _showRequired = false;
           });
           _frontFocus.requestFocus();
@@ -179,44 +236,75 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 ),
               ],
             )
-          : ListView(
+          // A column, not a lazy list, so every field of a long word is built
+          // and its error shows wherever it scrolls.
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpace.gutter),
-              children: [
-                CardPreview(
-                  front: _replaceText(card?.front ?? const [], _front.text),
-                  back: _replaceText(card?.back ?? const [], _back.text),
-                ),
-                const SizedBox(height: AppSpace.s24),
-                AppTextField(
-                  label: l10n.cardFront,
-                  controller: _front,
-                  focusNode: _frontFocus,
-                  autofocus: _isNew,
-                  minLines: 2,
-                  maxLines: null,
-                  errorText: _requiredError(l10n, _front),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: AppSpace.s16),
-                AppTextField(
-                  label: l10n.cardBack,
-                  controller: _back,
-                  minLines: 2,
-                  maxLines: null,
-                  errorText: _requiredError(l10n, _back),
-                  onChanged: (_) => setState(() {}),
-                ),
-                if (card?.back.any((block) => block is SensesContent) ??
-                    false) ...[
-                  const SizedBox(height: AppSpace.s8),
-                  Text(
-                    l10n.sensesEditNote,
-                    style: AppType.secondary.copyWith(
-                      color: AppColors.of(context).muted,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_isNew) ...[
+                    Semantics(
+                      label: l10n.cardKindLabel,
+                      child: SegmentedButton<CardKind>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(
+                            value: CardKind.basic,
+                            label: Text(l10n.cardKindBasic),
+                          ),
+                          ButtonSegment(
+                            value: CardKind.word,
+                            label: Text(l10n.cardKindWord),
+                          ),
+                        ],
+                        selected: {_kind},
+                        onSelectionChanged: (kinds) =>
+                            _chooseKind(kinds.single),
+                      ),
                     ),
+                    const SizedBox(height: AppSpace.s24),
+                  ],
+                  CardPreview(front: _frontBlocks, back: _backBlocks),
+                  const SizedBox(height: AppSpace.s24),
+                  AppTextField(
+                    label: l10n.cardFront,
+                    controller: _front,
+                    focusNode: _frontFocus,
+                    autofocus: _isNew,
+                    minLines: 2,
+                    maxLines: null,
+                    errorText: _requiredError(l10n, _front),
+                    onChanged: (_) => setState(() {}),
                   ),
+                  if (card?.front.any((block) => block is SensesContent) ??
+                      false) ...[
+                    const SizedBox(height: AppSpace.s8),
+                    Text(
+                      l10n.sensesEditNote,
+                      style: AppType.secondary.copyWith(
+                        color: AppColors.of(context).muted,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpace.s16),
+                  switch (_kind) {
+                    CardKind.basic => AppTextField(
+                      label: l10n.cardBack,
+                      controller: _back,
+                      minLines: 2,
+                      maxLines: null,
+                      errorText: _requiredError(l10n, _back),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    CardKind.word => SenseFields(
+                      senses: _senses,
+                      showErrors: _showRequired,
+                      onChanged: () => setState(() {}),
+                    ),
+                  },
                 ],
-              ],
+              ),
             ),
       bottomNavigationBar: readOnly
           ? null
@@ -281,8 +369,8 @@ class _DuplicateSheet extends StatelessWidget {
 
 /// [blocks] while [text] is still their text, so a side the user left as it
 /// was keeps its blocks, a senses block included; otherwise [text] as a text
-/// block, with blocks of other types kept. An edited senses side so becomes
-/// text, its labels as typed (ADR 0075).
+/// block, with blocks of other types kept. An edited senses front, a reversed
+/// word's, so becomes text, its labels as typed.
 List<Content> _replaceText(List<Content> blocks, String text) =>
     text == plainText(blocks)
     ? blocks
@@ -292,3 +380,15 @@ List<Content> _replaceText(List<Content> blocks, String text) =>
           (block) => block is! TextContent && block is! SensesContent,
         ),
       ];
+
+/// One draft per sense of [back]'s senses block, or one empty draft when it
+/// holds none.
+List<SenseDraft> _draftsOf(List<Content>? back) {
+  final senses = [
+    for (final block in back ?? const <Content>[])
+      if (block is SensesContent) ...block.senses,
+  ];
+  return senses.isEmpty
+      ? [SenseDraft()]
+      : [for (final sense in senses) SenseDraft(sense)];
+}
