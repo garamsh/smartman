@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -7,7 +8,6 @@ import {
   type LibraryFailure,
   parseDeckId,
   ReadFailure,
-  readLibrary,
 } from "@/features/decks";
 import {
   countDay,
@@ -20,6 +20,7 @@ import {
 } from "@/features/study";
 
 import { EnterLink } from "../../../_components/enter-link";
+import { readDeck } from "./read-deck";
 
 /**
  * The deck [params] names, read on the server; a deck that does not exist, or an id that names
@@ -28,7 +29,7 @@ import { EnterLink } from "../../../_components/enter-link";
 export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   const deckId = parseDeckId((await params).id);
   if (!deckId) notFound();
-  const [read, studyDay] = await Promise.all([readLibrary([deckId]), readToday()]);
+  const [read, studyDay] = await Promise.all([readDeck(deckId), readToday()]);
   if ("failure" in read) return <Failure failure={read.failure} />;
   if ("failure" in studyDay) return <Failure failure={studyDay.failure} />;
 
@@ -119,9 +120,9 @@ function BackToDecks() {
   return (
     <Link
       href="/decks"
-      className="rounded-md text-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="flex min-h-tap-target min-w-tap-target items-center gap-1 rounded-md pr-2 text-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
-      덱
+      <ChevronLeft aria-hidden className="size-5" strokeWidth={2} />덱
     </Link>
   );
 }
