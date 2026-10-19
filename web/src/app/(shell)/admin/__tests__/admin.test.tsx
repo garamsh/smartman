@@ -95,7 +95,7 @@ describe("the admin area's gate", () => {
       within(menu)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["개요", "신고", "공개 덱", "사용자", "요금제", "관리자", "작업 기록"]);
+    ).toEqual(["개요", "신고", "공개 덱", "사용자", "요금제", "프롬프트", "관리자", "작업 기록"]);
     expect(within(menu).getByRole("link", { name: "신고" })).toHaveAttribute(
       "aria-current",
       "page",

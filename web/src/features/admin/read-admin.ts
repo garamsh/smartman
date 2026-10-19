@@ -475,6 +475,73 @@ export async function readAuditLog(): Promise<AdminRead<AuditEntry[]>> {
   });
 }
 
+/** A prompt label: `active` serves every user, `test` the admins (ADR 0073). */
+export type PromptLabel = "active" | "test";
+
+/** A saved prompt version, as the prompts page lists it. */
+export type PromptVersion = {
+  id: number;
+  note: string;
+  length: number;
+  createdByEmail: string | null;
+  createdAt: number;
+  labels: PromptLabel[];
+};
+
+/** One version with its text, and the active version's beside it for the diff. */
+export type PromptDetail = PromptVersion & {
+  text: string;
+  active: { id: number; text: string } | null;
+};
+
+/** Every saved prompt version, newest first. */
+export async function readPromptVersions(): Promise<AdminRead<PromptVersion[]>> {
+  return parsed(await call("admin_prompt_versions"), (row) =>
+    parsePromptVersion(row, count(field(row, "length"))),
+  );
+}
+
+/** Version [id] with its text and the active version's, or null when there is no such version. */
+export async function readPromptVersion(id: number): Promise<AdminRead<PromptDetail | null>> {
+  const read = parsed(await call("admin_prompt_version", { version_id: id }), (row) => {
+    const text = field(row, "text");
+    if (typeof text !== "string") return null;
+    const version = parsePromptVersion(row, text.length);
+    const activeId = field(row, "active_id");
+    const activeText = field(row, "active_text");
+    if (version === null) return null;
+    // Both are null together while no version is active.
+    if (activeId === null && activeText === null) return { ...version, text, active: null };
+    const active = count(activeId);
+    if (active === null || typeof activeText !== "string") return null;
+    return { ...version, text, active: { id: active, text: activeText } };
+  });
+  if ("failure" in read) return read;
+  return { data: read.data[0] ?? null };
+}
+
+function parsePromptVersion(row: unknown, length: number | null): PromptVersion | null {
+  const id = count(field(row, "id"));
+  const note = field(row, "note");
+  const createdBy = field(row, "created_by_email");
+  const createdAt = parseTime(field(row, "created_at"));
+  const labels = promptLabels(field(row, "labels"));
+  if (id === null || typeof note !== "string" || length === null || createdAt === null) return null;
+  if ((createdBy !== null && typeof createdBy !== "string") || labels === null) return null;
+  return { id, note, length, createdByEmail: createdBy, createdAt, labels };
+}
+
+function promptLabels(value: unknown): PromptLabel[] | null {
+  const list = strings(value);
+  if (list === null) return null;
+  const labels: PromptLabel[] = [];
+  for (const label of list) {
+    if (label !== "active" && label !== "test") return null;
+    labels.push(label);
+  }
+  return labels;
+}
+
 /** Calls the server function [name] with [args] as the signed-in user. */
 async function call(
   name: string,

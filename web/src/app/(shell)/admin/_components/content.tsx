@@ -12,12 +12,18 @@ import {
   OverviewView,
   parseUserId,
   PlansView,
+  PromptForm,
+  PromptTrial,
+  PromptVersions,
+  PromptView,
   PublicDecks,
   readAdmins,
   readAuditLog,
   readDeck,
   readOverview,
   readPlans,
+  readPromptVersion,
+  readPromptVersions,
   readPublicDecks,
   readReportedDecks,
   readUser,
@@ -150,4 +156,49 @@ export async function AuditContent() {
   const [read, timeZone] = await Promise.all([readAuditLog(), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   return <AuditLog entries={read.data} timeZone={timeZone} />;
+}
+
+/** A version's id in an address: digits only, as the server numbers them. */
+function versionId(value: string | string[] | undefined): number | null {
+  return typeof value === "string" && /^[1-9]\d{0,15}$/.test(value) ? Number(value) : null;
+}
+
+export async function PromptsContent({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [read, timeZone, from] = await Promise.all([
+    readPromptVersions(),
+    adminTimeZone(),
+    searchParams.then((params) => versionId(params.from)),
+  ]);
+  if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
+  const active = read.data.find((version) => version.labels.includes("active"));
+  const test = read.data.find((version) => version.labels.includes("test"));
+  // The form starts from the version the address names, or else the active one.
+  const basis = from ?? active?.id ?? null;
+  const start = basis === null ? null : await readPromptVersion(basis);
+  if (start !== null && "failure" in start) return <AdminFailureMessage failure={start.failure} />;
+  const served = test ?? active;
+  return (
+    <>
+      {served !== undefined && <PromptTrial served={{ id: served.id, test: served === test }} />}
+      <PromptForm
+        key={basis}
+        initialText={start?.data?.text ?? ""}
+        basis={start?.data ? `버전 ${String(start.data.id)}` : "빈 프롬프트"}
+      />
+      <PromptVersions versions={read.data} timeZone={timeZone} />
+    </>
+  );
+}
+
+export async function PromptContent({ params }: { params: Promise<{ id: string }> }) {
+  const id = versionId((await params).id);
+  if (id === null) notFound();
+  const [read, timeZone] = await Promise.all([readPromptVersion(id), adminTimeZone()]);
+  if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
+  if (read.data === null) notFound();
+  return <PromptView version={read.data} timeZone={timeZone} />;
 }

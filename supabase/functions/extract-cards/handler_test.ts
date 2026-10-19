@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readConfig } from "./config.ts";
 import { createHandler, type LogEntry } from "./handler.ts";
 import { OPENROUTER_URL } from "./openrouter.ts";
+import { SYSTEM_PROMPT } from "./prompt_v8.ts";
 import { MAX_IMAGE_BYTES } from "./request.ts";
 
 const SUPABASE_URL = "https://project.supabase.test";
@@ -28,8 +29,10 @@ type Fake = {
   allowed: boolean;
   /** Whether the caller is suspended, as user_suspended answers. */
   suspended: boolean;
-  /** The row start_extraction answers for the caller's plan, or none when its settings are missing. */
+  /** The row begin_extraction answers for the caller's plan, or none when its settings are missing. */
   plan: { plan: string; model: string; daily_limit: number } | null;
+  /** The prompt version begin_extraction serves; the seed, prompt v8, unless a test names another. */
+  prompt: { prompt_version_id: unknown; prompt: unknown };
   calls: { url: string; init: RequestInit | undefined }[];
 };
 
@@ -54,10 +57,12 @@ function fakeFetch(fake: Fake): typeof fetch {
     if (url === `${SUPABASE_URL}/rest/v1/rpc/user_suspended`) {
       return Promise.resolve(Response.json(fake.suspended));
     }
-    if (url === `${SUPABASE_URL}/rest/v1/rpc/start_extraction`) {
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/begin_extraction`) {
       return Promise.resolve(
         Response.json(
-          fake.plan === null ? [] : [{ ...fake.plan, allowed: fake.allowed }],
+          fake.plan === null
+            ? []
+            : [{ ...fake.plan, ...fake.prompt, allowed: fake.allowed }],
         ),
       );
     }
@@ -146,6 +151,7 @@ async function run(
     allowed?: boolean;
     suspended?: boolean;
     plan?: Fake["plan"];
+    prompt?: Fake["prompt"];
     env?: Record<string, string | undefined>;
   } = {},
 ): Promise<Run> {
@@ -156,6 +162,7 @@ async function run(
     plan: options.plan === undefined
       ? { plan: "free", model: "vendor/primary-model", daily_limit: 30 }
       : options.plan,
+    prompt: options.prompt ?? { prompt_version_id: 1, prompt: SYSTEM_PROMPT },
     calls: [],
   };
   const env = { ...ENV, ...options.env };
@@ -206,7 +213,7 @@ async function run(
 }
 
 const usageCalls = (r: Run) =>
-  r.fake.calls.filter((call) => call.url.endsWith("/rpc/start_extraction"));
+  r.fake.calls.filter((call) => call.url.endsWith("/rpc/begin_extraction"));
 /**
  * Three cards as the model writes them: a vocabulary entry with a part of speech and an example,
  * one with neither, and a point of notes with the page's own example.
@@ -867,6 +874,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
       "outcome",
       "plan",
       "prompt_tokens",
+      "prompt_version",
       "user_id",
     ]);
     assert.ok(!JSON.stringify(r.logs).includes(photo.slice(0, 64)));
@@ -893,16 +901,51 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     user_id: USER_ID,
     plan: "free",
     model: "vendor/primary-model",
+    prompt_version: 1,
     latency_ms: 0,
     prompt_tokens: 1200,
     completion_tokens: 80,
     outcome: "ok",
   });
   assert.equal(outcomes[1].logs[0].prompt_tokens, 1200, "one call's tokens");
+  assert.equal(
+    outcomes[3].logs[0].prompt_version,
+    null,
+    "no version is logged where no call was made",
+  );
   assert.equal(outcomes[4].logs[0].user_id, null);
   assert.equal(
     outcomes[4].logs[0].plan,
     null,
     "no plan is read without a user",
   );
+});
+
+Deno.test("the model is instructed with the prompt version the server serves the caller, which the log names", async () => {
+  const served = await run({
+    replies: [cardsReply(twoCards)],
+    prompt: { prompt_version_id: 7, prompt: "Saved instructions." },
+  });
+  assert.equal(served.status, 200);
+  assert.equal(served.modelCalls[0].messages[0].content, "Saved instructions.");
+  assert.equal(served.logs[0].prompt_version, 7);
+  // Control: the seed's version is served by default, and its text is prompt v8's.
+  const seeded = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(seeded.modelCalls[0].messages[0].content, SYSTEM_PROMPT);
+  assert.equal(seeded.logs[0].prompt_version, 1);
+});
+
+Deno.test("a served row without the prompt's text or version fails before any model call", async () => {
+  for (
+    const prompt of [
+      { prompt_version_id: 1, prompt: null },
+      { prompt_version_id: "1", prompt: "Saved instructions." },
+    ]
+  ) {
+    // No model reply is scripted, so a model call would fail with another message.
+    await assert.rejects(
+      run({ prompt }),
+      /begin_extraction answered a row it should not/,
+    );
+  }
 });
