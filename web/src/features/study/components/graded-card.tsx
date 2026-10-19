@@ -27,11 +27,14 @@ export const grades = {
 /** An answered card as the stack shows it: its card, its answer, and whether it was changed. */
 type Graded = Pick<PreviousAnswer, "card" | "answer"> & { changed?: boolean };
 
-/** What a screen reader reads for an answered card: its sides and its grade. */
+/**
+ * What a screen reader reads for an answered card: its sides, a whole card's front with its
+ * blanks as "빈칸", and its grade.
+ */
 export function answerLabel(answer: Graded): string {
-  const { front, back } = answer.card.text;
+  const front = answer.card.whole?.question ?? answer.card.text.front;
   const changed = answer.changed ? ". 수정됨" : "";
-  return `앞면: ${front}. 뒷면: ${back}. 답: ${grades[answer.answer].name}${changed}`;
+  return `앞면: ${front}. 뒷면: ${answer.card.text.back}. 답: ${grades[answer.answer].name}${changed}`;
 }
 
 /** A grade's chip: its mark and its word, so the grade never rests on colour alone. */
@@ -85,8 +88,8 @@ type Touch = {
 
 /**
  * The card answered just before the current one, with both sides shown at the current card's
- * sizes, on its grade's fill inside its grade's line, and its grade's chip on its top edge. A
- * click opens the whole card. A horizontal touch swipe follows the finger, shows the answer it
+ * sizes, or a whole card's front with its blanks filled, on its grade's fill inside its grade's
+ * line, and its grade's chip on its top edge. A click opens the whole card. A horizontal touch swipe follows the finger, shows the answer it
  * would give behind it, and released past [commitDistance], or flung, toward the other answer
  * changes to it; a vertical one scrolls the page. Without [onRedecide] it is not changed from
  * here, and [label] names it above its sides.
@@ -212,13 +215,21 @@ export function GradedCard({
             {label}
           </span>
         )}
-        <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
-          <span className="line-clamp-6 break-words">{answer.card.text.front}</span>
-        </span>
-        <span aria-hidden className={`my-7 w-px ${grade.line}`} />
-        <span className="flex items-center justify-center p-4 text-answer text-ink-2 lg:p-6">
-          <span className="line-clamp-6 break-words">{answer.card.text.back}</span>
-        </span>
+        {answer.card.whole ? (
+          <span className="col-span-3 flex items-center justify-center p-4 text-answer text-ink lg:p-6">
+            {answer.card.whole.filled}
+          </span>
+        ) : (
+          <>
+            <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
+              <span className="line-clamp-6 break-words">{answer.card.text.front}</span>
+            </span>
+            <span aria-hidden className={`my-7 w-px ${grade.line}`} />
+            <span className="flex items-center justify-center p-4 text-answer text-ink-2 lg:p-6">
+              <span className="line-clamp-6 break-words">{answer.card.text.back}</span>
+            </span>
+          </>
+        )}
       </button>
     </article>
   );

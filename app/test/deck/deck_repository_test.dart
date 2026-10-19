@@ -72,6 +72,40 @@ void main() {
         },
       );
 
+      test("a cloze card's key is its filled text: a cloze filling to a stored "
+          'front collides, and one filling to another does not', () async {
+        final french = await repository.createDeck('French');
+        _saved(
+          await repository.addCard(
+            french.id,
+            front: _text('Paris is in France'),
+            back: _text('capital'),
+          ),
+        );
+
+        final same = await repository.addCard(
+          french.id,
+          front: [
+            const ClozeContent('___ is in France', ['Paris']),
+          ],
+          back: _text('Paris is in France'),
+        );
+        // Control: a cloze filling to another text is a new card.
+        final other = await repository.addCard(
+          french.id,
+          front: [
+            const ClozeContent('___ is in France', ['Lyon']),
+          ],
+          back: _text('Lyon is in France'),
+        );
+
+        expect(same, isA<DuplicateFront>());
+        expect(other, isA<CardSaved>());
+        expect((await cardsOf(french.id)).last.front, [
+          const ClozeContent('___ is in France', ['Lyon']),
+        ]);
+      });
+
       test('add anyway stores the second card', () async {
         final deck = await repository.createDeck('French');
         await repository.addCard(
