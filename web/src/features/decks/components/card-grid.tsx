@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { describeContent, isWholeCard, spokenContent } from "../card-content";
 import type { Card } from "../library";
 import { SideText } from "./side-text";
+import { EmptyDeck } from "./empty-home";
 import { WholeCard } from "./whole-card";
 
 /**
@@ -37,7 +38,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
     : rows;
 
   if (cards.length === 0) {
-    return <p className="text-muted">아직 카드가 없어요. 휴대폰 앱에서 카드를 추가해 주세요.</p>;
+    return <EmptyDeck />;
   }
   return (
     <section aria-label="카드" className="flex flex-col gap-3">
