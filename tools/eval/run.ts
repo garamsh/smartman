@@ -19,7 +19,6 @@ import {
   extractCards,
   type Extraction,
   MAX_OUTPUT_TOKENS,
-  type Models,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
 import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v6.ts";
@@ -263,7 +262,7 @@ type RunDeps = {
 
 /**
  * Every candidate over every sample, one call at a time. Before each image it checks that the
- * worst case of a call and its retry still fits the remaining budget, and stops otherwise. A
+ * worst case of its one call still fits the remaining budget, and stops otherwise. A
  * candidate whose calls fail `MODEL_ERRORS_TO_STOP` images in a row runs no further image.
  * Each image's reply is kept as it completes.
  */
@@ -279,16 +278,9 @@ export async function runEval(
   const halted: Halt[] = [];
   let spentUsd = 0;
   for (const candidate of candidates) {
-    const models: Models = {
-      primary: candidate.primary.id,
-      retry: candidate.retry.id,
-    };
     const pricing = new Map<string, Model>([[
       candidate.primary.id,
       candidate.primary,
-    ], [
-      candidate.retry.id,
-      candidate.retry,
     ]]);
     const results: ImageResult[] = [];
     let errorsInRow = 0;
@@ -300,8 +292,7 @@ export async function runEval(
         );
         break;
       }
-      const worst = worstCallUsd(candidate.primary.pricing) +
-        worstCallUsd(candidate.retry.pricing);
+      const worst = worstCallUsd(candidate.primary.pricing);
       if (spentUsd + worst > remaining(ledger)) {
         return { rows, spentUsd, stopped: true, halted };
       }
@@ -309,7 +300,7 @@ export async function runEval(
       const extraction = await extractCards(
         sample.image,
         sample.languages,
-        models,
+        candidate.primary.id,
         { ...deps, fetch: recording(deps.fetch, calls) },
       );
       errorsInRow = extraction.kind === "model_error" ? errorsInRow + 1 : 0;
@@ -559,7 +550,7 @@ export function report(
     "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in part of speech and meaning, and senses R the share of the entry's senses so returned. A truth written before senses is one sense of its meaning and part of speech.",
     "- Over the matched cards of every image, in percent: part of speech is the share of returned senses' labels equal to the page's for that sense, and examples the share of returned examples the page prints, after the same normalization; invented is the share of present labels and example lists where the page prints none. A dash means the configuration returned no such field.",
     `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards.`,
-    "- Latency is per image, retry included; cost per image is the mean of OpenRouter's reported cost, over every image.",
+    "- Latency is per image, one call each; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
       `- ${halt.label} stopped after ${MODEL_ERRORS_TO_STOP} model errors in a row: its row covers ${halt.ran} of ${sampleCount} images.`
@@ -644,7 +635,7 @@ function pagesSection(rows: readonly Row[]): string[] {
   return [
     "## Coverage per notes page",
     "",
-    `Each cell is the page's coverage in percent, then the completion tokens of its calls, retry included, against the function's \`max_tokens\` of ${MAX_OUTPUT_TOKENS} per call.`,
+    `Each cell is the page's coverage in percent, then the completion tokens of its call, against the function's \`max_tokens\` of ${MAX_OUTPUT_TOKENS} per call.`,
     "",
     `| Page | ${rows.map((row) => row.label).join(" | ")} |`,
     `|---|${rows.map(() => "---|").join("")}`,
@@ -667,9 +658,7 @@ function describe(candidate: Candidate): string {
     `\`${m.id}\` (${usd(m.pricing.prompt * 1e6)}/M prompt, ${
       usd(m.pricing.completion * 1e6)
     }/M completion)`;
-  return candidate.retry.id === candidate.primary.id
-    ? model(candidate.primary)
-    : `${model(candidate.primary)}, retry ${model(candidate.retry)}`;
+  return model(candidate.primary);
 }
 
 const usd = (value: number) => `$${value.toFixed(4)}`;

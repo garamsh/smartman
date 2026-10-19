@@ -73,8 +73,8 @@ export type SampleSize = {
 };
 
 /**
- * The dry estimate of a run: every candidate over every sample, each priced as one typical
- * call to the primary model plus one to the retry model, as if every image retried.
+ * The dry estimate of a run: every candidate over every sample, each priced as one typical call
+ * to its model, the one call the function makes per photo.
  */
 export function estimateUsd(
   candidates: readonly Candidate[],
@@ -85,7 +85,6 @@ export function estimateUsd(
     for (const size of sizes) {
       const reply = TYPICAL_REASONING_TOKENS + size.tokensPerCard * size.cards;
       total += cost(candidate.primary.pricing, TYPICAL_PROMPT_TOKENS, reply);
-      total += cost(candidate.retry.pricing, TYPICAL_PROMPT_TOKENS, reply);
     }
   }
   return total;

@@ -7,11 +7,10 @@ import {
 
 export const MODELS_URL = "https://openrouter.ai/api/v1/models";
 
-/** A candidate as `candidates.json` states it: patterns matched against model IDs. */
+/** A candidate as `candidates.json` states it: a pattern matched against model IDs. */
 export type Selector = {
   readonly label: string;
   readonly primary: string;
-  readonly retry?: string;
 };
 
 /** USD per token for prompt and completion, and per image and per request. */
@@ -28,11 +27,10 @@ export type Model = {
   readonly pricing: Pricing;
 };
 
-/** A candidate with the exact model IDs it runs, as recorded in the results. */
+/** A candidate with the exact model ID it runs, as recorded in the results. */
 export type Candidate = {
   readonly label: string;
   readonly primary: Model;
-  readonly retry: Model;
 };
 
 /**
@@ -110,11 +108,8 @@ export function resolve(
   const unresolved: string[] = [];
   for (const selector of selectors) {
     const primary = newest(selector.primary, models);
-    const retry = selector.retry === undefined
-      ? primary
-      : newest(selector.retry, models);
-    if (primary === null || retry === null) unresolved.push(selector.label);
-    else candidates.push({ label: selector.label, primary, retry });
+    if (primary === null) unresolved.push(selector.label);
+    else candidates.push({ label: selector.label, primary });
   }
   return unresolved.length > 0
     ? { ok: false, unresolved }
@@ -126,18 +121,16 @@ export function parseSelectors(value: unknown): Selector[] {
     throw new Error("candidates.json holds no candidate list");
   }
   return value.map((entry: unknown) => {
+    // A retry is refused: the function makes one call per photo (ADR 0071).
     if (
       !isRecord(entry) || typeof entry.label !== "string" ||
-      typeof entry.primary !== "string" ||
-      (entry.retry !== undefined && typeof entry.retry !== "string")
+      typeof entry.primary !== "string" || entry.retry !== undefined
     ) {
       throw new Error(
         `candidates.json holds a malformed candidate: ${JSON.stringify(entry)}`,
       );
     }
-    return entry.retry === undefined
-      ? { label: entry.label, primary: entry.primary }
-      : { label: entry.label, primary: entry.primary, retry: entry.retry };
+    return { label: entry.label, primary: entry.primary };
   });
 }
 
