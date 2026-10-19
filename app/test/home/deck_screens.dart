@@ -84,6 +84,14 @@ class DeckScreens {
     addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
+    // Tear-downs run last first, so the screens are unmounted before the
+    // database closes, even when a test fails before its own close(): closing
+    // under mounted screens leaves their stream queries waiting, and the run
+    // hangs until the test times out.
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    });
     var ids = 0;
     var tick = 0;
     final repository = UnreadableDecks(
