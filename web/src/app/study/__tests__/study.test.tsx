@@ -800,6 +800,20 @@ describe("the study page", () => {
     });
   });
 
+  it("gives 안다, 모른다 and the screen's other controls the shared hover and pressed state", async () => {
+    seedDeck(postgrest, "d1", ["un", "deux", "trois"]);
+    await open("d1");
+    // 마지막 응답 바꾸기 shows once a card is answered.
+    await userEvent.setup().keyboard("{ArrowRight}");
+
+    for (const name of [/^안다/, /^모른다/, "안내 다시 보기", "마지막 응답 바꾸기", "단축키"]) {
+      expect(screen.getByRole("button", { name }).className.split(" ")).toContain("pressable");
+    }
+    expect(screen.getByRole("link", { name: "그만하기" }).className.split(" ")).toContain(
+      "pressable",
+    );
+  });
+
   describe("the coach", () => {
     const caption = () => screen.queryByRole("region", { name: "학습 사용 방법" });
     /** What the screen's live region announces of the coach. */

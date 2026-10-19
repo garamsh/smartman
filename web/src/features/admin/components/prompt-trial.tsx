@@ -57,7 +57,7 @@ export function PromptTrial({ served }: { served: { id: number; test: boolean } 
         <button
           type="submit"
           disabled={pending}
-          className="flex min-h-button items-center justify-center self-start rounded-button border border-outline px-4 text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+          className="pressable flex min-h-button items-center justify-center self-start rounded-button border border-outline px-4 text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
         >
           {pending ? "만드는 중…" : "시험하기"}
         </button>
