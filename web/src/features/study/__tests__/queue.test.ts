@@ -7,7 +7,6 @@ import {
   backlogDays,
   type CardState,
   type CardStates,
-  countToday,
   dailyLoad,
   coldStartNewCards,
   orderQueue,
@@ -80,18 +79,8 @@ describe("the study queue", () => {
     expect(ids(current.cards).sort()).toEqual(
       [...ids(atThreshold.slice(0, 9)), "new0", "new1"].sort(),
     );
-    expect(countToday([...atThreshold, ...fresh], atStates, today)).toEqual({
-      review: 9,
-      fresh: 2,
-      backlog: false,
-    });
     expect(paused.backlog).toBe(true);
     expect(ids(paused.cards).sort()).toEqual(ids(over.slice(0, 10)).sort());
-    expect(countToday([...over, ...fresh], overStates, today)).toEqual({
-      review: 10,
-      fresh: 0,
-      backlog: true,
-    });
   });
 
   it("in a backlog, puts the due cards earliest due first, equal due times in the order given", () => {
@@ -185,7 +174,6 @@ describe("the study day", () => {
 
     expect(day.newCardsLeft).toBe(18);
     expect(selectQueue(cards, {}, day).cards).toHaveLength(18);
-    expect(countToday(cards, {}, day)).toEqual({ review: 0, fresh: 18, backlog: false });
   });
 
   it("counts the same answers against the day in one time zone and not in another", () => {
@@ -216,14 +204,14 @@ describe("the study day", () => {
     );
 
     expect(over.newCardsLeft).toBe(0);
-    expect(countToday([card("new")], {}, over)).toEqual({ review: 0, fresh: 0, backlog: false });
+    expect(selectQueue([card("new")], {}, over).cards).toEqual([]);
     // Control: with 19 answered, one new card is left.
     const fewer = studyDay(
       now,
       Array.from({ length: 19 }, () => morning),
       "UTC",
     );
-    expect(countToday([card("new")], {}, fewer)).toEqual({ review: 0, fresh: 1, backlog: false });
+    expect(ids(selectQueue([card("new")], {}, fewer).cards)).toEqual(["new"]);
   });
 
   it("counts a card due later in the day, and not one due the next day", () => {
@@ -241,10 +229,12 @@ describe("the study day", () => {
     const [over, overStates] = reviewed(12, 10);
 
     expect(today.newCardsLeft).toBe(20);
-    expect(countToday([...over, ...fresh], overStates, today).fresh).toBe(0);
+    const newOf = (cards: readonly TestCard[]) =>
+      ids(cards).filter((each) => each.startsWith("new"));
+    expect(newOf(selectQueue([...over, ...fresh], overStates, today).cards)).toEqual([]);
     // Control: below the threshold the day takes both new cards.
     const [at, atStates] = reviewed(12, 9);
-    expect(countToday([...at, ...fresh], atStates, today).fresh).toBe(2);
+    expect(newOf(selectQueue([...at, ...fresh], atStates, today).cards)).toEqual(["new0", "new1"]);
   });
 
   it("counts study days in a row back from today, or from yesterday while today has no answer", () => {

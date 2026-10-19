@@ -17,8 +17,6 @@ export { ReportedDecks } from "./components/reported-decks";
 export { UserSearch } from "./components/user-search";
 export { UserView } from "./components/user-view";
 export {
-  type AdminFailure,
-  type AdminRead,
   adminTimeZone,
   readAdmins,
   readAuditLog,
@@ -33,5 +31,4 @@ export {
   readReportedDecks,
   readUser,
   searchUsers,
-  userPageSize,
 } from "./read-admin";
