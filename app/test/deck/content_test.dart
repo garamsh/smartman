@@ -158,6 +158,28 @@ void main() {
       expect(decodeContent(encoded), blocks);
     });
 
+    test("decodes the back the server's senses migration writes, as "
+        'supabase/tests/senses_migration_test.sql states it', () {
+      const migrated =
+          '[{"type": "senses", "payload": {"senses": [{"labels": [{"kind": "part_of_speech", "text": "명", "category": "noun"}], "meaning": "사과", "examples": []}, {"labels": [{"kind": "part_of_speech", "text": "동", "category": "verb"}], "meaning": "먹다", "examples": []}]}}]';
+
+      final blocks = decodeContent(migrated);
+
+      expect(blocks, const [
+        SensesContent([
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+            meaning: '사과',
+          ),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+            meaning: '먹다',
+          ),
+        ]),
+      ]);
+      expect(plainText(blocks), '[명] 사과\n[동] 먹다');
+    });
+
     test(
       'rejects a senses block that breaks its shape, where a whole one decodes',
       () {
