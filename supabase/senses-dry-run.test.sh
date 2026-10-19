@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Tests supabase/senses-dry-run.sh against a local stack of its own, or says why it did not: a
 # fixture of a card in each recognised form, a mixed card, a note, an unrecognised label, a back of
-# two blocks and a deleted card, then the report's counts, forms and bare-form list, and that no
-# row changed. The stack is stopped, with its data, however the run ends (ADR 0014).
+# two blocks and a deleted card, then the report's counts, forms and bare-form list, that no row
+# changed, and that the migration then converts as many cards as the report counts. The stack is
+# stopped, with its data, however the run ends (ADR 0014).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -76,4 +77,10 @@ if [ "$before" != "$after" ]; then
   exit 1
 fi
 grep -q "Would convert: 6" "$report/report.md" || { echo "the Markdown report does not state the count" >&2; exit 1; }
-echo "checked the senses dry run's report on 11 fixture cards, 6 converting in each recognised form, the mixed card, the note, the unrecognised label, the two-block back and the deleted card left out, and public.cards unchanged"
+# The apply converts exactly what the dry run reported, on the same fixture.
+applied=$(echo "select private.migrate_senses();" | sql)
+if [ "$applied" != "$(jq .convertible "$report/report.json")" ]; then
+  echo "the migration converted $applied cards where the dry run reported $(jq .convertible "$report/report.json")" >&2
+  exit 1
+fi
+echo "checked the senses dry run's report on 11 fixture cards, 6 converting in each recognised form, the mixed card, the note, the unrecognised label, the two-block back and the deleted card left out, public.cards unchanged, and the migration converting the same 6"
