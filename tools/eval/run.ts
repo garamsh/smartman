@@ -5,7 +5,7 @@
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
  *     tools/eval/run.ts [--dry-run] [--prompt-version <id>]
  *
- * It runs prompt v8, the file the database's first version was seeded from, unless
+ * It runs prompt v9, the newest prompt file, unless
  * `--prompt-version` names a version saved in the admin area (ADR 0073), which it reads through
  * `public.prompt_version` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; that run also needs
  * both names in `--allow-env` and the project's host in `--allow-net`.
@@ -31,7 +31,7 @@ import {
 import {
   PROMPT_VERSION,
   SYSTEM_PROMPT,
-} from "../../supabase/functions/extract-cards/prompt_v8.ts";
+} from "../../supabase/functions/extract-cards/prompt_v9.ts";
 import type {
   Image,
   LanguageHints,
@@ -134,7 +134,7 @@ export type Io = {
 export type EvalPrompt = { readonly label: string; readonly text: string };
 
 /**
- * The prompt `--prompt-version <id>` names, read from the database, or prompt v8 without it; a
+ * The prompt `--prompt-version <id>` names, read from the database, or prompt v9 without it; a
  * sentence saying why when the flag or the read fails.
  */
 export async function readPrompt(
