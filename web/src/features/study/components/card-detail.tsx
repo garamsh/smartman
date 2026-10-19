@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { keepFocusInside } from "@/design/focus-trap";
+
 import type { PreviousAnswer } from "../session";
 import { CardSide } from "./card-side";
 import { GradeChip, grades } from "./graded-card";
@@ -28,6 +30,7 @@ export function CardDetail({
         role="dialog"
         aria-modal="true"
         aria-labelledby="card-detail-title"
+        onKeyDown={keepFocusInside}
         className="flex max-h-[90dvh] w-full max-w-study flex-col gap-4 overflow-y-auto rounded-card bg-surface p-6"
       >
         <div className="flex items-center justify-between gap-4">

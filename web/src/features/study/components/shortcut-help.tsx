@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { keepFocusInside } from "@/design/focus-trap";
+
 /** Each keyboard shortcut of the study screen, and what it does. */
 export const shortcuts = [
   { keys: ["→"], action: "안다" },
@@ -24,6 +26,7 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="shortcut-help-title"
+        onKeyDown={keepFocusInside}
         className="flex w-full max-w-sm flex-col gap-4 rounded-card bg-surface p-6"
       >
         <h2 id="shortcut-help-title" className="text-xl font-bold">

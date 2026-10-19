@@ -928,6 +928,41 @@ describe("the study page", () => {
       expect(followed).toHaveBeenCalledOnce();
     });
 
+    it("keeps Tab and Shift+Tab inside the shortcut list, on its 닫기", async () => {
+      const user = userEvent.setup();
+      await user.keyboard("{ArrowRight}");
+
+      await user.keyboard("?");
+      const close = within(screen.getByRole("dialog", { name: "단축키" })).getByRole("button", {
+        name: "닫기",
+      });
+      expect(close).toHaveFocus();
+      await user.tab();
+      expect(close).toHaveFocus();
+      await user.tab({ shift: true });
+      expect(close).toHaveFocus();
+      await user.keyboard("{Escape}");
+      expect(screen.getByRole("button", { name: "단축키" })).toHaveFocus();
+    });
+
+    it("keeps Tab and Shift+Tab inside the whole card, on its 닫기", async () => {
+      const user = userEvent.setup();
+      await user.keyboard("{ArrowRight}");
+
+      const face = screen.getByRole("button", { name: "카드 전체 보기" });
+      await user.click(face);
+      const done = within(screen.getByRole("dialog", { name: "카드" })).getByRole("button", {
+        name: "닫기",
+      });
+      expect(done).toHaveFocus();
+      await user.tab();
+      expect(done).toHaveFocus();
+      await user.tab({ shift: true });
+      expect(done).toHaveFocus();
+      await user.keyboard("{Escape}");
+      expect(face).toHaveFocus();
+    });
+
     it("lists every shortcut on ?, and closes the list on Esc without ending the session", async () => {
       const user = userEvent.setup();
 
