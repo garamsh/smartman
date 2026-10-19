@@ -74,7 +74,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCard => '카드';
 
   @override
-  String get wholeCardReadOnly => '표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
+  String get wholeCardReadOnly => '표 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
 
   @override
   String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
@@ -84,6 +84,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cardKindWord => '단어';
+
+  @override
+  String get cardKindCloze => '빈칸';
+
+  @override
+  String get clozeWordsHint => '빈칸으로 할 낱말을 눌러요';
+
+  @override
+  String clozeWord(String word) {
+    return '$word';
+  }
+
+  @override
+  String clozeWordBlank(String word) {
+    return '$word, 빈칸';
+  }
+
+  @override
+  String get clozeBlankRequired => '빈칸으로 할 낱말을 하나 이상 골라 주세요';
 
   @override
   String get cardKindLabel => '카드 종류';

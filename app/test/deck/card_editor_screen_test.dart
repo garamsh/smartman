@@ -5,11 +5,13 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_preview.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/word_break.dart';
 
 import '../home/deck_screens.dart';
 import 'whole_cards.dart';
 
-/// The text of the preview's two halves, front then back.
+/// The text of the preview's two halves, front then back, its word joiners
+/// left out.
 List<String?> _preview(WidgetTester tester) => [
   for (final text in tester.widgetList<Text>(
     find.descendant(
@@ -17,7 +19,7 @@ List<String?> _preview(WidgetTester tester) => [
       matching: find.byType(Text),
     ),
   ))
-    text.data ?? text.textSpan?.toPlainText(),
+    (text.data ?? text.textSpan?.toPlainText())?.replaceAll('\u2060', ''),
 ];
 
 /// The text of every stored card, front and back.
@@ -149,9 +151,7 @@ void main() {
       await screens.push((deck) => CardEditorScreen(deck: deck, card: whole));
       expect(blanksUnder(find.byType(CardPreview)), {'Paris': true});
       expect(
-        find.text(
-          "Table and cloze cards can't be edited yet. You can delete one.",
-        ),
+        find.text("Table cards can't be edited yet. You can delete one."),
         findsOneWidget,
       );
       expect(find.byType(AppTextField), findsNothing);
@@ -253,7 +253,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('cat'),
+          matching: find.text(keepWords('cat')),
         ),
         findsOneWidget,
       );
