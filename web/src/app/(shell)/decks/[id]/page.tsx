@@ -1,7 +1,26 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
+
+import { parseDeckId } from "@/features/decks";
 
 import { Deck } from "./_components/deck";
 import { DeckSkeleton } from "./_components/deck-skeleton";
+import { readDeck } from "./_components/read-deck";
+
+/**
+ * The deck's name as the page's title, from the read the page makes; a deck that does not exist
+ * is not found, as on the page, and a failed read leaves the title 덱's.
+ */
+export async function generateMetadata({ params }: PageProps<"/decks/[id]">): Promise<Metadata> {
+  const deckId = parseDeckId((await params).id);
+  if (!deckId) notFound();
+  const read = await readDeck(deckId);
+  if ("failure" in read) return { title: "덱 · smartman" };
+  const deck = read.library.decks.find((candidate) => candidate.id === deckId);
+  if (!deck) notFound();
+  return { title: `${deck.name} · smartman` };
+}
 
 /** One deck: where it sits, its header, today's card for it with its progress, and its cards. */
 export default function DeckPage({ params }: PageProps<"/decks/[id]">) {

@@ -22,7 +22,7 @@ export function RetentionPreview({ days, timeZone }: { days: RecordDay[]; timeZo
   const link = (
     <Link
       href="/record"
-      className="self-start text-label text-ink underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="flex min-h-tap-target items-center self-start text-label text-ink underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       기록에서 자세히 보기
     </Link>
