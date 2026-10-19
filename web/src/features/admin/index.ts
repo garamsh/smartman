@@ -8,6 +8,10 @@ export { GrantAdminForm } from "./components/grant-admin-form";
 export { OverviewView } from "./components/overview-view";
 export { usdPerPhoto } from "./model-costs";
 export { PlansView } from "./components/plans-view";
+export { PromptForm } from "./components/prompt-form";
+export { PromptTrial } from "./components/prompt-trial";
+export { PromptVersions } from "./components/prompt-versions";
+export { PromptView } from "./components/prompt-view";
 export { PublicDecks } from "./components/public-decks";
 export { ReportedDecks } from "./components/reported-decks";
 export { UserSearch } from "./components/user-search";
@@ -22,6 +26,8 @@ export {
   readIsAdmin,
   readOverview,
   readPlans,
+  readPromptVersion,
+  readPromptVersions,
   readPublicDecks,
   readReportedDecks,
   readUser,

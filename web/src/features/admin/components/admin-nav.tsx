@@ -9,6 +9,7 @@ const sections = [
   { href: "/admin/decks", label: "공개 덱" },
   { href: "/admin/users", label: "사용자" },
   { href: "/admin/plans", label: "요금제" },
+  { href: "/admin/prompts", label: "프롬프트" },
   { href: "/admin/admins", label: "관리자" },
   { href: "/admin/audit", label: "작업 기록" },
 ] as const;

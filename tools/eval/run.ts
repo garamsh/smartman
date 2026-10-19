@@ -3,7 +3,12 @@
  *
  *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
- *     tools/eval/run.ts [--dry-run]
+ *     tools/eval/run.ts [--dry-run] [--prompt-version <id>]
+ *
+ * It runs prompt v8, the file the database's first version was seeded from, unless
+ * `--prompt-version` names a version saved in the admin area (ADR 0073), which it reads through
+ * `public.prompt_version` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; that run also needs
+ * both names in `--allow-env` and the project's host in `--allow-net`.
  *
  * It resolves `candidates.json` against OpenRouter's model list, estimates the run's cost,
  * and refuses to start one the remaining budget in `spend.json` cannot cover. `--dry-run`
@@ -24,7 +29,10 @@ import {
   MAX_OUTPUT_TOKENS,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v8.ts";
+import {
+  PROMPT_VERSION,
+  SYSTEM_PROMPT,
+} from "../../supabase/functions/extract-cards/prompt_v8.ts";
 import type {
   Image,
   LanguageHints,
@@ -122,9 +130,65 @@ export type Io = {
   readonly startedAt: () => string;
 };
 
+/** The instructions a run gives the model, and how the ledger and the report name them. */
+export type EvalPrompt = { readonly label: string; readonly text: string };
+
+/**
+ * The prompt `--prompt-version <id>` names, read from the database, or prompt v8 without it; a
+ * sentence saying why when the flag or the read fails.
+ */
+export async function readPrompt(
+  args: readonly string[],
+  io: Pick<Io, "env" | "fetch">,
+): Promise<EvalPrompt | { readonly error: string }> {
+  const at = args.indexOf("--prompt-version");
+  if (at === -1) return { label: PROMPT_VERSION, text: SYSTEM_PROMPT };
+  const id = args[at + 1];
+  if (id === undefined || !/^[1-9]\d{0,15}$/.test(id)) {
+    return {
+      error: "--prompt-version takes a version's id, a positive whole number",
+    };
+  }
+  const url = io.env("SUPABASE_URL")?.trim();
+  const key = io.env("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!url || !key) {
+    return {
+      error:
+        "--prompt-version needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
+    };
+  }
+  const response = await io.fetch(`${url}/rest/v1/rpc/prompt_version`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ version_id: Number(id) }),
+  });
+  if (!response.ok) {
+    return { error: `prompt_version answered ${response.status}` };
+  }
+  const rows: unknown = await response.json();
+  const row: unknown = Array.isArray(rows) ? rows[0] : undefined;
+  if (row === undefined) return { error: `no prompt version ${id}` };
+  const text = typeof row === "object" && row !== null && "text" in row
+    ? row.text
+    : undefined;
+  if (typeof text !== "string" || text.trim() === "") {
+    return { error: "prompt_version answered a row it should not" };
+  }
+  return { label: `version ${id}`, text };
+}
+
 /** Runs the eval and returns the process exit code. */
 export async function main(args: readonly string[], io: Io): Promise<number> {
   const dryRun = args.includes("--dry-run");
+  const prompt = await readPrompt(args, io);
+  if ("error" in prompt) {
+    io.print(prompt.error);
+    return 1;
+  }
   const selectors = parseSelectors(
     JSON.parse(await io.readText(PATHS.candidates)),
   );
@@ -185,6 +249,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
   io.print(`keeping every reply in ${replies}/`);
   const run = await runEval(candidates, samples, ledger, {
     apiKey,
+    prompt,
     fetch: io.fetch,
     now: io.now,
     print: io.print,
@@ -201,7 +266,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
       spentUsd: round(run.spentUsd),
       note: run.stopped
         ? "stopped before exceeding the budget"
-        : `prompt ${PROMPT_VERSION}`,
+        : `prompt ${prompt.label}`,
     }],
   };
   io.print(
@@ -223,6 +288,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
           updated,
           io.today(),
           { replies, halted: run.halted },
+          prompt.label,
         ),
       );
       io.print(`wrote ${PATHS.report}`);
@@ -258,6 +324,8 @@ export type Halt = { readonly label: string; readonly ran: number };
 
 type RunDeps = {
   apiKey: string;
+  /** The instructions every call gives the model. */
+  prompt: EvalPrompt;
   fetch: typeof fetch;
   now: () => number;
   print: (line: string) => void;
@@ -306,6 +374,7 @@ export async function runEval(
         sample.image,
         sample.languages,
         candidate.primary.id,
+        deps.prompt.text,
         { ...deps, fetch: recording(deps.fetch, calls) },
       );
       errorsInRow = extraction.kind === "model_error" ? errorsInRow + 1 : 0;
@@ -552,6 +621,7 @@ export function report(
   ledger: Ledger,
   date: string,
   kept: { readonly replies: string; readonly halted: readonly Halt[] },
+  promptLabel: string,
 ): string {
   const pick = recommend(rows);
   const pct = (value: number) => (value * 100).toFixed(1);
@@ -561,7 +631,7 @@ export function report(
     "",
     "Results of `tools/eval/run.ts`: how each candidate configuration extracts cards from the sample set.",
     "",
-    `- Run on ${date} with prompt ${PROMPT_VERSION}, over ${sampleCount} images in \`tools/eval/samples/\`.`,
+    `- Run on ${date} with prompt ${promptLabel}, over ${sampleCount} images in \`tools/eval/samples/\`.`,
     "- The samples are synthetic: printed and handwritten-style pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
     "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in labels and meaning, and senses R the share of the entry's senses so returned.",

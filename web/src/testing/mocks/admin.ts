@@ -81,6 +81,12 @@ export class FakeAdmin {
       daily_limit: 30,
       updated_by: null,
     }));
+  /** The saved prompt versions, oldest first; the seed, prompt v8, is version 1. */
+  readonly prompts: { id: number; text: string; note: string; by: string | null }[] = [
+    { id: 1, text: "Prompt v8.\nKeep each fact.", note: "prompt v8", by: null },
+  ];
+  /** The version each label names; no `test` while none is set. */
+  readonly promptLabels = new Map<"active" | "test", number>([["active", 1]]);
   /** Each suspended user's suspension. */
   readonly suspensions = new Map<string, { reason: string; by: string }>();
   /** Each deck removed from sharing, and why. */
@@ -112,6 +118,19 @@ export class FakeAdmin {
   private owner(deck: FakeDeck): Row {
     const user = this.users.find((candidate) => candidate.id === deck.ownerId);
     return { owner_id: deck.ownerId, owner_email: user?.email ?? "", owner_name: null };
+  }
+
+  private promptRow(prompt: FakeAdmin["prompts"][number]): Row {
+    return {
+      id: prompt.id,
+      note: prompt.note,
+      length: prompt.text.length,
+      created_by_email: this.users.find((user) => user.id === prompt.by)?.email ?? null,
+      created_at: "2026-10-19T04:00:00Z",
+      labels: (["active", "test"] as const).filter(
+        (label) => this.promptLabels.get(label) === prompt.id,
+      ),
+    };
   }
 
   private reasons(deck: FakeDeck): string[] {
@@ -295,6 +314,56 @@ export class FakeAdmin {
         this.removals.set(deck.id, reason);
         deck.visibility = "private";
         this.record(admin, "remove_deck", "deck", deck.id, { name: deck.name, reason });
+        return true;
+      }
+      case "admin_prompt_versions":
+        return this.prompts.toReversed().map((prompt) => this.promptRow(prompt));
+      case "admin_prompt_version": {
+        const prompt = this.prompts.find((candidate) => candidate.id === args.version_id);
+        if (!prompt) return [];
+        const active = this.prompts.find((p) => p.id === this.promptLabels.get("active"));
+        return [
+          {
+            ...this.promptRow(prompt),
+            text: prompt.text,
+            active_id: active?.id ?? null,
+            active_text: active?.text ?? null,
+          },
+        ];
+      }
+      case "admin_save_prompt": {
+        const text = String(args.text);
+        const id = (this.prompts.at(-1)?.id ?? 0) + 1;
+        const note = String(args.note).trim();
+        this.prompts.push({ id, text, note, by: admin });
+        this.record(admin, "save_prompt", "prompt", String(id), { note, length: text.length });
+        return id;
+      }
+      case "admin_set_prompt_label": {
+        const label = args.label === "test" ? "test" : "active";
+        const id = Number(args.version_id);
+        const previous = this.promptLabels.get(label) ?? null;
+        if (previous === id) return false;
+        this.promptLabels.set(label, id);
+        const cleared = label === "active" && this.promptLabels.get("test") === id;
+        if (cleared) this.promptLabels.delete("test");
+        this.record(
+          admin,
+          label === "active" ? "activate_prompt" : "test_prompt",
+          "prompt",
+          String(id),
+          {
+            previous,
+            test_cleared: cleared,
+          },
+        );
+        return true;
+      }
+      case "admin_clear_test_prompt": {
+        const test = this.promptLabels.get("test");
+        if (test === undefined) return false;
+        this.promptLabels.delete("test");
+        this.record(admin, "clear_test_prompt", "prompt", String(test), {});
         return true;
       }
       case "admin_plans":

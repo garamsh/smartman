@@ -12,3 +12,8 @@ export { findUsers } from "./find-users";
 export { removeDeck } from "./remove-deck";
 export { suspendUser } from "./suspend-user";
 export { unsuspendUser } from "./unsuspend-user";
+export { activatePrompt } from "./activate-prompt";
+export { clearTestPrompt } from "./clear-test-prompt";
+export { savePrompt, type SavePromptState } from "./save-prompt";
+export { testPrompt } from "./test-prompt";
+export { tryPrompt, type TrialResult } from "./try-prompt";

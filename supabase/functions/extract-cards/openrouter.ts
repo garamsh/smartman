@@ -1,7 +1,7 @@
 /** Extracts cards from an image through one OpenRouter chat completion. */
 
 import { type Card, cardsSchema, parseCards } from "./cards.ts";
-import { SYSTEM_PROMPT, userPrompt } from "./prompt_v8.ts";
+import { userPrompt } from "./prompt_v8.ts";
 import type { Image, LanguageHints } from "./request.ts";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -46,14 +46,18 @@ export type ExtractDeps = {
   readonly now: () => number;
 };
 
-/** One call to [model]; output that is not the schema's is `invalid_output`, with no second call. */
+/**
+ * One call to [model] with [instructions] as the system prompt; output that is not the schema's
+ * is `invalid_output`, with no second call.
+ */
 export async function extractCards(
   image: Image,
   languages: LanguageHints,
   model: ModelId,
+  instructions: string,
   deps: ExtractDeps,
 ): Promise<Extraction> {
-  const call = await callModel(model, image, languages, deps);
+  const call = await callModel(model, instructions, image, languages, deps);
   const attempts = [call.attempt];
   if (call.reply === null) return { kind: "model_error", attempts };
   const cards = parseCards(call.reply);
@@ -68,6 +72,7 @@ type Call = { readonly attempt: Attempt; readonly reply: string | null };
 /** Sends one request; `reply` is the message text, or null when the call itself failed. */
 async function callModel(
   model: ModelId,
+  instructions: string,
   image: Image,
   languages: LanguageHints,
   deps: ExtractDeps,
@@ -84,7 +89,7 @@ async function callModel(
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: instructions },
           {
             role: "user",
             content: [

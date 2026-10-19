@@ -1,6 +1,7 @@
 // The eval end to end with OpenRouter and the file system replaced by in-memory fakes.
 import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
+import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v8.ts";
 import { meaningOf, normalize } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
@@ -704,6 +705,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
     ledger,
     {
       apiKey: "key",
+      prompt: { label: "v8", text: SYSTEM_PROMPT },
       fetch: io(w).fetch,
       now: () => 0,
       print: () => {},
@@ -727,6 +729,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
     },
     {
       apiKey: "key",
+      prompt: { label: "v8", text: SYSTEM_PROMPT },
       fetch: io(world()).fetch,
       now: () => 0,
       print: () => {},
@@ -1271,3 +1274,73 @@ async function committedSamples() {
       Deno.readFile(new URL(path.slice(PATHS.samples.length + 1), dir)),
   });
 }
+
+/** [w]'s I/O with the project's URL and key, whose database holds version 5 and no other. */
+function withStore(w: World, systems: string[]): Io {
+  const base = io(w, {
+    OPENROUTER_API_KEY: "key",
+    SUPABASE_URL: "https://project.supabase.test",
+    SUPABASE_SERVICE_ROLE_KEY: "service-key",
+  });
+  return {
+    ...base,
+    fetch: (input, init) => {
+      const url = String(input);
+      if (url === "https://project.supabase.test/rest/v1/rpc/prompt_version") {
+        const asked = JSON.parse(String(init?.body)).version_id;
+        const key = new Headers(init?.headers).get("Authorization");
+        return Promise.resolve(Response.json(
+          asked === 5 && key === "Bearer service-key"
+            ? [{ text: "Stored instructions.", note: "shorter" }]
+            : [],
+        ));
+      }
+      if (url === OPENROUTER_URL) {
+        systems.push(JSON.parse(String(init?.body)).messages[0].content);
+      }
+      return base.fetch(input, init);
+    },
+  };
+}
+
+Deno.test("--prompt-version runs a version read from the database, which the ledger and the report name", async () => {
+  const w = world({ budgetUsd: 10, runs: [] });
+  const systems: string[] = [];
+  assert.equal(await main(["--prompt-version", "5"], withStore(w, systems)), 0);
+  assert.ok(systems.length > 0);
+  assert.ok(systems.every((system) => system === "Stored instructions."));
+  assert.equal(
+    JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).note,
+    "prompt version 5",
+  );
+  assert.match(w.files.get(PATHS.report) ?? "", /with prompt version 5, over/);
+
+  // Control: without the flag, the run gives prompt v8.
+  const plain: string[] = [];
+  assert.equal(
+    await main([], withStore(world({ budgetUsd: 10, runs: [] }), plain)),
+    0,
+  );
+  assert.ok(plain.every((system) => system === SYSTEM_PROMPT));
+});
+
+Deno.test("--prompt-version refuses a missing or malformed id, an unknown version, or no project key, before any call", async () => {
+  for (
+    const args of [["--prompt-version"], ["--prompt-version", "x"], [
+      "--prompt-version",
+      "6",
+    ]]
+  ) {
+    const w = world({ budgetUsd: 10, runs: [] });
+    assert.equal(await main(args, withStore(w, [])), 1, args.join(" "));
+    assert.equal(w.chatCalls.length, 0);
+  }
+  const w = world({ budgetUsd: 10, runs: [] });
+  assert.equal(await main(["--prompt-version", "5"], io(w)), 1);
+  assert.ok(
+    w.printed.includes(
+      "--prompt-version needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
+    ),
+  );
+  assert.equal(w.chatCalls.length, 0);
+});
