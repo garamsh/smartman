@@ -165,6 +165,10 @@ NOTE_DISTORTIONS = ["mild", "harsh"]
 # the writer's own additions in pen, and a page with a classification table, judgment rules,
 # starred handwritten tips and a side box.
 DENSE_DOCUMENTS = ["ko-grammar", "ko-auxiliary", "ko-numerals"]
+# The pages for prompt v7, each in every hand and distortion after the word book pages: a page
+# whose classification table is to be memorised, its truth naming the cells a table card should
+# blank, and a page of list lines recalled in context, naming the words a cloze card should.
+BLANK_DOCUMENTS = ["ko-honorifics", "ko-components"]
 MARK_COLOUR = (190, 40, 40)
 # A line the writer added by hand, in pen, in the handwriting face on every page.
 ADDITION_COLOUR = (30, 90, 170)
@@ -373,6 +377,41 @@ def check_coverage(covered: dict[str, set[str]]) -> None:
             raise SystemExit(f"{face} has no glyph for: {''.join(missing)}")
 
 
+def write_notes_samples(index: int, name: str, doc: dict) -> int:
+    """Writes the notes page `name` in every hand and distortion, numbered after `index`, with its
+    truth: its facts and lines, and the table and cloze blanks it names; returns the last index."""
+    language = name.split("-")[0]
+    for hand in NOTE_HANDS:
+        for distortion in NOTE_DISTORTIONS:
+            index += 1
+            rng = np.random.default_rng([SEED, index])
+            face = NOTE_FACES[hand]
+            page = Page(rng, "", hand, (face, face))
+            notes(page, doc)
+            check_coverage(page.covered)
+            d = HARSH if distortion == "harsh" else MILD
+            photo = photograph(page.image, rng, d)
+            sample = f"{index:02d}-notes-{name}-{hand}-{distortion}"
+            photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
+            truth = {
+                "image": f"{sample}.jpg",
+                "kind": "notes",
+                "layout": "notes",
+                "languages": {"front": language, "back": language},
+                "hand": hand,
+                "distortion": distortion,
+                "fonts": [face],
+                "facts": doc["facts"],
+                "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
+            }
+            for key in ("tableBlanks", "clozeBlanks"):
+                if key in doc:
+                    truth[key] = doc[key]
+            (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                    encoding="utf-8")
+    return index
+
+
 def main() -> None:
     vocabulary = json.loads((HERE / "vocabulary.json").read_text(encoding="utf-8"))
     SAMPLES.mkdir(exist_ok=True)
@@ -434,33 +473,7 @@ def main() -> None:
                 (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                       encoding="utf-8")
     for name in DENSE_DOCUMENTS:
-        doc = documents[name]
-        language = name.split("-")[0]
-        for hand in NOTE_HANDS:
-            for distortion in NOTE_DISTORTIONS:
-                index += 1
-                rng = np.random.default_rng([SEED, index])
-                face = NOTE_FACES[hand]
-                page = Page(rng, "", hand, (face, face))
-                notes(page, doc)
-                check_coverage(page.covered)
-                d = HARSH if distortion == "harsh" else MILD
-                photo = photograph(page.image, rng, d)
-                sample = f"{index:02d}-notes-{name}-{hand}-{distortion}"
-                photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
-                truth = {
-                    "image": f"{sample}.jpg",
-                    "kind": "notes",
-                    "layout": "notes",
-                    "languages": {"front": language, "back": language},
-                    "hand": hand,
-                    "distortion": distortion,
-                    "fonts": [face],
-                    "facts": doc["facts"],
-                    "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
-                }
-                (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
-                                                        encoding="utf-8")
+        index = write_notes_samples(index, name, documents[name])
     # The word book pages, after every page above: several labelled senses an entry, and a
     # pronunciation per part of speech.
     entries = vocabulary["word-book"]
@@ -486,6 +499,8 @@ def main() -> None:
         }
         (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                               encoding="utf-8")
+    for name in BLANK_DOCUMENTS:
+        index = write_notes_samples(index, name, documents[name])
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 

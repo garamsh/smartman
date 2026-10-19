@@ -1,7 +1,7 @@
 /** Extracts cards from an image through one OpenRouter chat completion. */
 
 import { type Card, cardsSchema, parseCards } from "./cards.ts";
-import { SYSTEM_PROMPT, userPrompt } from "./prompt_v6.ts";
+import { SYSTEM_PROMPT, userPrompt } from "./prompt_v7.ts";
 import type { Image, LanguageHints } from "./request.ts";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";

@@ -27,6 +27,8 @@ const modelCards = [
     extras: [],
     pronunciation: null,
     examples: ["She ate an apple."],
+    table: null,
+    cloze: null,
   },
   {
     kind: "vocabulary",
@@ -38,6 +40,8 @@ const modelCards = [
     extras: [],
     pronunciation: null,
     examples: [],
+    table: null,
+    cloze: null,
   },
 ];
 /** A notes page's ground truth, and the note cards a model writes for it. */
@@ -68,6 +72,8 @@ const noteCards = [{
   extras: [],
   pronunciation: null,
   examples: ["253+4637+647898=652788 -> 연역"],
+  table: null,
+  cloze: null,
 }];
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
 /** A notes sample's image, told apart from the vocabulary ones by its bytes. */
@@ -113,6 +119,8 @@ type World = {
   printed: string[];
   /** The cost each chat reply reports. */
   replyCost: number;
+  /** The cards the model writes for a notes image, `noteCards` unless a test sets its own. */
+  notesReply?: unknown[];
 };
 
 /** The error body OpenRouter answers a call to `vendor/broken` with, and `vendor/flaky`'s first. */
@@ -171,7 +179,7 @@ function io(
         }
         const notes = JSON.stringify(body.messages).includes(NOTES_IMAGE);
         const cards = notes
-          ? noteCards
+          ? w.notesReply ?? noteCards
           : body.model === "vendor/dear"
           ? modelCards
           : modelCards.slice(0, 1);
@@ -300,7 +308,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v6",
+    note: "prompt v7",
   });
   assert.ok(
     w.printed.includes(
@@ -348,7 +356,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v6",
+    note: "prompt v7",
   }]);
 });
 
@@ -457,9 +465,13 @@ Deno.test("a notes sample is scored by coverage, unsupported cards, invented exa
   // The one note card covers one of the page's two facts.
   assert.match(
     table,
-    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \|\n/,
+    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \| Bare exceptions \| Table blanks \| Cloze blanks \|\n/,
   );
-  assert.match(table, /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \|\n/);
+  // No page names table or cloze blanks, so both read as a dash.
+  assert.match(
+    table,
+    /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| — \| — \|\n/,
+  );
   assert.doesNotMatch(table, /Step order|Coverage at/);
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
@@ -514,15 +526,92 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
     );
     await assert.rejects(
       loadSamples(io(w)),
-      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines\}/,
+      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines, tableBlanks\?: \[\{id, terms\}\], clozeBlanks\?: \[\{id, terms\}\]\}/,
     );
+  }
+  for (
+    const blanks of [
+      [],
+      "x",
+      [{ id: "a" }],
+      [{ id: "a", terms: [] }],
+      [{ id: "a", terms: [" "] }],
+      [{ id: 1, terms: ["x"] }],
+    ]
+  ) {
+    for (const key of ["tableBlanks", "clozeBlanks"]) {
+      const w = world();
+      w.files.set(
+        `${PATHS.samples}/03-notes.json`,
+        JSON.stringify({ image: "03-notes.jpg", ...notesTruth, [key]: blanks }),
+      );
+      await assert.rejects(
+        loadSamples(io(w)),
+        /notes ground truth/,
+        `${key}: ${JSON.stringify(blanks)}`,
+      );
+    }
   }
   const control = world();
   control.files.set(
     `${PATHS.samples}/03-notes.json`,
-    JSON.stringify({ image: "03-notes.jpg", ...notesTruth }),
+    JSON.stringify({
+      image: "03-notes.jpg",
+      ...notesTruth,
+      tableBlanks: [{ id: "a", terms: ["x"] }],
+      clozeBlanks: [{ id: "b", terms: ["y", "z"] }],
+    }),
   );
-  assert.equal((await loadSamples(io(control))).length, 3);
+  const samples = await loadSamples(io(control));
+  assert.equal(samples.length, 3);
+  const notes = samples.find((sample) => sample.kind === "notes");
+  assert.deepEqual(
+    notes?.kind === "notes" &&
+      [notes.notes.tableBlanks, notes.notes.clozeBlanks],
+    [[{ id: "a", terms: ["x"] }], [{ id: "b", terms: ["y", "z"] }]],
+  );
+});
+
+Deno.test("a notes page naming table and cloze blanks is scored on the blanks its table and cloze cards ask", async () => {
+  const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
+  w.files.set(
+    `${PATHS.samples}/03-notes.json`,
+    JSON.stringify({
+      image: "03-notes.jpg",
+      ...notesTruth,
+      tableBlanks: [
+        { id: "native", terms: ["하나"] },
+        { id: "sino", terms: ["일"] },
+      ],
+      clozeBlanks: [{ id: "deduction", terms: ["반드시"] }],
+    }),
+  );
+  w.notesReply = [{
+    ...noteCards[0],
+    type: "table",
+    front: "수사",
+    answer: null,
+    examples: [],
+    table: {
+      columns: ["구분", "고유어", "한자어"],
+      rows: [["양수사", "하나", "일"]],
+      blanks: [{ row: 0, column: 1 }],
+    },
+  }, {
+    ...noteCards[0],
+    type: "cloze",
+    front: "연역 논증: 전제가 참이면 결론이 ___ 참",
+    answer: null,
+    examples: [],
+    cloze: { answers: ["반드시"] },
+  }];
+  assert.equal(await main([], io(w)), 0);
+  const table = w.files.get(PATHS.report) ?? "";
+  // One of the two table cells is a blank, and the one cloze word is.
+  assert.match(
+    table,
+    /\| Cheap \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| 50\.0 \| 100\.0 \|\n/,
+  );
 });
 
 Deno.test("the dry estimate prices a note card above a vocabulary card", () => {
@@ -701,12 +790,20 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
   const notes = (await committedSamples()).flatMap((sample) =>
     sample.kind === "notes" ? [sample] : []
   );
-  assert.equal(notes.length, 20);
+  assert.equal(notes.length, 28);
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
   );
   for (
-    const document of ["ko", "en", "ko-grammar", "ko-auxiliary", "ko-numerals"]
+    const document of [
+      "ko",
+      "en",
+      "ko-grammar",
+      "ko-auxiliary",
+      "ko-numerals",
+      "ko-honorifics",
+      "ko-components",
+    ]
   ) {
     const drawn = notes.filter((sample) =>
       documentOf(sample.name) === document
@@ -794,6 +891,63 @@ Deno.test("the page for prompt v6 has a classification table, judgment rules, st
   }
 });
 
+Deno.test("the pages for prompt v7 name the cells of a table to blank and the words of list lines to blank, each a cell or word the page prints, and their samples carry them", async () => {
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  type Line = { text: string; kind: string; header?: boolean };
+  type Blank = { id: string; terms: string[] };
+  const table = documents["ko-honorifics"];
+  const rows: Line[] = table.lines.filter((line: Line) => line.kind === "row");
+  assert.ok(rows[0].header, "a header row");
+  const body = rows.slice(1).map((row) => row.text.split(" | "));
+  const headers = [
+    ...rows[0].text.split(" | "),
+    ...body.map(([name]) => name),
+  ];
+  // Every table blank is one body cell, never a header, and every body cell but the row names
+  // is a blank.
+  const blanks: Blank[] = table.tableBlanks;
+  for (const blank of blanks) {
+    const cells = body.flatMap(([, ...cells]) => cells).filter((cell) =>
+      blank.terms.every((term) => normalize(cell).includes(normalize(term)))
+    );
+    assert.equal(cells.length, 1, `${blank.id} is one body cell`);
+    assert.ok(
+      headers.every((header) =>
+        !blank.terms.every((term) => normalize(header).includes(term))
+      ),
+      `${blank.id} is no header`,
+    );
+  }
+  assert.equal(
+    blanks.length,
+    body.length * (rows[0].text.split(" | ").length - 1),
+  );
+  assert.equal(table.clozeBlanks, undefined);
+  // The list page names each listed word of its first section as a cloze blank.
+  const list = documents["ko-components"];
+  const listed = list.lines.filter((line: Line) => line.kind === "point")
+    .slice(0, 3)
+    .flatMap((line: Line) => line.text.split(": ")[1].split(", "));
+  assert.deepEqual(
+    list.clozeBlanks.map((blank: Blank) => blank.terms.join()),
+    listed,
+  );
+  assert.equal(list.tableBlanks, undefined);
+  for (const name of ["ko-honorifics", "ko-components"]) {
+    const samples = (await committedSamples()).filter((sample) =>
+      sample.kind === "notes" && documentOf(sample.name) === name
+    );
+    assert.equal(samples.length, 4, name);
+    for (const sample of samples) {
+      assert.ok(sample.kind === "notes");
+      assert.deepEqual(sample.notes.tableBlanks, documents[name].tableBlanks);
+      assert.deepEqual(sample.notes.clozeBlanks, documents[name].clozeBlanks);
+    }
+  }
+});
+
 Deno.test("the committed notes pages count rules and exceptions as facts, each worked example an example of its rule's fact, and the dense page marks its exceptions", async () => {
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
@@ -826,7 +980,16 @@ Deno.test("the committed notes pages count rules and exceptions as facts, each w
       `a fact for: ${line.text}`,
     );
   }
-  for (const name of ["ko", "en", "ko-grammar", "ko-auxiliary"]) {
+  for (
+    const name of [
+      "ko",
+      "en",
+      "ko-grammar",
+      "ko-auxiliary",
+      "ko-honorifics",
+      "ko-components",
+    ]
+  ) {
     const document = documents[name];
     // No fact is a worked example: none is named as one.
     assert.ok(

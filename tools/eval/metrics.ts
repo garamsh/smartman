@@ -2,8 +2,11 @@
 
 import type {
   Card,
+  CardType,
+  Cloze,
   Sense,
   Step,
+  Table,
 } from "../../supabase/functions/extract-cards/cards.ts";
 
 /**
@@ -212,15 +215,31 @@ export type Fact = {
   readonly examples: readonly string[];
 };
 
-/** A notes page's ground truth: its rules and exceptions, and every line it prints. */
+/**
+ * A word or cell of the page a card should ask as a blank: the terms one blank must all hold,
+ * after `normalize`.
+ */
+export type Blank = { readonly id: string; readonly terms: readonly string[] };
+
+/**
+ * A notes page's ground truth: its rules and exceptions, every line it prints, and, on a page
+ * with a table to memorise or lines recalled in context, the cells a table card should blank and
+ * the words a cloze card should.
+ */
 export type NotesTruth = {
   readonly facts: readonly Fact[];
   /** Every line the page prints, its title included. */
   readonly lines: readonly string[];
+  readonly tableBlanks?: readonly Blank[];
+  readonly clozeBlanks?: readonly Blank[];
 };
 
-/** The fields of a returned card the notes metrics read. */
-export type NoteCandidate = Pick<Card, "front" | "answer" | "examples">;
+/** The fields of a returned card the notes metrics read; a test may leave out its type. */
+export type NoteCandidate = Pick<Card, "front" | "answer" | "examples"> & {
+  readonly type?: CardType;
+  readonly table?: Table;
+  readonly cloze?: Cloze;
+};
 
 /** The most items one card's answer may list under prompt v6's atomic rule. */
 export const MAX_LISTED_ITEMS = 5;
@@ -236,8 +255,11 @@ export function listedItems(answer: string): number {
 
 /**
  * One notes image's counts: `coverage`, the share of the page's facts some card covers, and over
- * every returned card, those covering no fact, those whose answer lists more than
- * `MAX_LISTED_ITEMS` items, the examples returned and those the page does not print.
+ * every returned card, those covering no fact, those other than a table card whose answer lists
+ * more than `MAX_LISTED_ITEMS` items, the examples returned and those the page does not print,
+ * and those that only call themselves an exception (`isBareException`). Then the page's table
+ * blanks and those some table card blanks, and its cloze blanks and those some cloze card blanks
+ * (`blankCovered`).
  */
 export type NotesScore = {
   readonly coverage: number;
@@ -246,7 +268,58 @@ export type NotesScore = {
   readonly longAnswers: number;
   readonly examples: number;
   readonly inventedExamples: number;
+  readonly bareExceptions: number;
+  readonly tableBlanks: number;
+  readonly tableBlanksCovered: number;
+  readonly clozeBlanks: number;
+  readonly clozeBlanksCovered: number;
 };
+
+/** The words that mark a card's answer as an exception's, in the samples' two languages. */
+export const EXCEPTION_WORDS = ["예외", "exception"] as const;
+
+/**
+ * Whether [card] only calls itself an exception: its answer names one (`EXCEPTION_WORDS`) yet
+ * covers no fact, as "'르' 불규칙의 예외" does, where an exception card should state what the
+ * exception does (#188).
+ */
+export function isBareException(
+  card: NoteCandidate,
+  facts: readonly Fact[],
+): boolean {
+  const answer = normalize(card.answer);
+  return EXCEPTION_WORDS.some((word) => answer.includes(word)) &&
+    !facts.some((fact) => covers(card, fact));
+}
+
+/** What a card asks as blanks: a table card's blank cells, or a cloze card's answers. */
+export function blanksOf(card: NoteCandidate): readonly string[] {
+  if (card.type === "table" && card.table !== undefined) {
+    const { rows, blanks } = card.table;
+    return blanks.map(({ row, column }) => rows[row][column]);
+  }
+  if (card.type === "cloze" && card.cloze !== undefined) {
+    return card.cloze.answers;
+  }
+  return [];
+}
+
+/**
+ * Whether one of [cards] of [type] asks [blank]: one of its blanks holds every one of the
+ * blank's terms after `normalize`.
+ */
+export function blankCovered(
+  cards: readonly NoteCandidate[],
+  type: "table" | "cloze",
+  blank: Blank,
+): boolean {
+  return cards.some((card) =>
+    card.type === type &&
+    blanksOf(card).some((text) =>
+      blank.terms.every((term) => normalize(text).includes(normalize(term)))
+    )
+  );
+}
 
 /**
  * Whether [card] covers [fact]: its front and answer hold every one of the fact's terms. A
@@ -271,9 +344,13 @@ export function scoreNotes(
   const unsupported =
     candidates.filter((card) => !truth.facts.some((fact) => covers(card, fact)))
       .length;
+  // A table card's answer is its whole table, composed, which the atomic rule does not split.
   const longAnswers =
-    candidates.filter((card) => listedItems(card.answer) > MAX_LISTED_ITEMS)
-      .length;
+    candidates.filter((card) =>
+      card.type !== "table" && listedItems(card.answer) > MAX_LISTED_ITEMS
+    ).length;
+  const tableBlanks = truth.tableBlanks ?? [];
+  const clozeBlanks = truth.clozeBlanks ?? [];
   const printed = truth.facts.flatMap((fact) => fact.examples).map(normalize);
   const lines = truth.lines.map(normalize);
   const returned = candidates.flatMap((card) => card.examples ?? []);
@@ -294,6 +371,16 @@ export function scoreNotes(
     longAnswers,
     examples: returned.length,
     inventedExamples,
+    bareExceptions:
+      candidates.filter((card) => isBareException(card, truth.facts)).length,
+    tableBlanks: tableBlanks.length,
+    tableBlanksCovered:
+      tableBlanks.filter((blank) => blankCovered(candidates, "table", blank))
+        .length,
+    clozeBlanks: clozeBlanks.length,
+    clozeBlanksCovered:
+      clozeBlanks.filter((blank) => blankCovered(candidates, "cloze", blank))
+        .length,
   };
 }
 
@@ -313,6 +400,14 @@ export type NotesRow = {
   readonly inventedExamplesRate: number | null;
   /** The share of returned cards whose answer lists more than `MAX_LISTED_ITEMS` items. */
   readonly longAnswerRate: number | null;
+  /** The share of returned cards that only call themselves an exception. */
+  readonly bareExceptionRate: number | null;
+  /**
+   * Over every notes image, the share of the pages' table blanks some table card blanks, and of
+   * their cloze blanks some cloze card blanks; null when no page holds any.
+   */
+  readonly tableBlankCoverage: number | null;
+  readonly clozeBlankCoverage: number | null;
   /** Each notes image's coverage and the completion tokens its calls used, in the order run. */
   readonly pages: readonly {
     readonly name: string;
@@ -428,6 +523,18 @@ function summarizeNotes(
       total((s) => s.examples),
     ),
     longAnswerRate: share(total((s) => s.longAnswers), total((s) => s.cards)),
+    bareExceptionRate: share(
+      total((s) => s.bareExceptions),
+      total((s) => s.cards),
+    ),
+    tableBlankCoverage: share(
+      total((s) => s.tableBlanksCovered),
+      total((s) => s.tableBlanks),
+    ),
+    clozeBlankCoverage: share(
+      total((s) => s.clozeBlanksCovered),
+      total((s) => s.clozeBlanks),
+    ),
     pages: images.map((image) => ({
       name: image.name,
       coverage: image.score.coverage,

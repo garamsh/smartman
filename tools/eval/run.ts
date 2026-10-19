@@ -21,7 +21,7 @@ import {
   MAX_OUTPUT_TOKENS,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v6.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v7.ts";
 import type {
   Image,
   LanguageHints,
@@ -40,8 +40,10 @@ import {
   worstCallUsd,
 } from "./budget.ts";
 import {
+  type Blank,
   type Entry,
   entryOf,
+  EXCEPTION_WORDS,
   type Fact,
   type ImageResult,
   MAX_LISTED_ITEMS,
@@ -412,7 +414,7 @@ export async function loadSamples(
       const notes = parseNotes(truth);
       if (notes === null) {
         throw new Error(
-          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines}`,
+          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines, tableBlanks?: [{id, terms}], clozeBlanks?: [{id, terms}]}`,
         );
       }
       samples.push({ ...photo, kind: "notes", notes });
@@ -437,6 +439,9 @@ export async function loadSamples(
 
 function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
   const { facts, lines } = truth;
+  const tableBlanks = parseBlanks(truth.tableBlanks);
+  const clozeBlanks = parseBlanks(truth.clozeBlanks);
+  if (tableBlanks === null || clozeBlanks === null) return null;
   if (
     !Array.isArray(facts) || facts.length === 0 ||
     !Array.isArray(lines) || lines.length === 0 ||
@@ -455,7 +460,30 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
     ) return null;
     parsed.push({ id: fact.id, step, terms, examples });
   }
-  return { facts: parsed, lines };
+  return {
+    facts: parsed,
+    lines,
+    ...(tableBlanks === undefined ? {} : { tableBlanks }),
+    ...(clozeBlanks === undefined ? {} : { clozeBlanks }),
+  };
+}
+
+/** A truth's blanks, undefined when it names none, or null when they are not [{id, terms}]. */
+function parseBlanks(value: unknown): Blank[] | null | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const blanks: Blank[] = [];
+  for (const blank of value) {
+    if (
+      !isRecord(blank) || typeof blank.id !== "string" ||
+      !Array.isArray(blank.terms) || blank.terms.length === 0 ||
+      !blank.terms.every((term) =>
+        typeof term === "string" && term.trim() !== ""
+      )
+    ) return null;
+    blanks.push({ id: blank.id, terms: blank.terms });
+  }
+  return blanks;
 }
 
 /**
@@ -549,7 +577,9 @@ export function report(
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
     "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in part of speech and meaning, and senses R the share of the entry's senses so returned. A truth written before senses is one sense of its meaning and part of speech.",
     "- Over the matched cards of every image, in percent: part of speech is the share of returned senses' labels equal to the page's for that sense, and examples the share of returned examples the page prints, after the same normalization; invented is the share of present labels and example lists where the page prints none. A dash means the configuration returned no such field.",
-    `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards.`,
+    `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards; a table card's answer, its whole table, is not counted. Bare exceptions is the share of returned cards whose answer names an exception (${
+      EXCEPTION_WORDS.map((word) => `"${word}"`).join(" or ")
+    }) yet covers no fact, which prompt v7 asks every exception card to avoid by stating what the exception does. Table blanks is the share of the pages' cells to memorise that a table card asks as a blank, one blank holding each of the cell's terms, and cloze blanks the same for the words a cloze card should ask, pooled over the pages that hold any; a dash means no page held any.`,
     "- Latency is per image, one call each; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -606,15 +636,17 @@ function notesSection(rows: readonly Row[]): string[] {
   return [
     "## Notes pages",
     "",
-    "| Configuration | Coverage | Unsupported | Invented examples | Long answers |",
-    "|---|---|---|---|---|",
+    "| Configuration | Coverage | Unsupported | Invented examples | Long answers | Bare exceptions | Table blanks | Cloze blanks |",
+    "|---|---|---|---|---|---|---|---|",
     ...rows.map((row) => {
       const notes = row.notes;
       return `| ${row.label} | ${pct(notes?.coverage)} | ${
         pct(notes?.unsupportedRate)
       } | ${pct(notes?.inventedExamplesRate)} | ${
         pct(notes?.longAnswerRate)
-      } |`;
+      } | ${pct(notes?.bareExceptionRate)} | ${
+        pct(notes?.tableBlankCoverage)
+      } | ${pct(notes?.clozeBlankCoverage)} |`;
     }),
     "",
   ];

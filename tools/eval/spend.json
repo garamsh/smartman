@@ -65,6 +65,21 @@
       "date": "2026-10-18",
       "spentUsd": 0.567,
       "note": "prompt v6 of #202 at a3a2081f6bc1b1f4da5cf928c2c9c52c21d1558c, Claude Sonnet 5.5 x samples 01, 07, 13, 19, 27, 33, 35 and 37 to 44, by the PM; spend as the eval recorded it"
+    },
+    {
+      "date": "2026-10-19",
+      "spentUsd": 1.2549,
+      "note": "prompt v6 on main, Claude Sonnet 5.5 x the 47 samples, by the PM; spend as the PM reported it on #217"
+    },
+    {
+      "date": "2026-10-19",
+      "spentUsd": 0.0869,
+      "note": "prompt v6 on main, Claude Haiku 5.5 x the 47 samples, by the PM; spend as the PM reported it on #217"
+    },
+    {
+      "date": "2026-10-19",
+      "spentUsd": 0.6806,
+      "note": "OpenRouter key usage ($5.9865, read 2026-10-19 after the PM's runs) less the ledger, unattributed: it includes a stopped partial run (Haiku 5.5 over about 40 samples, then stopped before its other configurations), and PM runs whose ledger lived only in scratch worktrees; key usage also lags"
     }
   ]
 }
