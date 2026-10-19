@@ -30,6 +30,8 @@ const CARD = {
   extras: [],
   pronunciation: null,
   examples: [],
+  table: null,
+  cloze: null,
 };
 
 const fakeFetch: typeof fetch = (input) => {

@@ -1,21 +1,3 @@
 [
-  { "label": "Claude Haiku 5.5", "primary": "^anthropic/claude-haiku-5\\.5$" },
-  {
-    "label": "Claude Sonnet 5.5",
-    "primary": "^anthropic/claude-sonnet-5\\.5$"
-  },
-  { "label": "Claude Opus 5.5", "primary": "^anthropic/claude-opus-5\\.5$" },
-  { "label": "Claude Fable 5.1", "primary": "^anthropic/claude-fable-5\\.1$" },
-  {
-    "label": "Google Gemini Argon, newest",
-    "primary": "^google/gemini-[0-9.]+-argon$"
-  },
-  {
-    "label": "OpenAI GPT Sol, newest",
-    "primary": "^openai/gpt-[0-9.]+-sol$"
-  },
-  {
-    "label": "OpenAI GPT Luna, newest",
-    "primary": "^openai/gpt-[0-9.]+-luna$"
-  }
+  { "label": "Claude Haiku 5.5", "primary": "^anthropic/claude-haiku-5\\.5$" }
 ]

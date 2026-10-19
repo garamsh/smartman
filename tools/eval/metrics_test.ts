@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  blankCovered,
   covers,
   entryOf,
   type FieldCounts,
+  isBareException,
   listedItems,
   normalize,
   type NotesRow,
@@ -447,6 +449,9 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
     unsupportedRate: 0,
     inventedExamplesRate: 0,
     longAnswerRate: 0,
+    bareExceptionRate: 0,
+    tableBlankCoverage: null,
+    clozeBlankCoverage: null,
     pages: [
       { name: "02-notes", coverage: 1, completionTokens: 900 },
       { name: "03-notes", coverage: 0, completionTokens: 0 },
@@ -460,7 +465,173 @@ const notesRow = (coverage: number): NotesRow => ({
   unsupportedRate: null,
   inventedExamplesRate: null,
   longAnswerRate: null,
+  bareExceptionRate: null,
+  tableBlankCoverage: null,
+  clozeBlankCoverage: null,
   pages: [],
+});
+
+/** A page whose truth also names the cells a table card should blank and the words a cloze card should. */
+const blanksTruth = {
+  ...notesTruth,
+  tableBlanks: [
+    { id: "subject", terms: ["-시-"] },
+    { id: "object", terms: ["드리다", "여쭈다"] },
+  ],
+  clozeBlanks: [
+    { id: "predicate", terms: ["서술어"] },
+    { id: "complement", terms: ["보어"] },
+  ],
+};
+
+/** A table card of the honorifics table, its method cells blanks as [blanks] says. */
+const tableCard = (blanks: { row: number; column: number }[]) => ({
+  type: "table" as const,
+  front: "높임법의 갈래",
+  answer:
+    "구분 | 실현 방법 | 대상\n주체 높임 | 선어말 어미 '-시-' | 주어\n객체 높임 | 드리다, 모시다, 여쭈다 | 목적어, 부사어",
+  table: {
+    columns: ["구분", "실현 방법", "대상"],
+    rows: [
+      ["주체 높임", "선어말 어미 '-시-'", "주어"],
+      ["객체 높임", "드리다, 모시다, 여쭈다", "목적어, 부사어"],
+    ],
+    blanks,
+  },
+});
+
+/** A cloze card of [front] and [answers]. */
+const clozeCard = (front: string, answers: string[]) => ({
+  type: "cloze" as const,
+  front,
+  answer: answers.join("\n"),
+  cloze: { answers },
+});
+
+Deno.test("a table blank is covered when one blank cell of a table card holds each of its terms, and not by the same text left unblanked or on a concept card", () => {
+  const [subject, object] = blanksTruth.tableBlanks;
+  const both = tableCard([{ row: 0, column: 1 }, { row: 1, column: 1 }]);
+  assert.equal(blankCovered([both], "table", subject), true);
+  assert.equal(blankCovered([both], "table", object), true);
+  const targetsOnly = tableCard([{ row: 0, column: 2 }, { row: 1, column: 2 }]);
+  assert.equal(
+    blankCovered([targetsOnly], "table", subject),
+    false,
+    "the cell is in the table but not a blank",
+  );
+  assert.equal(
+    blankCovered(
+      [noteCard("주체 높임", "선어말 어미 '-시-'")],
+      "table",
+      subject,
+    ),
+    false,
+    "a concept card stating the cell",
+  );
+  assert.equal(
+    blankCovered([clozeCard("주체 높임: ___", ["-시-"])], "table", subject),
+    false,
+    "a cloze card asks it, but not as a table",
+  );
+  const notes = scoreNotes([targetsOnly, both], blanksTruth);
+  assert.equal(notes.tableBlanks, 2);
+  assert.equal(notes.tableBlanksCovered, 2);
+  assert.equal(scoreNotes([targetsOnly], blanksTruth).tableBlanksCovered, 0);
+});
+
+Deno.test("a cloze blank is covered when one answer of a cloze card holds each of its terms, and not by the word in its front", () => {
+  const [predicate, complement] = blanksTruth.clozeBlanks;
+  const card = clozeCard("주성분: 주어, ___, 목적어, 보어", ["서술어"]);
+  assert.equal(blankCovered([card], "cloze", predicate), true);
+  assert.equal(
+    blankCovered([card], "cloze", complement),
+    false,
+    "보어 is in the front, not a blank",
+  );
+  const notes = scoreNotes([card], blanksTruth);
+  assert.equal(notes.clozeBlanks, 2);
+  assert.equal(notes.clozeBlanksCovered, 1);
+});
+
+Deno.test("a page whose truth names no blanks counts none", () => {
+  const notes = scoreNotes([clozeCard("___", ["서술어"])], notesTruth);
+  assert.equal(notes.tableBlanks, 0);
+  assert.equal(notes.clozeBlanks, 0);
+});
+
+Deno.test("a card whose answer only names an exception is a bare exception, and one stating what the exception does is not", () => {
+  const facts = [{
+    id: "reu",
+    step: 3 as const,
+    terms: ["르", "흘러"],
+    examples: [],
+  }];
+  assert.equal(
+    isBareException(noteCard("'르' 불규칙", "'르' 불규칙의 예외"), facts),
+    true,
+  );
+  assert.equal(
+    isBareException(noteCard("Irregular plural", "An exception"), facts),
+    true,
+    "the English word, in any case",
+  );
+  assert.equal(
+    isBareException(
+      noteCard("'르' 불규칙", "예외: 흐르+어 -> 흘러, 'ㄹ'이 덧난다"),
+      facts,
+    ),
+    false,
+    "control: an exception card that covers its fact",
+  );
+  assert.equal(
+    isBareException(noteCard("논리학의 아버지는?", "아리스토텔레스"), facts),
+    false,
+    "control: a card covering nothing that names no exception",
+  );
+  const notes = scoreNotes([
+    noteCard("'르' 불규칙", "'르' 불규칙의 예외"),
+    noteCard("연역 논증", "전제가 참이면 결론이 반드시 참"),
+  ], notesTruth);
+  assert.equal(notes.bareExceptions, 1);
+});
+
+Deno.test("a table card's answer, its whole table, is not a long answer, while the same answer on a concept card is", () => {
+  const card = tableCard([{ row: 0, column: 1 }]);
+  assert.ok(listedItems(card.answer) > 5);
+  assert.equal(scoreNotes([card], notesTruth).longAnswers, 0);
+  assert.equal(
+    scoreNotes([noteCard(card.front, card.answer)], notesTruth).longAnswers,
+    1,
+    "control: the same answer on a concept card",
+  );
+});
+
+Deno.test("summarize pools the bare exceptions over the cards, and the table and cloze blanks over the pages holding any", () => {
+  const image = (name: string, notes: ReturnType<typeof scoreNotes>) => ({
+    name,
+    score: null,
+    notes,
+    latencyMs: 0,
+    costUsd: 0,
+    completionTokens: 0,
+  });
+  const row = summarize("m", [
+    image(
+      "01-notes",
+      scoreNotes([
+        tableCard([{ row: 0, column: 1 }]),
+        clozeCard("주성분: 주어, ___, 목적어, ___", ["서술어", "보어"]),
+        noteCard("'르' 불규칙", "'르' 불규칙의 예외"),
+      ], blanksTruth),
+    ),
+    image(
+      "02-notes",
+      scoreNotes([noteCard("연역 논증", "결론이 반드시 참")], notesTruth),
+    ),
+  ]);
+  assert.equal(row.notes?.bareExceptionRate, 1 / 4);
+  assert.equal(row.notes?.tableBlankCoverage, 1 / 2);
+  assert.equal(row.notes?.clozeBlankCoverage, 1);
 });
 
 Deno.test("with notes results, the recommendation must also be within 5 points of the best notes coverage", () => {
