@@ -2,8 +2,8 @@
 # Runs deno lint, format or test, as make lint, format and test ask, over the TypeScript of the
 # Edge Functions in supabase/functions/ and the eval in tools/eval/. Where deno is not
 # installed it prints that the step was skipped and why. The tests run with read access to
-# tools/eval/ and to the prompt store's migration, whose seed one test compares with the prompt
-# file, only: no write, network or environment access, so a test that writes fails. A
+# tools/eval/ and to the prompt files' copies in SQL, the store's seed, v9's activation and its
+# pgTAP test, which one test compares with the prompt files, only: no write, network or environment access, so a test that writes fails. A
 # *_io_test.ts file runs apart, writing only under a temporary directory this script removes,
 # and running deno, so it can run the eval as a subprocess under the eval's own grant.
 set -euf
@@ -45,7 +45,7 @@ test)
 		exit 1
 	fi
 	# shellcheck disable=SC2086
-	output=$(NO_COLOR=1 deno test --no-prompt --allow-read=tools/eval,supabase/migrations/20261019210000_prompts.sql $tests 2>&1) || { echo "$output"; exit 1; }
+	output=$(NO_COLOR=1 deno test --no-prompt --allow-read=tools/eval,supabase/migrations/20261019210000_prompts.sql,supabase/migrations/20261019230002_activate_prompt_v9.sql,supabase/tests/prompt_v9_activation_test.sql $tests 2>&1) || { echo "$output"; exit 1; }
 	echo "$output"
 	passed=$(echo "$output" | sed -n 's/.*ok | \([0-9]*\) passed.*/\1/p' | tail -n 1)
 	if [ -z "$passed" ] || [ "$passed" -eq 0 ]; then

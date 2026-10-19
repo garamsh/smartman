@@ -95,11 +95,17 @@ grant execute on function pg_temp.id(text) to public;
 
 -- The seed and the role.
 
-select results_eq($$select id, note, created_by from private.prompt_versions$$,
+select results_eq($$select id, note, created_by from private.prompt_versions where id = 1$$,
   $$values (1::bigint, 'prompt v8', null::uuid)$$,
-  'the migration seeds one version, prompt v8, saved by no one');
+  'the migration seeds version 1, prompt v8, saved by no one');
+
+-- The store as the seed left it: version 1 active, no test version and an empty log. A later
+-- migration activated prompt v9 (20261019230002_activate_prompt_v9.sql), which
+-- prompt_v9_activation_test.sql covers.
+update private.prompt_labels set version_id = 1, set_by = null where label = 'active';
+delete from private.admin_audit;
 select results_eq($$select label, version_id from private.prompt_labels$$,
-  $$values ('active', 1::bigint)$$, 'and makes it the active version, with no test version');
+  $$values ('active', 1::bigint)$$, 'version 1 is active again, with no test version');
 
 select results_eq($$select count(*) from pg_temp.refused_as('b')$$, $$values (5::bigint)$$,
   'a signed-in user who is not an admin is refused by every admin prompt function');
@@ -238,7 +244,9 @@ select pg_temp.sign_in('a');
 select results_eq(
   $$select id, note, labels from public.admin_prompt_versions()$$,
   $$values (pg_temp.id('by_c'), '', '{}'::text[]), (pg_temp.id('longest'), 'longest', '{}'::text[]),
-           (pg_temp.id('second'), 'shorter', '{}'::text[]), (1::bigint, 'prompt v8', '{active}'::text[])$$,
+           (pg_temp.id('second'), 'shorter', '{}'::text[]),
+           (2::bigint, 'prompt v9 (#261, #266), PM eval 2026-10-19: dense 89.3/90.5', '{}'::text[]),
+           (1::bigint, 'prompt v8', '{active}'::text[])$$,
   'the versions list newest first, each with the labels naming it');
 select results_eq(
   $$select id, text, created_by_email, active_id, active_text = (select v.text from public.admin_prompt_version(1) as v)

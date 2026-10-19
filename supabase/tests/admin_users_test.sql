@@ -5,6 +5,10 @@
 begin;
 select plan(43);
 
+-- The log starts empty here: a migration may record a change of its own, as
+-- 20261019230002_activate_prompt_v9.sql records prompt v9's activation.
+delete from private.admin_audit;
+
 -- A is an admin, B a signed-in user who is not, C the user acted on, D an active user.
 insert into auth.users (id, email, encrypted_password, raw_user_meta_data) values
   ('00000000-0000-4000-8000-00000000000a', 'admin@example.com', 'hash-a', '{"name": "A"}'),
