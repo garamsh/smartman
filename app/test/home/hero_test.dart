@@ -35,7 +35,7 @@ void main() {
         for (final (mark, ground) in [
           (colors.streak, hero),
           (colors.onHero, _over(heroTrack(colors), hero)),
-          (_over(quietBar(colors.ink), colors.surface), colors.surface),
+          (_over(AppColors.quiet(colors.ink), colors.surface), colors.surface),
         ]) {
           expect(
             _contrast(mark, ground),
