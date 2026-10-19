@@ -1,6 +1,6 @@
 # ADR 0071: Give each user a plan whose model and daily limit an admin sets in the database, and make one model call per photo
 
-> Status: accepted
+> Status: accepted; its overview's cost at the Free plan's model superseded by ADR-0074
 > Date: 2026-10-19
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

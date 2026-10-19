@@ -109,11 +109,29 @@ describe("the admin area's gate", () => {
   });
 });
 
+/** The UTC day [offset] days from now, as YYYY-MM-DD. */
+const utcDay = (offset = 0) =>
+  new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+
 describe("the overview", () => {
-  it("shows users, study and today's photos with the estimated cost, and 30 days of photos", async () => {
-    admin.extractionsByDay = [
-      { day: "2026-10-18", extractions: 10 },
-      { day: "2026-10-19", extractions: 5 },
+  it("shows users and study, and the last 30 days of photos with their cost by day, plan, model and version", async () => {
+    // Haiku, the Free plan's model, is measured at $0.0018 a photo; Sonnet at $0.0267.
+    admin.breakdown = [
+      { day: utcDay(-1), plan: null, model: null, prompt_version_id: null, photos: 10 },
+      {
+        day: utcDay(),
+        plan: "free",
+        model: "anthropic/claude-haiku-5.5",
+        prompt_version_id: 2,
+        photos: 5,
+      },
+      {
+        day: utcDay(),
+        plan: "pro",
+        model: "anthropic/claude-sonnet-5.5",
+        prompt_version_id: 2,
+        photos: 1,
+      },
     ];
     // The session's token holds for an hour from now, so the clock stays real.
     const now = Date.now();
@@ -121,16 +139,46 @@ describe("the overview", () => {
 
     const users = screen.getByRole("region", { name: "사용자" });
     expect(within(users).getByText("전체").nextSibling).toHaveTextContent("2명");
-    const photos = screen.getByRole("region", { name: "사진 추출" });
-    expect(within(photos).getByText("오늘 예상 비용").nextSibling).toHaveTextContent("$0.0090");
-    const days = within(screen.getByRole("region", { name: "최근 30일 사진 추출" }));
+    const photos = within(screen.getByRole("region", { name: "사진 추출" }));
+    expect(photos.getByText("오늘").nextSibling).toHaveTextContent("6장 · $0.0357");
+    expect(photos.getByText("최근 30일").nextSibling).toHaveTextContent("16장 · $0.0537");
     expect(
-      days
+      photos.getByRole("img", { name: /^최근 30일 사진 16장 · \$0\.0537\. 가장 많은 날은/ }),
+    ).toHaveAccessibleName(
+      `최근 30일 사진 16장 · $0.0537. 가장 많은 날은 ${utcDay(-1)}, 10장이에요.`,
+    );
+    const byDay = within(photos.getByRole("table", { name: "날짜별 사진과 예상 비용" }));
+    expect(
+      byDay
+        .getAllByRole("row")
+        .slice(1, 3)
+        .map((row) => row.textContent),
+    ).toEqual([`${utcDay()}6장$0.0357`, `${utcDay(-1)}10장$0.0180`]);
+    expect(byDay.getAllByRole("row")).toHaveLength(31);
+    const byPlan = within(photos.getByRole("table", { name: "요금제" }));
+    expect(
+      byPlan
         .getAllByRole("row")
         .slice(1)
         .map((row) => row.textContent),
-    ).toEqual(["2026-10-195장$0.0090", "2026-10-1810장$0.0180"]);
-    // Today and the last 7 days are study days from 04:00 in the browser's zone.
+    ).toEqual(["무료5장$0.0090", "프로1장$0.0267", "기록 전10장$0.0180"]);
+    expect(
+      photos.getByRole("img", {
+        name: "요금제별 예상 비용, 최근 30일: 무료 $0.0090, 프로 $0.0267, 기록 전 $0.0180.",
+      }),
+    ).toBeInTheDocument();
+    const byVersion = within(photos.getByRole("table", { name: "버전" }));
+    expect(byVersion.getByRole("link", { name: "버전 2" })).toHaveAttribute(
+      "href",
+      "/admin/prompts/2",
+    );
+    expect(
+      byVersion
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => row.textContent),
+    ).toEqual(["버전 26장$0.0357", "기록 전10장$0.0180"]);
+    // Today and the last 7 days of study are study days from 04:00 in the browser's zone.
     const call = admin.calls.find((made) => made.startsWith("admin_overview "));
     const args = JSON.parse(call?.slice("admin_overview ".length) ?? "{}") as Record<
       string,
@@ -142,6 +190,14 @@ describe("the overview", () => {
       today_start: new Date(today).toISOString(),
       week_start: new Date(studyDayStart(now - 6 * 86_400_000, "UTC")).toISOString(),
     });
+    expect(admin.calls).toContain('admin_extraction_breakdown {"days":30}');
+  });
+
+  it("says when there were no photos in the last 30 days", async () => {
+    await render(OverviewContent, {});
+    expect(
+      screen.getByRole("img", { name: "최근 30일 동안 사진 추출이 없어요." }),
+    ).toBeInTheDocument();
   });
 
   it("says a user who is not an admin may not see it, against an admin's figures", async () => {
@@ -717,11 +773,26 @@ describe("the plans page", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("관리자만 볼 수 있어요.");
   });
 
-  it("estimates the overview's cost at the Free plan's model, and none for a model never measured", async () => {
+  it("costs a photo without a call record at the Free plan's model, and leaves out one a never-measured model served", async () => {
     admin.plans[0] = { id: "free", model: "openai/gpt-6-luna", daily_limit: 30, updated_by: null };
+    admin.breakdown = [
+      { day: utcDay(), plan: null, model: null, prompt_version_id: null, photos: 4 },
+      {
+        day: utcDay(),
+        plan: "pro",
+        model: "anthropic/claude-haiku-5.5",
+        prompt_version_id: 1,
+        photos: 1,
+      },
+    ];
     await render(OverviewContent, {});
-    const photos = screen.getByRole("region", { name: "사진 추출" });
-    expect(within(photos).getByText("오늘 예상 비용").nextSibling).toHaveTextContent("—");
+    const photos = within(screen.getByRole("region", { name: "사진 추출" }));
+    expect(photos.getByText("오늘").nextSibling).toHaveTextContent(
+      "5장 · $0.0018 (비용 모르는 4장 제외)",
+    );
+    expect(
+      photos.getByText(/측정하지 않은 모델\(openai\/gpt-6-luna\)의 사진은 비용에서 빠졌어요/),
+    ).toBeInTheDocument();
   });
 });
 

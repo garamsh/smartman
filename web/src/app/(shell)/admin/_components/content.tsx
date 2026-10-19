@@ -20,6 +20,7 @@ import {
   readAdmins,
   readAuditLog,
   readDeck,
+  readExtractionBreakdown,
   readOverview,
   readPlans,
   readPromptVersion,
@@ -31,7 +32,7 @@ import {
   ReportedDecks,
   UserSearch,
   UserView,
-  usdPerPhoto,
+  summarizeUsage,
 } from "@/features/admin";
 
 /** The text of a search parameter, or "" when it is absent or repeated. */
@@ -40,17 +41,18 @@ function searchText(value: string | string[] | undefined): string {
 }
 
 export async function OverviewContent() {
-  const [read, plans] = await Promise.all([readOverview(), readPlans()]);
+  const [read, plans, breakdown] = await Promise.all([
+    readOverview(),
+    readPlans(),
+    readExtractionBreakdown(),
+  ]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if ("failure" in plans) return <AdminFailureMessage failure={plans.failure} />;
+  if ("failure" in breakdown) return <AdminFailureMessage failure={breakdown.failure} />;
+  // A photo counted before calls were recorded is costed at the Free plan's model, as ADR 0071 did.
   const free = plans.data.find((plan) => plan.id === "free")?.model ?? null;
-  return (
-    <OverviewView
-      overview={read.data}
-      costModel={free}
-      usdPerPhoto={free === null ? null : usdPerPhoto(free)}
-    />
-  );
+  const today = new Date().toISOString().slice(0, 10);
+  return <OverviewView overview={read.data} usage={summarizeUsage(breakdown.data, today, free)} />;
 }
 
 export async function PlansContent() {

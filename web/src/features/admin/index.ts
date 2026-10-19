@@ -6,7 +6,7 @@ export { AuditLog } from "./components/audit-log";
 export { DeckView } from "./components/deck-view";
 export { GrantAdminForm } from "./components/grant-admin-form";
 export { OverviewView } from "./components/overview-view";
-export { usdPerPhoto } from "./model-costs";
+export { summarizeUsage } from "./usage";
 export { PlansView } from "./components/plans-view";
 export { PromptForm } from "./components/prompt-form";
 export { PromptTrial } from "./components/prompt-trial";
@@ -23,6 +23,7 @@ export {
   readAdmins,
   readAuditLog,
   readDeck,
+  readExtractionBreakdown,
   readIsAdmin,
   readOverview,
   readPlans,
