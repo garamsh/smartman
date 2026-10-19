@@ -337,6 +337,19 @@ describe("the deck page", () => {
     ]);
   });
 
+  it("leads back to 덱 with a chevron, on a target at least the tap target high and wide", async () => {
+    await open("d-fr");
+
+    const back = within(screen.getByRole("navigation", { name: "위치" })).getByRole("link", {
+      name: "덱",
+    });
+    expect(back).toHaveAttribute("href", "/decks");
+    expect(back.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(back.className.split(" ")).toEqual(
+      expect.arrayContaining(["min-h-tap-target", "min-w-tap-target"]),
+    );
+  });
+
   it("is not found for a deleted deck, and found for a live one", async () => {
     await expect(open("d-old")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
     await expect(open("d-fr")).resolves.toBeDefined();
