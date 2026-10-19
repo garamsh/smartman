@@ -125,6 +125,30 @@ describe("a senses block", () => {
     ).not.toBeNull();
   });
 
+  it("reads the back the server's senses migration writes, as supabase/tests/senses_migration_test.sql states it", () => {
+    const migrated =
+      '[{"type": "senses", "payload": {"senses": [{"labels": [{"kind": "part_of_speech", "text": "명", "category": "noun"}], "meaning": "사과", "examples": []}, {"labels": [{"kind": "part_of_speech", "text": "동", "category": "verb"}], "meaning": "먹다", "examples": []}]}}]';
+    const blocks = parseContent(JSON.parse(migrated));
+    expect(blocks).toEqual([
+      {
+        kind: "senses",
+        senses: [
+          {
+            labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
+            meaning: "사과",
+            examples: [],
+          },
+          {
+            labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+            meaning: "먹다",
+            examples: [],
+          },
+        ],
+      },
+    ]);
+    expect(describeContent(blocks ?? [])).toBe("[명] 사과\n[동] 먹다");
+  });
+
   it("reads as one line per sense, each label in brackets and a space before the meaning, a part of speech by its short form", () => {
     const blocks =
       parseContent(
