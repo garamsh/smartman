@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { CardGrid, DeckTile, parseDeckId, ReadFailure, readLibrary } from "@/features/decks";
+import {
+  CardGrid,
+  DeckTile,
+  type LibraryFailure,
+  parseDeckId,
+  ReadFailure,
+  readLibrary,
+} from "@/features/decks";
 import {
   countDay,
   dayPlanOf,
@@ -22,15 +29,15 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   const deckId = parseDeckId((await params).id);
   if (!deckId) notFound();
   const [read, studyDay] = await Promise.all([readLibrary([deckId]), readToday()]);
-  if ("failure" in read) return <ReadFailure failure={read.failure} />;
-  if ("failure" in studyDay) return <ReadFailure failure={studyDay.failure} />;
+  if ("failure" in read) return <Failure failure={read.failure} />;
+  if ("failure" in studyDay) return <Failure failure={studyDay.failure} />;
 
   const deck = read.library.decks.find((candidate) => candidate.id === deckId);
   if (!deck) notFound();
   const { cards } = read.library;
   const { states, day, pace, answers } = studyDay.today;
   const engine = await readyServerEngine();
-  if ("failure" in engine) return <ReadFailure failure={engine.failure} />;
+  if ("failure" in engine) return <Failure failure={engine.failure} />;
   const today = countDay(dayPlanOf(cards, states, day, answers), states);
   const total = today.review + today.fresh;
   const progress = deckProgress(cards, states);
@@ -40,12 +47,7 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
       <nav aria-label="위치" className="text-secondary">
         <ol className="flex items-center gap-2">
           <li>
-            <Link
-              href="/decks"
-              className="rounded-md text-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              덱
-            </Link>
+            <BackToDecks />
           </li>
           <li aria-hidden className="text-muted">
             /
@@ -108,6 +110,31 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
         {cards.length > 0 && <EnterLink href={studyHref([deck.id])} label="학습하기" />}
       </section>
       <CardGrid cards={cards} />
+    </>
+  );
+}
+
+/** The breadcrumb's way back to the deck list. */
+function BackToDecks() {
+  return (
+    <Link
+      href="/decks"
+      className="rounded-md text-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+    >
+      덱
+    </Link>
+  );
+}
+
+/** A failed read under the way back to 덱 and a heading saying the deck could not be read. */
+function Failure({ failure }: { failure: LibraryFailure }) {
+  return (
+    <>
+      <nav aria-label="위치" className="text-secondary">
+        <BackToDecks />
+      </nav>
+      <h1 className="text-deck-title lg:text-display">덱을 불러오지 못했어요</h1>
+      <ReadFailure failure={failure} />
     </>
   );
 }
