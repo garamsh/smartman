@@ -156,7 +156,7 @@ describe("a study session's writes", () => {
     );
 
     vi.setSystemTime(start + 4000);
-    await userEvent.setup().keyboard("k");
+    await userEvent.setup().keyboard("{ArrowRight}");
 
     await waitFor(() => {
       expect(postgrest.rows.card_states).toHaveLength(1);
@@ -209,7 +209,7 @@ describe("a study session's writes", () => {
       />,
     );
     vi.setSystemTime(start + 4000);
-    await userEvent.setup().keyboard("k");
+    await userEvent.setup().keyboard("{ArrowRight}");
 
     await waitFor(() => {
       expect(postgrest.rows.reviews).toHaveLength(1);
@@ -242,7 +242,7 @@ describe("a study session's writes", () => {
     );
 
     vi.setSystemTime(start + 4000);
-    await userEvent.setup().keyboard("j");
+    await userEvent.setup().keyboard("{ArrowLeft}");
 
     await waitFor(() => {
       expect(postgrest.rows.card_states).toHaveLength(1);
@@ -296,7 +296,7 @@ describe("a study session's writes", () => {
     };
     const answeredAt = start + 2000;
     vi.setSystemTime(answeredAt);
-    await user.keyboard("k");
+    await user.keyboard("{ArrowRight}");
     await stateEditedAt(answeredAt)();
     const fuzzFactor = storedFactor(postgrest);
     const known = await expected(before, "know", answeredAt, fuzzFactor);
