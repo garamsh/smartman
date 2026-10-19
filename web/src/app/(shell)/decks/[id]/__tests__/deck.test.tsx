@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine } from "@/features/study";
 
-import { cardRow, day, deckRow, reviewRow, side, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, side, start, stateRow, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -22,7 +22,8 @@ beforeAll(async () => {
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
-const open = (id: string) => render(Deck, { params: Promise.resolve({ id }) });
+/** Opens the page of the deck named [name]. */
+const open = (name: string) => render(Deck, { params: Promise.resolve({ id: uuidOf(name) }) });
 
 /** What the page says of the deck: its card count under the name, and today's cards for it. */
 const summary = () => ({
@@ -73,7 +74,7 @@ describe("the deck page", () => {
     expect(summary()).toEqual({ cards: "3", today: "2" });
     expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "href",
-      "/study?decks=d-fr",
+      `/study?decks=${uuidOf("d-fr")}`,
     );
     expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "aria-keyshortcuts",
@@ -111,7 +112,7 @@ describe("the deck page", () => {
 
       expect(summary(), answered).toEqual({ cards: "1", today: "0" });
       const href = screen.getByRole("link", { name: "학습하기" }).getAttribute("href");
-      expect(href, answered).toBe("/study?decks=d-done");
+      expect(href, answered).toBe(`/study?decks=${uuidOf("d-done")}`);
 
       cleanup();
       await render(Study, {
@@ -272,5 +273,14 @@ describe("the deck page", () => {
   it("is not found for a deleted deck, and found for a live one", async () => {
     await expect(open("d-old")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
     await expect(open("d-fr")).resolves.toBeDefined();
+  });
+
+  it("is not found for an address id that is not a uuid, and found for the deck's own id", async () => {
+    await expect(render(Deck, { params: Promise.resolve({ id: "d-fr" }) })).rejects.toMatchObject({
+      digest: "NEXT_HTTP_ERROR_FALLBACK;404",
+    });
+    // Control: the same deck by its uuid opens.
+    await open("d-fr");
+    expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
   });
 });

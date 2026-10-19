@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { seedDeck, start } from "@/testing/library";
+import { seedDeck, start, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -27,7 +27,7 @@ describe("the study page", () => {
     const postgrest = new FakePostgrest();
     server.use(...postgrest.handlers);
     seedDeck(postgrest, "d1", ["un"]);
-    await render(Study, { searchParams: Promise.resolve({ decks: "d1" }) });
+    await render(Study, { searchParams: Promise.resolve({ decks: uuidOf("d1") }) });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "카드를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
