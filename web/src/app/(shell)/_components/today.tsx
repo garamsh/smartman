@@ -15,7 +15,7 @@ import {
   dailyGoal,
   dayPlanOf,
   deckProgress,
-  forecast,
+  lastWeek,
   newCards,
   readRecentRetention,
   readToday,
@@ -23,9 +23,9 @@ import {
   RetentionPreview,
   sessionMinutes,
   statusLine,
-  studyDayEnd,
   studyHref,
   todayStatus,
+  type WeekDay,
 } from "@/features/study";
 
 import { EnterLink } from "./enter-link";
@@ -88,12 +88,13 @@ export async function Today() {
   const total = count.review + count.fresh;
   const goal = dailyGoal(plan);
   const streak = streakBefore + (answers.length > 0 ? 1 : 0);
-  const stored = Object.values(states).flatMap((state) => (state ? [state] : []));
-  const days = forecast(stored, day, total, timeZone);
-  const starts = [day.start];
-  while (starts.length < days.length) {
-    starts.push(studyDayEnd(starts[starts.length - 1] ?? day.start, timeZone));
-  }
+  const week = lastWeek({
+    days: retention.studyDays,
+    times: today.today.earlierTimes,
+    today: answers,
+    todayStart: day.start,
+    timeZone,
+  });
   const rows = decks.flatMap((deck) => {
     const own = cards.filter((card) => card.deckId === deck.id);
     const left = countDay(dayPlanOf(own, states, day, answers), states);
@@ -169,7 +170,7 @@ export async function Today() {
             label={total === 0 ? "학습하기" : "모두 학습"}
           />
         </section>
-        <Forecast days={days} starts={starts} timeZone={timeZone} done={total === 0} />
+        <LastWeek week={week} streak={streak} timeZone={timeZone} />
         {rows.length > 0 && <TodayDecks rows={rows} />}
         <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
       </div>
@@ -219,58 +220,67 @@ function GoalRing({ done, goal }: { done: number; goal: number }) {
   );
 }
 
-/** The next seven days as bars, today's in ink, read as one line of each day and its count. */
-function Forecast({
-  days,
-  starts,
+/**
+ * The last seven study days as bars of the cards answered on each, today's in ink and last, under
+ * the week's cards and minutes and the streak; the whole card links to 기록, which reads it as one
+ * sentence and each day's count.
+ */
+function LastWeek({
+  week,
+  streak,
   timeZone,
-  done,
 }: {
-  days: number[];
-  starts: number[];
+  week: WeekDay[];
+  streak: number;
   timeZone: string;
-  done: boolean;
 }) {
-  const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "short", timeZone });
-  const labels = starts.map((start, index) =>
-    index === 0 ? "오늘" : index === 1 ? "내일" : weekday.format(noon(start)),
+  const short = new Intl.DateTimeFormat("ko-KR", { weekday: "short", timeZone });
+  const long = new Intl.DateTimeFormat("ko-KR", { weekday: "long", timeZone });
+  const labels = week.map((day, index) =>
+    index === week.length - 1 ? "오늘" : short.format(noon(day.start)),
   );
-  const week = days.reduce((sum, value) => sum + value, 0);
-  const highest = Math.max(1, ...days);
+  const cards = week.reduce((sum, day) => sum + day.cards, 0);
+  const minutes = Math.ceil(week.reduce((sum, day) => sum + day.ms, 0) / 60_000);
+  const highest = Math.max(1, ...week.map((day) => day.cards));
+  const summary = `지난 7일 동안 ${String(cards)}장을 ${String(minutes)}분 공부했어요`;
   return (
-    <section
-      aria-labelledby="forecast-title"
-      className="flex flex-col gap-3.5 rounded-card bg-surface p-5"
+    <Link
+      href="/record"
+      aria-label={[
+        summary,
+        ...week.map((day) => `${long.format(noon(day.start))} ${String(day.cards)}장`),
+      ].join(", ")}
+      aria-describedby="last-week-open"
+      className="pressable flex flex-col gap-3.5 rounded-card bg-surface p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 id="forecast-title" className="text-body-strong">
-          앞으로 7일
-        </h2>
-        <span className="text-caption text-muted">
-          {done
-            ? `이번 주 ${String(week)}장`
-            : `내일 ${String(days[1] ?? 0)}장 · 이번 주 ${String(week)}장`}
+      <span id="last-week-open" className="sr-only">
+        기록 열기
+      </span>
+      <span className="text-body-strong">지난 7일</span>
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-ink-2">
+        <span>
+          이번 주 {cards}장 · {minutes}분
         </span>
-      </div>
-      <div
-        role="img"
-        aria-label={labels
-          .map((label, index) => `${label} ${String(days[index] ?? 0)}장`)
-          .join(", ")}
-        className="grid h-28 grid-cols-7 gap-2.5"
-      >
-        {days.map((value, index) => (
-          <div key={labels[index]} className="flex flex-col items-center justify-end gap-1">
-            <span className="text-micro font-bold">{value}</span>
+        {streak > 0 && (
+          <span className="flex items-center gap-1 font-bold">
+            <Flame aria-hidden className="size-4 text-streak" strokeWidth={2} />
+            {streak}일 연속
+          </span>
+        )}
+      </span>
+      <span aria-hidden className="grid h-28 grid-cols-7 gap-2.5">
+        {week.map((day, index) => (
+          <span key={day.start} className="flex flex-col items-center justify-end gap-1">
+            <span className="text-micro font-bold">{day.cards}</span>
             <span
-              className={`w-full rounded-md ${index === 0 ? "bg-ink" : "bg-outline"}`}
-              style={{ height: `${String(Math.max(4, (value / highest) * 64))}px` }}
+              className={`w-full rounded-md ${index === week.length - 1 ? "bg-ink" : "bg-outline"}`}
+              style={{ height: `${String(Math.max(4, (day.cards / highest) * 64))}px` }}
             />
             <span className="text-micro text-muted">{labels[index]}</span>
-          </div>
+          </span>
         ))}
-      </div>
-    </section>
+      </span>
+    </Link>
   );
 }
 

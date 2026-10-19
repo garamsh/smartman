@@ -1063,26 +1063,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get forecastTitle => 'Next 7 days';
+  String get dayToday => 'Today';
 
   @override
-  String forecastSummary(int tomorrow, int week) {
-    return 'Tomorrow $tomorrow · This week $week';
-  }
+  String get dayTomorrow => 'Tomorrow';
 
   @override
-  String forecastWeek(int week) {
-    return 'This week $week';
-  }
-
-  @override
-  String get forecastToday => 'Today';
-
-  @override
-  String get forecastTomorrow => 'Tomorrow';
-
-  @override
-  String forecastDay(String day, int count) {
+  String dayCount(String day, int count) {
     return '$day $count';
   }
 
@@ -1537,4 +1524,26 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get weekTitle => 'Last 7 days';
+
+  @override
+  String weekSummary(int cards, int minutes) {
+    return 'This week $cards · $minutes min';
+  }
+
+  @override
+  String weekSemantics(int cards, int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cards,
+      locale: localeName,
+      other: 'Studied $cards cards in $minutes min over the last 7 days',
+      one: 'Studied 1 card in $minutes min over the last 7 days',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get weekOpenRecord => 'open Record';
 }

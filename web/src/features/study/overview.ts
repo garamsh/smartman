@@ -1,6 +1,7 @@
 import type { CardId } from "@/features/decks";
 
-import { type CardState, type CardStates, type StudyDay, studyDayEnd } from "./queue";
+import { answerCapMs, type CardState, type CardStates, studyDayStart } from "./queue";
+import type { RecordDay } from "./stats";
 import { type DayPlan, leftOf } from "./today-list";
 
 // What the 오늘 page and the deck pages show of a selection beyond its queue, by the definitions
@@ -9,8 +10,8 @@ import { type DayPlan, leftOf } from "./today-list";
 /** The interval, in days, from which a reviewed card counts as mastered (익힘). */
 export const masteredIntervalDays = 21;
 
-/** How many study days the forecast covers, today included. */
-export const forecastDays = 7;
+/** How many study days the 오늘 page's charts cover, today included: the last seven. */
+export const chartDays = 7;
 
 const day = 86_400_000;
 
@@ -37,25 +38,46 @@ export function deckProgress(cards: Iterable<{ id: CardId }>, states: CardStates
 }
 
 /**
- * The cards due on each of the `forecastDays` study days from [today]: today's [load], then, for
- * each later day, the stored [states] that fall due within it, in [timeZone].
+ * One of the last `chartDays` study days: when it starts, the cards answered in it, each once, and
+ * the time its answers took, each up to `answerCapMs`, in milliseconds.
  */
-export function forecast(
-  states: Iterable<CardState>,
-  today: StudyDay,
-  load: number,
-  timeZone: string,
-): number[] {
-  const ends = [today.end];
-  while (ends.length < forecastDays)
-    ends.push(studyDayEnd(ends[ends.length - 1] ?? today.end, timeZone));
-  const counts = Array.from({ length: forecastDays }, (_, index) => (index === 0 ? load : 0));
-  for (const state of states) {
-    const index = ends.findIndex((end) => state.due < end);
-    // A card due within today is in the load already; one past the last day is in none.
-    if (index > 0) counts[index] = (counts[index] ?? 0) + 1;
+export type WeekDay = { start: number; cards: number; ms: number };
+
+/**
+ * The last `chartDays` study days, oldest first, ending with the one starting at [todayStart] in
+ * [timeZone], as the phone's `lastWeek` counts them: each day's cards from the server's study days
+ * [days] (`study_record_days`), each earlier day's time from [times] (`study_days_before`, capped
+ * there), and today's from its [today] answers. A day without an answer has no cards and no time.
+ */
+export function lastWeek({
+  days,
+  times,
+  today,
+  todayStart,
+  timeZone,
+}: {
+  days: readonly RecordDay[];
+  times: readonly { dayStart: number; ms: number }[];
+  today: readonly { durationMs: number }[];
+  todayStart: number;
+  timeZone: string;
+}): WeekDay[] {
+  const starts = [todayStart];
+  while (starts.length < chartDays) {
+    // An hour before a day's start lies in the day before, whatever the offset does.
+    starts.unshift(studyDayStart((starts[0] ?? todayStart) - 3_600_000, timeZone));
   }
-  return counts;
+  const cards = new Map(days.map((day) => [day.dayStart, day.cards]));
+  const ms = new Map(times.map((time) => [time.dayStart, time.ms]));
+  ms.set(
+    todayStart,
+    today.reduce((sum, { durationMs }) => sum + Math.min(durationMs, answerCapMs), 0),
+  );
+  return starts.map((start) => ({
+    start,
+    cards: cards.get(start) ?? 0,
+    ms: ms.get(start) ?? 0,
+  }));
 }
 
 /** The daily goal: [done] of the [goal] cards the study day held. */

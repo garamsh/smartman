@@ -222,7 +222,7 @@ void main() {
       'opens on 오늘, the bar switches tabs, and back from another tab returns to 오늘',
       (tester) async {
         final list = await _open(tester, fresh: {'Alpha': 1});
-        expect(find.text('Next 7 days'), findsOneWidget);
+        expect(find.text('Last 7 days'), findsOneWidget);
         expect(
           tester.getSemantics(find.text('Today').last),
           isSemantics(isSelected: true, hasSelectedState: true),
@@ -230,13 +230,13 @@ void main() {
 
         await list.decks();
         expect(find.text('My decks 3'), findsOneWidget);
-        expect(find.text('Next 7 days'), findsNothing);
+        expect(find.text('Last 7 days'), findsNothing);
         await list.tap('Record');
         expect(find.text('Correct in reviews'), findsOneWidget);
 
         expect(await tester.binding.handlePopRoute(), isTrue);
         await tester.pumpAndSettle();
-        expect(find.text('Next 7 days'), findsOneWidget);
+        expect(find.text('Last 7 days'), findsOneWidget);
         // Control: back on 오늘 is left to the platform, which leaves the app.
         expect(await tester.binding.handlePopRoute(), isFalse);
         await list.close();
@@ -338,7 +338,8 @@ void main() {
         expect(find.textContaining("of today's 7"), findsNothing);
         // The pace's answers were given the day before, which starts the
         // streak.
-        expect(find.text('1-day streak'), findsOneWidget);
+        // The today card's chip and the last seven days' line.
+        expect(find.text('1-day streak'), findsNWidgets(2));
 
         await list.tap('Study all');
 
@@ -395,29 +396,40 @@ void main() {
         // Two cards left: almost there.
         expect(_shown('Almost there'), findsOneWidget);
         // Answered today: the streak counts today.
-        expect(find.text('1-day streak'), findsOneWidget);
+        // The today card's chip and the last seven days' line.
+        expect(find.text('1-day streak'), findsNWidgets(2));
         await list.close();
       },
     );
 
     testWidgets(
-      'the next seven days show today\'s load and the cards due on each later day',
+      'the last seven days show the cards answered on each study day and the week\'s minutes, and open 기록',
       (tester) async {
+        // Beta's card answered 20 times at 25 s on Wednesday, and two of
+        // Alpha's cards today at 3 s each.
         final list = await _open(
           tester,
-          fresh: {'Alpha': 2},
           due: {'Beta': 1},
-          later: {'Gamma': 2},
+          pace: const Duration(seconds: 25),
+          answeredToday: {'Alpha': 2},
         );
 
         // homeNow is Thursday 15 October 2026.
         expect(
           find.bySemanticsLabel(
-            'Today 3, Tomorrow 2, Sat 0, Sun 0, Mon 0, Tue 0, Wed 0',
+            'Studied 3 cards in 9 min over the last 7 days, Friday 0, '
+            'Saturday 0, Sunday 0, Monday 0, Tuesday 0, Wednesday 1, '
+            'Thursday 2',
           ),
           findsOneWidget,
         );
-        expect(find.text('Tomorrow 2 · This week 5'), findsOneWidget);
+        // 506 s, rounded up.
+        expect(find.text('This week 3 · 9 min'), findsOneWidget);
+        expect(find.text('Next 7 days'), findsNothing);
+
+        await tester.ensureVisible(find.text('Last 7 days'));
+        await list.tap('Last 7 days');
+        expect(find.text('Correct in reviews'), findsOneWidget);
         await list.close();
       },
     );
@@ -465,8 +477,10 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Goal of 2 reached'), findsOneWidget);
-        expect(find.text('1-day streak'), findsOneWidget);
-        expect(find.text('This week 2'), findsOneWidget);
+        // The today card's chip and the last seven days' line.
+        expect(find.text('1-day streak'), findsNWidgets(2));
+        // The last seven days hold today's two answers, 6 s rounded up.
+        expect(find.text('This week 2 · 1 min'), findsOneWidget);
 
         await list.tap('Study');
 
@@ -603,7 +617,7 @@ void main() {
           tester,
           decks: ['Alpha'],
           fresh: {'Alpha': 150},
-          // Wide enough for the forecast's three-figure week in the test font.
+          // Wide enough for the three-figure counts in the test font.
           screen: const Size(800, 844),
         );
         // 20 minutes at the unknown pace of 10 s: 120 new cards.

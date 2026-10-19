@@ -279,12 +279,9 @@
   "statusStarted": "Off to a good start",
   "goalReached": "Goal of {goal} reached",
   "streakDays": "{days}-day streak",
-  "forecastTitle": "Next 7 days",
-  "forecastSummary": "Tomorrow {tomorrow} · This week {week}",
-  "forecastWeek": "This week {week}",
-  "forecastToday": "Today",
-  "forecastTomorrow": "Tomorrow",
-  "forecastDay": "{day} {count}",
+  "dayToday": "Today",
+  "dayTomorrow": "Tomorrow",
+  "dayCount": "{day} {count}",
   "todayDecks": "Today's decks",
   "deckDueCount": "{count}",
   "studyDeckToday": "Study {name}, {count} today",
@@ -388,5 +385,9 @@
   "settingsStudy": "Study",
   "studyExtra": "+{count} extra",
   "studyExtraSemantics": "{count, plural, =1{1 more card studied past today's plan} other{{count} more cards studied past today's plan}}",
-  "todayExtra": "{count, plural, =1{1 more card today} other{{count} more cards today}}"
+  "todayExtra": "{count, plural, =1{1 more card today} other{{count} more cards today}}",
+  "weekTitle": "Last 7 days",
+  "weekSummary": "This week {cards} · {minutes} min",
+  "weekSemantics": "{cards, plural, =1{Studied 1 card in {minutes} min over the last 7 days} other{Studied {cards} cards in {minutes} min over the last 7 days}}",
+  "weekOpenRecord": "open Record"
 }

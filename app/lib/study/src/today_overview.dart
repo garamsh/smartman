@@ -31,15 +31,15 @@ final class OverviewUnavailable extends TodayOverviewRead {
 }
 
 /// Today's [count], the daily [goal], the [streak] of study days, the
-/// [forecast] of the cards due on each of the next [forecastDays] study days,
-/// which start at [days], the [dailyMinutes] the user studies a day, and the
-/// [extra] cards studied past the day's plan.
+/// [nextReview], the last seven study days ([week]), the [dailyMinutes] the
+/// user studies a day, and the [extra] cards studied past the day's plan.
 final class TodayOverview extends TodayOverviewRead {
   const TodayOverview({
     required this.count,
     required this.goal,
     required this.streak,
-    required this.forecast,
+    required this.nextReview,
+    required this.week,
     required this.days,
     required this.load,
     required this.dailyMinutes,
@@ -49,9 +49,16 @@ final class TodayOverview extends TodayOverviewRead {
   final TodayCounted count;
   final DailyGoal goal;
   final int streak;
-  final List<int> forecast;
 
-  /// The calendar date each day of [forecast] starts on, at midnight UTC.
+  /// The first later day with a card due within [chartDays], as
+  /// [nextReviewOf] finds it; null when none has one.
+  final ({int after, int cards})? nextReview;
+
+  /// The last [chartDays] study days, oldest first, today last ([lastWeek]).
+  final List<WeekDay> week;
+
+  /// The calendar date each of the [chartDays] study days from today starts
+  /// on, at midnight UTC: the days the catch-up and the next review name.
   final List<DateTime> days;
 
   /// The reviews an average day asks for at the cards' current intervals,
@@ -64,18 +71,9 @@ final class TodayOverview extends TodayOverviewRead {
   /// How many cards were studied today past the day's plan, never in [goal].
   final int extra;
 
-  /// In a backlog, the overdue reviews left at the start of each day of
-  /// [forecast] when the user clears [load] of them a day ([catchUp]).
+  /// In a backlog, the overdue reviews left at the start of each of [days]
+  /// when the user clears [load] of them a day ([catchUp]).
   List<int> get backlogLeft => catchUp(count.total, load);
-
-  /// The first later day with a card due: how many days after today, and how
-  /// many cards; null when none of the forecast's days has one.
-  ({int after, int cards})? get nextReview {
-    for (var day = 1; day < forecast.length; day++) {
-      if (forecast[day] > 0) return (after: day, cards: forecast[day]);
-    }
-    return null;
-  }
 
   /// The whole minutes [cards] reviews take at the user's pace, rounded up.
   int minutesFor(int cards) => count.pace.minutes(reviews: cards, fresh: 0);
@@ -89,7 +87,8 @@ typedef TodayOverviewBuilder = Widget Function(
 
 /// Reads [decks]' [TodayOverview]: [TodayCounter]'s count, the daily goal
 /// from the answers recorded today, the streak as the completion card counts
-/// it, and the forecast; shows it through [builder].
+/// it, the next review, and the last seven study days; shows it through
+/// [builder].
 ///
 /// It is read again when [decks] changes and whenever the route that shows it
 /// comes back on top.
@@ -118,16 +117,23 @@ class _TodayOverviewReaderState extends ConsumerState<TodayOverviewReader> {
     final now = ref.read(studyClockProvider)();
     final zone = ref.read(studyZoneProvider);
     final start = today.day.start;
-    final answers = await repository.answersSince(start);
+    var weekStart = start;
+    for (var day = 1; day < chartDays; day++) {
+      weekStart = studyDayBefore(weekStart, zone);
+    }
+    final recent = await repository.answersSince(weekStart);
     final days = <DateTime>[start];
-    while (days.length < forecastDays) {
+    while (days.length < chartDays) {
       days.add(studyDayEnd(days.last, zone));
     }
     return TodayOverview(
       count: today.count,
       goal: DailyGoal.of(today.plan),
       streak: streak(
-        [for (final answer in answers) answer.at],
+        [
+          for (final answer in recent)
+            if (!answer.at.isBefore(start)) answer.at,
+        ],
         now,
         since: start,
         daysBefore: await studyDaysBefore(
@@ -137,12 +143,8 @@ class _TodayOverviewReaderState extends ConsumerState<TodayOverviewReader> {
         ),
         offsetAt: zone,
       ),
-      forecast: forecast(
-        today.states.values,
-        today.day,
-        load: today.count.total,
-        offsetAt: zone,
-      ),
+      nextReview: nextReviewOf(today.states.values, today.day, offsetAt: zone),
+      week: lastWeek(recent, start, zone),
       load: max(1, dailyLoad(today.states.values).ceil()),
       dailyMinutes: today.dailyMinutes,
       extra: today.plan.extra.length,

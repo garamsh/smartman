@@ -1777,41 +1777,23 @@ abstract class AppLocalizations {
   /// **'{days}일 연속'**
   String streakDays(int days);
 
-  /// Heading of the forecast of cards due on each of the next seven study days.
-  ///
-  /// In ko, this message translates to:
-  /// **'앞으로 7일'**
-  String get forecastTitle;
-
-  /// Beside the forecast's heading: tomorrow's cards and the seven days' total.
-  ///
-  /// In ko, this message translates to:
-  /// **'내일 {tomorrow}장 · 이번 주 {week}장'**
-  String forecastSummary(int tomorrow, int week);
-
-  /// Beside the forecast's heading on the done card: the seven days' total.
-  ///
-  /// In ko, this message translates to:
-  /// **'이번 주 {week}장'**
-  String forecastWeek(int week);
-
-  /// The forecast's label for today.
+  /// A day chart's label for today: the last seven days' and the catch-up's.
   ///
   /// In ko, this message translates to:
   /// **'오늘'**
-  String get forecastToday;
+  String get dayToday;
 
-  /// The forecast's label for tomorrow.
+  /// The catch-up's label and the next review's word for tomorrow.
   ///
   /// In ko, this message translates to:
   /// **'내일'**
-  String get forecastTomorrow;
+  String get dayTomorrow;
 
-  /// One day of the forecast as a screen reader reads it.
+  /// One day of a day chart as a screen reader reads it.
   ///
   /// In ko, this message translates to:
   /// **'{day} {count}장'**
-  String forecastDay(String day, int count);
+  String dayCount(String day, int count);
 
   /// Heading over the decks that hold cards for today.
   ///
@@ -2436,6 +2418,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘 {count}장 더 했어요'**
   String todayExtra(int count);
+
+  /// The heading of the 오늘 tab's chart of the last seven study days.
+  ///
+  /// In ko, this message translates to:
+  /// **'지난 7일'**
+  String get weekTitle;
+
+  /// Beside the last seven days' heading: the cards answered and the minutes they took.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 주 {cards}장 · {minutes}분'**
+  String weekSummary(int cards, int minutes);
+
+  /// The last seven days' chart as one sentence for a screen reader.
+  ///
+  /// In ko, this message translates to:
+  /// **'지난 7일 동안 {cards}장을 {minutes}분 공부했어요'**
+  String weekSemantics(int cards, int minutes);
+
+  /// What a tap on the last seven days does, as a screen reader hears it.
+  ///
+  /// In ko, this message translates to:
+  /// **'기록 열기'**
+  String get weekOpenRecord;
 }
 
 class _AppLocalizationsDelegate

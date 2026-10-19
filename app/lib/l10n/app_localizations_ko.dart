@@ -991,26 +991,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get forecastTitle => '앞으로 7일';
+  String get dayToday => '오늘';
 
   @override
-  String forecastSummary(int tomorrow, int week) {
-    return '내일 $tomorrow장 · 이번 주 $week장';
-  }
+  String get dayTomorrow => '내일';
 
   @override
-  String forecastWeek(int week) {
-    return '이번 주 $week장';
-  }
-
-  @override
-  String get forecastToday => '오늘';
-
-  @override
-  String get forecastTomorrow => '내일';
-
-  @override
-  String forecastDay(String day, int count) {
+  String dayCount(String day, int count) {
     return '$day $count장';
   }
 
@@ -1427,4 +1414,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String todayExtra(int count) {
     return '오늘 $count장 더 했어요';
   }
+
+  @override
+  String get weekTitle => '지난 7일';
+
+  @override
+  String weekSummary(int cards, int minutes) {
+    return '이번 주 $cards장 · $minutes분';
+  }
+
+  @override
+  String weekSemantics(int cards, int minutes) {
+    return '지난 7일 동안 $cards장을 $minutes분 공부했어요';
+  }
+
+  @override
+  String get weekOpenRecord => '기록 열기';
 }

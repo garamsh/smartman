@@ -2,7 +2,7 @@ import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
  * The 오늘 page while it is read: the heading, the today card with its ring and button, and the
- * next seven days, in their sizes.
+ * last seven study days with their line, in their sizes.
  */
 export function TodaySkeleton() {
   return (
@@ -20,6 +20,7 @@ export function TodaySkeleton() {
         </div>
         <div className="flex flex-col gap-3.5 rounded-card bg-surface p-5">
           <SkeletonLine text="text-body-strong" width="w-24" />
+          <SkeletonLine text="text-caption" width="w-40" />
           <span className="h-28" />
         </div>
       </div>

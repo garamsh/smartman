@@ -1,7 +1,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadEngine } from "@/features/study";
+import { loadEngine, timeZoneCookie } from "@/features/study";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { otherUser, testUser } from "@/testing/mocks/handlers";
@@ -496,7 +496,8 @@ describe("the 오늘 and 덱 pages", () => {
     await render(Today, {});
 
     expect(screen.getByRole("img", { name: "하루 목표 6장 중 2장" })).toBeInTheDocument();
-    expect(screen.getByText("1일 연속")).toBeInTheDocument();
+    // The today card's chip and the last seven days' line.
+    expect(screen.getAllByText("1일 연속")).toHaveLength(2);
     expect(screen.getByText("좋은 출발이에요")).toBeInTheDocument();
     cleanup();
 
@@ -507,7 +508,7 @@ describe("the 오늘 and 덱 pages", () => {
     await render(Today, {});
 
     expect(screen.getByRole("img", { name: "하루 목표 4장 중 0장" })).toBeInTheDocument();
-    expect(screen.getByText("2일 연속")).toBeInTheDocument();
+    expect(screen.getAllByText("2일 연속")).toHaveLength(2);
     expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
   });
 
@@ -540,27 +541,57 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.getByRole("group", { name: "앞면" })).toHaveTextContent("b");
   });
 
-  it("forecasts the next seven days by study day, today's load first", async () => {
+  it("shows the last seven study days in the browser's zone, each day's cards once and the week's minutes, linking to 기록", async () => {
+    // The same history as app/test/study/overview_test.dart's last seven days, with the same
+    // figures: 10:00 on Wednesday 5 November 2025 in Los Angeles, after the change to UTC-8.
+    vi.setSystemTime(Date.UTC(2025, 10, 5, 18));
+    setRequestCookies([
+      ...(await signedInCookies()),
+      { name: timeZoneCookie, value: "America/Los_Angeles" },
+    ]);
+    const fronts = ["a", "b", "c", "d", "e", "f", "g", "h"];
     postgrest.seed("decks", deckRow("d-fr", "French"));
-    postgrest.seed("cards", ...["a", "b", "c"].map((front) => cardRow(front, "d-fr", front)));
-    // Thursday 15 January 2026 in Seoul: two cards due tomorrow, one on Sunday.
+    postgrest.seed("cards", ...fronts.map((front) => cardRow(front, "d-fr", front)));
+    const answers: [string, number, number][] = [
+      // 29 October, before the seven days.
+      ["a", Date.UTC(2025, 9, 29, 15), 10],
+      // 30 October: a twice and b, whose 45 s count as 30.
+      ["a", Date.UTC(2025, 9, 30, 18), 10],
+      ["b", Date.UTC(2025, 9, 30, 18, 5), 45],
+      ["a", Date.UTC(2025, 9, 30, 18, 10), 5],
+      // 03:59 on 1 November is still 31 October's; 04:00 starts its day.
+      ["c", Date.UTC(2025, 10, 1, 10, 59), 20],
+      ["d", Date.UTC(2025, 10, 1, 11), 20],
+      // 03:30 on 2 November at UTC-8 is still 1 November's; 04:30 is 2 November's.
+      ["e", Date.UTC(2025, 10, 2, 11, 30), 10],
+      ["f", Date.UTC(2025, 10, 2, 12, 30), 10],
+      // 3 November; 4 November has none.
+      ["a", Date.UTC(2025, 10, 3, 20), 10],
+      ["b", Date.UTC(2025, 10, 3, 20, 1), 10],
+      // Today so far, 90 s counting as 30: 185 s in all, 4 minutes, where uncapped would be 5.
+      ["g", Date.UTC(2025, 10, 5, 17), 30],
+      ["h", Date.UTC(2025, 10, 5, 17, 30), 90],
+    ];
     postgrest.seed(
-      "card_states",
-      stateRow("a", { stability: 3, difficulty: 5, lastReview: start - day, due: start + day }),
-      stateRow("b", { stability: 3, difficulty: 5, lastReview: start - day, due: start + day }),
-      stateRow("c", { stability: 9, difficulty: 5, lastReview: start - day, due: start + 3 * day }),
+      "reviews",
+      ...answers.map(([front, at, seconds], index) =>
+        reviewRow(`r${String(index)}`, front, at, seconds * 1000),
+      ),
     );
     await render(Today, {});
 
-    expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", {
-        name: "오늘 0장, 내일 2장, 토 0장, 일 1장, 월 0장, 화 0장, 수 0장",
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("이번 주 3장")).toBeInTheDocument();
+    const week = screen.getByRole("link", { name: /^지난 7일 동안/ });
+    expect(week).toHaveAccessibleName(
+      "지난 7일 동안 10장을 4분 공부했어요, 목요일 2장, 금요일 1장, 토요일 2장, 일요일 1장, " +
+        "월요일 2장, 화요일 0장, 수요일 2장",
+    );
+    expect(week).toHaveAccessibleDescription("기록 열기");
+    expect(week).toHaveAttribute("href", "/record");
+    expect(within(week).getByText("이번 주 10장 · 4분")).toBeInTheDocument();
+    // The forward forecast is gone.
+    expect(screen.queryByText("앞으로 7일")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "오늘" })).toBeInTheDocument();
-    expect(screen.getByText("1월 15일 목요일")).toBeInTheDocument();
+    expect(screen.getByText("11월 5일 수요일")).toBeInTheDocument();
   });
 
   it("lists the decks with cards left today, each opening a session over it, and no other", async () => {
