@@ -739,6 +739,8 @@ Deno.test("prompt v8 asks for #200's rules with a whole table on one table card 
       'Any other label is {"kind": "other", "category": null, "text": <as printed>}: a semantic class such as [사물], a register such as [구어], a field such as [의학], or a part of speech not on that list.',
       '"text" is the label as printed, its dots kept, without the brackets or parentheses around it',
       '"labels" is an empty list when the page prints no label for the meaning, even when its part of speech is plain: never add a label the page does not print.',
+      "A label is one the page prints with that meaning, on the meaning's own line.",
+      'A part of speech printed anywhere else is not a label of any sense, such as one before each reading of a pronunciation like "명 [\'kantent] / 형 [kan\'tent]": it stays in "pronunciation" alone',
       '"meaning" is the translation or the definition, exactly as written',
     ],
     "#228 examples per sense": [
