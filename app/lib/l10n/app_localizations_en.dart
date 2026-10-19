@@ -75,10 +75,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wholeCard => 'Card';
 
   @override
-  String get wholeCardReadOnly =>
-      'Table cards can\'t be edited yet. You can delete one.';
-
-  @override
   String get sensesEditNote =>
       'Editing the front saves labels such as [명] as plain text.';
 
@@ -106,6 +102,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clozeBlankRequired => 'Choose at least one word as a blank';
+
+  @override
+  String get cardKindTable => 'Table';
+
+  @override
+  String get tableNameHint => 'The table\'s name';
+
+  @override
+  String get tableModeLabel => 'Table editing';
+
+  @override
+  String get tableModeCells => 'Type cells';
+
+  @override
+  String get tableModeBlanks => 'Choose blanks';
+
+  @override
+  String get tableCellsHint => 'Type the headings and cells';
+
+  @override
+  String get tableBlanksHint => 'Tap the cells to make blanks';
+
+  @override
+  String tableHeaderCell(int column) {
+    return 'Column $column heading';
+  }
+
+  @override
+  String tableCell(int row, int column) {
+    return 'Row $row, column $column';
+  }
+
+  @override
+  String get tableEmptyCell => 'Empty';
+
+  @override
+  String get tableMakeBlank => 'Make blank';
+
+  @override
+  String get tableClearBlank => 'Remove blank';
+
+  @override
+  String get addRow => 'Add row';
+
+  @override
+  String get addColumn => 'Add column';
+
+  @override
+  String deleteRow(int row) {
+    return 'Delete row $row';
+  }
+
+  @override
+  String deleteColumn(int column) {
+    return 'Delete column $column';
+  }
+
+  @override
+  String get tableBlankRequired => 'Choose at least one cell as a blank';
+
+  @override
+  String get tableBlankEmpty => 'Fill in each cell chosen as a blank';
 
   @override
   String get cardKindLabel => 'Card kind';

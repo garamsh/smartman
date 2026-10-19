@@ -74,9 +74,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCard => '카드';
 
   @override
-  String get wholeCardReadOnly => '표 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
-
-  @override
   String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
 
   @override
@@ -103,6 +100,68 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clozeBlankRequired => '빈칸으로 할 낱말을 하나 이상 골라 주세요';
+
+  @override
+  String get cardKindTable => '표';
+
+  @override
+  String get tableNameHint => '표의 이름';
+
+  @override
+  String get tableModeLabel => '표 편집 방식';
+
+  @override
+  String get tableModeCells => '칸 입력';
+
+  @override
+  String get tableModeBlanks => '빈칸 고르기';
+
+  @override
+  String get tableCellsHint => '제목과 칸에 내용을 적어요';
+
+  @override
+  String get tableBlanksHint => '빈칸으로 할 칸을 눌러요';
+
+  @override
+  String tableHeaderCell(int column) {
+    return '$column열 제목';
+  }
+
+  @override
+  String tableCell(int row, int column) {
+    return '$row행 $column열';
+  }
+
+  @override
+  String get tableEmptyCell => '내용 없음';
+
+  @override
+  String get tableMakeBlank => '빈칸으로';
+
+  @override
+  String get tableClearBlank => '빈칸 해제';
+
+  @override
+  String get addRow => '행 추가';
+
+  @override
+  String get addColumn => '열 추가';
+
+  @override
+  String deleteRow(int row) {
+    return '$row행 지우기';
+  }
+
+  @override
+  String deleteColumn(int column) {
+    return '$column열 지우기';
+  }
+
+  @override
+  String get tableBlankRequired => '빈칸으로 할 칸을 하나 이상 골라 주세요';
+
+  @override
+  String get tableBlankEmpty => '빈칸으로 고른 칸에 내용을 적어 주세요';
 
   @override
   String get cardKindLabel => '카드 종류';

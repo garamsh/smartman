@@ -8,7 +8,6 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/word_break.dart';
 
 import '../home/deck_screens.dart';
-import 'whole_cards.dart';
 
 /// The text of the preview's two halves, front then back, its word joiners
 /// left out.
@@ -118,51 +117,6 @@ void main() {
     expect(await _stored(screens), isEmpty);
     await screens.close();
   });
-
-  testWidgets(
-    'a table card opens read-only: previewed whole and filled, with a note and no field or Save, and still deletes, where a text card opens its fields',
-    (tester) async {
-      final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
-      const table = TableContent(
-        columns: ['Capital', 'Country'],
-        rows: [
-          ['Paris', 'France'],
-        ],
-        blanks: [(row: 0, column: 0)],
-      );
-      await tester.runAsync(
-        () => screens.repository.addCard(
-          screens.deck.id,
-          front: [const TextContent('Capitals'), table],
-          back: [TextContent(table.filled)],
-        ),
-      );
-      final cards = await screens.cards();
-      final whole = cards.firstWhere((card) => isWholeCard(card.front));
-
-      // Control: a text card opens its fields and Save.
-      await screens.push(
-        (deck) => CardEditorScreen(deck: deck, card: cards.first),
-      );
-      expect(find.widgetWithText(AppTextField, 'Front'), findsOneWidget);
-      expect(find.text('Save'), findsOneWidget);
-      await screens.tap(find.byTooltip('Close'));
-
-      await screens.push((deck) => CardEditorScreen(deck: deck, card: whole));
-      expect(blanksUnder(find.byType(CardPreview)), {'Paris': true});
-      expect(
-        find.text("Table cards can't be edited yet. You can delete one."),
-        findsOneWidget,
-      );
-      expect(find.byType(AppTextField), findsNothing);
-      expect(find.text('Save'), findsNothing);
-
-      await screens.tap(find.byTooltip('Delete card'));
-      await screens.tap(find.text('Delete'));
-      expect(await _stored(screens), [('Chat', 'cat')]);
-      await screens.close();
-    },
-  );
 
   testWidgets(
     'a reversed word, its senses on the front, edits as a basic card: saved as it was it keeps them, and edited its front becomes the text typed, as the note says',
