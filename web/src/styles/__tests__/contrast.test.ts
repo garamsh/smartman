@@ -55,6 +55,11 @@ const pairs: [string, string, string][] = [
   ["the tab bar's other pages on the surface", "muted", "surface"],
   ["the today card's text on the navy", "on-hero", "hero"],
   ["the today card's button on white", "brand", "on-hero"],
+  ["the done card's heading on its tint", "ink", "brand-tint"],
+  ["the done card's next review on its tint", "ink-2", "brand-tint"],
+  ["the done card's pills on the surface", "ink", "surface"],
+  ["the done card's 학습하기 on the navy fill", "on-primary", "ink"],
+  ["the catch-up's line and labels on the surface", "muted", "surface"],
   ["the last seven days' labels and a deck's progress on the surface", "muted", "surface"],
   ["the date and the breadcrumb on the ground", "muted", "ground"],
   ["the admin's red final button's label on its fill", "on-dont-know-text", "dont-know-text"],
@@ -101,6 +106,10 @@ const studyMarks: [string, string, string][] = [
   ["the 모른다 chip on its card", "dont-know-text", "dont-know-card"],
   ["the 모른다 chip on the ground", "dont-know-text", "ground"],
   ["the streak's flame on the completion card", "streak", "surface"],
+  ["the streak's flame on the 오늘 page's navy cards", "streak", "hero"],
+  ["the catch-up's amber bars on the surface", "streak", "surface"],
+  ["the goal reached check on the done card's pill", "know", "surface"],
+  ["the backlog card's check on its amber disc", "ink", "tint-amber"],
 ];
 
 describe("the study screen's grades, answer buttons and streak", () => {

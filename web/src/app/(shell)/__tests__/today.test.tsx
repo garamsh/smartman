@@ -4,7 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { loadEngine, timeZoneCookie } from "@/features/study";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
-import { otherUser, testUser } from "@/testing/mocks/handlers";
+import { otherUser, supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
 import { testRouter } from "@/testing/router";
 import { server } from "@/testing/mocks/server";
 import { cardRow, day, deckRow, reviewRow, start, stateRow, uuidOf } from "@/testing/library";
@@ -124,15 +124,15 @@ describe("the 오늘 and 덱 pages", () => {
     expect(rowNames()).toEqual(["Alpha, 카드 35장, 오늘 29", "Beta, 카드 1장"]);
   });
 
-  it("says in the header that new cards wait while more than three days of reviews are due", async () => {
-    const paused = "밀린 복습을 마칠 때까지 새 카드는 쉬어요.";
+  it("in a backlog draws the phone's backlog card and its catch-up, and not otherwise", async () => {
+    const title = "다시 시작하면 돼요";
     postgrest.seed("decks", deckRow("d-fr", "French"));
     postgrest.seed("cards", cardRow("fr-new", "d-fr", "chat"), cardRow("fr-due", "d-fr", "chien"));
     postgrest.seed("card_states", stateRow("fr-due", due));
-    // Control: one card due every three days is not a backlog.
+    // Control: one card due every three days is not a backlog, so the today card shows.
     await renderBoth();
     expect(todayLine()).toBe("2 장 · 약 1분");
-    expect(screen.queryByText(paused)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
     cleanup();
 
     // Two more due after 30 days: three due against a load of about 0.4 a day.
@@ -146,9 +146,26 @@ describe("the 오늘 and 덱 pages", () => {
     postgrest.seed("card_states", stateRow("fr-a", overdue), stateRow("fr-b", overdue));
     await renderBoth();
 
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 3장" })).toBeInTheDocument();
-    expect(todayLine()).toBe("3 장 · 약 1분");
-    expect(screen.getByText(paused)).toBeInTheDocument();
+    const card = within(screen.getByRole("region", { name: title }));
+    expect(
+      card.getByText("밀린 복습 3장을 급한 것부터 해요. 새 카드는 잠시 쉬어요."),
+    ).toBeInTheDocument();
+    expect(card.getByRole("link", { name: /3장 학습 · 약 1분/ })).toHaveAttribute(
+      "href",
+      `/study?decks=${uuidOf("d-fr")}`,
+    );
+    expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
+    // The load rounds up to one a day: three days to catch up, Thursday 15 January in Seoul.
+    const catchUp = within(
+      screen.getByRole("region", { name: "하루 1장씩 하면 3일이면 따라잡아요" }),
+    );
+    expect(
+      catchUp.getByRole("img", {
+        name: "밀린 복습 예상: 오늘 3장, 내일 2장, 토 1장, 일 0장, 월 0장, 화 0장, 수 0장",
+      }),
+    ).toBeInTheDocument();
+    expect(catchUp.getByText("하루 1장씩 했을 때 남는 밀린 복습이에요")).toBeInTheDocument();
+    expect(screen.queryByText("지난 7일")).not.toBeInTheDocument();
   });
 
   it("leaves out tombstoned decks and cards, and the cards of a tombstoned deck", async () => {
@@ -430,14 +447,25 @@ describe("the 오늘 and 덱 pages", () => {
     ]);
   });
 
-  it("says the server cannot be reached when PostgREST does not answer", async () => {
+  it("says the server cannot be reached when PostgREST does not answer, under the page's heading", async () => {
     postgrest.fail("decks", 500);
 
     await render(Today, {});
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
-    );
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.");
+    // The day was read, so its date stays beside the heading.
+    const heading = screen.getByRole("heading", { level: 1, name: "오늘" });
+    expect(heading.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("1월 15일 목요일")).toBeInTheDocument();
+    cleanup();
+
+    // With nothing read, the heading stands alone above the failure.
+    server.use(supabaseUnreachable);
+    await render(Today, {});
+    expect(screen.getByRole("heading", { level: 1, name: "오늘" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("서버에 연결할 수 없어요.");
+    expect(screen.queryByText("1월 15일 목요일")).not.toBeInTheDocument();
   });
 
   it("with no card left today says the cards are done and links 학습하기 to the study page over every deck, which opens on nothing to study or on the completion card", async () => {
@@ -476,6 +504,44 @@ describe("the 오늘 and 덱 pages", () => {
       }
       cleanup();
     }
+  });
+
+  it("with nothing left draws the phone's done card: the next review in its three forms, the goal reached and 학습하기 in the navy fill", async () => {
+    const card = () => screen.getByRole("region", { name: "오늘 할 카드를 다 했어요" });
+    // Thursday 15 January 2026 in Seoul. Each card is answered today, so the goal is reached.
+    for (const [dueIn, line] of [
+      [1, "다음 복습은 내일 · 1장, 약 1분"],
+      [3, "다음 복습은 일요일 · 1장, 약 1분"],
+      [9, "앞으로 7일 동안 복습할 카드가 없어요"],
+    ] as const) {
+      postgrest = new FakePostgrest();
+      server.use(...postgrest.handlers);
+      postgrest.seed("decks", deckRow("d-fr", "French"));
+      postgrest.seed("cards", cardRow("fr", "d-fr", "oiseau"));
+      postgrest.seed(
+        "card_states",
+        stateRow("fr", {
+          stability: 3,
+          difficulty: 5,
+          lastReview: start - 3_600_000,
+          due: start + dueIn * day,
+        }),
+      );
+      postgrest.seed("reviews", reviewRow("r-fr", "fr", start - 3_600_000, 6_000));
+      await render(Today, {});
+
+      expect(within(card()).getByText(line), line).toBeInTheDocument();
+      cleanup();
+    }
+    await render(Today, {});
+
+    expect(card()).toHaveClass("bg-brand-tint");
+    expect(within(card()).getByText("목표 1장 달성")).toBeInTheDocument();
+    expect(within(card()).getAllByText("1일 연속")).toHaveLength(1);
+    const study = screen.getByRole("link", { name: "학습하기" });
+    expect(study).toHaveClass("bg-ink");
+    expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
+    expect(screen.queryByRole("img", { name: /^하루 목표/ })).not.toBeInTheDocument();
   });
 
   it("shows the goal ring, the streak and where the user stands, from the shared definitions", async () => {

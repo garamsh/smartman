@@ -1,4 +1,4 @@
-import { Flame, Play, Plus } from "lucide-react";
+import { Check, Flame, Play, Plus } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -10,13 +10,16 @@ import {
   readDeckList,
 } from "@/features/decks";
 import {
+  catchUp,
   countDay,
   DailyMinutes,
   dailyGoal,
+  dailyLoad,
   dayPlanOf,
   deckProgress,
   lastWeek,
   newCards,
+  nextReviewOf,
   readRecentRetention,
   readToday,
   readyServerEngine,
@@ -28,15 +31,39 @@ import {
   type WeekDay,
 } from "@/features/study";
 
+import { Mascot } from "@/design/brand";
+
 import { EnterLink } from "./enter-link";
 
 /** Noon of the study day starting at [start], which names its calendar date in any zone. */
 const noon = (start: number) => start + 12 * 3_600_000;
 
+/** The page's heading, "오늘", with the day's date beside it once the day is read. */
+function Heading({ day }: { day?: { start: number; timeZone: string } }) {
+  return (
+    <header className="flex flex-wrap items-baseline gap-x-3">
+      <h1 className="text-display">오늘</h1>
+      {day && (
+        <span className="text-label font-normal text-muted">
+          {new Intl.DateTimeFormat("ko-KR", {
+            month: "long",
+            day: "numeric",
+            weekday: "long",
+            timeZone: day.timeZone,
+          }).format(noon(day.start))}
+        </span>
+      )}
+    </header>
+  );
+}
+
 /**
- * The 오늘 page's content, read on the server: the today card over every deck, the next seven
- * days, today's decks and the retention of the last 30 days; with no deck, the first-run
- * invitation, and with decks but no card in any, the invitation to add cards.
+ * The 오늘 page's content, read on the server, under its heading, as the phone's 오늘 tab draws the
+ * day: with cards left, the today card, the last seven study days and today's decks; in a backlog,
+ * the backlog card and its catch-up; with nothing left, the done card, the last seven study days
+ * and 학습하기; then the retention of the last 30 days. With no deck, the first-run invitation;
+ * with decks but no card in any, the invitation to add cards; with a failed read, why, under the
+ * heading still.
  */
 export async function Today() {
   const [read, today, retention] = await Promise.all([
@@ -44,28 +71,30 @@ export async function Today() {
     readToday({ streak: true }),
     readRecentRetention(),
   ]);
-  if ("failure" in read) return <ReadFailure failure={read.failure} />;
-  if ("failure" in today) return <ReadFailure failure={today.failure} />;
-  if ("failure" in retention) return <ReadFailure failure={retention.failure} />;
+  const heading = (
+    <Heading
+      day={
+        "failure" in today
+          ? undefined
+          : { start: today.today.day.start, timeZone: today.today.timeZone }
+      }
+    />
+  );
+  const failed = (failure: Parameters<typeof ReadFailure>[0]["failure"]) => (
+    <>
+      {heading}
+      <ReadFailure failure={failure} />
+    </>
+  );
+  if ("failure" in read) return failed(read.failure);
+  if ("failure" in today) return failed(today.failure);
+  if ("failure" in retention) return failed(retention.failure);
   const { decks, cards } = read.library;
   const { day, states, pace, answers, streakBefore, timeZone, dailyMinutes } = today.today;
-  const header = (
-    <header className="flex flex-wrap items-baseline gap-x-3">
-      <h1 className="text-display">오늘</h1>
-      <span className="text-label font-normal text-muted">
-        {new Intl.DateTimeFormat("ko-KR", {
-          month: "long",
-          day: "numeric",
-          weekday: "long",
-          timeZone,
-        }).format(noon(day.start))}
-      </span>
-    </header>
-  );
   if (decks.length === 0) {
     return (
       <>
-        {header}
+        {heading}
         <EmptyHome />
       </>
     );
@@ -74,7 +103,7 @@ export async function Today() {
   if (cards.length === 0) {
     return (
       <>
-        {header}
+        {heading}
         <NoCardsHome />
       </>
     );
@@ -82,19 +111,44 @@ export async function Today() {
 
   // Today's list places the cards, as the study page and the phone do, so the counts agree.
   const engine = await readyServerEngine();
-  if ("failure" in engine) return <ReadFailure failure={engine.failure} />;
+  if ("failure" in engine) return failed(engine.failure);
   const plan = dayPlanOf(cards, states, day, answers);
   const count = countDay(plan, states);
   const total = count.review + count.fresh;
+  const minutes = sessionMinutes(count.review, count.fresh, pace);
   const goal = dailyGoal(plan);
   const streak = streakBefore + (answers.length > 0 ? 1 : 0);
-  const week = lastWeek({
-    days: retention.studyDays,
-    times: today.today.earlierTimes,
-    today: answers,
-    todayStart: day.start,
-    timeZone,
-  });
+  const stored = Object.values(states).flatMap((state) => (state ? [state] : []));
+  const href = studyHref(decks.map((deck) => deck.id));
+  const minutesControl = (onHero: boolean) => (
+    <DailyMinutes
+      minutes={dailyMinutes}
+      reviews={count.review}
+      plan={{
+        due: today.today.dueAtStart,
+        started: today.today.startedToday,
+        unstarted: newCards(cards, states).length,
+        backlog: count.backlog,
+        pace,
+        todayStart: day.start,
+        timeZone,
+      }}
+      onHero={onHero}
+    />
+  );
+  const week = (
+    <LastWeek
+      week={lastWeek({
+        days: retention.studyDays,
+        times: today.today.earlierTimes,
+        today: answers,
+        todayStart: day.start,
+        timeZone,
+      })}
+      streak={streak}
+      timeZone={timeZone}
+    />
+  );
   const rows = decks.flatMap((deck) => {
     const own = cards.filter((card) => card.deckId === deck.id);
     const left = countDay(dayPlanOf(own, states, day, answers), states);
@@ -103,78 +157,201 @@ export async function Today() {
     const { mastered } = deckProgress(own, states);
     return [{ deck, today: n, mastered: mastered / own.length }];
   });
+  const extraPill = (border: string) =>
+    plan.extra.size > 0 && (
+      <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${border}`}>
+        <Plus aria-hidden className="size-4" strokeWidth={2} />
+        오늘 {plan.extra.size}장 더 했어요
+      </span>
+    );
+  const streakChip = (border: string) =>
+    streak > 0 && (
+      <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${border}`}>
+        <Flame aria-hidden className="size-4 text-streak" strokeWidth={2} />
+        {streak}일 연속
+      </span>
+    );
+
+  if (total === 0) {
+    const next = nextReviewOf(stored, day, timeZone);
+    const nextDay =
+      next &&
+      (next.after === 1
+        ? "내일"
+        : new Intl.DateTimeFormat("ko-KR", { weekday: "long", timeZone }).format(
+            noon(day.start) + next.after * 86_400_000,
+          ));
+    return (
+      <>
+        {heading}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section
+            aria-labelledby="today-title"
+            className="flex flex-col items-center gap-2 rounded-card bg-brand-tint p-6 text-center text-ink lg:col-span-2"
+          >
+            <span className="relative">
+              <Mascot className="size-mascot-medium bg-surface" />
+              <span
+                aria-hidden
+                className="absolute -top-1 -right-4 text-label font-bold text-ink-2 italic"
+              >
+                z<sup>z</sup>
+              </span>
+            </span>
+            <h2 id="today-title" className="mt-1 text-title">
+              오늘 할 카드를 다 했어요
+            </h2>
+            <p className="text-secondary text-ink-2">
+              {next && nextDay
+                ? `다음 복습은 ${nextDay} · ${String(next.cards)}장, 약 ${String(sessionMinutes(next.cards, 0, pace))}분`
+                : "앞으로 7일 동안 복습할 카드가 없어요"}
+            </p>
+            <p className="flex flex-wrap items-center justify-center gap-2 text-secondary">
+              {minutesControl(false)}
+              {streakChip("bg-surface")}
+              {goal.goal > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-bold">
+                  <Check aria-hidden className="size-4 text-know" strokeWidth={2} />
+                  목표 {goal.goal}장 달성
+                </span>
+              )}
+              {extraPill("bg-surface")}
+            </p>
+          </section>
+          {week}
+          <EnterLink href={href} label="학습하기" primary />
+          <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
+        </div>
+      </>
+    );
+  }
+
+  if (count.backlog) {
+    const load = Math.max(1, Math.ceil(dailyLoad(stored)));
+    return (
+      <>
+        {heading}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section
+            aria-labelledby="today-title"
+            className="flex flex-col gap-4 rounded-card bg-hero p-6 text-on-hero shadow-card lg:col-span-2 lg:p-7"
+          >
+            <div className="flex items-center gap-4">
+              <span className="relative shrink-0">
+                <Mascot className="size-16 bg-surface" />
+                <span
+                  aria-hidden
+                  className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-tint-amber text-ink"
+                >
+                  <Check className="size-4" strokeWidth={2.5} />
+                </span>
+              </span>
+              <div className="flex min-w-0 flex-col gap-1">
+                <h2 id="today-title" className="text-headline">
+                  다시 시작하면 돼요
+                </h2>
+                <p className="text-secondary break-keep">
+                  밀린 복습 {total}장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.
+                </p>
+              </div>
+            </div>
+            <p className="flex flex-wrap items-center gap-2 text-secondary">
+              {minutesControl(true)}
+              {streakChip("border border-on-hero/40")}
+            </p>
+            {/* A row, so the link keeps its row sizes inside the card's column. */}
+            <div className="flex flex-wrap">
+              <EnterLink href={href} label={`${String(total)}장 학습 · 약 ${String(minutes)}분`} />
+            </div>
+          </section>
+          <CatchUp backlog={total} perDay={load} start={day.start} timeZone={timeZone} />
+          <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
-      {header}
+      {heading}
       <div className="grid gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="today-title"
           className="flex flex-wrap items-center gap-6 rounded-card bg-hero p-6 text-on-hero shadow-card lg:col-span-2 lg:p-7"
         >
           <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-2">
-            {total === 0 ? (
-              <h2 id="today-title" className="text-title">
-                오늘 할 카드를 다 했어요
-              </h2>
-            ) : (
-              <>
-                <p className="text-label font-normal">오늘 할 카드</p>
-                <h2 id="today-title" aria-label={`오늘 할 카드 ${String(total)}장`}>
-                  <span className="text-figure">{total}</span>{" "}
-                  <span className="text-headline">
-                    장 · 약 {sessionMinutes(count.review, count.fresh, pace)}분
-                  </span>
-                </h2>
-              </>
-            )}
+            <p className="text-label font-normal">오늘 할 카드</p>
+            <h2 id="today-title" aria-label={`오늘 할 카드 ${String(total)}장`}>
+              <span className="text-figure">{total}</span>{" "}
+              <span className="text-headline">장 · 약 {minutes}분</span>
+            </h2>
             <p className="flex flex-wrap items-center gap-2 text-secondary">
-              {streak > 0 && (
-                <span className="flex items-center gap-1 rounded-full border border-on-hero/40 px-2.5 py-1 font-bold">
-                  <Flame aria-hidden className="size-4" strokeWidth={2} />
-                  {streak}일 연속
-                </span>
-              )}
-              <span className="break-keep">
-                {total === 0
-                  ? goal.goal > 0 && `목표 ${String(goal.goal)}장 달성`
-                  : count.backlog
-                    ? "밀린 복습을 마칠 때까지 새 카드는 쉬어요."
-                    : statusLine(todayStatus(goal, streak))}
-              </span>
-              {plan.extra.size > 0 && (
-                <span className="flex items-center gap-1 rounded-full border border-on-hero/40 px-2.5 py-1 font-bold">
-                  <Plus aria-hidden className="size-4" strokeWidth={2} />
-                  오늘 {plan.extra.size}장 더 했어요
-                </span>
-              )}
+              {streakChip("border border-on-hero/40")}
+              <span className="break-keep">{statusLine(todayStatus(goal, streak))}</span>
+              {extraPill("border border-on-hero/40")}
             </p>
-            <DailyMinutes
-              minutes={dailyMinutes}
-              reviews={count.review}
-              plan={{
-                due: today.today.dueAtStart,
-                started: today.today.startedToday,
-                unstarted: newCards(cards, states).length,
-                backlog: count.backlog,
-                pace,
-                todayStart: day.start,
-                timeZone,
-              }}
-              onHero
-            />
+            {minutesControl(true)}
           </div>
           <GoalRing done={goal.done} goal={goal.goal} />
-          <EnterLink
-            href={studyHref(decks.map((deck) => deck.id))}
-            label={total === 0 ? "학습하기" : "모두 학습"}
-          />
+          <EnterLink href={href} label="모두 학습" />
         </section>
-        <LastWeek week={week} streak={streak} timeZone={timeZone} />
+        {week}
         {rows.length > 0 && <TodayDecks rows={rows} />}
         <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
       </div>
     </>
+  );
+}
+
+/**
+ * In a backlog: the overdue reviews left at the start of each of the seven study days from today
+ * when [perDay] are cleared a day, as amber bars under how many days that takes.
+ */
+function CatchUp({
+  backlog,
+  perDay,
+  start,
+  timeZone,
+}: {
+  backlog: number;
+  perDay: number;
+  start: number;
+  timeZone: string;
+}) {
+  const left = catchUp(backlog, perDay);
+  const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "short", timeZone });
+  const labels = left.map((_, index) =>
+    index === 0 ? "오늘" : index === 1 ? "내일" : weekday.format(noon(start) + index * 86_400_000),
+  );
+  const highest = Math.max(1, ...left);
+  return (
+    <section
+      aria-labelledby="catch-up-title"
+      className="flex flex-col gap-3.5 rounded-card bg-surface p-5"
+    >
+      <h2 id="catch-up-title" className="text-body-strong">
+        하루 {perDay}장씩 하면 {Math.ceil(backlog / perDay)}일이면 따라잡아요
+      </h2>
+      <div
+        role="img"
+        aria-label={`밀린 복습 예상: ${labels
+          .map((label, index) => `${label} ${String(left[index] ?? 0)}장`)
+          .join(", ")}`}
+        className="grid h-28 grid-cols-7 gap-2.5"
+      >
+        {left.map((value, index) => (
+          <div key={labels[index]} className="flex flex-col items-center justify-end gap-1">
+            <span className="text-micro font-bold">{value}</span>
+            <span
+              className="w-full rounded-md bg-streak"
+              style={{ height: `${String(Math.max(4, (value / highest) * 64))}px` }}
+            />
+            <span className="text-micro text-muted">{labels[index]}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-caption text-muted">하루 {perDay}장씩 했을 때 남는 밀린 복습이에요</p>
+    </section>
   );
 }
 
