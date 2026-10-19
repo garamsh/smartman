@@ -327,6 +327,67 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(completion).toHaveCount(0);
   await shot(page, "06c-study-nothing-today");
 
+  // With the day's cards done, 오늘 draws the done card and its navy 학습하기 (#275).
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "오늘 할 카드를 다 했어요", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "학습하기", exact: true })).toBeVisible();
+  await shot(page, "01d-today-done");
+
+  // Ten cards overdue after a month's interval are far more than three days' load: a backlog.
+  const behindDeck = randomUUID();
+  expect(
+    (
+      await phone.from("decks").insert({
+        id: behindDeck,
+        user_id: userId,
+        name: "Behind",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  const behind = Array.from({ length: 10 }, (_, index) => ({ id: randomUUID(), index }));
+  expect(
+    (
+      await phone.from("cards").insert(
+        behind.map(({ id, index }) => ({
+          id,
+          user_id: userId,
+          deck_id: behindDeck,
+          front: side(`retard ${String(index)}`),
+          back: side(`behind ${String(index)}`),
+          card_key: `retard ${String(index)}`,
+          source: "manual",
+          created_at: now,
+          updated_at: now,
+        })),
+      )
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await phone.from("card_states").insert(
+        behind.map(({ id }) => ({
+          user_id: userId,
+          card_id: id,
+          stability: 30,
+          difficulty: 5,
+          last_review: new Date(Date.now() - 31 * 86_400_000).toISOString(),
+          due: new Date(Date.now() - 86_400_000).toISOString(),
+          updated_at: now,
+        })),
+      )
+    ).error,
+  ).toBeNull();
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "다시 시작하면 돼요", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("region", { name: /따라잡아요$/ })).toBeVisible();
+  await shot(page, "01e-today-backlog");
+
   await page.goto("/account");
   await expect(
     page.getByRole("heading", { level: 1, name: "계정과 설정", exact: true }),

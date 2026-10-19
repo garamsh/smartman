@@ -47,7 +47,7 @@ export function DailyMinutes({
         className={`pressable flex min-h-tap-target items-center gap-2 self-start rounded-full border px-4 text-label focus-visible:outline-2 focus-visible:outline-offset-2 ${
           onHero
             ? "border-on-hero text-on-hero focus-visible:outline-on-hero"
-            : "border-outline text-ink focus-visible:outline-ink"
+            : "border-outline bg-surface text-ink focus-visible:outline-ink"
         }`}
       >
         하루 {minutes}분

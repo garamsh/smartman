@@ -1,6 +1,13 @@
 import type { CardId } from "@/features/decks";
 
-import { answerCapMs, type CardState, type CardStates, studyDayStart } from "./queue";
+import {
+  answerCapMs,
+  type CardState,
+  type CardStates,
+  type StudyDay,
+  studyDayEnd,
+  studyDayStart,
+} from "./queue";
 import type { RecordDay } from "./stats";
 import { type DayPlan, leftOf } from "./today-list";
 
@@ -35,6 +42,39 @@ export function deckProgress(cards: Iterable<{ id: CardId }>, states: CardStates
   const progress = { mastered: 0, learning: 0, fresh: 0 };
   for (const card of cards) progress[progressOf(states[card.id])] += 1;
   return progress;
+}
+
+/**
+ * The first study day after [today], within `chartDays` of it, on which one of the stored
+ * [states] falls due in [timeZone]: how many days after [today] it is, and how many cards fall due
+ * in it; null when none does.
+ */
+export function nextReviewOf(
+  states: Iterable<CardState>,
+  today: StudyDay,
+  timeZone: string,
+): { after: number; cards: number } | null {
+  const ends = [today.end];
+  while (ends.length < chartDays) {
+    ends.push(studyDayEnd(ends[ends.length - 1] ?? today.end, timeZone));
+  }
+  const counts = Array.from({ length: chartDays }, () => 0);
+  for (const state of states) {
+    // A card due before the day ends, today's or overdue, is on no later day.
+    const index = ends.findIndex((end) => state.due < end);
+    if (index > 0) counts[index] = (counts[index] ?? 0) + 1;
+  }
+  const after = counts.findIndex((count, index) => index > 0 && count > 0);
+  return after > 0 ? { after, cards: counts[after] ?? 0 } : null;
+}
+
+/**
+ * The overdue reviews left at the start of each of the `chartDays` study days from today, when
+ * [backlog] are overdue today and the user clears [perDay] of them a day: the catch-up a backlog
+ * card projects.
+ */
+export function catchUp(backlog: number, perDay: number): number[] {
+  return Array.from({ length: chartDays }, (_, day) => Math.max(0, backlog - day * perDay));
 }
 
 /**
