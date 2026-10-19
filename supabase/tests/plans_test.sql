@@ -2,7 +2,7 @@
 -- counts a photo by its plan's limit and learns its model; only an admin sets plans and grants
 -- them, each write recorded.
 begin;
-select plan(35);
+select plan(34);
 
 -- A is an admin, B a signed-in user who is not, C, D and E users on each plan.
 insert into auth.users (id, email) values
@@ -69,7 +69,8 @@ create function pg_temp.start(who text) returns table (plan text, model text, da
 language plpgsql as $$
 begin
   perform set_config('role', 'service_role', true);
-  return query select * from public.start_extraction(('00000000-0000-4000-8000-00000000000' || who)::uuid);
+  return query select b.plan, b.model, b.daily_limit, b.allowed
+    from public.begin_extraction(('00000000-0000-4000-8000-00000000000' || who)::uuid) as b;
   perform set_config('role', 'none', true);
 end;
 $$;
@@ -97,7 +98,7 @@ select is_empty($$select * from pg_temp.refused_as('a')$$,
 reset role;
 
 select pg_temp.sign_in('b');
-select throws_ok($$select * from public.start_extraction('00000000-0000-4000-8000-00000000000b')$$,
+select throws_ok($$select * from public.begin_extraction('00000000-0000-4000-8000-00000000000b')$$,
   '42501', null, 'a signed-in user cannot start an extraction itself');
 select throws_ok($$select * from private.plans$$, '42501', null, 'nor read the plans');
 select throws_ok($$select * from private.user_plans$$, '42501', null, 'nor read the grants');
@@ -140,10 +141,6 @@ select results_eq(
   $$values ('00000000-0000-4000-8000-00000000000b'::uuid, 2::bigint), ('00000000-0000-4000-8000-00000000000c'::uuid, 2::bigint),
            ('00000000-0000-4000-8000-00000000000d'::uuid, 1::bigint), ('00000000-0000-4000-8000-00000000000e'::uuid, 1::bigint)$$,
   'only allowed photos are recorded');
-select results_eq(
-  $$select public.consume_extraction('00000000-0000-4000-8000-00000000000c', 2)$$,
-  $$values (false)$$,
-  'the older consume_extraction counts the same rows, so a deploy between the two counts each photo once');
 
 delete from private.plans where id = 'free';
 select is_empty($$select * from pg_temp.start('b')$$,

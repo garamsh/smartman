@@ -484,10 +484,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'No cards found. Try a brighter, straighter photo.';
 
   @override
-  String get dailyLimitReached =>
-      'You\'ve reached today\'s limit for photos. Try again tomorrow.';
-
-  @override
   String get accountSuspended =>
       'This account is suspended. Write to sauce@garam.sh with any questions.';
 
@@ -1153,9 +1149,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String importSection(String topic, int count) {
     return '$topic $count';
   }
-
-  @override
-  String get importTopicNone => 'This page';
 
   @override
   String importIdentifySection(String topic) {

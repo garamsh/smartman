@@ -265,13 +265,8 @@ const twoAnswered = [{
   type: "concept",
   front: "run",
   answer: "달리다",
-  short: "달리다",
-  step: 1,
   topic: "Unit 3 동사",
   examples: ["I run every morning."],
-  back: "[동] 달리다",
-  meaning: "달리다",
-  partOfSpeech: "[동]",
   senses: [{
     labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
     meaning: "달리다",
@@ -282,22 +277,15 @@ const twoAnswered = [{
   type: "concept",
   front: "river",
   answer: "강",
-  short: "강",
-  step: 1,
   topic: "Unit 3 동사",
-  back: "강",
-  meaning: "강",
   senses: [{ labels: [], meaning: "강", examples: [] }],
 }, {
   kind: "note",
   type: "concept",
   front: "연역 논증",
   answer: "전제가 참이면 결론이 반드시 참인 논증",
-  short: "전제가 참이면 결론이 반드시 참인 논증",
-  step: 1,
   topic: "연역과 귀납",
   examples: ["253+4637+647898=652788 -> 연역"],
-  back: "전제가 참이면 결론이 반드시 참인 논증",
 }];
 
 Deno.test("the suite runs without write or network permission", () => {
@@ -308,24 +296,21 @@ Deno.test("the suite runs without write or network permission", () => {
   assert.notEqual(Deno.permissions.querySync({ name: "net" }).state, "granted");
 });
 
-Deno.test("a signed-in user's photo returns each card's kind, type, answer, topic and back, its answer as the short form at step 1, and a vocabulary card's fields", async () => {
+Deno.test("a signed-in user's photo returns each card's kind, type, answer and topic, and a vocabulary card's fields", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { cards: twoAnswered });
   const [, river, note] = r.body.cards as Record<string, unknown>[];
   assert.ok(
-    !Object.hasOwn(river, "partOfSpeech") && !Object.hasOwn(river, "examples"),
-    "a card without a part of speech or examples carries neither key",
+    !Object.hasOwn(river, "examples"),
+    "a card without examples carries no key",
   );
-  // An app that reads only front and back, or takes back as the meaning without one, shows
-  // a note card's fullest answer.
-  assert.ok(!Object.hasOwn(note, "meaning"), "a note card carries no meaning");
-  assert.equal(note.back, note.answer);
+  assert.ok(!Object.hasOwn(note, "senses"), "a note card carries no senses");
   assert.equal(r.modelCalls.length, 1);
   assert.equal(r.modelCalls[0].model, "vendor/primary-model");
 });
 
-Deno.test("a table card and a cloze card are answered with their table and blanks, and with front, answer and back filled for an app that reads only those", async () => {
+Deno.test("a table card and a cloze card are answered with their table and blanks, and their answer as text", async () => {
   const table = {
     columns: ["구분", "높임", "낮춤"],
     rows: [["2인칭", "당신, 그대", "너, 너희"]],
@@ -354,20 +339,14 @@ Deno.test("a table card and a cloze card are answered with their table and blank
     type: "table",
     front: "인칭 대명사",
     answer: "구분 | 높임 | 낮춤\n2인칭 | 당신, 그대 | 너, 너희",
-    short: "구분 | 높임 | 낮춤\n2인칭 | 당신, 그대 | 너, 너희",
-    step: 1,
     topic: "연역과 귀납",
-    back: "구분 | 높임 | 낮춤\n2인칭 | 당신, 그대 | 너, 너희",
     table,
   }, {
     kind: "note",
     type: "cloze",
     front: "3인칭 재귀칭: 높임 당신 · 예사 ___ · 낮춤 ___",
     answer: "자기, 자신\n저, 저희",
-    short: "자기, 자신\n저, 저희",
-    step: 1,
     topic: "연역과 귀납",
-    back: "자기, 자신\n저, 저희",
     cloze: { answers: ["자기, 자신", "저, 저희"] },
   }]);
 });

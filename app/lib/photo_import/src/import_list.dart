@@ -139,7 +139,7 @@ final class ImportRow {
 
   CardKind get kind => sources.first.kind;
   CardType get type => sources.first.type;
-  String? get topic => sources.first.topic;
+  String get topic => sources.first.topic;
   String? get pronunciation => sources.first.pronunciation;
   List<Extra> get extras => sources.first.extras;
 
@@ -228,8 +228,8 @@ final class ImportSection {
            ? const VocabularyForm()
            : const NoteForm();
 
-  /// The topic's name; null for the cards of a function that names none.
-  final String? topic;
+  /// The topic's name.
+  final String topic;
 
   final CardKind kind;
 
@@ -241,8 +241,7 @@ final class ImportSection {
   SectionForm form;
 
   /// The key the device remembers the section's form under, within a deck.
-  String get formKey =>
-      '${identify ? 'identify:' : ''}${kind.name}:${topic ?? ''}';
+  String get formKey => '${identify ? 'identify:' : ''}${kind.name}:$topic';
 }
 
 /// The rows of a photo, in sections by topic, against the keys the deck they

@@ -6,6 +6,8 @@ import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:smartman/deck/deck.dart'
+    show CardSense, OtherLabel, PartOfSpeech, PartOfSpeechLabel;
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/photo_import/src/photo.dart';
@@ -86,7 +88,7 @@ final class FakeExtractionClient implements ExtractionClient {
   /// meaning.
   void answer(Map<String, String> cards) => answerCards([
     for (final MapEntry(key: front, value: meaning) in cards.entries)
-      CandidateCard.word(front: front, meaning: meaning),
+      word(front: front, meaning: meaning),
   ]);
 
   /// Answers the last call with [cards].
@@ -127,4 +129,35 @@ Future<SharedPreferencesWithCache> openPreferences(
       ),
     ),
   ))!;
+}
+
+/// A vocabulary card of one sense, [meaning], under [partOfSpeech] when given,
+/// such as `[동]`, in [topic].
+CandidateCard word({
+  required String front,
+  required String meaning,
+  String? partOfSpeech,
+  String topic = 'Page',
+}) {
+  final label = partOfSpeech?.replaceAll(RegExp(r'^\[|\]$'), '');
+  final category = PartOfSpeech.values
+      .where((part) => part.short == label)
+      .firstOrNull;
+  return CandidateCard(
+    front: front,
+    answer: meaning,
+    topic: topic,
+    kind: CardKind.vocabulary,
+    senses: [
+      CardSense(
+        labels: [
+          if (category != null)
+            PartOfSpeechLabel(category, label!)
+          else if (label != null)
+            OtherLabel(label),
+        ],
+        meaning: meaning,
+      ),
+    ],
+  );
 }

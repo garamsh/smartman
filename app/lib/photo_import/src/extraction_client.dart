@@ -34,32 +34,16 @@ final class Extra {
 final class CandidateCard {
   const CandidateCard({
     required this.front,
-    this.answer = '',
+    required this.answer,
+    required this.topic,
     this.kind = CardKind.note,
     this.type = CardType.concept,
     this.senses = const [],
     this.extras = const [],
     this.pronunciation,
     this.examples = const [],
-    this.topic,
     this.wholeFront,
   });
-
-  /// A vocabulary card of one sense, as a function before senses sent it.
-  CandidateCard.word({
-    required String front,
-    required String meaning,
-    String? partOfSpeech,
-    List<String> examples = const [],
-    String? topic,
-  }) : this(
-         front: front,
-         answer: meaning,
-         kind: CardKind.vocabulary,
-         senses: [_oneSense(partOfSpeech, meaning)],
-         examples: examples,
-         topic: topic,
-       );
 
   final String front;
 
@@ -76,14 +60,12 @@ final class CandidateCard {
   /// The examples the page prints for the card; empty when it prints none.
   final List<String> examples;
 
-  /// The part of the page the card comes from, such as "모음조화"; null from
-  /// a function that names none.
-  final String? topic;
+  /// The part of the page the card comes from, such as "모음조화".
+  final String topic;
 
   /// A table or cloze card's front as content blocks, drawn whole (ADR
   /// 0068): a cloze of [front] and its answers, or [front] as the table's
-  /// name above its table. Null for every other card, and for a cloze card
-  /// from a function that sends no `cloze`.
+  /// name above its table. Null for every other card.
   final List<Content>? wholeFront;
 }
 
@@ -150,7 +132,10 @@ List<CandidateCard> parseExtraction(int status, String body) =>
         throw const AccountSuspendedFailure(),
       413 || 415 => throw PhotoRefused(status),
       422 => throw const NoCardsFound(),
-      429 => throw DailyLimitReached(dailyLimit: _dailyLimit(body)),
+      429 => switch (_dailyLimit(body)) {
+        final limit? => throw DailyLimitReached(dailyLimit: limit),
+        null => throw const ServiceFailed('HTTP 429 without a daily limit'),
+      },
       502 => throw const ModelFailed(),
       _ => throw ServiceFailed('HTTP $status'),
     };
@@ -192,22 +177,18 @@ List<CandidateCard> _parseCards(String body) {
   throw const ServiceFailed('the success body holds no card list');
 }
 
-/// A card of non-empty `front` and `back`, a `topic` of 1 to
-/// [maxTopicChars] characters when it has one, and the fields of its `kind`.
-/// A note's answer is its `answer`, else its `back`. A vocabulary card's
-/// senses are its `senses`, each `{labels, meaning, examples}` as `deck`'s
-/// [decodeSense] reads it (ADR 0075), else, from a function before senses,
-/// one sense of its `meaning` or `answer`, else its `back`, its
-/// `partOfSpeech` as a label as printed. A card with no `kind` from a function before kinds is a
-/// vocabulary card; one with no `type`, or a `type` this version does not
-/// know, is a concept, so a new type does not fail the extraction. A cloze
-/// card's `cloze` and a table card's `table` become its [wholeFront]. Other
-/// fields are not read.
+/// A card of a non-empty `front` and `answer`, a `topic` of 1 to
+/// [maxTopicChars] characters, a `kind` and the fields of its kind: a
+/// vocabulary card's `senses`, each `{labels, meaning, examples}` as `deck`'s
+/// [decodeSense] reads it (ADR 0075). A card with no `type`, or a `type` this
+/// version does not know, is a concept, so a new type does not fail the
+/// extraction. A cloze card's `cloze` and a table card's `table` become its
+/// [wholeFront]. Other fields are not read.
 CandidateCard _parseCard(Object? card) {
   if (card
       case final Map<String, Object?> fields &&
-          {'front': final String front, 'back': final String back}
-      when front.trim().isNotEmpty && back.trim().isNotEmpty) {
+          {'front': final String front, 'answer': final String answer}
+      when front.trim().isNotEmpty && answer.trim().isNotEmpty) {
     String? optional(String key) =>
         fields.containsKey(key) ? _text(fields[key]) : null;
     List<T> list<T>(String key, T Function(Object?) parse) =>
@@ -216,14 +197,14 @@ CandidateCard _parseCard(Object? card) {
           final List<Object?> items => [for (final item in items) parse(item)],
           _ => throw ServiceFailed('$key is not a list'),
         };
-    final topic = optional('topic');
-    if (topic != null && topic.runes.length > maxTopicChars) {
+    final topic = _text(fields['topic']);
+    if (topic.runes.length > maxTopicChars) {
       throw const ServiceFailed("a card's topic is too long");
     }
     final kind = switch (fields['kind']) {
       'note' => CardKind.note,
-      'vocabulary' || null => CardKind.vocabulary,
-      _ => throw const ServiceFailed('a card has an unknown kind'),
+      'vocabulary' => CardKind.vocabulary,
+      _ => throw const ServiceFailed('a card has no known kind'),
     };
     final type = switch (fields['type']) {
       final String name =>
@@ -231,16 +212,13 @@ CandidateCard _parseCard(Object? card) {
             CardType.concept,
       _ => CardType.concept,
     };
-    final answer = optional('answer') ?? optional('meaning') ?? back.trim();
-    final senses = fields.containsKey('senses')
-        ? list('senses', _parseSense)
-        : [_oneSense(optional('partOfSpeech'), answer)];
+    final senses = list('senses', _parseSense);
     if (kind == CardKind.vocabulary && senses.isEmpty) {
       throw const ServiceFailed('a vocabulary card has no sense');
     }
     return CandidateCard(
       front: front.trim(),
-      answer: answer,
+      answer: answer.trim(),
       kind: kind,
       type: type,
       senses: kind == CardKind.vocabulary ? senses : const [],
@@ -251,13 +229,13 @@ CandidateCard _parseCard(Object? card) {
       wholeFront: _wholeFront(type, front.trim(), fields),
     );
   }
-  throw const ServiceFailed('a card is not two non-empty sides');
+  throw const ServiceFailed('a card has no front and answer');
 }
 
 /// A cloze card's `cloze`, `{answers}`, as a cloze of [front], or a table
 /// card's `table`, `{columns, rows, blanks}`, under [front] as its name; null
-/// for any other card, or one without its field. The blocks' own decoding
-/// checks their shape (`deck.md`).
+/// for any other card. A cloze or table card without its field is refused.
+/// The blocks' own decoding checks their shape (`deck.md`).
 List<Content>? _wholeFront(
   CardType type,
   String front,
@@ -272,6 +250,9 @@ List<Content>? _wholeFront(
       'type': 'table',
       'payload': table,
     },
+    (CardType.cloze || CardType.table, _) => throw ServiceFailed(
+      'a ${type.name} card has no ${type.name}',
+    ),
     _ => null,
   };
   if (block == null) return null;
@@ -282,26 +263,6 @@ List<Content>? _wholeFront(
     throw ServiceFailed("a card's ${type.name} is not one");
   }
   return [if (type == CardType.table) TextContent(front), ...decoded];
-}
-
-/// A function before senses: one sense of [meaning], with its part of speech
-/// [label] when it gives one, without the brackets or parentheses around it:
-/// a part of speech when it is one's short form, such as 동, else another
-/// label as printed (ADR 0075).
-CardSense _oneSense(String? label, String meaning) {
-  final text = label?.replaceAll(RegExp(r'^[\[(]|[\])]$'), '');
-  final category = PartOfSpeech.values
-      .where((part) => part.short == text)
-      .firstOrNull;
-  return CardSense(
-    labels: [
-      if (category != null)
-        PartOfSpeechLabel(category, text!)
-      else if (text != null)
-        OtherLabel(text),
-    ],
-    meaning: meaning,
-  );
 }
 
 CardSense _parseSense(Object? sense) => switch (decodeSense(sense)) {

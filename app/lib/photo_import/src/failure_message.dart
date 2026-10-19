@@ -10,10 +10,7 @@ String describePhotoImportFailure(
   PhotoRefused() => l10n.photoRefused,
   NoCardsFound() => l10n.noCardsFound,
   AccountSuspendedFailure() => l10n.accountSuspended,
-  DailyLimitReached(:final dailyLimit) =>
-    dailyLimit == null
-        ? l10n.dailyLimitReached
-        : l10n.dailyLimitReachedOf(dailyLimit),
+  DailyLimitReached(:final dailyLimit) => l10n.dailyLimitReachedOf(dailyLimit),
   ModelFailed() => l10n.modelFailed,
   SignInRequired() => l10n.signInRequired,
   ServiceFailed() => l10n.serviceFailed,

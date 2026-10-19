@@ -6,9 +6,12 @@ import type {
   Cloze,
   Extra,
   Sense,
-  Step,
   Table,
 } from "../../supabase/functions/extract-cards/cards.ts";
+
+/** The detail steps a notes page's facts are written at, from its core ideas (1) to every detail (5). */
+export const STEPS = [1, 2, 3, 4, 5] as const;
+export type Step = (typeof STEPS)[number];
 
 /**
  * The card key normalization of `docs/architecture/deck.md`: Unicode NFKC, trim, each

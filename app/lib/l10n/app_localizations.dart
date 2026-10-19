@@ -889,12 +889,6 @@ abstract class AppLocalizations {
   /// **'카드를 찾지 못했어요. 더 밝고 반듯하게 찍어 보세요.'**
   String get noCardsFound;
 
-  /// Photo import failure: the daily extraction limit was reached.
-  ///
-  /// In ko, this message translates to:
-  /// **'오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.'**
-  String get dailyLimitReached;
-
   /// Shown when a suspended account tries to sign in or make cards from a photo.
   ///
   /// In ko, this message translates to:
@@ -1860,12 +1854,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{topic} {count}'**
   String importSection(String topic, int count);
-
-  /// The section title for cards with no topic.
-  ///
-  /// In ko, this message translates to:
-  /// **'이 페이지'**
-  String get importTopicNone;
 
   /// Title of a section holding a topic's identify cards.
   ///
