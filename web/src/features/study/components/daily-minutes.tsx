@@ -4,6 +4,8 @@ import { Minus, Pencil, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { keepFocusInside } from "@/design/focus-trap";
+
 import { saveDailyMinutes } from "../actions";
 import { dailyMinutePresets, dailyMinuteStep, maxDailyMinutes, minDailyMinutes } from "../queue";
 import { type MinutesPlan, minutesPreview } from "../study-time";
@@ -134,6 +136,7 @@ function MinutesDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="daily-minutes-title"
+        onKeyDown={keepFocusInside}
         aria-describedby="daily-minutes-body"
         className="flex max-h-[90dvh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-sheet bg-surface p-6 text-ink sm:rounded-sheet"
       >
