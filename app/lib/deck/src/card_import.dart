@@ -52,7 +52,8 @@ enum DuplicateChoice {
   addNew,
 }
 
-/// A card to import, and what it does when its key collides.
+/// A card to import, its sides as content blocks, and what it does when its
+/// key collides.
 final class ImportedCard {
   const ImportedCard({
     required this.front,
@@ -60,8 +61,8 @@ final class ImportedCard {
     required this.onDuplicate,
   });
 
-  final String front;
-  final String back;
+  final List<Content> front;
+  final List<Content> back;
   final DuplicateChoice onDuplicate;
 }
 

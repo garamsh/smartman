@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
+import 'package:smartman/deck/deck.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/photo_import/src/photo.dart';
 
@@ -144,7 +145,7 @@ void main() {
     },
   );
 
-  test('an unknown kind or type, a vocabulary card with no sense, or a '
+  test('an unknown kind, a vocabulary card with no sense, or a '
       'malformed sense or extra is a service failure', () async {
     Map<String, Object?> card(Map<String, Object?> fields) => {
       'front': 'face',
@@ -153,8 +154,6 @@ void main() {
     };
     for (final fields in <Map<String, Object?>>[
       {'kind': 'grammar'},
-      {'type': 'judgment'},
-      {'type': 1},
       {'kind': 'vocabulary', 'senses': <Object>[]},
       {
         'senses': [
@@ -200,6 +199,174 @@ void main() {
       }),
     );
     expect((await _extract(valid))!.single.type, CardType.cloze);
+  });
+
+  test('a type this version does not know is read as a concept card with its '
+      'front and answer, so a new type does not fail the extraction', () async {
+    final client = _client(
+      (_) async => _json(200, {
+        'cards': [
+          for (final type in ['judgment', 1])
+            {
+              'kind': 'note',
+              'type': type,
+              'front': '양성모음',
+              'answer': 'ㅏ ㅗ',
+              'back': 'ㅏ ㅗ',
+              'table': {'columns': <String>[]},
+            },
+          // Control: a known type keeps its own.
+          {
+            'kind': 'note',
+            'type': 'identify',
+            'front': "'아름다운'의 '아'",
+            'answer': '양성모음',
+            'back': '양성모음',
+          },
+        ],
+      }),
+    );
+
+    final cards = (await _extract(client))!;
+
+    expect(
+      [for (final card in cards) card.type],
+      [CardType.concept, CardType.concept, CardType.identify],
+    );
+    expect(
+      [for (final card in cards.take(2)) (card.front, card.answer)],
+      [('양성모음', 'ㅏ ㅗ'), ('양성모음', 'ㅏ ㅗ')],
+    );
+    expect(cards.map((card) => card.wholeFront), everyElement(isNull));
+  });
+
+  test(
+    "a table card's table and a cloze card's cloze become its front's blocks, "
+    "where a cloze card without one, from prompt v6, stays a plain card",
+    () async {
+      final client = _client(
+        (_) async => _json(200, {
+          'cards': [
+            {
+              'kind': 'note',
+              'type': 'table',
+              'front': '인칭 대명사',
+              'answer': '구분 | 높임\n2인칭 | 당신',
+              'back': '구분 | 높임\n2인칭 | 당신',
+              'table': {
+                'columns': ['구분', '높임'],
+                'rows': [
+                  ['2인칭', '당신'],
+                ],
+                'blanks': [
+                  {'row': 0, 'column': 1},
+                ],
+              },
+            },
+            {
+              'kind': 'note',
+              'type': 'cloze',
+              'front': '높임 ___ · 낮춤 ___',
+              'answer': '당신\n너',
+              'back': '당신\n너',
+              'cloze': {
+                'answers': ['당신', '너'],
+              },
+            },
+            {
+              'kind': 'note',
+              'type': 'cloze',
+              'front': '높임 ___ · 낮춤 너',
+              'answer': '당신',
+              'back': '당신',
+            },
+          ],
+        }),
+      );
+
+      final [table, cloze, v6] = (await _extract(client))!;
+
+      expect(table.type, CardType.table);
+      expect(table.wholeFront, [
+        const TextContent('인칭 대명사'),
+        const TableContent(
+          columns: ['구분', '높임'],
+          rows: [
+            ['2인칭', '당신'],
+          ],
+          blanks: [(row: 0, column: 1)],
+        ),
+      ]);
+      expect(cloze.wholeFront, [
+        const ClozeContent('높임 ___ · 낮춤 ___', ['당신', '너']),
+      ]);
+      expect(v6.type, CardType.cloze);
+      expect(v6.wholeFront, isNull);
+      expect((v6.front, v6.answer), ('높임 ___ · 낮춤 너', '당신'));
+    },
+  );
+
+  test('a cloze whose answers do not match its blanks, or a table with a blank '
+      'outside it, is a service failure', () async {
+    Future<List<CandidateCard>?> extract(Map<String, Object?> fields) =>
+        _extract(
+          _client(
+            (_) async => _json(200, {
+              'cards': [
+                {'kind': 'note', 'front': '높임 ___', 'back': '당신', ...fields},
+              ],
+            }),
+          ),
+        );
+    final table = {
+      'columns': ['구분', '높임'],
+      'rows': [
+        ['2인칭', '당신'],
+      ],
+    };
+    for (final fields in <Map<String, Object?>>[
+      {
+        'type': 'cloze',
+        'cloze': {
+          'answers': ['당신', '너'],
+        },
+      },
+      {
+        'type': 'table',
+        'table': {
+          ...table,
+          'blanks': [
+            {'row': 1, 'column': 1},
+          ],
+        },
+      },
+    ]) {
+      await expectLater(
+        extract(fields),
+        throwsA(isA<ServiceFailed>()),
+        reason: '$fields',
+      );
+    }
+    // Control: each with its blanks inside.
+    for (final fields in <Map<String, Object?>>[
+      {
+        'type': 'cloze',
+        'cloze': {
+          'answers': ['당신'],
+        },
+      },
+      {
+        'type': 'table',
+        'table': {
+          ...table,
+          'blanks': [
+            {'row': 0, 'column': 1},
+          ],
+        },
+      },
+    ]) {
+      expect((await extract(fields))!.single.wholeFront, isNotNull);
+    }
   });
 
   test(

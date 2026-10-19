@@ -287,7 +287,7 @@ class DeckRepository {
       var added = 0;
       var merged = 0;
       for (final card in cards) {
-        final key = CardKey.fromFront(card.front);
+        final key = CardKey.fromFront(plainText(card.front));
         final existing = await _findByKey(deck.id, key);
         switch ((existing, card.onDuplicate)) {
           case (null, _) || (_, DuplicateChoice.addNew):
@@ -298,8 +298,8 @@ class DeckRepository {
                   CardRow(
                     id: _newId(),
                     deckId: deck.id.value,
-                    front: encodeContent([TextContent(card.front)]),
-                    back: encodeContent([TextContent(card.back)]),
+                    front: encodeContent(card.front),
+                    back: encodeContent(card.back),
                     cardKey: key.value,
                     source: switch (source) {
                       FromPhoto() => CardSource.import.name,
@@ -316,7 +316,8 @@ class DeckRepository {
                 );
             added++;
           case (final existing?, DuplicateChoice.mergeBack):
-            if (mergeBack(existing.back, card.back) case final back?) {
+            if (mergeBack(existing.back, plainText(card.back))
+                case final back?) {
               await (_db.update(
                 _db.cards,
               )..where((row) => row.id.equals(existing.id.value))).write(
