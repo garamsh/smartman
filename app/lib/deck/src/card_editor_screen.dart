@@ -16,15 +16,15 @@ import 'deck_repository.dart';
 import 'failure_message.dart';
 import 'model.dart';
 import 'providers.dart';
+import 'table_form.dart';
 import 'word_form.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
 /// of the card as the study screen shows it, in the form of its kind: a text
-/// front and back, a word with its senses, or a line with blanks. A new card
-/// starts in the kind
-/// the deck's last new card was added in, and a switch at the top changes it;
-/// a card being edited keeps its kind (ADR 0083). A table card is shown
-/// read-only, with a note, as it cannot be edited yet (ADR 0068).
+/// front and back, a word with its senses, a line with blanks, or a table
+/// with blanks under its name. A new card starts in the kind the deck's last
+/// new card was added in, and a switch at the top changes it; a card being
+/// edited keeps its kind (ADR 0083).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -42,8 +42,12 @@ enum _DuplicateChoice { saveAnyway, openExisting }
 enum _AfterSave { close, next }
 
 class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
+  /// The front's text; a table card's is its name, the table being the
+  /// table form's.
   late final _front = TextEditingController(
-    text: plainText(widget.card?.front ?? const []),
+    text: plainText([
+      ...?widget.card?.front.where((block) => block is! TableContent),
+    ]),
   );
   late final _back = TextEditingController(
     text: plainText(widget.card?.back ?? const []),
@@ -68,6 +72,14 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     null => ClozeDraft(),
   };
 
+  /// The table form's table: the card's own, or two empty rows of two cells.
+  late TableDraft _table = switch (widget.card?.front
+      .whereType<TableContent>()
+      .firstOrNull) {
+    final table? => TableDraft.of(table),
+    null => TableDraft(),
+  };
+
   /// Whether the cloze's line or blanks were changed; until then, an existing
   /// cloze card keeps its own blocks, a blank inside a word included.
   bool _clozeEdited = false;
@@ -82,6 +94,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     for (final sense in _senses) {
       sense.dispose();
     }
+    _table.dispose();
     super.dispose();
   }
 
@@ -92,6 +105,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         CardKind.basic => _back.text.trim().isNotEmpty,
         CardKind.word => !_senses.any((sense) => sense.isBlank),
         CardKind.cloze => _cloze.content != null,
+        CardKind.table => _table.problem == null,
       };
 
   /// The card's own front and back while its cloze is left as it was.
@@ -103,6 +117,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     CardKind.cloze when _keepsCloze => widget.card!.front,
     // The line itself, while it has no blank, so the preview shows it.
     CardKind.cloze => [_cloze.content ?? TextContent(_front.text)],
+    CardKind.table => [TextContent(_front.text), _table.table],
     _ => _replaceText(widget.card?.front ?? const [], _front.text),
   };
 
@@ -117,6 +132,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     CardKind.cloze when _keepsCloze => widget.card!.back,
     // The line with its blanks filled, as photo import writes a cloze's back.
     CardKind.cloze => [TextContent(_cloze.content?.filled ?? _front.text)],
+    // The table with every cell shown, as photo import writes a table's back.
+    CardKind.table => [TextContent(_table.table.filled)],
   };
 
   Future<void> _chooseKind(CardKind kind) async {
@@ -168,6 +185,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               ..clear()
               ..add(SenseDraft());
             _cloze = ClozeDraft();
+            _table.dispose();
+            _table = TableDraft();
             _showRequired = false;
           });
           _frontFocus.requestFocus();
@@ -220,9 +239,6 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final card = widget.card;
-    // A table card cannot be edited yet, so it is shown read-only.
-    final readOnly =
-        card != null && card.front.any((block) => block is TableContent);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -249,106 +265,99 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           ),
         ],
       ),
-      body: readOnly
-          ? ListView(
-              padding: const EdgeInsets.all(AppSpace.gutter),
-              children: [
-                CardPreview(front: card.front, back: card.back),
-                const SizedBox(height: AppSpace.s24),
-                Text(
-                  l10n.wholeCardReadOnly,
-                  style: AppType.secondary.copyWith(
-                    color: AppColors.of(context).muted,
-                  ),
+      // A column, not a lazy list, so every field of a long word is built and
+      // its error shows wherever it scrolls.
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpace.gutter),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_isNew) ...[
+              Semantics(
+                label: l10n.cardKindLabel,
+                child: SegmentedButton<CardKind>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: CardKind.basic,
+                      label: Text(l10n.cardKindBasic),
+                    ),
+                    ButtonSegment(
+                      value: CardKind.word,
+                      label: Text(l10n.cardKindWord),
+                    ),
+                    ButtonSegment(
+                      value: CardKind.cloze,
+                      label: Text(l10n.cardKindCloze),
+                    ),
+                    ButtonSegment(
+                      value: CardKind.table,
+                      label: Text(l10n.cardKindTable),
+                    ),
+                  ],
+                  selected: {_kind},
+                  onSelectionChanged: (kinds) => _chooseKind(kinds.single),
                 ),
-              ],
-            )
-          // A column, not a lazy list, so every field of a long word is built
-          // and its error shows wherever it scrolls.
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpace.gutter),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_isNew) ...[
-                    Semantics(
-                      label: l10n.cardKindLabel,
-                      child: SegmentedButton<CardKind>(
-                        showSelectedIcon: false,
-                        segments: [
-                          ButtonSegment(
-                            value: CardKind.basic,
-                            label: Text(l10n.cardKindBasic),
-                          ),
-                          ButtonSegment(
-                            value: CardKind.word,
-                            label: Text(l10n.cardKindWord),
-                          ),
-                          ButtonSegment(
-                            value: CardKind.cloze,
-                            label: Text(l10n.cardKindCloze),
-                          ),
-                        ],
-                        selected: {_kind},
-                        onSelectionChanged: (kinds) =>
-                            _chooseKind(kinds.single),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpace.s24),
-                  ],
-                  CardPreview(front: _frontBlocks, back: _backBlocks),
-                  const SizedBox(height: AppSpace.s24),
-                  AppTextField(
-                    label: l10n.cardFront,
-                    controller: _front,
-                    focusNode: _frontFocus,
-                    autofocus: _isNew,
-                    minLines: 2,
-                    maxLines: null,
-                    errorText: _requiredError(l10n, _front),
-                    onChanged: (text) => setState(() {
-                      _cloze.update(text);
-                      _clozeEdited = true;
-                    }),
-                  ),
-                  if (card?.front.any((block) => block is SensesContent) ??
-                      false) ...[
-                    const SizedBox(height: AppSpace.s8),
-                    Text(
-                      l10n.sensesEditNote,
-                      style: AppType.secondary.copyWith(
-                        color: AppColors.of(context).muted,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpace.s16),
-                  switch (_kind) {
-                    CardKind.basic => AppTextField(
-                      label: l10n.cardBack,
-                      controller: _back,
-                      minLines: 2,
-                      maxLines: null,
-                      errorText: _requiredError(l10n, _back),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    CardKind.word => SenseFields(
-                      senses: _senses,
-                      showErrors: _showRequired,
-                      onChanged: () => setState(() {}),
-                    ),
-                    CardKind.cloze => ClozeWords(
-                      line: _front.text,
-                      draft: _cloze,
-                      showError: _showRequired,
-                      onChanged: () => setState(() => _clozeEdited = true),
-                    ),
-                  },
-                ],
               ),
+              const SizedBox(height: AppSpace.s24),
+            ],
+            CardPreview(front: _frontBlocks, back: _backBlocks),
+            const SizedBox(height: AppSpace.s24),
+            AppTextField(
+              label: l10n.cardFront,
+              controller: _front,
+              hint: _kind == CardKind.table ? l10n.tableNameHint : null,
+              focusNode: _frontFocus,
+              autofocus: _isNew,
+              minLines: 2,
+              maxLines: null,
+              errorText: _requiredError(l10n, _front),
+              onChanged: (text) => setState(() {
+                _cloze.update(text);
+                _clozeEdited = true;
+              }),
             ),
-      bottomNavigationBar: readOnly
-          ? null
-          : _isNew
+            if (card?.front.any((block) => block is SensesContent) ??
+                false) ...[
+              const SizedBox(height: AppSpace.s8),
+              Text(
+                l10n.sensesEditNote,
+                style: AppType.secondary.copyWith(
+                  color: AppColors.of(context).muted,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpace.s16),
+            switch (_kind) {
+              CardKind.basic => AppTextField(
+                label: l10n.cardBack,
+                controller: _back,
+                minLines: 2,
+                maxLines: null,
+                errorText: _requiredError(l10n, _back),
+                onChanged: (_) => setState(() {}),
+              ),
+              CardKind.word => SenseFields(
+                senses: _senses,
+                showErrors: _showRequired,
+                onChanged: () => setState(() {}),
+              ),
+              CardKind.cloze => ClozeWords(
+                line: _front.text,
+                draft: _cloze,
+                showError: _showRequired,
+                onChanged: () => setState(() => _clozeEdited = true),
+              ),
+              CardKind.table => TableFields(
+                draft: _table,
+                showErrors: _showRequired,
+                onChanged: () => setState(() {}),
+              ),
+            },
+          ],
+        ),
+      ),
+      bottomNavigationBar: _isNew
           ? BottomActions(
               secondary: AppButton(
                 label: l10n.save,

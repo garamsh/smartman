@@ -678,6 +678,70 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('the table form in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardEditorScreen(deck: deck),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.cardKindTable));
+      await tester.enterText(
+        find.widgetWithText(AppTextField, ko.cardFront),
+        '불규칙 동사',
+      );
+      // The table's fields follow the front's: its headers, then its cells.
+      Finder cell(int index) => find.byType(TextField).at(index + 1);
+      for (final (index, text) in [
+        '원형',
+        '과거형',
+        'go',
+        'went',
+        'see',
+        'saw',
+      ].indexed) {
+        await tester.ensureVisible(cell(index));
+        await tester.enterText(cell(index), text);
+      }
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(ko.addRow));
+      await tester.pumpAndSettle();
+      await shot(tester, '05h-card-editor-table');
+      await tester.ensureVisible(find.text(ko.tableModeBlanks));
+      await tap(tester, find.text(ko.tableModeBlanks));
+      await tap(tester, find.widgetWithText(InkWell, 'went'));
+      await tap(tester, find.widgetWithText(InkWell, 'saw'));
+      await tester.ensureVisible(find.text(ko.cardKindTable));
+      await tester.pumpAndSettle();
+      await shot(tester, '05i-card-editor-table-blanks');
+      await unmount(tester);
+    });
+
     testWidgets('the record tab over twelve weeks in $mode', skip: !_capture, (
       tester,
     ) async {

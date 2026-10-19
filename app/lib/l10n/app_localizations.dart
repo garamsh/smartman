@@ -206,12 +206,6 @@ abstract class AppLocalizations {
   /// **'카드'**
   String get wholeCard;
 
-  /// In the card editor under a table card, which it shows read-only.
-  ///
-  /// In ko, this message translates to:
-  /// **'표 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
-  String get wholeCardReadOnly;
-
   /// In the card editor under the front of a card whose front holds senses, such as a reversed vocabulary card: editing that front saves it as text.
   ///
   /// In ko, this message translates to:
@@ -259,6 +253,114 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'빈칸으로 할 낱말을 하나 이상 골라 주세요'**
   String get clozeBlankRequired;
+
+  /// The table kind's segment in the card editor's kind switch.
+  ///
+  /// In ko, this message translates to:
+  /// **'표'**
+  String get cardKindTable;
+
+  /// Hint in the front field of the table form, where the table's name is written.
+  ///
+  /// In ko, this message translates to:
+  /// **'표의 이름'**
+  String get tableNameHint;
+
+  /// What a screen reader reads for the table form's switch between typing cells and choosing blanks.
+  ///
+  /// In ko, this message translates to:
+  /// **'표 편집 방식'**
+  String get tableModeLabel;
+
+  /// The table form's segment for typing the headers and cells.
+  ///
+  /// In ko, this message translates to:
+  /// **'칸 입력'**
+  String get tableModeCells;
+
+  /// The table form's segment for choosing which cells are blanks.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 고르기'**
+  String get tableModeBlanks;
+
+  /// Above the table form's grid while cells are typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'제목과 칸에 내용을 적어요'**
+  String get tableCellsHint;
+
+  /// Above the table form's grid while blanks are chosen: tap a cell to make it a blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 칸을 눌러요'**
+  String get tableBlanksHint;
+
+  /// What a screen reader reads for a column's header field in the table form.
+  ///
+  /// In ko, this message translates to:
+  /// **'{column}열 제목'**
+  String tableHeaderCell(int column);
+
+  /// A cell's place in the table form, as a screen reader reads it; rows count the table's body from 1.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행 {column}열'**
+  String tableCell(int row, int column);
+
+  /// What a screen reader reads for a cell of the table form that holds no text.
+  ///
+  /// In ko, this message translates to:
+  /// **'내용 없음'**
+  String get tableEmptyCell;
+
+  /// Screen-reader action on a table cell that is not a blank: make it one.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로'**
+  String get tableMakeBlank;
+
+  /// Screen-reader action on a table cell chosen as a blank: make it a plain cell again.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 해제'**
+  String get tableClearBlank;
+
+  /// Button under the table form's grid that adds a row.
+  ///
+  /// In ko, this message translates to:
+  /// **'행 추가'**
+  String get addRow;
+
+  /// Button under the table form's grid that adds a column.
+  ///
+  /// In ko, this message translates to:
+  /// **'열 추가'**
+  String get addColumn;
+
+  /// Screen-reader name of the button after a row of the table form that removes it; a table keeps at least one row.
+  ///
+  /// In ko, this message translates to:
+  /// **'{row}행 지우기'**
+  String deleteRow(int row);
+
+  /// Screen-reader name of the button over a column of the table form that removes it; a table keeps at least one column.
+  ///
+  /// In ko, this message translates to:
+  /// **'{column}열 지우기'**
+  String deleteColumn(int column);
+
+  /// Error under the table form's grid when a table is saved with no blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 칸을 하나 이상 골라 주세요'**
+  String get tableBlankRequired;
+
+  /// Error under the table form's grid when a cell chosen as a blank holds no text.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 고른 칸에 내용을 적어 주세요'**
+  String get tableBlankEmpty;
 
   /// What a screen reader reads for the card editor's kind switch.
   ///
