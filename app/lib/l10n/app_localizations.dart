@@ -206,10 +206,10 @@ abstract class AppLocalizations {
   /// **'카드'**
   String get wholeCard;
 
-  /// In the card editor under a table or cloze card, which it shows read-only.
+  /// In the card editor under a table card, which it shows read-only.
   ///
   /// In ko, this message translates to:
-  /// **'표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
+  /// **'표 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
   String get wholeCardReadOnly;
 
   /// In the card editor under the front of a card whose front holds senses, such as a reversed vocabulary card: editing that front saves it as text.
@@ -229,6 +229,36 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'단어'**
   String get cardKindWord;
+
+  /// The card editor's kind switch: a line with the words to recall as blanks.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸'**
+  String get cardKindCloze;
+
+  /// Above the cloze form's word buttons: tap a word to make it a blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 낱말을 눌러요'**
+  String get clozeWordsHint;
+
+  /// What a screen reader reads for a word of the cloze form that is not a blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'{word}'**
+  String clozeWord(String word);
+
+  /// What a screen reader reads for a word of the cloze form chosen as a blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'{word}, 빈칸'**
+  String clozeWordBlank(String word);
+
+  /// Error under the cloze form's words when a cloze is saved with no blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 낱말을 하나 이상 골라 주세요'**
+  String get clozeBlankRequired;
 
   /// What a screen reader reads for the card editor's kind switch.
   ///
