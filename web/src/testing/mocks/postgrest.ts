@@ -55,6 +55,40 @@ function passes(row: Row, column: string, filter: string): boolean {
 
 const reserved = new Set(["select", "order", "offset", "limit", "on_conflict", "columns"]);
 
+/** The four tables' uuid columns, as server.md lists them. */
+const uuidColumns = new Set(["id", "user_id", "deck_id", "card_id", "origin_deck_id"]);
+
+const uuidForm = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * PostgREST's answer to an `eq` or `in` filter on a uuid column with a value that is not a uuid,
+ * which Postgres refuses as `22P02` before reading a row, or null when every such value is one.
+ */
+function malformedUuid(params: URLSearchParams): Response | null {
+  for (const [column, filter] of params) {
+    if (!uuidColumns.has(column)) continue;
+    const [operator, ...rest] = filter.split(".");
+    const operand = rest.join(".");
+    const values =
+      operator === "eq"
+        ? [operand]
+        : operator === "in"
+          ? operand
+              .replace(/^\(|\)$/g, "")
+              .split(",")
+              .map((item) => item.replace(/^"|"$/g, ""))
+          : [];
+    const bad = values.find((value) => !uuidForm.test(value));
+    if (bad !== undefined) {
+      return HttpResponse.json(
+        { code: "22P02", message: `invalid input syntax for type uuid: "${bad}"` },
+        { status: 400 },
+      );
+    }
+  }
+  return null;
+}
+
 function matching(rows: Row[], params: URLSearchParams): Row[] {
   return rows.filter((row) =>
     [...params].every(([column, filter]) => reserved.has(column) || passes(row, column, filter)),
@@ -280,6 +314,8 @@ export class FakePostgrest {
       this.requests.push(`GET ${table}`);
       const url = new URL(request.url);
       this.selected.push(`${table}: ${url.searchParams.get("select") ?? "*"}`);
+      const malformed = malformedUuid(url.searchParams);
+      if (malformed) return malformed;
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const limit = Number(url.searchParams.get("limit") ?? Infinity);
       const rows = ordered(
@@ -323,6 +359,8 @@ export class FakePostgrest {
         return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 403 });
       }
       const url = new URL(request.url);
+      const malformed = malformedUuid(url.searchParams);
+      if (malformed) return malformed;
       for (const row of matching(this.rows[table], url.searchParams)) {
         const at = this.rows[table].indexOf(row);
         this.rows[table][at] = this.stamp({ ...row, ...body });

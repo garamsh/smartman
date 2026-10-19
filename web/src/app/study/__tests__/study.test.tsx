@@ -12,6 +12,7 @@ import {
   side,
   start,
   stateRow,
+  uuidOf,
 } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
@@ -32,10 +33,11 @@ vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const hour = 3_600_000;
 
-/** Opens the study page over [decks] at [at], as the browser would with `?decks=`. */
+/** Opens the study page over the decks named [decks] at [at], as the browser would with `?decks=`. */
 async function open(decks: string, at = start) {
   vi.setSystemTime(at);
-  await render(Study, { searchParams: Promise.resolve({ decks }) });
+  const ids = decks.split(",").map(uuidOf).join(",");
+  await render(Study, { searchParams: Promise.resolve({ decks: ids }) });
   // The screen starts its session once the browser's engine has loaded, under the skeleton.
   await waitFor(() => {
     expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
@@ -91,6 +93,23 @@ describe("the study page", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe("its address", () => {
+    it("leaves out an id that is not a uuid and studies the decks named by theirs, and is not found with none left", async () => {
+      seedDeck(postgrest, "d1", ["un"]);
+      vi.setSystemTime(start);
+      await render(Study, { searchParams: Promise.resolve({ decks: `d1,${uuidOf("d1")}` }) });
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+      });
+      expect(currentFront()).toBe("un");
+      cleanup();
+
+      await expect(
+        render(Study, { searchParams: Promise.resolve({ decks: "d1" }) }),
+      ).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
+    });
   });
 
   describe("queue", () => {
@@ -1051,7 +1070,7 @@ describe("the study page", () => {
       expect(earlierFront()).toBe("deux");
       cleanup();
 
-      const deux = postgrest.rows.cards.find((row) => row.id === "d1-1");
+      const deux = postgrest.rows.cards.find((row) => row.id === uuidOf("d1-1"));
       if (!deux) throw new Error("deux is seeded above");
       deux.deleted_at = new Date(start - hour / 2).toISOString();
       await open("d1");
@@ -1101,7 +1120,7 @@ describe("the study page when its decks cannot be read", () => {
     postgrest.fail("decks", 500);
     vi.setSystemTime(start);
 
-    await render(Study, { searchParams: Promise.resolve({ decks: "d1" }) });
+    await render(Study, { searchParams: Promise.resolve({ decks: uuidOf("d1") }) });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
