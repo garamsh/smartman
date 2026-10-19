@@ -1,6 +1,6 @@
 # Server
 
-The Supabase schema the app syncs to, and the extraction count, the plans, and the admin area's role, audit log and functions beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
+The Supabase schema the app syncs to, and the extraction count, the plans, and the admin area's role, audit log and functions beside it: its tables, row-level security, revisions, tombstones, account deletion, the migration of stored vocabulary backs to senses blocks, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
 
 ## Current decisions
 
@@ -172,6 +172,20 @@ The Supabase schema the app syncs to, and the extraction count, the plans, and t
 - **Order.** The purge was built before any store release, by the owner's decision of 2026-10-18 in issue #108, which supersedes ADR 0034 §9's order of building it after the app's store release ([ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md)). The only client devices then were the owner's, running `main`'s build, which reads the watermark.
 - **Runs.** `cron.job_run_details` records each run, so a failure or a missing day shows there; a horizon that stops rising shows through `sync_horizon()`.
 
+### Senses migration
+
+- Migration `20261019180002_senses_migration.sql` turns each live card whose back is one text block of sense lines, such as `[명] 사과`, into a back of one `senses` block ([`deck.md`](deck.md), [ADR 0075](adr/0075-store-a-vocabulary-card-s-senses-as-a-typed-block-and-show-each-label-in-brackets-before-its-meaning.md), #228). It changes existing data; the owner approved it for the 105 cards the dry run found on production, and #255's dry run merges before it.
+- The rules are functions in `private`, which the dry run (`supabase/senses-dry-run.sql`) calls too: `sense_labels` holds the labels and the part of speech each names, `sense_forms` the four forms and their order, `sense_line` a line's first matching form, and `senses_block` the block a back becomes, or null when it does not convert.
+- `private.migrate_senses()` converts, and the migration calls it once.
+  - It locks each card it converts and first copies the card's back into `private.senses_migration_backup` (`card_id`, `back`, `migrated_at`). That table enables row-level security with no policy and grants nothing to `anon` or `authenticated`, so no client reads it. A row goes with its card's delete.
+  - A second run converts nothing, since a senses block is no text block, and a backed-up card keeps its first backup.
+- **How it reaches devices.** The update draws a new `revision` through the trigger, so every device pulls the card. The card keeps its `updated_at`:
+  - a device holding the card synced takes the server's copy on the tie;
+  - a device with an edit not yet pushed holds a later `updated_at`, so its edit wins the merge and is pushed over the migration's ([`sync.md`](sync.md) §Conflicts).
+  - No front, card key, review or card state changes.
+- **Revert.** `select private.revert_senses_migration();`, run by the PM against production, restores each backed-up back on a live card that still holds the block the migration wrote, and returns how many. A card edited since keeps its edit. It also draws new revisions and keeps `updated_at`.
+- Every function revokes `execute` from `public`, `anon` and `authenticated`, and runs as `security invoker`: only the migration and the PM call them.
+
 ### Target data model (not built yet)
 
 [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) decides the schema below. None of it is built yet: each bullet holds once the migration that its implementation issue adds has been applied. Until then the decisions above describe the database.
@@ -234,6 +248,7 @@ The Supabase schema the app syncs to, and the extraction count, the plans, and t
   - `study_day_start_test.sql` — the hour is 4; an answer at 04:30 counted in its day from 04:00 by the streak, the study days and the record, and, with the hour moved to 5 in the test's transaction, in the day from 05:00 the day before by all three; executable by `authenticated` and not `anon`;
   - `study_streak_test.sql` — on the instants `queue.test.ts` counts: the 04:00 boundary in UTC and in Seoul, a day across Los Angeles's change of offset at both ends, and a gap, each with a control; only the caller's live answers count; an unknown zone raises; and the function runs as the caller, stable, with an empty `search_path`, executable by `authenticated` and not `anon`;
   - `indexes_test.sql` — each index ADR 0034 names for a server query exists with its columns and predicate, and `cards_user_id_deck_id` is gone, with an index `cards` keeps as control;
+  - `senses_migration_test.sql` — on the dry run's fixture: each form's line rule and a label off the list or a label without a meaning refused; the six cards of the recognised forms converted, a sense per line with its label and category, and the mixed card, the note, the back of two blocks, the deleted card and the unrecognised label untouched; each original back in the backup; no front, card key, edit time, review or card state changed while each converted card's revision rose; a second run changing nothing; and the revert restoring every back but one edited since;
   - `account_deletion_test.sql` — the tables in `public` are the ones it covers, every reference from `public` to `auth.users` cascades, and after a user is deleted no uuid column of any table holds its id, while the other user keeps its rows and its copy of the deleted user's deck.
 - `make test` runs `supabase/test-db.sh`. Where Docker answers, it starts a throwaway stack of its own with only Postgres, which applies the migrations, runs the tests and prints their count ([ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md)). Where Docker does not, it prints that the tests were skipped and why.
 - The throwaway stack is named `smartman_test_<port>` and publishes its database on the first port in 54400–54499 that the run reserves under `${TMPDIR:-/tmp}/smartman-test-db/` and that nothing listens on. Concurrent runs, from several checkouts on one host, each get their own, and none touches the `smartman` stack or its rows.
