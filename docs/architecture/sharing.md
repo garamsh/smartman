@@ -1,6 +1,6 @@
 # Sharing
 
-The `sharing` domain: publishing a deck, and browsing, previewing, copying, reporting and blocking other users' public decks.
+The `sharing` domain: publishing a deck, and browsing, previewing, copying, reporting and blocking other users' public decks, and how admins moderate them.
 
 ## Current decisions
 
@@ -45,6 +45,12 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - "신고하기" asks in a sheet for a reason, inappropriate, spam, copyright or other, with "신고하기" as its one action and no cancel, and files it once; a second report of the same deck says "이미 신고한 덱이에요".
 - "이 사용자 차단" asks for confirmation, then blocks the owner and returns to the browse screen, which lists again without the owner's decks.
 
+### Moderation
+
+- A deck that three users reported is hidden by the server ([`server.md`](server.md)). Admins moderate on the web, in the admin area's 신고 and 공개 덱 pages: hide or unhide a deck, make a public deck private, and dismiss a deck's reports, each after a confirmation and each recorded in the audit log ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md), [`web.md`](web.md)). Dismissing leaves a hidden deck hidden, and three new reports hide a deck again.
+- A deck an admin made private reaches its owner's devices by sync like a private switch on another device: the server gives it an edit time of now, so it wins over an older edit ([`sync.md`](sync.md)). The owner can publish it again.
+- Nothing in the app moderates.
+
 ### Failures
 
 - Each expected failure is a `SharingFailure`, mapped from PostgREST's codes as `sync` maps them ([`sync.md`](sync.md)): `SharingRejected`, `SharingOffline` (also no answer within 20 seconds), `SharingFailed`, and `DeckNoLongerPublic`.
@@ -69,6 +75,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why sharing is its own domain, why a publish writes the server first, how a copy reuses the deck import, and why pulls filter by owner.
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` reaches sharing through its surface rather than `deck` through a provider.
+- [ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md) records why moderation moved from the dashboard to the web admin area.
 - Issue #29 records the decisions made by the PM, and its amendments.
 
 ## Open questions

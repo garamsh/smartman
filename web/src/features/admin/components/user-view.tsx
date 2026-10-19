@@ -1,0 +1,45 @@
+import { dailyExtractionLimit } from "../extraction";
+import { formatDate, formatTime } from "../format";
+import type { AdminUser } from "../read-admin";
+import { PublicDecks } from "./public-decks";
+
+/** One user, read-only: sign-up, last study, decks and cards, public decks and today's photos. */
+export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string }) {
+  const facts = [
+    ["가입일", formatDate(user.createdAt, timeZone)],
+    [
+      "마지막 학습",
+      user.lastAnswerAt === null ? "없어요" : formatTime(user.lastAnswerAt, timeZone),
+    ],
+    ["덱", `${String(user.decks)}개`],
+    ["카드", `${String(user.cards)}장`],
+    [
+      "오늘 사진 추출 (UTC)",
+      `${String(user.extractionsToday)}장 / 하루 ${String(dailyExtractionLimit)}장`,
+    ],
+  ] as const;
+  return (
+    <div className="flex flex-col gap-section-gap">
+      <header className="flex flex-wrap items-center gap-2">
+        <h1 className="text-display break-all">{user.email}</h1>
+        {user.admin && (
+          <span className="rounded-full bg-brand-tint px-2 py-0.5 text-micro font-semibold text-ink">
+            관리자
+          </span>
+        )}
+      </header>
+      <dl className="flex flex-col gap-2 rounded-card bg-surface p-5">
+        {facts.map(([term, value]) => (
+          <div key={term} className="flex items-baseline justify-between gap-3">
+            <dt className="text-secondary text-muted">{term}</dt>
+            <dd className="text-body-strong">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <section aria-label="공개 덱" className="flex flex-col gap-3">
+        <h2 className="text-section">공개 덱</h2>
+        <PublicDecks decks={user.publicDecks} timeZone={timeZone} empty="공개한 덱이 없어요." />
+      </section>
+    </div>
+  );
+}
