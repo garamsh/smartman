@@ -60,7 +60,7 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
               <Link
                 href={`/decks/${encodeURIComponent(deck.id)}`}
                 aria-label={`${deck.name}, 카드 ${String(cards)}장${deck.public ? ", 공개" : ""}${today > 0 ? `, 오늘 ${String(today)}` : ""}, ${String(cards)}장 중 ${String(mastered)}장 익힘`}
-                className="flex min-h-13 items-center gap-3 rounded-row bg-surface py-3 pr-3 pl-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                className="pressable flex min-h-13 items-center gap-3 rounded-row bg-surface py-3 pr-3 pl-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 <DeckTile deck={deck} />
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">

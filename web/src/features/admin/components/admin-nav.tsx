@@ -27,7 +27,7 @@ export function AdminNav() {
               <Link
                 href={href}
                 aria-current={current ? "page" : undefined}
-                className={`flex min-h-tap-target items-center rounded-button px-3 text-label whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+                className={`pressable flex min-h-tap-target items-center rounded-button px-3 text-label whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
                   current ? "bg-brand-tint font-bold text-ink" : "text-ink-2"
                 }`}
               >

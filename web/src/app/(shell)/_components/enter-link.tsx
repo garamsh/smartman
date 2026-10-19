@@ -35,7 +35,7 @@ export function EnterLink({ href, label }: { href: string; label: string }) {
       ref={link}
       href={href}
       aria-keyshortcuts="Enter"
-      className="flex min-h-cta items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero flex-[1_1_100%] sm:flex-[0_1_240px]"
+      className="pressable flex min-h-cta items-center justify-center gap-2 rounded-button bg-on-hero px-6 text-label text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero flex-[1_1_100%] sm:flex-[0_1_240px]"
     >
       <Play aria-hidden className="size-small-icon" strokeWidth={2} />
       {label}

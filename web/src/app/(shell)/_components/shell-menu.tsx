@@ -54,7 +54,7 @@ export function SideMenuAt({ path, account }: { path: string | null; account: Re
               key={href}
               href={href}
               aria-current={selected ? "page" : undefined}
-              className={`flex min-h-tap-target items-center gap-3 rounded-field px-3 text-label ${selected ? "bg-brand-tint text-ink" : "font-semibold text-ink-2"} ${focus}`}
+              className={`pressable flex min-h-tap-target items-center gap-3 rounded-field px-3 text-label ${selected ? "bg-brand-tint text-ink" : "font-semibold text-ink-2"} ${focus}`}
             >
               <Icon aria-hidden className="size-5" strokeWidth={selected ? 2.2 : 2} />
               {label}
@@ -87,7 +87,7 @@ export function TabBarAt({ path }: { path: string | null }) {
             key={href}
             href={href}
             aria-current={selected ? "page" : undefined}
-            className={`flex flex-col items-center justify-center gap-0.5 text-micro ${selected ? "font-bold text-ink" : "font-semibold text-muted"} ${focus} focus-visible:-outline-offset-2`}
+            className={`pressable flex flex-col items-center justify-center gap-0.5 text-micro ${selected ? "font-bold text-ink" : "font-semibold text-muted"} ${focus} focus-visible:-outline-offset-2`}
           >
             <Icon aria-hidden className="size-6" strokeWidth={selected ? 2.2 : 2} />
             {label}

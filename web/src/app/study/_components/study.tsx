@@ -119,7 +119,7 @@ function Failure({ failure }: { failure: LibraryFailure }) {
       <ReadFailure failure={failure} />
       <Link
         href="/"
-        className="flex min-h-button items-center justify-center self-start rounded-button border border-outline bg-surface px-5 text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="pressable flex min-h-button items-center justify-center self-start rounded-button border border-outline bg-surface px-5 text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         그만하기
       </Link>

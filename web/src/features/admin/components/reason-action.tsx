@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import type { ActionResult } from "../action-call";
 
 const button =
-  "flex min-h-button items-center justify-center rounded-button px-4 text-label font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+  "pressable flex min-h-button items-center justify-center rounded-button px-4 text-label font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
 
 /**
  * An admin action that records a reason: [label] opens a field for the reason, then [question]
