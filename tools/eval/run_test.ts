@@ -1,7 +1,7 @@
 // The eval end to end with OpenRouter and the file system replaced by in-memory fakes.
 import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v8.ts";
+import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v9.ts";
 import { meaningOf, normalize } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
@@ -313,7 +313,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v8",
+    note: "prompt v9",
   });
   assert.ok(
     w.printed.includes(
@@ -367,7 +367,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v8",
+    note: "prompt v9",
   }]);
 });
 
@@ -705,7 +705,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
     ledger,
     {
       apiKey: "key",
-      prompt: { label: "v8", text: SYSTEM_PROMPT },
+      prompt: { label: "v9", text: SYSTEM_PROMPT },
       fetch: io(w).fetch,
       now: () => 0,
       print: () => {},
@@ -729,7 +729,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
     },
     {
       apiKey: "key",
-      prompt: { label: "v8", text: SYSTEM_PROMPT },
+      prompt: { label: "v9", text: SYSTEM_PROMPT },
       fetch: io(world()).fetch,
       now: () => 0,
       print: () => {},
@@ -1315,7 +1315,7 @@ Deno.test("--prompt-version runs a version read from the database, which the led
   );
   assert.match(w.files.get(PATHS.report) ?? "", /with prompt version 5, over/);
 
-  // Control: without the flag, the run gives prompt v8.
+  // Control: without the flag, the run gives prompt v9.
   const plain: string[] = [];
   assert.equal(
     await main([], withStore(world({ budgetUsd: 10, runs: [] }), plain)),
