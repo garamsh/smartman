@@ -212,6 +212,12 @@ abstract class AppLocalizations {
   /// **'표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
   String get wholeCardReadOnly;
 
+  /// In the card editor under the answer of a vocabulary card whose senses carry labels.
+  ///
+  /// In ko, this message translates to:
+  /// **'답을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
+  String get sensesEditNote;
+
   /// Title of the sheet shown when a card's front duplicates another in the deck.
   ///
   /// In ko, this message translates to:
@@ -888,6 +894,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.'**
   String get dailyLimitReached;
+
+  /// Shown when a suspended account tries to sign in or make cards from a photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.'**
+  String get accountSuspended;
 
   /// Photo import failure: the user's plan's daily extraction limit, which the server states, was reached.
   ///

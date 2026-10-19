@@ -14,48 +14,147 @@
   "cards": [
     {
       "front": "学校",
-      "meaning": "학교",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "학교",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "空",
-      "meaning": "하늘",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "하늘",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "明るい",
-      "meaning": "밝다",
-      "partOfSpeech": "[형]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "밝다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "椅子",
-      "meaning": "의자",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "의자",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "売る",
-      "meaning": "팔다",
-      "partOfSpeech": "[동]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "팔다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "雨",
-      "meaning": "비",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "비",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "教える",
-      "meaning": "가르치다",
-      "partOfSpeech": "[동]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "가르치다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "料理",
-      "meaning": "요리",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "요리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "写真",
-      "meaning": "사진",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "사진",
+          "examples": []
+        }
+      ]
     }
   ]
 }

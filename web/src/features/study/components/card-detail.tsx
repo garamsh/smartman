@@ -45,13 +45,23 @@ export function CardDetail({
               <h3 id="card-detail-front" className="text-section text-muted">
                 앞면
               </h3>
-              <CardSide blocks={answer.card.front} size="question" />
+              {answer.card.sides ? (
+                <div className="text-center text-question break-words">
+                  {answer.card.sides.front}
+                </div>
+              ) : (
+                <CardSide blocks={answer.card.front} size="question" />
+              )}
             </section>
             <section aria-labelledby="card-detail-back" className="flex flex-col gap-2">
               <h3 id="card-detail-back" className="text-section text-muted">
                 뒷면
               </h3>
-              <CardSide blocks={answer.card.back} size="answer" />
+              {answer.card.sides ? (
+                <div className="text-center text-answer break-words">{answer.card.sides.back}</div>
+              ) : (
+                <CardSide blocks={answer.card.back} size="answer" />
+              )}
             </section>
           </>
         )}

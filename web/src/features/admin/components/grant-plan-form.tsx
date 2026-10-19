@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { grantPlan, type GrantPlanState } from "../admin-actions";
+import { grantPlan, type GrantPlanState } from "../grant-plan";
 
 const field =
   "h-search rounded-field border border-outline bg-surface px-4 text-body focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink";

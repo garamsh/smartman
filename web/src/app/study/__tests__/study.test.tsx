@@ -12,12 +12,14 @@ import {
   side,
   start,
   stateRow,
+  uuidOf,
 } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
 
 import { Study } from "../_components/study";
@@ -32,10 +34,11 @@ vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const hour = 3_600_000;
 
-/** Opens the study page over [decks] at [at], as the browser would with `?decks=`. */
+/** Opens the study page over the decks named [decks] at [at], as the browser would with `?decks=`. */
 async function open(decks: string, at = start) {
   vi.setSystemTime(at);
-  await render(Study, { searchParams: Promise.resolve({ decks }) });
+  const ids = decks.split(",").map(uuidOf).join(",");
+  await render(Study, { searchParams: Promise.resolve({ decks: ids }) });
   // The screen starts its session once the browser's engine has loaded, under the skeleton.
   await waitFor(() => {
     expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
@@ -91,6 +94,23 @@ describe("the study page", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe("its address", () => {
+    it("leaves out an id that is not a uuid and studies the decks named by theirs, and is not found with none left", async () => {
+      seedDeck(postgrest, "d1", ["un"]);
+      vi.setSystemTime(start);
+      await render(Study, { searchParams: Promise.resolve({ decks: `d1,${uuidOf("d1")}` }) });
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+      });
+      expect(currentFront()).toBe("un");
+      cleanup();
+
+      await expect(
+        render(Study, { searchParams: Promise.resolve({ decks: "d1" }) }),
+      ).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
+    });
   });
 
   describe("queue", () => {
@@ -947,6 +967,45 @@ describe("the study page", () => {
     expect(shown()).toEqual([expect.stringMatching(/^앞면: trois\. /)]);
   });
 
+  it("shows a vocabulary card's senses once answered, on the previous card and in its dialog, each label in brackets with a gap after it", async () => {
+    postgrest.seed("decks", deckRow("d1", "d1"));
+    postgrest.seed("cards", {
+      ...cardRow("d1-0", "d1", "train"),
+      back: [
+        {
+          type: "senses",
+          payload: {
+            senses: [
+              {
+                labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
+                meaning: "기차",
+                examples: [],
+              },
+              {
+                labels: [{ kind: "other", category: null, text: "구어" }],
+                meaning: "열차",
+                examples: [],
+              },
+            ],
+          },
+        },
+      ],
+    });
+    await open("d1");
+    const user = userEvent.setup();
+    await user.keyboard("k");
+
+    const card = within(cards()).getByRole("article");
+    const drawn = [
+      { labels: ["[명]"], gapped: true, text: "[명]기차" },
+      { labels: ["[구어]"], gapped: true, text: "[구어]열차" },
+    ];
+    expect(sensesUnder(card)).toEqual(drawn);
+    expect(shown()).toEqual(["앞면: train. 뒷면: [명] 기차\n[구어] 열차. 답: 안다"]);
+    await user.click(within(card).getByRole("button", { name: "카드 전체 보기" }));
+    expect(sensesUnder(screen.getByRole("dialog", { name: "카드" }))).toEqual(drawn);
+  });
+
   describe("a whole card", () => {
     // Stored as the phone stores them: typed blocks, the back their filled text.
     const cloze = {
@@ -1051,7 +1110,7 @@ describe("the study page", () => {
       expect(earlierFront()).toBe("deux");
       cleanup();
 
-      const deux = postgrest.rows.cards.find((row) => row.id === "d1-1");
+      const deux = postgrest.rows.cards.find((row) => row.id === uuidOf("d1-1"));
       if (!deux) throw new Error("deux is seeded above");
       deux.deleted_at = new Date(start - hour / 2).toISOString();
       await open("d1");
@@ -1101,7 +1160,7 @@ describe("the study page when its decks cannot be read", () => {
     postgrest.fail("decks", 500);
     vi.setSystemTime(start);
 
-    await render(Study, { searchParams: Promise.resolve({ decks: "d1" }) });
+    await render(Study, { searchParams: Promise.resolve({ decks: uuidOf("d1") }) });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "서버에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",

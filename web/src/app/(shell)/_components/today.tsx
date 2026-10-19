@@ -16,17 +16,17 @@ import {
   deckProgress,
   forecast,
   readRecentRetention,
-  readyServerEngine,
   readToday,
+  readyServerEngine,
   RetentionPreview,
   sessionMinutes,
   statusLine,
   studyDayEnd,
+  studyHref,
   todayStatus,
 } from "@/features/study";
 
 import { EnterLink } from "./enter-link";
-import { studyHref } from "./study-href";
 
 /** Noon of the study day starting at [start], which names its calendar date in any zone. */
 const noon = (start: number) => start + 12 * 3_600_000;

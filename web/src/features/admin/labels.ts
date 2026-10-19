@@ -17,6 +17,13 @@ export const actionLabels: Record<string, string> = {
   set_plan: "요금제 설정",
   grant_plan: "요금제 지정",
   revoke_plan: "무료로 되돌리기",
+  suspend_user: "이용 정지",
+  unsuspend_user: "정지 해제",
+  remove_deck: "공유에서 영구 삭제",
+  save_prompt: "프롬프트 저장",
+  activate_prompt: "프롬프트 적용",
+  test_prompt: "프롬프트 테스트 시작",
+  clear_test_prompt: "프롬프트 테스트 끝",
 };
 
 /** Each plan's name in the admin area. */

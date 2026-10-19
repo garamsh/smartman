@@ -72,7 +72,8 @@ export class FakeAdmin {
     studied_7d: 2,
     extractions_today: 5,
   };
-  extractionsByDay: Row[] = [];
+  /** The rows `admin_extraction_breakdown` answers: each UTC day's photos by plan, model and version. */
+  breakdown: Row[] = [];
   /** The plans' settings, seeded as the migration seeds them. */
   readonly plans: { id: string; model: string; daily_limit: number; updated_by: string | null }[] =
     ["free", "pro", "special"].map((id) => ({
@@ -81,6 +82,16 @@ export class FakeAdmin {
       daily_limit: 30,
       updated_by: null,
     }));
+  /** The saved prompt versions, oldest first; the seed, prompt v8, is version 1. */
+  readonly prompts: { id: number; text: string; note: string; by: string | null }[] = [
+    { id: 1, text: "Prompt v8.\nKeep each fact.", note: "prompt v8", by: null },
+  ];
+  /** The version each label names; no `test` while none is set. */
+  readonly promptLabels = new Map<"active" | "test", number>([["active", 1]]);
+  /** Each suspended user's suspension. */
+  readonly suspensions = new Map<string, { reason: string; by: string }>();
+  /** Each deck removed from sharing, and why. */
+  readonly removals = new Map<string, string>();
   /** Each user's grant of a plan other than Free. */
   readonly userPlans = new Map<
     string,
@@ -110,8 +121,17 @@ export class FakeAdmin {
     return { owner_id: deck.ownerId, owner_email: user?.email ?? "", owner_name: null };
   }
 
-  private visible(deck: FakeDeck): boolean {
-    return deck.visibility === "public" || deck.reports.length > 0;
+  private promptRow(prompt: FakeAdmin["prompts"][number]): Row {
+    return {
+      id: prompt.id,
+      note: prompt.note,
+      length: prompt.text.length,
+      created_by_email: this.users.find((user) => user.id === prompt.by)?.email ?? null,
+      created_at: "2026-10-19T04:00:00Z",
+      labels: (["active", "test"] as const).filter(
+        (label) => this.promptLabels.get(label) === prompt.id,
+      ),
+    };
   }
 
   private reasons(deck: FakeDeck): string[] {
@@ -136,8 +156,8 @@ export class FakeAdmin {
     switch (name) {
       case "admin_overview":
         return [this.overview];
-      case "admin_extractions_by_day":
-        return this.extractionsByDay;
+      case "admin_extraction_breakdown":
+        return this.breakdown;
       case "admin_reported_decks":
         return this.decks
           .filter((deck) => deck.reports.length > 0)
@@ -172,40 +192,6 @@ export class FakeAdmin {
             published_at: deck.publishedAt,
           }));
       }
-      case "admin_deck": {
-        const deck = deckOf(args.deck_id);
-        if (!deck || !this.visible(deck)) return [];
-        return [
-          {
-            id: deck.id,
-            name: deck.name,
-            description: deck.description,
-            ...this.owner(deck),
-            visibility: deck.visibility,
-            hidden: deck.hidden,
-            deleted: deck.deleted,
-            import_count: deck.copies,
-            reports: deck.reports.length,
-            reasons: this.reasons(deck),
-          },
-        ];
-      }
-      case "admin_deck_cards": {
-        const deck = deckOf(args.deck_id);
-        if (!deck || !this.visible(deck)) return [];
-        return deck.cards.map((card) => ({
-          card_id: card.id,
-          front: text(card.front),
-          back: text(card.back),
-        }));
-      }
-      case "admin_find_users": {
-        const query = typeof args.query === "string" ? args.query.toLowerCase() : "";
-        if (query === "") return [];
-        return this.users
-          .filter((user) => user.email.toLowerCase().includes(query))
-          .map((user) => ({ user_id: user.id, email: user.email, created_at: user.createdAt }));
-      }
       case "admin_user": {
         const user = this.users.find((candidate) => candidate.id === args.user_id);
         if (!user) return [];
@@ -231,6 +217,156 @@ export class FakeAdmin {
         }));
       case "admin_audit_log":
         return this.audit;
+      case "admin_search_users": {
+        const query = typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
+        if (query === "") return [];
+        const matches = this.users
+          .filter((user) => user.email.toLowerCase().includes(query))
+          .toSorted(
+            (a, b) =>
+              Number(!a.email.toLowerCase().startsWith(query)) -
+                Number(!b.email.toLowerCase().startsWith(query)) || a.email.localeCompare(b.email),
+          );
+        const offset = Number(args.page_offset ?? 0);
+        return matches.slice(offset, offset + Number(args.page_size ?? 20)).map((user) => ({
+          user_id: user.id,
+          email: user.email,
+          created_at: user.createdAt,
+          suspended: this.suspensions.has(user.id),
+          total: matches.length,
+        }));
+      }
+      case "admin_user_suspension": {
+        const suspension = this.suspensions.get(String(args.user_id));
+        if (!suspension) return [];
+        return [
+          {
+            reason: suspension.reason,
+            suspended_at: "2026-10-19T03:00:00Z",
+            suspended_by_email: this.users.find((user) => user.id === suspension.by)?.email ?? null,
+          },
+        ];
+      }
+      case "admin_suspend_user": {
+        const id = String(args.user_id);
+        const user = this.users.find((candidate) => candidate.id === id);
+        if (!user) return "no_user";
+        if (id === admin) return "self";
+        if (this.suspensions.has(id)) return "already";
+        const reason = String(args.reason).trim();
+        this.suspensions.set(id, { reason, by: admin });
+        this.record(admin, "suspend_user", "user", id, { email: user.email, reason });
+        return "suspended";
+      }
+      case "admin_unsuspend_user": {
+        const id = String(args.user_id);
+        if (!this.suspensions.delete(id)) return false;
+        this.record(admin, "unsuspend_user", "user", id, {
+          email: this.users.find((user) => user.id === id)?.email ?? "",
+        });
+        return true;
+      }
+      case "admin_user_decks":
+        return this.decks
+          .filter((deck) => deck.ownerId === args.user_id && !deck.deleted)
+          .map((deck) => ({
+            deck_id: deck.id,
+            name: deck.name,
+            visibility: deck.visibility,
+            hidden: deck.hidden,
+            removed: this.removals.has(deck.id),
+            cards: deck.cards.length,
+            created_at: "2026-10-17T00:00:00Z",
+          }));
+      case "admin_user_deck": {
+        const deck = deckOf(args.deck_id);
+        if (!deck) return [];
+        const removal = this.removals.get(deck.id);
+        return [
+          {
+            id: deck.id,
+            name: deck.name,
+            description: deck.description,
+            ...this.owner(deck),
+            visibility: deck.visibility,
+            hidden: deck.hidden,
+            deleted: deck.deleted,
+            import_count: deck.copies,
+            reports: deck.reports.length,
+            reasons: this.reasons(deck),
+            removal_reason: removal ?? null,
+            removed_at: removal === undefined ? null : "2026-10-19T03:00:00Z",
+          },
+        ];
+      }
+      case "admin_user_deck_cards": {
+        const deck = deckOf(args.deck_id);
+        if (!deck) return [];
+        return deck.cards.map((card) => ({
+          card_id: card.id,
+          front: text(card.front),
+          back: text(card.back),
+        }));
+      }
+      case "admin_remove_deck": {
+        const deck = deckOf(args.deck_id);
+        if (!deck || this.removals.has(deck.id)) return false;
+        const reason = String(args.reason).trim();
+        this.removals.set(deck.id, reason);
+        deck.visibility = "private";
+        this.record(admin, "remove_deck", "deck", deck.id, { name: deck.name, reason });
+        return true;
+      }
+      case "admin_prompt_versions":
+        return this.prompts.toReversed().map((prompt) => this.promptRow(prompt));
+      case "admin_prompt_version": {
+        const prompt = this.prompts.find((candidate) => candidate.id === args.version_id);
+        if (!prompt) return [];
+        const active = this.prompts.find((p) => p.id === this.promptLabels.get("active"));
+        return [
+          {
+            ...this.promptRow(prompt),
+            text: prompt.text,
+            active_id: active?.id ?? null,
+            active_text: active?.text ?? null,
+          },
+        ];
+      }
+      case "admin_save_prompt": {
+        const text = String(args.text);
+        const id = (this.prompts.at(-1)?.id ?? 0) + 1;
+        const note = String(args.note).trim();
+        this.prompts.push({ id, text, note, by: admin });
+        this.record(admin, "save_prompt", "prompt", String(id), { note, length: text.length });
+        return id;
+      }
+      case "admin_set_prompt_label": {
+        const label = args.label === "test" ? "test" : "active";
+        const id = Number(args.version_id);
+        const previous = this.promptLabels.get(label) ?? null;
+        if (previous === id) return false;
+        this.promptLabels.set(label, id);
+        const cleared = label === "active" && this.promptLabels.get("test") === id;
+        if (cleared) this.promptLabels.delete("test");
+        this.record(
+          admin,
+          label === "active" ? "activate_prompt" : "test_prompt",
+          "prompt",
+          String(id),
+          {
+            previous,
+            test_cleared: cleared,
+          },
+        );
+        return true;
+      }
+      case "admin_clear_test_prompt": {
+        const test = this.promptLabels.get("test");
+        if (test === undefined) return false;
+        this.promptLabels.delete("test");
+        this.record(admin, "clear_test_prompt", "prompt", String(test), {});
+        return true;
+      }
       case "admin_plans":
         return this.plans.map((plan) => ({
           id: plan.id,

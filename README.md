@@ -17,13 +17,17 @@ A memorization app: decks of cards studied on a phone. This file is the project'
 - `engine-wasm/` — the engine as WebAssembly for the web app; its generated module, committed, is in `engine-wasm/pkg/`.
 - `web/` — the Next.js web app, its `Dockerfile`, and its e2e specs in `web/e2e/`; `web.sh` runs the checks over it.
 - `supabase/` — the Supabase CLI project for the backend: its configuration, migrations in `supabase/migrations/`, and pgTAP tests in `supabase/tests/`.
-- `supabase/functions/extract-cards/` — the Edge Function that turns a photo of a vocabulary page into candidate cards, with its Deno tests.
+- `supabase/functions/extract-cards/` — the Edge Function that turns a photo of a study page, a vocabulary page or notes, into candidate cards, with its Deno tests.
 - `tools/eval/` — the eval that measures candidate models for that function, its generated sample set, and the generator.
 - `supabase/functions/delete-account/` — the Edge Function that deletes the caller's account and every row it owns, with its Deno tests.
 - `supabase/functions/_shared/` — the code both Edge Functions use: reading the caller from Supabase Auth.
 - `docs/convention/` — the conventions every change follows.
 - `docs/architecture/` — the structure of the system and the decisions behind it.
+- `docs/procedure/` — the procedures for dispatching a worker, reviewing a pull request and anchoring a claim, ranked below every convention.
+- `docs/eval/` — the eval's latest report, which a run writes.
+- `docs/research/` — assessments made for an issue, such as moving the engine to FSRS-7.
 - `Makefile` — the entry points for the project's checks.
+- `check-*.sh` — the checks `make lint` and `make test` run (§Run the checks); `deno.sh`, `web.sh` and `wasm-bindgen.sh` run the Deno, web app and WebAssembly parts of the entry points.
 - `.github/` — the CI workflow, Dependabot configuration, and issue and pull request templates.
 
 ## Requirements
@@ -81,9 +85,22 @@ docker run --rm -p 3000:3000 smartman-web
 
 ## Run the checks
 
-- `make lint` — checks Markdown Contents lists, fails on a Supabase secret or service-role key in any file, checks that the iOS URL scheme matches the iOS client ID in `app/config/dev.json`, checks that the app's committed generated code (flutter_rust_bridge's included) and `engine-wasm/pkg/` match their generators, lints and type-checks the TypeScript under `supabase/functions/` and `tools/eval/` with deno (`deno.sh`), lints and type-checks the web app with ESLint and `tsc` and fails on Vercel-only code in it (`web.sh`), runs `flutter analyze` over the app's Dart files, and runs clippy over the engine, the bridge crate and `engine-wasm/` with warnings denied.
+- `make lint` runs, in this order:
+  - `check-contents-list.sh` — each Markdown file's `## Contents` list against its `##` headings;
+  - `check-object-names.sh` — fails on a commit cited by fewer than its 40 characters in a Markdown file;
+  - `check-convention-index.sh` — the tables of `docs/convention/README.md` against the convention files, both ways;
+  - `check-architecture-index.sh` — the index of `docs/architecture/README.md` against the responsibility documents and ADRs: one line each, every line naming a file, the ADRs in number order;
+  - `check-section-citations.sh` — fails on a `§Heading` citation in a Markdown file that resolves to no heading;
+  - `check-heading-prefixes.sh` — fails on a Markdown file where one heading is a prefix of another;
+  - `check-secrets.sh` — fails on a Supabase secret or service-role key in any file;
+  - `check-ios-client-id.sh` — the iOS URL scheme against the iOS client ID in `app/config/dev.json`;
+  - `check-generated.sh` — the app's committed generated code (flutter_rust_bridge's included) and `engine-wasm/pkg/` against their generators;
+  - `check-migration-order.sh` — each migration `main` lacks sorts after every migration on `main` (`docs/architecture/server.md`);
+  - `deno.sh lint` — lints and type-checks the TypeScript under `supabase/functions/` and `tools/eval/`;
+  - `web.sh lint` — lints and type-checks the web app with ESLint and `tsc`, and fails on Vercel-only code in it;
+  - then `flutter analyze` over the app's Dart files, and clippy over the engine, the bridge crate and `engine-wasm/` with warnings denied.
 - `make format` — fails when a TypeScript file under `supabase/functions/` or `tools/eval/`, a file Prettier checks in the web app, a Dart file in the app, or a Rust file in the engine, the bridge crate or `engine-wasm/` is not formatted; `deno fmt`, `npx prettier --write .` in `web/`, `dart format` or `cargo fmt` fixes it.
-- `make test` — builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, the engine's WebAssembly tests in Node (`wasm-bindgen.sh test`), and the database tests in `supabase/tests/` on a throwaway local stack of their own (`supabase/test-db.sh`), stopped afterwards, so concurrent checkouts do not collide and a running local stack is left untouched. It then runs the two-device sync test, `app/test/sync/two_devices_test.dart`, against another throwaway stack with Auth and PostgREST (`supabase/test-sync.sh`). Without Docker it skips both and prints why. Then it runs the Deno tests of the Edge Function and the eval, with no network: OpenRouter and Supabase are faked. Last, it runs the web app's Vitest suite, with Supabase faked, and, where Docker and buildx answer, builds the web app's image, runs it, checks it answers `/api/health` as a non-root user, and runs the Playwright specs in `web/e2e/` against it.
+- `make test` — runs `check-migration-order.test.sh`, the migration order check against repositories it builds in a temporary directory, then builds the bridge crate for this host, then runs the app's tests, given `app/config/dev.json`, the engine's tests, the engine's WebAssembly tests in Node (`wasm-bindgen.sh test`), and the database tests in `supabase/tests/` on a throwaway local stack of their own (`supabase/test-db.sh`), stopped afterwards, so concurrent checkouts do not collide and a running local stack is left untouched. It then runs the two-device sync test, `app/test/sync/two_devices_test.dart`, against another throwaway stack with Auth and PostgREST (`supabase/test-sync.sh`). Without Docker it skips both and prints why. Then it runs the Deno tests of the Edge Function and the eval, with no network: OpenRouter and Supabase are faked. Then it runs the web app's Vitest suite, with Supabase faked, and, where Docker and buildx answer, builds the web app's image, runs it, checks it answers `/api/health` as a non-root user, and runs the Playwright specs in `web/e2e/` against it (`web.sh test`). Last, `supabase/test-web.sh` runs `web/e2e/study.spec.ts` against the web app built for another throwaway stack.
 - `make build` — builds, given `app/config/dev.json`, a debug Android APK holding the bridge library, on macOS also the iOS simulator app without code signing, the engine crate with its rustdoc, `engine-wasm/` for `wasm32-unknown-unknown` with its rustdoc, warnings denied, and the web app with `next build`, then its image where Docker and buildx answer. It reports which builds it ran. `make build BUILD=ios` builds the iOS simulator app alone, and fails on a host other than macOS.
 - `make ci` — runs all four in that order. CI's ubuntu job runs the same target, which skips the iOS simulator build there, and its macOS job runs `make build BUILD=ios`.
 
@@ -101,17 +118,18 @@ supabase stop
 - `supabase test db` runs the pgTAP tests in `supabase/tests/`.
 - `supabase stop` stops the stack.
 
-The schema is described in `docs/architecture/server.md`. Only the PM applies a migration to the remote project, with `supabase db push`, after its pull request merges.
+The schema is described in `docs/architecture/server.md`. A migration reaches the production project when its pull request merges: Supabase's GitHub integration applies it, and no one runs `supabase db push` (`docs/architecture/server.md` §Location and migrations).
 
 ## Run the eval
 
 The eval needs the OpenRouter key in `supabase/functions/.env`, as `OPENROUTER_API_KEY=...`; git ignores that file, and only the owner creates it. Its spend is capped at $10 across all runs, recorded in `tools/eval/spend.json`.
 
 ```sh
-deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval --allow-net=openrouter.ai \
-  --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env tools/eval/run.ts --dry-run
+deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
+  --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
+  tools/eval/run.ts --dry-run
 ```
 
-- `--dry-run` resolves the candidates in `tools/eval/candidates.json` to model IDs, prints the estimated cost, and calls no model. Without it the run starts when the estimate fits the remaining budget, writes `docs/eval/extract-cards.md`, and appends its spend to `tools/eval/spend.json`; commit both.
+- `--dry-run` resolves the candidates in `tools/eval/candidates.json` to model IDs, prints the estimated cost, and calls no model. Without it the run starts when the estimate fits the remaining budget, keeps every reply under `tools/eval/replies/`, which git ignores, writes `docs/eval/extract-cards.md`, and appends its spend to `tools/eval/spend.json`; commit both.
 - `uv run --locked --script tools/eval/generate.py` regenerates the samples in `tools/eval/samples/`.
 - The method is described in `docs/architecture/ai-extraction.md`.

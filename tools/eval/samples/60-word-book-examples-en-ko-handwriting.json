@@ -1,0 +1,157 @@
+{
+  "image": "60-word-book-examples-en-ko-handwriting.jpg",
+  "layout": "word-book",
+  "languages": {
+    "front": "en",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "run",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "달리다",
+          "examples": [
+            "I run every morning."
+          ]
+        },
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "운영하다",
+          "examples": [
+            "She runs a small shop."
+          ]
+        },
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "달리기",
+          "examples": [
+            "We went for a run."
+          ]
+        }
+      ],
+      "pronunciation": "['ran]"
+    },
+    {
+      "front": "book",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "책",
+          "examples": [
+            "I read a book on the train."
+          ]
+        },
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "예약하다",
+          "examples": [
+            "Book a table for two."
+          ]
+        }
+      ],
+      "pronunciation": "['buk]"
+    },
+    {
+      "front": "fair",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "공정한",
+          "examples": [
+            "That is a fair price."
+          ]
+        },
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "박람회",
+          "examples": [
+            "They met at a book fair."
+          ]
+        }
+      ],
+      "pronunciation": "['fear]"
+    },
+    {
+      "front": "watch",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "보다, 지켜보다",
+          "examples": [
+            "We watch the game together."
+          ]
+        },
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "손목시계",
+          "examples": [
+            "My watch is five minutes slow."
+          ]
+        }
+      ],
+      "pronunciation": "['wach]"
+    }
+  ]
+}

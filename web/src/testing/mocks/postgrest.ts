@@ -26,6 +26,60 @@ const updatable: Record<Table, readonly string[] | null> = {
   card_states: null,
 };
 
+/**
+ * Every column of the tables whose requests the fake checks, as server.md lists them; a filter,
+ * a selected column or a written one outside them is refused, as PostgREST refuses it.
+ */
+const columns: Record<Table, readonly string[] | null> = {
+  decks: null,
+  cards: null,
+  reviews: [
+    "id",
+    "user_id",
+    "card_id",
+    "rating",
+    "reviewed_at",
+    "duration_ms",
+    "fuzz_factor",
+    "updated_at",
+    "revision",
+  ],
+  card_states: [
+    "user_id",
+    "card_id",
+    "stability",
+    "difficulty",
+    "last_review",
+    "due",
+    "updated_at",
+    "revision",
+  ],
+};
+
+/** PostgREST's answer to a request naming a column [table] lacks, or null when it names none. */
+function unknownColumn(table: Table, names: Iterable<string>): Response | null {
+  const known = columns[table];
+  if (!known) return null;
+  for (const name of names) {
+    if (!known.includes(name)) {
+      return HttpResponse.json(
+        { code: "42703", message: `column ${table}.${name} does not exist` },
+        { status: 400 },
+      );
+    }
+  }
+  return null;
+}
+
+/** The columns a request's query string filters on or selects. */
+function namedColumns(params: URLSearchParams): string[] {
+  const selected = (params.get("select") ?? "*")
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name !== "*");
+  return [...[...params.keys()].filter((name) => !reserved.has(name)), ...selected];
+}
+
 function isTable(name: string | readonly string[] | undefined): name is Table {
   return typeof name === "string" && (tables as readonly string[]).includes(name);
 }
@@ -54,6 +108,40 @@ function passes(row: Row, column: string, filter: string): boolean {
 }
 
 const reserved = new Set(["select", "order", "offset", "limit", "on_conflict", "columns"]);
+
+/** The four tables' uuid columns, as server.md lists them. */
+const uuidColumns = new Set(["id", "user_id", "deck_id", "card_id", "origin_deck_id"]);
+
+const uuidForm = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * PostgREST's answer to an `eq` or `in` filter on a uuid column with a value that is not a uuid,
+ * which Postgres refuses as `22P02` before reading a row, or null when every such value is one.
+ */
+function malformedUuid(params: URLSearchParams): Response | null {
+  for (const [column, filter] of params) {
+    if (!uuidColumns.has(column)) continue;
+    const [operator, ...rest] = filter.split(".");
+    const operand = rest.join(".");
+    const values =
+      operator === "eq"
+        ? [operand]
+        : operator === "in"
+          ? operand
+              .replace(/^\(|\)$/g, "")
+              .split(",")
+              .map((item) => item.replace(/^"|"$/g, ""))
+          : [];
+    const bad = values.find((value) => !uuidForm.test(value));
+    if (bad !== undefined) {
+      return HttpResponse.json(
+        { code: "22P02", message: `invalid input syntax for type uuid: "${bad}"` },
+        { status: 400 },
+      );
+    }
+  }
+  return null;
+}
 
 function matching(rows: Row[], params: URLSearchParams): Row[] {
   return rows.filter((row) =>
@@ -153,7 +241,7 @@ export class FakePostgrest {
       };
       const start = studyDayStart(Date.parse(before), timeZone);
       const answers = this.rows.reviews
-        .filter((row) => row.user_id === user.id && row.deleted_at == null)
+        .filter((row) => row.user_id === user.id)
         .map((row) => Date.parse(String(row.reviewed_at)))
         .filter((at) => at < start);
       // The day holding [start] has no answer here, so the count starts from the day before it.
@@ -174,7 +262,7 @@ export class FakePostgrest {
         cap_ms: number;
       };
       const live = this.rows.reviews
-        .filter((row) => row.user_id === user.id && row.deleted_at == null)
+        .filter((row) => row.user_id === user.id)
         .map((row) => ({
           card: String(row.card_id),
           at: Date.parse(String(row.reviewed_at)),
@@ -216,7 +304,7 @@ export class FakePostgrest {
       const body = (await request.json()) as { time_zone: string; before: string };
       const before = Date.parse(body.before);
       const answers = this.rows.reviews
-        .filter((row) => row.user_id === user.id && row.deleted_at == null)
+        .filter((row) => row.user_id === user.id)
         .map((row) => ({
           cardId: String(row.card_id) as CardId,
           know: row.rating === "good",
@@ -248,12 +336,14 @@ export class FakePostgrest {
         .sort();
       const rows = cards.flatMap((card) => {
         const answers = this.rows.reviews
-          .filter((row) => own(row) && String(row.card_id) === card)
+          .filter((row) => row.user_id === user.id && String(row.card_id) === card)
           .toSorted(
             (a, b) => Date.parse(String(a.reviewed_at)) - Date.parse(String(b.reviewed_at)),
           );
         if (answers.length === 0) return [];
-        const state = this.rows.card_states.find((row) => own(row) && String(row.card_id) === card);
+        const state = this.rows.card_states.find(
+          (row) => row.user_id === user.id && String(row.card_id) === card,
+        );
         return [
           {
             card_id: card,
@@ -279,7 +369,11 @@ export class FakePostgrest {
       }
       this.requests.push(`GET ${table}`);
       const url = new URL(request.url);
+      const unknown = unknownColumn(table, namedColumns(url.searchParams));
+      if (unknown) return unknown;
       this.selected.push(`${table}: ${url.searchParams.get("select") ?? "*"}`);
+      const malformed = malformedUuid(url.searchParams);
+      if (malformed) return malformed;
       const offset = Number(url.searchParams.get("offset") ?? 0);
       const limit = Number(url.searchParams.get("limit") ?? Infinity);
       const rows = ordered(
@@ -301,6 +395,11 @@ export class FakePostgrest {
       this.requests.push(`POST ${table}`);
       const body: unknown = await request.json();
       const incoming = (Array.isArray(body) ? body : [body]) as Row[];
+      const unknown = unknownColumn(
+        table,
+        incoming.flatMap((row) => Object.keys(row)),
+      );
+      if (unknown) return unknown;
       const ignore = request.headers.get("prefer")?.includes("resolution=ignore-duplicates");
       for (const row of incoming) {
         const at = this.rows[table].findIndex(
@@ -318,11 +417,18 @@ export class FakePostgrest {
       if (refused) return refused;
       this.requests.push(`PATCH ${table}`);
       const body = (await request.json()) as Row;
+      const url = new URL(request.url);
+      const unknown = unknownColumn(table, [
+        ...Object.keys(body),
+        ...namedColumns(url.searchParams),
+      ]);
+      if (unknown) return unknown;
       const allowed = updatable[table];
       if (allowed && Object.keys(body).some((column) => !allowed.includes(column))) {
         return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 403 });
       }
-      const url = new URL(request.url);
+      const malformed = malformedUuid(url.searchParams);
+      if (malformed) return malformed;
       for (const row of matching(this.rows[table], url.searchParams)) {
         const at = this.rows[table].indexOf(row);
         this.rows[table][at] = this.stamp({ ...row, ...body });

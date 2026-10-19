@@ -19,22 +19,25 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 ### Local schema
 
-- Schema v4 gives `decks`, `cards`, `reviews` and `card_states` the columns `updated_at`, `deleted_at` (a tombstone) and `dirty` (not yet pushed). `dirty` defaults to set, so every local insert is unsynced; the v3 to v4 migration leaves every existing row unsynced, and dates a review's `updated_at` by its `reviewed_at` and a card state's by its `last_review`.
+- Schema v4 gives `decks`, `cards`, `reviews` and `card_states` the columns `updated_at`, `deleted_at` (a tombstone, which schema v7 drops from `reviews` and `card_states`) and `dirty` (not yet pushed). `dirty` defaults to set, so every local insert is unsynced; the v3 to v4 migration leaves every existing row unsynced, and dates a review's `updated_at` by its `reviewed_at` and a card state's by its `last_review`.
 - `sync_state` holds at most one row: the owning account's id, and per table the pull cursor, the highest server `revision` applied. No row means no account owns the database.
 - Schema v5 adds `visibility`, `published_at` and `description` to `decks` and `origin_deck_id` to `cards`, and lets `source` be `shared`. The v4 to v5 migration leaves every deck private and rebuilds `cards` for its check, keeping every row ([`sharing.md`](sharing.md)).
 - Schema v6 stores every `DateTime` column as ISO-8601 text in UTC (drift's `store_date_time_values_as_text`, in `app/build.yaml`). Every column writes through `StoredTime` (`app/lib/database/database.dart`), which converts to UTC and truncates to the millisecond, so every value has one length and one zone, its text order is its time order, and its precision is the web's ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) §2).
   - The v5 to v6 migration rebuilds `decks`, `cards`, `reviews` and `card_states` with `TableMigration`, converting each time column from Unix seconds. It keeps every row and its `dirty` flag, with foreign keys off, as the earlier rebuilds did.
   - Its migration test starts from v5 rows that are unsynced and tombstoned, and reads them back unchanged, times included.
-- Schema v6 indexes:
+- Schema v7 drops `deleted_at` from `reviews` and `card_states`, which nothing wrote, so only decks and cards have tombstones ([ADR 0077](adr/0077-drop-the-review-and-card-state-tombstones-that-nothing-writes.md)).
+  - The v6 to v7 migration drops the partial index `reviews_live_reviewed_at`, whose term names the column, then rebuilds both tables with `TableMigration`, keeping every row and its `dirty` flag, and creates `reviews_reviewed_at`.
+  - Its migration test starts from v6 reviews and a card state, unsynced and synced, reads them back unchanged, and finds the index on `reviewed_at` whole.
+- Schema v7 indexes:
   - `cards_deck_id_created_at` on `(deck_id, created_at)`;
-  - `cards_deck_id_card_key`, rebuilt as partial where `deleted_at IS NULL`;
+  - `cards_deck_id_card_key`, partial where `deleted_at IS NULL` since v6;
   - `reviews_card_id_reviewed_at` on `(card_id, reviewed_at)`, which also covers the cascade from `cards`;
-  - `reviews_live_reviewed_at` on `reviewed_at` where `deleted_at IS NULL`;
+  - `reviews_reviewed_at` on `reviewed_at`;
   - one `{table}_unsynced` index per synced table, partial on `dirty`.
   - Each partial index is declared with `TableIndex.sql`. A query reaches it only by repeating its term, so the check for unsynced rows reads `WHERE "dirty"`, not `dirty = 1`.
   - drift's own comparison of two times is written through `julianday()`, which no index serves, so the reads by time are written in SQL comparing the text ([`study.md`](study.md)).
 - **No new local checks.** A check added on the device would have to hold for every stored row, or the table rebuild aborts and the database no longer opens. The server's checks are the authority, and a row they refuse fails the run as `SyncFailed`, as any constraint does.
-- Screens never show a tombstoned row ([`deck.md`](deck.md), [`study.md`](study.md)).
+- Screens never show a tombstoned deck or card ([`deck.md`](deck.md), [`study.md`](study.md)).
 - Ids are `TEXT` on the device, in canonical lowercase uuid form. The server keeps them as `uuid` and returns them in that same form ([`server.md`](server.md)), so a pulled id equals the one the device stored. The app creates new ids with `uuid`'s `v7()`, which the composition site passes to `DeckRepository` and `StudyRepository`. The web creates its new ids, each answer's review, with the `uuid` npm package's `v7()`, pinned exactly in `web/package.json` ([`web.md`](web.md)).
 
 ### A run
@@ -63,7 +66,6 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 ### Local purge
 
 - After a run that leaves no row unsynced, the device purges its tombstones ([ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md)):
-  - every card state tombstone is deleted;
   - every card tombstone is stripped in place, its `front` and `back` made `[]` and its `card_key` `''`;
   - every deck tombstone is stripped in place, its `name` made `''` and its `description` null, and made private.
 - A card or deck tombstone is never deleted on the device, so a review pulled later still finds its card, and no foreign key cascades to a review. The strip is not marked unsynced; the server strips its own copy ([`server.md`](server.md)).
@@ -73,7 +75,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 - Decks and cards: a tombstone wins over a live row, whichever was written later; otherwise the later `updated_at` wins. A deck's visibility, publish time and description are columns of its row and follow the same rule, so a publish on one device reaches the others. On a tie an unsynced local edit wins, since the server has not seen it; otherwise the server's.
 - Reviews: a union by id. A review on both sides keeps the rating of its later edit, with the same tie rule. On the server, a push inserts new reviews and changes an existing one's `rating` and `updated_at` only where the server's edit is older.
-- Card states are never merged. A pulled state replaces a synced local one and gives way to an unsynced one. After a pull brings a review for a card, the card's state is recomputed by folding all its non-deleted reviews in `reviewed_at` order through the engine from a new card, each with its stored fuzz factor, and written unsynced where it differs.
+- Card states are never merged. A pulled state replaces a synced local one and gives way to an unsynced one. After a pull brings a review for a card, the card's state is recomputed by folding all its reviews in `reviewed_at` order through the engine from a new card, each with its stored fuzz factor, and written unsynced where it differs.
 - A row where the local copy is kept is marked unsynced, so the next push repairs the server's copy, which another device may have overwritten.
 - Equal-key cards from two devices are distinct rows: both are kept, and the deck's duplicate rule shows them on the next edit.
 
@@ -103,7 +105,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - The web app keeps no local database: it writes the server's `reviews` and `card_states` directly, with the user's session, the same rows a phone's push sends, so the phone merges them by the rules above ([`web.md`](web.md), [ADR 0022](adr/0022-study-on-the-web-with-the-engine-in-the-browser.md)).
 - An answer inserts its review, ignoring one already stored under its id, with `good` for "안다" and `again` for "모른다", its time, its duration on screen, a fuzz factor drawn for it, and `user_id`. A toggle changes that review's `rating` and `updated_at` only where the server's edit is older, as a push does.
 - Either then upserts the card's `card_states` row with the state the engine computes, replaying the card's answers of the web session, each with its factor, from the state the session opened with.
-- Every row takes the time of the edit as `updated_at`, and `deleted_at` stays null; the server sets `revision`. The web app deletes nothing.
+- Every row takes the time of the edit as `updated_at`; the server sets `revision`. Neither table has a tombstone, and the web app deletes nothing.
 - A phone pulls these rows like any other: the review is added to or changes the rating of its card's history, so the card's state is recomputed by the fold, and a pulled state replaces a synced one.
 
 ### Tests
@@ -124,6 +126,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - [ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md) records schema v6, its indexes, the horizon and the local purge; issue #93 records the owner's direction.
 - [ADR 0053](adr/0053-purge-tombstones-before-any-store-release-enable-pg-cron-in-the-purge-s-migration-and-lock-cards-and-reviews-while-it-purges.md) records why the server's purge was built before any store release; issue #108 records the owner's decision.
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why a completed pull raises the cursor to the watermark, and why the device strips its tombstones rather than delete them; issue #106 records their implementation.
+- [ADR 0077](adr/0077-drop-the-review-and-card-state-tombstones-that-nothing-writes.md) records why reviews and card states have no tombstone, and schema v7.
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` hands the status view to the account screen.
 - Issue #24 records the decisions made by the PM, issue #29 the synced deck and card columns of schema v5, and issue #45 those for the web app as a writer.
 

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { type PlanFormState, setPlan } from "../admin-actions";
+import { type PlanFormState, setPlan } from "../set-plan";
 
 const field =
   "h-search w-full rounded-field border border-outline bg-surface px-4 text-body focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ink";

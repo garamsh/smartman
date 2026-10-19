@@ -34,6 +34,7 @@ lint:
 	./check-contents-list.sh
 	./check-object-names.sh
 	./check-convention-index.sh
+	./check-architecture-index.sh
 	./check-section-citations.sh
 	./check-heading-prefixes.sh
 	./check-secrets.sh
@@ -76,6 +77,7 @@ test:
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
 	./wasm-bindgen.sh test
 	./supabase/test-db.sh
+	./supabase/senses-dry-run.test.sh
 	./supabase/test-sync.sh
 	./deno.sh test
 	./web.sh test

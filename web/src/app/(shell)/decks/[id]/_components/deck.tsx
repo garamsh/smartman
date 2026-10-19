@@ -1,23 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { CardGrid, type DeckId, DeckTile, ReadFailure, readLibrary } from "@/features/decks";
+import { CardGrid, DeckTile, parseDeckId, ReadFailure, readLibrary } from "@/features/decks";
 import {
   countDay,
   dayPlanOf,
   deckProgress,
-  readyServerEngine,
   readToday,
+  readyServerEngine,
   sessionMinutes,
+  studyHref,
 } from "@/features/study";
 
 import { EnterLink } from "../../../_components/enter-link";
-import { studyHref } from "../../../_components/study-href";
 
-/** The deck [params] names, read on the server; a deck that does not exist is not found. */
+/**
+ * The deck [params] names, read on the server; a deck that does not exist, or an id that names
+ * none, is not found.
+ */
 export async function Deck({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const deckId = id as DeckId;
+  const deckId = parseDeckId((await params).id);
+  if (!deckId) notFound();
   const [read, studyDay] = await Promise.all([readLibrary([deckId]), readToday()]);
   if ("failure" in read) return <ReadFailure failure={read.failure} />;
   if ("failure" in studyDay) return <ReadFailure failure={studyDay.failure} />;

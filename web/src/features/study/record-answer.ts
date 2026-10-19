@@ -1,6 +1,6 @@
 "use server";
 
-import type { CardId } from "@/features/decks";
+import { parseCardId } from "@/features/decks";
 import { classifyFailure, requestTimeoutMs, type ServerFailure } from "@/supabase/failure";
 import { field } from "@/supabase/row";
 import { createClient } from "@/supabase/server";
@@ -70,7 +70,6 @@ export async function recordAnswer(input: RecordedAnswer): Promise<WriteResult> 
         last_review: iso(state.lastReview),
         due: iso(state.due),
         updated_at: editedAt,
-        deleted_at: null,
       },
       { onConflict: "user_id,card_id" },
     )
@@ -95,14 +94,14 @@ function iso(milliseconds: number): string {
 }
 
 function parseAnswer(input: unknown): RecordedAnswer | null {
-  const cardId = field(input, "cardId");
+  const cardId = parseCardId(field(input, "cardId"));
   const review = parseReview(field(input, "review"));
   const change = field(input, "change");
   const state = parseState(field(input, "state"));
   const editedAt = field(input, "editedAt");
-  if (typeof cardId !== "string" || !review || !state || !isTime(editedAt)) return null;
+  if (!cardId || !review || !state || !isTime(editedAt)) return null;
   if (change !== "answer" && change !== "toggle") return null;
-  return { cardId: cardId as CardId, review, change, state, editedAt };
+  return { cardId, review, change, state, editedAt };
 }
 
 function parseReview(value: unknown): SessionReview | null {

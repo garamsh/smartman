@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readConfig } from "./config.ts";
 import { createHandler, type LogEntry } from "./handler.ts";
 import { OPENROUTER_URL } from "./openrouter.ts";
+import { SYSTEM_PROMPT } from "./prompt_v8.ts";
 import { MAX_IMAGE_BYTES } from "./request.ts";
 
 const SUPABASE_URL = "https://project.supabase.test";
@@ -26,8 +27,12 @@ const cardsReply = (cards: unknown): Reply => ({
 type Fake = {
   replies: Reply[];
   allowed: boolean;
-  /** The row start_extraction answers for the caller's plan, or none when its settings are missing. */
+  /** Whether the caller is suspended, as user_suspended answers. */
+  suspended: boolean;
+  /** The row begin_extraction answers for the caller's plan, or none when its settings are missing. */
   plan: { plan: string; model: string; daily_limit: number } | null;
+  /** The prompt version begin_extraction serves; the seed, prompt v8, unless a test names another. */
+  prompt: { prompt_version_id: unknown; prompt: unknown };
   calls: { url: string; init: RequestInit | undefined }[];
 };
 
@@ -49,10 +54,15 @@ function fakeFetch(fake: Fake): typeof fetch {
       }
       return Promise.resolve(Response.json({ code: 403 }, { status: 403 }));
     }
-    if (url === `${SUPABASE_URL}/rest/v1/rpc/start_extraction`) {
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/user_suspended`) {
+      return Promise.resolve(Response.json(fake.suspended));
+    }
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/begin_extraction`) {
       return Promise.resolve(
         Response.json(
-          fake.plan === null ? [] : [{ ...fake.plan, allowed: fake.allowed }],
+          fake.plan === null
+            ? []
+            : [{ ...fake.plan, ...fake.prompt, allowed: fake.allowed }],
         ),
       );
     }
@@ -139,16 +149,20 @@ async function run(
     method?: string;
     replies?: Reply[];
     allowed?: boolean;
+    suspended?: boolean;
     plan?: Fake["plan"];
+    prompt?: Fake["prompt"];
     env?: Record<string, string | undefined>;
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
     replies: options.replies ?? [],
     allowed: options.allowed ?? true,
+    suspended: options.suspended ?? false,
     plan: options.plan === undefined
       ? { plan: "free", model: "vendor/primary-model", daily_limit: 30 }
       : options.plan,
+    prompt: options.prompt ?? { prompt_version_id: 1, prompt: SYSTEM_PROMPT },
     calls: [],
   };
   const env = { ...ENV, ...options.env };
@@ -199,7 +213,7 @@ async function run(
 }
 
 const usageCalls = (r: Run) =>
-  r.fake.calls.filter((call) => call.url.endsWith("/rpc/start_extraction"));
+  r.fake.calls.filter((call) => call.url.endsWith("/rpc/begin_extraction"));
 /**
  * Three cards as the model writes them: a vocabulary entry with a part of speech and an example,
  * one with neither, and a point of notes with the page's own example.
@@ -210,7 +224,11 @@ const twoCards = [{
   front: "run",
   answer: null,
   topic: "Unit 3 동사",
-  senses: [{ pos: "[동]", meaning: "달리다" }],
+  senses: [{
+    labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+    meaning: "달리다",
+    examples: [],
+  }],
   extras: [],
   pronunciation: null,
   examples: ["I run every morning."],
@@ -222,7 +240,7 @@ const twoCards = [{
   front: "river",
   answer: null,
   topic: "Unit 3 동사",
-  senses: [{ pos: null, meaning: "강" }],
+  senses: [{ labels: [], meaning: "강", examples: [] }],
   extras: [],
   pronunciation: null,
   examples: [],
@@ -254,7 +272,11 @@ const twoAnswered = [{
   back: "[동] 달리다",
   meaning: "달리다",
   partOfSpeech: "[동]",
-  senses: [{ pos: "[동]", meaning: "달리다" }],
+  senses: [{
+    labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+    meaning: "달리다",
+    examples: [],
+  }],
 }, {
   kind: "vocabulary",
   type: "concept",
@@ -265,7 +287,7 @@ const twoAnswered = [{
   topic: "Unit 3 동사",
   back: "강",
   meaning: "강",
-  senses: [{ pos: null, meaning: "강" }],
+  senses: [{ labels: [], meaning: "강", examples: [] }],
 }, {
   kind: "note",
   type: "concept",
@@ -607,7 +629,7 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
   // Nothing outside the page enters a card.
   for (
     const kept of [
-      "never add a fact, a meaning, a part of speech, an extra, a pronunciation or an example the page does not show",
+      "never add a fact, a meaning, a label, an extra, a pronunciation or an example the page does not show",
       "A field the page does not print is null or empty.",
       "Never write an example of your own.",
     ]
@@ -634,13 +656,16 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
       "A whole table is never one card.",
       'with one blank written "___"',
       "gets one cloze card per blank",
+      // v7: a sense's label copied verbatim with its brackets into "pos".
+      '"pos"',
+      "copied verbatim with its brackets",
     ]
   ) {
     assert.ok(!system.includes(dropped), `no longer asks: ${dropped}`);
   }
 });
 
-Deno.test("prompt v7 asks for #200's rules with a whole table on one table card and a cloze of one or more blanks, an exception card stating what the exception does, a type on every card, and a vocabulary entry's senses, extras and pronunciation", async () => {
+Deno.test("prompt v8 asks for #200's rules with a whole table on one table card and a cloze of one or more blanks, an exception card stating what the exception does, a type on every card, and a vocabulary entry's senses with their labels and examples, extras and pronunciation", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   const system = r.modelCalls[0].messages[0].content;
   const rules: Record<string, string[]> = {
@@ -714,15 +739,34 @@ Deno.test("prompt v7 asks for #200's rules with a whole table on one table card 
     ],
     "vocabulary form": [
       "\"senses\" are a vocabulary entry's meanings, in the page's order",
-      '"pos" is the part-of-speech label the page prints for that meaning, copied verbatim',
-      "or null when the page prints none",
+      '{"labels": [...], "meaning": "...", "examples": [...]}',
       "An entry with one meaning has one sense.",
-      '"extras" are anything else the page prints for a vocabulary entry, each with the page\'s own label verbatim',
+      '"extras" are anything else the page prints for a vocabulary entry as a whole, rather than for one meaning, each with the page\'s own label verbatim',
       '"pronunciation" is the pronunciation, phonetic transcription or reading the page prints for a vocabulary entry, verbatim',
       "when the page prints one per part of speech",
       'It is null for every vocabulary card, whose meanings go in "senses"',
     ],
+    "#228 labels transcribed, never inferred": [
+      '"labels" are the labels the page prints for that meaning, in the page\'s order, each transcribed, never inferred.',
+      'A part of speech is {"kind": "part_of_speech", "category": <name>, "text": <as printed>}',
+      '"noun", "verb", "adjective", "adverb", "pronoun", "preposition" (a postposition too), "conjunction", "interjection", "determiner" (an article too), "numeral", "particle", "auxiliary", "classifier", "phrase" (an idiom or set phrase)',
+      'Any other label is {"kind": "other", "category": null, "text": <as printed>}: a semantic class such as [사물], a register such as [구어], a field such as [의학], or a part of speech not on that list.',
+      '"text" is the label as printed, its dots kept, without the brackets or parentheses around it',
+      '"labels" is an empty list when the page prints no label for the meaning, even when its part of speech is plain: never add a label the page does not print.',
+      "A label is one the page prints with that meaning, on the meaning's own line.",
+      'A part of speech printed anywhere else is not a label of any sense, such as one before each reading of a pronunciation like "명 [\'kantent] / 형 [kan\'tent]": it stays in "pronunciation" alone',
+      '"meaning" is the translation or the definition, exactly as written',
+    ],
+    "#228 examples per sense": [
+      '"examples" are the example sentences the page prints under that meaning',
+      'an example the page prints under one of its meanings goes in that sense\'s "examples" instead',
+    ],
+    "#228 other grammar in extras": [
+      "The entry's grammar beyond its parts of speech goes here too, verbatim under the page's label",
+      '{"label": "성", "text": "der"} for a gender, a measure word, a verb class, a plural or an irregular form',
+    ],
     cap: [
+      "at most 10 senses, 5 labels and 5 examples a sense, 10 extras and 10 cloze answers",
       "keep its definitions, rules, judgment cards, handwritten tips and marked exceptions before its table and cloze cards, and those before its identify cards",
       "a table at most 8 columns and 20 rows",
     ],
@@ -761,6 +805,31 @@ Deno.test("a user at the daily limit of its plan is refused with 429 stating tha
     headers.get("Authorization"),
     "Bearer service-role-key",
     "read and recorded with the service role",
+  );
+});
+
+Deno.test("a suspended user is refused with 403 before its plan, the count or a model call", async () => {
+  const r = await run({ suspended: true, replies: [cardsReply(twoCards)] });
+  assert.equal(r.status, 403);
+  assert.deepEqual(r.body, { error: "suspended" });
+  assert.equal(r.modelCalls.length, 0);
+  assert.equal(usageCalls(r).length, 0, "nothing is counted");
+  assert.equal(r.logs[0].outcome, "suspended");
+  const suspension = r.fake.calls.find((call) =>
+    call.url.endsWith("/rpc/user_suspended")
+  );
+  assert.deepEqual(JSON.parse(String(suspension?.init?.body)), {
+    user_id: USER_ID,
+  });
+
+  const active = await run({
+    suspended: false,
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(
+    active.status,
+    200,
+    "control: the same request from an active user",
   );
 });
 
@@ -805,6 +874,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
       "outcome",
       "plan",
       "prompt_tokens",
+      "prompt_version",
       "user_id",
     ]);
     assert.ok(!JSON.stringify(r.logs).includes(photo.slice(0, 64)));
@@ -831,16 +901,51 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     user_id: USER_ID,
     plan: "free",
     model: "vendor/primary-model",
+    prompt_version: 1,
     latency_ms: 0,
     prompt_tokens: 1200,
     completion_tokens: 80,
     outcome: "ok",
   });
   assert.equal(outcomes[1].logs[0].prompt_tokens, 1200, "one call's tokens");
+  assert.equal(
+    outcomes[3].logs[0].prompt_version,
+    null,
+    "no version is logged where no call was made",
+  );
   assert.equal(outcomes[4].logs[0].user_id, null);
   assert.equal(
     outcomes[4].logs[0].plan,
     null,
     "no plan is read without a user",
   );
+});
+
+Deno.test("the model is instructed with the prompt version the server serves the caller, which the log names", async () => {
+  const served = await run({
+    replies: [cardsReply(twoCards)],
+    prompt: { prompt_version_id: 7, prompt: "Saved instructions." },
+  });
+  assert.equal(served.status, 200);
+  assert.equal(served.modelCalls[0].messages[0].content, "Saved instructions.");
+  assert.equal(served.logs[0].prompt_version, 7);
+  // Control: the seed's version is served by default, and its text is prompt v8's.
+  const seeded = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(seeded.modelCalls[0].messages[0].content, SYSTEM_PROMPT);
+  assert.equal(seeded.logs[0].prompt_version, 1);
+});
+
+Deno.test("a served row without the prompt's text or version fails before any model call", async () => {
+  for (
+    const prompt of [
+      { prompt_version_id: 1, prompt: null },
+      { prompt_version_id: "1", prompt: "Saved instructions." },
+    ]
+  ) {
+    // No model reply is scripted, so a model call would fail with another message.
+    await assert.rejects(
+      run({ prompt }),
+      /begin_extraction answered a row it should not/,
+    );
+  }
 });

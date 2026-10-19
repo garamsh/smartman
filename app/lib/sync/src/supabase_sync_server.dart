@@ -131,7 +131,6 @@ final class SupabaseSyncServer implements SyncServer {
               'last_review': _time(row.lastReview),
               'due': _time(row.due),
               'updated_at': _time(row.updatedAt),
-              'deleted_at': _timeOrNull(row.deletedAt),
             },
         ], onConflict: 'user_id,card_id'),
       );
@@ -253,7 +252,6 @@ ReviewRow _decodeReview(_Fields row) => ReviewRow(
   durationMs: row.integer('duration_ms'),
   fuzzFactor: row.numberOrNull('fuzz_factor'),
   updatedAt: row.time('updated_at'),
-  deletedAt: row.timeOrNull('deleted_at'),
   dirty: false,
 );
 
@@ -264,7 +262,6 @@ CardStateRow _decodeCardState(_Fields row) => CardStateRow(
   lastReview: row.time('last_review'),
   due: row.time('due'),
   updatedAt: row.time('updated_at'),
-  deletedAt: row.timeOrNull('deleted_at'),
   dirty: false,
 );
 

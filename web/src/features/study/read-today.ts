@@ -70,8 +70,7 @@ export async function readToday(
     supabase
       .from("reviews")
       .select(columns, counted ? { count: "exact" } : {})
-      .eq("user_id", session.userId)
-      .is("deleted_at", null);
+      .eq("user_id", session.userId);
 
   const [read, before, states, window] = await Promise.all([
     selectAll((from, to, counted) =>

@@ -1,15 +1,19 @@
-export {
-  type ActionResult,
-  dismissReports,
-  grantAdmin,
-  grantPlan,
-  type GrantPlanState,
-  type GrantState,
-  hideDeck,
-  type PlanFormState,
-  revokeAdmin,
-  revokePlan,
-  setPlan,
-  unhideDeck,
-  unpublishDeck,
-} from "./admin-actions";
+export type { ActionResult } from "./action-call";
+export { dismissReports } from "./dismiss-reports";
+export { grantAdmin, type GrantState } from "./grant-admin";
+export { grantPlan, type GrantPlanState } from "./grant-plan";
+export { hideDeck } from "./hide-deck";
+export { revokeAdmin } from "./revoke-admin";
+export { revokePlan } from "./revoke-plan";
+export { type PlanFormState, setPlan } from "./set-plan";
+export { unhideDeck } from "./unhide-deck";
+export { unpublishDeck } from "./unpublish-deck";
+export { findUsers } from "./find-users";
+export { removeDeck } from "./remove-deck";
+export { suspendUser } from "./suspend-user";
+export { unsuspendUser } from "./unsuspend-user";
+export { activatePrompt } from "./activate-prompt";
+export { clearTestPrompt } from "./clear-test-prompt";
+export { savePrompt, type SavePromptState } from "./save-prompt";
+export { testPrompt } from "./test-prompt";
+export { tryPrompt, type TrialResult } from "./try-prompt";

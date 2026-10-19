@@ -15,7 +15,9 @@ function Target({ entry }: { entry: AuditEntry }) {
         ? email
         : entry.targetKind === "plan"
           ? labelOf(planLabels, entry.targetId)
-          : entry.targetId;
+          : entry.targetKind === "prompt"
+            ? `버전 ${entry.targetId}`
+            : entry.targetId;
   const href =
     entry.targetKind === "deck"
       ? `/admin/decks/${entry.targetId}`
@@ -23,7 +25,9 @@ function Target({ entry }: { entry: AuditEntry }) {
         ? `/admin/users/${entry.targetId}`
         : entry.targetKind === "plan"
           ? "/admin/plans"
-          : null;
+          : entry.targetKind === "prompt"
+            ? `/admin/prompts/${entry.targetId}`
+            : null;
   return href === null ? (
     <span>{words}</span>
   ) : (
@@ -46,6 +50,7 @@ export function AuditLog({ entries, timeZone }: { entries: AuditEntry[]; timeZon
           <span className="text-body-strong">
             {labelOf(actionLabels, entry.action)} · <Target entry={entry} />
             {typeof entry.detail.reports === "number" ? ` · ${String(entry.detail.reports)}건` : ""}
+            {typeof entry.detail.reason === "string" ? ` · ${entry.detail.reason}` : ""}
             {typeof entry.detail.plan === "string"
               ? ` · ${labelOf(planLabels, entry.detail.plan)}`
               : ""}

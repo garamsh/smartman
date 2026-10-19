@@ -22,6 +22,14 @@ describe("the login page's callback error", () => {
     );
   });
 
+  it("says the account is suspended for error=suspended", async () => {
+    await render(CallbackError, { searchParams: Promise.resolve({ error: "suspended" }) });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.",
+    );
+  });
+
   it("shows nothing for no error or an unknown one", async () => {
     for (const error of [undefined, "other", ["failed", "cancelled"]]) {
       await render(CallbackError, { searchParams: Promise.resolve({ error }) });

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CardId, DeckId } from "@/features/decks";
-import { day, start } from "@/testing/library";
+import { day, start, uuidOf } from "@/testing/library";
 import { testUser } from "@/testing/mocks/handlers";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
@@ -11,6 +11,7 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 
 import { StudyScreen } from "../components/study-screen";
+import { recordAnswer } from "../record-answer";
 import { loadEngine } from "../engine";
 import init, { reviewCard, reviewNewCard } from "../engine-wasm/smartman_engine_wasm.js";
 import type { CardState } from "../queue";
@@ -29,7 +30,7 @@ vi.mock("next/headers", () => import("@/testing/next-headers"));
 const iso = (time: number) => new Date(time).toISOString();
 
 const card: StudyCard = {
-  id: "c1" as CardId,
+  id: uuidOf("c1") as CardId,
   deckId: "d1" as DeckId,
   front: [{ kind: "text", text: "chat" }],
   back: [{ kind: "text", text: "cat" }],
@@ -79,6 +80,42 @@ function storedFactor(postgrest: FakePostgrest): number {
 
 beforeAll(loadEngine);
 
+describe("recordAnswer", () => {
+  beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(start);
+    setRequestCookies(await signedInCookies());
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("refuses a card id that is not a uuid and writes nothing, and stores the same answer under its uuid", async () => {
+    const postgrest = new FakePostgrest();
+    server.use(...postgrest.handlers);
+    const answer = (cardId: string) =>
+      recordAnswer({
+        cardId: cardId as CardId,
+        review: {
+          id: "0192a6f0-0000-7000-8000-000000000001",
+          answer: "know",
+          reviewedAt: start,
+          durationMs: 1000,
+          fuzzFactor: 0.5,
+        },
+        change: "answer",
+        state: { stability: 3, difficulty: 5, lastReview: start, due: start + 3 * day },
+        editedAt: start,
+      });
+
+    expect(await answer("c1")).toMatchObject({ saved: false });
+    expect([postgrest.rows.reviews, postgrest.rows.card_states]).toEqual([[], []]);
+    // Control: the same answer to the card's uuid is stored.
+    expect(await answer(uuidOf("c1"))).toEqual({ saved: true });
+    expect(postgrest.rows.card_states.map((row) => row.card_id)).toEqual([uuidOf("c1")]);
+  });
+});
+
 describe("a study session's writes", () => {
   let postgrest: FakePostgrest;
   beforeEach(async () => {
@@ -127,7 +164,7 @@ describe("a study session's writes", () => {
     expect(postgrest.rows.reviews).toHaveLength(1);
     expect(postgrest.rows.reviews[0]).toMatchObject({
       user_id: testUser.id,
-      card_id: "c1",
+      card_id: uuidOf("c1"),
       rating: "good",
       reviewed_at: iso(start + 4000),
       duration_ms: 4000,
@@ -136,14 +173,14 @@ describe("a study session's writes", () => {
     const state = await expected(before, "know", start + 4000, storedFactor(postgrest));
     expect(postgrest.rows.card_states[0]).toMatchObject({
       user_id: testUser.id,
-      card_id: "c1",
+      card_id: uuidOf("c1"),
       stability: state.stability,
       difficulty: state.difficulty,
       last_review: iso(state.lastReview),
       due: iso(state.due),
       updated_at: iso(start + 4000),
-      deleted_at: null,
     });
+    expect(Object.keys(postgrest.rows.card_states[0] ?? {})).not.toContain("deleted_at");
   });
 
   it("writes each answer's review under a version 7 id in canonical lowercase form, stamped with the answer's time", async () => {

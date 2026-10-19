@@ -10,10 +10,10 @@ export 'src/extraction_client.dart'
         Extra,
         ExtractionClient,
         extractCardsUrl,
-        HttpExtractionClient,
-        Sense;
+        HttpExtractionClient;
 export 'src/failure.dart'
     show
+        AccountSuspendedFailure,
         CameraUnavailable,
         DailyLimitReached,
         ExtractionOffline,

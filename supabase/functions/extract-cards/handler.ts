@@ -5,7 +5,7 @@ import type { Config } from "./config.ts";
 import { type Attempt, extractCards } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
-import { type Plan, startExtraction } from "./supabase.ts";
+import { beginExtraction, type Plan, userSuspended } from "./supabase.ts";
 
 /** How a request ended; the error body carries the same code, for the app to show. */
 export type Outcome =
@@ -13,6 +13,7 @@ export type Outcome =
   | "method_not_allowed"
   | "not_configured"
   | "unauthenticated"
+  | "suspended"
   | "bad_request"
   | "too_large"
   | "unsupported_type"
@@ -31,6 +32,8 @@ export type LogEntry = {
   readonly plan: Plan | null;
   /** The model of the call made, or null when none was. */
   readonly model: string | null;
+  /** The id of the prompt version the call was made with, or null when none was made. */
+  readonly prompt_version: number | null;
   readonly latency_ms: number;
   /** The call's usage; null when it made none or reported none. */
   readonly prompt_tokens: number | null;
@@ -54,6 +57,8 @@ export function status(outcome: Outcome): number {
       return 400;
     case "unauthenticated":
       return 401;
+    case "suspended":
+      return 403;
     case "method_not_allowed":
       return 405;
     case "too_large":
@@ -77,6 +82,7 @@ type Result = {
   readonly outcome: Outcome;
   readonly userId: UserId | null;
   readonly plan?: Plan;
+  readonly promptVersion?: number;
   /** The plan's daily limit, which a `rate_limited` answer states. */
   readonly dailyLimit?: number;
   readonly attempts: readonly Attempt[];
@@ -128,7 +134,10 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
 
   const parsed = await parseRequest(request.body);
   if (!parsed.ok) return refused(parsed.failure, userId);
-  const start = await startExtraction(userId, supabase);
+  if (await userSuspended(userId, supabase)) {
+    return refused("suspended", userId);
+  }
+  const start = await beginExtraction(userId, supabase);
   if (start.kind === "not_configured") return refused("not_configured", userId);
   if (start.kind === "rate_limited") {
     return {
@@ -140,11 +149,13 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
     };
   }
   const plan = start.plan;
+  const promptVersion = start.prompt.versionId;
 
   const extraction = await extractCards(
     parsed.request.image,
     parsed.request.languages,
     start.model,
+    start.prompt.text,
     {
       apiKey: config.openRouterApiKey,
       fetch: deps.fetch,
@@ -157,6 +168,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
         outcome: "ok",
         userId,
         plan,
+        promptVersion,
         attempts: extraction.attempts,
         cards: extraction.cards,
       };
@@ -165,6 +177,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
         outcome: "no_cards",
         userId,
         plan,
+        promptVersion,
         attempts: extraction.attempts,
       };
     case "invalid_output":
@@ -173,6 +186,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
         outcome: "model_error",
         userId,
         plan,
+        promptVersion,
         attempts: extraction.attempts,
       };
   }
@@ -190,6 +204,7 @@ function log(deps: HandlerDeps, started: number, result: Result): void {
     user_id: result.userId,
     plan: result.plan ?? null,
     model: result.attempts.at(-1)?.model ?? null,
+    prompt_version: result.promptVersion ?? null,
     latency_ms: Math.round(deps.now() - started),
     prompt_tokens: sum((usage) => usage.promptTokens),
     completion_tokens: sum((usage) => usage.completionTokens),

@@ -13,43 +13,103 @@
   "cards": [
     {
       "front": "carry",
-      "meaning": "나르다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "나르다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "festival",
-      "meaning": "축제"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "축제",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "slowly",
-      "meaning": "천천히"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "천천히",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "hungry",
-      "meaning": "배고픈"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "배고픈",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "library",
-      "meaning": "도서관"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "도서관",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "often",
-      "meaning": "자주"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자주",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "already",
-      "meaning": "이미"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이미",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "careful",
-      "meaning": "조심스러운"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "조심스러운",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "mountain",
-      "meaning": "산"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "산",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "empty",
-      "meaning": "빈"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빈",
+          "examples": []
+        }
+      ]
     }
   ]
 }

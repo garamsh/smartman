@@ -13,75 +13,183 @@
   "cards": [
     {
       "front": "neighbor",
-      "meaning": "이웃"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이웃",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "carry",
-      "meaning": "나르다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "나르다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "library",
-      "meaning": "도서관"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "도서관",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "polite",
-      "meaning": "공손한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "공손한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "always",
-      "meaning": "항상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "항상",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "quiet",
-      "meaning": "조용한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "조용한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "window",
-      "meaning": "창문"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "창문",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "direction",
-      "meaning": "방향"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "방향",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "explain",
-      "meaning": "설명하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "설명하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "young",
-      "meaning": "젊은"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "젊은",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "promise",
-      "meaning": "약속하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "약속하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "tired",
-      "meaning": "피곤한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "피곤한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "mistake",
-      "meaning": "실수"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "실수",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "pocket",
-      "meaning": "주머니"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "주머니",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "strange",
-      "meaning": "이상한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이상한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "quickly",
-      "meaning": "빨리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빨리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "choice",
-      "meaning": "선택"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "선택",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "never",
-      "meaning": "결코"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "결코",
+          "examples": []
+        }
+      ]
     }
   ]
 }

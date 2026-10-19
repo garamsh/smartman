@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine } from "@/features/study";
 
-import { cardRow, day, deckRow, reviewRow, side, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, side, start, stateRow, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
 
 import { Deck } from "../_components/deck";
@@ -22,7 +23,8 @@ beforeAll(async () => {
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
-const open = (id: string) => render(Deck, { params: Promise.resolve({ id }) });
+/** Opens the page of the deck named [name]. */
+const open = (name: string) => render(Deck, { params: Promise.resolve({ id: uuidOf(name) }) });
 
 /** What the page says of the deck: its card count under the name, and today's cards for it. */
 const summary = () => ({
@@ -73,7 +75,7 @@ describe("the deck page", () => {
     expect(summary()).toEqual({ cards: "3", today: "2" });
     expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "href",
-      "/study?decks=d-fr",
+      `/study?decks=${uuidOf("d-fr")}`,
     );
     expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "aria-keyshortcuts",
@@ -111,7 +113,7 @@ describe("the deck page", () => {
 
       expect(summary(), answered).toEqual({ cards: "1", today: "0" });
       const href = screen.getByRole("link", { name: "학습하기" }).getAttribute("href");
-      expect(href, answered).toBe("/study?decks=d-done");
+      expect(href, answered).toBe(`/study?decks=${uuidOf("d-done")}`);
 
       cleanup();
       await render(Study, {
@@ -217,6 +219,38 @@ describe("the deck page", () => {
     expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
   });
 
+  it("shows a vocabulary card's senses on a click, each label in brackets with a gap after it, a part of speech by its short form", async () => {
+    postgrest.seed("cards", {
+      ...cardRow("c-train", "d-fr", "train", day / 2),
+      back: [
+        {
+          type: "senses",
+          payload: {
+            senses: [
+              {
+                labels: [
+                  { kind: "part_of_speech", category: "noun", text: "n." },
+                  { kind: "other", category: null, text: "사물" },
+                ],
+                meaning: "기차",
+                examples: [],
+              },
+              { labels: [], meaning: "열차", examples: [] },
+            ],
+          },
+        },
+      ],
+    });
+    await open("d-fr");
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "train, 답 가려짐" }));
+    const card = screen.getByRole("button", { name: "train, 답 [명] [사물] 기차\n열차" });
+    expect(sensesUnder(card)).toEqual([
+      { labels: ["[명]", "[사물]"], gapped: true, text: "[명][사물]기차" },
+      { labels: [], gapped: true, text: "열차" },
+    ]);
+  });
+
   it("shows a whole card's front with its blank empty in place of the answer bar, and fills it on a click", async () => {
     postgrest.seed("cards", {
       ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
@@ -272,5 +306,14 @@ describe("the deck page", () => {
   it("is not found for a deleted deck, and found for a live one", async () => {
     await expect(open("d-old")).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
     await expect(open("d-fr")).resolves.toBeDefined();
+  });
+
+  it("is not found for an address id that is not a uuid, and found for the deck's own id", async () => {
+    await expect(render(Deck, { params: Promise.resolve({ id: "d-fr" }) })).rejects.toMatchObject({
+      digest: "NEXT_HTTP_ERROR_FALLBACK;404",
+    });
+    // Control: the same deck by its uuid opens.
+    await open("d-fr");
+    expect(screen.getByRole("heading", { name: "French" })).toBeInTheDocument();
   });
 });

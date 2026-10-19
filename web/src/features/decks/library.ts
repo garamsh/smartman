@@ -6,6 +6,19 @@ export type DeckId = string & { readonly brand: "DeckId" };
 /** A card's id, as the phone created it. */
 export type CardId = string & { readonly brand: "CardId" };
 
+/** A uuid in the canonical lowercase form the server stores and returns ids in. */
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** [value] as a deck's id, or null when it is not one: an address or a request names no deck. */
+export function parseDeckId(value: unknown): DeckId | null {
+  return typeof value === "string" && uuid.test(value) ? (value as DeckId) : null;
+}
+
+/** [value] as a card's id, or null when it is not one. */
+export function parseCardId(value: unknown): CardId | null {
+  return typeof value === "string" && uuid.test(value) ? (value as CardId) : null;
+}
+
 /** A deck that is not deleted, and whether its owner published it. */
 export type Deck = { id: DeckId; name: string; public: boolean };
 

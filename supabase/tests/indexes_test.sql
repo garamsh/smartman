@@ -1,5 +1,6 @@
--- Indexes: each index ADR 0034 names for a server query exists with its columns and predicate,
--- and cards_user_id_deck_id, which cards_deck_id_created_at_id replaces, is gone.
+-- Indexes: each index ADR 0034 names for a server query exists with its columns and predicate, as
+-- ADR 0077 leaves them; cards_user_id_deck_id, which cards_deck_id_created_at_id replaces, and
+-- card_states_tombstone_revision, whose tombstone ADR 0077 drops, are gone.
 begin;
 select plan(10);
 
@@ -9,9 +10,9 @@ language sql stable as $$
   select indexdef from pg_indexes where schemaname = 'public' and indexname = index_name
 $$;
 
-select is(pg_temp.definition('reviews_live_user_id_reviewed_at'),
-  'CREATE INDEX reviews_live_user_id_reviewed_at ON public.reviews USING btree (user_id, reviewed_at) WHERE (deleted_at IS NULL)',
-  'reviews_live_user_id_reviewed_at indexes a user''s live reviews by time');
+select is(pg_temp.definition('reviews_user_id_reviewed_at'),
+  'CREATE INDEX reviews_user_id_reviewed_at ON public.reviews USING btree (user_id, reviewed_at)',
+  'reviews_user_id_reviewed_at indexes a user''s reviews by time');
 select is(pg_temp.definition('cards_deck_id_created_at_id'),
   'CREATE INDEX cards_deck_id_created_at_id ON public.cards USING btree (deck_id, created_at, id)',
   'cards_deck_id_created_at_id indexes every card of a deck, tombstones included, oldest first');
@@ -30,9 +31,8 @@ select is(pg_temp.definition('decks_tombstone_revision'),
 select is(pg_temp.definition('cards_tombstone_revision'),
   'CREATE INDEX cards_tombstone_revision ON public.cards USING btree (revision) WHERE (deleted_at IS NOT NULL)',
   'cards_tombstone_revision indexes card tombstones by revision');
-select is(pg_temp.definition('card_states_tombstone_revision'),
-  'CREATE INDEX card_states_tombstone_revision ON public.card_states USING btree (revision) WHERE (deleted_at IS NOT NULL)',
-  'card_states_tombstone_revision indexes card state tombstones by revision');
+select is(pg_temp.definition('card_states_tombstone_revision'), null,
+  'card_states_tombstone_revision is gone with the card state tombstone');
 
 -- The control: the same lookup finds an index the cards table still has.
 select isnt(pg_temp.definition('cards_user_id_revision'), null,

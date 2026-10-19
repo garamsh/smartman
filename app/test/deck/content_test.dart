@@ -130,6 +130,150 @@ void main() {
       expect(isWholeCard([const TextContent('___ is in France')]), isFalse);
     });
 
+    test('round-trips a senses block, each sense with its labels, meaning and examples', () {
+      const blocks = [
+        SensesContent([
+          CardSense(
+            labels: [
+              PartOfSpeechLabel(PartOfSpeech.noun, '명'),
+              OtherLabel('사물'),
+            ],
+            meaning: '기차',
+            examples: ['기차를 타다'],
+          ),
+          CardSense(meaning: '열차'),
+        ]),
+      ];
+
+      final encoded = encodeContent(blocks);
+
+      expect(
+        encoded,
+        '[{"type":"senses","payload":{"senses":['
+        '{"labels":[{"kind":"part_of_speech","category":"noun","text":"명"},'
+        '{"kind":"other","category":null,"text":"사물"}],'
+        '"meaning":"기차","examples":["기차를 타다"]},'
+        '{"labels":[],"meaning":"열차","examples":[]}]}}]',
+      );
+      expect(decodeContent(encoded), blocks);
+    });
+
+    test("decodes the back the server's senses migration writes, as "
+        'supabase/tests/senses_migration_test.sql states it', () {
+      const migrated =
+          '[{"type": "senses", "payload": {"senses": [{"labels": [{"kind": "part_of_speech", "text": "명", "category": "noun"}], "meaning": "사과", "examples": []}, {"labels": [{"kind": "part_of_speech", "text": "동", "category": "verb"}], "meaning": "먹다", "examples": []}]}}]';
+
+      final blocks = decodeContent(migrated);
+
+      expect(blocks, const [
+        SensesContent([
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+            meaning: '사과',
+          ),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+            meaning: '먹다',
+          ),
+        ]),
+      ]);
+      expect(plainText(blocks), '[명] 사과\n[동] 먹다');
+    });
+
+    test(
+      'rejects a senses block that breaks its shape, where a whole one decodes',
+      () {
+        String senses(Object? senses) => jsonEncode([
+          {
+            'type': 'senses',
+            'payload': {'senses': senses},
+          },
+        ]);
+        Map<String, Object?> sense({
+          Object? labels = const <Object>[],
+          Object? meaning = '사과',
+          Object? examples = const <Object>[],
+        }) => {'labels': labels, 'meaning': meaning, 'examples': examples};
+        for (final broken in [
+          senses(<Object>[]),
+          senses('사과'),
+          senses([sense(meaning: ' ')]),
+          senses([sense(meaning: null)]),
+          senses([
+            sense(examples: [1]),
+          ]),
+          senses([
+            sense(
+              labels: [
+                {'kind': 'part_of_speech', 'category': 'gerund', 'text': '동'},
+              ],
+            ),
+          ]),
+          senses([
+            sense(
+              labels: [
+                {'kind': 'other', 'category': 'noun', 'text': '사물'},
+              ],
+            ),
+          ]),
+          senses([
+            sense(
+              labels: [
+                {'kind': 'other', 'category': null, 'text': ''},
+              ],
+            ),
+          ]),
+          senses([
+            {'pos': '[명]', 'meaning': '사과'},
+          ]),
+        ]) {
+          expect(
+            () => decodeContent(broken),
+            throwsFormatException,
+            reason: broken,
+          );
+        }
+        // Control: a whole one, with a label of each kind.
+        expect(
+          decodeContent(
+            senses([
+              sense(
+                labels: [
+                  {'kind': 'part_of_speech', 'category': 'noun', 'text': '명'},
+                  {'kind': 'other', 'category': null, 'text': '사물'},
+                ],
+              ),
+            ]),
+          ).single,
+          isA<SensesContent>(),
+        );
+      },
+    );
+
+    test(
+      'a senses block reads as one line per sense, each label in brackets '
+      'and a space before the meaning, a part of speech by its short form',
+      () {
+        const senses = SensesContent([
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.verb, 'v.')],
+            meaning: '살다, 거주하다',
+          ),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.adjective, '형')],
+            meaning: '살아 있는',
+          ),
+          CardSense(labels: [OtherLabel('사물')], meaning: '철도 위를 다니는 긴 차'),
+          CardSense(meaning: '사과'),
+        ]);
+
+        expect(
+          plainText([senses]),
+          '[동] 살다, 거주하다\n[형] 살아 있는\n[사물] 철도 위를 다니는 긴 차\n사과',
+        );
+      },
+    );
+
     test('rejects a text block without text as a format error', () {
       expect(
         () => decodeContent('[{"type":"text","payload":{}}]'),

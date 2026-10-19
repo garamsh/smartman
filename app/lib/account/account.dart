@@ -13,5 +13,10 @@ export 'src/account_state.dart'
     show AccountState, AccountUnavailable, SignedIn, SignedOut, UserId;
 export 'src/config.dart' show accountDefines;
 export 'src/failure.dart'
-    show AccountFailure, AccountMisconfigured, AccountOffline, AccountRejected;
+    show
+        AccountFailure,
+        AccountMisconfigured,
+        AccountOffline,
+        AccountRejected,
+        AccountSuspended;
 export 'src/providers.dart' show accountServiceProvider, appVersionProvider;

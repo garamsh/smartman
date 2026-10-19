@@ -219,7 +219,6 @@ void main() {
         'last_review': time(state.lastReview),
         'due': time(state.due),
         'updated_at': time(editedAt),
-        'deleted_at': null,
       }, onConflict: 'user_id,card_id');
     }
 

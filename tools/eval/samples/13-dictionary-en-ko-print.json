@@ -13,56 +13,133 @@
   "cards": [
     {
       "front": "health",
-      "meaning": "건강",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "건강",
+          "examples": []
+        }
+      ],
       "examples": [
         "Exercise is good for your health."
       ]
     },
     {
       "front": "window",
-      "meaning": "창문",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "창문",
+          "examples": []
+        }
+      ],
       "examples": [
         "Please open the window."
       ]
     },
     {
       "front": "borrow",
-      "meaning": "빌리다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "빌리다",
+          "examples": []
+        }
+      ],
       "examples": [
         "Can I borrow your pen?"
       ]
     },
     {
       "front": "bright",
-      "meaning": "밝은",
-      "partOfSpeech": "adj.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "adj."
+            }
+          ],
+          "meaning": "밝은",
+          "examples": []
+        }
+      ],
       "examples": [
         "The room is bright and clean."
       ]
     },
     {
       "front": "carry",
-      "meaning": "나르다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "나르다",
+          "examples": []
+        }
+      ],
       "examples": [
         "He carried the box upstairs."
       ]
     },
     {
       "front": "early",
-      "meaning": "일찍",
-      "partOfSpeech": "adv.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adverb",
+              "text": "adv."
+            }
+          ],
+          "meaning": "일찍",
+          "examples": []
+        }
+      ],
       "examples": [
         "She gets up early."
       ]
     },
     {
       "front": "village",
-      "meaning": "마을",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "마을",
+          "examples": []
+        }
+      ],
       "examples": [
         "She grew up in a small village."
       ]

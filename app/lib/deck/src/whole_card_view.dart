@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import 'card_list.dart';
 import 'card_text.dart';
 import 'content.dart';
+import 'content_view.dart';
 
 /// A whole card's front, its blocks in order: a text block as its title, a
 /// cloze as its sentence and a table as its table, with each blank empty, or
@@ -50,6 +51,11 @@ class WholeCardView extends StatelessWidget {
             ),
             ClozeContent() => _cloze(context, block),
             TableContent() => _table(context, block),
+            SensesContent() => Text.rich(
+              sensesSpan(block),
+              textAlign: TextAlign.center,
+              style: style,
+            ),
             UnsupportedContent(:final type) => Text(
               l10n.unsupportedContent(type),
               textAlign: TextAlign.center,

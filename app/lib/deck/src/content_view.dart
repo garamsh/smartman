@@ -28,14 +28,7 @@ class ContentView extends StatelessWidget {
     final fit = this.fit;
     final style = this.style;
     if (fit case (:final minFontSize, :final width, :final height?)) {
-      final span = TextSpan(
-        children: [
-          for (final (index, block) in blocks.indexed) ...[
-            if (index > 0) const TextSpan(text: '\n'),
-            _span(l10n, block),
-          ],
-        ],
-      );
+      final span = contentSpan(l10n, blocks);
       final paragraph = DefaultTextStyle.of(context).style.merge(style);
       final fitted = fittedToBox(
         span,
@@ -71,6 +64,15 @@ class ContentView extends StatelessWidget {
                 width: fit.width,
               ),
             TextContent(:final text) => Text(text, style: style),
+            SensesContent(:final lines) when fit != null && style != null =>
+              CardText(
+                lines,
+                span: sensesSpan(block),
+                style: style,
+                minFontSize: fit.minFontSize,
+                width: fit.width,
+              ),
+            SensesContent() => Text.rich(sensesSpan(block), style: style),
             ClozeContent() || TableContent() => WholeCardView(
               [block],
               revealed: true,
@@ -87,19 +89,61 @@ class ContentView extends StatelessWidget {
   String _plain(AppLocalizations l10n, Content block) => switch (block) {
     TextContent(:final text) => text,
     ClozeContent(:final filled) || TableContent(:final filled) => filled,
+    SensesContent(:final lines) => lines,
     UnsupportedContent(:final type) => l10n.unsupportedContent(type),
   };
-
-  InlineSpan _span(AppLocalizations l10n, Content block) => switch (block) {
-    TextContent(:final text) => TextSpan(text: text),
-    ClozeContent(:final filled) ||
-    TableContent(:final filled) => TextSpan(text: filled),
-    UnsupportedContent(:final type) => TextSpan(
-      text: l10n.unsupportedContent(type),
-      style: const TextStyle(fontStyle: FontStyle.italic),
-    ),
-  };
 }
+
+String _same(String text) => text;
+
+/// [blocks] run together as one paragraph, a line apart: a text block as
+/// written, a cloze or a table filled, a senses block as [sensesSpan] draws
+/// it, and a block this version cannot show named by its type. [wrap] is
+/// applied to each piece of text, such as a list's line-breaking rule.
+InlineSpan contentSpan(
+  AppLocalizations l10n,
+  List<Content> blocks, {
+  String Function(String text) wrap = _same,
+}) => TextSpan(
+  children: [
+    for (final (index, block) in blocks.indexed) ...[
+      if (index > 0) const TextSpan(text: '\n'),
+      switch (block) {
+        TextContent(:final text) => TextSpan(text: wrap(text)),
+        ClozeContent(:final filled) ||
+        TableContent(:final filled) => TextSpan(text: wrap(filled)),
+        SensesContent() => sensesSpan(block, wrap: wrap),
+        UnsupportedContent(:final type) => TextSpan(
+          text: l10n.unsupportedContent(type),
+          style: const TextStyle(fontStyle: FontStyle.italic),
+        ),
+      },
+    ],
+  ],
+);
+
+/// [senses] one per line, each label in its brackets as its own span with a
+/// gap of [AppSpace.s4] after it, narrower than a word space, then the
+/// meaning: `[명]` 사과 (ADR 0075). The gap is the closing bracket's letter
+/// spacing, so the line stays one paragraph that fits and wraps as text.
+InlineSpan sensesSpan(
+  SensesContent senses, {
+  String Function(String text) wrap = _same,
+}) => TextSpan(
+  children: [
+    for (final (index, sense) in senses.senses.indexed) ...[
+      if (index > 0) const TextSpan(text: '\n'),
+      for (final label in sense.labels) ...[
+        TextSpan(text: '[${label.shown}'),
+        const TextSpan(
+          text: ']',
+          style: TextStyle(letterSpacing: AppSpace.s4),
+        ),
+      ],
+      TextSpan(text: wrap(sense.meaning)),
+    ],
+  ],
+);
 
 /// Space between two content blocks, and inside a block's placeholder.
 const _blockGap = AppSpace.s8;

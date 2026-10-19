@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { grantAdmin, type GrantState } from "../admin-actions";
+import { grantAdmin, type GrantState } from "../grant-admin";
 
 /** Grants the admin role to the existing user an email names. */
 export function GrantAdminForm() {

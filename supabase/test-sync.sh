@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Runs the tests that need Auth and PostgREST, the two-device sync test
-# app/test/sync/two_devices_test.dart and the sharing server test app/test/sharing/sharing_server_test.dart,
+# app/test/sync/two_devices_test.dart, the sharing server test app/test/sharing/sharing_server_test.dart and the
+# suspension test app/test/account/suspension_test.dart,
 # against a local stack of its own, or says why it did not. The stack follows ADR 0014's pattern for the database tests: its own
 # project id and reserved ports, stopped with its data however the run ends. It runs Postgres, Auth,
 # PostgREST and the API gateway, which the test signs in and syncs through.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-test_files="test/sync/two_devices_test.dart test/sharing/sharing_server_test.dart"
+test_files="test/sync/two_devices_test.dart test/sharing/sharing_server_test.dart test/account/suspension_test.dart"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "skipped the stack tests in app/ ($test_files): they need Docker, and this host has no docker command"

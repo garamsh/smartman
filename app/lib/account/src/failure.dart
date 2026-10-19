@@ -25,6 +25,17 @@ final class AccountMisconfigured extends AccountFailure {
   String toString() => 'AccountMisconfigured: $cause';
 }
 
+/// An admin suspended the account: Supabase Auth refuses its sign-in and
+/// refresh (`user_banned`).
+final class AccountSuspended extends AccountFailure {
+  const AccountSuspended(this.cause);
+
+  final Exception cause;
+
+  @override
+  String toString() => 'AccountSuspended: $cause';
+}
+
 /// Google or Supabase refused the request.
 final class AccountRejected extends AccountFailure {
   const AccountRejected(this.cause);

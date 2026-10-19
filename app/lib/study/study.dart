@@ -2,10 +2,12 @@
 /// them with the Rust engine.
 library;
 
+export 'src/model.dart' show CardState, FuzzFactor, Review;
 export 'src/providers.dart'
     show
         schedulerProvider,
         studyClockProvider,
+        studyCoachShownKey,
         studyRandomProvider,
         studyRepositoryProvider,
         studyStorageKeys,
@@ -22,6 +24,7 @@ export 'src/overview.dart'
         StatusWaiting,
         TodayStatus;
 export 'src/progress_counter.dart' show ProgressBuilder, ProgressCounter;
+export 'src/rust/api/engine.dart' show Answer;
 export 'src/queue.dart' show localOffsetAt;
 export 'src/scheduler.dart' show Scheduler;
 export 'src/stats_view.dart' show StatsView;

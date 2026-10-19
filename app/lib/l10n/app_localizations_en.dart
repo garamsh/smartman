@@ -79,6 +79,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Table and cloze cards can\'t be edited yet. You can delete one.';
 
   @override
+  String get sensesEditNote =>
+      'Editing the answer saves labels such as [명] as plain text.';
+
+  @override
   String get duplicateTitle => 'This deck already has this card';
 
   @override
@@ -482,6 +486,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dailyLimitReached =>
       'You\'ve reached today\'s limit for photos. Try again tomorrow.';
+
+  @override
+  String get accountSuspended =>
+      'This account is suspended. Write to sauce@garam.sh with any questions.';
 
   @override
   String dailyLimitReachedOf(int limit) {

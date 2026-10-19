@@ -77,6 +77,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCardReadOnly => '표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
 
   @override
+  String get sensesEditNote => '답을 고치면 [명] 같은 표시도 글자로 저장돼요.';
+
+  @override
   String get duplicateTitle => '이 덱에 이미 있는 카드예요';
 
   @override
@@ -448,6 +451,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyLimitReached => '오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.';
+
+  @override
+  String get accountSuspended => '이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.';
 
   @override
   String dailyLimitReachedOf(int limit) {

@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
-  type DeckId,
   describeContent,
   isWholeCard,
   type LibraryFailure,
   ReadFailure,
   readLibrary,
+  SideText,
   spokenContent,
   WholeCard,
 } from "@/features/decks";
@@ -17,6 +17,7 @@ import {
   newCards,
   readToday,
   readyServerEngine,
+  studyDecks,
   StudyScreen,
 } from "@/features/study";
 
@@ -26,7 +27,8 @@ import { StudySkeleton } from "./study-skeleton";
  * Opens a session over the decks [searchParams] names: reads their cards, their states and
  * today's answers on the server and selects the cards left today, through today's list, and the
  * new cards past them.
- * Decks that do not exist are left out; with none left, the page is not found.
+ * Decks that do not exist, and ids that name no deck, are left out; with none left, the page is
+ * not found.
  */
 export async function Study({
   searchParams,
@@ -34,12 +36,9 @@ export async function Study({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { decks } = await searchParams;
-  const named = typeof decks === "string" ? decks.split(",").filter(Boolean) : [];
+  const named = studyDecks(decks);
   if (named.length === 0) notFound();
-  const [read, today] = await Promise.all([
-    readLibrary(named as DeckId[]),
-    readToday({ streak: true }),
-  ]);
+  const [read, today] = await Promise.all([readLibrary(named), readToday({ streak: true })]);
   if ("failure" in read) return <Failure failure={read.failure} />;
   if ("failure" in today) return <Failure failure={today.failure} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
@@ -54,6 +53,12 @@ export async function Study({
         question: spokenContent(card.front, false),
         empty: <WholeCard blocks={card.front} revealed={false} />,
         filled: <WholeCard blocks={card.front} revealed />,
+      },
+    }),
+    ...([...card.front, ...card.back].some((block) => block.kind === "senses") && {
+      sides: {
+        front: <SideText blocks={card.front} />,
+        back: <SideText blocks={card.back} />,
       },
     }),
   }));

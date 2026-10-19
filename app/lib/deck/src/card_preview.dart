@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import 'card_list.dart';
 import 'card_text.dart';
 import 'content.dart';
+import 'content_view.dart';
 import 'split_card.dart';
 import 'whole_card_view.dart';
 
@@ -51,12 +52,14 @@ class CardPreview extends StatelessWidget {
             : SplitCard(
                 front: (context, width) => CardText(
                   describeContent(l10n, front),
+                  span: contentSpan(l10n, front),
                   style: AppType.question,
                   minFontSize: AppType.questionFloor,
                   width: width,
                 ),
                 back: (context, width) => CardText(
                   describeContent(l10n, back),
+                  span: contentSpan(l10n, back),
                   style: AppType.answer,
                   minFontSize: AppType.answerFloor,
                   width: width,

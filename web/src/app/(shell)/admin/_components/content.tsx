@@ -1,31 +1,39 @@
 import { notFound } from "next/navigation";
 
+import { parseDeckId } from "@/features/decks";
+
 import {
   AdminFailureMessage,
   AdminList,
   adminTimeZone,
   AuditLog,
   DeckView,
-  findUsers,
   GrantAdminForm,
   OverviewView,
+  parseUserId,
   PlansView,
+  PromptForm,
+  PromptTrial,
+  PromptVersions,
+  PromptView,
   PublicDecks,
   readAdmins,
   readAuditLog,
   readDeck,
+  readExtractionBreakdown,
   readOverview,
   readPlans,
+  readPromptVersion,
+  readPromptVersions,
   readPublicDecks,
   readReportedDecks,
   readUser,
+  searchUsers,
   ReportedDecks,
   UserSearch,
   UserView,
-  usdPerPhoto,
+  summarizeUsage,
 } from "@/features/admin";
-
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** The text of a search parameter, or "" when it is absent or repeated. */
 function searchText(value: string | string[] | undefined): string {
@@ -33,17 +41,18 @@ function searchText(value: string | string[] | undefined): string {
 }
 
 export async function OverviewContent() {
-  const [read, plans] = await Promise.all([readOverview(), readPlans()]);
+  const [read, plans, breakdown] = await Promise.all([
+    readOverview(),
+    readPlans(),
+    readExtractionBreakdown(),
+  ]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if ("failure" in plans) return <AdminFailureMessage failure={plans.failure} />;
+  if ("failure" in breakdown) return <AdminFailureMessage failure={breakdown.failure} />;
+  // A photo counted before calls were recorded is costed at the Free plan's model, as ADR 0071 did.
   const free = plans.data.find((plan) => plan.id === "free")?.model ?? null;
-  return (
-    <OverviewView
-      overview={read.data}
-      costModel={free}
-      usdPerPhoto={free === null ? null : usdPerPhoto(free)}
-    />
-  );
+  const today = new Date().toISOString().slice(0, 10);
+  return <OverviewView overview={read.data} usage={summarizeUsage(breakdown.data, today, free)} />;
 }
 
 export async function PlansContent() {
@@ -92,11 +101,12 @@ export async function PublicDecksContent({
 
 export async function DeckContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!uuid.test(id)) notFound();
-  const read = await readDeck(id);
+  const deckId = parseDeckId(id);
+  if (deckId === null) notFound();
+  const [read, timeZone] = await Promise.all([readDeck(deckId), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
-  return <DeckView deck={read.data} />;
+  return <DeckView deck={read.data} timeZone={timeZone} />;
 }
 
 export async function UsersContent({
@@ -106,23 +116,25 @@ export async function UsersContent({
 }) {
   const query = searchText((await searchParams).q);
   const timeZone = await adminTimeZone();
-  if (query === "") return <UserSearch query="" matches={null} timeZone={timeZone} />;
-  const read = await findUsers(query);
-  if ("failure" in read) {
-    return (
-      <>
-        <UserSearch query={query} matches={null} timeZone={timeZone} />
-        <AdminFailureMessage failure={read.failure} />
-      </>
-    );
-  }
-  return <UserSearch query={query} matches={read.data} timeZone={timeZone} />;
+  // An address with a query opens on its first page, read on the server.
+  const read = query === "" ? null : await searchUsers(query, 0);
+  return (
+    <>
+      <UserSearch
+        initialQuery={query}
+        initialPage={read === null || "failure" in read ? null : read.data}
+        timeZone={timeZone}
+      />
+      {read !== null && "failure" in read && <AdminFailureMessage failure={read.failure} />}
+    </>
+  );
 }
 
 export async function UserContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!uuid.test(id)) notFound();
-  const [read, timeZone] = await Promise.all([readUser(id), adminTimeZone()]);
+  const userId = parseUserId(id);
+  if (userId === null) notFound();
+  const [read, timeZone] = await Promise.all([readUser(userId), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
   return <UserView user={read.data} timeZone={timeZone} />;
@@ -146,4 +158,49 @@ export async function AuditContent() {
   const [read, timeZone] = await Promise.all([readAuditLog(), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   return <AuditLog entries={read.data} timeZone={timeZone} />;
+}
+
+/** A version's id in an address: digits only, as the server numbers them. */
+function versionId(value: string | string[] | undefined): number | null {
+  return typeof value === "string" && /^[1-9]\d{0,15}$/.test(value) ? Number(value) : null;
+}
+
+export async function PromptsContent({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [read, timeZone, from] = await Promise.all([
+    readPromptVersions(),
+    adminTimeZone(),
+    searchParams.then((params) => versionId(params.from)),
+  ]);
+  if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
+  const active = read.data.find((version) => version.labels.includes("active"));
+  const test = read.data.find((version) => version.labels.includes("test"));
+  // The form starts from the version the address names, or else the active one.
+  const basis = from ?? active?.id ?? null;
+  const start = basis === null ? null : await readPromptVersion(basis);
+  if (start !== null && "failure" in start) return <AdminFailureMessage failure={start.failure} />;
+  const served = test ?? active;
+  return (
+    <>
+      {served !== undefined && <PromptTrial served={{ id: served.id, test: served === test }} />}
+      <PromptForm
+        key={basis}
+        initialText={start?.data?.text ?? ""}
+        basis={start?.data ? `버전 ${String(start.data.id)}` : "빈 프롬프트"}
+      />
+      <PromptVersions versions={read.data} timeZone={timeZone} />
+    </>
+  );
+}
+
+export async function PromptContent({ params }: { params: Promise<{ id: string }> }) {
+  const id = versionId((await params).id);
+  if (id === null) notFound();
+  const [read, timeZone] = await Promise.all([readPromptVersion(id), adminTimeZone()]);
+  if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
+  if (read.data === null) notFound();
+  return <PromptView version={read.data} timeZone={timeZone} />;
 }

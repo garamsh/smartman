@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
@@ -8,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/account/src/account_service.dart';
+import 'package:smartman/account/src/failure_message.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fake_google_sign_in.dart';
@@ -245,6 +248,27 @@ void main() {
       expect(await failureOf(service.signIn), isA<AccountMisconfigured>());
     },
   );
+
+  test('Supabase refusing a banned user is a suspension, which the sign-in screen names', () async {
+    final service = await serviceAnswering(
+      (_) async => http.Response(
+        jsonEncode({
+          'code': 400,
+          'error_code': 'user_banned',
+          'msg': 'User is banned',
+        }),
+        400,
+      ),
+    );
+
+    expect(await failureOf(service.signIn), isA<AccountSuspended>());
+    expect(service.state, isA<SignedOut>());
+    final l10n = await AppLocalizations.delegate.load(const Locale('ko'));
+    expect(
+      describeAccountFailure(l10n, AccountSuspended(Exception('banned'))),
+      '이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.',
+    );
+  });
 
   test('sign-out ends the session and the Google sign-in', () async {
     final service = await serviceAnswering(
