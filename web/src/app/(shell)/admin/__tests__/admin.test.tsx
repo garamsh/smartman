@@ -232,6 +232,13 @@ describe("the reports page", () => {
     await user.click(screen.getByRole("button", { name: "숨기기" }));
     const question = screen.getByRole("group", { name: "'French' 덱을 공개 목록에서 숨길까요?" });
     expect(within(question).getByRole("button", { name: "숨기기" })).toHaveFocus();
+    // A reversible action's confirm comes last, after 취소, in the navy fill.
+    expect(
+      within(question)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["취소", "숨기기"]);
+    expect(within(question).getByRole("button", { name: "숨기기" }).className).toContain("bg-ink");
     await user.click(within(question).getByRole("button", { name: "취소" }));
     expect(admin.decks[0]?.hidden).toBe(false);
     expect(admin.calls.some((call) => call.startsWith("admin_set_deck_hidden"))).toBe(false);
@@ -363,6 +370,17 @@ describe("a deck's page", () => {
     await user.click(screen.getByRole("button", { name: "공유에서 영구 삭제" }));
     const confirm = screen.getByRole("button", { name: "영구 삭제" });
     expect(confirm).toBeDisabled();
+    // The one action that cannot be undone confirms with a red final button, last, after 취소.
+    const question = screen.getByRole("group", { name: /영구 삭제할까요/ });
+    expect(
+      within(question)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["취소", "영구 삭제"]);
+    expect(confirm.className.split(" ")).toEqual(
+      expect.arrayContaining(["bg-dont-know-text", "text-on-dont-know-text"]),
+    );
+    expect(confirm.className).not.toContain("bg-ink");
     await user.click(screen.getByRole("button", { name: "취소" }));
     expect(admin.removals.size).toBe(0);
 
