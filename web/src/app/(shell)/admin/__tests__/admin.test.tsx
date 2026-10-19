@@ -238,6 +238,22 @@ describe("the moderation actions", () => {
     expect(await hideDeck("not-an-id")).toMatchObject({ changed: false });
     expect(admin.calls).toEqual([]);
   });
+
+  it("refuse a deck's or a user's id that is not a uuid without asking the server, and a user page with one is not found", async () => {
+    for (const result of [
+      await removeDeck("not-an-id", "spam"),
+      await suspendUser("not-an-id", "spam"),
+      await unsuspendUser(`${otherUser.id}x`),
+    ]) {
+      expect(result).toMatchObject({ changed: false });
+    }
+    expect(admin.calls).toEqual([]);
+    await expect(
+      render(UserContent, { params: Promise.resolve({ id: "nope" }) }),
+    ).rejects.toMatchObject(notFound);
+    // Control: a well-formed id reaches the server.
+    expect(await suspendUser(otherUser.id, "spam")).toMatchObject({ changed: true });
+  });
 });
 
 describe("the public decks page", () => {

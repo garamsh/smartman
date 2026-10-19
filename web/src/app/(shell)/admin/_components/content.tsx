@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 
+import { parseDeckId } from "@/features/decks";
+
 import {
   AdminFailureMessage,
   AdminList,
@@ -8,6 +10,7 @@ import {
   DeckView,
   GrantAdminForm,
   OverviewView,
+  parseUserId,
   PlansView,
   PublicDecks,
   readAdmins,
@@ -24,8 +27,6 @@ import {
   UserView,
   usdPerPhoto,
 } from "@/features/admin";
-
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** The text of a search parameter, or "" when it is absent or repeated. */
 function searchText(value: string | string[] | undefined): string {
@@ -92,8 +93,9 @@ export async function PublicDecksContent({
 
 export async function DeckContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!uuid.test(id)) notFound();
-  const [read, timeZone] = await Promise.all([readDeck(id), adminTimeZone()]);
+  const deckId = parseDeckId(id);
+  if (deckId === null) notFound();
+  const [read, timeZone] = await Promise.all([readDeck(deckId), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
   return <DeckView deck={read.data} timeZone={timeZone} />;
@@ -122,8 +124,9 @@ export async function UsersContent({
 
 export async function UserContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!uuid.test(id)) notFound();
-  const [read, timeZone] = await Promise.all([readUser(id), adminTimeZone()]);
+  const userId = parseUserId(id);
+  if (userId === null) notFound();
+  const [read, timeZone] = await Promise.all([readUser(userId), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
   return <UserView user={read.data} timeZone={timeZone} />;

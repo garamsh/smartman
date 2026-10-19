@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import { type ActionResult, call, isUuid, refused } from "./action-call";
+import { type ActionResult, call, parseUserId, refused } from "./action-call";
 
 /** Removes another admin's role; the server refuses the caller's own. */
 export async function revokeAdmin(userId: string): Promise<ActionResult> {
-  if (!isUuid(userId)) return refused("malformed");
-  const result = await call("admin_revoke_admin", { user_id: userId });
+  const id = parseUserId(userId);
+  if (id === null) return refused("malformed");
+  const result = await call("admin_revoke_admin", { user_id: id });
   if ("failure" in result) return refused(result.failure);
   switch (result.data) {
     case "revoked":

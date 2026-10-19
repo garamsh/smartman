@@ -2,18 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 
-import { type ActionResult, call, isUuid, refused } from "./action-call";
+import { type ActionResult, call, parseUserId, refused } from "./action-call";
 
 /**
  * Suspends a user with a reason: Supabase Auth then refuses the user's sign-in and refresh, and the
  * server its extractions and sync writes (ADR 0072). The server checks the role and records it.
  */
 export async function suspendUser(userId: string, reason: string): Promise<ActionResult> {
-  if (!isUuid(userId) || typeof reason !== "string") return refused("malformed");
+  const id = parseUserId(userId);
+  if (id === null || typeof reason !== "string") return refused("malformed");
   if (reason.trim() === "" || reason.trim().length > 500) {
     return { changed: false, message: "정지하는 이유를 500자 안으로 적어 주세요." };
   }
-  const result = await call("admin_suspend_user", { user_id: userId, reason: reason.trim() });
+  const result = await call("admin_suspend_user", { user_id: id, reason: reason.trim() });
   if ("failure" in result) return refused(result.failure);
   switch (result.data) {
     case "suspended":
