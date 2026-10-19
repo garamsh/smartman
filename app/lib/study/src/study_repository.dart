@@ -4,8 +4,10 @@ import '../../database/database.dart';
 import '../../deck/deck.dart';
 import 'failure.dart';
 import 'model.dart';
+import 'queue.dart' show defaultDailyMinutes;
 
-/// Reads and writes the study domain's tables: card states and reviews.
+/// Reads and writes the study domain's tables: card states, reviews and the
+/// study settings.
 ///
 /// A failed read reaches the caller as [StudyStorageFailure], and a failed
 /// write as [AnswerNotSaved].
@@ -182,6 +184,32 @@ class StudyRepository {
         .getSingle();
     return row.readNullable<DateTime>('latest');
   });
+
+  /// The daily study minutes the user set, or [defaultDailyMinutes] while
+  /// none is stored.
+  Future<int> dailyMinutes() => _read(() async {
+    final row = await _db.select(_db.studySettings).getSingleOrNull();
+    return row?.dailyMinutes ?? defaultDailyMinutes;
+  });
+
+  /// Stores [minutes] as the daily study minutes, edited [at] and left for
+  /// sync to push. A failed write throws [SettingNotSaved].
+  Future<void> setDailyMinutes(int minutes, {required DateTime at}) async {
+    try {
+      await _db
+          .into(_db.studySettings)
+          .insertOnConflictUpdate(
+            StudySettingsRow(
+              id: 0,
+              dailyMinutes: minutes,
+              updatedAt: at,
+              dirty: true,
+            ),
+          );
+    } on Exception catch (cause, stackTrace) {
+      Error.throwWithStackTrace(SettingNotSaved(cause), stackTrace);
+    }
+  }
 
   /// Every review, oldest first, whether or not its card is
   /// live.

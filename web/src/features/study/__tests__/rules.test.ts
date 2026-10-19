@@ -25,13 +25,11 @@ function dartConstants(source: string): Map<string, number> {
 
 /** The rules both clients apply, each a constant of the same name in queue.dart and queue.ts. */
 const shared = {
-  coldStartNewCards: queue.coldStartNewCards,
-  coldStartStudyDays: queue.coldStartStudyDays,
+  defaultDailyMinutes: queue.defaultDailyMinutes,
+  minDailyMinutes: queue.minDailyMinutes,
+  maxDailyMinutes: queue.maxDailyMinutes,
   studyDayWindow: queue.studyDayWindow,
-  studyTimeHalfLife: queue.studyTimeHalfLife,
   paceHalfLife: queue.paceHalfLife,
-  studyTimeStepPercent: queue.studyTimeStepPercent,
-  reviewSpreadDays: queue.reviewSpreadDays,
   answerCapMs: queue.answerCapMs,
   paceMinimum: queue.paceMinimum,
   defaultAnswerMs: queue.defaultAnswerMs,
@@ -51,13 +49,26 @@ describe("the queue rules", () => {
     }
     // Control: the comparison sees a changed value.
     const changed = dartConstants(
-      queueDart.replace("const coldStartNewCards = 20;", "const coldStartNewCards = 21;"),
+      queueDart.replace("const defaultDailyMinutes = 20;", "const defaultDailyMinutes = 21;"),
     );
-    expect(changed.get("coldStartNewCards")).not.toBe(shared.coldStartNewCards);
+    expect(changed.get("defaultDailyMinutes")).not.toBe(shared.defaultDailyMinutes);
   });
 
   it("are every rule queue.dart declares, so a new one is compared too", () => {
     expect([...dartConstants(queueDart).keys()].sort()).toEqual(Object.keys(shared).sort());
+  });
+
+  it("offer the phone's daily minute choices, and the server's bounds on the minutes", () => {
+    const presets = /^const dailyMinutePresets = \[([\d, ]+)\];$/m.exec(queueDart)?.[1];
+    expect(presets?.split(", ").map(Number)).toEqual([...queue.dailyMinutePresets]);
+    const check =
+      /daily_minutes integer not null check \(daily_minutes between (\d+) and (\d+)\)/.exec(
+        migrations.map((file) => file.text).join("\n"),
+      );
+    expect([Number(check?.[1]), Number(check?.[2])]).toEqual([
+      queue.minDailyMinutes,
+      queue.maxDailyMinutes,
+    ]);
   });
 
   it("start the server's study days at studyDayStartHour, as the latest migration defines it", () => {

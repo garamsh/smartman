@@ -90,9 +90,14 @@ describe("the 오늘 and 덱 pages", () => {
 
   it("counts the new cards left today across every deck, in the time zone the browser's cookie names", async () => {
     postgrest.seed("decks", deckRow("d-a", "Alpha"), deckRow("d-b", "Beta"));
+    // 5 minutes at 10 s a card, the pace while too few answers are stored: 30 new cards a day.
+    postgrest.studySettings.set(testUser.id, {
+      daily_minutes: 5,
+      updated_at: new Date(start).toISOString(),
+    });
     postgrest.seed(
       "cards",
-      ...Array.from({ length: 25 }, (_, index) =>
+      ...Array.from({ length: 35 }, (_, index) =>
         cardRow(`a${String(index)}`, "d-a", `alpha ${String(index)}`),
       ),
       cardRow("b-answered", "d-b", "beta"),
@@ -105,7 +110,7 @@ describe("the 오늘 and 덱 pages", () => {
 
     // Without the cookie the day is read in Seoul.
     await renderBoth();
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 20장" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 30장" })).toBeInTheDocument();
     cleanup();
 
     setRequestCookies([
@@ -113,8 +118,8 @@ describe("the 오늘 and 덱 pages", () => {
       { name: "smartman-tz", value: "America/Los_Angeles" },
     ]);
     await renderBoth();
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 19장" })).toBeInTheDocument();
-    expect(rowNames()).toEqual(["Alpha, 카드 25장, 오늘 19", "Beta, 카드 1장"]);
+    expect(screen.getByRole("heading", { name: "오늘 할 카드 29장" })).toBeInTheDocument();
+    expect(rowNames()).toEqual(["Alpha, 카드 35장, 오늘 29", "Beta, 카드 1장"]);
   });
 
   it("says in the header that new cards wait while more than three days of reviews are due", async () => {
@@ -223,6 +228,11 @@ describe("the 오늘 and 덱 pages", () => {
       ),
     );
     postgrest.seed("card_states", ...reviews.map((front) => stateRow(`due-${front}`, due)));
+    // 5 minutes: (300 s - 4 reviews at 25 s) / 25 s is 8 new cards, short of the deck's ten.
+    postgrest.studySettings.set(testUser.id, {
+      daily_minutes: 5,
+      updated_at: new Date(start).toISOString(),
+    });
     // Five study days before today of four cards each answered twice in 25 s, and each due
     // card's last answer.
     postgrest.seed(
@@ -369,8 +379,8 @@ describe("the 오늘 and 덱 pages", () => {
 
     await render(Decks, {});
 
-    // New cards are capped at 20 per session.
-    expect(rowNames()).toEqual(["Big, 카드 1001장, 오늘 20"]);
+    // New cards are capped at the day's: 20 minutes at 10 s a card, with no answer stored.
+    expect(rowNames()).toEqual(["Big, 카드 1001장, 오늘 120"]);
     expect(postgrest.requests.filter((request) => request === "GET cards")).toHaveLength(2);
   });
 
@@ -386,7 +396,7 @@ describe("the 오늘 and 덱 pages", () => {
     await render(Decks, {});
 
     // Control: every card is read.
-    expect(rowNames()).toEqual(["Big, 카드 2000장, 오늘 20"]);
+    expect(rowNames()).toEqual(["Big, 카드 2000장, 오늘 120"]);
     expect(postgrest.requests.filter((request) => request === "GET cards")).toHaveLength(2);
   });
 

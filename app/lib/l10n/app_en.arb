@@ -101,6 +101,7 @@
   "studyCoachSampleFront": "deadline",
   "studyCoachSampleBack": "the date by which it is due",
   "answerNotSaved": "Couldn't save your response on this device. This card's schedule did not change.",
+  "settingNotSaved": "Couldn't save your study time on this device. Please try again.",
   "studyComplete": "Done for today",
   "nothingToStudyToday": "No cards to study today",
   "completionMinutes": "{minutes} min",

@@ -47,6 +47,13 @@ final class UnavailableSyncServer implements SyncServer {
   Future<void> pushDecks(UserId owner, List<DeckRow> rows) async => _refuse();
 
   @override
+  Future<StudySettingsRow?> pullStudySettings(UserId owner) async => _refuse();
+
+  @override
+  Future<void> pushStudySettings(UserId owner, StudySettingsRow row) async =>
+      _refuse();
+
+  @override
   Future<void> pushCards(UserId owner, List<CardRow> rows) async => _refuse();
 
   @override

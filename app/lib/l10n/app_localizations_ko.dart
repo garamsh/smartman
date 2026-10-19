@@ -389,6 +389,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get answerNotSaved => '응답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
 
   @override
+  String get settingNotSaved => '공부 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get studyComplete => '오늘 학습 완료';
 
   @override

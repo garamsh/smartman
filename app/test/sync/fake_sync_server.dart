@@ -39,6 +39,9 @@ class FakeSyncServer implements SyncServer {
   final reviews = <String, _Stored<ReviewRow>>{};
   final cardStates = <String, _Stored<CardStateRow>>{};
 
+  /// Each account's study settings, as `study_settings` holds them.
+  final studySettings = <UserId, StudySettingsRow>{};
+
   /// Every request the server answered, by method name.
   final requests = <String>[];
 
@@ -211,6 +214,23 @@ class FakeSyncServer implements SyncServer {
     }
     for (final row in rows) {
       cardStates[row.cardId] = _stamp(row.copyWith(dirty: false), owner);
+    }
+  }
+
+  @override
+  Future<StudySettingsRow?> pullStudySettings(UserId owner) async {
+    await _answer('pullStudySettings');
+    return studySettings[owner];
+  }
+
+  @override
+  Future<void> pushStudySettings(UserId owner, StudySettingsRow row) async {
+    await beforePush?.call('study_settings');
+    await _answer('pushStudySettings');
+    _own(owner);
+    final stored = studySettings[owner];
+    if (stored == null || row.updatedAt.isAfter(stored.updatedAt)) {
+      studySettings[owner] = row.copyWith(dirty: false);
     }
   }
 }

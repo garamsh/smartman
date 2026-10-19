@@ -112,7 +112,8 @@ describe("today's list, through the engine's WebAssembly", () => {
 });
 
 const now = Date.UTC(2026, 9, 14, 9);
-const goalDay = studyDay(now, [], "UTC");
+/** A day of 20 new cards, as the daily minutes would set it. */
+const goalDay = studyDay(now, [], "UTC", 20);
 const msPerDay = 86_400_000;
 
 describe("the daily goal", () => {

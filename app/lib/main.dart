@@ -100,6 +100,7 @@ Widget composeApp(
         database.cards,
         database.reviews,
         database.cardStates,
+        database.studySettings,
       ]),
     ),
   )..start();

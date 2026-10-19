@@ -173,9 +173,13 @@ type Held = { release: () => void; released: Promise<void> };
  * `study_days_before` with the web's own `studyDayStart`, as the server groups the same days;
  * `study_record_days` with the web's own `recordDays`, as the server counts the same days; and
  * `study_record_cards` from the seeded decks, cards, states and reviews, as the server joins them.
+ * It holds each user's `study_settings` row, which a user reads only its own of, and answers
+ * `save_study_settings` as the server does: the later edit wins.
  */
 export class FakePostgrest {
   readonly rows: Record<Table, Row[]> = { decks: [], cards: [], reviews: [], card_states: [] };
+  /** Each user's study settings, by user id, as `public.study_settings` holds them. */
+  readonly studySettings = new Map<string, { daily_minutes: number; updated_at: string }>();
   /** Every request answered, as `<method> <table>`. */
   readonly requests: string[] = [];
   /** The columns each read selected, as `<table>: <select>`. */
@@ -227,6 +231,43 @@ export class FakePostgrest {
   }
 
   readonly handlers = [
+    http.get(`${supabaseUrl}/rest/v1/study_settings`, ({ request }) => {
+      const user = bearerUser(request.headers.get("authorization"));
+      if (!user) {
+        return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
+      }
+      this.requests.push("GET study_settings");
+      // Row-level security returns the caller's own row alone, whatever the filter names.
+      const own = new URL(request.url).searchParams.get("user_id") === `eq.${user.id}`;
+      const row = own ? this.studySettings.get(user.id) : undefined;
+      const rows = row ? [{ user_id: user.id, ...row }] : [];
+      if (request.headers.get("accept")?.includes("vnd.pgrst.object")) {
+        return rows.length === 1
+          ? HttpResponse.json(rows[0])
+          : HttpResponse.json({ code: "PGRST116", message: "no row" }, { status: 406 });
+      }
+      return HttpResponse.json(rows);
+    }),
+    http.post(`${supabaseUrl}/rest/v1/rpc/save_study_settings`, async ({ request }) => {
+      const user = bearerUser(request.headers.get("authorization"));
+      if (!user) {
+        return HttpResponse.json({ code: "42501", message: "permission denied" }, { status: 401 });
+      }
+      this.requests.push("POST rpc/save_study_settings");
+      const body = (await request.json()) as { daily_minutes: number; updated_at: string };
+      if (body.daily_minutes < 5 || body.daily_minutes > 180) {
+        return HttpResponse.json({ code: "23514", message: "check" }, { status: 400 });
+      }
+      const stored = this.studySettings.get(user.id);
+      if (stored && Date.parse(stored.updated_at) >= Date.parse(body.updated_at)) {
+        return HttpResponse.json(false);
+      }
+      this.studySettings.set(user.id, {
+        daily_minutes: body.daily_minutes,
+        updated_at: body.updated_at,
+      });
+      return HttpResponse.json(true);
+    }),
     http.post(`${supabaseUrl}/rest/v1/rpc/study_streak_before`, async ({ request }) => {
       const refused = await this.gate("reviews");
       if (refused) return refused;

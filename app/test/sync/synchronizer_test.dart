@@ -509,4 +509,82 @@ void main() {
       expect(await a.deckNames(), ['Grace\'s']);
     });
   });
+
+  group('study settings', () {
+    test('the daily minutes set on one device reach the other, and the setting stays unsynced until pushed', () async {
+      await a.study.setDailyMinutes(45, at: a.now);
+      expect(await a.store.hasUnsynced(), isTrue);
+
+      await a.sync(_ada);
+      await b.sync(_ada);
+
+      expect(server.studySettings[_ada]?.dailyMinutes, 45);
+      expect(await a.store.hasUnsynced(), isFalse);
+      expect(await b.study.dailyMinutes(), 45);
+      // Control: a device that never synced still reads the default.
+      final fresh = Device('fresh', server, scheduler);
+      addTearDown(fresh.close);
+      expect(await fresh.study.dailyMinutes(), 20);
+    });
+
+    test('the later edit wins: a later server setting replaces an older device one, and a later unsynced device one is kept and pushed', () async {
+      await a.study.setDailyMinutes(30, at: a.now);
+      await a.sync(_ada);
+      // B sets 10 earlier than A's 30 but has not synced: A's later one wins.
+      await b.study.setDailyMinutes(
+        10,
+        at: a.now.subtract(const Duration(minutes: 1)),
+      );
+      await b.sync(_ada);
+      expect(await b.study.dailyMinutes(), 30);
+      expect(server.studySettings[_ada]?.dailyMinutes, 30);
+
+      // B sets 60 later than A's: B's is kept, pushed, and reaches A.
+      await b.study.setDailyMinutes(
+        60,
+        at: a.now.add(const Duration(minutes: 1)),
+      );
+      await b.sync(_ada);
+      await a.sync(_ada);
+      expect(server.studySettings[_ada]?.dailyMinutes, 60);
+      expect(await a.study.dailyMinutes(), 60);
+    });
+
+    test(
+      'a setting changed while its push is under way stays unsynced',
+      () async {
+        await a.study.setDailyMinutes(30, at: a.now);
+        server.beforePush = (table) async {
+          if (table != 'study_settings') return;
+          await a.study.setDailyMinutes(
+            45,
+            at: a.now.add(const Duration(seconds: 1)),
+          );
+        };
+
+        await a.sync(_ada);
+
+        expect(server.studySettings[_ada]?.dailyMinutes, 30);
+        expect(await a.store.hasUnsynced(), isTrue);
+        server.beforePush = null;
+        await a.sync(_ada);
+        expect(server.studySettings[_ada]?.dailyMinutes, 45);
+        expect(await a.store.hasUnsynced(), isFalse);
+      },
+    );
+
+    test('another account claiming the database, or sign-out, clears the setting, so the next account starts at the default', () async {
+      await a.study.setDailyMinutes(45, at: a.now);
+      await a.sync(_ada);
+      server.account = _grace;
+
+      await a.sync(_grace);
+
+      expect(await a.study.dailyMinutes(), 20);
+      expect(server.studySettings[_grace], isNull);
+      await a.study.setDailyMinutes(15, at: a.now);
+      await a.store.clear();
+      expect(await a.study.dailyMinutes(), 20);
+    });
+  });
 }

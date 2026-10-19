@@ -144,4 +144,36 @@ void main() {
       );
     });
   });
+
+  group('study settings', () {
+    StudySettingsRow settings(int minutes, DateTime at, {bool dirty = false}) =>
+        StudySettingsRow(
+          id: 0,
+          dailyMinutes: minutes,
+          updatedAt: at,
+          dirty: dirty,
+        );
+    final at = DateTime.utc(2026, 10, 15, 9);
+
+    test('keep the later edit, an unsynced local one on a tie, and the server\'s with none on the device', () {
+      final later = at.add(const Duration(seconds: 1));
+      expect(
+        mergeStudySettings(settings(30, later), settings(10, at)),
+        Kept.local,
+      );
+      expect(
+        mergeStudySettings(settings(30, at), settings(10, later)),
+        Kept.remote,
+      );
+      expect(
+        mergeStudySettings(settings(30, at, dirty: true), settings(10, at)),
+        Kept.local,
+      );
+      expect(
+        mergeStudySettings(settings(30, at), settings(10, at)),
+        Kept.remote,
+      );
+      expect(mergeStudySettings(null, settings(10, at)), Kept.remote);
+    });
+  });
 }

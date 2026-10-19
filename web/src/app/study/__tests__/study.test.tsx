@@ -14,6 +14,7 @@ import {
   stateRow,
   uuidOf,
 } from "@/testing/library";
+import { testUser } from "@/testing/mocks/handlers";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -64,8 +65,14 @@ const shown = () =>
     .map((card) => card.getAttribute("aria-label"));
 
 /** Answers every card shown with [key] until [count] cards have been shown; their fronts. */
-/** The new cards a user's first study days take. */
-const coldStartNewCards = 20;
+/**
+ * The new cards a day takes in these tests: the 5 daily minutes each test's server holds, at
+ * 10 s a card, the pace while too few answers are stored.
+ */
+const todayNewCards = 30;
+
+/** The study settings each test's server holds for the signed-in user: 5 daily minutes. */
+const fiveMinutes = { daily_minutes: 5, updated_at: new Date(0).toISOString() };
 
 /** [count] fronts, f00 onwards, created oldest first by `seedDeck`. */
 function past(count: number): string[] {
@@ -90,6 +97,7 @@ describe("the study page", () => {
     window.localStorage.setItem("studyCoachShown", "true");
     setRequestCookies(await signedInCookies());
     postgrest = new FakePostgrest();
+    postgrest.studySettings.set(testUser.id, fiveMinutes);
     server.use(...postgrest.handlers);
   });
   afterEach(() => {
@@ -123,6 +131,7 @@ describe("the study page", () => {
     async function openFresh(at = start) {
       cleanup();
       postgrest = new FakePostgrest();
+      postgrest.studySettings.set(testUser.id, fiveMinutes);
       server.use(...postgrest.handlers);
       seedDeck(postgrest, "d1", fronts);
       await open("d1", at);
@@ -156,8 +165,8 @@ describe("the study page", () => {
       expect(gaps[1]).toBe(gaps[0]);
     });
 
-    it("studies the due cards and the 20 oldest new cards, and no card not yet due", async () => {
-      const news = Array.from({ length: 25 }, (_, index) => `new ${String(index)}`);
+    it("studies the due cards and the oldest new cards the daily minutes leave room for, and no card not yet due", async () => {
+      const news = Array.from({ length: 35 }, (_, index) => `new ${String(index)}`);
       seedDeck(postgrest, "d1", news);
       postgrest.seed("cards", cardRow("due", "d1", "due"), cardRow("later", "d1", "later"));
       postgrest.seed(
@@ -167,13 +176,14 @@ describe("the study page", () => {
       );
 
       await open("d1");
-      const shown = await answerAll("{ArrowRight}", 21);
+      // (5 min - the due card at 10 s) / 10 s: 29 new cards.
+      const shown = await answerAll("{ArrowRight}", 30);
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toHaveAttribute(
         "aria-valuemax",
-        "21",
+        "30",
       );
-      expect([...shown].sort()).toEqual(["due", ...news.slice(0, 20)].sort());
+      expect([...shown].sort()).toEqual(["due", ...news.slice(0, 29)].sort());
       expect(screen.getByRole("heading", { name: "오늘 학습 완료" })).toBeInTheDocument();
     });
   });
@@ -351,27 +361,27 @@ describe("the study page", () => {
     });
 
     it("goes on with the new cards past today's on 학습하기, oldest first, each answer written", async () => {
-      const fronts = past(coldStartNewCards + 2);
+      const fronts = past(todayNewCards + 2);
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
-      await answerAll("{ArrowRight}", coldStartNewCards);
+      await answerAll("{ArrowRight}", todayNewCards);
       await waitFor(() => {
-        expect(postgrest.rows.reviews).toHaveLength(coldStartNewCards);
+        expect(postgrest.rows.reviews).toHaveLength(todayNewCards);
       });
       const studyOn = screen.getByRole("button", { name: "학습하기" });
       expect(studyOn).toHaveFocus();
       const progress = screen.getByRole("progressbar", { name: "진행" });
 
       await userEvent.setup().click(studyOn);
-      expect(await answerAll("{ArrowRight}", 2)).toEqual(fronts.slice(coldStartNewCards));
+      expect(await answerAll("{ArrowRight}", 2)).toEqual(fronts.slice(todayNewCards));
 
       expect(screen.getByRole("progressbar", { name: "진행" })).toBe(progress);
       expect(progress.getAttribute("aria-valuetext")).toBe(
-        `${String(coldStartNewCards + 2)}장 중 ${String(coldStartNewCards + 2)}장 끝냄`,
+        `${String(todayNewCards + 2)}장 중 ${String(todayNewCards + 2)}장 끝냄`,
       );
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       await waitFor(() => {
-        expect(postgrest.rows.reviews).toHaveLength(coldStartNewCards + 2);
+        expect(postgrest.rows.reviews).toHaveLength(todayNewCards + 2);
       });
     });
 
@@ -744,9 +754,9 @@ describe("the study page", () => {
 
     it("opens straight on the new cards past today's when none is left today, under the day's last card from an earlier session, until its first answer", async () => {
       // The first day's new cards answered this morning, and two more.
-      const fronts = past(coldStartNewCards + 2);
+      const fronts = past(todayNewCards + 2);
       seedDeck(postgrest, "d1", fronts);
-      for (let index = 0; index < coldStartNewCards; index++) {
+      for (let index = 0; index < todayNewCards; index++) {
         postgrest.seed(
           "card_states",
           stateRow(`d1-${String(index)}`, {
@@ -764,7 +774,7 @@ describe("the study page", () => {
       await open("d1");
 
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
-      expect(currentFront()).toBe(fronts[coldStartNewCards]);
+      expect(currentFront()).toBe(fronts[todayNewCards]);
       expect(shown()).toEqual([
         expect.stringMatching(/^지난번 마지막 카드\. 앞면: f\d\d\. .*응답: 안다$/),
       ]);
@@ -772,7 +782,7 @@ describe("the study page", () => {
       expect(screen.getByRole("status")).toBeEmptyDOMElement();
 
       await userEvent.setup().keyboard("{ArrowRight}");
-      expect(currentFront()).toBe(fronts[coldStartNewCards + 1]);
+      expect(currentFront()).toBe(fronts[todayNewCards + 1]);
       expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
     });
 
@@ -1322,6 +1332,7 @@ describe("the study page when its decks cannot be read", () => {
 
   it("says so and offers 그만하기 back to 오늘, since no shell surrounds the page", async () => {
     const postgrest = new FakePostgrest();
+    postgrest.studySettings.set(testUser.id, fiveMinutes);
     server.use(...postgrest.handlers);
     postgrest.fail("decks", 500);
     vi.setSystemTime(start);

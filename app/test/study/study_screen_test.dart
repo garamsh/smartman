@@ -83,6 +83,12 @@ class _StalledRepository implements StudyRepository {
   }
 
   @override
+  Future<int> dailyMinutes() async => defaultDailyMinutes;
+
+  @override
+  Future<void> setDailyMinutes(int minutes, {required DateTime at}) async {}
+
+  @override
   Future<Map<CardId, CardState>> allStates() async => {};
 
   @override
@@ -256,6 +262,9 @@ Future<_Study> _open(
   final seeding = StudyRepository(db, newId: () => 'seed${ids++}');
   final deck = (await tester.runAsync(() async {
     final deck = await deckRepository.createDeck('French');
+    // 5 minutes at 10 s a card, the pace while too few answers are stored:
+    // [_quota] new cards a day.
+    await seeding.setDailyMinutes(5, at: created);
     for (final name in cards) {
       final (front, back) =
           sides[name] ??
@@ -578,23 +587,23 @@ void main() {
   testWidgets(
     'a session opened with no card left today starts on the next new card, under the day\'s last card from an earlier session, until its first answer',
     (tester) async {
-      // Twenty cards answered today, the first day's new cards, and two more.
-      final (names, states) = _deck(22, today: coldStartNewCards);
+      // The day's new cards all answered today, and two more.
+      final (names, states) = _deck(_quota + 2, today: _quota);
       final study = await _open(tester, names, states: states);
 
       expect(find.text('Done for today'), findsNothing);
-      expect(study.current, 'c20 front');
-      // The day's count goes on from the twenty answered today.
-      expect(find.text('20/22'), findsOneWidget);
+      expect(study.current, 'c30 front');
+      // The day's count goes on from the cards answered today.
+      expect(find.text('30/32'), findsOneWidget);
       expect(_text(_earlier), findsOneWidget);
       expect(find.byType(PreviousPlaceholder), findsNothing);
       // No card is left of the day's, so nothing goes on to announce.
       expect(find.textContaining('Picking up'), findsNothing);
 
       await study.know();
-      expect(study.current, 'c21 front');
+      expect(study.current, 'c31 front');
       expect(_text(_earlier), findsNothing);
-      expect(_previous('c20 front'), findsOneWidget);
+      expect(_previous('c30 front'), findsOneWidget);
     },
   );
 
@@ -1475,9 +1484,9 @@ void main() {
   testWidgets(
     'Study goes on with the next new cards in the same screen and route, each answer written, and stop closes it',
     (tester) async {
-      // Eighteen of the first day's twenty new cards answered today: two are
-      // left today, and two more past them.
-      final (names, states) = _deck(22, today: coldStartNewCards - 2);
+      // All but two of the day's new cards answered today: two are left
+      // today, and two more past them.
+      final (names, states) = _deck(_quota + 2, today: _quota - 2);
       final study = await _open(tester, names, states: states);
       await study.know();
       await study.know();
@@ -1488,24 +1497,24 @@ void main() {
       await tester.tap(find.widgetWithText(AppButton, 'Study'));
       await tester.pumpAndSettle();
 
-      expect(study.current, 'c20 front');
+      expect(study.current, 'c30 front');
       expect(tester.state(find.byType(StudyScreen)), same(screen));
       expect(
         ModalRoute.of(tester.element(find.byType(StudyScreen))),
         same(route),
       );
       expect(route!.isCurrent, isTrue);
-      expect(find.text('20/22'), findsOneWidget);
+      expect(find.text('30/32'), findsOneWidget);
       await study.know();
-      expect(study.current, 'c21 front');
+      expect(study.current, 'c31 front');
       await study.know();
-      expect(find.text('22/22'), findsOneWidget);
+      expect(find.text('32/32'), findsOneWidget);
       expect(find.text('No more cards to study'), findsOneWidget);
       final reviews = await tester.runAsync(
         () => study.db.select(study.db.reviews).get(),
       );
       // The seeded answers and the session's four.
-      expect(reviews, hasLength(coldStartNewCards - 2 + 4));
+      expect(reviews, hasLength(_quota - 2 + 4));
 
       // Control: the completion card's other choice closes the screen.
       await tester.tap(find.text('Stop'));
@@ -2074,6 +2083,9 @@ final _answeredToday = CardState(
   ];
   return (names, {for (final name in names.take(today)) name: _answeredToday});
 }
+
+/// The day's new cards: the 5 daily minutes [_open] stores, at 10 s a card.
+const _quota = 30;
 
 /// Last answered four days before the session's day and due before it began.
 final _dueToday = CardState(

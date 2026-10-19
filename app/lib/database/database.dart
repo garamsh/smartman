@@ -145,13 +145,31 @@ class SyncState extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// The user's study settings, owned by the study domain and synced: the daily
+/// study minutes new cards fill (ADR 0085). At most one row; none while the
+/// user has set nothing, which reads as the default.
+@DataClassName('StudySettingsRow')
+class StudySettings extends Table {
+  IntColumn get id => integer().check(const CustomExpression('id = 0'))();
+  IntColumn get dailyMinutes => integer().check(
+    const CustomExpression('daily_minutes BETWEEN 5 AND 180'),
+  )();
+  DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// The app's local SQLite database, shared by every domain below which it sits.
-@DriftDatabase(tables: [Decks, Cards, Reviews, CardStates, SyncState])
+@DriftDatabase(
+  tables: [Decks, Cards, Reviews, CardStates, SyncState, StudySettings],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -301,6 +319,10 @@ class AppDatabase extends _$AppDatabase {
             },
           ),
         );
+      },
+      // The daily study minutes (ADR 0085): a new table, so no row changes.
+      from8To9: (m, schema) async {
+        await m.createTable(schema.studySettings);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

@@ -29,6 +29,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - The v6 to v7 migration drops the partial index `reviews_live_reviewed_at`, whose term names the column, then rebuilds both tables with `TableMigration`, keeping every row and its `dirty` flag, and creates `reviews_reviewed_at`.
   - Its migration test starts from v6 reviews and a card state, unsynced and synced, reads them back unchanged, and finds the index on `reviewed_at` whole.
 - Schema v8 renames a copied card's `source` from `shared` to `copy` ([ADR 0082](adr/0082-name-copying-a-public-deck-copy-and-keep-import-for-photo-import.md)). The v7 to v8 migration rebuilds `cards` for its check with each such row remapped, keeping every row, its origin and its `dirty` flag; the server remaps its own rows. Its migration test reads a copied, a photo and a typed card back, the copied one as `copy`.
+- Schema v9 adds `study_settings`, at most one row: the user's daily study minutes, their edit time and `dirty`; no row reads as the default ([ADR 0085](adr/0085-fill-each-day-s-new-cards-from-the-daily-study-minutes-the-user-sets-stored-per-user-on-the-server-and-synced.md), [`study.md`](study.md)).
 - Schema v7 indexes, which v8 keeps:
   - `cards_deck_id_created_at` on `(deck_id, created_at)`;
   - `cards_deck_id_card_key`, partial where `deleted_at IS NULL` since v6;
@@ -44,12 +45,13 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 ### A run
 
 - A run, for the signed-in account:
-  1. claims the database: with no owner, its rows become the account's; with another owner, every synced row, the owner and the cursors are deleted first, so another account's rows are never pushed;
+  1. claims the database: with no owner, its rows become the account's; with another owner, every synced row, the study settings, the owner and the cursors are deleted first, so another account's rows are never pushed;
   2. reads `sync_horizon()`: the horizon, below which tombstones may have been purged, and the watermark, a revision at or below which none of the account's rows is still uncommitted ([`server.md`](server.md), [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md));
   3. pulls the account's own `decks`, `cards`, `reviews`, then `card_states`, each in pages of 500 rows above its cursor, lowest revision first, applying each page and moving the cursor in one drift transaction; a pull filters on `user_id`, since the session may also read other users' public decks and cards ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md));
   4. recomputes the state of every card a pulled review was added to or changed the rating of;
-  5. pushes the unsynced rows of each table in the same order, 500 per request, then clears `dirty` on each row still as it was pushed; a row edited during the push stays unsynced;
-  6. purges the local tombstones, when nothing is left unsynced.
+  5. pulls the account's `study_settings` row whole, one row a user with no revision, and merges it as §Conflicts says;
+  6. pushes the unsynced rows of each table in the same order, 500 per request, then the study settings, through `save_study_settings`, and clears `dirty` on each row still as it was pushed; a row edited during the push stays unsynced;
+  7. purges the local tombstones, when nothing is left unsynced.
 - Pull comes before push, so a local row that loses its merge is never sent.
 - A pulled row whose parent is not yet on the device ends its page there, below the cursor; the pull starts over, up to three passes, and a parent still missing then fails the run as `SyncFailed`.
 - Each pushed row carries `user_id`, the run's account; a session belonging to another account is refused by row-level security.
@@ -76,13 +78,14 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 - Decks and cards: a tombstone wins over a live row, whichever was written later; otherwise the later `updated_at` wins. A deck's visibility, publish time and description are columns of its row and follow the same rule, so a publish on one device reaches the others. On a tie an unsynced local edit wins, since the server has not seen it; otherwise the server's.
 - Reviews: a union by id. A review on both sides keeps the rating of its later edit, with the same tie rule. On the server, a push inserts new reviews and changes an existing one's `rating` and `updated_at` only where the server's edit is older.
+- Study settings: the later `updated_at` wins, with the same tie rule as decks; a local row kept stays unsynced, so the next push repairs the server's. The server's `save_study_settings` writes only over an older row ([`server.md`](server.md)).
 - Card states are never merged. A pulled state replaces a synced local one and gives way to an unsynced one. After a pull brings a review for a card, the card's state is recomputed by folding all its reviews in `reviewed_at` order through the engine from a new card, each with its stored fuzz factor, and written unsynced where it differs.
 - A row where the local copy is kept is marked unsynced, so the next push repairs the server's copy, which another device may have overwritten.
 - Equal-key cards from two devices are distinct rows: both are kept, and the deck's duplicate rule shows them on the next edit.
 
 ### When it runs
 
-- `SyncController` starts a run when an account signs in, at app start and on each resume while signed in, and three seconds after the last of a burst of local writes that left a row unsynced. A study session's answers are such writes, so the run after a session is the one after its last answer.
+- `SyncController` starts a run when an account signs in, at app start and on each resume while signed in, and three seconds after the last of a burst of local writes that left a row unsynced. A study session's answers are such writes, as is a change of the daily study minutes, so the run after a session is the one after its last answer.
 - One run at a time: a trigger during a run starts one more after it.
 - Nothing on the study screen's answer path awaits a run; only sign-out's push and clear do.
 - A failed run is retried after 5 seconds, doubling up to 5 minutes; a successful run or the retry button restarts the backoff.
@@ -90,7 +93,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 ### Sign-out
 
 - `SyncController` is `account`'s `AccountData`. Sign-out first runs sync and reports whether nothing is left unsynced; the account screen then warns "동기화되지 않은 변경이 있어요" and lets the user cancel or sign out anyway.
-- After signing out, the controller waits for the run under way, then deletes every synced row, the owner and the cursors, so the next account starts empty and pulls its own rows.
+- After signing out, the controller waits for the run under way, then deletes every synced row, the study settings, the owner and the cursors, so the next account starts empty and pulls its own rows.
 
 ### Failures and status
 
@@ -111,13 +114,14 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 ### Tests
 
-- `app/test/sync/merge_test.dart` — each conflict rule, with a control.
+- `app/test/sync/merge_test.dart` — each conflict rule, the study settings' included, with a control.
 - `app/test/sync/synchronizer_test.dart` — push, pull, the conflict rules end to end, the state fold and ownership; a table no one writes kept at the watermark against one below the horizon rebuilt, a rebuild keeping unsynced rows, a push refused for a missing parent, and the local purge, with a review that reaches a device after it purged its card's tombstone. It runs over in-memory databases and a substituted server (`app/test/sync/fake_sync_server.dart`) with the server's revision, ownership, foreign key and review rules and a horizon a test sets.
+- `app/test/sync/synchronizer_test.dart` also covers the study settings: set on one device and read on the other against a fresh device's default, the later edit winning both ways, a setting changed during its push left unsynced, and the setting cleared by another account's claim and by sign-out.
 - `app/test/sync/sync_controller_test.dart` — when runs start, retry, `push` and `clear`.
-- `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes.
+- `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes, and pushes a change of the daily study minutes after the edit delay.
 - `app/test/sync/sync_status_test.dart` — each status on the account screen, the retry, and the tap target and contrast guidelines in both themes.
 - `app/test/sharing/sharing_server_test.dart`, run by the same script, checks that a run never pulls another account's public deck, and that a publish reaches the owner's other device.
-- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. A device left below the horizon by the server's purge, which the test runs in the stack's database container, rebuilds: a card deleted elsewhere and purged leaves it, and a studied one stays, stripped, with its review. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47).
+- `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. A device left below the horizon by the server's purge, which the test runs in the stack's database container, rebuilds: a card deleted elsewhere and purged leaves it, and a studied one stays, stripped, with its review. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47). The same file sets the daily study minutes on both devices and finds the later edit on both, against an older one that changes neither.
 
 ## Rationale
 

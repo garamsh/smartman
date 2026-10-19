@@ -49,6 +49,13 @@ abstract interface class SyncServer {
   Future<void> pushCards(UserId owner, List<CardRow> rows);
   Future<void> pushCardStates(UserId owner, List<CardStateRow> rows);
 
+  /// [owner]'s study settings, or null while [owner] has set none.
+  Future<StudySettingsRow?> pullStudySettings(UserId owner);
+
+  /// Stores [row] as [owner]'s study settings where the server's are older or
+  /// absent; the later edit wins, as a review's rating does.
+  Future<void> pushStudySettings(UserId owner, StudySettingsRow row);
+
   /// Inserts [rows] as [owner]'s. A review the server already holds keeps
   /// every column but its rating and edit time, which take the pushed ones
   /// when the pushed edit time is later. A review whose card the server does

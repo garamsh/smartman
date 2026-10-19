@@ -1,15 +1,6 @@
-import {
-  coldStartNewCards,
-  coldStartStudyDays,
-  defaultAnswerMs,
-  paceHalfLife,
-  paceMinimum,
-  reviewSpreadDays,
-  studyTimeHalfLife,
-  studyTimeStepPercent,
-} from "./queue";
+import { defaultAnswerMs, paceHalfLife, paceMinimum, studyDayEnd } from "./queue";
 
-// The day's new cards from the user's own study time and pace, by the rules of study.md, as
+// The day's new cards from the user's daily study minutes and pace, by the rules of study.md, as
 // app/lib/study/src/study_time.dart computes them.
 
 /**
@@ -28,31 +19,6 @@ export type Pace = { reviewMs: number; firstMs: number };
 
 /** The pace while the user's own is unknown: `defaultAnswerMs` for both. */
 export const unknownPace: Pace = { reviewMs: defaultAnswerMs, firstMs: defaultAnswerMs };
-
-/**
- * The time the user studies on a study day, in whole milliseconds, from [days], the study days
- * of the window, oldest first. Each day's estimate is the mean of the days up to it, each
- * weighted 0.5^(age / `studyTimeHalfLife`) with the age in study days, held within
- * `studyTimeStepPercent` of the day before's; the last is returned.
- */
-export function studyTime(days: readonly StudyDayTotal[]): number {
-  let time: number | null = null;
-  for (let upto = 0; upto < days.length; upto++) {
-    let sum = 0;
-    let weights = 0;
-    for (let index = 0; index <= upto; index++) {
-      const weight = 0.5 ** ((upto - index) / studyTimeHalfLife);
-      const day = days[index];
-      if (!day) continue;
-      sum += weight * (day.reviewMs + day.firstMs);
-      weights += weight;
-    }
-    const next = sum / weights;
-    const step = studyTimeStepPercent / 100;
-    time = time === null ? next : Math.min(Math.max(next, time * (1 - step)), time * (1 + step));
-  }
-  return Math.round(time ?? 0);
-}
 
 /**
  * The user's pace over [days], the study days of the window, oldest first: for each kind, the
@@ -85,23 +51,47 @@ export function paceOf(days: readonly StudyDayTotal[]): Pace {
 }
 
 /**
- * How many new cards a study day takes, across every deck, from [days], the study days of the
- * window before it, oldest first; [due], the reviews due in it when it started; and [load], the
- * collection's `dailyLoad` then. While [days] holds fewer than `coldStartStudyDays`,
- * `coldStartNewCards`. Otherwise the `studyTime` left after the reviews set aside, at the review
- * pace in whole milliseconds, divided by the first-answer pace, rounded down, never below zero.
- * The reviews set aside are [load], with the reviews due beyond it spread over
- * `reviewSpreadDays`.
+ * How many new cards a study day takes, across every deck: the [minutes] the user studies a day,
+ * less the [due] reviews at the review pace of [pace], in whole milliseconds, divided by its
+ * first-answer pace, rounded down, never below zero (ADR 0085).
  */
-export function dailyNewCards(
-  days: readonly StudyDayTotal[],
-  { due, load }: { due: number; load: number },
-): number {
-  if (days.length < coldStartStudyDays) return coldStartNewCards;
-  const pace = paceOf(days);
-  const setAside = load + Math.max(0, due - load) / reviewSpreadDays;
-  const left = studyTime(days) - Math.round(setAside * pace.reviewMs);
-  return Math.max(0, Math.trunc(left / pace.firstMs));
+export function dailyNewCards({
+  minutes,
+  due,
+  pace,
+}: {
+  minutes: number;
+  due: number;
+  pace: Pace;
+}): number {
+  return Math.max(0, Math.trunc((minutes * 60_000 - due * pace.reviewMs) / pace.firstMs));
+}
+
+/**
+ * The start of the study day on which the last of [remaining] never-reviewed cards is first
+ * answered, when the day starting [todayStart] takes [today] more of them and every later day
+ * [perDay]; null when they are never all taken, with [perDay] zero and more left than today takes.
+ */
+export function lastNewCardDay({
+  remaining,
+  today,
+  perDay,
+  todayStart,
+  timeZone,
+}: {
+  remaining: number;
+  today: number;
+  perDay: number;
+  todayStart: number;
+  timeZone: string;
+}): number | null {
+  if (remaining <= today) return todayStart;
+  if (perDay <= 0) return null;
+  let start = todayStart;
+  for (let left = remaining - today; left > 0; left -= perDay) {
+    start = studyDayEnd(start, timeZone);
+  }
+  return start;
 }
 
 /** The whole minutes [reviews] reviews and [fresh] new cards take at [pace], rounded up. */

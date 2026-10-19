@@ -45,33 +45,6 @@ final class Pace {
   String toString() => 'Pace(review: $reviewMs ms, first: $firstMs ms)';
 }
 
-/// The time the user studies on a study day, in whole milliseconds, from
-/// [days], the study days of the window, oldest first.
-///
-/// Each day's estimate is the mean of the days up to it, each weighted
-/// 0.5^(age / [studyTimeHalfLife]) with the age in study days, held within
-/// [studyTimeStepPercent] of the day before's; the last is returned.
-int studyTime(List<StudyDayTotal> days) {
-  double? time;
-  for (var upto = 0; upto < days.length; upto++) {
-    var sum = 0.0;
-    var weights = 0.0;
-    for (var index = 0; index <= upto; index++) {
-      final weight = pow(0.5, (upto - index) / studyTimeHalfLife).toDouble();
-      final day = days[index];
-      sum += weight * (day.reviewMs + day.firstMs);
-      weights += weight;
-    }
-    final next = sum / weights;
-    final step = studyTimeStepPercent / 100;
-    time = switch (time) {
-      null => next,
-      final before => next.clamp(before * (1 - step), before * (1 + step)),
-    };
-  }
-  return (time ?? 0).round();
-}
-
 /// The user's [Pace] over [days], the study days of the window, oldest first:
 /// for each kind, the time of its answers over their number, each day
 /// weighted 0.5^(age / [paceHalfLife]), in whole milliseconds; or
@@ -96,26 +69,34 @@ Pace paceOf(List<StudyDayTotal> days) {
   );
 }
 
-/// How many new cards a study day takes, across every deck, from [days], the
-/// study days of the window before it, oldest first; [due], the reviews due
-/// in it when it started; and [load], the collection's [dailyLoad] then.
-///
-/// While [days] holds fewer than [coldStartStudyDays], [coldStartNewCards].
-/// Otherwise the [studyTime] left after the reviews set aside, at the review
-/// pace in whole milliseconds, divided by the first-answer pace, rounded down,
-/// never below zero.
-/// The reviews set aside are [load], with the reviews due beyond it spread
-/// over [reviewSpreadDays].
-int dailyNewCards(
-  List<StudyDayTotal> days, {
+/// How many new cards a study day takes, across every deck: the [minutes] the
+/// user studies a day, less the [due] reviews at the review pace of [pace], in
+/// whole milliseconds, divided by its first-answer pace, rounded down, never
+/// below zero (ADR 0085).
+int dailyNewCards({
+  required int minutes,
   required int due,
-  required double load,
+  required Pace pace,
+}) => max(0, (minutes * 60000 - due * pace.reviewMs) ~/ pace.firstMs);
+
+/// The study day on which the last of [remaining] never-reviewed cards is
+/// first answered, as its start, when the day starting [todayStart] takes
+/// [today] more of them and every later day [perDay]; null when they are never
+/// all taken, with [perDay] zero and more left than today takes.
+DateTime? lastNewCardDay({
+  required int remaining,
+  required int today,
+  required int perDay,
+  required DateTime todayStart,
+  UtcOffsetAt offsetAt = localOffsetAt,
 }) {
-  if (days.length < coldStartStudyDays) return coldStartNewCards;
-  final pace = paceOf(days);
-  final setAside = load + max(0, due - load) / reviewSpreadDays;
-  final left = studyTime(days) - (setAside * pace.reviewMs).round();
-  return max(0, left ~/ pace.firstMs);
+  if (remaining <= today) return todayStart;
+  if (perDay <= 0) return null;
+  var day = todayStart;
+  for (var left = remaining - today; left > 0; left -= perDay) {
+    day = studyDayEnd(day, offsetAt);
+  }
+  return day;
 }
 
 /// [answers] by study day in the zone [offsetAt] gives, oldest first, each
@@ -170,14 +151,14 @@ Future<List<StudyDayTotal>> readStudyDays(
 }
 
 /// Today's [StudyDay] at [now] and the user's [Pace], read through
-/// [repository] from the stored reviews and card states, across every deck.
+/// [repository] from the stored reviews, card states and daily study minutes,
+/// across every deck.
 ///
-/// The day's new cards are [dailyNewCards] as the day stood when it started,
-/// so answering during it does not change them: the reviews due then are the
+/// The day's new cards are [dailyNewCards] over the reviews due as the day
+/// stood when it started, so answering during it does not change them: the
 /// cards due before it ends that were not answered in it, and the cards
-/// answered in it that had an answer before it; the daily load counts the
-/// latter at the time between their last answer before the day and their
-/// first in it.
+/// answered in it that had an answer before it. A change of the minutes
+/// applies at once.
 ///
 /// A failed read throws the `StudyFailure` that reports it.
 Future<(StudyDay, Pace)> readStudyDay(
@@ -196,29 +177,24 @@ Future<(StudyDay, Pace)> readStudyDay(
     firstToday.keys.toList(),
     start,
   );
-  var due = 0;
-  final standing = <CardState>[];
+  var due = earlier.length;
   for (final MapEntry(key: card, value: state)
       in (await repository.allStates()).entries) {
-    if (firstToday.containsKey(card)) continue;
-    standing.add(state);
-    if (state.due.isBefore(end)) due++;
+    if (!firstToday.containsKey(card) && state.due.isBefore(end)) due++;
   }
-  var load = dailyLoad(standing);
-  for (final MapEntry(key: card, value: last) in earlier.entries) {
-    due++;
-    final interval =
-        firstToday[card]!.difference(last).inSeconds / Duration.secondsPerDay;
-    load += 1 / max(interval, 1);
-  }
+  final pace = paceOf(days);
   final day = StudyDay.at(
     now,
     firstAnswers: [
       for (final MapEntry(key: card, value: at) in firstToday.entries)
         if (!earlier.containsKey(card)) at,
     ],
-    newCards: dailyNewCards(days, due: due, load: load),
+    newCards: dailyNewCards(
+      minutes: await repository.dailyMinutes(),
+      due: due,
+      pace: pace,
+    ),
     offsetAt: offsetAt,
   );
-  return (day, paceOf(days));
+  return (day, pace);
 }

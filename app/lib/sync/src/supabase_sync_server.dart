@@ -135,6 +135,40 @@ final class SupabaseSyncServer implements SyncServer {
         ], onConflict: 'user_id,card_id'),
       );
 
+  /// Reads [owner]'s row of `study_settings`, which row-level security limits
+  /// to the session's own.
+  @override
+  Future<StudySettingsRow?> pullStudySettings(UserId owner) =>
+      _request(() async {
+        final row = await _client
+            .from('study_settings')
+            .select()
+            .eq('user_id', owner.value)
+            .maybeSingle();
+        if (row == null) return null;
+        final fields = _Fields(row);
+        return StudySettingsRow(
+          id: 0,
+          dailyMinutes: fields.integer('daily_minutes'),
+          updatedAt: fields.time('updated_at'),
+          dirty: false,
+        );
+      });
+
+  /// Calls `save_study_settings`, which keeps the later edit; a session's
+  /// account is the owner, so [owner] is not sent.
+  @override
+  Future<void> pushStudySettings(UserId owner, StudySettingsRow row) =>
+      _request(
+        () => _client.rpc<Object?>(
+          'save_study_settings',
+          params: {
+            'daily_minutes': row.dailyMinutes,
+            'updated_at': _time(row.updatedAt),
+          },
+        ),
+      );
+
   /// Inserts the reviews the server lacks, then moves each other review's
   /// rating to the pushed one where the server's edit is older. A client may
   /// update no other column of a review.

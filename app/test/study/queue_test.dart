@@ -13,13 +13,25 @@ import 'package:smartman/study/src/study_time.dart';
 
 import 'fixtures.dart';
 
+/// The new cards a study day takes in these cases, as the daily minutes would
+/// set them.
+const _quota = 20;
+
+/// The new cards a day takes over [_Decks], whose stored daily minutes are 5.
+const _storedQuota = 30;
+
 final _now = DateTime.utc(2026, 10, 14, 9);
 
 /// UTC as the device's time zone.
 Duration _utc(DateTime _) => Duration.zero;
 
 /// The study day holding [_now] in UTC, with no new card answered in it.
-final _today = StudyDay.at(_now, firstAnswers: const [], offsetAt: _utc);
+final _today = StudyDay.at(
+  _now,
+  firstAnswers: const [],
+  newCards: _quota,
+  offsetAt: _utc,
+);
 
 List<String> _names(List<Card> cards) => [
   for (final card in cards) card.id.value,
@@ -46,6 +58,9 @@ class _Decks {
       newId: _counter('id'),
     );
     final study = StudyRepository(db, newId: _counter('review'));
+    // 5 minutes at 10 s a card, the pace while too few answers are stored:
+    // [_storedQuota] new cards a day.
+    await study.setDailyMinutes(5, at: created);
     return _Decks._(cards, study, {
       for (final name in ['a', 'b', 'empty'])
         name: (await cards.createDeck(name)).id,
@@ -167,7 +182,6 @@ void main() {
 
   group('membership', () {
     test('a session over several decks takes every card due by the end of the study day in them and the 20 oldest new cards across them', () async {
-      expect(coldStartNewCards, 20);
       final decks = await _Decks.open();
       // Created alternately, so the oldest twenty new cards are the first
       // ten of each deck.
@@ -474,6 +488,7 @@ void main() {
         final day = StudyDay.at(
           DateTime.utc(2026, 11, 1, 10),
           firstAnswers: const [],
+          newCards: _quota,
           offsetAt: pacific,
         );
 
@@ -482,10 +497,9 @@ void main() {
       },
     );
 
-    test('the day takes 20 new cards less those first answered in it across every deck, counting 04:00 and not 03:59', () async {
-      expect(coldStartNewCards, 20);
+    test('the day takes its new cards less those first answered in it across every deck, counting 04:00 and not 03:59', () async {
       final decks = await _Decks.open();
-      for (var index = 0; index < 30; index++) {
+      for (var index = 0; index < _storedQuota + 10; index++) {
         await decks.add('a', 'a new $index');
       }
       // Seoul, 11:00 on 15 October; the day began at 19:00 UTC on the 14th.
@@ -503,10 +517,10 @@ void main() {
       );
 
       final day = await decks.day(now, seoul);
-      expect(day.newCardsLeft, 18);
+      expect(day.newCardsLeft, _storedQuota - 2);
       // Deck b's answer counts against deck a's new cards.
       final queue = await decks.queueIn(['a'], day);
-      expect(queue, hasLength(18));
+      expect(queue, hasLength(_storedQuota - 2));
       expect(queue, everyElement(startsWith('a new')));
     });
 
@@ -518,8 +532,8 @@ void main() {
       // 11:00 in Seoul, 19:00 the day before in Los Angeles.
       final now = DateTime.utc(2026, 10, 15, 2);
 
-      expect((await decks.day(now, seoul)).newCardsLeft, 20);
-      expect((await decks.day(now, losAngeles)).newCardsLeft, 19);
+      expect((await decks.day(now, seoul)).newCardsLeft, _storedQuota);
+      expect((await decks.day(now, losAngeles)).newCardsLeft, _storedQuota - 1);
     });
 
     test('an unused quota is not carried to the next day, and new cards answered the day before do not count', () async {
@@ -533,22 +547,23 @@ void main() {
       }
 
       final day = await decks.day(_now, _utc);
-      expect(day.newCardsLeft, 20);
-      expect(await decks.queueIn(['a'], day), hasLength(20));
+      expect(day.newCardsLeft, _storedQuota);
+      expect(await decks.queueIn(['a'], day), hasLength(_storedQuota));
       // The day itself counts only its own first answers, whatever it is given.
       final given = StudyDay.at(
         _now,
         firstAnswers: List.filled(5, yesterday),
+        newCards: _quota,
         offsetAt: _utc,
       );
       expect(given.newCardsLeft, 20);
     });
 
-    test('the cards left never go below zero once more than 20 new cards were answered', () async {
+    test('the cards left never go below zero once more new cards were answered than the day takes', () async {
       final decks = await _Decks.open();
       await decks.add('a', 'a new');
       final morning = DateTime.utc(2026, 10, 14, 5);
-      for (var index = 0; index < 25; index++) {
+      for (var index = 0; index < _storedQuota + 5; index++) {
         await decks.firstAnswer('b', 'b $index', morning);
       }
 
@@ -559,6 +574,7 @@ void main() {
       final fewer = StudyDay.at(
         _now,
         firstAnswers: List.filled(19, morning),
+        newCards: _quota,
         offsetAt: _utc,
       );
       expect(fewer.newCardsLeft, 1);

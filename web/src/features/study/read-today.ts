@@ -13,9 +13,10 @@ import { parseTimeZone, timeZoneCookie } from "./time-zone";
 import type { Answer } from "./answer-write";
 import {
   answerCapMs,
-  type CardState,
   type CardStates,
-  dailyLoad,
+  defaultDailyMinutes,
+  maxDailyMinutes,
+  minDailyMinutes,
   type StudyDay,
   studyDay,
   studyDayEnd,
@@ -44,6 +45,10 @@ export type Today = {
   day: StudyDay;
   answers: TodayAnswer[];
   pace: Pace;
+  /** The daily study minutes the user set, or `defaultDailyMinutes` while none is stored. */
+  dailyMinutes: number;
+  /** The reviews due today as the day stood when it started, which the minutes leave room for. */
+  dueAtStart: number;
   states: CardStates;
   readAt: number;
   streakBefore: number;
@@ -72,7 +77,7 @@ export async function readToday(
       .select(columns, counted ? { count: "exact" } : {})
       .eq("user_id", session.userId);
 
-  const [read, before, states, window] = await Promise.all([
+  const [read, before, states, window, minutes] = await Promise.all([
     selectAll((from, to, counted) =>
       reviews("id, card_id, rating, reviewed_at, duration_ms", counted)
         .gte("reviewed_at", new Date(start).toISOString())
@@ -83,11 +88,13 @@ export async function readToday(
     options.streak ? readStreakBefore(supabase, start, timeZone) : { streak: 0 },
     readCardStates(),
     readStudyDays(supabase, start, timeZone),
+    readDailyMinutes(supabase, session.userId),
   ]);
   if ("failure" in read) return read;
   if ("failure" in before) return before;
   if ("failure" in states) return states;
   if ("failure" in window) return window;
+  if ("failure" in minutes) return minutes;
   const answers: TodayAnswer[] = [];
   for (const row of read.rows) {
     const answer = parseAnswer(row);
@@ -133,19 +140,20 @@ export async function readToday(
   const firstAnswers = [...firstToday].flatMap(([cardId, at]) =>
     lastBefore.has(cardId) ? [] : [at],
   );
+  const pace = paceOf(window.days);
+  const due = dueAtStart(states.states, firstToday, lastBefore, start, timeZone);
   return {
     today: {
       day: studyDay(
         now,
         firstAnswers,
         timeZone,
-        dailyNewCards(
-          window.days,
-          dueAtStart(states.states, firstToday, lastBefore, start, timeZone),
-        ),
+        dailyNewCards({ minutes: minutes.dailyMinutes, due, pace }),
       ),
       answers,
-      pace: paceOf(window.days),
+      pace,
+      dailyMinutes: minutes.dailyMinutes,
+      dueAtStart: due,
       states: states.states,
       readAt: states.readAt,
       streakBefore: before.streak,
@@ -155,11 +163,10 @@ export async function readToday(
 }
 
 /**
- * The reviews due in the study day starting at [start] and the collection's daily load, as they
- * stood when it started, so answering during it changes neither: the cards due before it ends
- * that were not answered in it, and the cards answered in it that had an answer before it, each
- * counted in the load at the time between its last answer before the day, in [lastBefore], and
- * its first in it, in [firstToday].
+ * The reviews due in the study day starting at [start] as they stood when it started, so
+ * answering during it does not change them: the cards due before it ends that were not answered
+ * in it, in [firstToday], and the cards answered in it that had an answer before it, in
+ * [lastBefore].
  */
 function dueAtStart(
   states: CardStates,
@@ -167,24 +174,35 @@ function dueAtStart(
   lastBefore: ReadonlyMap<CardId, number>,
   start: number,
   timeZone: string,
-): { due: number; load: number } {
+): number {
   const end = studyDayEnd(start, timeZone);
-  const answeredToday = new Set<string>(firstToday.keys());
-  const standing: CardState[] = [];
-  let due = 0;
+  let due = [...lastBefore.keys()].filter((cardId) => firstToday.has(cardId)).length;
   for (const [cardId, state] of Object.entries(states)) {
-    if (!state || answeredToday.has(cardId)) continue;
-    standing.push(state);
-    if (state.due < end) due += 1;
+    if (state && !firstToday.has(cardId as CardId) && state.due < end) due += 1;
   }
-  let load = dailyLoad(standing);
-  for (const [cardId, last] of lastBefore) {
-    const first = firstToday.get(cardId);
-    if (first === undefined) continue;
-    due += 1;
-    load += 1 / Math.max((first - last) / 86_400_000, 1);
-  }
-  return { due, load };
+  return due;
+}
+
+/**
+ * The daily study minutes the user set, read from its own `study_settings` row, or
+ * `defaultDailyMinutes` with none.
+ */
+async function readDailyMinutes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<{ dailyMinutes: number } | { failure: ServerFailure | "unreadable" }> {
+  const read = await supabase
+    .from("study_settings")
+    .select("daily_minutes")
+    .eq("user_id", userId)
+    .abortSignal(AbortSignal.timeout(requestTimeoutMs))
+    .maybeSingle();
+  if (read.error) return { failure: classifyFailure(read.error, read.status) };
+  if (read.data === null) return { dailyMinutes: defaultDailyMinutes };
+  const minutes = count(field(read.data, "daily_minutes"));
+  return minutes === null || minutes < minDailyMinutes || minutes > maxDailyMinutes
+    ? { failure: "unreadable" }
+    : { dailyMinutes: minutes };
 }
 
 /**
