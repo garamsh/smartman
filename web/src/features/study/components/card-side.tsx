@@ -3,7 +3,7 @@ import type { Content } from "@/features/decks";
 /**
  * Every block of a card side, in the question's or the answer's size: text as written, and a
  * block of an unknown type as a placeholder. A cloze or a table is drawn only whole, through the
- * card's faces, so a split side shows none.
+ * card's faces, and a senses block through the card's sides, so a split side shows none.
  */
 export function CardSide({ blocks, size }: { blocks: Content[]; size: "question" | "answer" }) {
   return (

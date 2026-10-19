@@ -44,6 +44,8 @@
   "@wholeCard": {"description": "Title of the sheet that shows a table or cloze card whole, its blanks filled."},
   "wholeCardReadOnly": "표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.",
   "@wholeCardReadOnly": {"description": "In the card editor under a table or cloze card, which it shows read-only."},
+  "sensesEditNote": "답을 고치면 [명] 같은 표시도 글자로 저장돼요.",
+  "@sensesEditNote": {"description": "In the card editor under the answer of a vocabulary card whose senses carry labels."},
   "duplicateTitle": "이 덱에 이미 있는 카드예요",
   "@duplicateTitle": {"description": "Title of the sheet shown when a card's front duplicates another in the deck."},
   "duplicateBody": "대소문자와 띄어쓰기는 구분하지 않아요.",

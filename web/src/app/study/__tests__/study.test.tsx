@@ -19,6 +19,7 @@ import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
 
 import { Study } from "../_components/study";
@@ -964,6 +965,45 @@ describe("the study page", () => {
     await user.keyboard("k");
     expect(screen.queryByText("지난번 마지막 카드")).not.toBeInTheDocument();
     expect(shown()).toEqual([expect.stringMatching(/^앞면: trois\. /)]);
+  });
+
+  it("shows a vocabulary card's senses once answered, on the previous card and in its dialog, each label in brackets with a gap after it", async () => {
+    postgrest.seed("decks", deckRow("d1", "d1"));
+    postgrest.seed("cards", {
+      ...cardRow("d1-0", "d1", "train"),
+      back: [
+        {
+          type: "senses",
+          payload: {
+            senses: [
+              {
+                labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
+                meaning: "기차",
+                examples: [],
+              },
+              {
+                labels: [{ kind: "other", category: null, text: "구어" }],
+                meaning: "열차",
+                examples: [],
+              },
+            ],
+          },
+        },
+      ],
+    });
+    await open("d1");
+    const user = userEvent.setup();
+    await user.keyboard("k");
+
+    const card = within(cards()).getByRole("article");
+    const drawn = [
+      { labels: ["[명]"], gapped: true, text: "[명]기차" },
+      { labels: ["[구어]"], gapped: true, text: "[구어]열차" },
+    ];
+    expect(sensesUnder(card)).toEqual(drawn);
+    expect(shown()).toEqual(["앞면: train. 뒷면: [명] 기차\n[구어] 열차. 답: 안다"]);
+    await user.click(within(card).getByRole("button", { name: "카드 전체 보기" }));
+    expect(sensesUnder(screen.getByRole("dialog", { name: "카드" }))).toEqual(drawn);
   });
 
   describe("a whole card", () => {

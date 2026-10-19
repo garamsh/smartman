@@ -18,22 +18,6 @@ enum CardKind { vocabulary, note }
 /// table with the cells to recall as blanks.
 enum CardType { concept, cloze, identify, table }
 
-/// One meaning of a vocabulary entry, with the part-of-speech label the page
-/// prints for it, such as "[동]"; null when it prints none.
-final class Sense {
-  const Sense({this.pos, required this.meaning});
-
-  final String? pos;
-  final String meaning;
-
-  @override
-  bool operator ==(Object other) =>
-      other is Sense && other.pos == pos && other.meaning == meaning;
-
-  @override
-  int get hashCode => Object.hash(pos, meaning);
-}
-
 /// Something else the page prints for a vocabulary entry, under its own
 /// label, such as 유의어.
 final class Extra {
@@ -72,7 +56,7 @@ final class CandidateCard {
          front: front,
          answer: meaning,
          kind: CardKind.vocabulary,
-         senses: [Sense(pos: partOfSpeech, meaning: meaning)],
+         senses: [_oneSense(partOfSpeech, meaning)],
          examples: examples,
          topic: topic,
        );
@@ -85,7 +69,7 @@ final class CandidateCard {
 
   final CardKind kind;
   final CardType type;
-  final List<Sense> senses;
+  final List<CardSense> senses;
   final List<Extra> extras;
   final String? pronunciation;
 
@@ -197,9 +181,10 @@ List<CandidateCard> _parseCards(String body) {
 /// A card of non-empty `front` and `back`, a `topic` of 1 to
 /// [maxTopicChars] characters when it has one, and the fields of its `kind`.
 /// A note's answer is its `answer`, else its `back`. A vocabulary card's
-/// senses are its `senses` of `{pos, meaning}`, else, from a function before
-/// senses, one sense of its `meaning` or `answer`, else its `back`, with its
-/// `partOfSpeech`. A card with no `kind` from a function before kinds is a
+/// senses are its `senses`, each `{labels, meaning, examples}` as `deck`'s
+/// [decodeSense] reads it (ADR 0075), else, from a function before senses,
+/// one sense of its `meaning` or `answer`, else its `back`, its
+/// `partOfSpeech` as a label as printed. A card with no `kind` from a function before kinds is a
 /// vocabulary card; one with no `type`, or a `type` this version does not
 /// know, is a concept, so a new type does not fail the extraction. A cloze
 /// card's `cloze` and a table card's `table` become its [wholeFront]. Other
@@ -235,7 +220,7 @@ CandidateCard _parseCard(Object? card) {
     final answer = optional('answer') ?? optional('meaning') ?? back.trim();
     final senses = fields.containsKey('senses')
         ? list('senses', _parseSense)
-        : [Sense(pos: optional('partOfSpeech'), meaning: answer)];
+        : [_oneSense(optional('partOfSpeech'), answer)];
     if (kind == CardKind.vocabulary && senses.isEmpty) {
       throw const ServiceFailed('a vocabulary card has no sense');
     }
@@ -285,17 +270,36 @@ List<Content>? _wholeFront(
   return [if (type == CardType.table) TextContent(front), ...decoded];
 }
 
-Sense _parseSense(Object? sense) {
-  if (sense case final Map<String, Object?> fields
-      when fields.containsKey('meaning')) {
-    final pos = fields['pos'];
-    return Sense(
-      pos: pos == null ? null : _text(pos),
-      meaning: _text(fields['meaning']),
-    );
-  }
-  throw const ServiceFailed('a sense has no meaning');
+/// A function before senses: one sense of [meaning], with its part of speech
+/// [label] when it gives one, without the brackets or parentheses around it:
+/// a part of speech when it is one's short form, such as 동, else another
+/// label as printed (ADR 0075).
+CardSense _oneSense(String? label, String meaning) {
+  final text = label?.replaceAll(RegExp(r'^[\[(]|[\])]$'), '');
+  final category = PartOfSpeech.values
+      .where((part) => part.short == text)
+      .firstOrNull;
+  return CardSense(
+    labels: [
+      if (category != null)
+        PartOfSpeechLabel(category, text!)
+      else if (text != null)
+        OtherLabel(text),
+    ],
+    meaning: meaning,
+  );
 }
+
+CardSense _parseSense(Object? sense) => switch (decodeSense(sense)) {
+  final decoded? => CardSense(
+    labels: decoded.labels,
+    meaning: decoded.meaning.trim(),
+    examples: [for (final example in decoded.examples) example.trim()],
+  ),
+  null => throw const ServiceFailed(
+    'a sense is not {labels, meaning, examples}',
+  ),
+};
 
 Extra _parseExtra(Object? extra) => switch (extra) {
   {'label': final Object? label, 'text': final Object? text} => Extra(

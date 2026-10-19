@@ -90,9 +90,15 @@ void main() {
       (run.front, run.answer, run.kind),
       ('run', '달리다, 운영하다', CardKind.vocabulary),
     );
-    expect(run.senses, [const Sense(pos: '[동]', meaning: '달리다, 운영하다')]);
-    expect(river.senses, [const Sense(meaning: '강')]);
-    expect(chat.senses, [const Sense(meaning: 'n. cat')]);
+    // Its label, without its brackets, a part of speech's short form.
+    expect(run.senses, [
+      const CardSense(
+        labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+        meaning: '달리다, 운영하다',
+      ),
+    ]);
+    expect(river.senses, [const CardSense(meaning: '강')]);
+    expect(chat.senses, [const CardSense(meaning: 'n. cat')]);
   });
 
   test(
@@ -108,8 +114,15 @@ void main() {
               'front': 'face',
               'back': '[동] 직면하다\n[명] 표면',
               'senses': [
-                {'pos': '[동]', 'meaning': ' 직면하다 '},
-                {'pos': null, 'meaning': '표면'},
+                {
+                  'labels': [
+                    {'kind': 'part_of_speech', 'category': 'verb', 'text': '동'},
+                    {'kind': 'other', 'category': null, 'text': '구어'},
+                  ],
+                  'meaning': ' 직면하다 ',
+                  'examples': [' face the music '],
+                },
+                {'labels': <Object>[], 'meaning': '표면', 'examples': <Object>[]},
               ],
               'extras': [
                 {'label': '유의어', 'text': 'confront'},
@@ -131,8 +144,12 @@ void main() {
 
       expect((face.kind, face.type), (CardKind.vocabulary, CardType.concept));
       expect(face.senses, [
-        const Sense(pos: '[동]', meaning: '직면하다'),
-        const Sense(meaning: '표면'),
+        const CardSense(
+          labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동'), OtherLabel('구어')],
+          meaning: '직면하다',
+          examples: ['face the music'],
+        ),
+        const CardSense(meaning: '표면'),
       ]);
       expect(face.extras.map((extra) => (extra.label, extra.text)), [
         ('유의어', 'confront'),
@@ -155,16 +172,36 @@ void main() {
     for (final fields in <Map<String, Object?>>[
       {'kind': 'grammar'},
       {'kind': 'vocabulary', 'senses': <Object>[]},
-      {
-        'senses': [
-          {'pos': '[명]'},
-        ],
-      },
-      {
-        'senses': [
-          {'pos': 1, 'meaning': '표면'},
-        ],
-      },
+      // A sense without its meaning, with a label of an unknown kind or
+      // category, an other label with a category, or the old {pos, meaning}.
+      for (final sense in <Map<String, Object?>>[
+        {'labels': <Object>[], 'examples': <Object>[]},
+        {
+          'labels': [
+            {'kind': 'gender', 'category': null, 'text': 'der'},
+          ],
+          'meaning': '표면',
+          'examples': <Object>[],
+        },
+        {
+          'labels': [
+            {'kind': 'part_of_speech', 'category': 'gerund', 'text': 'ger.'},
+          ],
+          'meaning': '표면',
+          'examples': <Object>[],
+        },
+        {
+          'labels': [
+            {'kind': 'other', 'category': 'noun', 'text': '사물'},
+          ],
+          'meaning': '표면',
+          'examples': <Object>[],
+        },
+        {'pos': '[명]', 'meaning': '표면'},
+      ])
+        {
+          'senses': [sense],
+        },
       {'senses': 'a'},
       {
         'extras': [
@@ -192,7 +229,7 @@ void main() {
             'kind': 'vocabulary',
             'type': 'cloze',
             'senses': [
-              {'pos': null, 'meaning': '표면'},
+              {'labels': <Object>[], 'meaning': '표면', 'examples': <Object>[]},
             ],
           }),
         ],

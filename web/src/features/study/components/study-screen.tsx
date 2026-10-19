@@ -514,6 +514,8 @@ function CurrentCard({ card }: { card: PreviousAnswer["card"] }) {
       >
         {card.whole ? (
           <div className="w-full text-question">{card.whole.empty}</div>
+        ) : card.sides ? (
+          <div className="w-full text-question break-words">{card.sides.front}</div>
         ) : (
           <CardSide blocks={card.front} size="question" />
         )}

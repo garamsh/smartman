@@ -17,7 +17,7 @@ List<String?> _preview(WidgetTester tester) => [
       matching: find.byType(Text),
     ),
   ))
-    text.data,
+    text.data ?? text.textSpan?.toPlainText(),
 ];
 
 /// The text of every stored card, front and back.
@@ -160,6 +160,48 @@ void main() {
       await screens.tap(find.byTooltip('Delete card'));
       await screens.tap(find.text('Delete'));
       expect(await _stored(screens), [('Chat', 'cat')]);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a vocabulary card keeps its senses when saved as it was, and edited, its answer becomes the text typed, as the note says',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const senses = SensesContent([
+        CardSense(
+          labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+          meaning: '사과',
+        ),
+      ]);
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [const TextContent('apple')],
+          back: [senses],
+        ),
+      );
+      Future<Card> stored() async => (await screens.cards()).single;
+
+      final card = await stored();
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      expect(
+        find.text('Editing the answer saves labels such as [명] as plain text.'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextField, '[명] 사과'), findsOneWidget);
+      // Control: saved as it was, the answer keeps its senses block.
+      await screens.tap(find.text('Save'));
+      expect((await stored()).back, [senses]);
+
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await tester.enterText(
+        find.widgetWithText(TextField, '[명] 사과'),
+        '[명] 사과, 능금',
+      );
+      await tester.pumpAndSettle();
+      await screens.tap(find.text('Save'));
+      expect((await stored()).back, [const TextContent('[명] 사과, 능금')]);
       await screens.close();
     },
   );

@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 
 import { describeContent, isWholeCard, spokenContent } from "../card-content";
 import type { Card } from "../library";
+import { SideText } from "./side-text";
 import { WholeCard } from "./whole-card";
 
 /**
@@ -22,6 +23,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
   const rows = cards.map((card) => ({
     id: card.id,
     blocks: card.front,
+    backBlocks: card.back,
     front: describeContent(card.front),
     back: describeContent(card.back),
   }));
@@ -110,9 +112,13 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                     <WholeCard blocks={row.blocks} revealed={open} className="text-headline" />
                   ) : (
                     <>
-                      <span className="text-headline break-words">{row.front}</span>
+                      <span className="text-headline break-words">
+                        <SideText blocks={row.blocks} />
+                      </span>
                       {open ? (
-                        <span className="text-secondary break-words text-ink-2">{row.back}</span>
+                        <span className="text-secondary break-words text-ink-2">
+                          <SideText blocks={row.backBlocks} />
+                        </span>
                       ) : (
                         <span aria-hidden className="h-4.5 w-3/5 rounded-md bg-hairline" />
                       )}
