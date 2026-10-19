@@ -350,7 +350,7 @@ Deno.test("a table card and a cloze card are answered with their table and blank
   }]);
 });
 
-Deno.test("a reply with a malformed table is invalid output, retried once and then answered 502", async () => {
+Deno.test("a reply with a malformed table is invalid output, answered 502 after its one call", async () => {
   const ragged = cardsReply([{
     ...twoCards[2],
     type: "table",
@@ -361,10 +361,10 @@ Deno.test("a reply with a malformed table is invalid output, retried once and th
       blanks: [{ row: 0, column: 1 }],
     },
   }]);
-  const r = await run({ replies: [ragged, ragged] });
+  const r = await run({ replies: [ragged] });
   assert.equal(r.status, 502);
   assert.deepEqual(r.body, { error: "model_error" });
-  assert.equal(r.modelCalls.length, 2);
+  assert.equal(r.modelCalls.length, 1);
   // Control: the same table with its rows as wide as its columns.
   const even = await run({
     replies: [cardsReply([{
