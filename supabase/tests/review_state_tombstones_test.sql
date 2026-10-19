@@ -9,7 +9,9 @@ select hasnt_column('public', 'card_states', 'deleted_at', 'card_states has no d
 select has_column('public', 'decks', 'deleted_at', 'control: decks keeps its tombstone');
 select has_column('public', 'cards', 'deleted_at', 'control: cards keeps its tombstone');
 
-select policies_are('public', 'reviews', array['reviews_select', 'reviews_insert', 'reviews_update'],
+select policies_are('public', 'reviews',
+  array['reviews_select', 'reviews_insert', 'reviews_update', 'reviews_not_suspended_insert',
+    'reviews_not_suspended_update'],
   'reviews has no delete policy, since no client may delete a review');
 
 -- The guard: a table with no tombstone passes, one holding a tombstone raises.
