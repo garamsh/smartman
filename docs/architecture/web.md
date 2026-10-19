@@ -72,6 +72,7 @@ Sign-in and the account page are the `account` feature's ([`web-account.md`](web
 - `web/src/styles/fonts` links to `app/assets/fonts/`. `next.config.ts` names that directory in `turbopackAdditionalRoots`, and the root layout bundles Pretendard's Regular, Medium, SemiBold, Bold and ExtraBold with `next/font/local`; nothing is downloaded at run time.
 - `web/public/` holds `favicon.svg`, which follows the colour scheme, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` and `manifest.webmanifest` with theme colour `#1F2A44`; the root layout names them, `brand/` holds the marks, and `google/` Google's "G" mark.
 - Buttons are at least 52 px high (`min-h-button`), the primary 56 (`min-h-cta`), and the focus ring is a visible outline.
+- Every enabled button shows the pointer cursor, as a link does, and a disabled one the arrow: a base rule in `globals.css`, since Tailwind's preflight leaves a button the arrow (#274). Every button, switch and link drawn as a button or a row carries `.pressable`, the one place its states are written, as the phone's `AppButton` shows pressed feedback ([`design.md`](design.md) §Principles 7): on hover, where the device hovers, and while pressed, a layer of the control's own text colour at 4% over its fill, a token at an opacity, so no colour is added; and while pressed, under `motion-safe`, a 98% scale. Every text pair under that layer still meets 4.5:1 in both themes; at 8% a row's muted second line would not. The focus ring is unchanged. The 오늘 page's deck rows do not carry it yet (#275). Text links keep their underline on hover.
 - Every text colour the login, account or empty home page, the shell's menus, the today card or the forecast draws meets WCAG AA, 4.5:1, on its ground in either theme; on the study screen, the text on a grade's fill, on a grade's chip and on an answer button meets 4.5:1, and a grade's chip on its card or the ground, and the streak's flame on the surface, 3:1.
 
 ### Checks
@@ -92,7 +93,8 @@ The foundations', the shell's and the end-to-end tests; each feature's document 
 - `web/src/__tests__/client-boundary.test.ts` — no `"use client"` module reaching a `server-only` module, with `decks`' entry point reaching `read-library.ts` as control.
 - `web/src/__tests__/vercel-config.test.ts` — `web/vercel.json` naming `hnd1` and nothing else.
 - `web/src/styles/__tests__/theme-tokens.test.ts` — every token against `theme.dart` (§Theme).
-- `web/src/styles/__tests__/contrast.test.ts` — the contrast of §Theme in both themes.
+- `web/src/styles/__tests__/contrast.test.ts` — the contrast of §Theme in both themes, under the hover and pressed layer too.
+- `web/src/styles/__tests__/control-states.test.tsx` — the pointer over an enabled button and not a disabled one, the `.pressable` rule, and its place on the menus' items, "모두 학습", a deck row and a deck page's cards and switch; the study page's test checks it on "안다", "모른다" and the screen's other controls.
 - `web/src/design/__tests__/theme.test.ts` — the head script and the store; `web/src/design/__tests__/theme-choice.test.tsx` — the theme choice's radio group.
 - `web/src/app/__tests__/skeletons.test.tsx` — each page's skeleton: busy, its sentence, hidden placeholders, the pulse under `motion-safe`.
 - `web/src/app/__tests__/sign-in-gate.test.ts` — every route under `web/src/app/` through the proxy's matcher and the proxy, signed out and signed in.

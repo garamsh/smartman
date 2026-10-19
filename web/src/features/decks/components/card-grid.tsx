@@ -74,7 +74,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
               setAll(!all);
               setApart(new Set());
             }}
-            className={`relative my-2 h-7 w-12 rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${all ? "bg-ink" : "bg-outline"}`}
+            className={`pressable relative my-2 h-7 w-12 rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${all ? "bg-ink" : "bg-outline"}`}
           >
             <span
               aria-hidden
@@ -107,7 +107,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                     else next.add(row.id);
                     setApart(next);
                   }}
-                  className="flex min-h-23 w-full flex-col gap-2 rounded-row bg-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  className="pressable flex min-h-23 w-full flex-col gap-2 rounded-row bg-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   {isWholeCard(row.blocks) ? (
                     <WholeCard blocks={row.blocks} revealed={open} className="text-headline" />

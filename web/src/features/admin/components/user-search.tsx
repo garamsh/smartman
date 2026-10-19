@@ -103,7 +103,7 @@ export function UserSearch({
           <li key={user.id}>
             <Link
               href={`/admin/users/${user.id}`}
-              className="flex min-h-13 items-center justify-between gap-3 rounded-row bg-surface px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="pressable flex min-h-13 items-center justify-between gap-3 rounded-row bg-surface px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               <span className="truncate text-body-strong">{user.email}</span>
               <span className="text-caption whitespace-nowrap text-muted">
@@ -119,7 +119,7 @@ export function UserSearch({
           type="button"
           disabled={pending}
           onClick={more}
-          className="flex min-h-button items-center justify-center self-start rounded-button border border-outline px-4 text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+          className="pressable flex min-h-button items-center justify-center self-start rounded-button border border-outline px-4 text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
         >
           더 보기
         </button>
