@@ -5,6 +5,7 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_text.dart';
 import 'content.dart';
+import 'whole_card_view.dart';
 
 /// A card side's content blocks, in order, each through its block widget.
 ///
@@ -70,6 +71,11 @@ class ContentView extends StatelessWidget {
                 width: fit.width,
               ),
             TextContent(:final text) => Text(text, style: style),
+            ClozeContent() || TableContent() => WholeCardView(
+              [block],
+              revealed: true,
+              style: style ?? AppType.body,
+            ),
             UnsupportedContent(:final type) => _UnsupportedBlock(
               label: l10n.unsupportedContent(type),
             ),
@@ -80,11 +86,14 @@ class ContentView extends StatelessWidget {
 
   String _plain(AppLocalizations l10n, Content block) => switch (block) {
     TextContent(:final text) => text,
+    ClozeContent(:final filled) || TableContent(:final filled) => filled,
     UnsupportedContent(:final type) => l10n.unsupportedContent(type),
   };
 
   InlineSpan _span(AppLocalizations l10n, Content block) => switch (block) {
     TextContent(:final text) => TextSpan(text: text),
+    ClozeContent(:final filled) ||
+    TableContent(:final filled) => TextSpan(text: filled),
     UnsupportedContent(:final type) => TextSpan(
       text: l10n.unsupportedContent(type),
       style: const TextStyle(fontStyle: FontStyle.italic),

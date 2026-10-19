@@ -1,0 +1,159 @@
+{
+  "image": "51-notes-ko-honorifics-handwriting-harsh.jpg",
+  "kind": "notes",
+  "layout": "notes",
+  "languages": {
+    "front": "ko",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumPenScript-Regular.ttf"
+  ],
+  "facts": [
+    {
+      "id": "subject-method",
+      "step": 1,
+      "terms": [
+        "주체 높임",
+        "-시-"
+      ]
+    },
+    {
+      "id": "subject-target",
+      "step": 1,
+      "terms": [
+        "주체 높임",
+        "주어"
+      ]
+    },
+    {
+      "id": "object-method",
+      "step": 2,
+      "terms": [
+        "객체 높임",
+        "드리다",
+        "모시다",
+        "여쭈다"
+      ]
+    },
+    {
+      "id": "object-target",
+      "step": 2,
+      "terms": [
+        "객체 높임",
+        "목적어",
+        "부사어"
+      ]
+    },
+    {
+      "id": "listener-method",
+      "step": 2,
+      "terms": [
+        "상대 높임",
+        "종결 어미"
+      ]
+    },
+    {
+      "id": "listener-target",
+      "step": 3,
+      "terms": [
+        "상대 높임",
+        "듣는 사람"
+      ]
+    },
+    {
+      "id": "vocabulary",
+      "step": 2,
+      "terms": [
+        "계시다",
+        "잡수시다",
+        "주무시다"
+      ]
+    },
+    {
+      "id": "particles",
+      "step": 3,
+      "terms": [
+        "께서",
+        "께"
+      ]
+    },
+    {
+      "id": "indirect",
+      "step": 4,
+      "terms": [
+        "있으시다",
+        "간접"
+      ],
+      "examples": [
+        "할머니께서는 걱정이 있으시다"
+      ]
+    },
+    {
+      "id": "trap",
+      "step": 4,
+      "terms": [
+        "계시다",
+        "직접"
+      ]
+    }
+  ],
+  "lines": [
+    "국어 문법 - 높임 표현",
+    "1. 높임법의 갈래",
+    "구분 | 실현 방법 | 높이는 대상",
+    "주체 높임 | 선어말 어미 '-시-' | 문장의 주어",
+    "객체 높임 | 드리다, 모시다, 여쭈다 | 목적어, 부사어",
+    "상대 높임 | 종결 어미 (-습니다, -어요) | 듣는 사람",
+    "2. 높임 어휘",
+    "주체를 높이는 어휘: 계시다(있다), 잡수시다(먹다), 주무시다(자다)",
+    "조사도 높인다: 께서(이/가), 께(에게)",
+    "3. 주의",
+    "예외: '있으시다'는 높일 대상의 소유물을 높이는 간접 높임에 쓴다",
+    "예) 할머니께서는 걱정이 있으시다",
+    "함정! '계시다'는 주체를 직접 높일 때만 쓴다"
+  ],
+  "tableBlanks": [
+    {
+      "id": "subject-method",
+      "terms": [
+        "-시-"
+      ]
+    },
+    {
+      "id": "subject-target",
+      "terms": [
+        "주어"
+      ]
+    },
+    {
+      "id": "object-method",
+      "terms": [
+        "드리다",
+        "모시다",
+        "여쭈다"
+      ]
+    },
+    {
+      "id": "object-target",
+      "terms": [
+        "목적어",
+        "부사어"
+      ]
+    },
+    {
+      "id": "listener-method",
+      "terms": [
+        "종결 어미"
+      ]
+    },
+    {
+      "id": "listener-target",
+      "terms": [
+        "듣는 사람"
+      ]
+    }
+  ]
+}

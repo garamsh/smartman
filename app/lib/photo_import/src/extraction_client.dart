@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../deck/deck.dart';
 import 'failure.dart';
 import 'photo.dart';
 
@@ -12,9 +13,10 @@ const maxTopicChars = 60;
 /// notes.
 enum CardKind { vocabulary, note }
 
-/// What a card asks: a named concept and its statement, a line with one blank
-/// and what fills it, or a printed sentence with a word to judge.
-enum CardType { concept, cloze, identify }
+/// What a card asks: a named concept and its statement, a line with blanks
+/// and what fills each, a printed sentence with a word to judge, or a whole
+/// table with the cells to recall as blanks.
+enum CardType { concept, cloze, identify, table }
 
 /// One meaning of a vocabulary entry, with the part-of-speech label the page
 /// prints for it, such as "[동]"; null when it prints none.
@@ -56,6 +58,7 @@ final class CandidateCard {
     this.pronunciation,
     this.examples = const [],
     this.topic,
+    this.wholeFront,
   });
 
   /// A vocabulary card of one sense, as a function before senses sent it.
@@ -92,6 +95,12 @@ final class CandidateCard {
   /// The part of the page the card comes from, such as "모음조화"; null from
   /// a function that names none.
   final String? topic;
+
+  /// A table or cloze card's front as content blocks, drawn whole (ADR
+  /// 0068): a cloze of [front] and its answers, or [front] as the table's
+  /// name above its table. Null for every other card, and for a cloze card
+  /// from a function that sends no `cloze`.
+  final List<Content>? wholeFront;
 }
 
 /// Sends a photo to `extract-cards` and returns the cards it found.
@@ -191,8 +200,10 @@ List<CandidateCard> _parseCards(String body) {
 /// senses are its `senses` of `{pos, meaning}`, else, from a function before
 /// senses, one sense of its `meaning` or `answer`, else its `back`, with its
 /// `partOfSpeech`. A card with no `kind` from a function before kinds is a
-/// vocabulary card; one with no `type` is a concept. Other fields are not
-/// read.
+/// vocabulary card; one with no `type`, or a `type` this version does not
+/// know, is a concept, so a new type does not fail the extraction. A cloze
+/// card's `cloze` and a table card's `table` become its [wholeFront]. Other
+/// fields are not read.
 CandidateCard _parseCard(Object? card) {
   if (card
       case final Map<String, Object?> fields &&
@@ -216,11 +227,10 @@ CandidateCard _parseCard(Object? card) {
       _ => throw const ServiceFailed('a card has an unknown kind'),
     };
     final type = switch (fields['type']) {
-      null => CardType.concept,
       final String name =>
         CardType.values.where((type) => type.name == name).firstOrNull ??
-            (throw const ServiceFailed('a card has an unknown type')),
-      _ => throw const ServiceFailed('a card has an unknown type'),
+            CardType.concept,
+      _ => CardType.concept,
     };
     final answer = optional('answer') ?? optional('meaning') ?? back.trim();
     final senses = fields.containsKey('senses')
@@ -239,9 +249,40 @@ CandidateCard _parseCard(Object? card) {
       pronunciation: optional('pronunciation'),
       examples: list('examples', _text),
       topic: topic,
+      wholeFront: _wholeFront(type, front.trim(), fields),
     );
   }
   throw const ServiceFailed('a card is not two non-empty sides');
+}
+
+/// A cloze card's `cloze`, `{answers}`, as a cloze of [front], or a table
+/// card's `table`, `{columns, rows, blanks}`, under [front] as its name; null
+/// for any other card, or one without its field. The blocks' own decoding
+/// checks their shape (`deck.md`).
+List<Content>? _wholeFront(
+  CardType type,
+  String front,
+  Map<String, Object?> fields,
+) {
+  final block = switch ((type, fields)) {
+    (CardType.cloze, {'cloze': final Map<String, Object?> cloze}) => {
+      'type': 'cloze',
+      'payload': {'text': front, 'answers': cloze['answers']},
+    },
+    (CardType.table, {'table': final Map<String, Object?> table}) => {
+      'type': 'table',
+      'payload': table,
+    },
+    _ => null,
+  };
+  if (block == null) return null;
+  final List<Content> decoded;
+  try {
+    decoded = decodeContent(jsonEncode([block]));
+  } on FormatException {
+    throw ServiceFailed("a card's ${type.name} is not one");
+  }
+  return [if (type == CardType.table) TextContent(front), ...decoded];
 }
 
 Sense _parseSense(Object? sense) {

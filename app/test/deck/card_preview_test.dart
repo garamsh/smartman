@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_preview.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('a short side sits vertically centred in its half', (
@@ -10,14 +12,19 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const Scaffold(
           body: Align(
             alignment: Alignment.topCenter,
             child: CardPreview(
-              front: 'cat',
-              back:
+              front: [TextContent('cat')],
+              back: [
+                TextContent(
                   'a small domesticated carnivorous mammal with soft fur, '
                   'a short snout and retractable claws',
+                ),
+              ],
             ),
           ),
         ),

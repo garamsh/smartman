@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine } from "@/features/study";
 
-import { cardRow, day, deckRow, reviewRow, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, side, start, stateRow } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { blanksUnder } from "@/testing/whole-cards";
 
 import { Deck } from "../_components/deck";
 import { Study } from "../../../../study/_components/study";
@@ -214,6 +215,30 @@ describe("the deck page", () => {
     );
     await user.click(screen.getByRole("button", { name: "chien, 답 chien back" }));
     expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+  });
+
+  it("shows a whole card's front with its blank empty in place of the answer bar, and fills it on a click", async () => {
+    postgrest.seed("cards", {
+      ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
+      front: [
+        { type: "cloze", payload: { text: "The capital of France is ___", answers: ["Paris"] } },
+      ],
+      back: side("The capital of France is Paris"),
+    });
+    await open("d-fr");
+    const user = userEvent.setup();
+
+    const hidden = screen.getByRole("button", {
+      name: "The capital of France is 빈칸, 답 가려짐",
+    });
+    expect(blanksUnder(hidden)).toEqual({ Paris: false });
+    await user.click(hidden);
+    const filledCard = screen.getByRole("button", {
+      name: "The capital of France is 빈칸, 답 The capital of France is Paris",
+    });
+    expect(blanksUnder(filledCard)).toEqual({ Paris: true });
+    // Control: the split cards keep their answers hidden.
+    expect(rows()).toContain("Chat, 답 가려짐");
   });
 
   it("shows or hides every answer with 뜻 보기, off when the page opens, resetting a card set apart by a click", async () => {
