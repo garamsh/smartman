@@ -14,48 +14,147 @@
   "cards": [
     {
       "front": "映画",
-      "meaning": "영화",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "영화",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "きれい",
-      "meaning": "예쁘다",
-      "partOfSpeech": "[형]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "예쁘다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "海",
-      "meaning": "바다",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "바다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "明日",
-      "meaning": "내일",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "내일",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "易しい",
-      "meaning": "쉽다",
-      "partOfSpeech": "[형]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "쉽다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "走る",
-      "meaning": "달리다",
-      "partOfSpeech": "[동]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "달리다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "歩く",
-      "meaning": "걷다",
-      "partOfSpeech": "[동]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "걷다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "昨日",
-      "meaning": "어제",
-      "partOfSpeech": "[명]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "어제",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "楽しい",
-      "meaning": "즐겁다",
-      "partOfSpeech": "[형]"
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "형"
+            }
+          ],
+          "meaning": "즐겁다",
+          "examples": []
+        }
+      ]
     }
   ]
 }

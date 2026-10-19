@@ -14,55 +14,133 @@
   "cards": [
     {
       "front": "写真",
-      "meaning": "사진"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "사진",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "習う",
-      "meaning": "배우다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "배우다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "休む",
-      "meaning": "쉬다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "쉬다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "食べる",
-      "meaning": "먹다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "먹다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "仕事",
-      "meaning": "일"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "일",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "明日",
-      "meaning": "내일"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "내일",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "泣く",
-      "meaning": "울다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "울다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "天気",
-      "meaning": "날씨"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "날씨",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "笑う",
-      "meaning": "웃다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "웃다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "易しい",
-      "meaning": "쉽다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "쉽다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "起きる",
-      "meaning": "일어나다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "일어나다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "忘れる",
-      "meaning": "잊다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잊다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "図書館",
-      "meaning": "도서관"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "도서관",
+          "examples": []
+        }
+      ]
     }
   ]
 }

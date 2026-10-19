@@ -6,6 +6,7 @@ export const MAX_ANSWER_CHARS = 1000;
 export const MAX_EXAMPLES = 5;
 export const MAX_TOPIC_CHARS = 60;
 export const MAX_SENSES = 10;
+export const MAX_SENSE_LABELS = 5;
 export const MAX_EXTRAS = 10;
 export const MAX_TABLE_COLUMNS = 8;
 export const MAX_TABLE_ROWS = 20;
@@ -27,8 +28,46 @@ export type CardKind = (typeof KINDS)[number];
 export const TYPES = ["concept", "cloze", "identify", "table"] as const;
 export type CardType = (typeof TYPES)[number];
 
-/** One meaning of a vocabulary entry, with the part-of-speech label the page prints for it. */
-export type Sense = { readonly pos: string | null; readonly meaning: string };
+/** The parts of speech a label may name, a closed list common across languages (ADR 0075). */
+export const PARTS_OF_SPEECH = [
+  "noun",
+  "verb",
+  "adjective",
+  "adverb",
+  "pronoun",
+  "preposition",
+  "conjunction",
+  "interjection",
+  "determiner",
+  "numeral",
+  "particle",
+  "auxiliary",
+  "classifier",
+  "phrase",
+] as const;
+export type PartOfSpeech = (typeof PARTS_OF_SPEECH)[number];
+
+/** What a sense label is: a part of speech on the list, or any other label. */
+export const LABEL_KINDS = ["part_of_speech", "other"] as const;
+
+/**
+ * A label the page prints for a sense, `text` as printed without its enclosing brackets: a part
+ * of speech with its category, or any other label, such as a semantic class, with none.
+ */
+export type SenseLabel =
+  | {
+    readonly kind: "part_of_speech";
+    readonly category: PartOfSpeech;
+    readonly text: string;
+  }
+  | { readonly kind: "other"; readonly category: null; readonly text: string };
+
+/** One meaning of a vocabulary entry, with the labels and examples the page prints for it. */
+export type Sense = {
+  readonly labels: readonly SenseLabel[];
+  readonly meaning: string;
+  readonly examples: readonly string[];
+};
 
 /** Anything else the page prints for a vocabulary entry, under the page's own label. */
 export type Extra = { readonly label: string; readonly text: string };
@@ -153,8 +192,34 @@ export const cardsSchema = {
             maxItems: MAX_SENSES,
             items: {
               type: "object",
-              properties: { pos: nullableField, meaning: field },
-              required: ["pos", "meaning"],
+              properties: {
+                labels: {
+                  type: "array",
+                  maxItems: MAX_SENSE_LABELS,
+                  items: {
+                    type: "object",
+                    properties: {
+                      kind: { type: "string", enum: [...LABEL_KINDS] },
+                      category: {
+                        anyOf: [
+                          { type: "string", enum: [...PARTS_OF_SPEECH] },
+                          { type: "null" },
+                        ],
+                      },
+                      text: field,
+                    },
+                    required: ["kind", "category", "text"],
+                    additionalProperties: false,
+                  },
+                },
+                meaning: field,
+                examples: {
+                  type: "array",
+                  maxItems: MAX_EXAMPLES,
+                  items: field,
+                },
+              },
+              required: ["labels", "meaning", "examples"],
               additionalProperties: false,
             },
           },
@@ -235,23 +300,31 @@ export function composeBack(meaning: string, partOfSpeech?: string): string {
   return partOfSpeech === undefined ? meaning : `${partOfSpeech} ${meaning}`;
 }
 
+/** A sense's labels as printed, each in brackets, or undefined when it has none: `[명] [사물]`. */
+function composeLabels(sense: Sense): string | undefined {
+  return sense.labels.length === 0
+    ? undefined
+    : sense.labels.map((label) => `[${label.text}]`).join(" ");
+}
+
 /**
  * The answer and part of speech an app that predates senses reads: one sense gives its meaning
- * and its label, as before; several give one line per sense, each label before its meaning, and
+ * and its labels, as before; several give one line per sense, its labels before its meaning, and
  * no part of speech, so `back` reads one sense per line.
  */
 export function composeAnswer(
   senses: readonly Sense[],
 ): { answer: string; partOfSpeech?: string } {
   if (senses.length === 1) {
-    const [{ pos, meaning }] = senses;
-    return pos === null
-      ? { answer: meaning }
-      : { answer: meaning, partOfSpeech: pos };
+    const [sense] = senses;
+    const labels = composeLabels(sense);
+    return labels === undefined
+      ? { answer: sense.meaning }
+      : { answer: sense.meaning, partOfSpeech: labels };
   }
   return {
-    answer: senses.map(({ pos, meaning }) =>
-      composeBack(meaning, pos ?? undefined)
+    answer: senses.map((sense) =>
+      composeBack(sense.meaning, composeLabels(sense))
     )
       .join("\n"),
   };
@@ -449,14 +522,64 @@ function parseCloze(value: unknown): Cloze | undefined {
   return answers === null || answers.length === 0 ? undefined : { answers };
 }
 
-function parseSense(value: unknown): Sense | null {
-  if (!isRecord(value) || !hasOnlyKeys(value, ["pos", "meaning"])) return null;
-  const pos = nullable(value.pos, MAX_FIELD_CHARS);
+/**
+ * A sense of `{labels, meaning, examples}`, or null when it is not one: a label's `kind` unknown,
+ * a part of speech without a category on the list, another label with a category, or a label,
+ * meaning or example empty or over its limit. The eval reads its ground truth through it too.
+ */
+export function parseSense(value: unknown): Sense | null {
+  if (
+    !isRecord(value) || !hasOnlyKeys(value, ["labels", "meaning", "examples"])
+  ) return null;
+  const labels = list(value.labels, MAX_SENSE_LABELS, parseLabel);
   const meaning = text(value.meaning, MAX_FIELD_CHARS);
-  return pos === undefined || meaning === null ? null : { pos, meaning };
+  const examples = list(
+    value.examples,
+    MAX_EXAMPLES,
+    (example) => text(example, MAX_FIELD_CHARS),
+  );
+  return labels === null || meaning === null || examples === null
+    ? null
+    : { labels, meaning, examples };
 }
 
-function parseExtra(value: unknown): Extra | null {
+/** The bracket pairs a page may enclose a label in, which its `text` leaves out. */
+const LABEL_BRACKETS = [
+  "[]",
+  "()",
+  "<>",
+  "「」",
+  "『』",
+  "〈〉",
+  "《》",
+  "【】",
+  "〔〕",
+];
+
+function parseLabel(value: unknown): SenseLabel | null {
+  if (!isRecord(value) || !hasOnlyKeys(value, ["kind", "category", "text"])) {
+    return null;
+  }
+  const printed = text(value.text, MAX_FIELD_CHARS);
+  if (printed === null) return null;
+  // A label written with its brackets keeps only what they enclose.
+  const brackets = LABEL_BRACKETS.find(([open, close]) =>
+    printed.startsWith(open) && printed.endsWith(close)
+  );
+  const labelText = brackets === undefined
+    ? printed
+    : text(printed.slice(1, -1), MAX_FIELD_CHARS);
+  if (labelText === null) return null;
+  if (value.kind === "other" && value.category === null) {
+    return { kind: "other", category: null, text: labelText };
+  }
+  const category = PARTS_OF_SPEECH.find((known) => known === value.category);
+  return value.kind === "part_of_speech" && category !== undefined
+    ? { kind: "part_of_speech", category, text: labelText }
+    : null;
+}
+
+export function parseExtra(value: unknown): Extra | null {
   if (!isRecord(value) || !hasOnlyKeys(value, ["label", "text"])) return null;
   const label = text(value.label, MAX_FIELD_CHARS);
   const extra = text(value.text, MAX_FIELD_CHARS);

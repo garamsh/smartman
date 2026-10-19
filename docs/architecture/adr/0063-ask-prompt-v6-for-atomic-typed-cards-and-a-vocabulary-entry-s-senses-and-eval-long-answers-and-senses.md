@@ -1,6 +1,6 @@
 # ADR 0063: Ask prompt v6 for atomic, typed cards and a vocabulary entry's senses, and eval long answers and senses
 
-> Status: accepted; its prompt v6, tables cell by cell, cloze of one blank, three types and cap order superseded by ADR-0069
+> Status: accepted; its prompt v6, tables cell by cell, cloze of one blank, three types and cap order superseded by ADR-0069; its sense of `pos` and `meaning`, and its senses and part-of-speech scores, superseded by ADR-0076
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

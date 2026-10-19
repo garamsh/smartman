@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
+import type {
+  Extra,
+  Sense,
+  SenseLabel,
+} from "../../supabase/functions/extract-cards/cards.ts";
 import {
   blankCovered,
   covers,
+  type Entry,
   entryOf,
   type FieldCounts,
   isBareException,
@@ -19,13 +25,52 @@ import {
 const NO_SENSES = { returned: 0, page: 0, matched: 0 };
 
 const NO_FIELDS: FieldCounts = {
-  partOfSpeech: 0,
-  partOfSpeechCorrect: 0,
+  labels: 0,
+  labelsCorrect: 0,
+  pageLabels: 0,
+  categoriesCorrect: 0,
+  unlabelledSenses: 0,
+  unprintedLabels: 0,
   examples: 0,
   examplesCorrect: 0,
+  senseExamples: 0,
+  senseExamplesReturned: 0,
+  extras: 0,
+  extrasReturned: 0,
   fields: 0,
   invented: 0,
 };
+
+const VERB: SenseLabel = {
+  kind: "part_of_speech",
+  category: "verb",
+  text: "동",
+};
+const NOUN: SenseLabel = {
+  kind: "part_of_speech",
+  category: "noun",
+  text: "명",
+};
+const CLASS: SenseLabel = { kind: "other", category: null, text: "사물" };
+
+/** A sense of [meaning] with [labels] and [examples]. */
+const sense = (
+  meaning: string,
+  labels: readonly SenseLabel[] = [],
+  examples: string[] = [],
+): Sense => ({ labels, meaning, examples });
+
+/** An entry of one sense of [meaning] with [labels], and [fields] such as its examples. */
+const entry = (
+  front: string,
+  meaning: string,
+  labels: readonly SenseLabel[] = [],
+  fields: { examples?: readonly string[]; extras?: readonly Extra[] } = {},
+): Entry => ({ front, senses: [sense(meaning, labels)], ...fields });
+
+/** The field counts of [candidate] scored against [page], each one entry. */
+const fieldsOf = (candidate: Entry, page: Entry) =>
+  score([candidate], [page]).fields;
 
 Deno.test("normalize applies NFKC, trims, collapses whitespace and lowercases", () => {
   assert.equal(normalize("  Ａpple \t\n Pie "), "apple pie");
@@ -34,47 +79,32 @@ Deno.test("normalize applies NFKC, trims, collapses whitespace and lowercases", 
 });
 
 Deno.test("a candidate matches only when both sides match after normalization", () => {
-  const truth = [{ front: "apple", meaning: "사과" }, {
-    front: "river",
-    meaning: "강",
-  }];
+  const truth = [entry("apple", "사과"), entry("river", "강")];
   assert.deepEqual(
-    score(
-      [{ front: " Apple", meaning: "사과 " }, {
-        front: "river",
-        meaning: "강",
-      }],
-      truth,
-    ),
+    score([entry(" Apple", "사과 "), entry("river", "강")], truth),
     {
       precision: 1,
       recall: 1,
       f1: 1,
-      fields: NO_FIELDS,
+      fields: { ...NO_FIELDS, unlabelledSenses: 2 },
       senses: { returned: 2, page: 2, matched: 2 },
     },
   );
-  const wrongBack = score([{ front: "apple", meaning: "배" }, {
-    front: "river",
-    meaning: "강",
-  }], truth);
+  const wrongBack = score([entry("apple", "배"), entry("river", "강")], truth);
   assert.equal(wrongBack.precision, 0.5);
   assert.equal(wrongBack.recall, 0.5);
 });
 
 Deno.test("each ground-truth card matches at most one candidate", () => {
-  const truth = [{ front: "apple", meaning: "사과" }];
-  const twice = score([{ front: "apple", meaning: "사과" }, {
-    front: "apple",
-    meaning: "사과",
-  }], truth);
+  const truth = [entry("apple", "사과")];
+  const twice = score([entry("apple", "사과"), entry("apple", "사과")], truth);
   assert.equal(twice.precision, 0.5);
   assert.equal(twice.recall, 1);
   assert.ok(Math.abs(twice.f1 - 2 / 3) < 1e-12);
 });
 
 Deno.test("an image with no candidates scores zero", () => {
-  assert.deepEqual(score([], [{ front: "a", meaning: "b" }]), {
+  assert.deepEqual(score([], [entry("a", "b")]), {
     precision: 0,
     recall: 0,
     f1: 0,
@@ -90,7 +120,7 @@ Deno.test("percentile takes the nearest rank", () => {
   assert.equal(percentile([42], 90), 42);
 });
 
-Deno.test("summarize averages per-image scores and sums the spend", () => {
+Deno.test("summarize averages per-image scores, pools the field counts, keeps each page's own shares and sums the spend", () => {
   const row = summarize("m", [
     {
       name: "01",
@@ -100,8 +130,10 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
         f1: 2 / 3,
         fields: {
           ...NO_FIELDS,
-          partOfSpeech: 2,
-          partOfSpeechCorrect: 1,
+          labels: 2,
+          labelsCorrect: 1,
+          pageLabels: 4,
+          categoriesCorrect: 1,
           fields: 2,
         },
         senses: NO_SENSES,
@@ -117,7 +149,7 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
         precision: 0,
         recall: 0,
         f1: 0,
-        fields: NO_FIELDS,
+        fields: { ...NO_FIELDS, unlabelledSenses: 4, unprintedLabels: 1 },
         senses: NO_SENSES,
       },
       notes: null,
@@ -128,9 +160,22 @@ Deno.test("summarize averages per-image scores and sums the spend", () => {
   ]);
   assert.equal(row.precision, 0.5);
   assert.equal(row.recall, 0.25);
-  assert.equal(row.partOfSpeechPrecision, 0.5);
+  assert.equal(row.labelPrecision, 0.5);
+  assert.equal(row.labelRecall, 0.25);
+  assert.equal(row.categoryAccuracy, 1);
+  assert.equal(row.unprintedLabelRate, 0.25);
   assert.equal(row.examplesPrecision, null, "no examples were returned");
+  assert.equal(row.extrasRecall, null, "the pages print no extras");
   assert.equal(row.inventedRate, 0);
+  assert.deepEqual(
+    row.vocabularyPages.map((page) => [
+      page.name,
+      page.f1,
+      page.labelPrecision,
+      page.unprintedLabelRate,
+    ]),
+    [["01", 2 / 3, 0.5, null], ["02", 0, null, 0.25]],
+  );
   assert.equal(row.p50Ms, 1000);
   assert.equal(row.p90Ms, 3000);
   assert.ok(Math.abs(row.costPerImageUsd - 0.02) < 1e-12);
@@ -148,11 +193,17 @@ const row = (
   precision: f1,
   recall: f1,
   f1,
-  partOfSpeechPrecision: null,
+  labelPrecision: null,
+  labelRecall: null,
+  categoryAccuracy: null,
+  unprintedLabelRate: null,
   examplesPrecision: null,
+  senseExamplesRecall: null,
+  extrasRecall: null,
   inventedRate: null,
   sensePrecision: null,
   senseRecall: null,
+  vocabularyPages: [],
   notes,
   p50Ms: 0,
   p90Ms: 0,
@@ -187,73 +238,161 @@ Deno.test("among equally cheap eligible configurations the higher F1 is recommen
   );
 });
 
-Deno.test("a candidate matches on front and meaning, whatever its part of speech or examples", () => {
-  const page = [{ front: "run", meaning: "달리다", partOfSpeech: "[동]" }];
-  const r = score(
-    [{ front: "run", meaning: "달리다", partOfSpeech: "n." }],
-    page,
-  );
+Deno.test("a candidate matches on front and meaning, whatever its labels or examples", () => {
+  const page = [entry("run", "달리다", [VERB])];
+  const r = score([entry("run", "달리다", [NOUN])], page);
   assert.equal(r.recall, 1);
-  assert.equal(r.fields.partOfSpeech, 1);
-  assert.equal(r.fields.partOfSpeechCorrect, 0, "a wrong part of speech");
+  assert.equal(r.fields.labels, 1);
+  assert.equal(r.fields.labelsCorrect, 0, "a wrong label");
   assert.equal(
-    score([{ front: "run", meaning: "뛰다" }], page).recall,
+    score([entry("run", "뛰다", [VERB])], page).recall,
     0,
     "control: another meaning does not match",
   );
 });
 
-Deno.test("field precision counts parts of speech and examples equal to the page's", () => {
-  const page = [{
+Deno.test("labels count when their text equals the page's for that sense, and their category when kind and category match too", () => {
+  const page = entry("기차", "철도 위를 다니는 긴 차", [
+    { kind: "part_of_speech", category: "noun", text: "명사" },
+    CLASS,
+  ]);
+  const fields = fieldsOf(
+    entry("기차", "철도 위를 다니는 긴 차", [
+      { kind: "part_of_speech", category: "verb", text: " 명사" },
+      { kind: "part_of_speech", category: "noun", text: "사물" },
+      { kind: "other", category: null, text: "구어" },
+    ]),
+    page,
+  );
+  assert.equal(fields.labels, 3);
+  assert.equal(fields.pageLabels, 2);
+  assert.equal(fields.labelsCorrect, 2, "명사 and 사물 as printed");
+  assert.equal(
+    fields.categoriesCorrect,
+    0,
+    "명사 is a noun, not a verb, and 사물 another label, not a noun",
+  );
+  assert.equal(
+    fieldsOf(
+      entry("기차", "철도 위를 다니는 긴 차", page.senses[0].labels),
+      page,
+    )
+      .categoriesCorrect,
+    2,
+    "control: both of the page's kind and category",
+  );
+});
+
+Deno.test("a label given to a sense the page prints none for is an unprinted label, and none given is not", () => {
+  const page = {
+    front: "face",
+    senses: [sense("직면하다", [VERB]), sense("표면")],
+  };
+  const given = fieldsOf({
+    front: "face",
+    senses: [sense("직면하다", [VERB]), sense("표면", [NOUN])],
+  }, page);
+  assert.equal(given.unlabelledSenses, 1);
+  assert.equal(given.unprintedLabels, 1);
+  assert.equal(given.invented, 1, "a label list the page does not print");
+  const kept = fieldsOf({
+    front: "face",
+    senses: [sense("직면하다", [VERB]), sense("표면")],
+  }, page);
+  assert.equal(kept.unlabelledSenses, 1);
+  assert.equal(kept.unprintedLabels, 0, "control: the sense left unlabelled");
+  assert.equal(kept.labelsCorrect, 1, "control: the printed label is kept");
+});
+
+Deno.test("examples count wherever the card puts them, and a sense's examples count under that sense only", () => {
+  const page = {
     front: "run",
-    meaning: "달리다",
-    partOfSpeech: "[동]",
-    examples: ["I run every morning.", "run a shop"],
-  }];
-  const r = score([{
+    senses: [
+      sense("달리다", [VERB], ["I run every morning."]),
+      sense("운영하다", [VERB], ["She runs a shop."]),
+    ],
+  };
+  const fields = fieldsOf({
     front: "run",
-    meaning: "달리다",
-    partOfSpeech: " [동]",
-    examples: ["I run every  morning.", "run a bath"],
-  }], page);
-  assert.deepEqual(r.fields, {
-    partOfSpeech: 1,
-    partOfSpeechCorrect: 1,
-    examples: 2,
-    examplesCorrect: 1,
-    fields: 2,
-    invented: 0,
+    senses: [
+      sense("달리다", [VERB], ["She runs a shop."]),
+      sense("운영하다", [VERB], ["I run every  morning."]),
+    ],
+  }, page);
+  assert.equal(fields.examples, 2);
+  assert.equal(fields.examplesCorrect, 2, "both are printed for the entry");
+  assert.equal(fields.senseExamples, 2);
+  assert.equal(fields.senseExamplesReturned, 0, "each under the other sense");
+  const placed = fieldsOf({
+    front: "run",
+    senses: [
+      sense("달리다", [VERB], ["I run every morning."]),
+      sense("운영하다", [VERB], ["She runs a shop."]),
+    ],
+  }, page);
+  assert.equal(placed.senseExamplesReturned, 2, "control: each under its own");
+  const onCard = fieldsOf(
+    entry("run", "달리다", [], {
+      examples: ["I run every morning.", "run a bath"],
+    }),
+    entry("run", "달리다", [], { examples: ["I run every morning."] }),
+  );
+  assert.equal(onCard.examples, 2);
+  assert.equal(onCard.examplesCorrect, 1);
+});
+
+Deno.test("an extra counts when its label and text both equal one the page prints", () => {
+  const page = entry("Tisch", "책상", [NOUN], {
+    extras: [{ label: "성", text: "der" }, {
+      label: "복수",
+      text: "die Tische",
+    }],
   });
+  const fields = fieldsOf(
+    entry("Tisch", "책상", [NOUN], {
+      extras: [
+        { label: "성", text: " der" },
+        { label: "복수", text: "Tische" },
+        { label: "Genus", text: "der" },
+      ],
+    }),
+    page,
+  );
+  assert.equal(fields.extras, 2);
+  assert.equal(fields.extrasReturned, 1, "the plural without its article");
+  assert.equal(fields.invented, 0, "the page prints extras");
+  assert.equal(
+    fieldsOf(entry("Tisch", "책상", [NOUN], { extras: page.extras }), page)
+      .extrasReturned,
+    2,
+    "control: both as printed",
+  );
 });
 
 Deno.test("a field the page does not print counts as invented, and an absent one does not", () => {
-  const page = [{ front: "apple", meaning: "사과" }];
+  const page = [entry("apple", "사과")];
   const invented = score([{
     front: "apple",
-    meaning: "사과",
-    partOfSpeech: "n.",
+    senses: [sense("사과", [NOUN], ["an apple a day"])],
     examples: ["She ate an apple."],
+    extras: [{ label: "복수", text: "apples" }],
   }], page);
-  assert.equal(invented.fields.fields, 2);
-  assert.equal(invented.fields.invented, 2);
-  const absent = score([{ front: "apple", meaning: "사과" }], page);
-  assert.deepEqual(absent.fields, NO_FIELDS, "control: nothing returned");
-  const printed = score([{
-    front: "apple",
-    meaning: "사과",
-    partOfSpeech: "n.",
-  }], [{
-    ...page[0],
-    partOfSpeech: "n.",
-  }]);
+  assert.equal(invented.fields.fields, 4);
+  assert.equal(invented.fields.invented, 4);
+  const absent = score([entry("apple", "사과")], page);
+  assert.deepEqual(
+    absent.fields,
+    { ...NO_FIELDS, unlabelledSenses: 1 },
+    "control: nothing returned",
+  );
+  const printed = score([entry("apple", "사과", [NOUN])], [
+    entry("apple", "사과", [NOUN]),
+  ]);
   assert.equal(printed.fields.invented, 0, "control: a printed field");
 });
 
 Deno.test("an unmatched candidate's fields are not counted", () => {
-  const r = score([{ front: "pear", meaning: "배", partOfSpeech: "n." }], [{
-    front: "apple",
-    meaning: "사과",
-  }]);
+  const r = score([entry("pear", "배", [NOUN])], [entry("apple", "사과")]);
   assert.deepEqual(r.fields, NO_FIELDS);
 });
 
@@ -657,7 +796,7 @@ Deno.test("with notes results, the recommendation must also be within 5 points o
 });
 
 Deno.test("a note card is matched on a vocabulary page by its answer, and a vocabulary card by its senses' meanings", () => {
-  const truth = [{ front: "apple", meaning: "사과" }];
+  const truth = [entry("apple", "사과")];
   const asNote = entryOf({
     kind: "note",
     type: "concept",
@@ -668,12 +807,13 @@ Deno.test("a note card is matched on a vocabulary page by its answer, and a voca
     topic: "과일",
     back: "사과",
   });
-  assert.deepEqual(asNote, { front: "apple", meaning: "사과" });
+  assert.deepEqual(asNote, entry("apple", "사과"));
   assert.equal(score([asNote], truth).f1, 1);
   const senses = [
-    { pos: "[동]", meaning: "직면하다, 마주하다" },
-    { pos: "[명]", meaning: "표면, 겉면" },
+    sense("직면하다, 마주하다", [VERB]),
+    sense("표면, 겉면", [NOUN]),
   ];
+  const extras = [{ label: "유의어", text: "confront" }];
   const vocabulary = entryOf({
     kind: "vocabulary",
     type: "concept",
@@ -685,31 +825,28 @@ Deno.test("a note card is matched on a vocabulary page by its answer, and a voca
     back: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
     meaning: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
     senses,
+    extras,
   });
-  assert.deepEqual(vocabulary, {
-    front: "face",
-    meaning: "직면하다, 마주하다; 표면, 겉면",
-    senses,
-  }, "the senses' meanings, not the composed answer with its labels");
+  assert.deepEqual(vocabulary, { front: "face", senses, extras });
+  assert.equal(
+    score([vocabulary], [{ front: "face", senses }]).f1,
+    1,
+    "the senses' meanings, not the composed answer with its labels",
+  );
 });
 
-Deno.test("senses are scored per entry matched by front, a sense counting when its part of speech and meaning both equal the page's", () => {
+Deno.test("senses are scored per entry matched by front, a sense counting when its labels and meaning both equal the page's", () => {
   const truth = [{
     front: "face",
-    meaning: "직면하다; 표면; 얼굴",
     senses: [
-      { pos: "[동]", meaning: "직면하다" },
-      { pos: "[명]", meaning: "표면" },
-      { pos: "[명]", meaning: "얼굴" },
+      sense("직면하다", [VERB]),
+      sense("표면", [NOUN]),
+      sense("얼굴", [NOUN]),
     ],
   }];
   const result = score([{
     front: " Face",
-    meaning: "직면하다; 표면",
-    senses: [
-      { pos: "[동]", meaning: "직면하다" },
-      { pos: "[형]", meaning: "표면" },
-    ],
+    senses: [sense("직면하다", [VERB]), sense("표면")],
   }], truth);
   assert.deepEqual(result.senses, { returned: 2, page: 3, matched: 1 });
   assert.equal(
@@ -717,46 +854,9 @@ Deno.test("senses are scored per entry matched by front, a sense counting when i
     0,
     "the card itself does not match, its meanings short of the page's",
   );
-  // A truth written before senses is one sense of its meaning and part of speech.
   assert.deepEqual(
-    score(
-      [{
-        front: "run",
-        meaning: "달리다",
-        senses: [{ pos: "v.", meaning: "달리다" }],
-      }],
-      [{ front: "run", meaning: "달리다", partOfSpeech: "v." }],
-    ).senses,
-    { returned: 1, page: 1, matched: 1 },
-  );
-  assert.deepEqual(
-    score([{ front: "walk", meaning: "걷다" }], truth).senses,
+    score([entry("walk", "걷다")], truth).senses,
     NO_SENSES,
     "control: a front the page does not print counts no sense",
-  );
-});
-
-Deno.test("part of speech is scored per sense, against the page's label for that sense", () => {
-  const senses = [
-    { pos: "[동]", meaning: "직면하다" },
-    { pos: "[명]", meaning: "표면" },
-  ];
-  const fields = score(
-    [{ front: "face", meaning: "직면하다; 표면", senses }],
-    [{
-      front: "face",
-      meaning: "직면하다; 표면",
-      senses: [{ pos: "[동]", meaning: "직면하다" }, {
-        pos: null,
-        meaning: "표면",
-      }],
-    }],
-  ).fields;
-  assert.equal(fields.partOfSpeech, 2);
-  assert.equal(fields.partOfSpeechCorrect, 1);
-  assert.equal(
-    fields.invented,
-    1,
-    "the page prints no label for the second sense",
   );
 });

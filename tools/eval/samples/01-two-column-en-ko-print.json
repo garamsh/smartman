@@ -13,51 +13,123 @@
   "cards": [
     {
       "front": "prepare",
-      "meaning": "준비하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "준비하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "often",
-      "meaning": "자주"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자주",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "bright",
-      "meaning": "밝은"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "밝은",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "remember",
-      "meaning": "기억하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기억하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "reason",
-      "meaning": "이유"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이유",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "heavy",
-      "meaning": "무거운"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "무거운",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "festival",
-      "meaning": "축제"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "축제",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "forget",
-      "meaning": "잊다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잊다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "polite",
-      "meaning": "공손한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "공손한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "arrive",
-      "meaning": "도착하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "도착하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "weather",
-      "meaning": "날씨"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "날씨",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "customer",
-      "meaning": "손님"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "손님",
+          "examples": []
+        }
+      ]
     }
   ]
 }

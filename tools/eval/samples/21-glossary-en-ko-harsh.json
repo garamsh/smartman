@@ -13,79 +13,193 @@
   "cards": [
     {
       "front": "price",
-      "meaning": "가격"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가격",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "village",
-      "meaning": "마을"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "마을",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "borrow",
-      "meaning": "빌리다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빌리다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "build",
-      "meaning": "짓다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "짓다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "neighbor",
-      "meaning": "이웃"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이웃",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "never",
-      "meaning": "결코"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "결코",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "garden",
-      "meaning": "정원"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "정원",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "early",
-      "meaning": "일찍"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "일찍",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "suddenly",
-      "meaning": "갑자기"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "갑자기",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "ticket",
-      "meaning": "표"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "표",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "choice",
-      "meaning": "선택"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "선택",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "memory",
-      "meaning": "기억"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기억",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "customer",
-      "meaning": "손님"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "손님",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "remember",
-      "meaning": "기억하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "기억하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "almost",
-      "meaning": "거의"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "거의",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "ocean",
-      "meaning": "바다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "바다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "habit",
-      "meaning": "습관"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "습관",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "decide",
-      "meaning": "결정하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "결정하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "always",
-      "meaning": "항상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "항상",
+          "examples": []
+        }
+      ]
     }
   ]
 }

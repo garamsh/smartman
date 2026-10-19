@@ -14,71 +14,173 @@
   "cards": [
     {
       "front": "泣く",
-      "meaning": "울다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "울다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "送る",
-      "meaning": "보내다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "보내다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "笑う",
-      "meaning": "웃다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "웃다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "窓",
-      "meaning": "창문"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "창문",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "空",
-      "meaning": "하늘"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "하늘",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "忘れる",
-      "meaning": "잊다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잊다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "雨",
-      "meaning": "비"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "비",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "古い",
-      "meaning": "낡다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "낡다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "質問",
-      "meaning": "질문"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "질문",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "花",
-      "meaning": "꽃"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "꽃",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "図書館",
-      "meaning": "도서관"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "도서관",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "病院",
-      "meaning": "병원"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "병원",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "休む",
-      "meaning": "쉬다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "쉬다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "写真",
-      "meaning": "사진"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "사진",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "働く",
-      "meaning": "일하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "일하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "使う",
-      "meaning": "사용하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "사용하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "短い",
-      "meaning": "짧다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "짧다",
+          "examples": []
+        }
+      ]
     }
   ]
 }

@@ -7,21 +7,34 @@ import {
   composeClozeAnswer,
   composeTableAnswer,
   KINDS,
+  LABEL_KINDS,
   MAX_ANSWER_CHARS,
   MAX_CARDS,
   MAX_CLOZE_BLANKS,
   MAX_EXAMPLES,
   MAX_EXTRAS,
   MAX_FIELD_CHARS,
+  MAX_SENSE_LABELS,
   MAX_SENSES,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
   MAX_TOPIC_CHARS,
   parseCards,
+  PARTS_OF_SPEECH,
   TYPES,
 } from "./cards.ts";
 
 const reply = (cards: unknown) => JSON.stringify({ cards });
+
+/** A model's sense of [meaning] with [labels] and no examples. */
+const sense = (meaning: string, labels: unknown[] = []) => ({
+  labels,
+  meaning,
+  examples: [],
+});
+const VERB = { kind: "part_of_speech", category: "verb", text: "동" };
+const NOUN = { kind: "part_of_speech", category: "noun", text: "명" };
+const CLASS = { kind: "other", category: null, text: "사물" };
 
 /** A model's vocabulary card of one sense with no part of speech, overridden by `fields`. */
 const item = (fields: Record<string, unknown> = {}) => ({
@@ -30,7 +43,7 @@ const item = (fields: Record<string, unknown> = {}) => ({
   front: "apple",
   answer: null,
   topic: "과일",
-  senses: [{ pos: null, meaning: "사과" }],
+  senses: [sense("사과")],
   extras: [],
   pronunciation: null,
   examples: [],
@@ -98,11 +111,15 @@ const one = (cards: unknown[]) => parseCards(reply(cards))?.[0];
 const tableWith = (fields: Record<string, unknown>) =>
   table({ table: { ...TABLE, ...fields } });
 
-Deno.test("parseCards returns a vocabulary card of one sense with its fields trimmed, its meaning and label as the answer and part of speech, and the composed back", () => {
+Deno.test("parseCards returns a vocabulary card of one sense with its fields trimmed, its meaning and bracketed labels as the answer and part of speech, and the composed back", () => {
   assert.deepEqual(
     one([item({
       front: "  run ",
-      senses: [{ pos: " [동] ", meaning: "\n달리다, 운영하다\t" }],
+      senses: [{
+        labels: [{ ...VERB, text: " 동 " }, CLASS],
+        meaning: "\n달리다, 운영하다\t",
+        examples: [" I run fast. "],
+      }],
       extras: [{ label: " 유의어 ", text: " sprint " }],
       pronunciation: " [rʌn] ",
       examples: [" I run every morning. ", "run a shop"],
@@ -116,10 +133,14 @@ Deno.test("parseCards returns a vocabulary card of one sense with its fields tri
       step: 1,
       topic: "과일",
       examples: ["I run every morning.", "run a shop"],
-      back: "[동] 달리다, 운영하다",
+      back: "[동] [사물] 달리다, 운영하다",
       meaning: "달리다, 운영하다",
-      partOfSpeech: "[동]",
-      senses: [{ pos: "[동]", meaning: "달리다, 운영하다" }],
+      partOfSpeech: "[동] [사물]",
+      senses: [{
+        labels: [VERB, CLASS],
+        meaning: "달리다, 운영하다",
+        examples: ["I run fast."],
+      }],
       extras: [{ label: "유의어", text: "sprint" }],
       pronunciation: "[rʌn]",
     },
@@ -130,16 +151,16 @@ Deno.test("several senses keep their order and labels, and compose one line per 
   const card = one([item({
     front: "face",
     senses: [
-      { pos: "[동]", meaning: "직면하다, 마주하다" },
-      { pos: "[명]", meaning: "표면, 겉면" },
-      { pos: "[명]", meaning: "얼굴, 생김새" },
+      sense("직면하다, 마주하다", [VERB]),
+      sense("표면, 겉면", [NOUN]),
+      sense("얼굴, 생김새", [NOUN]),
     ],
   })]);
   assert.ok(card?.kind === "vocabulary");
-  assert.deepEqual(card.senses.map((sense) => sense.pos), [
-    "[동]",
-    "[명]",
-    "[명]",
+  assert.deepEqual(card.senses.map((sense) => sense.labels), [
+    [VERB],
+    [NOUN],
+    [NOUN],
   ]);
   const lines = "[동] 직면하다, 마주하다\n[명] 표면, 겉면\n[명] 얼굴, 생김새";
   assert.equal(card.answer, lines);
@@ -148,8 +169,15 @@ Deno.test("several senses keep their order and labels, and compose one line per 
   assert.ok(!Object.hasOwn(card, "partOfSpeech"), "no single part of speech");
   // A sense without a label is its meaning alone on its line.
   assert.deepEqual(
-    composeAnswer([{ pos: null, meaning: "a" }, { pos: "n.", meaning: "b" }]),
-    { answer: "a\nn. b" },
+    composeAnswer([
+      { labels: [], meaning: "a", examples: [] },
+      {
+        labels: [{ kind: "part_of_speech", category: "noun", text: "n." }],
+        meaning: "b",
+        examples: [],
+      },
+    ]),
+    { answer: "a\n[n.] b" },
   );
 });
 
@@ -177,10 +205,89 @@ Deno.test("a vocabulary card without a label, extras, pronunciation or examples 
   for (const key of ["partOfSpeech", "extras", "pronunciation", "examples"]) {
     assert.ok(card !== undefined && !Object.hasOwn(card, key), `no ${key} key`);
   }
-  const control = one([item({ senses: [{ pos: "n.", meaning: "사과" }] })]);
+  const control = one([item({ senses: [sense("사과", [NOUN])] })]);
   assert.ok(control?.kind === "vocabulary");
-  assert.equal(control.partOfSpeech, "n.", "control: a printed one is kept");
-  assert.equal(control.back, "n. 사과");
+  assert.equal(control.partOfSpeech, "[명]", "control: a printed one is kept");
+  assert.equal(control.back, "[명] 사과");
+});
+
+Deno.test("a sense's labels keep the page's order, a part of speech with its category and any other label with none, and a sense may have none", () => {
+  const card = one([item({
+    front: "기차",
+    senses: [
+      sense("철도 위를 다니는 긴 차", [
+        { kind: "part_of_speech", category: "noun", text: "명사" },
+        CLASS,
+      ]),
+      sense("기차를 타다"),
+    ],
+  })]);
+  assert.ok(card?.kind === "vocabulary");
+  assert.deepEqual(card.senses, [
+    {
+      labels: [
+        { kind: "part_of_speech", category: "noun", text: "명사" },
+        { kind: "other", category: null, text: "사물" },
+      ],
+      meaning: "철도 위를 다니는 긴 차",
+      examples: [],
+    },
+    { labels: [], meaning: "기차를 타다", examples: [] },
+  ]);
+});
+
+Deno.test("parseCards refuses a sense whose label is not a part of speech on the list or another label without a category", () => {
+  const refused: Record<string, unknown> = {
+    "an unknown kind": { kind: "gender", category: null, text: "m." },
+    "a part of speech without a category": { ...VERB, category: null },
+    "a part of speech off the list": { ...VERB, category: "gerund" },
+    "a category given as other": { ...VERB, category: "other" },
+    "another label with a category": { ...CLASS, category: "noun" },
+    "a label without text": { kind: "other", category: null },
+    "a label with a key outside the shape": { ...CLASS, printed: "[사물]" },
+    "a label that is text": "[동]",
+  };
+  for (const [name, label] of Object.entries(refused)) {
+    assert.equal(
+      parseCards(reply([item({ senses: [sense("뜻", [label])] })])),
+      null,
+      name,
+    );
+  }
+  for (const category of PARTS_OF_SPEECH) {
+    assert.equal(
+      parseCards(
+        reply([
+          item({ senses: [sense("뜻", [{ ...VERB, category }, CLASS])] }),
+        ]),
+      )
+        ?.length,
+      1,
+      `control: ${category} and another label are read`,
+    );
+  }
+});
+
+Deno.test("a label written with its brackets keeps only what they enclose, and one without keeps its dots", () => {
+  const texts = (printed: string[]) => {
+    const card = one([item({
+      senses: [sense("뜻", printed.map((text) => ({ ...CLASS, text })))],
+    })]);
+    assert.ok(card?.kind === "vocabulary");
+    return card.senses[0].labels.map((label) => label.text);
+  };
+  assert.deepEqual(texts(["[동]", "(명)", "「명사」", "〔사물〕"]), [
+    "동",
+    "명",
+    "명사",
+    "사물",
+  ]);
+  assert.deepEqual(texts(["n.", "동", "[a] b", "(x"]), [
+    "n.",
+    "동",
+    "[a] b",
+    "(x",
+  ], "control: a label not enclosed is kept as written");
 });
 
 Deno.test("composeBack puts the part of speech and a space before the meaning", () => {
@@ -240,7 +347,7 @@ Deno.test("a vocabulary card has senses and no answer, and a note an answer and 
   );
   for (
     const fields of [
-      { senses: [{ pos: null, meaning: "뜻" }] },
+      { senses: [sense("뜻")] },
       { extras: [{ label: "유의어", text: "x" }] },
       { pronunciation: "[x]" },
     ]
@@ -332,9 +439,12 @@ Deno.test("parseCards refuses keys and types the schema does not allow", () => {
     const fields of [
       { front: 1 },
       { senses: "a" },
-      { senses: [{ pos: null }] },
-      { senses: [{ pos: 1, meaning: "뜻" }] },
-      { senses: [{ pos: null, meaning: "뜻", note: "x" }] },
+      { senses: [{ labels: [], examples: [] }] },
+      { senses: [{ labels: [], meaning: "뜻" }] },
+      { senses: [{ meaning: "뜻", examples: [] }] },
+      { senses: [{ ...sense("뜻"), note: "x" }] },
+      { senses: [{ ...sense("뜻"), examples: [1] }] },
+      { senses: [{ pos: null, meaning: "뜻" }] },
       { extras: [{ label: "유의어" }] },
       { extras: [{ label: "유의어", text: "x", more: "y" }] },
       { pronunciation: 1 },
@@ -358,8 +468,10 @@ Deno.test("parseCards refuses a field that is empty once trimmed", () => {
     const card of [
       item({ front: "  " }),
       note({ answer: "" }),
-      item({ senses: [{ pos: " ", meaning: "사과" }] }),
-      item({ senses: [{ pos: null, meaning: " " }] }),
+      item({ senses: [sense("사과", [{ ...VERB, text: " " }])] }),
+      item({ senses: [sense("사과", [{ ...VERB, text: "[ ]" }])] }),
+      item({ senses: [sense(" ")] }),
+      item({ senses: [{ ...sense("사과"), examples: [" "] }] }),
       item({ extras: [{ label: " ", text: "x" }] }),
       item({ extras: [{ label: "유의어", text: "" }] }),
       item({ pronunciation: " " }),
@@ -386,8 +498,9 @@ Deno.test("parseCards refuses a field over its limit in code points, counting ea
   );
   const fields = (text: string) => [
     { front: text },
-    { senses: [{ pos: text, meaning: "뜻" }] },
-    { senses: [{ pos: null, meaning: text }] },
+    { senses: [sense("뜻", [{ ...CLASS, text }])] },
+    { senses: [sense(text)] },
+    { senses: [{ ...sense("뜻"), examples: [text] }] },
     { extras: [{ label: text, text: "x" }] },
     { extras: [{ label: "유의어", text }] },
     { pronunciation: text },
@@ -424,7 +537,8 @@ Deno.test("parseCards refuses more than 5 examples, 10 senses or 10 extras on a 
   const many = <T>(n: number, make: (i: number) => T) =>
     Array.from({ length: n }, (_, i) => make(i));
   const example = (i: number) => `e${i}`;
-  const sense = (i: number) => ({ pos: null, meaning: `뜻${i}` });
+  const numbered = (i: number) => sense(`뜻${i}`);
+  const label = (i: number) => ({ ...CLASS, text: `분류${i}` });
   const extra = (i: number) => ({ label: "유의어", text: `x${i}` });
   assert.deepEqual(
     one([item({ examples: many(MAX_EXAMPLES, example) })])?.examples,
@@ -435,11 +549,37 @@ Deno.test("parseCards refuses more than 5 examples, 10 senses or 10 extras on a 
     null,
   );
   assert.equal(
-    parseCards(reply([item({ senses: many(MAX_SENSES, sense) })]))?.length,
+    parseCards(reply([item({ senses: many(MAX_SENSES, numbered) })]))?.length,
     1,
   );
   assert.equal(
-    parseCards(reply([item({ senses: many(MAX_SENSES + 1, sense) })])),
+    parseCards(reply([item({ senses: many(MAX_SENSES + 1, numbered) })])),
+    null,
+  );
+  assert.equal(
+    one([item({ senses: [sense("뜻", many(MAX_SENSE_LABELS, label))] })])
+      ?.kind,
+    "vocabulary",
+  );
+  assert.equal(
+    parseCards(
+      reply([
+        item({ senses: [sense("뜻", many(MAX_SENSE_LABELS + 1, label))] }),
+      ]),
+    ),
+    null,
+  );
+  assert.equal(
+    one([item({ senses: [{ ...sense("뜻"), examples: many(5, example) }] })])
+      ?.kind,
+    "vocabulary",
+  );
+  assert.equal(
+    parseCards(
+      reply([
+        item({ senses: [{ ...sense("뜻"), examples: many(6, example) }] }),
+      ]),
+    ),
     null,
   );
   assert.equal(
@@ -651,11 +791,11 @@ Deno.test("only a note's table card has a table and only its cloze card a cloze,
     "a concept card with a cloze": note({ cloze: CLOZE }),
     "a vocabulary table card": table({
       kind: "vocabulary",
-      senses: [{ pos: null, meaning: "x" }],
+      senses: [sense("x")],
     }),
     "a vocabulary cloze card": cloze({
       kind: "vocabulary",
-      senses: [{ pos: null, meaning: "x" }],
+      senses: [sense("x")],
     }),
     "a vocabulary card with a table": item({ table: TABLE }),
     "a vocabulary card of type table": item({ type: "table" }),
@@ -696,7 +836,20 @@ Deno.test("the schema sent to the model states the fields and the limits the par
   assert.equal(fields.answer.maxLength, MAX_ANSWER_CHARS);
   assert.deepEqual(fields.answer.type, ["string", "null"]);
   assert.deepEqual(fields.pronunciation.type, ["string", "null"]);
-  assert.deepEqual(fields.senses.items.properties.pos.type, ["string", "null"]);
+  const label = fields.senses.items.properties.labels;
+  assert.equal(label.maxItems, MAX_SENSE_LABELS);
+  assert.deepEqual(label.items.properties.kind.enum, [...LABEL_KINDS]);
+  assert.deepEqual(label.items.properties.category.anyOf, [
+    { type: "string", enum: [...PARTS_OF_SPEECH] },
+    { type: "null" },
+  ]);
+  assert.equal(label.items.properties.text.minLength, 1);
+  assert.deepEqual(label.items.required, ["kind", "category", "text"]);
+  assert.equal(label.items.additionalProperties, false);
+  assert.equal(
+    fields.senses.items.properties.examples.maxItems,
+    MAX_EXAMPLES,
+  );
   assert.deepEqual(fields.kind.enum, ["vocabulary", "note"]);
   assert.deepEqual(fields.type.enum, ["concept", "cloze", "identify", "table"]);
   const [tableShape, noTable] = fields.table.anyOf;
@@ -730,7 +883,11 @@ Deno.test("the schema sent to the model states the fields and the limits the par
   assert.equal(clozeShape.additionalProperties, false);
   assert.equal(fields.topic.maxLength, MAX_TOPIC_CHARS);
   assert.equal(fields.senses.maxItems, MAX_SENSES);
-  assert.deepEqual(fields.senses.items.required, ["pos", "meaning"]);
+  assert.deepEqual(fields.senses.items.required, [
+    "labels",
+    "meaning",
+    "examples",
+  ]);
   assert.equal(fields.extras.maxItems, MAX_EXTRAS);
   assert.deepEqual(fields.extras.items.required, ["label", "text"]);
   assert.equal(fields.examples.maxItems, MAX_EXAMPLES);
