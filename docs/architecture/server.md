@@ -174,7 +174,7 @@ The Supabase schema the app syncs to, and the extraction count, the plans, and t
 
 ### Senses migration
 
-- Migration `20261019180002_senses_migration.sql` turns each live card whose back is one text block of sense lines, such as `[명] 사과`, into a back of one `senses` block ([`deck.md`](deck.md), [ADR 0075](adr/0075-store-a-vocabulary-card-s-senses-as-a-typed-block-and-show-each-label-in-brackets-before-its-meaning.md), #228). It changes existing data; the owner approved it for the 105 cards the dry run found on production, and #255's dry run merges before it.
+- Migration `20261019180003_senses_migration.sql` turns each live card whose back is one text block of sense lines, such as `[명] 사과`, into a back of one `senses` block ([`deck.md`](deck.md), [ADR 0075](adr/0075-store-a-vocabulary-card-s-senses-as-a-typed-block-and-show-each-label-in-brackets-before-its-meaning.md), #228). It changes existing data; the owner approved it for the 105 cards the dry run found on production, and #255's dry run merges before it.
 - The rules are functions in `private`, which the dry run (`supabase/senses-dry-run.sql`) calls too: `sense_labels` holds the labels and the part of speech each names, `sense_forms` the four forms and their order, `sense_line` a line's first matching form, and `senses_block` the block a back becomes, or null when it does not convert.
 - `private.migrate_senses()` converts, and the migration calls it once.
   - It locks each card it converts and first copies the card's back into `private.senses_migration_backup` (`card_id`, `back`, `migrated_at`). That table enables row-level security with no policy and grants nothing to `anon` or `authenticated`, so no client reads it. A row goes with its card's delete.

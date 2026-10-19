@@ -3,7 +3,7 @@
 -- and returns one row of JSON, the report supabase/senses-dry-run.sh formats.
 --
 -- The rules are the migration's, `private.senses_block` and the functions it calls
--- (supabase/migrations/20261019180002_senses_migration.sql), so the dry run reads what the apply
+-- (supabase/migrations/20261019180003_senses_migration.sql), so the dry run reads what the apply
 -- converts: a card converts only when its back is one text block whose every non-empty line is a
 -- recognised sense line. A card with any other line (mixed) is left alone, so a note or free text
 -- is never touched.

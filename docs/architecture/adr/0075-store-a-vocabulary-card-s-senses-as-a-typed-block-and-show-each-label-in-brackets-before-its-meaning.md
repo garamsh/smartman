@@ -92,7 +92,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Note, 2026-10-19: the stored cards' migration
 
-#228's PR 3 migrates the cards stored before this change: migration `20261019180002_senses_migration.sql` ([`server.md`](../server.md) §Senses migration). The owner approved it for the 105 cards that #255's dry run found on production, all in the bracket form.
+#228's PR 3 migrates the cards stored before this change: migration `20261019180003_senses_migration.sql` ([`server.md`](../server.md) §Senses migration). The owner approved it for the 105 cards that #255's dry run found on production, all in the bracket form.
 
 - **What it writes.** Each live card whose back is one text block of sense lines gets a back of one `senses` block, a sense per line. Each label is a part of speech, its category the one its short form names and its text as printed. The rules are the dry run's, held once as functions the dry run calls.
 - **Replace, not beside.** #228's PM comment asked to keep the original text block beside the new block. A side drawn with both would show each sense twice, since the app and the web draw every block (Decision, Drawing). Hiding the text block by its place on the side is a rule no reader of a card could see. So, by the coordinator's decision on 2026-10-19, the migration replaces the text block and keeps each original back in `private.senses_migration_backup`, which no client reads. The drawing above needs no change.
