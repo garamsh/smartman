@@ -41,11 +41,11 @@ final class AccountSuspendedFailure extends PhotoImportFailure {
 }
 
 /// The user has made today's extractions (`429`): [dailyLimit] photos a day
-/// on the user's plan, or null from a function that does not state it.
+/// on the user's plan.
 final class DailyLimitReached extends PhotoImportFailure {
-  const DailyLimitReached({this.dailyLimit});
+  const DailyLimitReached({required this.dailyLimit});
 
-  final int? dailyLimit;
+  final int dailyLimit;
 
   @override
   String toString() => 'DailyLimitReached($dailyLimit)';

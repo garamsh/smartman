@@ -21,7 +21,6 @@ import {
   parseExtra,
   parseSense,
   type Sense,
-  STEPS,
 } from "../../supabase/functions/extract-cards/cards.ts";
 import {
   extractCards,
@@ -63,6 +62,7 @@ import {
   type Row,
   score,
   scoreNotes,
+  STEPS,
   summarize,
   type VocabularyRates,
 } from "./metrics.ts";

@@ -802,10 +802,7 @@ Deno.test("a note card is matched on a vocabulary page by its answer, and a voca
     type: "concept",
     front: "apple",
     answer: "사과",
-    short: "사과",
-    step: 1,
     topic: "과일",
-    back: "사과",
   });
   assert.deepEqual(asNote, entry("apple", "사과"));
   assert.equal(score([asNote], truth).f1, 1);
@@ -819,11 +816,7 @@ Deno.test("a note card is matched on a vocabulary page by its answer, and a voca
     type: "concept",
     front: "face",
     answer: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
-    short: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
-    step: 1,
     topic: "단어",
-    back: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
-    meaning: "[동] 직면하다, 마주하다\n[명] 표면, 겉면",
     senses,
     extras,
   });

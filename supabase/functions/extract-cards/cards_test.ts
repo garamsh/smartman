@@ -3,7 +3,6 @@ import {
   cardsSchema,
   CLOZE_BLANK,
   composeAnswer,
-  composeBack,
   composeClozeAnswer,
   composeTableAnswer,
   KINDS,
@@ -111,7 +110,7 @@ const one = (cards: unknown[]) => parseCards(reply(cards))?.[0];
 const tableWith = (fields: Record<string, unknown>) =>
   table({ table: { ...TABLE, ...fields } });
 
-Deno.test("parseCards returns a vocabulary card of one sense with its fields trimmed, its meaning and bracketed labels as the answer and part of speech, and the composed back", () => {
+Deno.test("parseCards returns a vocabulary card of one sense with its fields trimmed and its meaning as the answer", () => {
   assert.deepEqual(
     one([item({
       front: "  run ",
@@ -129,13 +128,8 @@ Deno.test("parseCards returns a vocabulary card of one sense with its fields tri
       type: "concept",
       front: "run",
       answer: "달리다, 운영하다",
-      short: "달리다, 운영하다",
-      step: 1,
       topic: "과일",
       examples: ["I run every morning.", "run a shop"],
-      back: "[동] [사물] 달리다, 운영하다",
-      meaning: "달리다, 운영하다",
-      partOfSpeech: "[동] [사물]",
       senses: [{
         labels: [VERB, CLASS],
         meaning: "달리다, 운영하다",
@@ -147,7 +141,7 @@ Deno.test("parseCards returns a vocabulary card of one sense with its fields tri
   );
 });
 
-Deno.test("several senses keep their order and labels, and compose one line per sense with no part of speech, so an old app's back reads one sense per line", () => {
+Deno.test("several senses keep their order and labels, and compose an answer of one line per sense, its labels before its meaning", () => {
   const card = one([item({
     front: "face",
     senses: [
@@ -163,10 +157,7 @@ Deno.test("several senses keep their order and labels, and compose one line per 
     [NOUN],
   ]);
   const lines = "[동] 직면하다, 마주하다\n[명] 표면, 겉면\n[명] 얼굴, 생김새";
-  assert.equal(card.answer, lines);
-  assert.equal(card.meaning, lines);
-  assert.equal(card.back, lines, "not '[동] [명] [명] 직면하다, …'");
-  assert.ok(!Object.hasOwn(card, "partOfSpeech"), "no single part of speech");
+  assert.equal(card.answer, lines, "not '[동] [명] [명] 직면하다, …'");
   // A sense without a label is its meaning alone on its line.
   assert.deepEqual(
     composeAnswer([
@@ -177,11 +168,11 @@ Deno.test("several senses keep their order and labels, and compose one line per 
         examples: [],
       },
     ]),
-    { answer: "a\n[n.] b" },
+    "a\n[n.] b",
   );
 });
 
-Deno.test("a note card returns its concept, answer and topic, its back is the fullest answer, and it has no meaning or senses", () => {
+Deno.test("a note card returns its concept, answer and topic, and no senses", () => {
   const card = one([note({ examples: ["253+4637+647898=652788 -> 연역"] })]);
   assert.deepEqual(card, {
     kind: "note",
@@ -189,26 +180,24 @@ Deno.test("a note card returns its concept, answer and topic, its back is the fu
     front: "연역 논증과 귀납 논증의 차이",
     answer:
       "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
-    short:
-      "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
-    step: 1,
     topic: "연역과 귀납",
     examples: ["253+4637+647898=652788 -> 연역"],
-    back:
-      "연역은 전제가 참이면 결론이 반드시 참이고, 귀납은 결론이 개연적으로만 참이다.",
   });
 });
 
-Deno.test("a vocabulary card without a label, extras, pronunciation or examples leaves those keys absent, and its back is the meaning", () => {
+Deno.test("a vocabulary card without extras, pronunciation or examples leaves those keys absent, and its answer is the meaning", () => {
   const card = one([item()]);
-  assert.equal(card?.back, "사과");
-  for (const key of ["partOfSpeech", "extras", "pronunciation", "examples"]) {
+  assert.equal(card?.answer, "사과");
+  for (const key of ["extras", "pronunciation", "examples"]) {
     assert.ok(card !== undefined && !Object.hasOwn(card, key), `no ${key} key`);
   }
-  const control = one([item({ senses: [sense("사과", [NOUN])] })]);
+  const control = one([item({ pronunciation: "[ˈæpl]" })]);
   assert.ok(control?.kind === "vocabulary");
-  assert.equal(control.partOfSpeech, "[명]", "control: a printed one is kept");
-  assert.equal(control.back, "[명] 사과");
+  assert.equal(
+    control.pronunciation,
+    "[ˈæpl]",
+    "control: a printed one is kept",
+  );
 });
 
 Deno.test("a sense's labels keep the page's order, a part of speech with its category and any other label with none, and a sense may have none", () => {
@@ -290,16 +279,23 @@ Deno.test("a label written with its brackets keeps only what they enclose, and o
   ], "control: a label not enclosed is kept as written");
 });
 
-Deno.test("composeBack puts the part of speech and a space before the meaning", () => {
-  assert.equal(composeBack("먹다", "[동]"), "[동] 먹다");
-  assert.equal(composeBack("먹다"), "먹다");
-});
-
-Deno.test("the model writes no short form or step, and each card carries its answer as the short form at step 1 for an app that reads them", () => {
-  for (const card of [item(), note()]) {
-    const parsed = one([card]);
-    assert.equal(parsed?.short, parsed?.answer);
-    assert.equal(parsed?.step, 1);
+Deno.test("no card carries a field kept only for an older app: short, step, meaning, partOfSpeech or back", () => {
+  const cards = [
+    item({ senses: [sense("사과", [NOUN])] }),
+    note(),
+  ].map((card) => one([card]));
+  for (const card of cards) {
+    for (const key of ["short", "step", "meaning", "partOfSpeech", "back"]) {
+      assert.ok(
+        card !== undefined && !Object.hasOwn(card, key),
+        `no ${key} key`,
+      );
+    }
+    // Control: the same cards carry the fields an app reads today.
+    assert.ok(
+      card !== undefined && Object.hasOwn(card, "answer") &&
+        Object.hasOwn(card, "topic"),
+    );
   }
   for (const extra of [{ short: "사과" }, { step: 1 }]) {
     assert.equal(
@@ -599,7 +595,7 @@ Deno.test("parseCards refuses more than 100 cards", () => {
   assert.equal(parseCards(reply(cards(MAX_CARDS + 1))), null);
 });
 
-Deno.test("a table card returns its table as the page prints it, and its answer and back are the table as plain text, one row per line, for an app that reads only front and back", () => {
+Deno.test("a table card returns its table as the page prints it, and its answer is the table as plain text, one row per line, for an app that reads only front and back", () => {
   const card = one([table({ front: " 인칭 대명사 " })]);
   assert.deepEqual(card, {
     kind: "note",
@@ -607,12 +603,7 @@ Deno.test("a table card returns its table as the page prints it, and its answer 
     front: "인칭 대명사",
     answer:
       "구분 | 높임 | 낮춤\n1인칭 | 저, 저희 | 나, 우리\n2인칭 | 당신, 그대 | 너, 너희",
-    short:
-      "구분 | 높임 | 낮춤\n1인칭 | 저, 저희 | 나, 우리\n2인칭 | 당신, 그대 | 너, 너희",
-    step: 1,
     topic: "대명사",
-    back:
-      "구분 | 높임 | 낮춤\n1인칭 | 저, 저희 | 나, 우리\n2인칭 | 당신, 그대 | 너, 너희",
     table: TABLE,
   });
 });
@@ -707,7 +698,7 @@ Deno.test("parseCards takes a table of up to 8 columns and 20 rows of cells up t
   assert.equal(parseCards(reply([grid(1, 1, atLimit + "a")])), null);
 });
 
-Deno.test("a cloze card returns what fills each blank, and its answer and back are those answers one per line", () => {
+Deno.test("a cloze card returns what fills each blank, and its answer is those answers one per line", () => {
   const card = one([
     cloze({ cloze: { answers: [" 자기, 자신 ", "저, 저희"] } }),
   ]);
@@ -716,10 +707,7 @@ Deno.test("a cloze card returns what fills each blank, and its answer and back a
     type: "cloze",
     front: "3인칭 재귀칭: 높임 당신 · 예사 ___ · 낮춤 ___",
     answer: "자기, 자신\n저, 저희",
-    short: "자기, 자신\n저, 저희",
-    step: 1,
     topic: "대명사",
-    back: "자기, 자신\n저, 저희",
     cloze: { answers: ["자기, 자신", "저, 저희"] },
   });
   assert.equal(CLOZE_BLANK, "___");

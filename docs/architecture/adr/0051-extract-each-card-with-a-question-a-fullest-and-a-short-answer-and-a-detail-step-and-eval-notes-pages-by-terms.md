@@ -1,6 +1,6 @@
 # ADR 0051: Extract each card with a question, a fullest and a short answer, and a detail step, and eval notes pages by their terms
 
-> Status: accepted; its prompt v3, its note card's question-shaped front, and its worked-example facts on the notes pages, superseded by ADR-0055; its short form and detail step written by the model, and its notes scoring by step and step order, superseded by ADR-0058; its vocabulary answer and part of speech written by the model, and the eval's part of speech per card, superseded by ADR-0063
+> Status: accepted; its prompt v3, its note card's question-shaped front, and its worked-example facts on the notes pages, superseded by ADR-0055; its short form and detail step written by the model, and its notes scoring by step and step order, superseded by ADR-0058; its vocabulary answer and part of speech written by the model, and the eval's part of speech per card, superseded by ADR-0063; its `short`, `step`, `back`, `meaning` and `partOfSpeech` kept for apps that have not updated superseded by ADR-0078
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

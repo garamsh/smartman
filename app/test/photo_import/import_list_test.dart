@@ -14,6 +14,7 @@ CandidateCard _word(
   String topic = '단어',
 }) => CandidateCard(
   front: front,
+  answer: [for (final (_, meaning) in senses) meaning].join('\n'),
   kind: CardKind.vocabulary,
   senses: [
     for (final (pos, meaning) in senses)
@@ -163,6 +164,7 @@ void main() {
     final list = ImportList(const [
       CandidateCard(
         front: '기차',
+        answer: '철도 위를 다니는 긴 차',
         kind: CardKind.vocabulary,
         senses: [train],
         topic: '단어',

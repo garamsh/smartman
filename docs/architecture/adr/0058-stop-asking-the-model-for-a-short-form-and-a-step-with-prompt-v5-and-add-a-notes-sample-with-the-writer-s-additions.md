@@ -1,6 +1,6 @@
 # ADR 0058: Stop asking the model for a short form and a step with prompt v5, and add a notes sample with the writer's additions
 
-> Status: accepted; its prompt v5 and its cap order superseded by ADR-0063
+> Status: accepted; its prompt v5 and its cap order superseded by ADR-0063; the function's `short` and `step` filled for an app that reads them superseded by ADR-0078
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

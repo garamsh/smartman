@@ -307,7 +307,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final topic = section.topic ?? l10n.importTopicNone;
+    final topic = section.topic;
     final title = section.identify ? l10n.importIdentifySection(topic) : topic;
     final form = section.form;
     final formLabel = switch (form) {

@@ -749,6 +749,7 @@ void main() {
       client.answerCards([
         const CandidateCard(
           front: 'face',
+          answer: '[동] 직면하다, 마주하다\n[명] 표면, 겉면\n[명] 얼굴, 생김새',
           kind: CardKind.vocabulary,
           senses: [
             CardSense(
@@ -768,34 +769,26 @@ void main() {
           extras: [Extra(label: '유의어', text: 'confront')],
           topic: '최빈출 단어',
         ),
-        CandidateCard.word(
+        word(
           front: 'include',
           meaning: '포함하다, 포괄하다',
           partOfSpeech: '[동]',
           topic: '최빈출 단어',
         ),
-        CandidateCard.word(
+        word(
           front: 'strategy',
           meaning: '전략, 계획',
           partOfSpeech: '[명]',
           topic: '최빈출 단어',
         ),
-        CandidateCard.word(
+        word(
           front: 'lucid',
           meaning: '맑은, 또렷한',
           partOfSpeech: '[형]',
           topic: '최빈출 단어',
         ),
-        CandidateCard.word(
-          front: 'in addition',
-          meaning: '~뿐만 아니라, 또한',
-          topic: '빈출 숙어',
-        ),
-        CandidateCard.word(
-          front: 'be ready to',
-          meaning: '~할 준비가 되다',
-          topic: '빈출 숙어',
-        ),
+        word(front: 'in addition', meaning: '~뿐만 아니라, 또한', topic: '빈출 숙어'),
+        word(front: 'be ready to', meaning: '~할 준비가 되다', topic: '빈출 숙어'),
       ]);
       await tester.pumpAndSettle();
       await shot(tester, '22a-photo-list');

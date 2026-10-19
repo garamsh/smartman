@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
@@ -13,9 +11,6 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 
 import '../home/home_data.dart';
-
-import 'package:smartman/photo_import/src/extraction_client.dart'
-    show parseExtraction;
 
 import '../deck/whole_cards.dart';
 import 'fakes.dart';
@@ -451,7 +446,9 @@ void main() {
       expect(import.popped, isNull);
       expect(_shown('open'), findsOneWidget);
       // A late answer to the cancelled request is ignored.
-      call.answer.complete([const CandidateCard(front: 'a', answer: 'b')]);
+      call.answer.complete([
+        const CandidateCard(front: 'a', answer: 'b', topic: 'Page'),
+      ]);
       await tester.pumpAndSettle();
       expect(_shown('Made 1 card'), findsNothing);
       expect(_shown('open'), findsOneWidget);
@@ -505,6 +502,7 @@ void main() {
     final words = [
       const CandidateCard(
         front: 'face',
+        answer: '[동] 직면하다, 마주하다\n[명] 표면, 겉면',
         kind: CardKind.vocabulary,
         senses: [
           CardSense(
@@ -520,17 +518,13 @@ void main() {
         extras: [Extra(label: '유의어', text: 'confront')],
         topic: '최빈출 단어',
       ),
-      CandidateCard.word(
+      word(
         front: 'include',
         meaning: '포함하다',
         partOfSpeech: '[동]',
         topic: '최빈출 단어',
       ),
-      CandidateCard.word(
-        front: 'in addition',
-        meaning: '~뿐만 아니라',
-        topic: '빈출 숙어',
-      ),
+      word(front: 'in addition', meaning: '~뿐만 아니라', topic: '빈출 숙어'),
     ];
 
     /// A notes page: two rules and an identify card of their topic.
@@ -919,16 +913,12 @@ void main() {
       (tester) async {
         final import = await _Import.open(tester);
         await import.extractCards([
-          CandidateCard.word(front: 'run', meaning: '달리다', partOfSpeech: '[동]'),
-          CandidateCard.word(
-            front: 'Run',
-            meaning: '경영하다',
-            partOfSpeech: '[동]',
-          ),
+          word(front: 'run', meaning: '달리다', partOfSpeech: '[동]'),
+          word(front: 'Run', meaning: '경영하다', partOfSpeech: '[동]'),
         ]);
 
         expect(_shown('Found 1 word'), findsOneWidget);
-        expect(_shown('This page 1'), findsOneWidget);
+        expect(_shown('Page 1'), findsOneWidget);
         expect(_shown('[동]달리다\n[동]경영하다'), findsOneWidget);
         await import.close();
       },
@@ -1063,44 +1053,14 @@ void main() {
     );
 
     testWidgets(
-      'a card from a function before senses shows its meaning with its part of speech',
-      (tester) async {
-        final import = await _Import.open(tester);
-        await import.extractCards(
-          parseExtraction(
-            200,
-            jsonEncode({
-              'cards': [
-                {
-                  'front': 'run',
-                  'back': '[동] 달리다',
-                  'meaning': '달리다',
-                  'partOfSpeech': '[동]',
-                },
-              ],
-            }),
-          ),
-        );
-
-        expect(_shown('Found 1 word'), findsOneWidget);
-        expect(_shown('[동]달리다'), findsOneWidget);
-        await import.tap(_shown('Add 1 card'));
-        expect(await import.cards(import.french), [
-          ('run', '[동] 달리다', CardSource.import),
-        ]);
-        await import.close();
-      },
-    );
-
-    testWidgets(
       "양쪽 다 over a deck that holds a word's meaning keeps the row, counts its cards by key, and merges the reversed card",
       (tester) async {
         final import = await _Import.open(tester, french: {'강': 'river'});
         await import.extractCards([
-          CandidateCard.word(front: 'stream', meaning: '강'),
-          CandidateCard.word(front: 'creek', meaning: '강'),
+          word(front: 'stream', meaning: '강'),
+          word(front: 'creek', meaning: '강'),
         ]);
-        await import.menu('This page');
+        await import.menu('Page');
         await import.pickItem('Both ways');
 
         expect(import.included('stream'), isTrue);
@@ -1120,6 +1080,8 @@ void main() {
     final face = [
       const CandidateCard(
         front: 'face',
+        answer: '[동] 직면하다\n[명] 표면\n[명] 얼굴',
+        topic: 'Page',
         kind: CardKind.vocabulary,
         senses: [
           CardSense(
@@ -1280,8 +1242,8 @@ void main() {
         true,
       ),
       (
-        const DailyLimitReached(),
-        "You've reached today's limit for photos. Try again tomorrow.",
+        const DailyLimitReached(dailyLimit: 30),
+        "You've used today's 30 photos. Try again tomorrow.",
         false,
         false,
       ),
@@ -1405,7 +1367,7 @@ void main() {
           expect(_shown('Already in the deck'), findsOneWidget);
           expect(_shown('Add 1 card'), findsOneWidget);
           await check();
-          await import.menu('This page');
+          await import.menu('Page');
           expect(find.byType(MenuItemButton), findsWidgets);
           await check();
           await tester.tapAt(Offset.zero);

@@ -12,10 +12,6 @@ export const MAX_TABLE_COLUMNS = 8;
 export const MAX_TABLE_ROWS = 20;
 export const MAX_CLOZE_BLANKS = 10;
 
-/** The detail steps of a page, from its core ideas (1) to every detail (5). */
-export const STEPS = [1, 2, 3, 4, 5] as const;
-export type Step = (typeof STEPS)[number];
-
 /** What a card was read from: an entry of a vocabulary page, or a point of notes. */
 export const KINDS = ["vocabulary", "note"] as const;
 export type CardKind = (typeof KINDS)[number];
@@ -75,33 +71,25 @@ export type Extra = { readonly label: string; readonly text: string };
 /**
  * What every card carries, each text field plain, trimmed and non-empty. `type` is what the card
  * asks; `front` the headword or the name of the concept a note states; `answer` the fullest
- * answer the page supports; `topic` the name of the page section the card comes from. `short`
- * and `step` are for an app that reads them, which offered cards by step on a slider (ADR
- * 0052): the answer, and step 1. `back` is the answer an app that reads only `front` and `back`
- * shows. `examples` are those the page prints, absent when it prints none.
+ * answer the page supports; `topic` the name of the page section the card comes from.
+ * `examples` are those the page prints, absent when it prints none.
  */
 type SharedCard = {
   readonly type: CardType;
   readonly front: string;
   readonly answer: string;
-  readonly short: string;
-  readonly step: Step;
   readonly topic: string;
-  readonly back: string;
   readonly examples?: readonly string[];
 };
 
 /**
  * A vocabulary entry: its `senses` in page order, and `extras` and `pronunciation` when the page
- * prints them. `answer`, `meaning`, `partOfSpeech` and `back` are composed from the senses for
- * apps that read them (`composeAnswer`).
+ * prints them. Its `answer` is composed from the senses (`composeAnswer`).
  */
 export type VocabularyCard = SharedCard & {
   readonly kind: "vocabulary";
   readonly type: "concept" | "identify";
   readonly senses: readonly Sense[];
-  readonly meaning: string;
-  readonly partOfSpeech?: string;
   readonly extras?: readonly Extra[];
   readonly pronunciation?: string;
 };
@@ -126,9 +114,8 @@ export type Cloze = { readonly answers: readonly string[] };
 type NoteFields = SharedCard & { readonly kind: "note" };
 
 /**
- * A point of notes: its `back` is its `answer`. A cloze card carries its `cloze` and a table card
- * its `table`, and each one's `answer` is composed from them for apps that read only `front`,
- * `answer` and `back` (`composeClozeAnswer`, `composeTableAnswer`).
+ * A point of notes. A cloze card carries its `cloze` and a table card its `table`, and each one's
+ * `answer` is composed from them (`composeClozeAnswer`, `composeTableAnswer`).
  */
 export type NoteCard =
   | (NoteFields & { readonly type: "concept" | "identify" })
@@ -170,8 +157,7 @@ const MODEL_KEYS = [
  * no answer, and a note an answer and no senses, extras or pronunciation; a table card its
  * `table`, a cloze card its `cloze`, and neither an answer. Strict structured outputs require every
  * key, so an absent answer, pronunciation, table or cloze is `null` and absent lists are empty.
- * Which cells a table holds, and where its blanks are, the parser checks. The model writes no `short`, `step`, `meaning`, `partOfSpeech` or `back`: the
- * parser composes them.
+ * Which cells a table holds, and where its blanks are, the parser checks.
  */
 export const cardsSchema = {
   type: "object",
@@ -295,11 +281,6 @@ export const cardsSchema = {
   additionalProperties: false,
 } as const;
 
-/** A vocabulary card's default answer: the part of speech and a space before the meaning. */
-export function composeBack(meaning: string, partOfSpeech?: string): string {
-  return partOfSpeech === undefined ? meaning : `${partOfSpeech} ${meaning}`;
-}
-
 /** A sense's labels as printed, each in brackets, or undefined when it has none: `[명] [사물]`. */
 function composeLabels(sense: Sense): string | undefined {
   return sense.labels.length === 0
@@ -308,40 +289,27 @@ function composeLabels(sense: Sense): string | undefined {
 }
 
 /**
- * The answer and part of speech an app that predates senses reads: one sense gives its meaning
- * and its labels, as before; several give one line per sense, its labels before its meaning, and
- * no part of speech, so `back` reads one sense per line.
+ * A vocabulary card's answer as text: one sense's meaning, or one line per sense, its labels
+ * before its meaning.
  */
-export function composeAnswer(
-  senses: readonly Sense[],
-): { answer: string; partOfSpeech?: string } {
-  if (senses.length === 1) {
-    const [sense] = senses;
+export function composeAnswer(senses: readonly Sense[]): string {
+  if (senses.length === 1) return senses[0].meaning;
+  return senses.map((sense) => {
     const labels = composeLabels(sense);
-    return labels === undefined
-      ? { answer: sense.meaning }
-      : { answer: sense.meaning, partOfSpeech: labels };
-  }
-  return {
-    answer: senses.map((sense) =>
-      composeBack(sense.meaning, composeLabels(sense))
-    )
-      .join("\n"),
-  };
+    return labels === undefined ? sense.meaning : `${labels} ${sense.meaning}`;
+  }).join("\n");
 }
 
 /**
- * A cloze card's answer for an app that reads only `front`, `answer` and `back`: what fills each
- * blank, one line per blank in the front's order.
+ * A cloze card's answer as text: what fills each blank, one line per blank in the front's order.
  */
 export function composeClozeAnswer(cloze: Cloze): string {
   return cloze.answers.join("\n");
 }
 
 /**
- * A table card's answer for an app that reads only `front`, `answer` and `back`: the table as
- * plain text, its column headers on the first line and then one line per row, cells joined by
- * " | ".
+ * A table card's answer as text: its column headers on the first line and then one line per row,
+ * cells joined by " | ".
  */
 export function composeTableAnswer(table: Table): string {
   return [table.columns, ...table.rows].map((cells) => cells.join(" | "))
@@ -398,8 +366,6 @@ function parseCard(item: unknown): Card | null {
   ) return null;
   const shared = {
     front,
-    // For an app that reads them: every card at the first step.
-    step: STEPS[0],
     topic,
     ...(examples.length === 0 ? {} : { examples }),
   };
@@ -412,15 +378,7 @@ function parseCard(item: unknown): Card | null {
       // A table card's answer is its table, composed.
       if (table === null || cloze !== null || answer !== null) return null;
       const composed = composeTableAnswer(table);
-      return {
-        ...shared,
-        kind,
-        type,
-        answer: composed,
-        short: composed,
-        back: composed,
-        table,
-      };
+      return { ...shared, kind, type, answer: composed, table };
     }
     if (type === "cloze") {
       // A cloze card's answer is what fills its blanks, one for each "___" of its front.
@@ -429,37 +387,22 @@ function parseCard(item: unknown): Card | null {
         front.split(CLOZE_BLANK).length - 1 !== cloze.answers.length
       ) return null;
       const composed = composeClozeAnswer(cloze);
-      return {
-        ...shared,
-        kind,
-        type,
-        answer: composed,
-        short: composed,
-        back: composed,
-        cloze,
-      };
+      return { ...shared, kind, type, answer: composed, cloze };
     }
     if (answer === null || table !== null || cloze !== null) return null;
-    return { ...shared, kind, type, answer, short: answer, back: answer };
+    return { ...shared, kind, type, answer };
   }
   // A vocabulary entry's answer is composed from its senses; it is never a table or a cloze.
   if (
     answer !== null || senses.length === 0 || table !== null ||
     cloze !== null || type === "table" || type === "cloze"
   ) return null;
-  const composed = composeAnswer(senses);
   return {
     ...shared,
     kind,
     type,
-    answer: composed.answer,
-    short: composed.answer,
-    back: composeBack(composed.answer, composed.partOfSpeech),
-    meaning: composed.answer,
+    answer: composeAnswer(senses),
     senses,
-    ...(composed.partOfSpeech === undefined
-      ? {}
-      : { partOfSpeech: composed.partOfSpeech }),
     ...(extras.length === 0 ? {} : { extras }),
     ...(pronunciation === null ? {} : { pronunciation }),
   };
