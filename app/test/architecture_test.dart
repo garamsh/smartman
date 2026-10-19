@@ -40,6 +40,17 @@ List<String> importViolations(Map<String, String> sources) => [
     for (final target in importedPaths(file, source)) ?_violation(file, target),
 ];
 
+/// The tests that reach into a domain's `src/` without being that domain's,
+/// checked over Dart sources keyed by their path under `app/test/`: a domain's
+/// own tests, under `test/<domain>/`, may import its `src/`, and no other test
+/// may (`docs/architecture/structure.md`).
+List<String> testImportViolations(Map<String, String> sources) => [
+  for (final MapEntry(key: file, value: source) in sources.entries)
+    for (final match in _directive.allMatches(source))
+      if (match.group(1)!.startsWith(_package))
+        ?_testViolation(file, match.group(1)!.substring(_package.length)),
+];
+
 /// The foundation files whose importers outside their folder all sit in one
 /// domain, or all in `home/`: each serves that one alone, so it belongs there.
 List<String> singleUnitFoundations(Map<String, String> sources) {
@@ -121,9 +132,10 @@ List<String> importedPaths(String file, String source) => [
     ?_resolve(file, match.group(1)!),
 ];
 
+const _package = 'package:smartman/';
+
 String? _resolve(String file, String uri) {
-  const package = 'package:smartman/';
-  if (uri.startsWith(package)) return uri.substring(package.length);
+  if (uri.startsWith(_package)) return uri.substring(_package.length);
   if (uri.startsWith('package:') || uri.startsWith('dart:')) return null;
   final resolved = Uri.parse('file:///lib/$file').resolve(uri).path;
   return resolved.startsWith('/lib/')
@@ -165,6 +177,19 @@ String? _violation(String file, String target) {
       segments[1] == 'src' &&
       _domainOf(file) != targetDomain) {
     return '$file imports $target, inside $targetDomain/src/';
+  }
+  return null;
+}
+
+String? _testViolation(String file, String target) {
+  final targetDomain = _domainOf(target);
+  final segments = target.split('/');
+  final owner = file.contains('/') ? _unitOf(file) : null;
+  if (targetDomain != null &&
+      segments.length > 2 &&
+      segments[1] == 'src' &&
+      owner != targetDomain) {
+    return 'test/$file imports $target, inside $targetDomain/src/';
   }
   return null;
 }
@@ -211,6 +236,23 @@ void main() {
     expect(singleUnitFoundations(sources), isEmpty);
     expect(foreignScreens(sources), isEmpty);
     expect(homeReads(sources), isEmpty);
+  });
+
+  test("no test reaches into another domain's src", () {
+    final tests = Directory('test');
+    final testSources = {
+      for (final entity in tests.listSync(recursive: true))
+        if (entity is File && entity.path.endsWith('.dart'))
+          entity.path.substring('test/'.length): entity.readAsStringSync(),
+    };
+    // The scan reaches the tests and reads a domain's own test importing its
+    // src/, so an empty result below is not the result of reading nothing.
+    expect(
+      testSources['study/engine_bridge_test.dart'],
+      contains("import 'package:smartman/study/src/"),
+    );
+
+    expect(testImportViolations(testSources), isEmpty);
   });
 
   test(
@@ -289,6 +331,33 @@ void main() {
         'main.dart': "import 'deck/deck.dart';",
         'deck/deck.dart': "export 'src/model.dart';",
         'deck/src/deck_row.dart': "import 'model.dart';",
+      }),
+      isEmpty,
+    );
+  });
+
+  test("a test reaching into another domain's src is refused, and a domain's own test or the surface is not", () {
+    expect(
+      testImportViolations({
+        'sync/answer_path_test.dart':
+            "import 'package:smartman/study/src/providers.dart';",
+        'widget_test.dart': "import 'package:smartman/study/src/model.dart';",
+        'home/home_data.dart':
+            "import 'package:smartman/study/src/model.dart';",
+      }),
+      [
+        'test/sync/answer_path_test.dart imports study/src/providers.dart, inside study/src/',
+        'test/widget_test.dart imports study/src/model.dart, inside study/src/',
+        'test/home/home_data.dart imports study/src/model.dart, inside study/src/',
+      ],
+    );
+    expect(
+      testImportViolations({
+        'study/session_test.dart':
+            "import 'package:smartman/study/src/session.dart';",
+        'sync/answer_path_test.dart':
+            "import 'package:smartman/study/study.dart';",
+        'home/home_data.dart': "import '../account/fake_account_service.dart';",
       }),
       isEmpty,
     );
