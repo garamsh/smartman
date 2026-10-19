@@ -185,11 +185,11 @@ class StudyRepository {
     return row.readNullable<DateTime>('latest');
   });
 
-  /// The daily study minutes the user set, or [defaultDailyMinutes] while
-  /// none is stored.
-  Future<int> dailyMinutes() => _read(() async {
+  /// The daily study minutes the user set, on any device; null while none is
+  /// stored, when the day takes [defaultDailyMinutes].
+  Future<int?> dailyMinutes() => _read(() async {
     final row = await _db.select(_db.studySettings).getSingleOrNull();
-    return row?.dailyMinutes ?? defaultDailyMinutes;
+    return row?.dailyMinutes;
   });
 
   /// Stores [minutes] as the daily study minutes, edited [at] and left for

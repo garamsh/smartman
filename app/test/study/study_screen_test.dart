@@ -30,6 +30,7 @@ import 'package:smartman/study/src/today_overview.dart';
 
 import '../deck/whole_cards.dart';
 import 'fixtures.dart';
+import 'minutes_sheet.dart';
 import 'study_storage.dart';
 
 /// Schedules every review one day out, at once.
@@ -83,7 +84,7 @@ class _StalledRepository implements StudyRepository {
   }
 
   @override
-  Future<int> dailyMinutes() async => defaultDailyMinutes;
+  Future<int?> dailyMinutes() async => defaultDailyMinutes;
 
   @override
   Future<void> setDailyMinutes(int minutes, {required DateTime at}) async {}
@@ -1319,6 +1320,40 @@ void main() {
       semantics.dispose();
       expect(find.text('Done for today'), findsNothing);
       expect(study.current, 'a front');
+    },
+  );
+
+  testWidgets(
+    "the completion card's quiet line shows tomorrow's daily minutes, read as a change, and opens the sheet, then shows those saved",
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final study = await _open(tester, ['a']);
+      await study.know();
+      expect(find.text('Done for today'), findsOneWidget);
+      // The session's deck stores 5 minutes.
+      expect(find.text('5 min again tomorrow · Change'), findsOneWidget);
+      final line = find.bySemanticsLabel('5 min again tomorrow, change');
+      expect(line, findsOneWidget);
+
+      await tester.tap(line);
+      await tester.pumpAndSettle();
+      await waitForChoices(tester);
+      await tester.tap(find.text('30 min'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.bySemanticsLabel('30 min again tomorrow, change'),
+        findsOneWidget,
+      );
+      expect(
+        await tester.runAsync<int?>(
+          () => StudyRepository(study.db, newId: () => 'unused').dailyMinutes(),
+        ),
+        30,
+      );
+      semantics.dispose();
     },
   );
 

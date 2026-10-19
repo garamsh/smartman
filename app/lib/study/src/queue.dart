@@ -16,6 +16,9 @@ const maxDailyMinutes = 180;
 /// The daily study minutes offered as one-tap choices.
 const dailyMinutePresets = [10, 15, 20, 30, 45, 60];
 
+/// The step the custom daily minutes move by.
+const dailyMinuteStep = 5;
+
 /// How many of the latest study days before today the pace is read from.
 const studyDayWindow = 30;
 

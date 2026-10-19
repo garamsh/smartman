@@ -21,10 +21,17 @@ import 'providers.dart';
 /// Shows the signed-in account with [syncStatus] under its email, signs it
 /// out and deletes it; and the theme the app is drawn in.
 class AccountScreen extends ConsumerStatefulWidget {
-  const AccountScreen({super.key, required this.syncStatus});
+  const AccountScreen({
+    super.key,
+    required this.syncStatus,
+    required this.studySetting,
+  });
 
   /// Where sync stands, as its caller draws it.
   final Widget syncStatus;
+
+  /// The daily study minutes' row, as its caller draws it, under "공부".
+  final Widget studySetting;
 
   @override
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
@@ -55,6 +62,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             _ProfileCard(email: email, syncStatus: widget.syncStatus),
             const SizedBox(height: AppSpace.sectionGap),
           ],
+          AppSectionLabel(l10n.settingsStudy),
+          widget.studySetting,
+          const SizedBox(height: AppSpace.sectionGap),
           AppSectionLabel(l10n.displaySection),
           const _ThemeRow(),
           const SizedBox(height: AppSpace.sectionGap),

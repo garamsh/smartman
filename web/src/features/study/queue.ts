@@ -17,6 +17,9 @@ export const maxDailyMinutes = 180;
 /** The daily study minutes offered as one-tap choices. */
 export const dailyMinutePresets = [10, 15, 20, 30, 45, 60] as const;
 
+/** The step the custom daily minutes move by. */
+export const dailyMinuteStep = 5;
+
 /** How many of the latest study days before today the pace is read from. */
 export const studyDayWindow = 30;
 

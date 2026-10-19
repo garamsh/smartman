@@ -94,6 +94,48 @@ export function lastNewCardDay({
   return start;
 }
 
+/**
+ * What a choice of daily study minutes means, across every deck: the reviews [due] as today stood
+ * when it started, the cards [started] in it, the [unstarted] cards never answered, at the user's
+ * [pace], whether new cards pause for a [backlog], and the start of today, [todayStart].
+ */
+export type MinutesPlan = {
+  due: number;
+  started: number;
+  unstarted: number;
+  backlog: boolean;
+  pace: Pace;
+  todayStart: number;
+  timeZone: string;
+};
+
+/**
+ * At [minutes] a day by [plan]: the new cards left today, and the start of the study day on which
+ * the last unstarted card is first answered, null when none is left or they are never all taken.
+ * In a backlog no new card is taken.
+ */
+export function minutesPreview(
+  plan: MinutesPlan,
+  minutes: number,
+): { fresh: number; lastDay: number | null } {
+  if (plan.backlog) return { fresh: 0, lastDay: null };
+  const perDay = dailyNewCards({ minutes, due: plan.due, pace: plan.pace });
+  const fresh = Math.min(plan.unstarted, Math.max(0, perDay - plan.started));
+  return {
+    fresh,
+    lastDay:
+      plan.unstarted === 0
+        ? null
+        : lastNewCardDay({
+            remaining: plan.unstarted,
+            today: fresh,
+            perDay,
+            todayStart: plan.todayStart,
+            timeZone: plan.timeZone,
+          }),
+  };
+}
+
 /** The whole minutes [reviews] reviews and [fresh] new cards take at [pace], rounded up. */
 export function sessionMinutes(reviews: number, fresh: number, pace: Pace): number {
   return Math.ceil((reviews * pace.reviewMs + fresh * pace.firstMs) / 60_000);

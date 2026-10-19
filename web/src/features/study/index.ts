@@ -1,3 +1,4 @@
+export { DailyMinutes } from "./components/daily-minutes";
 export { RecordView } from "./components/record-view";
 export { RetentionPreview } from "./components/retention-preview";
 export { StudyScreen } from "./components/study-screen";

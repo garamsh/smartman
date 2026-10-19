@@ -135,7 +135,7 @@ class _Decks {
   /// The study day holding [now] in the time zone [offsetAt] gives, from the
   /// answers and states stored across every deck.
   Future<StudyDay> day(DateTime now, UtcOffsetAt offsetAt) async =>
-      (await readStudyDay(study, now, offsetAt)).$1;
+      (await readStudyDay(study, now, offsetAt)).day;
 
   /// The fronts of the cards a session over [decks] would study in [day].
   Future<List<String>> queueIn(List<String> decks, StudyDay day) async {

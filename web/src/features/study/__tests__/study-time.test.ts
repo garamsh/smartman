@@ -10,6 +10,8 @@ import {
 import {
   dailyNewCards,
   lastNewCardDay,
+  type MinutesPlan,
+  minutesPreview,
   paceOf,
   sessionMinutes,
   type StudyDayTotal,
@@ -106,5 +108,49 @@ describe("the figure", () => {
     // 30 reviews at 4 s and 15 new cards at 8 s: 4 minutes.
     expect(sessionMinutes(30, 15, { reviewMs: 4000, firstMs: 8000 })).toBe(4);
     expect(sessionMinutes(30, 16, { reviewMs: 4000, firstMs: 8000 })).toBe(5);
+  });
+});
+
+// The same plans as app/test/study/daily_minutes_test.dart, with the same figures.
+describe("what a choice of minutes means", () => {
+  const today = Date.UTC(2026, 9, 15, 4);
+  const plan = (fields: Partial<MinutesPlan> & { unstarted: number }): MinutesPlan => ({
+    due: 0,
+    started: 0,
+    backlog: false,
+    pace: unknownPace,
+    todayStart: today,
+    timeZone: "UTC",
+    ...fields,
+  });
+
+  it("takes today the new cards the minutes leave room for, less those started today", () => {
+    // 20 min at 10 s: 120 a day, of which 20 were started today; 400 left after today.
+    expect(minutesPreview(plan({ started: 20, unstarted: 500 }), 20)).toEqual({
+      fresh: 100,
+      lastDay: Date.UTC(2026, 9, 19, 4),
+    });
+  });
+
+  it("puts due reviews first, so a backlog of them leaves no new card", () => {
+    // 60 due reviews at 10 s fill 10 minutes.
+    expect(minutesPreview(plan({ due: 60, unstarted: 50 }), 10)).toEqual({
+      fresh: 0,
+      lastDay: null,
+    });
+    // Control: five more minutes leave room for 30.
+    expect(minutesPreview(plan({ due: 60, unstarted: 50 }), 15).fresh).toBe(30);
+  });
+
+  it("takes no new card in a backlog, whatever the minutes", () => {
+    expect(minutesPreview(plan({ unstarted: 50, backlog: true }), 60)).toEqual({
+      fresh: 0,
+      lastDay: null,
+    });
+  });
+
+  it("takes no more than the cards left, and with none left names no day", () => {
+    expect(minutesPreview(plan({ unstarted: 7 }), 20)).toEqual({ fresh: 7, lastDay: today });
+    expect(minutesPreview(plan({ unstarted: 0 }), 20)).toEqual({ fresh: 0, lastDay: null });
   });
 });

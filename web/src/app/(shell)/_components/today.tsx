@@ -11,10 +11,12 @@ import {
 } from "@/features/decks";
 import {
   countDay,
+  DailyMinutes,
   dailyGoal,
   dayPlanOf,
   deckProgress,
   forecast,
+  newCards,
   readRecentRetention,
   readToday,
   readyServerEngine,
@@ -46,7 +48,7 @@ export async function Today() {
   if ("failure" in today) return <ReadFailure failure={today.failure} />;
   if ("failure" in retention) return <ReadFailure failure={retention.failure} />;
   const { decks, cards } = read.library;
-  const { day, states, pace, answers, streakBefore, timeZone } = today.today;
+  const { day, states, pace, answers, streakBefore, timeZone, dailyMinutes } = today.today;
   const header = (
     <header className="flex flex-wrap items-baseline gap-x-3">
       <h1 className="text-display">오늘</h1>
@@ -140,6 +142,20 @@ export async function Today() {
                     : statusLine(todayStatus(goal, streak))}
               </span>
             </p>
+            <DailyMinutes
+              minutes={dailyMinutes}
+              reviews={count.review}
+              plan={{
+                due: today.today.dueAtStart,
+                started: today.today.startedToday,
+                unstarted: newCards(cards, states).length,
+                backlog: count.backlog,
+                pace,
+                todayStart: day.start,
+                timeZone,
+              }}
+              onHero
+            />
           </div>
           <GoalRing done={goal.done} goal={goal.goal} />
           <EnterLink

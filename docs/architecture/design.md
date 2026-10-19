@@ -15,6 +15,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
    - 덱 tab: "새 덱 만들기" under the rows, before "공개 덱 둘러보기", its ways in a sheet that also holds the photo's source; first-run home: "덱 만들기", which opens the same sheet; and nothing in the top bar but the title; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, or, while the deck holds no card, "카드 추가" alone as the primary ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), `BottomActions`; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
+   - Daily study minutes: the sheet's one primary is "저장", with the first-run step's quiet "건너뛰기" above it; the choices are large, 56 high, three to a row, the chosen one in the primary fill ([ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md)).
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
@@ -22,6 +23,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Deck screen: each row shows the front, its back hidden until a tap or the "뜻 보기" switch; the deck name is the only title, and the row above the cards a quiet "카드 n".
    - Tabs: no line explains a long-press or a tab; 기록 has no explanatory paragraph, only each chart's heading, its figures and a line beside the heading.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
+   - Daily study minutes: the control says only "하루 n분" beside a pencil, and the sheet one sentence, with the preview's two lines saying what the choice means rather than how it is computed.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
    - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다", and on the web a touch swipe answers the same, with the buttons and the arrow keys ([ADR 0084](adr/0084-answer-the-web-s-current-study-card-by-a-touch-swipe-as-the-phone-does.md)); a horizontal drag on the previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기", and a tap on it opens the whole card; a drag on either card moves that card alone.
    - Deck screen: a long-press opens a card, and a screen reader reaches the same through the row's "카드 편집" action.
@@ -32,6 +34,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
    - Account: a theme choice applies at once and is stored after.
+   - Daily study minutes: "저장" stores them on the device, sync pushes them after, and the counts behind the sheet are read again as it closes; the preview moves with each choice before anything is stored.
    - Photo import: a swipe removes or puts back a card at once, and a topic's switch drops or keeps its cards at once; nothing is written until the cards are added.
    - Account and photo import: `AppButton`'s loading state shows progress in the button the user pressed, and the button cannot be pressed twice.
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation sheet. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account.
@@ -146,7 +149,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 
 ### Checks
 
-- Each screen and each sheet is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/account/account_screen_test.dart`, `app/test/account/sign_in_screen_test.dart`, `app/test/study/study_screen_test.dart`, `app/test/study/stats_view_test.dart`, `app/test/photo_import/photo_import_screen_test.dart`, the sharing screens' tests under `app/test/sharing/` and, for each component, `app/test/design/`.
+- Each screen and each sheet is checked against Flutter's `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `textContrastGuideline` in both themes, in `app/test/widget_test.dart`, `app/test/account/account_screen_test.dart`, `app/test/account/sign_in_screen_test.dart`, `app/test/study/study_screen_test.dart`, `app/test/study/stats_view_test.dart`, `app/test/home/home_screen_test.dart` for the daily study minutes' control and sheet, `app/test/photo_import/photo_import_screen_test.dart`, the sharing screens' tests under `app/test/sharing/` and, for each component, `app/test/design/`.
 - `app/test/design/theme_test.dart` fails on a colour outside the theme and Google's button, on a spacing or font-size literal outside the theme, the components, Google's button and `CardText`, and on a dialog, or a sheet opened other than through `showAppSheet`.
 - `app/test/l10n/voice_test.dart` fails on a Korean string ending a sentence in 합쇼체 and on an English string with an exclamation mark, with controls that the check finds each ending and passes 해요체.
 - The sheet rule is checked where each sheet is tested: the duplicate sheet in `app/test/deck/card_editor_screen_test.dart` and the report sheet in `app/test/sharing/public_deck_screen_test.dart` have no cancel; the card delete confirmation in the former, the account deletion confirmation in `app/test/account/account_screen_test.dart`, and `showAppConfirm` in `app/test/design/app_sheet_test.dart`, put cancel above delete.

@@ -2298,6 +2298,126 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'시작하기'**
   String get coachStart;
+
+  /// The today card's control: the daily study minutes, which opens the sheet that changes them.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 {minutes}분'**
+  String dailyMinutesControl(int minutes);
+
+  /// What a screen reader reads for the daily study minutes control.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 공부 시간 {minutes}분, 바꾸기'**
+  String dailyMinutesControlSemantics(int minutes);
+
+  /// The title of the sheet that changes the daily study minutes, and the account screen's row.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 공부 시간'**
+  String get dailyMinutesTitle;
+
+  /// The title of the daily study minutes sheet when it shows once as a first-run step.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 몇 분 공부할까요?'**
+  String get dailyMinutesFirstTitle;
+
+  /// The daily study minutes sheet's one sentence: how the minutes are used.
+  ///
+  /// In ko, this message translates to:
+  /// **'복습을 먼저 하고, 남는 시간에 새 카드를 시작해요.'**
+  String get dailyMinutesBody;
+
+  /// A choice of daily study minutes in the sheet, and the account row's value.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분'**
+  String dailyMinutesChoice(int minutes);
+
+  /// The sheet's choice that sets the minutes by steps of 5.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 정하기'**
+  String get dailyMinutesCustom;
+
+  /// The custom choice once chosen, with its minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'직접 · {minutes}분'**
+  String dailyMinutesCustomValue(int minutes);
+
+  /// Tooltip of the button that lowers the custom minutes by 5.
+  ///
+  /// In ko, this message translates to:
+  /// **'5분 줄이기'**
+  String get dailyMinutesLess;
+
+  /// Tooltip of the button that raises the custom minutes by 5.
+  ///
+  /// In ko, this message translates to:
+  /// **'5분 늘리기'**
+  String get dailyMinutesMore;
+
+  /// The sheet's preview: the new cards and reviews left today at the chosen minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 새 카드 약 {fresh}장 · 복습 {reviews}장'**
+  String dailyMinutesToday(int fresh, int reviews);
+
+  /// The sheet's preview: the date by which every unstarted card is started at the chosen minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'이대로면 남은 새 카드 {cards}장을 {date}쯤 다 시작해요'**
+  String dailyMinutesForecast(int cards, String date);
+
+  /// The sheet's preview when today takes every unstarted card.
+  ///
+  /// In ko, this message translates to:
+  /// **'남은 새 카드 {cards}장을 오늘 다 시작해요'**
+  String dailyMinutesForecastToday(int cards);
+
+  /// The sheet's preview when the reviews fill the chosen minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 시간은 복습으로 차서 새 카드는 시작하지 않아요'**
+  String get dailyMinutesNoTime;
+
+  /// The sheet's preview when no card is left unstarted.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 카드를 모두 시작했어요'**
+  String get dailyMinutesAllStarted;
+
+  /// The first-run step's button that keeps the default minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'건너뛰기'**
+  String get dailyMinutesSkip;
+
+  /// The completion card's quiet line: the daily study minutes tomorrow.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일도 하루 {minutes}분'**
+  String completionTomorrow(int minutes);
+
+  /// After the completion card's minutes: opens the sheet that changes them.
+  ///
+  /// In ko, this message translates to:
+  /// **'바꾸기'**
+  String get completionChange;
+
+  /// What a screen reader reads for the completion card's minutes line.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일도 하루 {minutes}분, 바꾸기'**
+  String completionTomorrowSemantics(int minutes);
+
+  /// The account screen's section label over the daily study minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'공부'**
+  String get settingsStudy;
 }
 
 class _AppLocalizationsDelegate

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
@@ -14,6 +17,7 @@ import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 
 import 'home_data.dart';
+import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
 
 /// The home screen over decks named "Alpha", "Beta" and "Gamma", opening on
@@ -41,6 +45,14 @@ class _List {
   /// Shows the decks tab.
   Future<void> decks() => tap('Decks');
 
+  /// The daily study minutes stored, null while none is.
+  Future<int?> storedMinutes() async => (await tester.runAsync<int?>(
+    () =>
+        ProviderScope.containerOf(tester.element(find.byType(HomeScreen)))
+            .read(studyRepositoryProvider)
+            .dailyMinutes(),
+  ));
+
   /// Taps "새 덱 만들기" under the deck rows, which opens the new-deck sheet.
   Future<void> newDeck() async {
     await tester.ensureVisible(find.text('Create a deck'));
@@ -67,7 +79,9 @@ class _List {
 /// and due tomorrow, and in each named in [mastered] that many reviewed after
 /// a 30-day interval and due in ten days.
 /// [pace] is the time the user's answers took; [unreadable] names the decks
-/// whose cards cannot be read. [photoImport] stands in for the photo import
+/// whose cards cannot be read. The first-run daily minutes step has shown
+/// unless [minutesAsked] is false. The screen is a phone's unless [screen]
+/// says otherwise, in the light theme unless [theme] is another. [photoImport] stands in for the photo import
 /// when given: a screen it pushes, which pops with what photo import resolves
 /// to.
 Future<_List> _open(
@@ -82,6 +96,10 @@ Future<_List> _open(
   Set<String> unreadable = const {},
   Widget Function(DeckId? deck, PhotoOrigin origin)? photoImport,
   List<String> decks = const ['Alpha', 'Beta', 'Gamma'],
+  bool minutesAsked = true,
+  Locale locale = const Locale('en'),
+  Size screen = const Size(390, 844),
+  ThemeData? theme,
 }) async {
   Future<Deck?> pushed(
     BuildContext context,
@@ -91,7 +109,7 @@ Future<_List> _open(
     context,
   ).push(MaterialPageRoute<Deck>(builder: (_) => photoImport!(deck, origin)));
   // A phone's screen, so the 오늘 tab's decks are on it.
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = screen;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final db = AppDatabase(NativeDatabase.memory());
@@ -167,7 +185,7 @@ Future<_List> _open(
   }))!;
   repository.unreadable.addAll([for (final name in unreadable) created[name]!]);
   final list = _List(tester, repository, created);
-  final storage = await openStudyStorage(tester);
+  final storage = await openStudyStorage(tester, minutesAsked: minutesAsked);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -176,8 +194,8 @@ Future<_List> _open(
         if (photoImport != null) photoImportProvider.overrideWithValue(pushed),
       ],
       child: MaterialApp(
-        theme: lightTheme,
-        locale: const Locale('en'),
+        theme: theme ?? lightTheme,
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const HomeScreen(),
@@ -375,6 +393,14 @@ void main() {
         // Control: a deck with nothing left today has no row.
         expect(find.bySemanticsLabel(RegExp('^Study Beta')), findsNothing);
 
+        // Centred, so the tab bar does not cover it.
+        unawaited(
+          Scrollable.ensureVisible(
+            tester.element(find.bySemanticsLabel('Study Alpha, 2 today')),
+            alignment: 0.5,
+          ),
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.bySemanticsLabel('Study Alpha, 2 today'));
         await tester.pumpAndSettle();
 
@@ -492,39 +518,180 @@ void main() {
     });
   });
 
-  group('덱', () {
+  group('daily study minutes', () {
     testWidgets(
-      "each row shows its deck's name, its progress and a today chip only when it has cards for today",
+      'the today card shows them as a control read as the time and a change, which opens the sheet',
       (tester) async {
-        const unreadable =
-            "Couldn't read or write the device's storage. Please try again.";
-        final list = await _open(
-          tester,
-          fresh: {'Alpha': 2},
-          mastered: {'Alpha': 1},
-          later: {'Beta': 1},
-          unreadable: {'Gamma'},
-        );
-        await list.decks();
+        final list = await _open(tester, fresh: {'Alpha': 3});
 
-        Finder inRow(String deck, Finder finder) =>
-            find.descendant(of: list.row(deck), matching: finder);
-        expect(inRow('Alpha', find.text('1 of 3 mastered')), findsOneWidget);
-        expect(inRow('Alpha', find.text('Today 2')), findsOneWidget);
+        expect(find.text('20 min a day'), findsOneWidget);
         expect(
-          tester.getSemantics(list.row('Alpha')),
-          isSemantics(label: 'Alpha\nToday 2\n1 of 3 mastered'),
+          find.bySemanticsLabel('Daily study time 20 minutes, change'),
+          findsOneWidget,
         );
-        expect(inRow('Beta', find.text('0 of 1 mastered')), findsOneWidget);
-        expect(inRow('Beta', find.textContaining('Today')), findsNothing);
-        // A deck whose cards cannot be read shows why, and its card count.
-        expect(inRow('Gamma', find.text('0 cards')), findsOneWidget);
-        expect(inRow('Gamma', find.byTooltip(unreadable)), findsOneWidget);
-        expect(find.text('My decks 3'), findsOneWidget);
-        expect(find.textContaining('Long-press'), findsNothing);
+        await tester.tap(
+          find.bySemanticsLabel('Daily study time 20 minutes, change'),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet), findsOneWidget);
+        expect(find.text('Daily study time'), findsOneWidget);
         await list.close();
       },
     );
+
+    testWidgets('in Korean the control reads 하루 20분, as 하루 공부 시간 20분, 바꾸기', (
+      tester,
+    ) async {
+      final list = await _open(
+        tester,
+        fresh: {'Alpha': 3},
+        locale: const Locale('ko'),
+      );
+
+      expect(find.text('하루 20분'), findsOneWidget);
+      expect(find.bySemanticsLabel('하루 공부 시간 20분, 바꾸기'), findsOneWidget);
+      await list.close();
+    });
+
+    testWidgets(
+      'the sheet previews today\'s new cards and reviews and the day the last new card starts, following the choice, and saving updates today\'s count at once',
+      (tester) async {
+        final list = await _open(
+          tester,
+          decks: ['Alpha'],
+          fresh: {'Alpha': 150},
+          // Wide enough for the forecast's three-figure week in the test font.
+          screen: const Size(800, 844),
+        );
+        // 20 minutes at the unknown pace of 10 s: 120 new cards.
+        expect(find.bySemanticsLabel('120 cards for today'), findsOneWidget);
+        await tester.tap(find.text('20 min a day'));
+        await waitForChoices(tester);
+
+        expect(
+          tester.getSemantics(find.text('20 min').last),
+          isSemantics(isSelected: true, hasSelectedState: true),
+        );
+        expect(
+          find.text('About 120 new cards today · 0 reviews'),
+          findsOneWidget,
+        );
+        // 120 today, the other 30 tomorrow.
+        expect(
+          find.text(
+            'At this pace you start the 150 new cards left by about Oct 16',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('10 min'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('About 60 new cards today · 0 reviews'),
+          findsOneWidget,
+        );
+        // 60 today, 60 tomorrow and 30 the day after.
+        expect(
+          find.text(
+            'At this pace you start the 150 new cards left by about Oct 17',
+          ),
+          findsOneWidget,
+        );
+        // Nothing is stored until Save.
+        expect(await list.storedMinutes(), isNull);
+
+        await tester.tap(find.text('Custom'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('5 minutes less'));
+        await tester.pumpAndSettle();
+        expect(find.text('Custom · 5 min'), findsOneWidget);
+        expect(
+          find.text('About 30 new cards today · 0 reviews'),
+          findsOneWidget,
+        );
+        // Five is the floor.
+        expect(
+          tester
+              .widget<IconButton>(
+                find.widgetWithIcon(IconButton, LucideIcons.minus),
+              )
+              .onPressed,
+          isNull,
+        );
+
+        await list.tap('Save');
+
+        expect(find.byType(BottomSheet), findsNothing);
+        expect(await list.storedMinutes(), 5);
+        expect(find.bySemanticsLabel('30 cards for today'), findsOneWidget);
+        expect(find.text('5 min a day'), findsOneWidget);
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'once a deck has cards, the sheet shows once as a first-run step whose Skip keeps the default',
+      (tester) async {
+        final list = await _open(
+          tester,
+          decks: ['Alpha'],
+          fresh: {'Alpha': 3},
+          minutesAsked: false,
+        );
+
+        expect(
+          find.text('How many minutes a day will you study?'),
+          findsOneWidget,
+        );
+        await waitForChoices(tester);
+        await list.tap('Skip');
+        expect(find.byType(BottomSheet), findsNothing);
+        expect(await list.storedMinutes(), isNull);
+        expect(find.text('20 min a day'), findsOneWidget);
+
+        // Shown once: back on the tab, it does not show again.
+        await list.decks();
+        await list.tap('Today');
+        expect(find.byType(BottomSheet), findsNothing);
+        await list.close();
+      },
+    );
+
+    for (final (name, theme) in [('light', lightTheme), ('dark', darkTheme)]) {
+      testWidgets(
+        'in the $name theme the control, the sheet and its custom steps meet the tap target and contrast guidelines',
+        (tester) async {
+          Future<void> meetsGuidelines() async {
+            await expectLater(
+              tester,
+              meetsGuideline(labeledTapTargetGuideline),
+            );
+            await expectLater(
+              tester,
+              meetsGuideline(androidTapTargetGuideline),
+            );
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+          }
+
+          final list = await _open(tester, fresh: {'Alpha': 3}, theme: theme);
+          await meetsGuidelines();
+          await tester.tap(find.text('20 min a day'));
+          await waitForChoices(tester);
+          await meetsGuidelines();
+          await list.tap('Custom');
+          await meetsGuidelines();
+          await list.close();
+        },
+      );
+    }
+
+    testWidgets('without a card the first-run step waits', (tester) async {
+      final list = await _open(tester, decks: ['Alpha'], minutesAsked: false);
+
+      expect(find.text('Make your first card?'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+      await list.close();
+    });
 
     testWidgets(
       'the search keeps the decks whose name holds it, ignoring case',

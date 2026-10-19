@@ -1430,4 +1430,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coachStart => 'Start';
+
+  @override
+  String dailyMinutesControl(int minutes) {
+    return '$minutes min a day';
+  }
+
+  @override
+  String dailyMinutesControlSemantics(int minutes) {
+    return 'Daily study time $minutes minutes, change';
+  }
+
+  @override
+  String get dailyMinutesTitle => 'Daily study time';
+
+  @override
+  String get dailyMinutesFirstTitle => 'How many minutes a day will you study?';
+
+  @override
+  String get dailyMinutesBody =>
+      'Reviews come first, and new cards fill the time left.';
+
+  @override
+  String dailyMinutesChoice(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get dailyMinutesCustom => 'Custom';
+
+  @override
+  String dailyMinutesCustomValue(int minutes) {
+    return 'Custom · $minutes min';
+  }
+
+  @override
+  String get dailyMinutesLess => '5 minutes less';
+
+  @override
+  String get dailyMinutesMore => '5 minutes more';
+
+  @override
+  String dailyMinutesToday(int fresh, int reviews) {
+    return 'About $fresh new cards today · $reviews reviews';
+  }
+
+  @override
+  String dailyMinutesForecast(int cards, String date) {
+    return 'At this pace you start the $cards new cards left by about $date';
+  }
+
+  @override
+  String dailyMinutesForecastToday(int cards) {
+    return 'You start the $cards new cards left today';
+  }
+
+  @override
+  String get dailyMinutesNoTime =>
+      'Reviews fill this time, so no new card starts';
+
+  @override
+  String get dailyMinutesAllStarted => 'You\'ve started every new card';
+
+  @override
+  String get dailyMinutesSkip => 'Skip';
+
+  @override
+  String completionTomorrow(int minutes) {
+    return '$minutes min again tomorrow';
+  }
+
+  @override
+  String get completionChange => 'Change';
+
+  @override
+  String completionTomorrowSemantics(int minutes) {
+    return '$minutes min again tomorrow, change';
+  }
+
+  @override
+  String get settingsStudy => 'Study';
 }

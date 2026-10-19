@@ -225,7 +225,8 @@ void main() {
         studyDayStart(_now, _utc),
         _utc,
       );
-      final (day, pace) = await readStudyDay(study, _now, _utc);
+      final (day: day, pace: pace, due: _, started: _, dailyMinutes: _) =
+          await readStudyDay(study, _now, _utc);
       expect(window, hasLength(30));
       // (20 min - the oldest day's 2 cards, due today, at 6 s) / 6 s.
       expect(day.newCardsLeft, 198);
@@ -266,7 +267,8 @@ void main() {
         await readStudyDays(study, studyDayStart(_now, _utc), _utc),
         window,
       );
-      final (same, samePace) = await readStudyDay(study, _now, _utc);
+      final (day: same, pace: samePace, due: _, started: _, dailyMinutes: _) =
+          await readStudyDay(study, _now, _utc);
       expect(same.newCardsLeft, day.newCardsLeft);
       expect(samePace, pace);
       // Control: an answer inside the window is read.
@@ -304,14 +306,16 @@ void main() {
           ),
         );
       }
-      final (before, _) = await readStudyDay(study, _now, _utc);
+      final (day: before, pace: _, due: _, started: _, dailyMinutes: _) =
+          await readStudyDay(study, _now, _utc);
 
       // Every due card answered at its due time, and a new card first answered.
       for (final card in due) {
         await answer(card, [dueAt]);
       }
       await answer('new', [dueAt.add(const Duration(minutes: 1))]);
-      final (after, _) = await readStudyDay(study, _now, _utc);
+      final (day: after, pace: _, due: _, started: _, dailyMinutes: _) =
+          await readStudyDay(study, _now, _utc);
 
       // The figure leaves room for more than the one new card taken, and is
       // the same before and after, less that card.
@@ -321,15 +325,17 @@ void main() {
 
     test('the daily minutes the user stores apply to today at once, and the default holds until then', () async {
       await answer('known', [daysAgo(1)]);
-      final (unset, pace) = await readStudyDay(study, _now, _utc);
-      expect(await study.dailyMinutes(), defaultDailyMinutes);
+      final (day: unset, pace: pace, due: _, started: _, dailyMinutes: _) =
+          await readStudyDay(study, _now, _utc);
+      expect(await study.dailyMinutes(), isNull);
       expect(
         unset.newCardsLeft,
         dailyNewCards(minutes: defaultDailyMinutes, due: 0, pace: pace),
       );
 
       await study.setDailyMinutes(5, at: _now);
-      final (changed, _) = await readStudyDay(study, _now, _utc);
+      final (day: changed, pace: _, due: _, started: _, dailyMinutes: _) =
+          await readStudyDay(study, _now, _utc);
 
       expect(await study.dailyMinutes(), 5);
       expect(

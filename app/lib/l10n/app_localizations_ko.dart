@@ -1334,4 +1334,82 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coachStart => '시작하기';
+
+  @override
+  String dailyMinutesControl(int minutes) {
+    return '하루 $minutes분';
+  }
+
+  @override
+  String dailyMinutesControlSemantics(int minutes) {
+    return '하루 공부 시간 $minutes분, 바꾸기';
+  }
+
+  @override
+  String get dailyMinutesTitle => '하루 공부 시간';
+
+  @override
+  String get dailyMinutesFirstTitle => '하루 몇 분 공부할까요?';
+
+  @override
+  String get dailyMinutesBody => '복습을 먼저 하고, 남는 시간에 새 카드를 시작해요.';
+
+  @override
+  String dailyMinutesChoice(int minutes) {
+    return '$minutes분';
+  }
+
+  @override
+  String get dailyMinutesCustom => '직접 정하기';
+
+  @override
+  String dailyMinutesCustomValue(int minutes) {
+    return '직접 · $minutes분';
+  }
+
+  @override
+  String get dailyMinutesLess => '5분 줄이기';
+
+  @override
+  String get dailyMinutesMore => '5분 늘리기';
+
+  @override
+  String dailyMinutesToday(int fresh, int reviews) {
+    return '오늘 새 카드 약 $fresh장 · 복습 $reviews장';
+  }
+
+  @override
+  String dailyMinutesForecast(int cards, String date) {
+    return '이대로면 남은 새 카드 $cards장을 $date쯤 다 시작해요';
+  }
+
+  @override
+  String dailyMinutesForecastToday(int cards) {
+    return '남은 새 카드 $cards장을 오늘 다 시작해요';
+  }
+
+  @override
+  String get dailyMinutesNoTime => '이 시간은 복습으로 차서 새 카드는 시작하지 않아요';
+
+  @override
+  String get dailyMinutesAllStarted => '새 카드를 모두 시작했어요';
+
+  @override
+  String get dailyMinutesSkip => '건너뛰기';
+
+  @override
+  String completionTomorrow(int minutes) {
+    return '내일도 하루 $minutes분';
+  }
+
+  @override
+  String get completionChange => '바꾸기';
+
+  @override
+  String completionTomorrowSemantics(int minutes) {
+    return '내일도 하루 $minutes분, 바꾸기';
+  }
+
+  @override
+  String get settingsStudy => '공부';
 }

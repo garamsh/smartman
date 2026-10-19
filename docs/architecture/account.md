@@ -14,10 +14,10 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
   - `AccountData`, `AccountDataNotCleared` and `accountDataProvider`, the device's data that sign-out pushes and clears, which the composition site overrides with the `sync` domain's, so this domain does not depend on it, a seam that breaks a behavioural cycle ([`sync.md`](sync.md));
   - the failures: `AccountFailure`, `AccountOffline`, `AccountMisconfigured`, `AccountRejected`;
   - `AccountGate`, the app's home, which takes the app it opens while signed in as a constructor argument: the composition site passes `home/`'s `HomeScreen`, so this domain depends on no other ([ADR 0017](adr/0017-require-sign-in-through-an-account-gate.md), [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md));
-  - `AccountScreen`, which takes the sync status it shows as a constructor argument, and `AccountAvatar`, the account's initial in a circle;
+  - `AccountScreen`, which takes the sync status and the study setting it shows as constructor arguments, and `AccountAvatar`, the account's initial in a circle;
   - `appVersionProvider`, the version the account screen names, which the composition site overrides.
 - It is the only domain that imports `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)). `sync` and `sharing` also import `supabase_flutter`, for PostgREST with the client `connectAccount` returns ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
-- `home/`'s home screen shows `AccountAvatar` on its account button and opens `AccountScreen` with `sync`'s `SyncStatusView` ([`home.md`](home.md)).
+- `home/`'s home screen shows `AccountAvatar` on its account button and opens `AccountScreen` with `sync`'s `SyncStatusView` and `study`'s `DailyMinutesRow` ([`home.md`](home.md)).
 
 ### Gate
 
@@ -26,8 +26,9 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - When the state leaves `SignedIn`, by sign-out or by the client dropping the session, the gate closes every screen opened over the app, so the sign-in screen is the only one left.
 - `SignInScreen` is the app's welcome ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)): the stacked lockup, 200 wide and read as the app's name, with the two lines "밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드", centred on a ground-coloured panel whose bottom corners are rounded 40; below it, in thumb reach, Google's "Google로 계속하기" button and, quieter, a disabled "Apple로 계속하기 · 준비 중" text button that Apple sign-in (M4b) fills; then "계속하면 이용약관과 개인정보 처리방침에 동의하는 것으로 봐요." over the two links. With `AccountUnavailable` it shows the misconfiguration message in place of the buttons, and no app runs.
 - The Google button is Google's own, drawn to its branding guidelines in the light or dark variant of the theme, with the "G" mark from Google's asset bundle ([`design.md`](design.md), [ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)).
-- `AccountScreen` is reached only from the app, so it shows the signed-in account, the theme, sign-out and deletion:
+- `AccountScreen` is reached only from the app, so it shows the signed-in account, the study setting, the theme, sign-out and deletion:
   - a profile card: a 56 px `AccountAvatar`, the email, and the sync status under it, synced with a check;
+  - "공부", the study setting it is given: the daily study minutes' row, which opens their sheet ([ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md), [`study.md`](study.md));
   - "화면", the theme control on a rounded surface;
   - "계정", with "로그아웃" as an `AppListRow`, and below it "계정 삭제", a destructive `AppListRow` with the note "계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요."
   - a foot: the mascot at half opacity, "버전 x.y.z", and the two links.

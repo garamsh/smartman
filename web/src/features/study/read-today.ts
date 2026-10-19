@@ -49,6 +49,8 @@ export type Today = {
   dailyMinutes: number;
   /** The reviews due today as the day stood when it started, which the minutes leave room for. */
   dueAtStart: number;
+  /** The cards first answered today, across every deck, which today's new cards include. */
+  startedToday: number;
   states: CardStates;
   readAt: number;
   streakBefore: number;
@@ -154,6 +156,7 @@ export async function readToday(
       pace,
       dailyMinutes: minutes.dailyMinutes,
       dueAtStart: due,
+      startedToday: firstAnswers.length,
       states: states.states,
       readAt: states.readAt,
       streakBefore: before.streak,

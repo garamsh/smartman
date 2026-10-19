@@ -52,7 +52,10 @@ void main() {
             locale: locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const AccountScreen(syncStatus: Text('sync status')),
+            home: const AccountScreen(
+              syncStatus: Text('sync status'),
+              studySetting: Text('study setting'),
+            ),
           ),
         ),
       ),
@@ -501,7 +504,12 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('grace@example.com'), findsOneWidget);
-      await tester.ensureVisible(find.text('Version 1.0.0'));
+      // The foot is below the rows the screen builds first.
+      await tester.scrollUntilVisible(
+        find.text('Version 1.0.0'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       expect(find.text('Terms of Service'), findsOneWidget);
       expect(find.text('Privacy Policy'), findsOneWidget);
@@ -528,7 +536,12 @@ void main() {
         },
       );
 
-      await tester.ensureVisible(find.text('Terms of Service'));
+      // The foot is below the rows the screen builds first.
+      await tester.scrollUntilVisible(
+        find.text('Terms of Service'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Terms of Service'));
       await tester.pumpAndSettle();

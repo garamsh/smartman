@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -347,11 +349,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     );
   }
 
-  void _study() => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => StudyScreen(decks: DeckSelection(widget.deck.id)),
-    ),
-  );
+  void _study() => unawaited(openStudy(context, DeckSelection(widget.deck.id)));
 
   Future<void> _open(Card? card) => Navigator.of(context).push(
     MaterialPageRoute<void>(

@@ -150,18 +150,19 @@ Future<List<StudyDayTotal>> readStudyDays(
   return totalsOf(await repository.answersBetween(first, before), offsetAt);
 }
 
-/// Today's [StudyDay] at [now] and the user's [Pace], read through
-/// [repository] from the stored reviews, card states and daily study minutes,
-/// across every deck.
+/// Today's [StudyDay] at [now], the user's [Pace], the reviews [due] as the
+/// day stood when it started, the cards [started] in it, first answered in
+/// it, and the [dailyMinutes] it takes, read through [repository] from
+/// the stored reviews, card states and daily study minutes, across every deck.
 ///
-/// The day's new cards are [dailyNewCards] over the reviews due as the day
-/// stood when it started, so answering during it does not change them: the
-/// cards due before it ends that were not answered in it, and the cards
-/// answered in it that had an answer before it. A change of the minutes
-/// applies at once.
+/// The day's new cards are [dailyNewCards] over [due], so answering during
+/// the day does not change them: the cards due before it ends that were not
+/// answered in it, and the cards answered in it that had an answer before it.
+/// A change of the minutes applies at once.
 ///
 /// A failed read throws the `StudyFailure` that reports it.
-Future<(StudyDay, Pace)> readStudyDay(
+Future<({StudyDay day, Pace pace, int due, int started, int dailyMinutes})>
+readStudyDay(
   StudyRepository repository,
   DateTime now, [
   UtcOffsetAt offsetAt = localOffsetAt,
@@ -183,18 +184,22 @@ Future<(StudyDay, Pace)> readStudyDay(
     if (!firstToday.containsKey(card) && state.due.isBefore(end)) due++;
   }
   final pace = paceOf(days);
+  final firstAnswers = [
+    for (final MapEntry(key: card, value: at) in firstToday.entries)
+      if (!earlier.containsKey(card)) at,
+  ];
+  final minutes = await repository.dailyMinutes() ?? defaultDailyMinutes;
   final day = StudyDay.at(
     now,
-    firstAnswers: [
-      for (final MapEntry(key: card, value: at) in firstToday.entries)
-        if (!earlier.containsKey(card)) at,
-    ],
-    newCards: dailyNewCards(
-      minutes: await repository.dailyMinutes(),
-      due: due,
-      pace: pace,
-    ),
+    firstAnswers: firstAnswers,
+    newCards: dailyNewCards(minutes: minutes, due: due, pace: pace),
     offsetAt: offsetAt,
   );
-  return (day, pace);
+  return (
+    day: day,
+    pace: pace,
+    due: due,
+    started: firstAnswers.length,
+    dailyMinutes: minutes,
+  );
 }

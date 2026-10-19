@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
+import 'daily_minutes_sheet.dart';
 import 'study_coach.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
@@ -38,6 +39,18 @@ enum _CoachStep {
 
 /// How long the notice that a session goes on with the day stays.
 const _resumeShown = Duration(seconds: 3);
+
+/// Opens a session over [decks] in a [StudyScreen], after the first-run step
+/// that asks for the daily study minutes while it has not shown
+/// ([askDailyMinutesOnce]), so the session takes the minutes chosen.
+Future<void> openStudy(BuildContext context, DeckSelection decks) async {
+  if (askDailyMinutesOnce(context) case final ask?) {
+    await ask;
+    if (!context.mounted) return;
+  }
+  await Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => StudyScreen(decks: decks)));
+}
 
 /// Studies the cards of [decks] left today in one session, one card at a time,
 /// answered by swiping, below the card answered just before it; then shows the
