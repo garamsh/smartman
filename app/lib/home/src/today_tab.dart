@@ -420,7 +420,9 @@ class _GoalRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    const size = AppSize.mascotMedium - AppSpace.s8;
+    // The ring grows with the text size, so its figures stay inside it.
+    final size = MediaQuery.textScalerOf(context)
+        .scale(AppSize.mascotMedium - AppSpace.s8);
     return Semantics(
       container: true,
       label: AppLocalizations.of(context)
@@ -565,11 +567,15 @@ class _Pill extends StatelessWidget {
           spacing: AppSpace.s4,
           children: [
             icon,
-            Text(
-              label,
-              style: AppType.caption.copyWith(
-                fontWeight: FontWeight.w700,
-                color: onHero ? colors.onHero : colors.ink,
+            // Wrapped where the line has no room for it, as at a large text
+            // size.
+            Flexible(
+              child: Text(
+                label,
+                style: AppType.caption.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: onHero ? colors.onHero : colors.ink,
+                ),
               ),
             ),
           ],
@@ -784,11 +790,13 @@ class _LastWeek extends StatelessWidget {
                             size: AppSize.smallIcon,
                             color: colors.streak,
                           ),
-                          Text(
-                            l10n.streakDays(overview.streak),
-                            style: AppType.caption.copyWith(
-                              color: colors.ink2,
-                              fontWeight: FontWeight.w700,
+                          Flexible(
+                            child: Text(
+                              l10n.streakDays(overview.streak),
+                              style: AppType.caption.copyWith(
+                                color: colors.ink2,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
@@ -916,11 +924,16 @@ class _DayBars extends StatelessWidget {
               child: Column(
                 spacing: AppSpace.s4,
                 children: [
-                  Text(
-                    '$count',
-                    style: AppType.micro.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colors.ink2,
+                  // A figure and a label stay on one line, shrunk to the
+                  // column only where a large text size is wider than it.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '$count',
+                      style: AppType.micro.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.ink2,
+                      ),
                     ),
                   ),
                   Container(
@@ -938,9 +951,12 @@ class _DayBars extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppSpace.s8 - 2),
                     ),
                   ),
-                  Text(
-                    labels[index],
-                    style: AppType.micro.copyWith(color: colors.muted),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      labels[index],
+                      style: AppType.micro.copyWith(color: colors.muted),
+                    ),
                   ),
                 ],
               ),

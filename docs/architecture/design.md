@@ -47,6 +47,10 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - A vocabulary sense reads the same from every book: each label in brackets, a part of speech by its fixed short form, as `[명]`, another label as printed, then the meaning, one sense per line. The label is its own span with a gap of one spacing step, `AppSpace.s4` (`mr-1` on the web), narrower than a word space, after it; a sense with no label shows its meaning alone ([ADR 0075](adr/0075-store-a-vocabulary-card-s-senses-as-a-typed-block-and-show-each-label-in-brackets-before-its-meaning.md)).
    - 덱 tab, 오늘 tab and deck screen: rows on rounded surfaces over the ground; the navy cards over them.
    - Every screen and sheet: the tokens below and the components that use them.
+   - At a larger system text size nothing is cut (issue #295):
+     - a box sized for its text grows with it: the tab bar from its 64 and the today card's goal ring, 76 across, by the text scale;
+     - a pill's label wraps inside the pill;
+     - a figure or label a narrow column holds, the day bars' among them, stays on one line and shrinks to the column only where it is wider, so a word never breaks inside itself.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
    - Study: an answered card flies off and rises into the previous card's place while the next emerges from below; under reduce motion they cross-fade. A re-decided card springs back into place, at once under reduce motion.
    - Photo import list: a row swiped left follows the finger and springs back into place, left out.

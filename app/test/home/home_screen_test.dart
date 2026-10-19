@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -12,6 +13,7 @@ import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
+import 'package:smartman/home/src/today_tab.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
@@ -317,6 +319,97 @@ void main() {
       expect(find.text('Study all'), findsOneWidget);
       await list.close();
     });
+
+    // Each card the 오늘 tab can lead with, by the text it shows: the today
+    // card, its ring's figures three digits, the done card, and the backlog
+    // card.
+    final states =
+        <
+          String,
+          (
+            String Function(AppLocalizations),
+            Future<_List> Function(WidgetTester, Locale),
+          )
+        >{
+          'the today card': (
+            (l10n) => l10n.studyAll,
+            (tester, locale) => _open(
+              tester,
+              locale: locale,
+              fresh: {'Alpha': 120, 'Gamma': 1},
+              due: {'Beta': 3},
+              answeredToday: {'Beta': 100},
+              dailyMinutes: 60,
+            ),
+          ),
+          'the done card': (
+            (l10n) => l10n.todayDone,
+            (tester, locale) => _open(
+              tester,
+              locale: locale,
+              decks: ['Alpha'],
+              answeredToday: {'Alpha': 35},
+              dailyMinutes: 5,
+            ),
+          ),
+          'the backlog card': (
+            (l10n) => l10n.backlogTitle,
+            (tester, locale) => _open(
+              tester,
+              locale: locale,
+              fresh: {'Gamma': 1},
+              due: {'Alpha': 40, 'Beta': 30},
+              dueDays: 30,
+            ),
+          ),
+        };
+    for (final locale in const [Locale('ko'), Locale('en')]) {
+      for (final MapEntry(key: state, value: (title, open)) in states.entries) {
+        testWidgets(
+          'at twice the text size in ${locale.languageCode}, the 오늘 tab with $state, its tab bar and the goal ring lay out without overflow and keep the day bar labels on one line',
+          (tester) async {
+            tester.platformDispatcher.textScaleFactorTestValue = 2;
+            addTearDown(
+              tester.platformDispatcher.clearTextScaleFactorTestValue,
+            );
+            final list = await open(tester, locale);
+            // The setup is the state asked for: the text twice its size,
+            // and the tab leading with that card.
+            final tab = tester.element(find.byType(TodayTab));
+            expect(MediaQuery.textScalerOf(tab).scale(10), 20);
+            expect(find.text(title(AppLocalizations.of(tab))), findsOneWidget);
+            // Every part of the tab laid out, from its top to its foot.
+            final scrollable = find
+                .descendant(
+                  of: find.byType(TodayTab),
+                  matching: find.byType(Scrollable),
+                )
+                .first;
+            final position = tester.state<ScrollableState>(scrollable).position;
+            while (position.pixels < position.maxScrollExtent) {
+              await tester.drag(scrollable, const Offset(0, -300));
+              await tester.pumpAndSettle();
+            }
+            expect(position.maxScrollExtent, greaterThan(0));
+            expect(tester.takeException(), isNull);
+            // The day bars' label for today stays one line: a word that
+            // broke inside itself would lay out taller than one line.
+            final today = AppLocalizations.of(tab).dayToday;
+            for (final label in find.text(today).evaluate()) {
+              final paragraph = label.renderObject! as RenderParagraph;
+              final line = TextPainter(
+                text: paragraph.text,
+                textScaler: paragraph.textScaler,
+                textDirection: TextDirection.ltr,
+              )..layout();
+              expect(paragraph.size.height, line.height, reason: today);
+              line.dispose();
+            }
+            await list.close();
+          },
+        );
+      }
+    }
 
     testWidgets(
       'the today card counts every deck with its minutes, the goal ring, the streak, and Study all studies every deck',

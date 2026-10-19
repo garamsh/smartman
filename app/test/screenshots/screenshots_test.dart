@@ -483,6 +483,63 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets(
+      'the today tab at twice the text size in $mode',
+      skip: !_capture,
+      (tester) async {
+        phone(tester);
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        var ids = 0;
+        final repository = DeckRepository(
+          db,
+          clock: () => homeNow.subtract(const Duration(days: 2)),
+          newId: () => 'id${ids++}',
+        );
+        await tester.runAsync(() async {
+          final deck = await repository.createDeck('영단어 기본');
+          for (var i = 0; i < 30; i++) {
+            final saved = await repository.addCard(
+              deck.id,
+              front: [TextContent('word $i')],
+              back: [TextContent('$i')],
+            );
+            if (saved case CardSaved(:final card) when i < 12) {
+              // Due today after a day's interval, answered the day before.
+              await storeState(db, card.id, due: homeNow);
+              await storeAnswers(db, card.id, 1, const Duration(seconds: 10));
+            }
+          }
+        });
+        final storage = await openStudyStorage(tester);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              deckRepositoryProvider.overrideWithValue(repository),
+              ...homeOverrides(db, storage: storage),
+            ],
+            child: MaterialApp(
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: ThemeMode.values.byName(mode),
+              locale: const Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const HomeScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await shot(tester, '16j-today-text-2x');
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -600));
+        await tester.pumpAndSettle();
+        await shot(tester, '16k-today-text-2x-below');
+        await unmount(tester);
+      },
+    );
+
     testWidgets('study past the day\'s plan in $mode', skip: !_capture, (
       tester,
     ) async {
