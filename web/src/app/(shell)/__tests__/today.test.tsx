@@ -525,7 +525,7 @@ describe("the 오늘 and 덱 pages", () => {
       expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
     });
     expect(screen.getByText("1/2")).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "문제" })).toHaveTextContent("b");
+    expect(screen.getByRole("group", { name: "앞면" })).toHaveTextContent("b");
   });
 
   it("forecasts the next seven days by study day, today's load first", async () => {

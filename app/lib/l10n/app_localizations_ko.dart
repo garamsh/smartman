@@ -59,10 +59,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteCard => '카드 삭제';
 
   @override
-  String get cardFront => '문제';
+  String get cardFront => '앞면';
 
   @override
-  String get cardBack => '답';
+  String get cardBack => '뒷면';
 
   @override
   String get cardSideRequired => '내용을 입력하세요';
@@ -77,7 +77,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCardReadOnly => '표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
 
   @override
-  String get sensesEditNote => '답을 고치면 [명] 같은 표시도 글자로 저장돼요.';
+  String get sensesEditNote => '뒷면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
 
   @override
   String get duplicateTitle => '이 덱에 이미 있는 카드예요';
@@ -144,7 +144,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String studyProgressSemantics(int answered, int total) {
-    return '$total장 중 $answered장 답함';
+    return '$total장 중 $answered장 응답함';
   }
 
   @override
@@ -153,10 +153,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get showAnswer => '답 보기';
+  String get showBack => '뒷면 보기';
 
   @override
-  String get hideAnswer => '답 가리기';
+  String get hideBack => '뒷면 가리기';
 
   @override
   String previousCardSemantics(
@@ -169,7 +169,7 @@ class AppLocalizationsKo extends AppLocalizations {
       'yes': '. 수정됨',
       'other': '',
     });
-    return '앞면: $front. 뒷면: $back. 답: $answer$_temp0';
+    return '앞면: $front. 뒷면: $back. 응답: $answer$_temp0';
   }
 
   @override
@@ -188,7 +188,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changingToDontKnow => '모른다로 바꿔요';
 
   @override
-  String get previousPlaceholder => '답한 카드가 여기에 쌓여요';
+  String get previousPlaceholder => '응답한 카드가 여기에 쌓여요';
 
   @override
   String get earlierCard => '지난번 마지막 카드';
@@ -205,7 +205,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get studyCoachDontKnow => '모르면 왼쪽으로 밀어요';
 
   @override
-  String get studyCoachRedecide => '답한 카드는 위로 올라와요. 밀어서 답을 바꿀 수 있어요';
+  String get studyCoachRedecide => '응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요';
 
   @override
   String get studyCoachReplay => '안내 다시 보기';
@@ -217,7 +217,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get studyCoachSampleBack => '마감 기한';
 
   @override
-  String get answerNotSaved => '답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
+  String get answerNotSaved => '응답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
 
   @override
   String get studyComplete => '오늘 학습 완료';
@@ -259,7 +259,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountTitle => '계정';
 
   @override
-  String get welcomeBody => '밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드';
+  String get welcomeBody => '밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드';
 
   @override
   String get signInWithGoogle => 'Google로 계속하기';
@@ -769,7 +769,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get closeSearch => '검색 닫기';
 
   @override
-  String get addCardManuallyBody => '문제와 답을 하나씩 적어요';
+  String get addCardManuallyBody => '앞면과 뒷면을 하나씩 적어요';
 
   @override
   String cardListTitle(int count) {
@@ -780,13 +780,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get showMeanings => '뜻 보기';
 
   @override
-  String cardAnswerHidden(String front) {
-    return '$front, 답 가려짐';
+  String cardBackHidden(String front) {
+    return '$front, 뒷면 가려짐';
   }
 
   @override
-  String cardAnswerShown(String front, String back) {
-    return '$front, 답 $back';
+  String cardBackShown(String front, String back) {
+    return '$front, 뒷면 $back';
   }
 
   @override

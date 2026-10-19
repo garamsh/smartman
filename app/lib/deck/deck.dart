@@ -16,7 +16,7 @@ export 'src/card_import.dart'
 export 'src/card_editor_screen.dart' show CardEditorScreen;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart'
-    show CardAnswerRow, CardSplitRow, describeContent, spokenContent;
+    show CardBackRow, CardSplitRow, describeContent, spokenContent;
 export 'src/content.dart'
     show
         CardSense,

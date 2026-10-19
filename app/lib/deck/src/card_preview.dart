@@ -9,8 +9,8 @@ import 'content_view.dart';
 import 'split_card.dart';
 import 'whole_card_view.dart';
 
-/// A card as the study screen shows it with its answer revealed: the question
-/// on the left half and the answer on the right, each centred and fitted to
+/// A card as the study screen shows it with its back revealed: the front on
+/// the left half and the back on the right, each centred and fitted to
 /// its half, or a whole card's front with its blanks filled, on a rounded
 /// surface.
 class CardPreview extends StatelessWidget {
@@ -42,8 +42,8 @@ class CardPreview extends StatelessWidget {
                     builder: (context, constraints) => WholeCardView(
                       front,
                       revealed: true,
-                      style: AppType.question,
-                      minFontSize: AppType.questionFloor,
+                      style: AppType.front,
+                      minFontSize: AppType.frontFloor,
                       width: constraints.maxWidth,
                     ),
                   ),
@@ -53,15 +53,15 @@ class CardPreview extends StatelessWidget {
                 front: (context, width) => CardText(
                   describeContent(l10n, front),
                   span: contentSpan(l10n, front),
-                  style: AppType.question,
-                  minFontSize: AppType.questionFloor,
+                  style: AppType.front,
+                  minFontSize: AppType.frontFloor,
                   width: width,
                 ),
                 back: (context, width) => CardText(
                   describeContent(l10n, back),
                   span: contentSpan(l10n, back),
-                  style: AppType.answer,
-                  minFontSize: AppType.answerFloor,
+                  style: AppType.back,
+                  minFontSize: AppType.backFloor,
                   width: width,
                 ),
               ),

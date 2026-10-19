@@ -440,16 +440,16 @@ class _CardFace extends StatelessWidget {
                       ? WholeCardView(
                           card.front,
                           revealed: false,
-                          style: AppType.question,
-                          minFontSize: AppType.questionFloor,
+                          style: AppType.front,
+                          minFontSize: AppType.frontFloor,
                           width:
                               constraints.maxWidth - 2 * StudyStyle.cardPadding,
                         )
                       : ContentView(
                           card.front,
-                          style: AppType.question,
+                          style: AppType.front,
                           fit: (
-                            minFontSize: AppType.questionFloor,
+                            minFontSize: AppType.frontFloor,
                             width:
                                 constraints.maxWidth -
                                 2 * StudyStyle.cardPadding,

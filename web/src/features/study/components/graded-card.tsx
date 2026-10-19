@@ -32,9 +32,9 @@ type Graded = Pick<PreviousAnswer, "card" | "answer"> & { changed?: boolean };
  * blanks as "빈칸", and its grade.
  */
 export function answerLabel(answer: Graded): string {
-  const front = answer.card.whole?.question ?? answer.card.text.front;
+  const front = answer.card.whole?.spokenFront ?? answer.card.text.front;
   const changed = answer.changed ? ". 수정됨" : "";
-  return `앞면: ${front}. 뒷면: ${answer.card.text.back}. 답: ${grades[answer.answer].name}${changed}`;
+  return `앞면: ${front}. 뒷면: ${answer.card.text.back}. 응답: ${grades[answer.answer].name}${changed}`;
 }
 
 /** A grade's chip: its mark and its word, so the grade never rests on colour alone. */
@@ -216,18 +216,18 @@ export function GradedCard({
           </span>
         )}
         {answer.card.whole ? (
-          <span className="col-span-3 flex items-center justify-center p-4 text-answer text-ink lg:p-6">
+          <span className="col-span-3 flex items-center justify-center p-4 text-back text-ink lg:p-6">
             {answer.card.whole.filled}
           </span>
         ) : (
           <>
-            <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
+            <span className="flex items-center justify-center p-4 text-front text-ink lg:p-6">
               <span className="line-clamp-6 break-words">
                 {answer.card.sides?.front ?? answer.card.text.front}
               </span>
             </span>
             <span aria-hidden className={`my-7 w-px ${grade.line}`} />
-            <span className="flex items-center justify-center p-4 text-answer text-ink-2 lg:p-6">
+            <span className="flex items-center justify-center p-4 text-back text-ink-2 lg:p-6">
               <span className="line-clamp-6 break-words">
                 {answer.card.sides?.back ?? answer.card.text.back}
               </span>

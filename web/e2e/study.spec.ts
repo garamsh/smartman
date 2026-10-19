@@ -162,14 +162,14 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await deckRow.click();
   await expect(page.getByRole("heading", { name: "French", exact: true })).toBeVisible();
   // Every answer hidden until it is asked for: one click shows that card's, 뜻 보기 them all.
-  await expect(page.getByRole("button", { name: "chat, 답 가려짐", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "chat, 뒷면 가려짐", exact: true })).toBeVisible();
   await shot(page, "02-deck");
-  const answersShown = page.getByRole("button", { name: "chat, 답 cat", exact: true });
+  const backsShown = page.getByRole("button", { name: "chat, 뒷면 cat", exact: true });
   await untilReacted(
     () => page.getByRole("switch", { name: "뜻 보기" }).click(),
-    async () => (await answersShown.count()) > 0,
+    async () => (await backsShown.count()) > 0,
   );
-  await expect(page.getByRole("button", { name: "chien, 답 dog", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "chien, 뒷면 dog", exact: true })).toBeVisible();
   await shot(page, "02b-deck-answers");
   // Enter opens the deck's session.
   await page.getByRole("heading", { name: "French", exact: true }).click();
@@ -179,23 +179,23 @@ test("a signed-in user studies two cards, and the server holds their reviews and
     () => Promise.resolve(studyPath.test(page.url())),
   );
 
-  const question = page.getByRole("group", { name: "문제", exact: true });
+  const front = page.getByRole("group", { name: "앞면", exact: true });
   const currentCard = page.getByRole("region", { name: "현재 카드", exact: true });
-  await expect(question).toHaveText(/^(chat|chien)$/);
-  const first = (await question.textContent()) ?? "";
+  await expect(front).toHaveText(/^(chat|chien)$/);
+  const first = (await front.textContent()) ?? "";
   // A device's first session: the coach's caption in the answer buttons' place, over the empty
   // previous card's place.
   const coach = page.getByRole("region", { name: "학습 사용 방법" });
   await expect(coach).toContainText("알면 안다(→)를 눌러요");
-  await expect(page.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "응답한 카드가 여기에 쌓여요" })).toBeVisible();
   await shot(page, "03a-study-coach");
-  // The current card shows its question alone; its answer shows once answered, above.
+  // The current card shows its front alone; its back shows once answered, above.
   await expect(currentCard).not.toContainText(backs.get(first) ?? "");
-  await shot(page, "03-study-question");
+  await shot(page, "03-study-front");
   const second = first === "chat" ? "chien" : "chat";
   await untilReacted(
     () => page.keyboard.press("k"),
-    async () => (await question.textContent()) === second,
+    async () => (await front.textContent()) === second,
   );
   await expect(
     page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
@@ -203,7 +203,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(currentCard).not.toContainText(backs.get(second) ?? "");
   // The first answer ended the coach and took the empty place.
   await expect(coach).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "응답한 카드가 여기에 쌓여요" })).toHaveCount(0);
   await shot(page, "05-study-stack");
   // A click on the previous card opens it whole; Esc closes it, and the session goes on.
   await page.getByRole("button", { name: "카드 전체 보기", exact: true }).click();
@@ -212,7 +212,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "05b-study-detail");
   await page.keyboard.press("Escape");
   await expect(detail).toHaveCount(0);
-  await expect(question).toHaveText(second);
+  await expect(front).toHaveText(second);
   // At a phone's width: the same cards with the large answer buttons, and no list beside.
   const desktop = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -223,7 +223,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   // No card is left today: the completion card takes the current card's place, below the stack.
   const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
   await expect(completion).toBeVisible();
-  await expect(question).toHaveCount(0);
+  await expect(front).toHaveCount(0);
   await expect(
     page.getByRole("complementary", { name: "이번 학습" }).getByRole("button"),
   ).toHaveCount(2);
@@ -776,7 +776,7 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
     ).toBeNull();
 
     await page.goto(`/study?decks=${deckId}`);
-    await expect(page.getByRole("group", { name: "문제", exact: true })).toHaveText("lundi");
+    await expect(page.getByRole("group", { name: "앞면", exact: true })).toHaveText("lundi");
     const completion = page.getByRole("region", { name: "오늘 학습 완료", exact: true });
     await untilReacted(
       () => page.keyboard.press("k"),

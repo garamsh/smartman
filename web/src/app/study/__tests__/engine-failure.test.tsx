@@ -32,6 +32,6 @@ describe("the study page", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "카드를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
     );
-    expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
   });
 });

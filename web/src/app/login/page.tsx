@@ -22,7 +22,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           <BrandMark mark="stacked" alt="smartman" className="h-auto w-stacked-lockup-width" />
         </h1>
         <p className="text-body whitespace-pre-line text-ink-2">
-          {"밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드"}
+          {"밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드"}
         </p>
       </div>
       <div className="mx-auto flex w-full max-w-list flex-col gap-4 px-gutter pt-8 pb-4">

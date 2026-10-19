@@ -506,7 +506,7 @@ class _RowTile extends StatelessWidget {
     final colors = AppColors.of(context);
     final onCheck = this.onCheck;
     final wholeFront = this.wholeFront;
-    final question = wholeFront == null
+    final spokenFront = wholeFront == null
         ? describeContent(l10n, sides.front)
         : spokenContent(l10n, wholeFront, revealed: false);
     final tile = DecoratedBox(
@@ -521,7 +521,7 @@ class _RowTile extends StatelessWidget {
           Semantics(
             container: true,
             checked: included,
-            label: l10n.importInclude(question),
+            label: l10n.importInclude(spokenFront),
             excludeSemantics: true,
             onTap: onCheck,
             child: InkResponse(
@@ -539,7 +539,10 @@ class _RowTile extends StatelessWidget {
               container: true,
               button: onEdit != null,
               label: wholeFront == null
-                  ? l10n.importRow(question, describeContent(l10n, sides.back))
+                  ? l10n.importRow(
+                      spokenFront,
+                      describeContent(l10n, sides.back),
+                    )
                   : spokenContent(l10n, wholeFront, revealed: true),
               excludeSemantics: true,
               onTap: onEdit,

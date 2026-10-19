@@ -65,12 +65,12 @@ void main() {
   );
 
   testWidgets(
-    'a deck row shows a senses answer the same way, and is read with one space after each label',
+    'a deck row shows a senses back the same way, and is read with one space after each label',
     (tester) async {
       final semantics = tester.ensureSemantics();
       await _pump(
         tester,
-        CardAnswerRow(
+        CardBackRow(
           front: const [TextContent('apple')],
           back: const [_senses],
           shown: true,
@@ -80,24 +80,22 @@ void main() {
       );
 
       expect(
-        _drawn(find.byType(CardAnswerRow)).text,
+        _drawn(find.byType(CardBackRow)).text,
         'apple',
-        reason: 'the question first',
+        reason: 'the front first',
       );
-      final answer = find
+      final back = find
           .descendant(
-            of: find.byType(CardAnswerRow),
+            of: find.byType(CardBackRow),
             matching: find.byType(RichText),
           )
           .at(1);
       expect(
-        (answer.evaluate().single.widget as RichText).text.toPlainText(),
+        (back.evaluate().single.widget as RichText).text.toPlainText(),
         '[명]사과\n[명][사물]철도 위를 다니는 긴 차\n열매',
       );
       expect(
-        find.bySemanticsLabel(
-          'apple, answer [명] 사과\n[명] [사물] 철도 위를 다니는 긴 차\n열매',
-        ),
+        find.bySemanticsLabel('apple, back [명] 사과\n[명] [사물] 철도 위를 다니는 긴 차\n열매'),
         findsOneWidget,
       );
       semantics.dispose();

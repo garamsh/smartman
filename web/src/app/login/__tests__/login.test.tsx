@@ -21,8 +21,8 @@ describe("the login page", () => {
       "/brand/smartman-stacked-dark.svg",
     ]);
     // The phone's welcomeBody, its line break kept.
-    expect(screen.getByText(/^밀어서 답하고,/).textContent).toBe(
-      "밀어서 답하고,\n잊을 때쯤 다시 만나는 암기 카드",
+    expect(screen.getByText(/^밀어서 응답하고,/).textContent).toBe(
+      "밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드",
     );
     expect(screen.getByRole("button", { name: "Google로 로그인" })).toBeEnabled();
     expect(

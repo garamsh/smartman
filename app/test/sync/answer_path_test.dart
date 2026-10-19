@@ -74,11 +74,8 @@ void main() {
     await tapAndSettle(tester, 'Create');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
-      await tester.enterText(
-        find.widgetWithText(AppTextField, 'Question'),
-        front,
-      );
-      await tester.enterText(find.widgetWithText(AppTextField, 'Answer'), back);
+      await tester.enterText(find.widgetWithText(AppTextField, 'Front'), front);
+      await tester.enterText(find.widgetWithText(AppTextField, 'Back'), back);
       await tapAndSettle(tester, 'Save');
     }
     await tapAndSettle(tester, 'Study');

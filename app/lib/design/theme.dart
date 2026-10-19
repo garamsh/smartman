@@ -232,8 +232,8 @@ abstract final class AppType {
     fontWeight: FontWeight.w400,
   );
 
-  /// A study card's question: 30/38, extra bold.
-  static const question = TextStyle(
+  /// A study card's front: 30/38, extra bold.
+  static const front = TextStyle(
     fontFamily: appFontFamily,
     fontSize: 30,
     height: 38 / 30,
@@ -241,18 +241,18 @@ abstract final class AppType {
     letterSpacing: -0.6,
   );
 
-  /// A study card's answer: 20/28, semibold.
-  static const answer = TextStyle(
+  /// A study card's back: 20/28, semibold.
+  static const back = TextStyle(
     fontFamily: appFontFamily,
     fontSize: 20,
     height: 28 / 20,
     fontWeight: FontWeight.w600,
   );
 
-  /// The smallest a card's question and answer shrink to so they fit their
+  /// The smallest a card's front and back shrink to so they fit their
   /// half.
-  static const questionFloor = 18.0;
-  static const answerFloor = 15.0;
+  static const frontFloor = 18.0;
+  static const backFloor = 15.0;
 
   /// The scale as Material's text theme, so Material widgets draw in it.
   static const textTheme = TextTheme(

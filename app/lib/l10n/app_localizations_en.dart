@@ -60,10 +60,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteCard => 'Delete card';
 
   @override
-  String get cardFront => 'Question';
+  String get cardFront => 'Front';
 
   @override
-  String get cardBack => 'Answer';
+  String get cardBack => 'Back';
 
   @override
   String get cardSideRequired => 'Enter some text';
@@ -80,7 +80,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sensesEditNote =>
-      'Editing the answer saves labels such as [명] as plain text.';
+      'Editing the back saves labels such as [명] as plain text.';
 
   @override
   String get duplicateTitle => 'This deck already has this card';
@@ -154,7 +154,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String studyProgressSemantics(int answered, int total) {
-    return '$answered of $total cards answered';
+    return 'Responded to $answered of $total cards';
   }
 
   @override
@@ -163,10 +163,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get showAnswer => 'show the answer';
+  String get showBack => 'show the back';
 
   @override
-  String get hideAnswer => 'hide the answer';
+  String get hideBack => 'hide the back';
 
   @override
   String previousCardSemantics(
@@ -179,7 +179,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'yes': '. Changed',
       'other': '',
     });
-    return 'Front: $front. Back: $back. Answer: $answer$_temp0';
+    return 'Front: $front. Back: $back. Response: $answer$_temp0';
   }
 
   @override
@@ -198,7 +198,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changingToDontKnow => 'Change to Don\'t know';
 
   @override
-  String get previousPlaceholder => 'Answered cards stack up here';
+  String get previousPlaceholder => 'Cards you responded to stack up here';
 
   @override
   String get earlierCard => 'Last card last time';
@@ -216,7 +216,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyCoachRedecide =>
-      'Answered cards come up here. Swipe one to change its answer';
+      'Cards you responded to come up here. Swipe one to change its response';
 
   @override
   String get studyCoachReplay => 'Show the guide again';
@@ -229,7 +229,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get answerNotSaved =>
-      'Couldn\'t save your answer on this device. This card\'s schedule did not change.';
+      'Couldn\'t save your response on this device. This card\'s schedule did not change.';
 
   @override
   String get studyComplete => 'Done for today';
@@ -273,7 +273,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeBody =>
-      'Swipe to answer,\nand meet each card again just before you forget';
+      'Swipe to respond,\nand meet each card again just before you forget';
 
   @override
   String get signInWithGoogle => 'Continue with Google';
@@ -842,7 +842,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closeSearch => 'Close search';
 
   @override
-  String get addCardManuallyBody => 'Write the question and the answer';
+  String get addCardManuallyBody => 'Write the front and the back';
 
   @override
   String cardListTitle(int count) {
@@ -850,16 +850,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get showMeanings => 'Show answers';
+  String get showMeanings => 'Show meanings';
 
   @override
-  String cardAnswerHidden(String front) {
-    return '$front, answer hidden';
+  String cardBackHidden(String front) {
+    return '$front, back hidden';
   }
 
   @override
-  String cardAnswerShown(String front, String back) {
-    return '$front, answer $back';
+  String cardBackShown(String front, String back) {
+    return '$front, back $back';
   }
 
   @override

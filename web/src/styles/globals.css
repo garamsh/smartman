@@ -87,13 +87,13 @@
   --text-micro: 12px;
   --text-micro--line-height: 16px;
   --text-micro--font-weight: 400;
-  --text-question: 30px;
-  --text-question--line-height: 38px;
-  --text-question--font-weight: 800;
-  --text-question--letter-spacing: -0.6px;
-  --text-answer: 20px;
-  --text-answer--line-height: 28px;
-  --text-answer--font-weight: 600;
+  --text-front: 30px;
+  --text-front--line-height: 38px;
+  --text-front--font-weight: 800;
+  --text-front--letter-spacing: -0.6px;
+  --text-back: 20px;
+  --text-back--line-height: 28px;
+  --text-back--font-weight: 600;
   /* Google's button label, GoogleButtonStyle.labelStyle. */
   --text-google: 14px;
   --text-google--line-height: 20px;

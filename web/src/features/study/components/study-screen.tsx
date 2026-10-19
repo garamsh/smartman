@@ -89,9 +89,9 @@ const noticeMs = 3000;
 
 /**
  * The study screen: the progress bar, and two cards of one size, the card answered just before,
- * split into question and answer, above the current card, which shows its question alone, with
+ * split into front and back, above the current card, which shows its front alone, with
  * the two answer buttons under them. A click on the previous card opens it whole; a touch swipe
- * on it, Z or "마지막 답 바꾸기" changes its answer. On a wide screen this session's answers are
+ * on it, Z or "마지막 응답 바꾸기" changes its answer. On a wide screen this session's answers are
  * listed beside, each a button that changes it. Once no card is left today the completion card
  * takes the current card's place, and the new cards past today's go on from it. Every action
  * shows at once; its write runs behind it, and a write that fails is shown with a retry while
@@ -487,7 +487,7 @@ function Session({ plan }: { plan: SessionPlan }) {
           aria-keyshortcuts="Z"
           className={`${quiet} self-center`}
         >
-          마지막 답 바꾸기 <Hint>Z</Hint>
+          마지막 응답 바꾸기 <Hint>Z</Hint>
         </button>
       )}
 
@@ -498,8 +498,8 @@ function Session({ plan }: { plan: SessionPlan }) {
 }
 
 /**
- * The card under study: its question alone, centred, or a whole card's front with its blanks
- * empty; its answer shows once answered, above.
+ * The card under study: its front alone, centred, or a whole card's front with its blanks
+ * empty; its back shows once answered, above.
  */
 function CurrentCard({ card }: { card: PreviousAnswer["card"] }) {
   return (
@@ -508,16 +508,16 @@ function CurrentCard({ card }: { card: PreviousAnswer["card"] }) {
       className="flex min-h-52 rounded-card bg-surface shadow-raised lg:min-h-75"
     >
       <div
-        aria-label="문제"
+        aria-label="앞면"
         role="group"
         className="flex flex-1 items-center justify-center p-6 text-center"
       >
         {card.whole ? (
-          <div className="w-full text-question">{card.whole.empty}</div>
+          <div className="w-full text-front">{card.whole.empty}</div>
         ) : card.sides ? (
-          <div className="w-full text-question break-words">{card.sides.front}</div>
+          <div className="w-full text-front break-words">{card.sides.front}</div>
         ) : (
-          <CardSide blocks={card.front} size="question" />
+          <CardSide blocks={card.front} size="front" />
         )}
       </div>
     </section>

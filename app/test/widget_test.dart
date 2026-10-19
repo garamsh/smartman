@@ -131,8 +131,8 @@ void main() {
   Future<void> addCard(WidgetTester tester, String front, String back) async {
     await tester.tap(find.text('Add card'));
     await tester.pumpAndSettle();
-    await enterText(tester, 'Question', front);
-    await enterText(tester, 'Answer', back);
+    await enterText(tester, 'Front', front);
+    await enterText(tester, 'Back', back);
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
   }
@@ -396,8 +396,8 @@ void main() {
       // tab shows the day.
       await tester.tap(find.text('Add card'));
       await tester.pumpAndSettle();
-      await enterText(tester, 'Question', 'Chat');
-      await enterText(tester, 'Answer', 'cat');
+      await enterText(tester, 'Front', 'Chat');
+      await enterText(tester, 'Back', 'cat');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       await tester.pageBack();
@@ -581,10 +581,10 @@ void main() {
 
         await tester.tap(find.text('Add card'));
         await tester.pumpAndSettle();
-        await enterText(tester, 'Question', 'Chien');
+        await enterText(tester, 'Front', 'Chien');
         await meetsGuidelines();
-        await enterText(tester, 'Question', 'chat');
-        await enterText(tester, 'Answer', 'chat (talk)');
+        await enterText(tester, 'Front', 'chat');
+        await enterText(tester, 'Back', 'chat (talk)');
         await tester.tap(find.text('Save'));
         await tester.pumpAndSettle();
         expect(find.text('This deck already has this card'), findsOneWidget);
@@ -604,7 +604,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Search cards'));
         await tester.pumpAndSettle();
-        // The answer shown, and the search open in the top bar.
+        // The back shown, and the search open in the top bar.
         await meetsGuidelines();
         await tester.tap(find.byTooltip('Close search'));
         await tester.pumpAndSettle();

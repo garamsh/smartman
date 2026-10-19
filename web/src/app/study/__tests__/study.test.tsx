@@ -46,7 +46,7 @@ async function open(decks: string, at = start) {
 }
 
 /** The front of the card on screen. */
-const currentFront = () => screen.getByRole("group", { name: "문제" }).textContent;
+const currentFront = () => screen.getByRole("group", { name: "앞면" }).textContent;
 
 /** The accessible names of this session's answers in the list beside the cards, oldest first. */
 const stack = () =>
@@ -207,7 +207,7 @@ describe("the study page", () => {
       await user.keyboard("k");
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "답을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+        "응답을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
       );
       expect(stack()).toHaveLength(2);
       expect(postgrest.rows.reviews).toHaveLength(0);
@@ -309,10 +309,10 @@ describe("the study page", () => {
       // it is answered 안다.
       await user.keyboard("k");
       await user.keyboard("k");
-      expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "앞면" })).toBeInTheDocument();
       await user.keyboard("k");
 
-      expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
       const completion = screen.getByRole("region", { name: "오늘 학습 완료" });
       const [previous] = within(cards()).getAllByRole("article");
       expect(previous?.compareDocumentPosition(completion)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -394,7 +394,7 @@ describe("the study page", () => {
       expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
       expect(screen.queryByRole("progressbar", { name: "진행" })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("group", { name: "문제" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "앞면" })).not.toBeInTheDocument();
 
       // Control: the same card answered this morning opens on the completion card.
       cleanup();
@@ -420,7 +420,7 @@ describe("the study page", () => {
     }
 
     const label = (front: string, answer: string) =>
-      `앞면: ${front}. 뒷면: ${front} back. 답: ${answer}`;
+      `앞면: ${front}. 뒷면: ${front} back. 응답: ${answer}`;
 
     /** Touches the previous card at (200, 100), moves to each of [moves] [step] ms apart, lifts. */
     function swipe(card: HTMLElement, moves: [number, number][], step = 1) {
@@ -461,11 +461,11 @@ describe("the study page", () => {
       expect(current.parentElement).toContainElement(previousCard());
       // Both sides at the current card's sizes.
       expect(within(previousCard()).getByText(third ?? "").parentElement?.className).toContain(
-        "text-question",
+        "text-front",
       );
       expect(
         within(previousCard()).getByText(`${third ?? ""} back`).parentElement?.className,
-      ).toContain("text-answer");
+      ).toContain("text-back");
       // Control: the list beside holds all three.
       expect(stack()).toHaveLength(3);
     });
@@ -507,7 +507,7 @@ describe("the study page", () => {
       let detail = screen.getByRole("dialog", { name: "카드" });
       expect(within(detail).getByText(third ?? "")).toBeInTheDocument();
       expect(within(detail).getByText(`${third ?? ""} back`)).toBeInTheDocument();
-      expect(within(detail).getByText("답: 안다")).toBeInTheDocument();
+      expect(within(detail).getByText("응답: 안다")).toBeInTheDocument();
       expect(within(detail).getByRole("button", { name: "닫기" })).toHaveFocus();
       // The answer is changed by a swipe or Z, not from here.
       expect(within(detail).getAllByRole("button")).toHaveLength(1);
@@ -630,7 +630,8 @@ describe("the study page", () => {
     });
 
     it("holds the previous card's place with a dashed outline, an up arrow and its line on a day's first session, until its first answer", async () => {
-      const placeholder = () => screen.queryByRole("region", { name: "답한 카드가 여기에 쌓여요" });
+      const placeholder = () =>
+        screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" });
       seedDeck(postgrest, "d1", ["un", "deux"]);
       await open("d1");
 
@@ -672,7 +673,7 @@ describe("the study page", () => {
       expect(screen.queryByRole("region", { name: "오늘 학습 완료" })).not.toBeInTheDocument();
       expect(currentFront()).toBe(fronts[coldStartNewCards]);
       expect(shown()).toEqual([
-        expect.stringMatching(/^지난번 마지막 카드\. 앞면: f\d\d\. .*답: 안다$/),
+        expect.stringMatching(/^지난번 마지막 카드\. 앞면: f\d\d\. .*응답: 안다$/),
       ]);
       // No card of the day's is left, so nothing goes on to say.
       expect(screen.getByRole("status")).toBeEmptyDOMElement();
@@ -700,14 +701,14 @@ describe("the study page", () => {
       await open("d1");
     });
 
-    it("shows the current card's question alone, with no answer to reveal, on Space or otherwise", async () => {
+    it("shows the current card's front alone, with no back to reveal, on Space or otherwise", async () => {
       const card = screen.getByRole("region", { name: "현재 카드" });
       const front = currentFront();
       // The card holds one of the seeded fronts and nothing else.
       expect(["un", "deux", "trois", "quatre", "cinq"]).toContain(card.textContent);
       expect(card).not.toHaveTextContent(`${front} back`);
-      expect(screen.queryByRole("group", { name: "답" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "답 보기" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "뒷면" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "뒷면 보기" })).not.toBeInTheDocument();
 
       await userEvent.setup().keyboard(" ");
 
@@ -715,7 +716,7 @@ describe("the study page", () => {
       expect(currentFront()).toBe(front);
       // Control: the answer shows once answered, on the previous card.
       await userEvent.setup().keyboard("k");
-      expect(stack()).toEqual([`앞면: ${front}. 뒷면: ${front} back. 답: 안다`]);
+      expect(stack()).toEqual([`앞면: ${front}. 뒷면: ${front} back. 응답: 안다`]);
     });
 
     it.each([
@@ -728,23 +729,23 @@ describe("the study page", () => {
 
       await userEvent.setup().keyboard(key);
 
-      expect(stack()).toEqual([`앞면: ${front}. 뒷면: ${front} back. 답: ${answer}`]);
+      expect(stack()).toEqual([`앞면: ${front}. 뒷면: ${front} back. 응답: ${answer}`]);
       expect(currentFront()).not.toBe(front);
     });
 
-    it("toggles the last answer on Z or 마지막 답 바꾸기, shown at every width", async () => {
+    it("toggles the last answer on Z or 마지막 응답 바꾸기, shown at every width", async () => {
       const user = userEvent.setup();
       await user.keyboard("k");
       await user.keyboard("j");
 
       await user.keyboard("z");
 
-      expect(stack()[0]).toMatch(/답: 안다$/);
-      expect(stack()[1]).toMatch(/답: 안다. 수정됨$/);
-      const toggle = screen.getByRole("button", { name: "마지막 답 바꾸기" });
+      expect(stack()[0]).toMatch(/응답: 안다$/);
+      expect(stack()[1]).toMatch(/응답: 안다. 수정됨$/);
+      const toggle = screen.getByRole("button", { name: "마지막 응답 바꾸기" });
       expect(toggle.className.split(" ")).not.toContain("hidden");
       await user.click(toggle);
-      expect(stack()[1]).toMatch(/답: 모른다$/);
+      expect(stack()[1]).toMatch(/응답: 모른다$/);
     });
 
     it("leaves for 오늘 on Esc", async () => {
@@ -769,19 +770,19 @@ describe("the study page", () => {
       await user.keyboard("?");
 
       const help = screen.getByRole("dialog", { name: "단축키" });
-      for (const action of ["안다", "모른다", "마지막 답 바꾸기", "그만하기", "단축키 보기"]) {
+      for (const action of ["안다", "모른다", "마지막 응답 바꾸기", "그만하기", "단축키 보기"]) {
         expect(within(help).getByText(action)).toBeInTheDocument();
       }
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByRole("group", { name: "문제" })).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "앞면" })).toBeInTheDocument();
     });
 
     it("mirrors each shortcut with a visible control", async () => {
       await userEvent.setup().keyboard("k");
 
       const controls = Object.fromEntries(
-        ["안다", "모른다", "마지막 답 바꾸기", "그만하기", "단축키"].map((name) => [
+        ["안다", "모른다", "마지막 응답 바꾸기", "그만하기", "단축키"].map((name) => [
           name,
           screen
             .getByRole(name === "그만하기" ? "link" : "button", { name })
@@ -792,7 +793,7 @@ describe("the study page", () => {
       expect(controls).toEqual({
         안다: "ArrowRight K",
         모른다: "ArrowLeft J",
-        "마지막 답 바꾸기": "Z",
+        "마지막 응답 바꾸기": "Z",
         그만하기: "Escape",
         단축키: "?",
       });
@@ -829,7 +830,7 @@ describe("the study page", () => {
       expect(demo).toContainElement(screen.getByRole("region", { name: "현재 카드" }));
       expect(within(demo).getByTestId("coach-finger")).toBeInTheDocument();
       // What is above it steps back.
-      const place = screen.getByRole("region", { name: "답한 카드가 여기에 쌓여요" });
+      const place = screen.getByRole("region", { name: "응답한 카드가 여기에 쌓여요" });
       expect(place.parentElement?.className).toContain("opacity-45");
 
       await user.click(screen.getByRole("button", { name: "다음" }));
@@ -839,10 +840,10 @@ describe("the study page", () => {
 
       await user.click(screen.getByRole("button", { name: "다음" }));
       expect(announced()).toBe(
-        "사용 방법, 3단계 중 3단계. 답한 카드는 위로 올라와요. '마지막 답 바꾸기'나 Z로 답을 바꿀 수 있어요",
+        "사용 방법, 3단계 중 3단계. 응답한 카드는 위로 올라와요. '마지막 응답 바꾸기'나 Z로 응답을 바꿀 수 있어요",
       );
       expect(caption()).toHaveTextContent(
-        "답한 카드는 위로 올라와요. '마지막 답 바꾸기'나 Z로 답을 바꿀 수 있어요",
+        "응답한 카드는 위로 올라와요. '마지막 응답 바꾸기'나 Z로 응답을 바꿀 수 있어요",
       );
       // A sample answered card in the previous card's place, changing toward 모른다.
       const sample = screen.getByTestId("coach-sample");
@@ -850,14 +851,16 @@ describe("the study page", () => {
       expect(sample).toHaveTextContent("모른다로 바꿔요");
       expect(screen.queryByTestId("coach-demo")).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("region", { name: "답한 카드가 여기에 쌓여요" }),
+        screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
       ).not.toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "시작하기" }));
       expect(caption()).not.toBeInTheDocument();
       expect(screen.queryByTestId("coach-sample")).not.toBeInTheDocument();
       expect(answerButton("안다")).toBeInTheDocument();
-      expect(screen.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
+      ).toBeInTheDocument();
       cleanup();
 
       // A later session in the same browser shows none, after the moment the coach would start.
@@ -886,7 +889,7 @@ describe("the study page", () => {
       expect(announced()).toContain("3단계 중 1단계");
       // Changing the previous card leaves it running.
       await user.keyboard("z");
-      expect(shown()).toEqual([expect.stringMatching(/답: 모른다\. 수정됨$/)]);
+      expect(shown()).toEqual([expect.stringMatching(/응답: 모른다\. 수정됨$/)]);
       expect(announced()).toContain("3단계 중 1단계");
       // An answer by its key ends it.
       await user.keyboard("k");
@@ -937,13 +940,13 @@ describe("the study page", () => {
     }
     await open("d1");
 
-    const label = "지난번 마지막 카드. 앞면: deux. 뒷면: deux back. 답: 안다";
+    const label = "지난번 마지막 카드. 앞면: deux. 뒷면: deux back. 응답: 안다";
     expect(shown()).toEqual([label]);
     const card = within(cards()).getByRole("article");
     expect(within(card).getByText("지난번 마지막 카드")).toBeInTheDocument();
     expect(within(card).getByText("안다")).toBeInTheDocument();
     expect(
-      screen.queryByRole("region", { name: "답한 카드가 여기에 쌓여요" }),
+      screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
     ).not.toBeInTheDocument();
 
     // A touch swipe toward 모른다 shows nothing behind it and changes nothing.
@@ -1001,7 +1004,7 @@ describe("the study page", () => {
       { labels: ["[구어]"], gapped: true, text: "[구어]열차" },
     ];
     expect(sensesUnder(card)).toEqual(drawn);
-    expect(shown()).toEqual(["앞면: train. 뒷면: [명] 기차\n[구어] 열차. 답: 안다"]);
+    expect(shown()).toEqual(["앞면: train. 뒷면: [명] 기차\n[구어] 열차. 응답: 안다"]);
     await user.click(within(card).getByRole("button", { name: "카드 전체 보기" }));
     expect(sensesUnder(screen.getByRole("dialog", { name: "카드" }))).toEqual(drawn);
   });
@@ -1057,7 +1060,7 @@ describe("the study page", () => {
 
       expect(screen.getByText("1/1")).toBeInTheDocument();
       expect(shown()).toEqual([
-        "앞면: The capital of France is 빈칸. 뒷면: The capital of France is Paris. 답: 안다",
+        "앞면: The capital of France is 빈칸. 뒷면: The capital of France is Paris. 응답: 안다",
       ]);
       const card = within(cards()).getByRole("article");
       expect(blanksUnder(card)).toEqual({ Paris: true });
@@ -1138,7 +1141,9 @@ describe("the study page", () => {
       answered(postgrest, "d1-0", dayStart - 60_000);
       await open("d1");
       expect(earlierFront()).toBeNull();
-      expect(screen.getByRole("region", { name: "답한 카드가 여기에 쌓여요" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
+      ).toBeInTheDocument();
       cleanup();
 
       // Control: at 04:00 the answer is the day's.
