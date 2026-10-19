@@ -222,11 +222,15 @@ export function GradedCard({
         ) : (
           <>
             <span className="flex items-center justify-center p-4 text-question text-ink lg:p-6">
-              <span className="line-clamp-6 break-words">{answer.card.text.front}</span>
+              <span className="line-clamp-6 break-words">
+                {answer.card.sides?.front ?? answer.card.text.front}
+              </span>
             </span>
             <span aria-hidden className={`my-7 w-px ${grade.line}`} />
             <span className="flex items-center justify-center p-4 text-answer text-ink-2 lg:p-6">
-              <span className="line-clamp-6 break-words">{answer.card.text.back}</span>
+              <span className="line-clamp-6 break-words">
+                {answer.card.sides?.back ?? answer.card.text.back}
+              </span>
             </span>
           </>
         )}

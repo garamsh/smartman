@@ -1,4 +1,5 @@
 import { type Content, clozeBlank, isBlank, spokenContent } from "../card-content";
+import { SensesText } from "./side-text";
 
 /**
  * A whole card's front, its blocks in order: a text block as its title, a cloze as its sentence
@@ -74,6 +75,12 @@ export function WholeCard({
                     </span>
                   )),
                 )}
+              </span>
+            );
+          case "senses":
+            return (
+              <span key={index} aria-hidden>
+                <SensesText senses={block.senses} />
               </span>
             );
           case "unsupported":

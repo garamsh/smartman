@@ -727,7 +727,12 @@ void main() {
       /// The text that reads [text] once its word joiners are left out.
       Finder shown(String text) => find.byWidgetPredicate(
         (widget) =>
-            widget is Text && widget.data?.replaceAll('\u2060', '') == text,
+            widget is Text &&
+            (widget.data ?? widget.textSpan?.toPlainText())?.replaceAll(
+                  '\u2060',
+                  '',
+                ) ==
+                text,
       );
 
       /// Taps [finder], which takes a photo with the camera, through to the
@@ -746,9 +751,18 @@ void main() {
           front: 'face',
           kind: CardKind.vocabulary,
           senses: [
-            Sense(pos: '[동]', meaning: '직면하다, 마주하다'),
-            Sense(pos: '[명]', meaning: '표면, 겉면'),
-            Sense(pos: '[명]', meaning: '얼굴, 생김새'),
+            CardSense(
+              labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+              meaning: '직면하다, 마주하다',
+            ),
+            CardSense(
+              labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+              meaning: '표면, 겉면',
+            ),
+            CardSense(
+              labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+              meaning: '얼굴, 생김새',
+            ),
           ],
           pronunciation: "['feis]",
           extras: [Extra(label: '유의어', text: 'confront')],

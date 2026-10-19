@@ -8,6 +8,7 @@ import {
   parseDeckId,
   ReadFailure,
   readLibrary,
+  SideText,
   spokenContent,
   WholeCard,
 } from "@/features/decks";
@@ -54,6 +55,12 @@ export async function Study({
         question: spokenContent(card.front, false),
         empty: <WholeCard blocks={card.front} revealed={false} />,
         filled: <WholeCard blocks={card.front} revealed />,
+      },
+    }),
+    ...([...card.front, ...card.back].some((block) => block.kind === "senses") && {
+      sides: {
+        front: <SideText blocks={card.front} />,
+        back: <SideText blocks={card.back} />,
       },
     }),
   }));

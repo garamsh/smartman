@@ -507,7 +507,7 @@ class _RowTile extends StatelessWidget {
     final onCheck = this.onCheck;
     final wholeFront = this.wholeFront;
     final question = wholeFront == null
-        ? sides.front
+        ? describeContent(l10n, sides.front)
         : spokenContent(l10n, wholeFront, revealed: false);
     final tile = DecoratedBox(
       decoration: BoxDecoration(
@@ -539,7 +539,7 @@ class _RowTile extends StatelessWidget {
               container: true,
               button: onEdit != null,
               label: wholeFront == null
-                  ? l10n.importRow(question, sides.back)
+                  ? l10n.importRow(question, describeContent(l10n, sides.back))
                   : spokenContent(l10n, wholeFront, revealed: true),
               excludeSemantics: true,
               onTap: onEdit,
@@ -572,16 +572,24 @@ class _RowTile extends StatelessWidget {
                             children: [
                               SizedBox(
                                 width: constraints.maxWidth * 0.44,
-                                child: Text(
-                                  keepWords(sides.front),
+                                child: Text.rich(
+                                  contentSpan(
+                                    l10n,
+                                    sides.front,
+                                    wrap: keepWords,
+                                  ),
                                   style: AppType.bodyStrong.copyWith(
                                     color: included ? colors.ink : colors.muted,
                                   ),
                                 ),
                               ),
                               Expanded(
-                                child: Text(
-                                  keepWords(sides.back),
+                                child: Text.rich(
+                                  contentSpan(
+                                    l10n,
+                                    sides.back,
+                                    wrap: keepWords,
+                                  ),
                                   style: AppType.secondary.copyWith(
                                     color: included
                                         ? colors.ink2

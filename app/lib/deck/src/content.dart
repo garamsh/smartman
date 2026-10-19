@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-/// A typed block of card content: text, a cloze or a table. A new kind adds a
-/// subclass and a discriminator value, and stored rows keep their encoding.
+/// A typed block of card content: text, a cloze, a table or a vocabulary
+/// entry's senses. A new kind adds a subclass and a discriminator value, and
+/// stored rows keep their encoding.
 sealed class Content {
   const Content();
 }
@@ -86,6 +87,106 @@ final class TableContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
+/// A part of speech a sense's label names, with the fixed short form every
+/// card shows it as, whatever the book prints (ADR 0075).
+enum PartOfSpeech {
+  noun('명'),
+  verb('동'),
+  adjective('형'),
+  adverb('부'),
+  pronoun('대'),
+  preposition('전'),
+  conjunction('접'),
+  interjection('감'),
+  determiner('관'),
+  numeral('수'),
+  particle('조'),
+  auxiliary('조동'),
+  classifier('양'),
+  phrase('구');
+
+  const PartOfSpeech(this.short);
+
+  /// The short form a card shows in brackets, as `[명]`.
+  final String short;
+}
+
+/// A label the page prints for a sense: a part of speech, or any other label
+/// such as a semantic class, a register or a gender. [text] is as printed,
+/// without the brackets the page encloses it in.
+sealed class SenseLabel {
+  const SenseLabel(this.text);
+
+  final String text;
+
+  /// What a card shows inside the label's brackets: a part of speech's short
+  /// form, or another label as printed.
+  String get shown;
+}
+
+final class PartOfSpeechLabel extends SenseLabel {
+  const PartOfSpeechLabel(this.category, super.text);
+
+  final PartOfSpeech category;
+
+  @override
+  String get shown => category.short;
+}
+
+final class OtherLabel extends SenseLabel {
+  const OtherLabel(super.text);
+
+  @override
+  String get shown => text;
+}
+
+/// One meaning of a vocabulary entry, a translation or a definition as
+/// printed, with the labels the page prints for it, in order, and its own
+/// examples.
+final class CardSense {
+  const CardSense({
+    this.labels = const [],
+    required this.meaning,
+    this.examples = const [],
+  });
+
+  final List<SenseLabel> labels;
+  final String meaning;
+  final List<String> examples;
+
+  /// The sense as one line of text: each label in brackets, then the
+  /// meaning, one space apart, as `[명] 사과`.
+  String get line =>
+      [for (final label in labels) '[${label.shown}]', meaning].join(' ');
+
+  @override
+  bool operator ==(Object other) =>
+      other is CardSense &&
+      jsonEncode(_senseJson(other)) == jsonEncode(_senseJson(this));
+
+  @override
+  int get hashCode => jsonEncode(_senseJson(this)).hashCode;
+}
+
+/// A vocabulary entry's senses, one or more, in the page's order (ADR 0075).
+final class SensesContent extends Content {
+  const SensesContent(this.senses);
+
+  final List<CardSense> senses;
+
+  /// One line per sense: the text a search, a screen reader and a merged back
+  /// read.
+  String get lines => senses.map((sense) => sense.line).join('\n');
+
+  @override
+  bool operator ==(Object other) =>
+      other is SensesContent &&
+      jsonEncode(_payload(other)) == jsonEncode(_payload(this));
+
+  @override
+  int get hashCode => jsonEncode(_payload(this)).hashCode;
+}
+
 /// A stored block whose type this version of the app does not know, kept
 /// intact so saving the card again does not lose it.
 final class UnsupportedContent extends Content {
@@ -104,11 +205,35 @@ bool isWholeCard(List<Content> front) =>
 const _textType = 'text';
 const _clozeType = 'cloze';
 const _tableType = 'table';
+const _sensesType = 'senses';
+const _partOfSpeechKind = 'part_of_speech';
+const _otherKind = 'other';
+
+Map<String, Object?> _senseJson(CardSense sense) => {
+  'labels': [
+    for (final label in sense.labels)
+      switch (label) {
+        PartOfSpeechLabel(:final category, :final text) => {
+          'kind': _partOfSpeechKind,
+          'category': category.name,
+          'text': text,
+        },
+        OtherLabel(:final text) => {
+          'kind': _otherKind,
+          'category': null,
+          'text': text,
+        },
+      },
+  ],
+  'meaning': sense.meaning,
+  'examples': sense.examples,
+};
 
 String _type(Content block) => switch (block) {
   TextContent() => _textType,
   ClozeContent() => _clozeType,
   TableContent() => _tableType,
+  SensesContent() => _sensesType,
   UnsupportedContent(:final type) => type,
 };
 
@@ -124,6 +249,9 @@ Object? _payload(Content block) => switch (block) {
     'blanks': [
       for (final (:row, :column) in blanks) {'row': row, 'column': column},
     ],
+  },
+  SensesContent(:final senses) => {
+    'senses': [for (final sense in senses) _senseJson(sense)],
   },
   UnsupportedContent(:final payload) => payload,
 };
@@ -158,7 +286,10 @@ Content _decodeBlock(Object? block, String source) {
     (_textType, {'text': final String text}) => TextContent(text),
     (_clozeType, final Map<String, Object?> fields) => _decodeCloze(fields),
     (_tableType, final Map<String, Object?> fields) => _decodeTable(fields),
-    (_textType || _clozeType || _tableType, _) => null,
+    (_sensesType, {'senses': final List<Object?> senses}) => _decodeSenses(
+      senses,
+    ),
+    (_textType || _clozeType || _tableType || _sensesType, _) => null,
     _ => UnsupportedContent(type, payload),
   };
   return decoded ??
@@ -225,6 +356,55 @@ TableContent? _decodeTable(Map<String, Object?> fields) {
   return null;
 }
 
+/// One or more senses, each [decodeSense]'s; null otherwise.
+SensesContent? _decodeSenses(List<Object?> senses) {
+  final decoded = [for (final sense in senses) decodeSense(sense)];
+  return decoded.isEmpty || decoded.contains(null)
+      ? null
+      : SensesContent(decoded.cast<CardSense>());
+}
+
+/// A sense as the `senses` block and the extraction function write it:
+/// `{labels, meaning, examples}`, its meaning non-empty text, its examples
+/// text, and each label `{kind, category, text}`, a `part_of_speech` with a
+/// [PartOfSpeech] name or an `other` with a null category, its text
+/// non-empty; null otherwise (ADR 0075).
+CardSense? decodeSense(Object? sense) {
+  if (sense
+      case {
+        'labels': final List<Object?> labels,
+        'meaning': final String meaning,
+        'examples': final List<Object?> examples,
+      }
+      when meaning.trim().isNotEmpty && examples.every((e) => e is String)) {
+    final decoded = [for (final label in labels) _decodeLabel(label)];
+    if (decoded.contains(null)) return null;
+    return CardSense(
+      labels: decoded.cast<SenseLabel>(),
+      meaning: meaning,
+      examples: examples.cast<String>(),
+    );
+  }
+  return null;
+}
+
+SenseLabel? _decodeLabel(Object? label) => switch (label) {
+  {
+    'kind': _partOfSpeechKind,
+    'category': final String category,
+    'text': final String text,
+  }
+      when text.trim().isNotEmpty =>
+    switch (PartOfSpeech.values.where((p) => p.name == category).firstOrNull) {
+      final category? => PartOfSpeechLabel(category, text),
+      null => null,
+    },
+  {'kind': _otherKind, 'category': null, 'text': final String text}
+      when text.trim().isNotEmpty =>
+    OtherLabel(text),
+  _ => null,
+};
+
 /// The text of [blocks], joined by newlines: a text block's text, and a
 /// cloze's and a table's filled form. The card key and a merged back read
 /// it.
@@ -233,6 +413,7 @@ String plainText(List<Content> blocks) => [
     switch (block) {
       TextContent(:final text) => text,
       ClozeContent(:final filled) || TableContent(:final filled) => filled,
+      SensesContent(:final lines) => lines,
       UnsupportedContent() => null,
     },
 ].nonNulls.join('\n');

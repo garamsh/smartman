@@ -9,6 +9,7 @@ import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
 
 import { Deck } from "../_components/deck";
@@ -216,6 +217,38 @@ describe("the deck page", () => {
     );
     await user.click(screen.getByRole("button", { name: "chien, 답 chien back" }));
     expect(rows()).toEqual(["Chat, 답 가려짐", "chien, 답 가려짐", "oiseau, 답 가려짐"]);
+  });
+
+  it("shows a vocabulary card's senses on a click, each label in brackets with a gap after it, a part of speech by its short form", async () => {
+    postgrest.seed("cards", {
+      ...cardRow("c-train", "d-fr", "train", day / 2),
+      back: [
+        {
+          type: "senses",
+          payload: {
+            senses: [
+              {
+                labels: [
+                  { kind: "part_of_speech", category: "noun", text: "n." },
+                  { kind: "other", category: null, text: "사물" },
+                ],
+                meaning: "기차",
+                examples: [],
+              },
+              { labels: [], meaning: "열차", examples: [] },
+            ],
+          },
+        },
+      ],
+    });
+    await open("d-fr");
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "train, 답 가려짐" }));
+    const card = screen.getByRole("button", { name: "train, 답 [명] [사물] 기차\n열차" });
+    expect(sensesUnder(card)).toEqual([
+      { labels: ["[명]", "[사물]"], gapped: true, text: "[명][사물]기차" },
+      { labels: [], gapped: true, text: "열차" },
+    ]);
   });
 
   it("shows a whole card's front with its blank empty in place of the answer bar, and fills it on a click", async () => {

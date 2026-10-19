@@ -19,6 +19,7 @@
   "blank": "blank",
   "wholeCard": "Card",
   "wholeCardReadOnly": "Table and cloze cards can't be edited yet. You can delete one.",
+  "sensesEditNote": "Editing the answer saves labels such as [명] as plain text.",
   "duplicateTitle": "This deck already has this card",
   "duplicateBody": "Case and spacing are ignored when comparing.",
   "openExistingCard": "Open existing card",
