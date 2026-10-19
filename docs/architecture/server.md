@@ -1,6 +1,6 @@
 # Server
 
-The Supabase schema the app syncs to, and the extraction count and the admin area's role, audit log and functions beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
+The Supabase schema the app syncs to, and the extraction count, the plans, and the admin area's role, audit log and functions beside it: its tables, row-level security, revisions, tombstones, account deletion, how migrations are named, how migrations and Edge Functions reach production, and the tests that hold them.
 
 ## Current decisions
 
@@ -84,7 +84,7 @@ The Supabase schema the app syncs to, and the extraction count and the admin are
 - `public.extraction_usage` holds one row per photo extraction the `extract-cards` function let through: an identity `id`, `user_id` referencing `auth.users` with `on delete cascade`, and `created_at` ([`ai-extraction.md`](ai-extraction.md), [ADR 0013](adr/0013-extract-cards-function-and-eval.md)).
 - It is not synced: it has no revision, tombstone or edit time.
 - `authenticated` may only select it, and row-level security allows only the caller's rows, so the app can read today's count. `anon` holds nothing.
-- Rows are written only by `public.consume_extraction(user_id, daily_limit)`, executable only by `service_role`. It takes a transaction-level advisory lock on the user, counts the rows since the start of the UTC day, and inserts one and returns true under the limit, or returns false. `service_role` itself may not insert directly.
+- Rows are written only by `public.start_extraction(user_id)`, which the function calls (§Plans), and by `public.consume_extraction(user_id, daily_limit)`, which a function deployed before plans calls, both executable only by `service_role`. Each takes a transaction-level advisory lock on the user, counts the rows since the start of the UTC day, and inserts one under the limit; they share the lock and the rows, so a photo counts once whichever runs. `service_role` itself may not insert directly. A later change removes `consume_extraction` once nothing calls it.
 - The lock's key is the hash of the user id seeded with 1, never the revision lock's seed 0.
 - The migration adding it is additive: it creates the table, its index and the function, and changes nothing that existed.
 
@@ -98,11 +98,20 @@ The Supabase schema the app syncs to, and the extraction count and the admin are
 - The overview's counts across users scan the live reviews in range and `extraction_usage` without an index of their own; the PM adds one when `supabase inspect db outliers` lists either function among the ten statements of highest total time.
 - Migration `20261019120000_admin.sql` is additive: it creates the two tables, their indexes and the functions, and changes no existing row or object.
 
+### Plans
+
+- `private.plans` holds the three plans, `free`, `pro` and `special`, each with its `model`, an OpenRouter id checked to the form `vendor/model`, its `daily_limit` from 0 to 1000, and who last changed it and when ([ADR 0071](adr/0071-give-each-user-a-plan-whose-model-and-daily-limit-an-admin-sets-in-the-database-and-make-one-model-call-per-photo.md)). Migration `20261019180000_plans.sql` seeds all three on `anthropic/claude-haiku-5.5` and 30 a day, as data the admin area edits.
+- `private.user_plans` holds a user's grant of `pro` or `special`, with an optional end that only Special may have, and who granted it and when. A user without a row is on Free, and so is one whose Special has ended; `private.plan_of(user_id)` answers which plan a user is on.
+- Both sit in `private`, and no client role holds a privilege on them.
+- `public.start_extraction(user_id)`, executable only by `service_role`, returns the user's plan, its model and limit, and whether the photo is allowed, recording it when it is, under the extraction lock (§Extraction usage). With the plan's settings missing it returns no row, which the function answers as not configured.
+- The admin functions, each checking the role and recording itself as §Admin area states: `admin_plans` and `admin_set_plan` (recorded as `set_plan` on a `plan`, with the settings before and after); `admin_user_plan`; `admin_grant_plan`, which replaces any earlier grant and refuses an end on Pro or one not in the future, and `admin_revoke_plan` (recorded as `grant_plan` and `revoke_plan` on a `user`, with the user's email).
+- The migration is additive: it creates the two tables with their seed rows, their indexes and the functions, and changes no existing row or object.
+
 ### Account deletion
 
 - The `delete-account` Edge Function deletes the caller's user from `auth.users` through Supabase Auth's admin API, with the service-role key, which stays in the function ([`account.md`](account.md), [ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). The deletion is hard, so the cascade runs.
-- Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. In `private`, `admins` deletes with the admin and `admins.granted_by` is set null; `admin_audit` keeps the admin's rows with `admin_id` set null. Another user's copy of a deleted user's deck stays theirs.
-- A new table holding a user id references `auth.users` with `on delete cascade`, except `private.admin_audit`, whose rows outlive the admin who wrote them ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md)).
+- Every table in `public` deletes with the user: `decks`, `cards`, `reviews`, `card_states`, `extraction_usage` and `profiles` by `user_id`, `deck_reports` and `deck_imports` by their user and by their deck, and `user_blocks` by either side. In `private`, `admins` and `user_plans` delete with their user, and a granter or editor column, `admins.granted_by`, `user_plans.granted_by` or `plans.updated_by`, is set null; `admin_audit` keeps the admin's rows with `admin_id` set null. Another user's copy of a deleted user's deck stays theirs.
+- A new table holding a user id references `auth.users` with `on delete cascade`, except a column naming who granted or edited a row, which is set null so the row outlives that admin, and `private.admin_audit`, whose rows outlive the admin who wrote them ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md)).
 - Merging the pull request that adds or changes the function deploys it (§Edge Function deploys).
 
 ### Integrity
@@ -205,6 +214,7 @@ The Supabase schema the app syncs to, and the extraction count and the admin are
   - `fuzz_factor_test.sql` — a review's fuzz factor is checked to `[0, 1)` and inserted by its client, which cannot update it, with an update of the rating as control;
   - `public_decks_test.sql` — another user reads a public deck, its live cards and its owner's name, and no private or hidden deck; non-owners' writes are refused, with the owner's as control; the listing searches, sorts and leaves out blocked users' decks; copies are counted once per user, and never the owner's;
   - `admin_test.sql` — every admin function refuses a signed-in user who is not an admin and refuses `anon`, with an admin as control; no client reads or writes the role or the log directly; the overview, the extractions by UTC day, the reported and public decks, a deck readable only while public or reported, the user search and a user's counts; hiding, unhiding, unpublishing with a new revision and edit time, and dismissing, each recorded once and a no-op not at all; granting by email, refusing one's own revoke, a revoke taking the admins lock, against none held before, a revoked admin refused at once, the audit log newest first with its paging, and a deleted admin's rows kept by email with no admin id;
+  - `plans_test.sql` — the three plans seeded on Haiku 5.5 at 30; every admin plan function refusing a non-admin and `anon`, with an admin as control, and no client reading or writing the plans or the grants or starting an extraction; a user resolved to Free, Pro, an unended Special and an ended Special as Free, each served by its plan's model; photos counted against each plan's limit with only allowed ones recorded, and `consume_extraction` counting the same rows; no plan without Free's settings; setting a plan, a no-op, and a malformed model or a limit over 1000 refused; granting, replacing, the refused grants and revoking, each recorded once; and a deleted user's grant gone while a deleted admin's grants and settings stay;
   - `deck_imports_test.sql` — a second copy by the same user adds nothing while another user's adds one, the owner's adds nothing, a count kept from before is added to, and clients reach no row;
   - `deck_reports_test.sql` — reports are insert-only by their reporter, once per deck, and the third distinct reporter hides the deck;
   - `deck_columns_test.sql` — the owner cannot write `hidden` or `import_count`, with an update of the writable columns as control; the publish and length checks; a `shared` card; the display name's length;
