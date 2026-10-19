@@ -88,7 +88,7 @@ final class TableContent extends Content {
 }
 
 /// A part of speech a sense's label names, with the fixed short form every
-/// card shows it as, whatever the book prints (ADR 0072).
+/// card shows it as, whatever the book prints (ADR 0075).
 enum PartOfSpeech {
   noun('명'),
   verb('동'),
@@ -168,7 +168,7 @@ final class CardSense {
   int get hashCode => jsonEncode(_senseJson(this)).hashCode;
 }
 
-/// A vocabulary entry's senses, one or more, in the page's order (ADR 0072).
+/// A vocabulary entry's senses, one or more, in the page's order (ADR 0075).
 final class SensesContent extends Content {
   const SensesContent(this.senses);
 
@@ -368,7 +368,7 @@ SensesContent? _decodeSenses(List<Object?> senses) {
 /// `{labels, meaning, examples}`, its meaning non-empty text, its examples
 /// text, and each label `{kind, category, text}`, a `part_of_speech` with a
 /// [PartOfSpeech] name or an `other` with a null category, its text
-/// non-empty; null otherwise (ADR 0072).
+/// non-empty; null otherwise (ADR 0075).
 CardSense? decodeSense(Object? sense) {
   if (sense
       case {

@@ -167,7 +167,7 @@ final class ImportRow {
   /// The meaning side in [form]: a senses block of the kept senses, or the
   /// first alone, each without its part-of-speech labels when the form hides
   /// them, its other labels kept; then each extra, one per line, as a text
-  /// block when shown (ADR 0072).
+  /// block when shown (ADR 0075).
   List<Content> meaning(VocabularyForm form) {
     final kept = senses.where((sense) => sense.kept);
     final shown = form.firstSenseOnly ? kept.take(1) : kept;

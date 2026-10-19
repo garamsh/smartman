@@ -21,7 +21,7 @@ export type StudyCard = Card & {
 
 /**
  * A card with a senses block drawn as `decks` draws its sides, each label as its own span with
- * a narrow gap before the meaning (ADR 0072).
+ * a narrow gap before the meaning (ADR 0075).
  */
 export type SideViews = { front: ReactNode; back: ReactNode };
 

@@ -1,4 +1,4 @@
-# ADR 0072: Store a vocabulary card's senses as a typed block, and show each label in brackets before its meaning
+# ADR 0075: Store a vocabulary card's senses as a typed block, and show each label in brackets before its meaning
 
 > Status: accepted
 > Date: 2026-10-19

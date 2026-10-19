@@ -124,7 +124,7 @@ InlineSpan contentSpan(
 
 /// [senses] one per line, each label in its brackets as its own span with a
 /// gap of [AppSpace.s4] after it, narrower than a word space, then the
-/// meaning: `[명]` 사과 (ADR 0072). The gap is the closing bracket's letter
+/// meaning: `[명]` 사과 (ADR 0075). The gap is the closing bracket's letter
 /// spacing, so the line stays one paragraph that fits and wraps as text.
 InlineSpan sensesSpan(
   SensesContent senses, {

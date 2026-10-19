@@ -182,7 +182,7 @@ List<CandidateCard> _parseCards(String body) {
 /// [maxTopicChars] characters when it has one, and the fields of its `kind`.
 /// A note's answer is its `answer`, else its `back`. A vocabulary card's
 /// senses are its `senses`, each `{labels, meaning, examples}` as `deck`'s
-/// [decodeSense] reads it (ADR 0072), else, from a function before senses,
+/// [decodeSense] reads it (ADR 0075), else, from a function before senses,
 /// one sense of its `meaning` or `answer`, else its `back`, its
 /// `partOfSpeech` as a label as printed. A card with no `kind` from a function before kinds is a
 /// vocabulary card; one with no `type`, or a `type` this version does not
@@ -273,7 +273,7 @@ List<Content>? _wholeFront(
 /// A function before senses: one sense of [meaning], with its part of speech
 /// [label] when it gives one, without the brackets or parentheses around it:
 /// a part of speech when it is one's short form, such as 동, else another
-/// label as printed (ADR 0072).
+/// label as printed (ADR 0075).
 CardSense _oneSense(String? label, String meaning) {
   final text = label?.replaceAll(RegExp(r'^[\[(]|[\])]$'), '');
   final category = PartOfSpeech.values

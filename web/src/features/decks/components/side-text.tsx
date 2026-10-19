@@ -15,7 +15,7 @@ export function SideText({ blocks }: { blocks: Content[] }) {
 
 /**
  * Senses one per line, each label in its brackets as its own span with a gap of one spacing
- * step after it, narrower than a word space, then the meaning: `[명]` 사과 (ADR 0072).
+ * step after it, narrower than a word space, then the meaning: `[명]` 사과 (ADR 0075).
  */
 export function SensesText({ senses }: { senses: Sense[] }) {
   return senses.map((sense, index) => (

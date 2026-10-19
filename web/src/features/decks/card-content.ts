@@ -2,7 +2,7 @@
  * One block of a card side, as the phone stores it: a `{type, payload}` object in the side's
  * JSON array (`deck.md`). A text block; a cloze, its text writing each blank as `___` with what
  * fills each, in order; or a table, its column headers, its rows of cells and the cells to
- * recall (ADR 0068); or a vocabulary entry's senses (ADR 0072). A block of another type is
+ * recall (ADR 0068); or a vocabulary entry's senses (ADR 0075). A block of another type is
  * shown as a placeholder naming it, so a card a later version wrote is shown, not lost.
  */
 export type Content =

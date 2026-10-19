@@ -282,7 +282,7 @@ class _DuplicateSheet extends StatelessWidget {
 /// [blocks] while [text] is still their text, so a side the user left as it
 /// was keeps its blocks, a senses block included; otherwise [text] as a text
 /// block, with blocks of other types kept. An edited senses side so becomes
-/// text, its labels as typed (ADR 0072).
+/// text, its labels as typed (ADR 0075).
 List<Content> _replaceText(List<Content> blocks, String text) =>
     text == plainText(blocks)
     ? blocks
