@@ -40,6 +40,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
      - any other label is `{"kind": "other", "category": null, "text": <as printed>}`;
      - `text` keeps the label's dots and drops the brackets around it: `동` for `[동]`, `n.` for `n.`;
      - `labels` is empty when the page prints no label for the meaning, even when its part of speech is plain.
+     - a label is one printed with that meaning, on its own line. A part of speech printed elsewhere, such as before each reading of a pronunciation like `명 ['kantent] / 형 [kan'tent]`, labels no sense and stays in `pronunciation` alone. The PM's first run of this change (below) put such markers on senses of samples 57 and 58.
   3. `meaning` is the translation or the definition, without its labels or number.
   4. A sense's `examples` are those the page prints under that meaning. A vocabulary card's own `examples` keep only those the page prints for the entry as a whole.
   5. **Labels and extras.** A label printed for one meaning goes in that sense's `labels`. Grammar printed for the entry as a whole goes in `extras`, verbatim under the page's label: a gender, a measure word, a verb class, a plural or an irregular form.
@@ -88,6 +89,14 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **Supersessions:**
   - [ADR 0069](0069-ask-prompt-v7-for-whole-table-and-cloze-cards-as-structured-fields-exception-cards-that-state-what-they-do-and-examples-only-from-the-page.md)'s prompt v7;
   - [ADR 0063](0063-ask-prompt-v6-for-atomic-typed-cards-and-a-vocabulary-entry-s-senses-and-eval-long-answers-and-senses.md)'s sense of `pos` and `meaning`, and its senses and part-of-speech scores.
+
+- **The PM's first run**, on 2026-10-19 at `6e62564c206163a612eb2a02936d49f1d68e8484`, Claude Haiku 5.5 over the 67 samples, $0.1468:
+  - Vocabulary F1 was 99.4, labels P, R and category 94.9, 100 and 100, and the Korean dictionary, German, sense-example and extras scores 100. Table and cloze blanks were 100, and the cost per photo $0.0022, as v7's.
+  - Unprinted labels were 15.4 on sample 57 and 53.8 on sample 58, and 0.0 on 56. Each wrong label sat on an entry whose pronunciation prints a part of speech before each reading, such as `명 ['kantent] / 형 [kan'tent]`. The model moved those markers onto the senses, so the rule above was added.
+  - The dense grammar pages 33 to 36 covered 81.0, 61.9, 90.5 and 66.7, against 95.2, 90.5, 95.2 and 85.7 for v7 at `048da7553c1212fc21352b10f39167aeccd6334f`. v8's notes rules are v7's word for word, except that the rule against adding names a label in place of a part of speech.
+    - On samples 33, 34 and 36, the four contraction lines missed for want of the rule's name, 축약: they came back as cloze or concept cards fronted "ㅗ+ㅏ -> ___" or "ㅗ+ㅏ -> ㅘ", or were dropped. ADR 0069 records the same failure on v7's first run. On sample 35 the cards named the rule, and two answers were misread, 궈 for ㅝ and 겨 for ㅕ.
+    - The other misses were misreads on harsh or handwritten pages, such as 깡총 for 깡충 and 굽다 for 곱다, and the vowel lists, dropped on sample 34 and split across two cloze cards on 36.
+  - Invented examples on the notes pages were 10 of 132, all on notes cards: misreads such as "보아라 -> 봐라" for "보+아라 -> 봐라" on sample 36, and "삼 면". None was a sense's example.
 
 ## Consequences
 
