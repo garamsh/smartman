@@ -676,6 +676,56 @@ describe("the study page", () => {
       expect(stack()).toEqual([label(first, "안다"), label(second, "모른다")]);
     });
 
+    it("shows the next card at rest after a swipe answers, not easing in from where the finger let go", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const first = currentFront();
+      const face = () => within(currentCard()).getByRole("group", { name: "앞면" }).parentElement;
+
+      // Control: a swipe short of an answer springs the same face back, easing under motion-safe.
+      const short = face();
+      swipe(
+        currentCard(),
+        [
+          [230, 100],
+          [250, 100],
+        ],
+        200,
+      );
+      expect(currentFront()).toBe(first);
+      expect(face()).toBe(short);
+      expect(short?.style.transform).toContain("translateX(0px)");
+      expect(short?.className.split(" ")).toContain("motion-safe:transition-transform");
+
+      const released = face();
+      fireEvent.pointerDown(currentCard(), {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 200,
+        clientY: 100,
+      });
+      fireEvent.pointerMove(currentCard(), {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 320,
+        clientY: 100,
+      });
+      expect(released?.style.transform).toContain("translateX(120px)");
+      vi.setSystemTime(Date.now() + 500);
+      fireEvent.pointerUp(currentCard(), {
+        pointerId: 1,
+        pointerType: "touch",
+        clientX: 320,
+        clientY: 100,
+      });
+
+      expect(shown()).toEqual([label(first, "안다")]);
+      // The face that held the release offset is gone; the next card's face is a new one at rest,
+      // with nothing to ease from.
+      expect(released?.isConnected).toBe(false);
+      expect(face()?.style.transform).toContain("translateX(0px)");
+    });
+
     it("shows the answer a swipe on the current card would give behind it, and springs back short of it", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");

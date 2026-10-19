@@ -318,14 +318,17 @@ function Session({ plan }: { plan: SessionPlan }) {
   /** The card the previous card's place shows, which a click opens whole. */
   const shown = newest ?? view.earlier;
   const demo = coach === "know" || coach === "dontKnow" ? coach : null;
+  // Keyed by the answers given, so each answer shows the next card as a new one, at rest,
+  // rather than easing it in from where a swipe let go.
+  const currentCard = view.kind === "studying" && (
+    <CurrentCard key={view.previous.length} card={view.current} onAnswer={answer} />
+  );
   const current: ReactNode =
     view.kind === "studying" ? (
       demo ? (
-        <CoachDemo answer={demo}>
-          <CurrentCard card={view.current} onAnswer={answer} />
-        </CoachDemo>
+        <CoachDemo answer={demo}>{currentCard}</CoachDemo>
       ) : (
-        <CurrentCard card={view.current} onAnswer={answer} />
+        currentCard
       )
     ) : view.kind === "complete" ? (
       <CompletionCard completion={view.completion} onStudyOn={view.more ? studyOn : null} />
