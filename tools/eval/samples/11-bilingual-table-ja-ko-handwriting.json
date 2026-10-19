@@ -14,43 +14,103 @@
   "cards": [
     {
       "front": "旅行",
-      "meaning": "여행"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "여행",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "木",
-      "meaning": "나무"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "나무",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "雪",
-      "meaning": "눈"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "눈",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "始める",
-      "meaning": "시작하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "시작하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "空",
-      "meaning": "하늘"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "하늘",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "答える",
-      "meaning": "대답하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "대답하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "山",
-      "meaning": "산"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "산",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "送る",
-      "meaning": "보내다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "보내다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "古い",
-      "meaning": "낡다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "낡다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "安い",
-      "meaning": "싸다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "싸다",
+          "examples": []
+        }
+      ]
     }
   ]
 }

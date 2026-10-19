@@ -210,20 +210,28 @@ const twoCards = [{
   front: "run",
   answer: null,
   topic: "Unit 3 동사",
-  senses: [{ pos: "[동]", meaning: "달리다" }],
+  senses: [{
+    labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+    meaning: "달리다",
+    examples: [],
+  }],
   extras: [],
   pronunciation: null,
   examples: ["I run every morning."],
+  table: null,
+  cloze: null,
 }, {
   kind: "vocabulary",
   type: "concept",
   front: "river",
   answer: null,
   topic: "Unit 3 동사",
-  senses: [{ pos: null, meaning: "강" }],
+  senses: [{ labels: [], meaning: "강", examples: [] }],
   extras: [],
   pronunciation: null,
   examples: [],
+  table: null,
+  cloze: null,
 }, {
   kind: "note",
   type: "concept",
@@ -234,6 +242,8 @@ const twoCards = [{
   extras: [],
   pronunciation: null,
   examples: ["253+4637+647898=652788 -> 연역"],
+  table: null,
+  cloze: null,
 }];
 /** The same cards as the function answers them. */
 const twoAnswered = [{
@@ -248,7 +258,11 @@ const twoAnswered = [{
   back: "[동] 달리다",
   meaning: "달리다",
   partOfSpeech: "[동]",
-  senses: [{ pos: "[동]", meaning: "달리다" }],
+  senses: [{
+    labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+    meaning: "달리다",
+    examples: [],
+  }],
 }, {
   kind: "vocabulary",
   type: "concept",
@@ -259,7 +273,7 @@ const twoAnswered = [{
   topic: "Unit 3 동사",
   back: "강",
   meaning: "강",
-  senses: [{ pos: null, meaning: "강" }],
+  senses: [{ labels: [], meaning: "강", examples: [] }],
 }, {
   kind: "note",
   type: "concept",
@@ -295,6 +309,84 @@ Deno.test("a signed-in user's photo returns each card's kind, type, answer, topi
   assert.equal(note.back, note.answer);
   assert.equal(r.modelCalls.length, 1);
   assert.equal(r.modelCalls[0].model, "vendor/primary-model");
+});
+
+Deno.test("a table card and a cloze card are answered with their table and blanks, and with front, answer and back filled for an app that reads only those", async () => {
+  const table = {
+    columns: ["구분", "높임", "낮춤"],
+    rows: [["2인칭", "당신, 그대", "너, 너희"]],
+    blanks: [{ row: 0, column: 1 }, { row: 0, column: 2 }],
+  };
+  const r = await run({
+    replies: [cardsReply([{
+      ...twoCards[2],
+      type: "table",
+      front: "인칭 대명사",
+      answer: null,
+      examples: [],
+      table,
+    }, {
+      ...twoCards[2],
+      type: "cloze",
+      front: "3인칭 재귀칭: 높임 당신 · 예사 ___ · 낮춤 ___",
+      answer: null,
+      examples: [],
+      cloze: { answers: ["자기, 자신", "저, 저희"] },
+    }])],
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.cards, [{
+    kind: "note",
+    type: "table",
+    front: "인칭 대명사",
+    answer: "구분 | 높임 | 낮춤\n2인칭 | 당신, 그대 | 너, 너희",
+    short: "구분 | 높임 | 낮춤\n2인칭 | 당신, 그대 | 너, 너희",
+    step: 1,
+    topic: "연역과 귀납",
+    back: "구분 | 높임 | 낮춤\n2인칭 | 당신, 그대 | 너, 너희",
+    table,
+  }, {
+    kind: "note",
+    type: "cloze",
+    front: "3인칭 재귀칭: 높임 당신 · 예사 ___ · 낮춤 ___",
+    answer: "자기, 자신\n저, 저희",
+    short: "자기, 자신\n저, 저희",
+    step: 1,
+    topic: "연역과 귀납",
+    back: "자기, 자신\n저, 저희",
+    cloze: { answers: ["자기, 자신", "저, 저희"] },
+  }]);
+});
+
+Deno.test("a reply with a malformed table is invalid output, answered 502 after its one call", async () => {
+  const ragged = cardsReply([{
+    ...twoCards[2],
+    type: "table",
+    answer: null,
+    table: {
+      columns: ["구분", "높임"],
+      rows: [["2인칭", "당신", "너"]],
+      blanks: [{ row: 0, column: 1 }],
+    },
+  }]);
+  const r = await run({ replies: [ragged] });
+  assert.equal(r.status, 502);
+  assert.deepEqual(r.body, { error: "model_error" });
+  assert.equal(r.modelCalls.length, 1);
+  // Control: the same table with its rows as wide as its columns.
+  const even = await run({
+    replies: [cardsReply([{
+      ...twoCards[2],
+      type: "table",
+      answer: null,
+      table: {
+        columns: ["구분", "높임", "낮춤"],
+        rows: [["2인칭", "당신", "너"]],
+        blanks: [{ row: 0, column: 1 }],
+      },
+    }])],
+  });
+  assert.equal(even.status, 200);
 });
 
 Deno.test("a request without a signed-in user is refused with 401 before any usage or model call", async () => {
@@ -494,6 +586,8 @@ Deno.test("the model call asks for the cards schema from providers that honour i
       "extras",
       "pronunciation",
       "examples",
+      "table",
+      "cloze",
     ],
   );
   assert.equal(call.provider.require_parameters, true);
@@ -506,13 +600,13 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
     const asked of [
       "cards hold the theory and the exceptions",
       "Every definition and every rule, each on its own card.",
-      "Each exception, on its own card.",
+      "Each exception, on its own card, its answer stating what the exception does, as the page prints it",
       "the name of the concept, rule or exception the card states",
       "It is a name, never a question",
       "the theory itself, the definition, rule or exception",
       '"topic" is the name of the page section the card comes from, at most 60 characters',
       "Cards of one section share one topic",
-      "It is never a concept or cloze card of its own: it goes in the examples of the card whose rule it illustrates, exactly as the page prints it, and only when the page prints it.",
+      "It is never a concept, cloze or table card of its own: it goes in the examples of the card whose rule it illustrates, exactly as the page prints it, and only when the page prints it.",
       "Do not merge separate rules into one card",
     ]
   ) {
@@ -521,7 +615,7 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
   // Nothing outside the page enters a card.
   for (
     const kept of [
-      "never add a fact, a meaning, a part of speech, an extra, a pronunciation or an example the page does not show",
+      "never add a fact, a meaning, a label, an extra, a pronunciation or an example the page does not show",
       "A field the page does not print is null or empty.",
       "Never write an example of your own.",
     ]
@@ -543,13 +637,21 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
       // v6 as first measured on #202: a cloze for every row, and an identify card per sentence.
       "Cloze by default",
       "for each such sentence",
+      // v6 as merged: a table cell by cell, and one blank a cloze.
+      "Tables cell by cell",
+      "A whole table is never one card.",
+      'with one blank written "___"',
+      "gets one cloze card per blank",
+      // v7: a sense's label copied verbatim with its brackets into "pos".
+      '"pos"',
+      "copied verbatim with its brackets",
     ]
   ) {
     assert.ok(!system.includes(dropped), `no longer asks: ${dropped}`);
   }
 });
 
-Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, and a vocabulary entry's senses, extras and pronunciation", async () => {
+Deno.test("prompt v8 asks for #200's rules with a whole table on one table card and a cloze of one or more blanks, an exception card stating what the exception does, a type on every card, and a vocabulary entry's senses with their labels and examples, extras and pronunciation", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   const system = r.modelCalls[0].messages[0].content;
   const rules: Record<string, string[]> = {
@@ -557,16 +659,30 @@ Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, 
       "One card per fact: each fact gets exactly one card, never a second card that asks it again in another form.",
       "An answer that would list more than 5 items is split into several cards.",
     ],
-    "2 tables cell by cell": [
-      "Tables cell by cell",
-      "its front the row and column names",
-      "A whole table is never one card.",
+    "2 table cards": [
+      'becomes one "table" card holding the whole table, its front the table\'s name',
+      "its headers kept and the cells to recall as its blanks",
+      "A table is never split into a card per cell or per row.",
+      '"columns" its column headers',
+      "every row as many cells as there are columns",
+      '"blanks" the cells to recall, each {"row": r, "column": c} counted from 0 within "rows", never a header and never an empty cell',
     ],
     "3 cloze only without a concept card": [
       "Cloze only where no concept card states it",
-      "which has no concept card of its own, gets one cloze card per blank",
-      "A cloze never asks what a concept card already answers.",
-      'one blank written "___"',
+      "which has no concept card of its own, also becomes one cloze card with a blank for each word to recall",
+      "A cloze never asks what a concept or table card already answers.",
+      'replaced by a blank written "___"',
+      'what fills each "___" of its front, in order, one answer for each blank',
+    ],
+    "list lines are cloze cards": [
+      "List lines are cloze cards: a line that names a group and then lists its members",
+      'It becomes one "cloze" card whose front is the whole line with each member written "___"',
+      'never a "concept" card whose front is the group\'s name and whose answer is the list',
+      "A line of more than 5 members becomes several cloze cards of at most 5 blanks each, each front keeping the group's name.",
+    ],
+    "sub-points": [
+      "every line written under a point, such as a member, a case, a condition or a variant of its rule, is covered by a card of its own or a blank of a cloze card, and never dropped or left only as an example",
+      "Its card names the rule it belongs to",
     ],
     "4 judgment cards": [
       'a rule that tells A from B gets its own card, its front "A vs B"',
@@ -592,20 +708,53 @@ Deno.test("prompt v6 asks for each of #200's seven rules, a type on every card, 
       '"concept"',
       '"cloze"',
       '"identify"',
+      '"table": a whole table of the page on one card',
       'Every vocabulary card is "concept", and so is a judgment card.',
+      'and for every cloze and table card, whose answers go in "cloze" and "table"',
+    ],
+    "#217 examples only from the page": [
+      "Examples come only from the page: copy one only when the page prints it for that card's entry or rule",
+      "whole and as printed, and never shorten, complete, extend, translate or make up an example to illustrate a rule, even a well-known one",
+      "Leave out an example you cannot read with confidence rather than guessing any of its characters.",
+      'When you cannot see the page print an example for the card, leave "examples" empty.',
+      "each copied character for character",
+    ],
+    "#188 exceptions state what they do": [
+      "Each exception, on its own card, its answer stating what the exception does, as the page prints it",
+      "never only that it is an exception",
     ],
     "vocabulary form": [
       "\"senses\" are a vocabulary entry's meanings, in the page's order",
-      '"pos" is the part-of-speech label the page prints for that meaning, copied verbatim',
-      "or null when the page prints none",
+      '{"labels": [...], "meaning": "...", "examples": [...]}',
       "An entry with one meaning has one sense.",
-      '"extras" are anything else the page prints for a vocabulary entry, each with the page\'s own label verbatim',
+      '"extras" are anything else the page prints for a vocabulary entry as a whole, rather than for one meaning, each with the page\'s own label verbatim',
       '"pronunciation" is the pronunciation, phonetic transcription or reading the page prints for a vocabulary entry, verbatim',
       "when the page prints one per part of speech",
-      'It is null for every vocabulary card, whose meanings go in "senses".',
+      'It is null for every vocabulary card, whose meanings go in "senses"',
+    ],
+    "#228 labels transcribed, never inferred": [
+      '"labels" are the labels the page prints for that meaning, in the page\'s order, each transcribed, never inferred.',
+      'A part of speech is {"kind": "part_of_speech", "category": <name>, "text": <as printed>}',
+      '"noun", "verb", "adjective", "adverb", "pronoun", "preposition" (a postposition too), "conjunction", "interjection", "determiner" (an article too), "numeral", "particle", "auxiliary", "classifier", "phrase" (an idiom or set phrase)',
+      'Any other label is {"kind": "other", "category": null, "text": <as printed>}: a semantic class such as [사물], a register such as [구어], a field such as [의학], or a part of speech not on that list.',
+      '"text" is the label as printed, its dots kept, without the brackets or parentheses around it',
+      '"labels" is an empty list when the page prints no label for the meaning, even when its part of speech is plain: never add a label the page does not print.',
+      "A label is one the page prints with that meaning, on the meaning's own line.",
+      'A part of speech printed anywhere else is not a label of any sense, such as one before each reading of a pronunciation like "명 [\'kantent] / 형 [kan\'tent]": it stays in "pronunciation" alone',
+      '"meaning" is the translation or the definition, exactly as written',
+    ],
+    "#228 examples per sense": [
+      '"examples" are the example sentences the page prints under that meaning',
+      'an example the page prints under one of its meanings goes in that sense\'s "examples" instead',
+    ],
+    "#228 other grammar in extras": [
+      "The entry's grammar beyond its parts of speech goes here too, verbatim under the page's label",
+      '{"label": "성", "text": "der"} for a gender, a measure word, a verb class, a plural or an irregular form',
     ],
     cap: [
-      "keep its definitions, rules, judgment cards, handwritten tips and marked exceptions before its cloze and cell cards, and those before its identify cards",
+      "at most 10 senses, 5 labels and 5 examples a sense, 10 extras and 10 cloze answers",
+      "keep its definitions, rules, judgment cards, handwritten tips and marked exceptions before its table and cloze cards, and those before its identify cards",
+      "a table at most 8 columns and 20 rows",
     ],
   };
   for (const [rule, phrases] of Object.entries(rules)) {

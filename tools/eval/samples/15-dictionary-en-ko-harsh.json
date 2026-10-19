@@ -13,64 +13,152 @@
   "cards": [
     {
       "front": "tired",
-      "meaning": "피곤한",
-      "partOfSpeech": "adj.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "adj."
+            }
+          ],
+          "meaning": "피곤한",
+          "examples": []
+        }
+      ],
       "examples": [
         "I feel tired today."
       ]
     },
     {
       "front": "choose",
-      "meaning": "고르다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "고르다",
+          "examples": []
+        }
+      ],
       "examples": [
         "Choose one color."
       ]
     },
     {
       "front": "repeat",
-      "meaning": "반복하다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "반복하다",
+          "examples": []
+        }
+      ],
       "examples": [
         "Repeat after me."
       ]
     },
     {
       "front": "direction",
-      "meaning": "방향",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "방향",
+          "examples": []
+        }
+      ],
       "examples": [
         "We went in the wrong direction."
       ]
     },
     {
       "front": "narrow",
-      "meaning": "좁은",
-      "partOfSpeech": "adj.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "adj."
+            }
+          ],
+          "meaning": "좁은",
+          "examples": []
+        }
+      ],
       "examples": [
         "The street is narrow."
       ]
     },
     {
       "front": "reason",
-      "meaning": "이유",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "이유",
+          "examples": []
+        }
+      ],
       "examples": [
         "Tell me the reason."
       ]
     },
     {
       "front": "already",
-      "meaning": "이미",
-      "partOfSpeech": "adv.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adverb",
+              "text": "adv."
+            }
+          ],
+          "meaning": "이미",
+          "examples": []
+        }
+      ],
       "examples": [
         "I have already eaten."
       ]
     },
     {
       "front": "forget",
-      "meaning": "잊다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "잊다",
+          "examples": []
+        }
+      ],
       "examples": [
         "Don't forget your keys."
       ]

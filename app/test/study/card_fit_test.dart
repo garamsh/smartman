@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_text.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
@@ -207,18 +206,12 @@ void main() {
       final width =
           _phoneWidth - 2 * StudyStyle.cardMargin - StudyStyle.cardPadding * 2;
       expect(
-        fittedFontSize(
-          'antidisestablishmentarianism',
-          style: AppType.question,
-          minFontSize: AppType.questionFloor,
-          width: width,
-          textScaler: TextScaler.noScaling,
-          textDirection: TextDirection.ltr,
-        ),
-        allOf(
-          greaterThan(AppType.questionFloor),
-          lessThan(AppType.question.fontSize!),
-        ),
+        _widest('antidisestablishmentarianism', AppType.question.fontSize!),
+        greaterThan(width),
+      );
+      expect(
+        _widest('antidisestablishmentarianism', AppType.questionFloor),
+        lessThanOrEqualTo(width),
       );
       expect(
         _widest(

@@ -13,43 +13,103 @@
   "cards": [
     {
       "front": "slowly",
-      "meaning": "천천히"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "천천히",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "bridge",
-      "meaning": "다리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "다리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "useful",
-      "meaning": "유용한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "유용한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "weather",
-      "meaning": "날씨"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "날씨",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "always",
-      "meaning": "항상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "항상",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "grow",
-      "meaning": "자라다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자라다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "dangerous",
-      "meaning": "위험한"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "위험한",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "carry",
-      "meaning": "나르다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "나르다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "reason",
-      "meaning": "이유"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이유",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "young",
-      "meaning": "젊은"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "젊은",
+          "examples": []
+        }
+      ]
     }
   ]
 }

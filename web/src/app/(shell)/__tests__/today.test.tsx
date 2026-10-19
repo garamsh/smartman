@@ -6,7 +6,7 @@ import { loadEngine } from "@/features/study";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { otherUser, testUser } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
-import { cardRow, day, deckRow, reviewRow, start, stateRow } from "@/testing/library";
+import { cardRow, day, deckRow, reviewRow, start, stateRow, uuidOf } from "@/testing/library";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
@@ -81,11 +81,11 @@ describe("the 오늘 and 덱 pages", () => {
     expect(todayLine()).toBe("2 장 · 약 1분");
     expect(screen.getByRole("link", { name: "모두 학습" })).toHaveAttribute(
       "href",
-      "/study?decks=d-fr,d-es",
+      `/study?decks=${uuidOf("d-fr")},${uuidOf("d-es")}`,
     );
     expect(screen.getByRole("heading", { name: "내 덱 2" })).toBeInTheDocument();
     expect(rowNames()).toEqual(["French, 카드 3장, 오늘 2", "Spanish, 카드 1장"]);
-    expect(row("French")).toHaveAttribute("href", "/decks/d-fr");
+    expect(row("French")).toHaveAttribute("href", `/decks/${uuidOf("d-fr")}`);
   });
 
   it("counts the new cards left today across every deck, in the time zone the browser's cookie names", async () => {
@@ -287,7 +287,7 @@ describe("the 오늘 and 덱 pages", () => {
 
     // The same answer with its card id held as a list, which the card filter still matches.
     postgrest.rows.reviews = postgrest.rows.reviews.map((row) =>
-      row.id === "before" ? { ...row, card_id: ["fr"] } : row,
+      row.id === "before" ? { ...row, card_id: [uuidOf("fr")] } : row,
     );
     await render(Today, {});
 
@@ -447,7 +447,7 @@ describe("the 오늘 and 덱 pages", () => {
       ).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "모두 학습" }), answered).not.toBeInTheDocument();
       const href = screen.getByRole("link", { name: "학습하기" }).getAttribute("href");
-      expect(href, answered).toBe("/study?decks=d-fr,d-es");
+      expect(href, answered).toBe(`/study?decks=${uuidOf("d-fr")},${uuidOf("d-es")}`);
 
       cleanup();
       await render(Study, {
@@ -520,7 +520,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.getByRole("img", { name: "하루 목표 2장 중 1장" })).toBeInTheDocument();
     cleanup();
 
-    await render(Study, { searchParams: Promise.resolve({ decks: "d-fr" }) });
+    await render(Study, { searchParams: Promise.resolve({ decks: uuidOf("d-fr") }) });
     await waitFor(() => {
       expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
     });
@@ -568,7 +568,7 @@ describe("the 오늘 and 덱 pages", () => {
     ]);
     expect(decks.getByRole("link", { name: "French, 오늘 2장 학습" })).toHaveAttribute(
       "href",
-      "/study?decks=d-fr",
+      `/study?decks=${uuidOf("d-fr")}`,
     );
   });
 

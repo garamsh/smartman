@@ -14,59 +14,143 @@
   "cards": [
     {
       "front": "料理",
-      "meaning": "요리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "요리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "易しい",
-      "meaning": "쉽다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "쉽다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "暗い",
-      "meaning": "어둡다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "어둡다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "楽しい",
-      "meaning": "즐겁다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "즐겁다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "忘れる",
-      "meaning": "잊다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "잊다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "新しい",
-      "meaning": "새롭다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "새롭다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "椅子",
-      "meaning": "의자"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "의자",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "音楽",
-      "meaning": "음악"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "음악",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "家族",
-      "meaning": "가족"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가족",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "見る",
-      "meaning": "보다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "보다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "古い",
-      "meaning": "낡다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "낡다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "開ける",
-      "meaning": "열다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "열다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "お茶",
-      "meaning": "차"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "차",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "聞く",
-      "meaning": "듣다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "듣다",
+          "examples": []
+        }
+      ]
     }
   ]
 }

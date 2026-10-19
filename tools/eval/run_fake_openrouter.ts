@@ -26,10 +26,12 @@ const CARD = {
   front: "apple",
   answer: null,
   topic: "Fruit",
-  senses: [{ pos: null, meaning: "사과" }],
+  senses: [{ labels: [], meaning: "사과", examples: [] }],
   extras: [],
   pronunciation: null,
   examples: [],
+  table: null,
+  cloze: null,
 };
 
 const fakeFetch: typeof fetch = (input) => {

@@ -1,7 +1,7 @@
 // The eval end to end with OpenRouter and the file system replaced by in-memory fakes.
 import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { normalize } from "./metrics.ts";
+import { meaningOf, normalize } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
 import {
@@ -11,9 +11,13 @@ import {
   worstCallUsd,
 } from "./budget.ts";
 
-const truth = [{ front: "apple", meaning: "사과", partOfSpeech: "n." }, {
+const NOUN = { kind: "part_of_speech", category: "noun", text: "n." } as const;
+const truth = [{
+  front: "apple",
+  senses: [{ labels: [NOUN], meaning: "사과", examples: [] }],
+}, {
   front: "river",
-  meaning: "강",
+  senses: [{ labels: [], meaning: "강", examples: [] }],
 }];
 /** The same cards as the model writes them, one inventing an example. */
 const modelCards = [
@@ -23,10 +27,12 @@ const modelCards = [
     front: "apple",
     answer: null,
     topic: "Unit 1",
-    senses: [{ pos: "n.", meaning: "사과" }],
+    senses: [{ labels: [NOUN], meaning: "사과", examples: [] }],
     extras: [],
     pronunciation: null,
     examples: ["She ate an apple."],
+    table: null,
+    cloze: null,
   },
   {
     kind: "vocabulary",
@@ -34,10 +40,12 @@ const modelCards = [
     front: "river",
     answer: null,
     topic: "Unit 1",
-    senses: [{ pos: null, meaning: "강" }],
+    senses: [{ labels: [], meaning: "강", examples: [] }],
     extras: [],
     pronunciation: null,
     examples: [],
+    table: null,
+    cloze: null,
   },
 ];
 /** A notes page's ground truth, and the note cards a model writes for it. */
@@ -68,6 +76,8 @@ const noteCards = [{
   extras: [],
   pronunciation: null,
   examples: ["253+4637+647898=652788 -> 연역"],
+  table: null,
+  cloze: null,
 }];
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
 /** A notes sample's image, told apart from the vocabulary ones by its bytes. */
@@ -113,6 +123,8 @@ type World = {
   printed: string[];
   /** The cost each chat reply reports. */
   replyCost: number;
+  /** The cards the model writes for a notes image, `noteCards` unless a test sets its own. */
+  notesReply?: unknown[];
 };
 
 /** The error body OpenRouter answers a call to `vendor/broken` with, and `vendor/flaky`'s first. */
@@ -171,7 +183,7 @@ function io(
         }
         const notes = JSON.stringify(body.messages).includes(NOTES_IMAGE);
         const cards = notes
-          ? noteCards
+          ? w.notesReply ?? noteCards
           : body.model === "vendor/dear"
           ? modelCards
           : modelCards.slice(0, 1);
@@ -300,7 +312,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v6",
+    note: "prompt v8",
   });
   assert.ok(
     w.printed.includes(
@@ -311,12 +323,18 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   const table = w.files.get(PATHS.report) ?? "";
   assert.match(
     table,
-    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 100\.0 \| 100\.0 \| 0\.0 \| 50\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
+    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| — \| 0\.0 \| — \| — \| 50\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
   );
   assert.match(
     table,
-    /\| Dear \| 100\.0 \| 100\.0 \| 100\.0 \|/,
+    /\| Dear \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 0\.0 \|/,
+    "river, printed without a label, was given none",
   );
+  assert.match(
+    table,
+    /## Vocabulary per page\n\n\| Page \| Configuration \| F1 \|[^\n]*\n\|[-|]+\n\| 01-a \| Cheap \| 66\.7 \| /,
+  );
+  assert.match(table, /\| 02-b \| Dear \| 100\.0 \| /);
   assert.match(
     table,
     /- Dear: the cheapest configuration whose vocabulary F1 is within 2 points/,
@@ -348,7 +366,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v6",
+    note: "prompt v8",
   }]);
 });
 
@@ -457,9 +475,13 @@ Deno.test("a notes sample is scored by coverage, unsupported cards, invented exa
   // The one note card covers one of the page's two facts.
   assert.match(
     table,
-    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \|\n/,
+    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \| Bare exceptions \| Table blanks \| Cloze blanks \|\n/,
   );
-  assert.match(table, /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \|\n/);
+  // No page names table or cloze blanks, so both read as a dash.
+  assert.match(
+    table,
+    /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| — \| — \|\n/,
+  );
   assert.doesNotMatch(table, /Step order|Coverage at/);
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
 });
@@ -490,6 +512,55 @@ Deno.test("the report gives each notes page's coverage, with the completion toke
   assert.match(table, /against the function's `max_tokens` of 16384 per call/);
 });
 
+Deno.test("a vocabulary ground truth is read as senses of labels, meaning and examples, and a card of another shape is refused", async () => {
+  const sense = { labels: [NOUN], meaning: "사과", examples: [] };
+  for (
+    const card of [
+      { front: "apple", meaning: "사과", partOfSpeech: "n." },
+      { front: "apple", senses: [{ pos: "n.", meaning: "사과" }] },
+      { front: "apple", senses: [] },
+      {
+        front: "apple",
+        senses: [{ ...sense, labels: [{ ...NOUN, category: null }] }],
+      },
+      { front: "apple", senses: [sense], extras: [{ label: "복수" }] },
+      { front: "apple", senses: [sense], examples: [] },
+    ]
+  ) {
+    const w = world();
+    w.files.set(
+      `${PATHS.samples}/01-a.json`,
+      JSON.stringify({ image: "01-a.jpg", cards: [card] }),
+    );
+    await assert.rejects(
+      loadSamples(io(w)),
+      /holds a card that is not \{front, senses: \[\{labels, meaning, examples\}\], examples\?, extras\?\}/,
+      JSON.stringify(card),
+    );
+  }
+  const control = world();
+  const card = {
+    front: "apple",
+    senses: [{ ...sense, labels: [{ ...NOUN, text: "[n.]" }] }],
+    examples: ["She ate an apple."],
+    extras: [{ label: "복수", text: "apples" }],
+  };
+  control.files.set(
+    `${PATHS.samples}/01-a.json`,
+    JSON.stringify({ image: "01-a.jpg", cards: [card] }),
+  );
+  const [sample] = await loadSamples(io(control));
+  assert.ok(sample.kind === "vocabulary");
+  assert.deepEqual(
+    sample.cards[0],
+    {
+      ...card,
+      senses: [sense],
+    },
+    "control: read as the function reads a sense, the label without its brackets",
+  );
+});
+
 Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with examples not of text, or without its lines, is refused", async () => {
   for (
     const facts of [
@@ -514,15 +585,92 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
     );
     await assert.rejects(
       loadSamples(io(w)),
-      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines\}/,
+      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines, tableBlanks\?: \[\{id, terms\}\], clozeBlanks\?: \[\{id, terms\}\]\}/,
     );
+  }
+  for (
+    const blanks of [
+      [],
+      "x",
+      [{ id: "a" }],
+      [{ id: "a", terms: [] }],
+      [{ id: "a", terms: [" "] }],
+      [{ id: 1, terms: ["x"] }],
+    ]
+  ) {
+    for (const key of ["tableBlanks", "clozeBlanks"]) {
+      const w = world();
+      w.files.set(
+        `${PATHS.samples}/03-notes.json`,
+        JSON.stringify({ image: "03-notes.jpg", ...notesTruth, [key]: blanks }),
+      );
+      await assert.rejects(
+        loadSamples(io(w)),
+        /notes ground truth/,
+        `${key}: ${JSON.stringify(blanks)}`,
+      );
+    }
   }
   const control = world();
   control.files.set(
     `${PATHS.samples}/03-notes.json`,
-    JSON.stringify({ image: "03-notes.jpg", ...notesTruth }),
+    JSON.stringify({
+      image: "03-notes.jpg",
+      ...notesTruth,
+      tableBlanks: [{ id: "a", terms: ["x"] }],
+      clozeBlanks: [{ id: "b", terms: ["y", "z"] }],
+    }),
   );
-  assert.equal((await loadSamples(io(control))).length, 3);
+  const samples = await loadSamples(io(control));
+  assert.equal(samples.length, 3);
+  const notes = samples.find((sample) => sample.kind === "notes");
+  assert.deepEqual(
+    notes?.kind === "notes" &&
+      [notes.notes.tableBlanks, notes.notes.clozeBlanks],
+    [[{ id: "a", terms: ["x"] }], [{ id: "b", terms: ["y", "z"] }]],
+  );
+});
+
+Deno.test("a notes page naming table and cloze blanks is scored on the blanks its table and cloze cards ask", async () => {
+  const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
+  w.files.set(
+    `${PATHS.samples}/03-notes.json`,
+    JSON.stringify({
+      image: "03-notes.jpg",
+      ...notesTruth,
+      tableBlanks: [
+        { id: "native", terms: ["하나"] },
+        { id: "sino", terms: ["일"] },
+      ],
+      clozeBlanks: [{ id: "deduction", terms: ["반드시"] }],
+    }),
+  );
+  w.notesReply = [{
+    ...noteCards[0],
+    type: "table",
+    front: "수사",
+    answer: null,
+    examples: [],
+    table: {
+      columns: ["구분", "고유어", "한자어"],
+      rows: [["양수사", "하나", "일"]],
+      blanks: [{ row: 0, column: 1 }],
+    },
+  }, {
+    ...noteCards[0],
+    type: "cloze",
+    front: "연역 논증: 전제가 참이면 결론이 ___ 참",
+    answer: null,
+    examples: [],
+    cloze: { answers: ["반드시"] },
+  }];
+  assert.equal(await main([], io(w)), 0);
+  const table = w.files.get(PATHS.report) ?? "";
+  // One of the two table cells is a blank, and the one cloze word is.
+  assert.match(
+    table,
+    /\| Cheap \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| 50\.0 \| 100\.0 \|\n/,
+  );
 });
 
 Deno.test("the dry estimate prices a note card above a vocabulary card", () => {
@@ -619,17 +767,31 @@ Deno.test("the committed sample set has at least 20 vocabulary images in every l
   for (const sample of vocabulary) {
     assert.ok(sample.cards.length > 0, `${sample.name} has cards`);
   }
-  const dictionary = vocabulary.filter((s) => s.name.includes("dictionary"));
-  const others = vocabulary.filter((s) => !s.name.includes("dictionary"));
+  const dictionary = vocabulary.filter((s) =>
+    /^\d+-dictionary-(en|ja)-ko-/.test(s.name)
+  );
+  const others = vocabulary.filter((s) =>
+    /^\d+-(two-column|bilingual-table|glossary)-/.test(s.name)
+  );
+  assert.equal(dictionary.length, 6);
+  assert.equal(others.length, 18);
   assert.ok(
-    dictionary.every((s) => s.cards.every((c) => c.partOfSpeech !== undefined)),
-    "every dictionary entry has the part of speech its page prints",
+    dictionary.every((s) =>
+      s.cards.every((c) =>
+        c.senses.length === 1 && c.senses[0].labels.length === 1 &&
+        c.senses[0].labels[0].kind === "part_of_speech"
+      )
+    ),
+    "every dictionary entry has the part of speech its page prints, with its category",
   );
   assert.ok(
     dictionary.some((s) =>
-      s.cards.some((c) => /^\[.\]$/.test(c.partOfSpeech ?? ""))
+      s.cards.some((c) =>
+        c.senses[0].labels[0].text === "동" &&
+        c.senses[0].labels[0].category === "verb"
+      )
     ),
-    "a dictionary page prints a bracket notation such as [동]",
+    "a dictionary page prints [동], a verb, read without its brackets",
   );
   assert.ok(
     dictionary.some((s) => s.cards.some((c) => (c.examples ?? []).length > 0)),
@@ -638,7 +800,8 @@ Deno.test("the committed sample set has at least 20 vocabulary images in every l
   assert.ok(
     others.every((s) =>
       s.cards.every((c) =>
-        c.partOfSpeech === undefined && c.examples === undefined
+        c.senses.every((sense) => sense.labels.length === 0) &&
+        c.examples === undefined
       )
     ),
     "the other layouts print neither, so their truth holds neither",
@@ -671,7 +834,7 @@ function documentOf(name: string): string {
 
 Deno.test("the committed word-book samples give each entry its senses in page order, several with labels, and a pronunciation per part of speech", async () => {
   const books = (await committedSamples()).flatMap((sample) =>
-    sample.kind === "vocabulary" && sample.name.includes("-word-book-")
+    sample.kind === "vocabulary" && /-word-book-en-ko-/.test(sample.name)
       ? [sample]
       : []
   );
@@ -681,12 +844,20 @@ Deno.test("the committed word-book samples give each entry its senses in page or
   )["word-book"];
   for (const book of books) {
     assert.deepEqual(
-      book.cards.map((card) => card.senses),
+      book.cards.map((card) =>
+        card.senses.map((sense) => ({
+          labels: sense.labels.map((label) => `[${label.text}]`),
+          meaning: sense.meaning,
+        }))
+      ),
       vocabulary.map((entry: { senses: unknown }) => entry.senses),
       `${book.name} reads each entry's senses in order`,
     );
     const face = book.cards.find((card) => card.front === "face");
-    assert.equal(face?.meaning, "직면하다, 마주하다; 표면, 겉면; 얼굴, 생김새");
+    assert.equal(
+      face && meaningOf(face.senses),
+      "직면하다, 마주하다; 표면, 겉면; 얼굴, 생김새",
+    );
   }
   assert.ok(
     vocabulary.some((entry: { pronunciation: string }) =>
@@ -697,16 +868,105 @@ Deno.test("the committed word-book samples give each entry its senses in page or
   );
 });
 
+Deno.test("the committed pages for prompt v8 print the word book without labels, an example under each sense, a Korean dictionary's classes and definitions, and German grammar as extras", async () => {
+  const samples = (await committedSamples()).flatMap((sample) =>
+    sample.kind === "vocabulary" ? [sample] : []
+  );
+  const pages = (name: string) =>
+    samples.filter((sample) => new RegExp(`^\\d+-${name}-`).test(sample.name));
+  const [book] = pages("word-book-en-ko");
+  const unlabelled = pages("word-book-unlabelled-en-ko");
+  assert.equal(unlabelled.length, 3, "print, handwriting and harsh");
+  for (const page of unlabelled) {
+    assert.deepEqual(
+      page.cards.map((card) => card.senses.map((sense) => sense.meaning)),
+      book.cards.map((card) => card.senses.map((sense) => sense.meaning)),
+      `${page.name} holds the word book's senses, whose labelled pages are its control`,
+    );
+    assert.ok(
+      page.cards.every((card) =>
+        card.senses.every((sense) => sense.labels.length === 0)
+      ),
+      `${page.name} prints no label`,
+    );
+  }
+  assert.ok(
+    book.cards.every((card) =>
+      card.senses.every((sense) => sense.labels.length === 1)
+    ),
+    "control: the word book labels every sense",
+  );
+  for (const page of pages("word-book-examples-en-ko")) {
+    assert.ok(
+      page.cards.every((card) =>
+        card.senses.length >= 2 &&
+        card.senses.every((sense) => sense.examples.length === 1) &&
+        card.examples === undefined
+      ),
+      `${page.name} prints one example under each sense, none for the entry`,
+    );
+  }
+  for (const page of pages("dictionary-ko")) {
+    const train = page.cards.find((card) => card.front === "기차");
+    assert.deepEqual(train?.senses, [{
+      labels: [{ kind: "other", category: null, text: "사물" }],
+      meaning: "철도 위를 다니는 긴 차",
+      examples: [],
+    }], `${page.name} prints 기차 with its class and definition`);
+    assert.ok(
+      page.cards.some((card) =>
+        card.senses.some((sense) =>
+          sense.labels.length === 2 &&
+          sense.labels[0].category === "noun" &&
+          sense.labels[0].text === "명사" && sense.labels[1].kind === "other"
+        )
+      ),
+      `${page.name} prints a part of speech and a class on one sense`,
+    );
+  }
+  for (const page of pages("word-book-de-ko")) {
+    const table = page.cards.find((card) => card.front === "Tisch");
+    assert.deepEqual(table?.extras, [
+      { label: "성", text: "der" },
+      { label: "복수", text: "die Tische" },
+    ], `${page.name} prints Tisch's gender and plural as extras`);
+    assert.ok(
+      page.cards.every((card) =>
+        card.senses.every((sense) =>
+          sense.labels.every((label) => label.kind === "part_of_speech")
+        )
+      ),
+      `${page.name} puts no gender among a sense's labels`,
+    );
+  }
+  assert.deepEqual(
+    [
+      "word-book-examples-en-ko",
+      "dictionary-ko",
+      "word-book-de-ko",
+    ].map((name) => pages(name).length),
+    [3, 3, 3],
+  );
+});
+
 Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step from 1 to 4, and only terms and examples their page prints", async () => {
   const notes = (await committedSamples()).flatMap((sample) =>
     sample.kind === "notes" ? [sample] : []
   );
-  assert.equal(notes.length, 20);
+  assert.equal(notes.length, 28);
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
   );
   for (
-    const document of ["ko", "en", "ko-grammar", "ko-auxiliary", "ko-numerals"]
+    const document of [
+      "ko",
+      "en",
+      "ko-grammar",
+      "ko-auxiliary",
+      "ko-numerals",
+      "ko-honorifics",
+      "ko-components",
+    ]
   ) {
     const drawn = notes.filter((sample) =>
       documentOf(sample.name) === document
@@ -794,6 +1054,63 @@ Deno.test("the page for prompt v6 has a classification table, judgment rules, st
   }
 });
 
+Deno.test("the pages for prompt v7 name the cells of a table to blank and the words of list lines to blank, each a cell or word the page prints, and their samples carry them", async () => {
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  type Line = { text: string; kind: string; header?: boolean };
+  type Blank = { id: string; terms: string[] };
+  const table = documents["ko-honorifics"];
+  const rows: Line[] = table.lines.filter((line: Line) => line.kind === "row");
+  assert.ok(rows[0].header, "a header row");
+  const body = rows.slice(1).map((row) => row.text.split(" | "));
+  const headers = [
+    ...rows[0].text.split(" | "),
+    ...body.map(([name]) => name),
+  ];
+  // Every table blank is one body cell, never a header, and every body cell but the row names
+  // is a blank.
+  const blanks: Blank[] = table.tableBlanks;
+  for (const blank of blanks) {
+    const cells = body.flatMap(([, ...cells]) => cells).filter((cell) =>
+      blank.terms.every((term) => normalize(cell).includes(normalize(term)))
+    );
+    assert.equal(cells.length, 1, `${blank.id} is one body cell`);
+    assert.ok(
+      headers.every((header) =>
+        !blank.terms.every((term) => normalize(header).includes(term))
+      ),
+      `${blank.id} is no header`,
+    );
+  }
+  assert.equal(
+    blanks.length,
+    body.length * (rows[0].text.split(" | ").length - 1),
+  );
+  assert.equal(table.clozeBlanks, undefined);
+  // The list page names each listed word of its first section as a cloze blank.
+  const list = documents["ko-components"];
+  const listed = list.lines.filter((line: Line) => line.kind === "point")
+    .slice(0, 3)
+    .flatMap((line: Line) => line.text.split(": ")[1].split(", "));
+  assert.deepEqual(
+    list.clozeBlanks.map((blank: Blank) => blank.terms.join()),
+    listed,
+  );
+  assert.equal(list.tableBlanks, undefined);
+  for (const name of ["ko-honorifics", "ko-components"]) {
+    const samples = (await committedSamples()).filter((sample) =>
+      sample.kind === "notes" && documentOf(sample.name) === name
+    );
+    assert.equal(samples.length, 4, name);
+    for (const sample of samples) {
+      assert.ok(sample.kind === "notes");
+      assert.deepEqual(sample.notes.tableBlanks, documents[name].tableBlanks);
+      assert.deepEqual(sample.notes.clozeBlanks, documents[name].clozeBlanks);
+    }
+  }
+});
+
 Deno.test("the committed notes pages count rules and exceptions as facts, each worked example an example of its rule's fact, and the dense page marks its exceptions", async () => {
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
@@ -826,7 +1143,16 @@ Deno.test("the committed notes pages count rules and exceptions as facts, each w
       `a fact for: ${line.text}`,
     );
   }
-  for (const name of ["ko", "en", "ko-grammar", "ko-auxiliary"]) {
+  for (
+    const name of [
+      "ko",
+      "en",
+      "ko-grammar",
+      "ko-auxiliary",
+      "ko-honorifics",
+      "ko-components",
+    ]
+  ) {
     const document = documents[name];
     // No fact is a worked example: none is named as one.
     assert.ok(

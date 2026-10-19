@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CardId, DeckId } from "@/features/decks";
-import { day, start } from "@/testing/library";
+import { day, start, uuidOf } from "@/testing/library";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -17,7 +17,7 @@ import { unknownPace } from "../study-time";
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
 const card = (front: string): StudyCard => ({
-  id: front as CardId,
+  id: uuidOf(front) as CardId,
   deckId: "d1" as DeckId,
   front: [{ kind: "text", text: front }],
   back: [{ kind: "text", text: `${front} back` }],

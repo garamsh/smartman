@@ -12,6 +12,9 @@
  */
 
 import {
+  type Extra,
+  parseExtra,
+  parseSense,
   type Sense,
   STEPS,
 } from "../../supabase/functions/extract-cards/cards.ts";
@@ -21,7 +24,7 @@ import {
   MAX_OUTPUT_TOKENS,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v6.ts";
+import { PROMPT_VERSION } from "../../supabase/functions/extract-cards/prompt_v8.ts";
 import type {
   Image,
   LanguageHints,
@@ -40,18 +43,20 @@ import {
   worstCallUsd,
 } from "./budget.ts";
 import {
+  type Blank,
   type Entry,
   entryOf,
+  EXCEPTION_WORDS,
   type Fact,
   type ImageResult,
   MAX_LISTED_ITEMS,
-  meaningOf,
   type NotesTruth,
   recommend,
   type Row,
   score,
   scoreNotes,
   summarize,
+  type VocabularyRates,
 } from "./metrics.ts";
 import {
   type Candidate,
@@ -412,7 +417,7 @@ export async function loadSamples(
       const notes = parseNotes(truth);
       if (notes === null) {
         throw new Error(
-          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines}`,
+          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines, tableBlanks?: [{id, terms}], clozeBlanks?: [{id, terms}]}`,
         );
       }
       samples.push({ ...photo, kind: "notes", notes });
@@ -425,7 +430,7 @@ export async function loadSamples(
       const entry = parseEntry(card);
       if (entry === null) {
         throw new Error(
-          `${name} holds a card that is not {front, meaning, partOfSpeech?, examples?} of text`,
+          `${name} holds a card that is not {front, senses: [{labels, meaning, examples}], examples?, extras?}`,
         );
       }
       return entry;
@@ -437,6 +442,9 @@ export async function loadSamples(
 
 function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
   const { facts, lines } = truth;
+  const tableBlanks = parseBlanks(truth.tableBlanks);
+  const clozeBlanks = parseBlanks(truth.clozeBlanks);
+  if (tableBlanks === null || clozeBlanks === null) return null;
   if (
     !Array.isArray(facts) || facts.length === 0 ||
     !Array.isArray(lines) || lines.length === 0 ||
@@ -455,61 +463,70 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
     ) return null;
     parsed.push({ id: fact.id, step, terms, examples });
   }
-  return { facts: parsed, lines };
-}
-
-/**
- * A truth card: `front`, and its `meaning` with an optional `partOfSpeech`, or its `senses`
- * of `{pos, meaning}`, where `pos` may be null; `examples` when the page prints any.
- */
-function parseEntry(card: unknown): Entry | null {
-  if (!isRecord(card) || typeof card.front !== "string") return null;
-  if (card.senses !== undefined) {
-    const senses = parseSenses(card.senses);
-    const { examples } = card;
-    if (
-      senses === null || card.meaning !== undefined ||
-      card.partOfSpeech !== undefined ||
-      (examples !== undefined &&
-        !(Array.isArray(examples) && examples.length > 0 &&
-          examples.every((example) => typeof example === "string")))
-    ) return null;
-    return {
-      front: card.front,
-      meaning: meaningOf(senses),
-      senses,
-      ...(examples === undefined ? {} : { examples }),
-    };
-  }
-  if (typeof card.meaning !== "string") return null;
-  const { partOfSpeech, examples } = card;
-  if (partOfSpeech !== undefined && typeof partOfSpeech !== "string") {
-    return null;
-  }
-  if (
-    examples !== undefined &&
-    !(Array.isArray(examples) && examples.length > 0 &&
-      examples.every((example) => typeof example === "string"))
-  ) return null;
   return {
-    front: card.front,
-    meaning: card.meaning,
-    ...(partOfSpeech === undefined ? {} : { partOfSpeech }),
-    ...(examples === undefined ? {} : { examples }),
+    facts: parsed,
+    lines,
+    ...(tableBlanks === undefined ? {} : { tableBlanks }),
+    ...(clozeBlanks === undefined ? {} : { clozeBlanks }),
   };
 }
 
-function parseSenses(value: unknown): Sense[] | null {
+/** A truth's blanks, undefined when it names none, or null when they are not [{id, terms}]. */
+function parseBlanks(value: unknown): Blank[] | null | undefined {
+  if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.length === 0) return null;
-  const senses: Sense[] = [];
-  for (const sense of value) {
+  const blanks: Blank[] = [];
+  for (const blank of value) {
     if (
-      !isRecord(sense) || typeof sense.meaning !== "string" ||
-      !(sense.pos === null || typeof sense.pos === "string")
+      !isRecord(blank) || typeof blank.id !== "string" ||
+      !Array.isArray(blank.terms) || blank.terms.length === 0 ||
+      !blank.terms.every((term) =>
+        typeof term === "string" && term.trim() !== ""
+      )
     ) return null;
-    senses.push({ pos: sense.pos, meaning: sense.meaning });
+    blanks.push({ id: blank.id, terms: blank.terms });
   }
-  return senses;
+  return blanks;
+}
+
+/**
+ * A truth card: `front` and its `senses`, each read as the function reads a model's sense, and
+ * the `examples` and `extras` its page prints for the entry as a whole, when it prints any.
+ */
+function parseEntry(card: unknown): Entry | null {
+  if (!isRecord(card) || typeof card.front !== "string") return null;
+  const senses = parseAll(card.senses, parseSense);
+  const extras = card.extras === undefined
+    ? undefined
+    : parseAll(card.extras, parseExtra);
+  const { examples } = card;
+  if (
+    senses === null || extras === null ||
+    (examples !== undefined &&
+      !(Array.isArray(examples) && examples.length > 0 &&
+        examples.every((example) => typeof example === "string")))
+  ) return null;
+  return {
+    front: card.front,
+    senses,
+    ...(examples === undefined ? {} : { examples }),
+    ...(extras === undefined ? {} : { extras }),
+  };
+}
+
+/** Each element of a non-empty list parsed, or null when any is not. */
+function parseAll<T extends Sense | Extra>(
+  value: unknown,
+  parse: (element: unknown) => T | null,
+): T[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const parsed: T[] = [];
+  for (const element of value) {
+    const one = parse(element);
+    if (one === null) return null;
+    parsed.push(one);
+  }
+  return parsed;
 }
 
 function languages(value: unknown): LanguageHints {
@@ -547,9 +564,11 @@ export function report(
     `- Run on ${date} with prompt ${PROMPT_VERSION}, over ${sampleCount} images in \`tools/eval/samples/\`.`,
     "- The samples are synthetic: printed and handwritten-style pages rendered and distorted by `tools/eval/generate.py`, not phone photos.",
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
-    "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in part of speech and meaning, and senses R the share of the entry's senses so returned. A truth written before senses is one sense of its meaning and part of speech.",
-    "- Over the matched cards of every image, in percent: part of speech is the share of returned senses' labels equal to the page's for that sense, and examples the share of returned examples the page prints, after the same normalization; invented is the share of present labels and example lists where the page prints none. A dash means the configuration returned no such field.",
-    `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards.`,
+    "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in labels and meaning, and senses R the share of the entry's senses so returned.",
+    "- Over the matched cards of every image, whose senses pair with the page's in order, in percent and after the same normalization: labels P is the share of returned labels whose text equals one the page prints for that sense, and labels R the share of printed labels so returned; category is the share of those equal labels whose kind and category are the page's too; unprinted labels is the share of the senses the page prints no label for that were given one, which must be 0; examples is the share of returned examples, on the card or a sense, the page prints for the entry; sense examples is the share of the examples printed under a sense that the returned sense holds; extras is the share of printed extras returned with an equal label and text; invented is the share of returned label lists, example lists and extras where the page prints none. A dash means the configuration returned no such field, or the pages printed none.",
+    `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards; a table card's answer, its whole table, is not counted. Bare exceptions is the share of returned cards whose answer names an exception (${
+      EXCEPTION_WORDS.map((word) => `"${word}"`).join(" or ")
+    }) yet covers no fact, which prompt v7 asks every exception card to avoid by stating what the exception does. Table blanks is the share of the pages' cells to memorise that a table card asks as a blank, one blank holding each of the cell's terms, and cloze blanks the same for the words a cloze card should ask, pooled over the pages that hold any; a dash means no page held any.`,
     "- Latency is per image, one call each; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -564,21 +583,20 @@ export function report(
     "",
     "## Vocabulary pages",
     "",
-    "| Configuration | Precision | Recall | F1 | Senses P | Senses R | Part of speech | Examples | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
-    "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    "| Configuration | Precision | Recall | F1 | Senses P | Senses R | Labels P | Labels R | Category | Unprinted labels | Examples | Sense examples | Extras | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ...rows.map((row) =>
       `| ${row.label} | ${pct(row.precision)} | ${pct(row.recall)} | ${
         pct(row.f1)
-      } | ${pctOrNone(row.sensePrecision)} | ${pctOrNone(row.senseRecall)} | ${
-        pctOrNone(row.partOfSpeechPrecision)
-      } | ${pctOrNone(row.examplesPrecision)} | ${
-        pctOrNone(row.inventedRate)
-      } | ${seconds(row.p50Ms)} | ` +
+      } | ${labelCells(row)} | ${pctOrNone(row.inventedRate)} | ${
+        seconds(row.p50Ms)
+      } | ` +
       `${seconds(row.p90Ms)} | ${usd(row.costPerImageUsd)} | ${
         usd(row.spentUsd)
       } |`
     ),
     "",
+    ...vocabularyPagesSection(rows),
     ...notesSection(rows),
     ...pagesSection(rows),
     "## Recommendation",
@@ -598,6 +616,45 @@ export function report(
   return lines.join("\n");
 }
 
+/** A row's senses, labels, examples and extras cells, in the vocabulary tables' order. */
+function labelCells(rates: VocabularyRates): string {
+  const pct = (value: number | null) =>
+    value === null ? "—" : (value * 100).toFixed(1);
+  return [
+    rates.sensePrecision,
+    rates.senseRecall,
+    rates.labelPrecision,
+    rates.labelRecall,
+    rates.categoryAccuracy,
+    rates.unprintedLabelRate,
+    rates.examplesPrecision,
+    rates.senseExamplesRecall,
+    rates.extrasRecall,
+  ].map(pct).join(" | ");
+}
+
+/**
+ * Each vocabulary page's F1 and shares, one row per page and configuration, so a page written
+ * for one measure, such as one printing no label, reads on its own; nothing when none ran.
+ */
+function vocabularyPagesSection(rows: readonly Row[]): string[] {
+  if (rows.every((row) => row.vocabularyPages.length === 0)) return [];
+  return [
+    "## Vocabulary per page",
+    "",
+    "| Page | Configuration | F1 | Senses P | Senses R | Labels P | Labels R | Category | Unprinted labels | Examples | Sense examples | Extras |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ...rows.flatMap((row) =>
+      row.vocabularyPages.map((page) =>
+        `| ${page.name} | ${row.label} | ${(page.f1 * 100).toFixed(1)} | ${
+          labelCells(page)
+        } |`
+      )
+    ),
+    "",
+  ];
+}
+
 /** The notes table, one row per configuration, or nothing when no notes image ran. */
 function notesSection(rows: readonly Row[]): string[] {
   if (rows.every((row) => row.notes === null)) return [];
@@ -606,15 +663,17 @@ function notesSection(rows: readonly Row[]): string[] {
   return [
     "## Notes pages",
     "",
-    "| Configuration | Coverage | Unsupported | Invented examples | Long answers |",
-    "|---|---|---|---|---|",
+    "| Configuration | Coverage | Unsupported | Invented examples | Long answers | Bare exceptions | Table blanks | Cloze blanks |",
+    "|---|---|---|---|---|---|---|---|",
     ...rows.map((row) => {
       const notes = row.notes;
       return `| ${row.label} | ${pct(notes?.coverage)} | ${
         pct(notes?.unsupportedRate)
       } | ${pct(notes?.inventedExamplesRate)} | ${
         pct(notes?.longAnswerRate)
-      } |`;
+      } | ${pct(notes?.bareExceptionRate)} | ${
+        pct(notes?.tableBlankCoverage)
+      } | ${pct(notes?.clozeBlankCoverage)} |`;
     }),
     "",
   ];

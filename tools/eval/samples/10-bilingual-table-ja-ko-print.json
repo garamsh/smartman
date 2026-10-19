@@ -14,51 +14,123 @@
   "cards": [
     {
       "front": "料理",
-      "meaning": "요리"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "요리",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "海",
-      "meaning": "바다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "바다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "寝る",
-      "meaning": "자다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "자다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "明日",
-      "meaning": "내일"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "내일",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "時間",
-      "meaning": "시간"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "시간",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "明るい",
-      "meaning": "밝다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "밝다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "教える",
-      "meaning": "가르치다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가르치다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "元気",
-      "meaning": "건강하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "건강하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "家族",
-      "meaning": "가족"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "가족",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "古い",
-      "meaning": "낡다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "낡다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "病院",
-      "meaning": "병원"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "병원",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "暑い",
-      "meaning": "덥다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "덥다",
+          "examples": []
+        }
+      ]
     }
   ]
 }

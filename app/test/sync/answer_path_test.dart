@@ -18,8 +18,6 @@ import '../account/fake_account_service.dart';
 import '../sharing/fakes.dart';
 import 'fake_sync_server.dart';
 
-import 'package:smartman/study/src/providers.dart' show studyCoachShownKey;
-
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 void main() {

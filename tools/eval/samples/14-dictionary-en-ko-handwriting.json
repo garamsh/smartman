@@ -13,64 +13,152 @@
   "cards": [
     {
       "front": "kitchen",
-      "meaning": "부엌",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "부엌",
+          "examples": []
+        }
+      ],
       "examples": [
         "He is cooking in the kitchen."
       ]
     },
     {
       "front": "decide",
-      "meaning": "결정하다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "결정하다",
+          "examples": []
+        }
+      ],
       "examples": [
         "We decided to stay home."
       ]
     },
     {
       "front": "health",
-      "meaning": "건강",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "건강",
+          "examples": []
+        }
+      ],
       "examples": [
         "Exercise is good for your health."
       ]
     },
     {
       "front": "grow",
-      "meaning": "자라다",
-      "partOfSpeech": "v.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "v."
+            }
+          ],
+          "meaning": "자라다",
+          "examples": []
+        }
+      ],
       "examples": [
         "Plants grow fast in summer."
       ]
     },
     {
       "front": "journey",
-      "meaning": "여행",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "여행",
+          "examples": []
+        }
+      ],
       "examples": [
         "The journey took three days."
       ]
     },
     {
       "front": "price",
-      "meaning": "가격",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "가격",
+          "examples": []
+        }
+      ],
       "examples": [
         "The price is too high."
       ]
     },
     {
       "front": "careful",
-      "meaning": "조심스러운",
-      "partOfSpeech": "adj.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "adjective",
+              "text": "adj."
+            }
+          ],
+          "meaning": "조심스러운",
+          "examples": []
+        }
+      ],
       "examples": [
         "Be careful on the stairs."
       ]
     },
     {
       "front": "schedule",
-      "meaning": "일정",
-      "partOfSpeech": "n.",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "n."
+            }
+          ],
+          "meaning": "일정",
+          "examples": []
+        }
+      ],
       "examples": [
         "My schedule is full this week."
       ]

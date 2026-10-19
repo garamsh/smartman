@@ -13,51 +13,123 @@
   "cards": [
     {
       "front": "mountain",
-      "meaning": "산"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "산",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "island",
-      "meaning": "섬"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "섬",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "garden",
-      "meaning": "정원"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "정원",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "answer",
-      "meaning": "대답"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "대답",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "experience",
-      "meaning": "경험"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "경험",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "reason",
-      "meaning": "이유"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이유",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "prepare",
-      "meaning": "준비하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "준비하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "borrow",
-      "meaning": "빌리다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "빌리다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "festival",
-      "meaning": "축제"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "축제",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "repeat",
-      "meaning": "반복하다"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "반복하다",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "already",
-      "meaning": "이미"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "이미",
+          "examples": []
+        }
+      ]
     },
     {
       "front": "always",
-      "meaning": "항상"
+      "senses": [
+        {
+          "labels": [],
+          "meaning": "항상",
+          "examples": []
+        }
+      ]
     }
   ]
 }

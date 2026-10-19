@@ -11,8 +11,8 @@ Regenerate from the repository root with:
 Each sample is a page in one layout and language pair, set in the bundled OFL fonts under
 tools/eval/fonts/, then photographed synthetically: perspective, rotation, uneven lighting,
 blur, and JPEG noise. Every random choice comes from SEED and the sample's index, so a rerun
-with the locked dependencies writes the same files. The cards a vocabulary page shows, with the
-parts of speech and examples it prints, are written beside its image as the ground truth; a notes
+with the locked dependencies writes the same files. The cards a vocabulary page shows, each sense
+with the labels and examples it prints, are written beside its image as the ground truth; a notes
 page's truth is the rules and exceptions it teaches, each with its step, the terms that cover it
 and the worked examples the page prints for it, and every line it prints, from tools/eval/notes.json.
 """
@@ -165,6 +165,10 @@ NOTE_DISTORTIONS = ["mild", "harsh"]
 # the writer's own additions in pen, and a page with a classification table, judgment rules,
 # starred handwritten tips and a side box.
 DENSE_DOCUMENTS = ["ko-grammar", "ko-auxiliary", "ko-numerals"]
+# The pages for prompt v7, each in every hand and distortion after the word book pages: a page
+# whose classification table is to be memorised, its truth naming the cells a table card should
+# blank, and a page of list lines recalled in context, naming the words a cloze card should.
+BLANK_DOCUMENTS = ["ko-honorifics", "ko-components"]
 MARK_COLOUR = (190, 40, 40)
 # A line the writer added by hand, in pen, in the handwriting face on every page.
 ADDITION_COLOUR = (30, 90, 170)
@@ -275,19 +279,25 @@ def table_row(page: Page, line: dict, size: int, y: float) -> float:
     return y + height
 
 
-def word_book(page: Page, entries: list[dict]) -> None:
-    """A word book's entries: each headword with its pronunciation, one line per sense with its
-    part-of-speech label in red, and its extras under their labels."""
-    page.text((100, 90), "Word Book  어휘", LABEL_FACE, 44, (60, 60, 60))
+def word_book(page: Page, entries: list[dict], title: str) -> None:
+    """A word book's entries: each headword with its pronunciation when it has one, one line per
+    sense with its labels in red and its examples under it, and its extras under their labels."""
+    page.text((100, 90), title, LABEL_FACE, 44, (60, 60, 60))
     y = 200
     for entry in entries:
         x = 100 + page.text((100, y), entry["front"], page.front_face, 48) + 24
-        page.text((x, y + 12), entry["pronunciation"], LABEL_FACE, 30, (90, 90, 90))
+        if "pronunciation" in entry:
+            page.text((x, y + 12), entry["pronunciation"], LABEL_FACE, 30, (90, 90, 90))
         y += 72
         for sense in entry["senses"]:
-            x = 140 + page.text((140, y), sense["pos"], LABEL_FACE, 32, (150, 40, 40)) + 18
+            x = 140
+            for label in sense["labels"]:
+                x += page.text((x, y), label, LABEL_FACE, 32, (150, 40, 40)) + 18
             page.text((x, y), sense["meaning"], page.back_face, 36)
             y += 52
+            for example in sense.get("examples", []):
+                page.text((180, y), example, page.front_face, 28, (90, 90, 90))
+                y += 44
         for extra in entry.get("extras", []):
             x = 140 + page.text((140, y), extra["label"], LABEL_FACE, 28, (30, 60, 120)) + 16
             page.text((x, y), extra["text"], page.front_face, 30)
@@ -298,12 +308,53 @@ def word_book(page: Page, entries: list[dict]) -> None:
         raise SystemExit("the word book page runs off the page")
 
 
+# The category of each part-of-speech label the pages print, by its text without brackets; any
+# other label, such as a semantic class, has none (ADR 0075).
+CATEGORIES = {
+    "n.": "noun", "v.": "verb", "adj.": "adjective", "adv.": "adverb",
+    "명": "noun", "동": "verb", "형": "adjective", "부": "adverb",
+    "명사": "noun", "동사": "verb", "형용사": "adjective",
+}
+BRACKETS = ["[]", "「」"]
+
+
+def truth_label(printed: str) -> dict:
+    """A printed label's truth: its text without the brackets around it, and its category."""
+    text = printed[1:-1] if any(printed[0] + printed[-1] == pair for pair in BRACKETS) else printed
+    category = CATEGORIES.get(text)
+    return {"kind": "part_of_speech" if category else "other", "category": category, "text": text}
+
+
+def truth_sense(labels: list[str], meaning: str, examples: list[str]) -> dict:
+    return {"labels": [truth_label(label) for label in labels], "meaning": meaning, "examples": examples}
+
+
 def word_book_card(entry: dict) -> dict:
-    """A word book entry's truth: its senses in order, and its extras and pronunciation."""
-    card = {"front": entry["front"], "senses": entry["senses"], "pronunciation": entry["pronunciation"]}
+    """A word book entry's truth: its senses in order, and its pronunciation and extras when it prints them."""
+    card = {"front": entry["front"],
+            "senses": [truth_sense(s["labels"], s["meaning"], s.get("examples", [])) for s in entry["senses"]]}
+    if "pronunciation" in entry:
+        card["pronunciation"] = entry["pronunciation"]
     if "extras" in entry:
         card["extras"] = entry["extras"]
     return card
+
+
+def unlabelled(entries: list[dict]) -> list[dict]:
+    """[entries] as a page printing no label for any sense."""
+    return [{**entry, "senses": [{**sense, "labels": []} for sense in entry["senses"]]} for entry in entries]
+
+
+# The word-book pages after the pages for prompt v7, each in every style, for prompt v8 (#228):
+# the word book with no label printed, against samples 45 to 47 as its labelled control; entries
+# with an example under each sense; a Korean dictionary page of semantic classes and
+# definitions; and German nouns and verbs with their gender, plural and past forms as extras.
+LABEL_PAGES = [
+    ("word-book-unlabelled-en-ko", "word-book", True, ("en", "ko"), "Word Book  어휘"),
+    ("word-book-examples-en-ko", "word-book-examples", False, ("en", "ko"), "Word Book  어휘"),
+    ("dictionary-ko", "dictionary-ko", False, ("ko", "ko"), "국어사전"),
+    ("word-book-de-ko", "word-book-de", False, ("de", "ko"), "Wortschatz  어휘"),
+]
 
 
 RENDER = {"two-column": two_column, "bilingual-table": bilingual_table, "dictionary": dictionary, "glossary": glossary}
@@ -355,12 +406,11 @@ def photograph(page: Image.Image, rng: np.random.Generator, d: Distortion) -> Im
 
 
 def truth_card(entry: dict, layout: str) -> dict:
-    """An entry's fields as its page prints them: only the dictionary layout prints a part of speech and examples."""
-    card = {"front": entry["front"], "meaning": entry["back"]}
-    if layout == "dictionary":
-        card["partOfSpeech"] = entry["pos"]
-        if "example" in entry:
-            card["examples"] = [entry["example"]]
+    """An entry's one sense as its page prints it: only the dictionary layout prints a part of speech and examples."""
+    printed = layout == "dictionary"
+    card = {"front": entry["front"], "senses": [truth_sense([entry["pos"]] if printed else [], entry["back"], [])]}
+    if printed and "example" in entry:
+        card["examples"] = [entry["example"]]
     return card
 
 
@@ -371,6 +421,70 @@ def check_coverage(covered: dict[str, set[str]]) -> None:
         missing = sorted(c for c in chars if not c.isspace() and ord(c) not in cmap)
         if missing:
             raise SystemExit(f"{face} has no glyph for: {''.join(missing)}")
+
+
+def write_notes_samples(index: int, name: str, doc: dict) -> int:
+    """Writes the notes page `name` in every hand and distortion, numbered after `index`, with its
+    truth: its facts and lines, and the table and cloze blanks it names; returns the last index."""
+    language = name.split("-")[0]
+    for hand in NOTE_HANDS:
+        for distortion in NOTE_DISTORTIONS:
+            index += 1
+            rng = np.random.default_rng([SEED, index])
+            face = NOTE_FACES[hand]
+            page = Page(rng, "", hand, (face, face))
+            notes(page, doc)
+            check_coverage(page.covered)
+            d = HARSH if distortion == "harsh" else MILD
+            photo = photograph(page.image, rng, d)
+            sample = f"{index:02d}-notes-{name}-{hand}-{distortion}"
+            photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
+            truth = {
+                "image": f"{sample}.jpg",
+                "kind": "notes",
+                "layout": "notes",
+                "languages": {"front": language, "back": language},
+                "hand": hand,
+                "distortion": distortion,
+                "fonts": [face],
+                "facts": doc["facts"],
+                "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
+            }
+            for key in ("tableBlanks", "clozeBlanks"):
+                if key in doc:
+                    truth[key] = doc[key]
+            (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                    encoding="utf-8")
+    return index
+
+
+def write_word_book_samples(index: int, name: str, entries: list[dict], languages: tuple[str, str],
+                            title: str) -> int:
+    """Writes the word-book page `name` of `entries` in every style, numbered after `index`, with
+    its truth; returns the last index."""
+    for style in STYLES:
+        index += 1
+        rng = np.random.default_rng([SEED, index])
+        hand = style if style != "harsh" else ("print", "handwriting")[index % 2]
+        page = Page(rng, "en-ko", hand)
+        word_book(page, entries, title)
+        check_coverage(page.covered)
+        d = HARSH if style == "harsh" else MILD
+        photo = photograph(page.image, rng, d)
+        sample = f"{index:02d}-{name}-{style}"
+        photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
+        truth = {
+            "image": f"{sample}.jpg",
+            "layout": "word-book",
+            "languages": dict(zip(("front", "back"), languages)),
+            "hand": hand,
+            "distortion": style if style == "harsh" else "mild",
+            "fonts": sorted({page.front_face, page.back_face, LABEL_FACE}),
+            "cards": [word_book_card(entry) for entry in entries],
+        }
+        (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                encoding="utf-8")
+    return index
 
 
 def main() -> None:
@@ -434,58 +548,16 @@ def main() -> None:
                 (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                       encoding="utf-8")
     for name in DENSE_DOCUMENTS:
-        doc = documents[name]
-        language = name.split("-")[0]
-        for hand in NOTE_HANDS:
-            for distortion in NOTE_DISTORTIONS:
-                index += 1
-                rng = np.random.default_rng([SEED, index])
-                face = NOTE_FACES[hand]
-                page = Page(rng, "", hand, (face, face))
-                notes(page, doc)
-                check_coverage(page.covered)
-                d = HARSH if distortion == "harsh" else MILD
-                photo = photograph(page.image, rng, d)
-                sample = f"{index:02d}-notes-{name}-{hand}-{distortion}"
-                photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
-                truth = {
-                    "image": f"{sample}.jpg",
-                    "kind": "notes",
-                    "layout": "notes",
-                    "languages": {"front": language, "back": language},
-                    "hand": hand,
-                    "distortion": distortion,
-                    "fonts": [face],
-                    "facts": doc["facts"],
-                    "lines": [doc["title"]] + [line["text"] for line in doc["lines"]],
-                }
-                (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
-                                                        encoding="utf-8")
+        index = write_notes_samples(index, name, documents[name])
     # The word book pages, after every page above: several labelled senses an entry, and a
     # pronunciation per part of speech.
-    entries = vocabulary["word-book"]
-    for style in STYLES:
-        index += 1
-        rng = np.random.default_rng([SEED, index])
-        hand = style if style != "harsh" else ("print", "handwriting")[index % 2]
-        page = Page(rng, "en-ko", hand)
-        word_book(page, entries)
-        check_coverage(page.covered)
-        d = HARSH if style == "harsh" else MILD
-        photo = photograph(page.image, rng, d)
-        name = f"{index:02d}-word-book-en-ko-{style}"
-        photo.save(SAMPLES / f"{name}.jpg", quality=d.quality, optimize=False)
-        truth = {
-            "image": f"{name}.jpg",
-            "layout": "word-book",
-            "languages": {"front": "en", "back": "ko"},
-            "hand": hand,
-            "distortion": style if style == "harsh" else "mild",
-            "fonts": sorted({page.front_face, page.back_face, LABEL_FACE}),
-            "cards": [word_book_card(entry) for entry in entries],
-        }
-        (SAMPLES / f"{name}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
-                                              encoding="utf-8")
+    index = write_word_book_samples(index, "word-book-en-ko", vocabulary["word-book"], ("en", "ko"),
+                                    "Word Book  어휘")
+    for name in BLANK_DOCUMENTS:
+        index = write_notes_samples(index, name, documents[name])
+    for name, key, strip, languages, title in LABEL_PAGES:
+        entries = unlabelled(vocabulary[key]) if strip else vocabulary[key]
+        index = write_word_book_samples(index, name, entries, languages, title)
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 

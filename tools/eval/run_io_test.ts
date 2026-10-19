@@ -28,7 +28,10 @@ async function root(): Promise<string> {
     `${dir}/tools/eval/samples/01-a.json`,
     JSON.stringify({
       image: "01-a.jpg",
-      cards: [{ front: "apple", meaning: "사과" }],
+      cards: [{
+        front: "apple",
+        senses: [{ labels: [], meaning: "사과", examples: [] }],
+      }],
     }),
   );
   await Deno.writeFile(
@@ -62,7 +65,7 @@ Deno.test("the documented command records the run in the ledger, writes the repo
     );
     assert.equal(ledger.runs.length, 1, output);
     assert.equal(ledger.runs[0].spentUsd, 0.001);
-    assert.equal(ledger.runs[0].note, "prompt v6");
+    assert.equal(ledger.runs[0].note, "prompt v8");
     assert.match(
       await Deno.readTextFile(`${dir}/docs/eval/extract-cards.md`),
       /\| Cheap \| 100\.0 \| 100\.0 \| 100\.0 \|/,

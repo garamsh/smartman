@@ -1,0 +1,172 @@
+{
+  "image": "66-word-book-de-ko-handwriting.jpg",
+  "layout": "word-book",
+  "languages": {
+    "front": "de",
+    "back": "ko"
+  },
+  "hand": "handwriting",
+  "distortion": "mild",
+  "fonts": [
+    "NanumGothic-Regular.ttf",
+    "NanumPenScript-Regular.ttf"
+  ],
+  "cards": [
+    {
+      "front": "Tisch",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "책상, 탁자",
+          "examples": []
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "der"
+        },
+        {
+          "label": "복수",
+          "text": "die Tische"
+        }
+      ]
+    },
+    {
+      "front": "Lampe",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "램프, 전등",
+          "examples": []
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "die"
+        },
+        {
+          "label": "복수",
+          "text": "die Lampen"
+        }
+      ]
+    },
+    {
+      "front": "Kind",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "아이, 어린이",
+          "examples": []
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "das"
+        },
+        {
+          "label": "복수",
+          "text": "die Kinder"
+        }
+      ]
+    },
+    {
+      "front": "Fenster",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "noun",
+              "text": "명"
+            }
+          ],
+          "meaning": "창문",
+          "examples": []
+        }
+      ],
+      "extras": [
+        {
+          "label": "성",
+          "text": "das"
+        },
+        {
+          "label": "복수",
+          "text": "die Fenster"
+        }
+      ]
+    },
+    {
+      "front": "fahren",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "타고 가다, 운전하다",
+          "examples": []
+        }
+      ],
+      "extras": [
+        {
+          "label": "과거",
+          "text": "fuhr"
+        },
+        {
+          "label": "과거분사",
+          "text": "gefahren"
+        }
+      ]
+    },
+    {
+      "front": "gehen",
+      "senses": [
+        {
+          "labels": [
+            {
+              "kind": "part_of_speech",
+              "category": "verb",
+              "text": "동"
+            }
+          ],
+          "meaning": "가다, 걷다",
+          "examples": []
+        }
+      ],
+      "extras": [
+        {
+          "label": "과거",
+          "text": "ging"
+        },
+        {
+          "label": "과거분사",
+          "text": "gegangen"
+        }
+      ]
+    }
+  ]
+}

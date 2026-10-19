@@ -1042,5 +1042,356 @@
         ]
       }
     ]
+  },
+  "ko-honorifics": {
+    "title": "국어 문법 - 높임 표현",
+    "scale": 0.9,
+    "lines": [
+      {
+        "text": "1. 높임법의 갈래",
+        "kind": "heading"
+      },
+      {
+        "text": "구분 | 실현 방법 | 높이는 대상",
+        "kind": "row",
+        "header": true
+      },
+      {
+        "text": "주체 높임 | 선어말 어미 '-시-' | 문장의 주어",
+        "kind": "row"
+      },
+      {
+        "text": "객체 높임 | 드리다, 모시다, 여쭈다 | 목적어, 부사어",
+        "kind": "row"
+      },
+      {
+        "text": "상대 높임 | 종결 어미 (-습니다, -어요) | 듣는 사람",
+        "kind": "row"
+      },
+      {
+        "text": "2. 높임 어휘",
+        "kind": "heading"
+      },
+      {
+        "text": "주체를 높이는 어휘: 계시다(있다), 잡수시다(먹다), 주무시다(자다)",
+        "kind": "point"
+      },
+      {
+        "text": "조사도 높인다: 께서(이/가), 께(에게)",
+        "kind": "point"
+      },
+      {
+        "text": "3. 주의",
+        "kind": "heading"
+      },
+      {
+        "text": "예외: '있으시다'는 높일 대상의 소유물을 높이는 간접 높임에 쓴다",
+        "kind": "point",
+        "mark": "star",
+        "hand": true
+      },
+      {
+        "text": "예) 할머니께서는 걱정이 있으시다",
+        "kind": "example"
+      },
+      {
+        "text": "함정! '계시다'는 주체를 직접 높일 때만 쓴다",
+        "kind": "point",
+        "hand": true
+      }
+    ],
+    "facts": [
+      {
+        "id": "subject-method",
+        "step": 1,
+        "terms": [
+          "주체 높임",
+          "-시-"
+        ]
+      },
+      {
+        "id": "subject-target",
+        "step": 1,
+        "terms": [
+          "주체 높임",
+          "주어"
+        ]
+      },
+      {
+        "id": "object-method",
+        "step": 2,
+        "terms": [
+          "객체 높임",
+          "드리다",
+          "모시다",
+          "여쭈다"
+        ]
+      },
+      {
+        "id": "object-target",
+        "step": 2,
+        "terms": [
+          "객체 높임",
+          "목적어",
+          "부사어"
+        ]
+      },
+      {
+        "id": "listener-method",
+        "step": 2,
+        "terms": [
+          "상대 높임",
+          "종결 어미"
+        ]
+      },
+      {
+        "id": "listener-target",
+        "step": 3,
+        "terms": [
+          "상대 높임",
+          "듣는 사람"
+        ]
+      },
+      {
+        "id": "vocabulary",
+        "step": 2,
+        "terms": [
+          "계시다",
+          "잡수시다",
+          "주무시다"
+        ]
+      },
+      {
+        "id": "particles",
+        "step": 3,
+        "terms": [
+          "께서",
+          "께"
+        ]
+      },
+      {
+        "id": "indirect",
+        "step": 4,
+        "terms": [
+          "있으시다",
+          "간접"
+        ],
+        "examples": [
+          "할머니께서는 걱정이 있으시다"
+        ]
+      },
+      {
+        "id": "trap",
+        "step": 4,
+        "terms": [
+          "계시다",
+          "직접"
+        ]
+      }
+    ],
+    "tableBlanks": [
+      {
+        "id": "subject-method",
+        "terms": [
+          "-시-"
+        ]
+      },
+      {
+        "id": "subject-target",
+        "terms": [
+          "주어"
+        ]
+      },
+      {
+        "id": "object-method",
+        "terms": [
+          "드리다",
+          "모시다",
+          "여쭈다"
+        ]
+      },
+      {
+        "id": "object-target",
+        "terms": [
+          "목적어",
+          "부사어"
+        ]
+      },
+      {
+        "id": "listener-method",
+        "terms": [
+          "종결 어미"
+        ]
+      },
+      {
+        "id": "listener-target",
+        "terms": [
+          "듣는 사람"
+        ]
+      }
+    ]
+  },
+  "ko-components": {
+    "title": "국어 문법 - 문장 성분",
+    "scale": 0.9,
+    "lines": [
+      {
+        "text": "1. 문장 성분의 갈래",
+        "kind": "heading"
+      },
+      {
+        "text": "주성분: 주어, 서술어, 목적어, 보어",
+        "kind": "point"
+      },
+      {
+        "text": "부속 성분: 관형어, 부사어",
+        "kind": "point"
+      },
+      {
+        "text": "독립 성분: 독립어",
+        "kind": "point"
+      },
+      {
+        "text": "2. 성분의 쓰임",
+        "kind": "heading"
+      },
+      {
+        "text": "보어는 '되다', '아니다' 앞에서 '이/가'가 붙은 말이다",
+        "kind": "point"
+      },
+      {
+        "text": "예) 물이 얼음이 되었다",
+        "kind": "example"
+      },
+      {
+        "text": "관형어는 체언을 꾸미고, 부사어는 주로 용언을 꾸민다",
+        "kind": "point"
+      },
+      {
+        "text": "예) 새 옷을 입었다, 빨리 달렸다",
+        "kind": "example"
+      },
+      {
+        "text": "3. 예외",
+        "kind": "heading"
+      },
+      {
+        "text": "예외: 부사어도 체언을 꾸밀 때가 있다 (바로 앞, 겨우 하나)",
+        "kind": "point",
+        "mark": "star",
+        "hand": true
+      }
+    ],
+    "facts": [
+      {
+        "id": "main",
+        "step": 1,
+        "terms": [
+          "주성분",
+          "주어",
+          "서술어",
+          "목적어",
+          "보어"
+        ]
+      },
+      {
+        "id": "sub",
+        "step": 1,
+        "terms": [
+          "부속 성분",
+          "관형어",
+          "부사어"
+        ]
+      },
+      {
+        "id": "independent",
+        "step": 2,
+        "terms": [
+          "독립 성분",
+          "독립어"
+        ]
+      },
+      {
+        "id": "complement",
+        "step": 2,
+        "terms": [
+          "보어",
+          "되다",
+          "아니다"
+        ],
+        "examples": [
+          "물이 얼음이 되었다"
+        ]
+      },
+      {
+        "id": "modifiers",
+        "step": 3,
+        "terms": [
+          "관형어",
+          "체언",
+          "부사어",
+          "용언"
+        ],
+        "examples": [
+          "새 옷을 입었다, 빨리 달렸다"
+        ]
+      },
+      {
+        "id": "adverb-exception",
+        "step": 4,
+        "terms": [
+          "예외",
+          "부사어",
+          "체언"
+        ],
+        "examples": [
+          "바로 앞, 겨우 하나"
+        ]
+      }
+    ],
+    "clozeBlanks": [
+      {
+        "id": "subject",
+        "terms": [
+          "주어"
+        ]
+      },
+      {
+        "id": "predicate",
+        "terms": [
+          "서술어"
+        ]
+      },
+      {
+        "id": "object",
+        "terms": [
+          "목적어"
+        ]
+      },
+      {
+        "id": "complement",
+        "terms": [
+          "보어"
+        ]
+      },
+      {
+        "id": "determiner",
+        "terms": [
+          "관형어"
+        ]
+      },
+      {
+        "id": "adverbial",
+        "terms": [
+          "부사어"
+        ]
+      },
+      {
+        "id": "independent",
+        "terms": [
+          "독립어"
+        ]
+      }
+    ]
   }
 }

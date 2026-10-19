@@ -50,11 +50,12 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
 ### Public surface and foundations
 
 - **A domain declares its public surface in one library file named for it**, `app/lib/<domain>/<domain>.dart`, which exports with `show` the names a caller may use ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
-- **Everything else a domain holds lives under `app/lib/<domain>/src/`.** An import of another domain's `src/` path is a defect, from a sibling or from the composition site. A domain's own tests may import its `src/` files.
+- **Everything else a domain holds lives under `app/lib/<domain>/src/`.** An import of another domain's `src/` path is a defect, from a sibling or from the composition site. A domain's own tests, those under `app/test/<domain>/`, may import its `src/` files; no other test may.
 - **The structural rules are checked by a test.** `app/test/architecture_test.dart` fails on:
   - an entry under `app/lib/` outside the closed list;
   - an import from a foundation into a domain or `home/`, and an import of `home/` from anywhere but `main.dart`;
   - an import into a domain's `src/` from outside that domain;
+  - an import into a domain's `src/` from a test under `app/test/` that is not under that domain's folder there;
   - a foundation file whose importers outside its folder all sit in one domain or all in `home/`;
   - a domain file that names a screen another domain's surface exports, a name ending in `Screen`;
   - a file in `home/` that declares a provider or imports the database, a read of its own.
