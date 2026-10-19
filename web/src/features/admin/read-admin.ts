@@ -9,6 +9,8 @@ import { field, parseTime } from "@/supabase/row";
 import { createClient } from "@/supabase/server";
 import { readUserId } from "@/supabase/session";
 
+import type { BreakdownRow } from "./usage";
+
 /** Why an admin read failed: the server's failure, `rejected` for a caller who is not an admin, or a row this version cannot read. */
 export type AdminFailure = ServerFailure | "unreadable";
 
@@ -27,9 +29,6 @@ export type Overview = {
   newUsers30d: number;
   studiedToday: number;
   studied7d: number;
-  extractionsToday: number;
-  /** Photo extractions per UTC day over the last 30 days, oldest first, each day as YYYY-MM-DD. */
-  days: { day: string; extractions: number }[];
 };
 
 export type ReportedDeck = {
@@ -176,40 +175,22 @@ export async function readIsAdmin(): Promise<boolean | { failure: AdminFailure }
 export async function readOverview(): Promise<AdminRead<Overview>> {
   const timeZone = await adminTimeZone();
   const now = Date.now();
-  const [totals, days] = await Promise.all([
-    call("admin_overview", {
-      today_start: new Date(studyDayStart(now, timeZone)).toISOString(),
-      week_start: new Date(studyDayStart(now - 6 * day, timeZone)).toISOString(),
-    }),
-    call("admin_extractions_by_day"),
-  ]);
-  if ("failure" in totals) return totals;
-  if ("failure" in days) return days;
-  const row = only(totals.data);
-  const counts = [
-    "users",
-    "new_users_7d",
-    "new_users_30d",
-    "studied_today",
-    "studied_7d",
-    "extractions_today",
-  ].map((key) => count(field(row, key)));
-  const parsedDays = rows(days.data, (dayRow) => {
-    const date = field(dayRow, "day");
-    const extractions = count(field(dayRow, "extractions"));
-    return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && extractions !== null
-      ? { day: date, extractions }
-      : null;
+  const totals = await call("admin_overview", {
+    today_start: new Date(studyDayStart(now, timeZone)).toISOString(),
+    week_start: new Date(studyDayStart(now - 6 * day, timeZone)).toISOString(),
   });
-  const [users, newUsers7d, newUsers30d, studiedToday, studied7d, extractionsToday] = counts;
+  if ("failure" in totals) return totals;
+  const row = only(totals.data);
+  const counts = ["users", "new_users_7d", "new_users_30d", "studied_today", "studied_7d"].map(
+    (key) => count(field(row, key)),
+  );
+  const [users, newUsers7d, newUsers30d, studiedToday, studied7d] = counts;
   if (
     users == null ||
     newUsers7d == null ||
     newUsers30d == null ||
     studiedToday == null ||
-    studied7d == null ||
-    extractionsToday == null ||
-    !parsedDays
+    studied7d == null
   ) {
     return { failure: "unreadable" };
   }
@@ -220,8 +201,6 @@ export async function readOverview(): Promise<AdminRead<Overview>> {
       newUsers30d,
       studiedToday,
       studied7d,
-      extractionsToday,
-      days: parsedDays,
     },
   };
 }
@@ -472,6 +451,27 @@ export async function readAuditLog(): Promise<AdminRead<AuditEntry[]>> {
     }
     if (targetKind === null || targetId === null || !isRecord(detail)) return null;
     return { id, at, adminEmail, action, targetKind, targetId, detail };
+  });
+}
+
+/** The last 30 UTC days' photos by the plan, model and prompt version that served them (ADR 0074). */
+export async function readExtractionBreakdown(): Promise<AdminRead<BreakdownRow[]>> {
+  return parsed(await call("admin_extraction_breakdown", { days: 30 }), (row) => {
+    const date = field(row, "day");
+    const plan = field(row, "plan");
+    const model = field(row, "model");
+    const version = field(row, "prompt_version_id");
+    const photos = count(field(row, "photos"));
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || photos === null)
+      return null;
+    // A photo counted before calls were recorded has none of the three.
+    if (plan === null && model === null && version === null) {
+      return { day: date, plan: null, model: null, promptVersion: null, photos };
+    }
+    const id = planId(plan);
+    const versionId = count(version);
+    if (id === null || typeof model !== "string" || versionId === null) return null;
+    return { day: date, plan: id, model, promptVersion: versionId, photos };
   });
 }
 

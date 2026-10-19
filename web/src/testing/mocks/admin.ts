@@ -72,7 +72,8 @@ export class FakeAdmin {
     studied_7d: 2,
     extractions_today: 5,
   };
-  extractionsByDay: Row[] = [];
+  /** The rows `admin_extraction_breakdown` answers: each UTC day's photos by plan, model and version. */
+  breakdown: Row[] = [];
   /** The plans' settings, seeded as the migration seeds them. */
   readonly plans: { id: string; model: string; daily_limit: number; updated_by: string | null }[] =
     ["free", "pro", "special"].map((id) => ({
@@ -155,8 +156,8 @@ export class FakeAdmin {
     switch (name) {
       case "admin_overview":
         return [this.overview];
-      case "admin_extractions_by_day":
-        return this.extractionsByDay;
+      case "admin_extraction_breakdown":
+        return this.breakdown;
       case "admin_reported_decks":
         return this.decks
           .filter((deck) => deck.reports.length > 0)
