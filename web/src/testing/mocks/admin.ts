@@ -73,6 +73,19 @@ export class FakeAdmin {
     extractions_today: 5,
   };
   extractionsByDay: Row[] = [];
+  /** The plans' settings, seeded as the migration seeds them. */
+  readonly plans: { id: string; model: string; daily_limit: number; updated_by: string | null }[] =
+    ["free", "pro", "special"].map((id) => ({
+      id,
+      model: "anthropic/claude-haiku-5.5",
+      daily_limit: 30,
+      updated_by: null,
+    }));
+  /** Each user's grant of a plan other than Free. */
+  readonly userPlans = new Map<
+    string,
+    { plan: string; endsAt: string | null; grantedBy: string | null }
+  >();
   /** The functions called, as `<name> <args as JSON>`. */
   readonly calls: string[] = [];
 
@@ -218,6 +231,81 @@ export class FakeAdmin {
         }));
       case "admin_audit_log":
         return this.audit;
+      case "admin_plans":
+        return this.plans.map((plan) => ({
+          id: plan.id,
+          model: plan.model,
+          daily_limit: plan.daily_limit,
+          updated_at: "2026-10-19T00:00:00Z",
+          updated_by_email: this.users.find((user) => user.id === plan.updated_by)?.email ?? null,
+        }));
+      case "admin_set_plan": {
+        const plan = this.plans.find((candidate) => candidate.id === args.plan);
+        if (!plan || (plan.model === args.model && plan.daily_limit === args.daily_limit)) {
+          return false;
+        }
+        this.record(admin, "set_plan", "plan", plan.id, {
+          model: args.model,
+          daily_limit: args.daily_limit,
+          model_before: plan.model,
+          daily_limit_before: plan.daily_limit,
+        });
+        plan.model = String(args.model);
+        plan.daily_limit = Number(args.daily_limit);
+        plan.updated_by = admin;
+        return true;
+      }
+      case "admin_user_plan": {
+        const user = this.users.find((candidate) => candidate.id === args.user_id);
+        if (!user) return [];
+        const grant = this.userPlans.get(user.id);
+        const active =
+          grant && (grant.endsAt === null || Date.parse(grant.endsAt) > Date.now())
+            ? grant.plan
+            : "free";
+        const settings = this.plans.find((plan) => plan.id === active);
+        return [
+          {
+            plan: settings?.id ?? null,
+            model: settings?.model ?? null,
+            daily_limit: settings?.daily_limit ?? null,
+            granted_plan: grant?.plan ?? null,
+            ends_at: grant?.endsAt ?? null,
+            granted_at: grant ? "2026-10-19T03:00:00Z" : null,
+            granted_by_email: this.users.find((u) => u.id === grant?.grantedBy)?.email ?? null,
+          },
+        ];
+      }
+      case "admin_grant_plan": {
+        const id = String(args.user_id);
+        if (!this.users.some((user) => user.id === id)) return "no_user";
+        const endsAt = typeof args.ends_at === "string" ? args.ends_at : null;
+        if (
+          (args.plan !== "pro" && args.plan !== "special") ||
+          (args.plan === "pro" && endsAt !== null) ||
+          (endsAt !== null && Date.parse(endsAt) <= Date.now())
+        ) {
+          return "bad_plan";
+        }
+        this.userPlans.set(id, { plan: args.plan, endsAt, grantedBy: admin });
+        this.record(admin, "grant_plan", "user", id, {
+          email: this.users.find((user) => user.id === id)?.email ?? "",
+          plan: args.plan,
+          ends_at: endsAt,
+        });
+        return "granted";
+      }
+      case "admin_revoke_plan": {
+        const id = String(args.user_id);
+        const grant = this.userPlans.get(id);
+        if (!grant) return false;
+        this.userPlans.delete(id);
+        this.record(admin, "revoke_plan", "user", id, {
+          email: this.users.find((user) => user.id === id)?.email ?? "",
+          plan: grant.plan,
+        });
+        return true;
+      }
       case "admin_set_deck_hidden": {
         const deck = deckOf(args.deck_id);
         if (!deck || deck.hidden === args.hidden) return false;

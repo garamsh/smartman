@@ -68,6 +68,34 @@ export type AdminDeck = {
 
 export type UserMatch = { id: string; email: string; createdAt: number };
 
+/** A plan, as the server names it. */
+export type PlanId = "free" | "pro" | "special";
+
+/** A plan's settings, as the admin area sets them. */
+export type PlanSettings = {
+  id: PlanId;
+  model: string;
+  dailyLimit: number;
+  updatedAt: number;
+  updatedByEmail: string | null;
+};
+
+/**
+ * A user's plan now, with its model and daily limit, null while its settings are missing, and the
+ * grant behind it, when there is one; an ended Special grant shows beside Free.
+ */
+export type UserPlan = {
+  plan: PlanId | null;
+  model: string | null;
+  dailyLimit: number | null;
+  grant: {
+    plan: "pro" | "special";
+    endsAt: number | null;
+    grantedAt: number;
+    grantedByEmail: string | null;
+  } | null;
+};
+
 export type AdminUser = {
   id: string;
   email: string;
@@ -78,6 +106,7 @@ export type AdminUser = {
   extractionsToday: number;
   admin: boolean;
   publicDecks: PublicDeck[];
+  plan: UserPlan;
 };
 
 export type AdminMember = {
@@ -248,13 +277,17 @@ export async function findUsers(query: string): Promise<AdminRead<UserMatch[]>> 
 
 /** One user with their public decks, or null when no user has [id]. */
 export async function readUser(id: string): Promise<AdminRead<AdminUser | null>> {
-  const [userRead, decksRead] = await Promise.all([
+  const [userRead, decksRead, planRead] = await Promise.all([
     call("admin_user", { user_id: id }),
     readPublicDecks({ owner: id }),
+    call("admin_user_plan", { user_id: id }),
   ]);
   if ("failure" in userRead) return userRead;
   if ("failure" in decksRead) return decksRead;
+  if ("failure" in planRead) return planRead;
   if (Array.isArray(userRead.data) && userRead.data.length === 0) return { data: null };
+  const plan = parseUserPlan(only(planRead.data));
+  if (!plan) return { failure: "unreadable" };
   const row = only(userRead.data);
   const email = text(field(row, "email"));
   const createdAt = parseTime(field(row, "created_at"));
@@ -281,8 +314,51 @@ export async function readUser(id: string): Promise<AdminRead<AdminUser | null>>
       extractionsToday,
       admin,
       publicDecks: decksRead.data,
+      plan,
     },
   };
+}
+
+/** The plans and their settings, Free first. */
+export async function readPlans(): Promise<AdminRead<PlanSettings[]>> {
+  return parsed(await call("admin_plans"), (row) => {
+    const id = planId(field(row, "id"));
+    const model = text(field(row, "model"));
+    const dailyLimit = count(field(row, "daily_limit"));
+    const updatedAt = parseTime(field(row, "updated_at"));
+    const updatedBy = field(row, "updated_by_email");
+    if (id === null || model === null || dailyLimit === null || updatedAt === null) return null;
+    if (updatedBy !== null && typeof updatedBy !== "string") return null;
+    return { id, model, dailyLimit, updatedAt, updatedByEmail: updatedBy };
+  });
+}
+
+function parseUserPlan(row: unknown): UserPlan | null {
+  const plan = field(row, "plan");
+  const model = field(row, "model");
+  const dailyLimit = field(row, "daily_limit");
+  const granted = field(row, "granted_plan");
+  const endsAtValue = field(row, "ends_at");
+  const grantedAtValue = field(row, "granted_at");
+  const grantedBy = field(row, "granted_by_email");
+  // The plan's columns are null together, while its settings are missing.
+  const settings =
+    plan === null && model === null && dailyLimit === null
+      ? { plan: null, model: null, dailyLimit: null }
+      : { plan: planId(plan), model: text(model), dailyLimit: count(dailyLimit) };
+  if (plan !== null && (settings.plan === null || settings.model === null)) return null;
+  if (plan !== null && settings.dailyLimit === null) return null;
+  if (granted === null) return { ...settings, grant: null };
+  const endsAt = endsAtValue === null ? null : parseTime(endsAtValue);
+  const grantedAt = parseTime(grantedAtValue);
+  if (granted !== "pro" && granted !== "special") return null;
+  if ((endsAtValue !== null && endsAt === null) || grantedAt === null) return null;
+  if (grantedBy !== null && typeof grantedBy !== "string") return null;
+  return { ...settings, grant: { plan: granted, endsAt, grantedAt, grantedByEmail: grantedBy } };
+}
+
+function planId(value: unknown): PlanId | null {
+  return value === "free" || value === "pro" || value === "special" ? value : null;
 }
 
 /** The admins, earliest granted first, the signed-in one marked. */

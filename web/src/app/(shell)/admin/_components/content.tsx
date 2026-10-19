@@ -9,17 +9,20 @@ import {
   findUsers,
   GrantAdminForm,
   OverviewView,
+  PlansView,
   PublicDecks,
   readAdmins,
   readAuditLog,
   readDeck,
   readOverview,
+  readPlans,
   readPublicDecks,
   readReportedDecks,
   readUser,
   ReportedDecks,
   UserSearch,
   UserView,
+  usdPerPhoto,
 } from "@/features/admin";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -30,9 +33,23 @@ function searchText(value: string | string[] | undefined): string {
 }
 
 export async function OverviewContent() {
-  const read = await readOverview();
+  const [read, plans] = await Promise.all([readOverview(), readPlans()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
-  return <OverviewView overview={read.data} />;
+  if ("failure" in plans) return <AdminFailureMessage failure={plans.failure} />;
+  const free = plans.data.find((plan) => plan.id === "free")?.model ?? null;
+  return (
+    <OverviewView
+      overview={read.data}
+      costModel={free}
+      usdPerPhoto={free === null ? null : usdPerPhoto(free)}
+    />
+  );
+}
+
+export async function PlansContent() {
+  const [read, timeZone] = await Promise.all([readPlans(), adminTimeZone()]);
+  if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
+  return <PlansView plans={read.data} timeZone={timeZone} />;
 }
 
 export async function ReportsContent() {

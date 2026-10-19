@@ -441,6 +441,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dailyLimitReached => '오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.';
 
   @override
+  String dailyLimitReachedOf(int limit) {
+    return '오늘 사진으로 만들 수 있는 $limit장을 다 썼어요. 내일 다시 시도해 주세요.';
+  }
+
+  @override
   String get modelFailed => '카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   @override

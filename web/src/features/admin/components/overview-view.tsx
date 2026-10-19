@@ -1,8 +1,19 @@
-import { estimatedCost, estimatedUsdPerPhoto } from "../extraction";
+import { estimatedCost } from "../model-costs";
 import type { Overview } from "../read-admin";
 
-/** The overview: users, study and photo extractions with their estimated cost. */
-export function OverviewView({ overview }: { overview: Overview }) {
+/**
+ * The overview: users, study and photo extractions with their estimated cost, at [usdPerPhoto],
+ * the measured cost of [costModel], the Free plan's model, or none when it was not measured.
+ */
+export function OverviewView({
+  overview,
+  costModel,
+  usdPerPhoto,
+}: {
+  overview: Overview;
+  costModel: string | null;
+  usdPerPhoto: number | null;
+}) {
   const figures = [
     {
       heading: "사용자",
@@ -23,7 +34,7 @@ export function OverviewView({ overview }: { overview: Overview }) {
       heading: "사진 추출",
       items: [
         ["오늘", `${String(overview.extractionsToday)}장`],
-        ["오늘 예상 비용", estimatedCost(overview.extractionsToday)],
+        ["오늘 예상 비용", estimatedCost(overview.extractionsToday, usdPerPhoto)],
       ],
     },
   ] as const;
@@ -52,8 +63,11 @@ export function OverviewView({ overview }: { overview: Overview }) {
       <section aria-label="최근 30일 사진 추출" className="flex flex-col gap-3">
         <h2 className="text-section">최근 30일 사진 추출</h2>
         <p className="text-caption text-muted">
-          UTC 날짜 기준, 사진 한 장에 ${estimatedUsdPerPhoto}로 계산한 예상 비용이에요. 30일 합계{" "}
-          {month}장 · {estimatedCost(month)}
+          UTC 날짜 기준이에요.{" "}
+          {usdPerPhoto === null
+            ? `무료 요금제의 모델${costModel === null ? "" : `(${costModel})`}은 측정한 비용이 없어 예상 비용을 계산하지 않았어요.`
+            : `예상 비용은 무료 요금제의 모델 ${costModel ?? ""}의 측정 비용, 사진 한 장에 ${estimatedCost(1, usdPerPhoto)}로 계산했어요.`}{" "}
+          30일 합계 {month}장 · {estimatedCost(month, usdPerPhoto)}
         </p>
         <table className="w-full rounded-card bg-surface text-secondary">
           <thead>
@@ -76,7 +90,7 @@ export function OverviewView({ overview }: { overview: Overview }) {
                   {day}
                 </th>
                 <td className="px-4 py-2 text-right">{extractions}장</td>
-                <td className="px-4 py-2 text-right">{estimatedCost(extractions)}</td>
+                <td className="px-4 py-2 text-right">{estimatedCost(extractions, usdPerPhoto)}</td>
               </tr>
             ))}
           </tbody>
