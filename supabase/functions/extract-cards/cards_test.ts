@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import {
   cardsSchema,
+  CLOZE_BLANK,
   composeAnswer,
   composeBack,
+  composeClozeAnswer,
+  composeTableAnswer,
   KINDS,
   MAX_ANSWER_CHARS,
   MAX_CARDS,
+  MAX_CLOZE_BLANKS,
   MAX_EXAMPLES,
   MAX_EXTRAS,
   MAX_FIELD_CHARS,
   MAX_SENSES,
+  MAX_TABLE_COLUMNS,
+  MAX_TABLE_ROWS,
   MAX_TOPIC_CHARS,
   parseCards,
   TYPES,
@@ -28,6 +34,8 @@ const item = (fields: Record<string, unknown> = {}) => ({
   extras: [],
   pronunciation: null,
   examples: [],
+  table: null,
+  cloze: null,
   ...fields,
 });
 
@@ -43,7 +51,52 @@ const note = (fields: Record<string, unknown> = {}) =>
     ...fields,
   });
 
+/** Two rows of a classification table, each row's two cells blanks, as the model writes them. */
+const TABLE = {
+  columns: ["구분", "높임", "낮춤"],
+  rows: [["1인칭", "저, 저희", "나, 우리"], [
+    "2인칭",
+    "당신, 그대",
+    "너, 너희",
+  ]],
+  blanks: [
+    { row: 0, column: 1 },
+    { row: 0, column: 2 },
+    { row: 1, column: 1 },
+    { row: 1, column: 2 },
+  ],
+};
+
+/** A cloze card's two answers, as the model writes them. */
+const CLOZE = { answers: ["자기, 자신", "저, 저희"] };
+
+/** A model's table card of `TABLE`. */
+const table = (fields: Record<string, unknown> = {}) =>
+  note({
+    type: "table",
+    front: "인칭 대명사",
+    answer: null,
+    topic: "대명사",
+    table: TABLE,
+    ...fields,
+  });
+
+/** A model's cloze card of two blanks. */
+const cloze = (fields: Record<string, unknown> = {}) =>
+  note({
+    type: "cloze",
+    front: "3인칭 재귀칭: 높임 당신 · 예사 ___ · 낮춤 ___",
+    answer: null,
+    topic: "대명사",
+    cloze: CLOZE,
+    ...fields,
+  });
+
 const one = (cards: unknown[]) => parseCards(reply(cards))?.[0];
+
+/** [base]'s table with [fields] in place of its own. */
+const tableWith = (fields: Record<string, unknown>) =>
+  table({ table: { ...TABLE, ...fields } });
 
 Deno.test("parseCards returns a vocabulary card of one sense with its fields trimmed, its meaning and label as the answer and part of speech, and the composed back", () => {
   assert.deepEqual(
@@ -159,10 +212,13 @@ Deno.test("parseCards takes each kind and refuses any other", () => {
   }
 });
 
-Deno.test("parseCards takes each type, concept, cloze or identify, and refuses any other or none", () => {
-  for (const type of TYPES) {
+Deno.test("parseCards takes each type, concept, cloze, identify or table, and refuses any other or none", () => {
+  assert.deepEqual([...TYPES], ["concept", "cloze", "identify", "table"]);
+  for (const type of ["concept", "identify"]) {
     assert.equal(one([note({ type })])?.type, type);
   }
+  assert.equal(one([cloze()])?.type, "cloze");
+  assert.equal(one([table()])?.type, "table");
   for (const type of ["Concept", "judgment", "", null]) {
     assert.equal(parseCards(reply([note({ type })])), null, String(type));
   }
@@ -403,6 +459,226 @@ Deno.test("parseCards refuses more than 100 cards", () => {
   assert.equal(parseCards(reply(cards(MAX_CARDS + 1))), null);
 });
 
+Deno.test("a table card returns its table as the page prints it, and its answer and back are the table as plain text, one row per line, for an app that reads only front and back", () => {
+  const card = one([table({ front: " 인칭 대명사 " })]);
+  assert.deepEqual(card, {
+    kind: "note",
+    type: "table",
+    front: "인칭 대명사",
+    answer:
+      "구분 | 높임 | 낮춤\n1인칭 | 저, 저희 | 나, 우리\n2인칭 | 당신, 그대 | 너, 너희",
+    short:
+      "구분 | 높임 | 낮춤\n1인칭 | 저, 저희 | 나, 우리\n2인칭 | 당신, 그대 | 너, 너희",
+    step: 1,
+    topic: "대명사",
+    back:
+      "구분 | 높임 | 낮춤\n1인칭 | 저, 저희 | 나, 우리\n2인칭 | 당신, 그대 | 너, 너희",
+    table: TABLE,
+  });
+});
+
+Deno.test("a table keeps a cell the page leaves empty as empty text, trims every cell, and a blank may sit in any column", () => {
+  const card = one([tableWith({
+    columns: ["", " 높임 "],
+    rows: [["1인칭", ""], [" 2인칭 ", "당신"]],
+    blanks: [{ row: 1, column: 1 }, { row: 0, column: 0 }],
+  })]);
+  assert.deepEqual(
+    card?.kind === "note" && card.type === "table" && card.table,
+    {
+      columns: ["", "높임"],
+      rows: [["1인칭", ""], ["2인칭", "당신"]],
+      blanks: [{ row: 1, column: 1 }, { row: 0, column: 0 }],
+    },
+  );
+  assert.equal(card?.answer, " | 높임\n1인칭 | \n2인칭 | 당신");
+});
+
+Deno.test("parseCards refuses a malformed table: ragged rows, a blank outside the table, on an empty cell or twice, no blank, and no column or row", () => {
+  assert.equal(
+    parseCards(reply([table()]))?.length,
+    1,
+    "control: the table as written",
+  );
+  const malformed: Record<string, Record<string, unknown>> = {
+    "a short row": {
+      rows: [["1인칭", "저, 저희"], ["2인칭", "당신, 그대", "너, 너희"]],
+    },
+    "a long row": {
+      rows: [["1인칭", "저, 저희", "나, 우리", "x"], [
+        "2인칭",
+        "당신, 그대",
+        "너, 너희",
+      ]],
+    },
+    "a blank below the last row": { blanks: [{ row: 2, column: 1 }] },
+    "a blank right of the last column": { blanks: [{ row: 0, column: 3 }] },
+    "a negative blank": { blanks: [{ row: -1, column: 1 }] },
+    "a fractional blank": { blanks: [{ row: 0.5, column: 1 }] },
+    "a blank as text": { blanks: [{ row: "0", column: 1 }] },
+    "a blank with another key": { blanks: [{ row: 0, column: 1, cell: "x" }] },
+    "the same blank twice": {
+      blanks: [{ row: 0, column: 1 }, { row: 0, column: 1 }],
+    },
+    "no blank": { blanks: [] },
+    "no column": { columns: [], rows: [[], []], blanks: [] },
+    "no row": { rows: [], blanks: [] },
+    "a cell that is not text": {
+      rows: [["1인칭", 1, "나"], ["2인칭", "당신", "너"]],
+    },
+  };
+  for (const [name, fields] of Object.entries(malformed)) {
+    assert.equal(parseCards(reply([tableWith(fields)])), null, name);
+  }
+  assert.equal(
+    parseCards(reply([tableWith({
+      rows: [["1인칭", " ", "나"], ["2인칭", "당신", "너"]],
+      blanks: [{ row: 0, column: 1 }],
+    })])),
+    null,
+    "a blank on a cell that is empty once trimmed",
+  );
+  assert.equal(
+    parseCards(reply([table({ table: { ...TABLE, note: "x" } })])),
+    null,
+    "a key outside the table's",
+  );
+});
+
+Deno.test("parseCards takes a table of up to 8 columns and 20 rows of cells up to 500 code points, and refuses a larger one", () => {
+  const grid = (columns: number, rows: number, cellText = "x") =>
+    tableWith({
+      columns: Array.from({ length: columns }, (_, i) => `c${i}`),
+      rows: Array.from(
+        { length: rows },
+        () => Array.from({ length: columns }, () => cellText),
+      ),
+      blanks: [{ row: 0, column: 0 }],
+    });
+  const atLimit = "가".repeat(MAX_FIELD_CHARS - 1) + "😀";
+  assert.equal(
+    parseCards(reply([grid(MAX_TABLE_COLUMNS, MAX_TABLE_ROWS, atLimit)]))
+      ?.length,
+    1,
+    "control: the largest table",
+  );
+  assert.equal(parseCards(reply([grid(MAX_TABLE_COLUMNS + 1, 1)])), null);
+  assert.equal(parseCards(reply([grid(1, MAX_TABLE_ROWS + 1)])), null);
+  assert.equal(parseCards(reply([grid(1, 1, atLimit + "a")])), null);
+});
+
+Deno.test("a cloze card returns what fills each blank, and its answer and back are those answers one per line", () => {
+  const card = one([
+    cloze({ cloze: { answers: [" 자기, 자신 ", "저, 저희"] } }),
+  ]);
+  assert.deepEqual(card, {
+    kind: "note",
+    type: "cloze",
+    front: "3인칭 재귀칭: 높임 당신 · 예사 ___ · 낮춤 ___",
+    answer: "자기, 자신\n저, 저희",
+    short: "자기, 자신\n저, 저희",
+    step: 1,
+    topic: "대명사",
+    back: "자기, 자신\n저, 저희",
+    cloze: { answers: ["자기, 자신", "저, 저희"] },
+  });
+  assert.equal(CLOZE_BLANK, "___");
+});
+
+Deno.test("parseCards refuses a cloze whose answers do not match its front's blanks one for one, or that has none, too many or an empty one", () => {
+  const blanks = (n: number) =>
+    Array.from({ length: n }, () => CLOZE_BLANK).join(" ");
+  const answers = (n: number) => Array.from({ length: n }, (_, i) => `a${i}`);
+  assert.equal(
+    parseCards(
+      reply([cloze({ front: blanks(1), cloze: { answers: answers(1) } })]),
+    )
+      ?.length,
+    1,
+    "control: one blank and one answer",
+  );
+  assert.equal(
+    parseCards(reply([cloze({
+      front: blanks(MAX_CLOZE_BLANKS),
+      cloze: { answers: answers(MAX_CLOZE_BLANKS) },
+    })]))?.length,
+    1,
+    "control: 10 blanks and 10 answers",
+  );
+  const malformed: Record<string, Record<string, unknown>> = {
+    "fewer answers than blanks": {
+      front: blanks(2),
+      cloze: { answers: answers(1) },
+    },
+    "more answers than blanks": {
+      front: blanks(1),
+      cloze: { answers: answers(2) },
+    },
+    "a front with no blank": {
+      front: "3인칭 재귀칭",
+      cloze: { answers: answers(1) },
+    },
+    "no answer": { front: "3인칭 재귀칭", cloze: { answers: [] } },
+    "11 blanks": {
+      front: blanks(MAX_CLOZE_BLANKS + 1),
+      cloze: { answers: answers(MAX_CLOZE_BLANKS + 1) },
+    },
+    "an empty answer": { front: blanks(1), cloze: { answers: [" "] } },
+    "a key outside the cloze's": {
+      front: blanks(1),
+      cloze: { answers: answers(1), hint: "x" },
+    },
+  };
+  for (const [name, fields] of Object.entries(malformed)) {
+    assert.equal(parseCards(reply([cloze(fields)])), null, name);
+  }
+});
+
+Deno.test("only a note's table card has a table and only its cloze card a cloze, neither with an answer, and a vocabulary card is neither", () => {
+  assert.equal(
+    parseCards(reply([table(), cloze(), note(), item()]))?.length,
+    4,
+    "control: each type as it fills its fields",
+  );
+  const refused: Record<string, unknown> = {
+    "a table card without its table": table({ table: null }),
+    "a table card with an answer": table({ answer: "x" }),
+    "a table card with a cloze": table({ cloze: CLOZE }),
+    "a cloze card without its cloze": cloze({ cloze: null }),
+    "a cloze card with an answer": cloze({ answer: "x" }),
+    "a cloze card with a table": cloze({ table: TABLE }),
+    "a concept card with a table": note({ table: TABLE }),
+    "a concept card with a cloze": note({ cloze: CLOZE }),
+    "a vocabulary table card": table({
+      kind: "vocabulary",
+      senses: [{ pos: null, meaning: "x" }],
+    }),
+    "a vocabulary cloze card": cloze({
+      kind: "vocabulary",
+      senses: [{ pos: null, meaning: "x" }],
+    }),
+    "a vocabulary card with a table": item({ table: TABLE }),
+    "a vocabulary card of type table": item({ type: "table" }),
+    "a vocabulary card of type cloze": item({ type: "cloze" }),
+  };
+  for (const [name, card] of Object.entries(refused)) {
+    assert.equal(parseCards(reply([card])), null, name);
+  }
+});
+
+Deno.test("composeTableAnswer writes the column headers, then one line per row, cells joined by a bar; composeClozeAnswer one line per answer", () => {
+  assert.equal(
+    composeTableAnswer({
+      columns: ["a", "b"],
+      rows: [["1", "2"]],
+      blanks: [{ row: 0, column: 1 }],
+    }),
+    "a | b\n1 | 2",
+  );
+  assert.equal(composeClozeAnswer({ answers: ["x"] }), "x");
+  assert.equal(composeClozeAnswer({ answers: ["x", "y, z"] }), "x\ny, z");
+});
+
 Deno.test("the schema sent to the model states the fields and the limits the parser enforces", () => {
   const cards = cardsSchema.properties.cards;
   const fields = cards.items.properties;
@@ -422,7 +698,36 @@ Deno.test("the schema sent to the model states the fields and the limits the par
   assert.deepEqual(fields.pronunciation.type, ["string", "null"]);
   assert.deepEqual(fields.senses.items.properties.pos.type, ["string", "null"]);
   assert.deepEqual(fields.kind.enum, ["vocabulary", "note"]);
-  assert.deepEqual(fields.type.enum, ["concept", "cloze", "identify"]);
+  assert.deepEqual(fields.type.enum, ["concept", "cloze", "identify", "table"]);
+  const [tableShape, noTable] = fields.table.anyOf;
+  assert.deepEqual(noTable, { type: "null" });
+  assert.equal(tableShape.properties.columns.maxItems, MAX_TABLE_COLUMNS);
+  assert.equal(tableShape.properties.rows.maxItems, MAX_TABLE_ROWS);
+  assert.equal(
+    tableShape.properties.rows.items.maxItems,
+    MAX_TABLE_COLUMNS,
+  );
+  assert.equal(
+    tableShape.properties.rows.items.items.maxLength,
+    MAX_FIELD_CHARS,
+  );
+  assert.equal(
+    tableShape.properties.blanks.maxItems,
+    MAX_TABLE_COLUMNS * MAX_TABLE_ROWS,
+  );
+  assert.deepEqual(tableShape.required, ["columns", "rows", "blanks"]);
+  assert.deepEqual(tableShape.properties.blanks.items.required, [
+    "row",
+    "column",
+  ]);
+  assert.equal(tableShape.additionalProperties, false);
+  assert.equal(tableShape.properties.blanks.items.additionalProperties, false);
+  const [clozeShape, noCloze] = fields.cloze.anyOf;
+  assert.deepEqual(noCloze, { type: "null" });
+  assert.equal(clozeShape.properties.answers.maxItems, MAX_CLOZE_BLANKS);
+  assert.equal(clozeShape.properties.answers.items.minLength, 1);
+  assert.deepEqual(clozeShape.required, ["answers"]);
+  assert.equal(clozeShape.additionalProperties, false);
   assert.equal(fields.topic.maxLength, MAX_TOPIC_CHARS);
   assert.equal(fields.senses.maxItems, MAX_SENSES);
   assert.deepEqual(fields.senses.items.required, ["pos", "meaning"]);
@@ -440,6 +745,8 @@ Deno.test("the schema sent to the model states the fields and the limits the par
     "extras",
     "pronunciation",
     "examples",
+    "table",
+    "cloze",
   ];
   assert.deepEqual(
     Object.keys(fields),
