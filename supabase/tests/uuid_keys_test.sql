@@ -11,7 +11,7 @@ select col_type_is('public', 'reviews', 'id', 'uuid', 'reviews.id is uuid');
 select col_type_is('public', 'reviews', 'card_id', 'uuid', 'reviews.card_id is uuid');
 select col_type_is('public', 'card_states', 'card_id', 'uuid', 'card_states.card_id is uuid');
 select col_type_is('public', 'deck_reports', 'deck_id', 'uuid', 'deck_reports.deck_id is uuid');
-select col_type_is('public', 'deck_imports', 'deck_id', 'uuid', 'deck_imports.deck_id is uuid');
+select col_type_is('public', 'deck_copies', 'deck_id', 'uuid', 'deck_copies.deck_id is uuid');
 -- Control: the one id that is not synced keeps its type, so the checks above read each column's own.
 select col_type_is('public', 'extraction_usage', 'id', 'bigint', 'extraction_usage.id stays an identity');
 
@@ -27,19 +27,19 @@ select fk_ok('public', 'reviews', array['user_id', 'card_id'], 'public', 'cards'
 select fk_ok('public', 'card_states', array['user_id', 'card_id'], 'public', 'cards', array['user_id', 'id'],
   'a card state''s card is its own user''s');
 select fk_ok('public', 'deck_reports', 'deck_id', 'public', 'decks', 'id', 'a report names its deck');
-select fk_ok('public', 'deck_imports', 'deck_id', 'public', 'decks', 'id', 'an import names its deck');
+select fk_ok('public', 'deck_copies', 'deck_id', 'public', 'decks', 'id', 'a copy names its deck');
 
 select is(
   pg_get_function_result('public.list_public_decks(text, text, integer, integer)'::regprocedure),
   'TABLE(id uuid, user_id uuid, name text, description text, display_name text, card_count bigint, '
-    || 'import_count integer, published_at timestamp with time zone)',
+    || 'copy_count integer, published_at timestamp with time zone)',
   'list_public_decks returns uuid ids');
-select has_function('public', 'record_deck_import', array['uuid'], 'record_deck_import takes a uuid');
-select hasnt_function('public', 'record_deck_import', array['text'], 'record_deck_import takes no text');
-select function_privs_are('public', 'record_deck_import', array['uuid'], 'authenticated', array['EXECUTE'],
-  'authenticated may record an import');
-select function_privs_are('public', 'record_deck_import', array['uuid'], 'anon', array[]::text[],
-  'anon may not record an import');
+select has_function('public', 'record_deck_copy', array['uuid'], 'record_deck_copy takes a uuid');
+select hasnt_function('public', 'record_deck_copy', array['text'], 'record_deck_copy takes no text');
+select function_privs_are('public', 'record_deck_copy', array['uuid'], 'authenticated', array['EXECUTE'],
+  'authenticated may record a copy');
+select function_privs_are('public', 'record_deck_copy', array['uuid'], 'anon', array[]::text[],
+  'anon may not record a copy');
 
 -- Whether this transaction holds the advisory lock that hide_reported_deck keys by the deck's id
 -- as text, seeded with 2: the key it took before the ids were uuid.

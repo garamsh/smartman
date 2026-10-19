@@ -59,8 +59,8 @@ final class Deck {
 }
 
 /// Where a card came from: the editor writes [manual], photo import
-/// [import], and a copy of another user's public deck [shared].
-enum CardSource { manual, import, shared }
+/// [import], and a copy of another user's public deck [copy].
+enum CardSource { manual, import, copy }
 
 /// A card inside a deck.
 final class Card {
@@ -85,7 +85,7 @@ final class Card {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  /// The public deck a [CardSource.shared] card was copied from; null for any
+  /// The public deck a [CardSource.copy] card was copied from; null for any
   /// other card.
   final DeckId? originDeckId;
 }

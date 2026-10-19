@@ -86,27 +86,27 @@ class SharingService {
   /// Copies every card of [deck] into the user's decks as [target] says, as
   /// ordinary cards that record where they came from. Refused with
   /// [DeckNoLongerPublic] once the deck is no longer public.
-  Future<CardsImported> copy(PublicDeckSummary deck, CopyTarget target) async {
+  Future<CardsAdded> copy(PublicDeckSummary deck, CopyTarget target) async {
     final cards = await server.listCards(deck.id);
-    if (!await server.recordImport(deck.id)) throw const DeckNoLongerPublic();
+    if (!await server.recordCopy(deck.id)) throw const DeckNoLongerPublic();
     final onDuplicate = switch (target) {
       CopyIntoNewDeck() => DuplicateChoice.addNew,
       CopyIntoDeck(:final onDuplicate) => onDuplicate,
     };
-    return decks.importCards(
+    return decks.addCards(
       switch (target) {
-        CopyIntoNewDeck() => ImportIntoNewDeck(deck.name),
-        CopyIntoDeck(:final deck) => ImportIntoDeck(deck),
+        CopyIntoNewDeck() => AddToNewDeck(deck.name),
+        CopyIntoDeck(:final deck) => AddToDeck(deck),
       },
       [
         for (final card in cards)
-          ImportedCard(
+          IncomingCard(
             front: card.front,
             back: card.back,
             onDuplicate: onDuplicate,
           ),
       ],
-      source: FromPublicDeck(deck.id),
+      source: FromCopy(deck.id),
     );
   }
 

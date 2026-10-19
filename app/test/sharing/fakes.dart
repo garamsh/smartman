@@ -82,7 +82,7 @@ class FakeSharingServer implements SharingServer {
     ]..sort(
       (a, b) => switch (sort) {
         BrowseSort.newest => b.publishedAt.compareTo(a.publishedAt),
-        BrowseSort.mostCopied => b.importCount.compareTo(a.importCount),
+        BrowseSort.mostCopied => b.copyCount.compareTo(a.copyCount),
       },
     );
   }
@@ -95,7 +95,7 @@ class FakeSharingServer implements SharingServer {
   }
 
   @override
-  Future<bool> recordImport(DeckId deck) async {
+  Future<bool> recordCopy(DeckId deck) async {
     _answer();
     if (!decks.any((summary) => summary.id == deck)) return false;
     imports.add(deck);

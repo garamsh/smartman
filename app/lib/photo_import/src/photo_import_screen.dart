@@ -284,9 +284,9 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
 
   Future<void> _save(ImportList list) async {
     final l10n = AppLocalizations.of(context);
-    final ImportTarget target;
+    final AddTarget target;
     if (_target case final deck?) {
-      target = ImportIntoDeck(deck);
+      target = AddToDeck(deck);
     } else {
       final name = await showNameSheet(
         context,
@@ -294,14 +294,14 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         action: l10n.create,
       );
       if (name == null || !mounted) return;
-      target = ImportIntoNewDeck(name);
+      target = AddToNewDeck(name);
     }
     final navigator = Navigator.of(context);
     setState(() => _saving = true);
     try {
       final result = await ref
           .read(deckRepositoryProvider)
-          .importCards(target, list.toImport());
+          .addCards(target, list.toImport());
       // The cards are saved; a form that cannot be stored says so and is
       // used only until the app closes.
       try {

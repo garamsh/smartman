@@ -12,28 +12,28 @@ import 'sharing_service.dart';
 /// Asks where to copy [deck]: into a new deck named after it (the default),
 /// or into one of the user's decks with a duplicate option. Copies it and
 /// returns the message saying what was added, or null when cancelled.
-Future<String?> showImportSheet(
+Future<String?> showCopySheet(
   BuildContext context, {
   required SharingService sharing,
   required PublicDeckSummary deck,
 }) => showAppSheet<String>(
   context,
-  builder: (_) => _ImportSheet(sharing: sharing, deck: deck),
+  builder: (_) => _CopySheet(sharing: sharing, deck: deck),
 );
 
 enum _Destination { newDeck, existingDeck }
 
-class _ImportSheet extends StatefulWidget {
-  const _ImportSheet({required this.sharing, required this.deck});
+class _CopySheet extends StatefulWidget {
+  const _CopySheet({required this.sharing, required this.deck});
 
   final SharingService sharing;
   final PublicDeckSummary deck;
 
   @override
-  State<_ImportSheet> createState() => _ImportSheetState();
+  State<_CopySheet> createState() => _CopySheetState();
 }
 
-class _ImportSheetState extends State<_ImportSheet> {
+class _CopySheetState extends State<_CopySheet> {
   late final Stream<List<Deck>> _decks = widget.sharing.decks.watchDecks();
   _Destination _destination = _Destination.newDeck;
   DeckId? _target;
@@ -49,10 +49,10 @@ class _ImportSheetState extends State<_ImportSheet> {
     });
     String? done;
     final message = await describing(l10n, () async {
-      final imported = await widget.sharing.copy(widget.deck, target);
+      final copied = await widget.sharing.copy(widget.deck, target);
       return done = l10n.copiedCards(
-        imported.deck.name,
-        imported.added + imported.merged,
+        copied.deck.name,
+        copied.added + copied.merged,
       );
     });
     if (!mounted) return;
@@ -86,7 +86,7 @@ class _ImportSheetState extends State<_ImportSheet> {
         };
         final error = _error;
         return AppSheet(
-          title: l10n.importToMyDecks,
+          title: l10n.copyToMyDecks,
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: AppSpace.s12,
@@ -96,11 +96,11 @@ class _ImportSheetState extends State<_ImportSheet> {
                 segments: [
                   ButtonSegment(
                     value: _Destination.newDeck,
-                    label: Text(l10n.importAsNewDeck),
+                    label: Text(l10n.copyAsNewDeck),
                   ),
                   ButtonSegment(
                     value: _Destination.existingDeck,
-                    label: Text(l10n.importIntoExistingDeck),
+                    label: Text(l10n.copyIntoExistingDeck),
                     enabled: decks.isNotEmpty,
                   ),
                 ],
@@ -112,13 +112,13 @@ class _ImportSheetState extends State<_ImportSheet> {
               ),
               if (_destination == _Destination.newDeck)
                 Text(
-                  l10n.importNewDeckHint(widget.deck.name),
+                  l10n.copyNewDeckHint(widget.deck.name),
                   style: AppType.secondary.copyWith(color: colors.muted),
                 )
               else ...[
                 DropdownMenu<DeckId>(
                   expandedInsets: EdgeInsets.zero,
-                  label: Text(l10n.importTargetDeck),
+                  label: Text(l10n.copyTargetDeck),
                   initialSelection: chosen,
                   enabled: !_saving,
                   onSelected: (deck) => setState(() => _target = deck),
@@ -127,7 +127,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                       DropdownMenuEntry(value: deck.id, label: deck.name),
                   ],
                 ),
-                AppSectionLabel(l10n.importDuplicates),
+                AppSectionLabel(l10n.copyDuplicates),
                 RadioGroup<DuplicateChoice>(
                   groupValue: _onDuplicate,
                   onChanged: (choice) {
@@ -163,7 +163,7 @@ class _ImportSheetState extends State<_ImportSheet> {
           ),
           actions: [
             AppButton(
-              label: l10n.importConfirm,
+              label: l10n.copyConfirm,
               size: AppButtonSize.cta,
               loading: _saving,
               onPressed: target == null ? null : () => _save(l10n, target),

@@ -15,7 +15,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - `DeckRow`, a deck on a row, `DeckTile`, its initial on a tinted tile, and `CardEditorScreen`, the card editor;
   - the split card, drawn one way for every screen: `SplitCard`, given each side as a `SideBuilder` of the width its text is laid out in, which lays out a card's two halves divided by a line, side by side or, when a half would be too narrow at the text scale, stacked, each side centred or at the top left and, on the study card, scrolling inside its half once capped; and `ContentView`, which renders a side's content blocks, with an unsupported block as a labelled placeholder, fitting text through `CardText` in `app/lib/deck/src/card_text.dart`, or, given a height too, running the blocks together as one paragraph scaled down as far as the floor until it fits that height and cut there with an ellipsis. The study screen's cards, the card preview and `CardSplitRow` draw through them ([ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md), [ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md));
   - `DeckRepository` and its save results;
-  - the import save: `ImportTarget`, `ImportIntoDeck`, `ImportIntoNewDeck`, `ImportedCard`, `DuplicateChoice`, `CardsImported`, `mergeBack`, and `ImportSource` with `FromPhoto` and `FromPublicDeck`;
+  - the batch save of incoming cards, from a photo or a copy: `AddTarget`, `AddToDeck`, `AddToNewDeck`, `IncomingCard`, `DuplicateChoice`, `CardsAdded`, `mergeBack`, and `AddSource` with `FromPhoto` and `FromCopy`;
   - `showNameSheet`, the sheet that asks for a deck's name, which `home/` and photo import use to name a deck;
   - the failures: `DeckFailure`, `StorageFailure`, `UnreadableCard`, `DeckDeleted`, `describeFailure`, the message a user reads for one, `describeProviderError`, the same for an error a provider holds, and `reportingFailure`, which shows an action's failure in a snack bar;
   - `deckRepositoryProvider`, and the reads kept current over it: `decksProvider`, `cardCountsProvider`, `deckProvider` and `cardsProvider`.
@@ -25,7 +25,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - A deck has an id, a name, creation and update times, a visibility, and an optional description. The visibility is `PrivateDeck`, the default, or `PublicDeck` with its publish time ([`sharing.md`](sharing.md)).
 - A card belongs to one deck and has a front, a back, a card key, a source, and creation and update times. Ids are UUIDs: new ones version 7, from the `uuid` package's `v7()`, which the composition site, `app/lib/main.dart`, passes to `DeckRepository` as `newId` ([ADR 0034](adr/0034-key-synced-rows-by-client-made-uuids-purge-tombstones-past-a-revision-horizon-and-index-each-query.md), [`sync.md`](sync.md)). Rows created before #124 (`2ad33491353dc8f4dfca12f906611a7c825ea3c0`, 2026-10-17), when it passed `v4()`, keep version 4 ids.
-- `source` is `manual`, `import` or `shared`. The editor writes `manual`, photo import `import`, and a copy of another user's public deck `shared`, with the copied deck's id as `originDeckId`, null on every other card.
+- `source` is `manual`, `import` or `copy`. The editor writes `manual`, photo import `import`, and a copy of another user's public deck `copy` ([ADR 0082](adr/0082-name-copying-a-public-deck-copy-and-keep-import-for-photo-import.md)), with the copied deck's id as `originDeckId`, null on every other card.
 - Front and back are each an ordered list of content blocks. A block's type is `text`, `cloze`, `table` or `senses`, or `UnsupportedContent` stands for a stored type this version does not know ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md)):
   - a `cloze` block holds its text, which writes each blank as `___`, and its answers, one non-empty answer per blank, in order;
   - a `table` block holds its column headers, its rows, each as many cells as there are columns and starting with the row's header, and its blanks, each the row and column of a cell with text, distinct;
@@ -63,8 +63,8 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 ### Import
 
-- `DeckRepository.importCards` saves a list of `ImportedCard`s into an existing deck, or into a new deck it creates, in one transaction: a failure writes nothing, the new deck included.
-- Each card's sides are content blocks, a table or cloze card's front kept as its blocks, and it is written unsynced like every write, with the source its `ImportSource` gives: `import` from a photo, or `shared` and the origin deck from a public deck ([`sharing.md`](sharing.md)).
+- `DeckRepository.addCards` saves a list of `IncomingCard`s into an existing deck, or into a new deck it creates, in one transaction: a failure writes nothing, the new deck included.
+- Each card's sides are content blocks, a table or cloze card's front kept as its blocks, and it is written unsynced like every write, with the source its `AddSource` gives: `import` from a photo, or `copy` and the origin deck from a public deck ([`sharing.md`](sharing.md)).
 - An import into a deck deleted meanwhile, on this device or through sync, is refused with `DeckDeleted` and writes nothing.
 - A card whose key collides with a card in the deck, or with one written earlier in the same import, does what its `DuplicateChoice` says, as the PM decided for issue #30:
   - **skip** (건너뛰기) writes nothing;

@@ -103,9 +103,9 @@ void main() {
 
       expect(find.text('Added 3 cards to "Spanish"'), findsOneWidget);
       expect(await app.cardsOf('Spanish'), [
-        ('perro', 'dog', CardSource.shared),
-        ('gato', 'cat', CardSource.shared),
-        ('pez', 'fish', CardSource.shared),
+        ('perro', 'dog', CardSource.copy),
+        ('gato', 'cat', CardSource.copy),
+        ('pez', 'fish', CardSource.copy),
       ]);
       expect(app.server.imports, [_spanish.id]);
       await app.close();
@@ -117,25 +117,25 @@ void main() {
       'Skip',
       [
         ('perro', 'hound', CardSource.manual),
-        ('gato', 'cat', CardSource.shared),
-        ('pez', 'fish', CardSource.shared),
+        ('gato', 'cat', CardSource.copy),
+        ('pez', 'fish', CardSource.copy),
       ],
     ),
     (
       'Merge back',
       [
         ('perro', 'hound\ndog', CardSource.manual),
-        ('gato', 'cat', CardSource.shared),
-        ('pez', 'fish', CardSource.shared),
+        ('gato', 'cat', CardSource.copy),
+        ('pez', 'fish', CardSource.copy),
       ],
     ),
     (
       'Add as new',
       [
         ('perro', 'hound', CardSource.manual),
-        ('perro', 'dog', CardSource.shared),
-        ('gato', 'cat', CardSource.shared),
-        ('pez', 'fish', CardSource.shared),
+        ('perro', 'dog', CardSource.copy),
+        ('gato', 'cat', CardSource.copy),
+        ('pez', 'fish', CardSource.copy),
       ],
     ),
   ]) {

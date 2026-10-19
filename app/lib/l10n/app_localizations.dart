@@ -1037,7 +1037,7 @@ abstract class AppLocalizations {
   ///
   /// In ko, this message translates to:
   /// **'내 덱으로 가져오기'**
-  String get importToMyDecks;
+  String get copyToMyDecks;
 
   /// Below a public deck's preview when it holds more cards than shown.
   ///
@@ -1123,41 +1123,41 @@ abstract class AppLocalizations {
   /// **'{name} 님을 차단했어요.'**
   String blocked(String name);
 
-  /// Import option: copy into a new deck.
+  /// Copy option: into a new deck.
   ///
   /// In ko, this message translates to:
   /// **'새 덱으로'**
-  String get importAsNewDeck;
+  String get copyAsNewDeck;
 
-  /// Import option: copy into one of the user's decks.
+  /// Copy option: into one of the user's decks.
   ///
   /// In ko, this message translates to:
   /// **'기존 덱에 추가'**
-  String get importIntoExistingDeck;
+  String get copyIntoExistingDeck;
 
-  /// What importing as a new deck does.
+  /// What copying into a new deck does.
   ///
   /// In ko, this message translates to:
   /// **'\"{name}\" 덱을 새로 만들어 모든 카드를 가져와요.'**
-  String importNewDeckHint(String name);
+  String copyNewDeckHint(String name);
 
-  /// Label of the deck chooser when importing into a deck.
+  /// Label of the deck chooser when copying into a deck.
   ///
   /// In ko, this message translates to:
   /// **'덱'**
-  String get importTargetDeck;
+  String get copyTargetDeck;
 
-  /// Heading of the duplicate options when importing into a deck.
+  /// Heading of the duplicate options when copying into a deck.
   ///
   /// In ko, this message translates to:
   /// **'이미 있는 카드는'**
-  String get importDuplicates;
+  String get copyDuplicates;
 
   /// Button that copies a public deck.
   ///
   /// In ko, this message translates to:
   /// **'가져오기'**
-  String get importConfirm;
+  String get copyConfirm;
 
   /// After copying a public deck: how many cards were added or merged, and into which deck.
   ///

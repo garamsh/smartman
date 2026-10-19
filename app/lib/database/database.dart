@@ -65,7 +65,7 @@ class Cards extends Table {
   TextColumn get back => text()();
   TextColumn get cardKey => text()();
   TextColumn get source => text().check(
-    const CustomExpression("source IN ('manual', 'import', 'shared')"),
+    const CustomExpression("source IN ('manual', 'import', 'copy')"),
   )();
 
   /// The public deck a copied card came from; null for any other card.
@@ -151,7 +151,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -286,6 +286,21 @@ class AppDatabase extends _$AppDatabase {
         await m.alterTable(TableMigration(schema.reviews));
         await m.alterTable(TableMigration(schema.cardStates));
         await m.create(schema.reviewsReviewedAt);
+      },
+      // A copied card's source is 'copy', not 'shared' (ADR 0082). The table
+      // is rebuilt for its check with each such row remapped and every other
+      // row and dirty flag kept; the server remaps its own copy.
+      from7To8: (m, schema) async {
+        await m.alterTable(
+          TableMigration(
+            schema.cards,
+            columnTransformer: {
+              schema.cards.source: const CustomExpression<String>(
+                "CASE source WHEN 'shared' THEN 'copy' ELSE source END",
+              ),
+            },
+          ),
+        );
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

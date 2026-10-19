@@ -640,7 +640,7 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     aliasedName,
     false,
     check: () =>
-        const CustomExpression("source IN ('manual', 'import', 'shared')"),
+        const CustomExpression("source IN ('manual', 'import', 'copy')"),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
