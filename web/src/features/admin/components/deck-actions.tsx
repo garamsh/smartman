@@ -1,4 +1,7 @@
-import { dismissReports, hideDeck, unhideDeck, unpublishDeck } from "../admin-actions";
+import { dismissReports } from "../dismiss-reports";
+import { hideDeck } from "../hide-deck";
+import { unhideDeck } from "../unhide-deck";
+import { unpublishDeck } from "../unpublish-deck";
 import type { DeckState } from "../read-admin";
 import { ConfirmAction } from "./confirm-action";
 

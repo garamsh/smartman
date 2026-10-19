@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 
-import type { ActionResult } from "../admin-actions";
+import type { ActionResult } from "../action-call";
 
 const button =
   "flex min-h-button items-center justify-center rounded-button px-4 text-label font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";

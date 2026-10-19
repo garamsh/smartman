@@ -1,15 +1,10 @@
-export {
-  type ActionResult,
-  dismissReports,
-  grantAdmin,
-  grantPlan,
-  type GrantPlanState,
-  type GrantState,
-  hideDeck,
-  type PlanFormState,
-  revokeAdmin,
-  revokePlan,
-  setPlan,
-  unhideDeck,
-  unpublishDeck,
-} from "./admin-actions";
+export type { ActionResult } from "./action-call";
+export { dismissReports } from "./dismiss-reports";
+export { grantAdmin, type GrantState } from "./grant-admin";
+export { grantPlan, type GrantPlanState } from "./grant-plan";
+export { hideDeck } from "./hide-deck";
+export { revokeAdmin } from "./revoke-admin";
+export { revokePlan } from "./revoke-plan";
+export { type PlanFormState, setPlan } from "./set-plan";
+export { unhideDeck } from "./unhide-deck";
+export { unpublishDeck } from "./unpublish-deck";

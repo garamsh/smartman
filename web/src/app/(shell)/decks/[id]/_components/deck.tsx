@@ -6,13 +6,13 @@ import {
   countDay,
   dayPlanOf,
   deckProgress,
-  readyServerEngine,
   readToday,
+  readyServerEngine,
   sessionMinutes,
+  studyHref,
 } from "@/features/study";
 
 import { EnterLink } from "../../../_components/enter-link";
-import { studyHref } from "../../../_components/study-href";
 
 /**
  * The deck [params] names, read on the server; a deck that does not exist, or an id that names

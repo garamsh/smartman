@@ -5,7 +5,6 @@ import {
   describeContent,
   isWholeCard,
   type LibraryFailure,
-  parseDeckId,
   ReadFailure,
   readLibrary,
   SideText,
@@ -18,6 +17,7 @@ import {
   newCards,
   readToday,
   readyServerEngine,
+  studyDecks,
   StudyScreen,
 } from "@/features/study";
 
@@ -36,9 +36,7 @@ export async function Study({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { decks } = await searchParams;
-  const named = (typeof decks === "string" ? decks.split(",") : [])
-    .map(parseDeckId)
-    .filter((id) => id !== null);
+  const named = studyDecks(decks);
   if (named.length === 0) notFound();
   const [read, today] = await Promise.all([readLibrary(named), readToday({ streak: true })]);
   if ("failure" in read) return <Failure failure={read.failure} />;

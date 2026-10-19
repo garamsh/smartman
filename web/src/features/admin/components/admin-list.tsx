@@ -1,4 +1,4 @@
-import { revokeAdmin } from "../admin-actions";
+import { revokeAdmin } from "../revoke-admin";
 import { formatDate } from "../format";
 import type { AdminMember } from "../read-admin";
 import { ConfirmAction } from "./confirm-action";
