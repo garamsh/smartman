@@ -71,6 +71,44 @@ describe("today's list, through the engine's WebAssembly", () => {
       backlog: false,
     });
   });
+
+  /**
+   * Twelve reviewed cards, each after an interval of four days, so their daily load is three;
+   * the first [due] of them are due today, the others tomorrow; and two new cards.
+   */
+  function reviewedDay(due: number) {
+    const card = (name: string) => ({ id: id(name), createdAt: day.start - 30 * 86_400_000 });
+    const reviewed = Array.from({ length: 12 }, (_, index) => card(`review${String(index)}`));
+    const states = Object.fromEntries(
+      reviewed.map((each, index) => {
+        const at = index < due ? day.start + hour : day.end + hour;
+        return [each.id, { stability: 4, difficulty: 5, lastReview: at - 4 * 86_400_000, due: at }];
+      }),
+    );
+    return { cards: [...reviewed, card("new0"), card("new1")], states };
+  }
+
+  it("counts a backlog's due cards as reviews and no new card, and below it takes the new cards", () => {
+    const over = reviewedDay(10);
+    const backlog = dayPlanOf(over.cards, over.states, { ...day, newCardsLeft: 20 }, []);
+    expect(countDay(backlog, over.states)).toEqual({ review: 10, fresh: 0, backlog: true });
+    // Control: nine due is three days of reviews, the threshold, so the day takes both new cards.
+    const at = reviewedDay(9);
+    const usual = dayPlanOf(at.cards, at.states, { ...day, newCardsLeft: 20 }, []);
+    expect(countDay(usual, at.states)).toEqual({ review: 9, fresh: 2, backlog: false });
+  });
+
+  it("counts no more new cards than the day has left", () => {
+    const none = reviewedDay(0);
+    for (const [left, fresh] of [
+      [0, 0],
+      [1, 1],
+      [20, 2],
+    ] as const) {
+      const plan = dayPlanOf(none.cards, none.states, { ...day, newCardsLeft: left }, []);
+      expect(countDay(plan, none.states)).toEqual({ review: 0, fresh, backlog: false });
+    }
+  });
 });
 
 const now = Date.UTC(2026, 9, 14, 9);

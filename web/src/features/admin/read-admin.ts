@@ -275,7 +275,7 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
 }
 
 /** How many users a page of the search holds. */
-export const userPageSize = 20;
+const userPageSize = 20;
 
 /**
  * The [page]th page of the users whose email holds [query], ignoring case, those it starts first,

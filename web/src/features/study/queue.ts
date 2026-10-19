@@ -240,17 +240,6 @@ export function newCards<C extends Queueable>(cards: readonly C[], states: CardS
   return cards.filter((card) => !states[card.id]).sort((a, b) => a.createdAt - b.createdAt);
 }
 
-/** How many due and new cards are left in [day] for a session over [cards]. */
-export function countToday(
-  cards: readonly Queueable[],
-  states: CardStates,
-  day: StudyDay,
-): TodayCount {
-  const queue = selectQueue(cards, states, day);
-  const review = queue.cards.filter((card) => states[card.id]).length;
-  return { review, fresh: queue.cards.length - review, backlog: queue.backlog };
-}
-
 /**
  * [queue]'s cards in an order drawn from [random]. In a backlog, each run of
  * [backlogBucketSize] consecutive cards is shuffled in its place, so earlier due cards still
