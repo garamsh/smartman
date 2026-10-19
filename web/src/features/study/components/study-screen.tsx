@@ -29,7 +29,7 @@ import {
 } from "./study-coach";
 
 const button =
-  "flex min-h-button items-center justify-center gap-2 rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+  "pressable flex min-h-button items-center justify-center gap-2 rounded-button px-5 text-label focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
 
 const quiet = `${button} border border-outline bg-surface text-ink`;
 
@@ -340,7 +340,7 @@ function Session({ plan }: { plan: SessionPlan }) {
           aria-label="그만하기"
           aria-keyshortcuts="Escape"
           title="그만하기 (Esc)"
-          className="flex size-tap-target shrink-0 items-center justify-center rounded-full text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          className="pressable flex size-tap-target shrink-0 items-center justify-center rounded-full text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           <X aria-hidden className="size-5" strokeWidth={2.2} />
         </Link>
@@ -581,7 +581,7 @@ function AnswerButtons({
       <button
         type="button"
         onClick={onGuide}
-        className="min-h-tap-target shrink-0 rounded-button px-2 text-caption text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="pressable min-h-tap-target shrink-0 rounded-button px-2 text-caption text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         안내 다시 보기
       </button>

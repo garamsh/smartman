@@ -118,3 +118,71 @@ describe("the study screen's grades, answer buttons and streak", () => {
     },
   );
 });
+
+/** [ground] with [layer] laid over it at [share], as a translucent layer composites in sRGB. */
+function layered(ground: string, layer: string, share: number): string {
+  return `#${[1, 3, 5]
+    .map((at) => {
+      const under = parseInt(ground.slice(at, at + 2), 16);
+      const over = parseInt(layer.slice(at, at + 2), 16);
+      return Math.round(under * (1 - share) + over * share)
+        .toString(16)
+        .padStart(2, "0");
+    })
+    .join("")}`;
+}
+
+/** The share of a control's text colour that `.pressable` lays over its fill on hover and press. */
+const stateShare =
+  Number(/--state-layer: color-mix\(in srgb, currentColor (\d+)%/.exec(globalsCss)?.[1]) / 100;
+
+/**
+ * The text a pressable control draws, its fill, and the text colour its state layer takes, by
+ * where they appear.
+ */
+const statePairs: [string, string, string, string][] = [
+  ["a navy button's label", "on-primary", "ink", "on-primary"],
+  ["an admin navy button's label", "surface", "ink", "surface"],
+  ["an outlined button's label on the surface", "ink", "surface", "ink"],
+  ["an outlined admin button's label on the ground", "ink", "ground", "ink"],
+  ["모두 학습 on white", "brand", "on-hero", "brand"],
+  ["the side menu's other pages", "ink-2", "surface", "ink-2"],
+  ["the menus' current page on its tint", "ink", "brand-tint", "ink"],
+  ["the tab bar's other pages", "muted", "surface", "muted"],
+  ["a row's title", "ink", "surface", "ink"],
+  ["a row's second line under its title's layer", "muted", "surface", "ink"],
+  ["a deck page card's back under its front's layer", "ink-2", "surface", "ink"],
+  ["the 안다 button's word", "on-know-tint", "tint-green", "on-know-tint"],
+  ["the 모른다 button's word", "on-dont-know-tint", "tint-red", "on-dont-know-tint"],
+  ["안내 다시 보기 on the ground", "ink-2", "ground", "ink-2"],
+  ["the completion card's 그만하기", "ink-2", "surface", "ink-2"],
+  ["a 안다 card's front", "ink", "know-card", "ink"],
+  ["a 안다 card's back", "ink-2", "know-card", "ink"],
+  ["a 모른다 card's front", "ink", "dont-know-card", "ink"],
+  ["a 모른다 card's back", "ink-2", "dont-know-card", "ink"],
+  ["the coach's 건너뛰기 on the navy", "on-hero", "hero", "on-hero"],
+  ["the coach's 다음 on white", "hero", "on-hero", "hero"],
+  ["Google's label on its fill", "google-label", "google-fill", "google-label"],
+];
+
+describe("the text of a hovered or pressed control", () => {
+  it("is measured under a layer that darkens its fill", () => {
+    // Control: the layer is read from globals.css, and a heavier one fails the tightest pair.
+    expect(stateShare).toBeGreaterThan(0);
+    const set = themes.light;
+    const muted = set.get("muted") ?? "";
+    const tight = (share: number) =>
+      contrast(muted, layered(set.get("surface") ?? "", set.get("ink") ?? "", share));
+    expect(tight(stateShare)).toBeGreaterThanOrEqual(4.5);
+    expect(tight(0.08)).toBeLessThan(4.5);
+  });
+
+  it.each(["light", "dark"] as const)("meets WCAG AA, 4.5:1, in the %s theme", (theme) => {
+    const set = themes[theme];
+    for (const [where, text, fill, layer] of statePairs) {
+      const ground = layered(set.get(fill) ?? "#000000", set.get(layer) ?? "#000000", stateShare);
+      const ratio = contrast(set.get(text) ?? "#000000", ground);
+      expect({ where, aa: ratio >= 4.5 }).toEqual({ where, aa: true });
+    }
+  });
+});

@@ -31,7 +31,7 @@ export const coachLines: Record<"pointer" | "touch", Record<CoachStep, string>> 
 };
 
 const button =
-  "inline-flex min-h-tap-target items-center justify-center rounded-button px-5 text-secondary font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero";
+  "pressable inline-flex min-h-tap-target items-center justify-center rounded-button px-5 text-secondary font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-on-hero";
 
 /**
  * The coach's caption on the navy surface in the answer buttons' place: the step's line, a dot
