@@ -12,10 +12,17 @@ export async function GET(request: NextRequest) {
   target.search = "";
 
   if (!code) {
-    // Supabase sends `error` instead of a code; `access_denied` is the user cancelling at Google.
-    const cancelled = request.nextUrl.searchParams.get("error") === "access_denied";
+    // Supabase sends `error` instead of a code: `user_banned` for a suspended account (ADR 0072),
+    // otherwise `access_denied` is the user cancelling at Google.
+    const params = request.nextUrl.searchParams;
+    const reason =
+      params.get("error_code") === "user_banned"
+        ? "suspended"
+        : params.get("error") === "access_denied"
+          ? "cancelled"
+          : "failed";
     target.pathname = "/login";
-    target.searchParams.set("error", cancelled ? "cancelled" : "failed");
+    target.searchParams.set("error", reason);
     return NextResponse.redirect(target);
   }
 
@@ -23,7 +30,7 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     target.pathname = "/login";
-    target.searchParams.set("error", "failed");
+    target.searchParams.set("error", error.code === "user_banned" ? "suspended" : "failed");
     return NextResponse.redirect(target);
   }
   target.pathname = "/";

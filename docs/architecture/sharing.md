@@ -47,8 +47,8 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 
 ### Moderation
 
-- A deck that three users reported is hidden by the server ([`server.md`](server.md)). Admins moderate on the web, in the admin area's 신고 and 공개 덱 pages: hide or unhide a deck, make a public deck private, and dismiss a deck's reports, each after a confirmation and each recorded in the audit log ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md), [`web.md`](web.md)). Dismissing leaves a hidden deck hidden, and three new reports hide a deck again.
-- A deck an admin made private reaches its owner's devices by sync like a private switch on another device: the server gives it an edit time of now, so it wins over an older edit ([`sync.md`](sync.md)). The owner can publish it again.
+- A deck that three users reported is hidden by the server ([`server.md`](server.md)). Admins moderate on the web, in the admin area's 신고 and 공개 덱 pages: hide or unhide a deck, make a public deck private, remove a public deck from sharing for good with a reason, and dismiss a deck's reports, each after a confirmation and each recorded in the audit log ([ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md), [`web.md`](web.md)). Dismissing leaves a hidden deck hidden, and three new reports hide a deck again.
+- A deck an admin made private reaches its owner's devices by sync like a private switch on another device: the server gives it an edit time of now, so it wins over an older edit ([`sync.md`](sync.md)). The owner can publish it again, unless it was removed from sharing: the server then refuses the publish, which leaves the deck private on the device and says why in the sheet ([ADR 0072](adr/0072-suspend-a-user-through-supabase-auth-s-ban-and-restrictive-write-policies-remove-a-public-deck-from-sharing-for-good-and-read-any-deck-in-the-admin-area.md)). A removed deck stays its owner's with its cards, and copies made before stay their users'.
 - Nothing in the app moderates.
 
 ### Failures
@@ -76,6 +76,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md) records why sharing is its own domain, why a publish writes the server first, how a copy reuses the deck import, and why pulls filter by owner.
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` reaches sharing through its surface rather than `deck` through a provider.
 - [ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md) records why moderation moved from the dashboard to the web admin area.
+- [ADR 0072](adr/0072-suspend-a-user-through-supabase-auth-s-ban-and-restrictive-write-policies-remove-a-public-deck-from-sharing-for-good-and-read-any-deck-in-the-admin-area.md) records why a deck removed from sharing stays private for good, and why it is not deleted.
 - Issue #29 records the decisions made by the PM, and its amendments.
 
 ## Open questions

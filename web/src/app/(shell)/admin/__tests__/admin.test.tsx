@@ -11,8 +11,11 @@ import {
   setPlan,
   grantAdmin,
   hideDeck,
+  removeDeck,
   revokeAdmin,
+  suspendUser,
   unpublishDeck,
+  unsuspendUser,
 } from "@/features/admin/actions";
 import { studyDayStart } from "@/features/study";
 import { FakeAdmin } from "@/testing/mocks/admin";
@@ -266,15 +269,97 @@ describe("a deck's page", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
-  it("is not found for a private deck no one reported, or an id that is no deck's", async () => {
-    await expect(
-      render(DeckContent, { params: Promise.resolve({ id: diary }) }),
-    ).rejects.toMatchObject(notFound);
+  it("shows a private deck no one reported, read-only, and is not found for an id that is no deck's", async () => {
+    await render(DeckContent, { params: Promise.resolve({ id: diary }) });
+    expect(screen.getByRole("heading", { name: "Diary" })).toBeInTheDocument();
+    // A private deck is not shared, so there is nothing to remove from sharing.
+    expect(screen.queryByRole("button", { name: "공유에서 영구 삭제" })).not.toBeInTheDocument();
+
     await expect(
       render(DeckContent, { params: Promise.resolve({ id: "nope" }) }),
     ).rejects.toMatchObject(notFound);
+    await expect(
+      render(DeckContent, {
+        params: Promise.resolve({ id: "d0000000-0000-4000-8000-0000000000ff" }),
+      }),
+    ).rejects.toMatchObject(notFound);
+  });
+
+  it("removes a public deck from sharing with a reason once confirmed, and then shows why", async () => {
+    const user = userEvent.setup();
+    const view = await render(DeckContent, { params: Promise.resolve({ id: french }) });
+    await user.click(screen.getByRole("button", { name: "공유에서 영구 삭제" }));
+    const confirm = screen.getByRole("button", { name: "영구 삭제" });
+    expect(confirm).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "취소" }));
+    expect(admin.removals.size).toBe(0);
+
+    await user.click(screen.getByRole("button", { name: "공유에서 영구 삭제" }));
+    await user.type(screen.getByLabelText("삭제하는 이유"), "copyright");
+    await user.click(screen.getByRole("button", { name: "영구 삭제" }));
+    expect(await screen.findByText("공유에서 영구 삭제했어요.")).toHaveAttribute("role", "status");
+    expect(admin.removals.get(french)).toBe("copyright");
+    expect(admin.decks[0]?.visibility).toBe("private");
+
+    view.unmount();
+    await render(DeckContent, { params: Promise.resolve({ id: french }) });
+    expect(screen.getByRole("note")).toHaveTextContent("공유에서 영구 삭제됨 · copyright");
+    expect(screen.queryByRole("button", { name: "공유에서 영구 삭제" })).not.toBeInTheDocument();
   });
 });
+
+describe("removing a deck from sharing", () => {
+  it("is refused for a user who is not an admin, changing nothing, and done for an admin", async () => {
+    await signIn(otherUser);
+    expect(await removeDeck(french, "spam")).toEqual({
+      changed: false,
+      message: "관리자만 할 수 있어요.",
+    });
+    expect(admin.removals.size).toBe(0);
+    expect(admin.decks[0]?.visibility).toBe("public");
+    expect(admin.audit).toEqual([]);
+
+    // Control: the same call by an admin removes it.
+    await signIn();
+    expect(await removeDeck(french, "spam")).toMatchObject({ changed: true });
+  });
+
+  it("needs a reason, and says when the deck was already removed", async () => {
+    expect(await removeDeck(french, "  ")).toMatchObject({ changed: false });
+    expect(admin.calls).toEqual([]);
+    expect(await removeDeck(french, " spam ")).toEqual({
+      changed: true,
+      message: "공유에서 영구 삭제했어요.",
+    });
+    expect(await removeDeck(french, "spam")).toEqual({
+      changed: false,
+      message: "이미 공유에서 삭제된 덱이에요.",
+    });
+    expect(admin.audit).toHaveLength(1);
+  });
+});
+
+/** Adds [count] users whose emails are `user01@example.com` onward. */
+function seedUsers(count: number) {
+  for (let index = 1; index <= count; index++) {
+    const number = String(index).padStart(2, "0");
+    admin.users.push({
+      id: `a0000000-0000-4000-8000-0000000000${number}`,
+      email: `user${number}@example.com`,
+      createdAt: "2026-10-10T00:00:00Z",
+      lastAnswerAt: null,
+      decks: 0,
+      cards: 0,
+      extractionsToday: 0,
+    });
+  }
+}
+
+/** The emails the users list shows. */
+const listedEmails = () =>
+  screen
+    .queryAllByRole("listitem")
+    .map((item) => item.textContent.split("정지")[0]?.split("2026")[0]);
 
 describe("the users pages", () => {
   it("finds users by email and opens one, read-only, with today's photos against the limit", async () => {
@@ -302,7 +387,112 @@ describe("the users pages", () => {
       screen.getByText("찾는 사용자가 없어요. 다른 단어로 검색해 보세요."),
     ).toBeInTheDocument();
     await render(UsersContent, { searchParams: Promise.resolve({}) });
-    expect(admin.calls.filter((call) => call.startsWith("admin_find_users"))).toHaveLength(1);
+    expect(admin.calls.filter((call) => call.startsWith("admin_search_users"))).toHaveLength(1);
+  });
+
+  it("searches as the admin types, once after the typing pauses, and updates the list in place", async () => {
+    const user = userEvent.setup();
+    await render(UsersContent, { searchParams: Promise.resolve({ q: "learner" }) });
+    expect(listedEmails()).toEqual([testUser.email]);
+
+    const field = screen.getByRole("searchbox", { name: "이메일 검색" });
+    await user.clear(field);
+    await user.type(field, "other");
+    await vi.waitFor(() => {
+      expect(listedEmails()).toEqual([otherUser.email]);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("1명");
+    // One search for the page's own query, and one for the whole typed word.
+    expect(admin.calls.filter((call) => call.startsWith("admin_search_users"))).toHaveLength(2);
+  });
+
+  it("shows twenty users at a time, the prefix matches first, and adds the next page on 더 보기", async () => {
+    const user = userEvent.setup();
+    seedUsers(21);
+    await render(UsersContent, { searchParams: Promise.resolve({ q: "user" }) });
+    expect(screen.getByRole("status")).toHaveTextContent("21명");
+    expect(listedEmails()).toHaveLength(20);
+    expect(listedEmails()[0]).toBe("user01@example.com");
+
+    await user.click(screen.getByRole("button", { name: "더 보기" }));
+    await vi.waitFor(() => {
+      expect(listedEmails()).toHaveLength(21);
+    });
+    expect(listedEmails()[20]).toBe("user21@example.com");
+    expect(screen.queryByRole("button", { name: "더 보기" })).not.toBeInTheDocument();
+  });
+
+  it("lists every live deck of a user, private ones too, each opening the deck", async () => {
+    await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
+    const decks = within(screen.getByRole("region", { name: "덱" }));
+    expect(decks.getByRole("link", { name: /Diary/ })).toHaveAttribute(
+      "href",
+      `/admin/decks/${diary}`,
+    );
+    expect(decks.getByRole("link", { name: /French/ })).toHaveTextContent("카드 2장");
+  });
+});
+
+describe("a user's suspension", () => {
+  it("suspends a user with a reason once confirmed, shows it, and lifts it", async () => {
+    const user = userEvent.setup();
+    await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
+    const section = within(screen.getByRole("region", { name: "이용 정지" }));
+    await user.click(section.getByRole("button", { name: "이용 정지" }));
+    await user.type(section.getByLabelText("정지하는 이유"), "spam decks");
+    await user.click(section.getByRole("button", { name: "정지" }));
+    expect(await section.findByRole("status")).toHaveTextContent("이용을 정지했어요.");
+    expect(admin.suspensions.get(otherUser.id)).toEqual({ reason: "spam decks", by: testUser.id });
+
+    await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
+    expect(screen.getByText("정지됨 · spam decks")).toBeInTheDocument();
+    await render(UsersContent, { searchParams: Promise.resolve({ q: "other" }) });
+    expect(screen.getByRole("link", { name: /other@example.com/ })).toHaveTextContent("정지 ·");
+
+    expect(await unsuspendUser(otherUser.id)).toEqual({
+      changed: true,
+      message: "정지를 풀었어요.",
+    });
+    expect(await unsuspendUser(otherUser.id)).toEqual({
+      changed: false,
+      message: "정지된 사용자가 아니에요.",
+    });
+    expect(admin.suspensions.size).toBe(0);
+  });
+
+  it("refuses one's own account, a second suspension and a missing reason", async () => {
+    expect(await suspendUser(otherUser.id, "")).toMatchObject({ changed: false });
+    expect(admin.calls).toEqual([]);
+    expect(await suspendUser(testUser.id, "test")).toEqual({
+      changed: false,
+      message: "내 계정은 정지할 수 없어요.",
+    });
+    expect(await suspendUser(otherUser.id, "spam")).toMatchObject({ changed: true });
+    expect(await suspendUser(otherUser.id, "spam")).toEqual({
+      changed: false,
+      message: "이미 정지된 사용자예요.",
+    });
+    expect(admin.audit.map((entry) => entry.action)).toEqual(["suspend_user"]);
+  });
+
+  it("is refused to a user who is not an admin, changing nothing, and done for an admin", async () => {
+    await signIn(otherUser);
+    expect(await suspendUser(testUser.id, "spam")).toEqual({
+      changed: false,
+      message: "관리자만 할 수 있어요.",
+    });
+    admin.suspensions.set(testUser.id, { reason: "seeded", by: otherUser.id });
+    expect(await unsuspendUser(testUser.id)).toEqual({
+      changed: false,
+      message: "관리자만 할 수 있어요.",
+    });
+    expect(admin.suspensions.get(testUser.id)?.reason).toBe("seeded");
+    expect(admin.audit).toEqual([]);
+
+    // Control: the same calls by an admin, on a user who is not the caller.
+    await signIn();
+    expect(await suspendUser(otherUser.id, "spam")).toMatchObject({ changed: true });
+    expect(await unsuspendUser(otherUser.id)).toMatchObject({ changed: true });
   });
 });
 
@@ -376,6 +566,18 @@ describe("the audit log", () => {
       "href",
       `/admin/decks/${french}`,
     );
+  });
+
+  it("names a suspension and a removal from sharing, with each one's reason", async () => {
+    await suspendUser(otherUser.id, "spam decks");
+    await unsuspendUser(otherUser.id);
+    await removeDeck(french, "copyright");
+    await render(AuditContent, {});
+    expect(screen.getAllByRole("listitem").map((entry) => entry.firstChild?.textContent)).toEqual([
+      "공유에서 영구 삭제 · French · copyright",
+      "정지 해제 · other@example.com",
+      "이용 정지 · other@example.com · spam decks",
+    ]);
   });
 
   it("is refused to a user who is not an admin", async () => {

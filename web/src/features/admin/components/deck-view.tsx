@@ -2,11 +2,14 @@ import Link from "next/link";
 
 import { labelOf, reasonLabels } from "../labels";
 import type { AdminDeck } from "../read-admin";
+import { removeDeck } from "../remove-deck";
+import { formatDate } from "../format";
 import { DeckActions } from "./deck-actions";
+import { ReasonAction } from "./reason-action";
 import { DeckStateChips } from "./deck-state";
 
 /** A deck, read-only: its owner, state, reports, actions and every live card. */
-export function DeckView({ deck }: { deck: AdminDeck }) {
+export function DeckView({ deck, timeZone }: { deck: AdminDeck; timeZone: string }) {
   return (
     <div className="flex flex-col gap-section-gap">
       <header className="flex flex-col gap-2">
@@ -28,6 +31,23 @@ export function DeckView({ deck }: { deck: AdminDeck }) {
         {deck.description !== null && <p className="text-body">{deck.description}</p>}
       </header>
       <DeckActions id={deck.id} name={deck.name} state={deck.state} reports={deck.reports} />
+      {deck.removal !== null ? (
+        <p role="note" className="text-secondary text-dont-know-text">
+          공유에서 영구 삭제됨 · {deck.removal.reason} ·{" "}
+          {formatDate(deck.removal.removedAt, timeZone)}
+        </p>
+      ) : (
+        deck.state.visibility === "public" &&
+        !deck.state.deleted && (
+          <ReasonAction
+            label="공유에서 영구 삭제"
+            reasonLabel="삭제하는 이유"
+            question={`'${deck.name}' 덱을 공유에서 영구 삭제할까요? 덱은 주인에게 남고, 다시 공개할 수 없어요.`}
+            confirmLabel="영구 삭제"
+            action={removeDeck.bind(null, deck.id)}
+          />
+        )
+      )}
       <section aria-label="카드" className="flex flex-col gap-3">
         <h2 className="text-section">카드</h2>
         {deck.cards.length === 0 ? (

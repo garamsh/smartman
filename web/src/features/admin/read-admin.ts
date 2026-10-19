@@ -62,11 +62,29 @@ export type AdminDeck = {
   copies: number;
   reports: number;
   reasons: string[];
+  /** Its removal from sharing for good, when an admin removed it (ADR 0072). */
+  removal: { reason: string; removedAt: number } | null;
   /** The live cards, oldest first, each side as the one line of text it shows. */
   cards: { id: string; front: string; back: string }[];
 };
 
-export type UserMatch = { id: string; email: string; createdAt: number };
+export type UserMatch = { id: string; email: string; createdAt: number; suspended: boolean };
+
+/** A page of the users a search matched, and how many it matched in all. */
+export type UserPage = { users: UserMatch[]; total: number };
+
+/** A user's deck as the user's page lists it. */
+export type UserDeck = {
+  id: string;
+  name: string;
+  visibility: "public" | "private";
+  hidden: boolean;
+  removed: boolean;
+  cards: number;
+};
+
+/** Why, when and by whom a user was suspended. */
+export type Suspension = { reason: string; suspendedAt: number; suspendedByEmail: string | null };
 
 /** A plan, as the server names it. */
 export type PlanId = "free" | "pro" | "special";
@@ -107,6 +125,9 @@ export type AdminUser = {
   admin: boolean;
   publicDecks: PublicDeck[];
   plan: UserPlan;
+  suspension: Suspension | null;
+  /** Every live deck of the user, public or private, newest first. */
+  allDecks: UserDeck[];
 };
 
 export type AdminMember = {
@@ -231,11 +252,11 @@ export async function readPublicDecks(
   return parsed(await call("admin_public_decks", args), parsePublicDeck);
 }
 
-/** A public or reported deck with its live cards, or null for any other deck. */
+/** Any deck with its live cards and its removal from sharing, or null for a deck that does not exist. */
 export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>> {
   const [deckRead, cardsRead] = await Promise.all([
-    call("admin_deck", { deck_id: id }),
-    call("admin_deck_cards", { deck_id: id }),
+    call("admin_user_deck", { deck_id: id }),
+    call("admin_user_deck_cards", { deck_id: id }),
   ]);
   if ("failure" in deckRead) return deckRead;
   if ("failure" in cardsRead) return cardsRead;
@@ -248,6 +269,13 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
   const copies = count(field(row, "import_count"));
   const reports = count(field(row, "reports"));
   const reasons = strings(field(row, "reasons"));
+  const removalReason = field(row, "removal_reason");
+  const removedAt = parseTime(field(row, "removed_at"));
+  const removal =
+    typeof removalReason === "string" && removedAt !== null
+      ? { reason: removalReason, removedAt }
+      : null;
+  if (removalReason !== null && removal === null) return { failure: "unreadable" };
   const cards = rows(cardsRead.data, (cardRow) => {
     const cardId = text(field(cardRow, "card_id"));
     const front = parseContent(field(cardRow, "front"));
@@ -262,29 +290,57 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
   if (!owner || !state || copies === null || reports === null || !reasons || !cards) {
     return { failure: "unreadable" };
   }
-  return { data: { id, name, description, owner, state, copies, reports, reasons, cards } };
+  return {
+    data: { id, name, description, owner, state, copies, reports, reasons, removal, cards },
+  };
 }
 
-/** At most 50 users whose email holds [query], ignoring case, by email. */
-export async function findUsers(query: string): Promise<AdminRead<UserMatch[]>> {
-  return parsed(await call("admin_find_users", { query }), (row) => {
+/** How many users a page of the search holds. */
+export const userPageSize = 20;
+
+/**
+ * The [page]th page of the users whose email holds [query], ignoring case, those it starts first,
+ * with the matches in all.
+ */
+export async function searchUsers(query: string, page: number): Promise<AdminRead<UserPage>> {
+  const read = await call("admin_search_users", {
+    query,
+    page_size: userPageSize,
+    page_offset: page * userPageSize,
+  });
+  if ("failure" in read) return read;
+  let total = 0;
+  const users = rows(read.data, (row) => {
     const id = text(field(row, "user_id"));
     const email = text(field(row, "email"));
     const createdAt = parseTime(field(row, "created_at"));
-    return id !== null && email !== null && createdAt !== null ? { id, email, createdAt } : null;
+    const suspended = field(row, "suspended");
+    const matches = count(field(row, "total"));
+    if (id === null || email === null || createdAt === null || matches === null) return null;
+    if (typeof suspended !== "boolean") return null;
+    total = matches;
+    return { id, email, createdAt, suspended };
   });
+  return users ? { data: { users, total } } : { failure: "unreadable" };
 }
 
 /** One user with their public decks, or null when no user has [id]. */
 export async function readUser(id: string): Promise<AdminRead<AdminUser | null>> {
-  const [userRead, decksRead, planRead] = await Promise.all([
+  const [userRead, decksRead, planRead, suspensionRead, allDecksRead] = await Promise.all([
     call("admin_user", { user_id: id }),
     readPublicDecks({ owner: id }),
     call("admin_user_plan", { user_id: id }),
+    call("admin_user_suspension", { user_id: id }),
+    call("admin_user_decks", { user_id: id }),
   ]);
   if ("failure" in userRead) return userRead;
   if ("failure" in decksRead) return decksRead;
   if ("failure" in planRead) return planRead;
+  if ("failure" in suspensionRead) return suspensionRead;
+  if ("failure" in allDecksRead) return allDecksRead;
+  const suspensions = rows(suspensionRead.data, parseSuspension);
+  const allDecks = rows(allDecksRead.data, parseUserDeck);
+  if (!suspensions || !allDecks) return { failure: "unreadable" };
   if (Array.isArray(userRead.data) && userRead.data.length === 0) return { data: null };
   const plan = parseUserPlan(only(planRead.data));
   if (!plan) return { failure: "unreadable" };
@@ -315,6 +371,8 @@ export async function readUser(id: string): Promise<AdminRead<AdminUser | null>>
       admin,
       publicDecks: decksRead.data,
       plan,
+      suspension: suspensions[0] ?? null,
+      allDecks,
     },
   };
 }
@@ -355,6 +413,28 @@ function parseUserPlan(row: unknown): UserPlan | null {
   if ((endsAtValue !== null && endsAt === null) || grantedAt === null) return null;
   if (grantedBy !== null && typeof grantedBy !== "string") return null;
   return { ...settings, grant: { plan: granted, endsAt, grantedAt, grantedByEmail: grantedBy } };
+}
+
+function parseSuspension(row: unknown): Suspension | null {
+  const reason = text(field(row, "reason"));
+  const suspendedAt = parseTime(field(row, "suspended_at"));
+  const by = field(row, "suspended_by_email");
+  if (reason === null || suspendedAt === null) return null;
+  if (by !== null && typeof by !== "string") return null;
+  return { reason, suspendedAt, suspendedByEmail: by };
+}
+
+function parseUserDeck(row: unknown): UserDeck | null {
+  const id = text(field(row, "deck_id"));
+  const name = field(row, "name");
+  const visibility = field(row, "visibility");
+  const hidden = field(row, "hidden");
+  const removed = field(row, "removed");
+  const cards = count(field(row, "cards"));
+  if (id === null || typeof name !== "string" || cards === null) return null;
+  if (visibility !== "public" && visibility !== "private") return null;
+  if (typeof hidden !== "boolean" || typeof removed !== "boolean") return null;
+  return { id, name, visibility, hidden, removed, cards };
 }
 
 function planId(value: unknown): PlanId | null {

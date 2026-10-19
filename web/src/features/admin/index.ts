@@ -15,7 +15,6 @@ export {
   type AdminFailure,
   type AdminRead,
   adminTimeZone,
-  findUsers,
   readAdmins,
   readAuditLog,
   readDeck,
@@ -25,4 +24,6 @@ export {
   readPublicDecks,
   readReportedDecks,
   readUser,
+  searchUsers,
+  userPageSize,
 } from "./read-admin";

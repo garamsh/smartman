@@ -895,6 +895,12 @@ abstract class AppLocalizations {
   /// **'오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.'**
   String get dailyLimitReached;
 
+  /// Shown when a suspended account tries to sign in or make cards from a photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.'**
+  String get accountSuspended;
+
   /// Photo import failure: the user's plan's daily extraction limit, which the server states, was reached.
   ///
   /// In ko, this message translates to:

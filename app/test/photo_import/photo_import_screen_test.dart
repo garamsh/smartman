@@ -1286,6 +1286,12 @@ void main() {
         false,
       ),
       (
+        const AccountSuspendedFailure(),
+        'This account is suspended. Write to sauce@garam.sh with any questions.',
+        false,
+        false,
+      ),
+      (
         const DailyLimitReached(dailyLimit: 50),
         "You've used today's 50 photos. Try again tomorrow.",
         false,

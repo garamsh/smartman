@@ -5,7 +5,7 @@ import type { Config } from "./config.ts";
 import { type Attempt, extractCards } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
-import { type Plan, startExtraction } from "./supabase.ts";
+import { type Plan, startExtraction, userSuspended } from "./supabase.ts";
 
 /** How a request ended; the error body carries the same code, for the app to show. */
 export type Outcome =
@@ -13,6 +13,7 @@ export type Outcome =
   | "method_not_allowed"
   | "not_configured"
   | "unauthenticated"
+  | "suspended"
   | "bad_request"
   | "too_large"
   | "unsupported_type"
@@ -54,6 +55,8 @@ export function status(outcome: Outcome): number {
       return 400;
     case "unauthenticated":
       return 401;
+    case "suspended":
+      return 403;
     case "method_not_allowed":
       return 405;
     case "too_large":
@@ -128,6 +131,9 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
 
   const parsed = await parseRequest(request.body);
   if (!parsed.ok) return refused(parsed.failure, userId);
+  if (await userSuspended(userId, supabase)) {
+    return refused("suspended", userId);
+  }
   const start = await startExtraction(userId, supabase);
   if (start.kind === "not_configured") return refused("not_configured", userId);
   if (start.kind === "rate_limited") {

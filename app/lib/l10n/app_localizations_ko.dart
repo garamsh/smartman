@@ -453,6 +453,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dailyLimitReached => '오늘은 사진으로 카드를 더 만들 수 없어요. 내일 다시 시도해 주세요.';
 
   @override
+  String get accountSuspended => '이 계정은 이용이 정지됐어요. 문의는 sauce@garam.sh로 보내 주세요.';
+
+  @override
   String dailyLimitReachedOf(int limit) {
     return '오늘 사진으로 만들 수 있는 $limit장을 다 썼어요. 내일 다시 시도해 주세요.';
   }

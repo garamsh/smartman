@@ -6,7 +6,6 @@ import {
   adminTimeZone,
   AuditLog,
   DeckView,
-  findUsers,
   GrantAdminForm,
   OverviewView,
   PlansView,
@@ -19,6 +18,7 @@ import {
   readPublicDecks,
   readReportedDecks,
   readUser,
+  searchUsers,
   ReportedDecks,
   UserSearch,
   UserView,
@@ -93,10 +93,10 @@ export async function PublicDecksContent({
 export async function DeckContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!uuid.test(id)) notFound();
-  const read = await readDeck(id);
+  const [read, timeZone] = await Promise.all([readDeck(id), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if (read.data === null) notFound();
-  return <DeckView deck={read.data} />;
+  return <DeckView deck={read.data} timeZone={timeZone} />;
 }
 
 export async function UsersContent({
@@ -106,17 +106,18 @@ export async function UsersContent({
 }) {
   const query = searchText((await searchParams).q);
   const timeZone = await adminTimeZone();
-  if (query === "") return <UserSearch query="" matches={null} timeZone={timeZone} />;
-  const read = await findUsers(query);
-  if ("failure" in read) {
-    return (
-      <>
-        <UserSearch query={query} matches={null} timeZone={timeZone} />
-        <AdminFailureMessage failure={read.failure} />
-      </>
-    );
-  }
-  return <UserSearch query={query} matches={read.data} timeZone={timeZone} />;
+  // An address with a query opens on its first page, read on the server.
+  const read = query === "" ? null : await searchUsers(query, 0);
+  return (
+    <>
+      <UserSearch
+        initialQuery={query}
+        initialPage={read === null || "failure" in read ? null : read.data}
+        timeZone={timeZone}
+      />
+      {read !== null && "failure" in read && <AdminFailureMessage failure={read.failure} />}
+    </>
+  );
 }
 
 export async function UserContent({ params }: { params: Promise<{ id: string }> }) {

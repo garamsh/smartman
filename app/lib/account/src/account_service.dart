@@ -289,5 +289,6 @@ AccountFailure? classifyGoogleError(GoogleSignInException error) =>
 AccountFailure classifyAuthError(Exception error) => switch (error) {
   AuthRetryableFetchException() => AccountOffline(error),
   AuthApiException(code: 'provider_disabled') => AccountMisconfigured(error),
+  AuthApiException(code: 'user_banned') => AccountSuspended(error),
   _ => AccountRejected(error),
 };

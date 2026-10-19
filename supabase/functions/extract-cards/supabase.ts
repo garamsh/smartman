@@ -24,6 +24,33 @@ export type Start =
   }
   | { readonly kind: "not_configured" };
 
+/** Whether an admin suspended the user (`public.user_suspended`); a suspended user extracts nothing. */
+export async function userSuspended(
+  userId: UserId,
+  deps: SupabaseDeps,
+): Promise<boolean> {
+  const response = await deps.fetch(
+    `${deps.url}/rest/v1/rpc/user_suspended`,
+    {
+      method: "POST",
+      headers: {
+        apikey: deps.serviceRoleKey,
+        Authorization: `Bearer ${deps.serviceRoleKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ user_id: userId }),
+    },
+  );
+  if (!response.ok) {
+    throw new SupabaseError(`user_suspended answered ${response.status}`);
+  }
+  const suspended: unknown = await response.json();
+  if (typeof suspended !== "boolean") {
+    throw new SupabaseError("user_suspended answered no boolean");
+  }
+  return suspended;
+}
+
 /** Resolves the user's plan and, under its daily limit, records the photo. */
 export async function startExtraction(
   userId: UserId,

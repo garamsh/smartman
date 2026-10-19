@@ -488,6 +488,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'You\'ve reached today\'s limit for photos. Try again tomorrow.';
 
   @override
+  String get accountSuspended =>
+      'This account is suspended. Write to sauce@garam.sh with any questions.';
+
+  @override
   String dailyLimitReachedOf(int limit) {
     return 'You\'ve used today\'s $limit photos. Try again tomorrow.';
   }

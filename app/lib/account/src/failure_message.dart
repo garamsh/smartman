@@ -7,6 +7,7 @@ String describeAccountFailure(AppLocalizations l10n, AccountFailure failure) =>
       AccountOffline() => l10n.accountOffline,
       AccountMisconfigured() => l10n.accountMisconfigured,
       AccountRejected() => l10n.accountRejected,
+      AccountSuspended() => l10n.accountSuspended,
     };
 
 /// The message a user reads when deleting the account failed with [failure].
@@ -15,4 +16,5 @@ String describeDeletionFailure(AppLocalizations l10n, AccountFailure failure) =>
       AccountOffline() => l10n.accountOffline,
       AccountMisconfigured() => l10n.accountMisconfigured,
       AccountRejected() => l10n.deleteAccountRejected,
+      AccountSuspended() => l10n.accountSuspended,
     };

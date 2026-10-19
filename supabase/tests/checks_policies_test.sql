@@ -81,10 +81,15 @@ select results_eq(
     ('cards_card_key_check', true), ('cards_origin_deck_id_check', true), ('decks_name_check', true)$$,
   'the five checks exist and are validated');
 
-select policies_are('public', 'decks', array['decks_select', 'decks_insert', 'decks_update', 'decks_delete'],
-  'decks has one policy per command');
-select policies_are('public', 'cards', array['cards_select', 'cards_insert', 'cards_update', 'cards_delete'],
-  'cards has one policy per command');
+-- One permissive policy per command (ADR 0034 §7); the restrictive policies of ADR 0072 narrow writes beside them.
+select results_eq(
+  $$select policyname::text collate "default" from pg_policies where schemaname = 'public' and tablename = 'decks' and permissive = 'PERMISSIVE' order by 1$$,
+  $$values ('decks_delete'), ('decks_insert'), ('decks_select'), ('decks_update')$$,
+  'decks has one permissive policy per command');
+select results_eq(
+  $$select policyname::text collate "default" from pg_policies where schemaname = 'public' and tablename = 'cards' and permissive = 'PERMISSIVE' order by 1$$,
+  $$values ('cards_delete'), ('cards_insert'), ('cards_select'), ('cards_update')$$,
+  'cards has one permissive policy per command');
 select policies_are('public', 'profiles', array['profiles_select', 'profiles_insert', 'profiles_update'],
   'profiles has one policy per command it allows');
 
