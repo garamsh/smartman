@@ -27,7 +27,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
   - `account`'s `AccountAvatar` on the account button, and `AccountScreen`, given `sync`'s `SyncStatusView` as the status it shows ([`account.md`](account.md), [`sync.md`](sync.md));
   - `sharing`'s `sharingServiceProvider`, for the browse screen ([`sharing.md`](sharing.md));
   - `photo_import`'s `photoImportProvider`, for the photo options ([`ai-extraction.md`](ai-extraction.md)).
-- The deck screen composes `deck`'s `deckProvider`, `cardsProvider`, `DeckTile`, `CardAnswerRow`, `CardEditorScreen`, `showNameSheet` and `DeckRepository`; `study`'s `TodayCounter`, `ProgressCounter` and `StudyScreen`; `sharing`'s `sharingServiceProvider` and `onlineProvider`, for publishing; and `photo_import`'s `photoImportProvider`.
+- The deck screen composes `deck`'s `deckProvider`, `cardsProvider`, `DeckTile`, `CardBackRow`, `CardEditorScreen`, `showNameSheet` and `DeckRepository`; `study`'s `TodayCounter`, `ProgressCounter` and `StudyScreen`; `sharing`'s `sharingServiceProvider` and `onlineProvider`, for publishing; and `photo_import`'s `photoImportProvider`.
 - A `DeckRow` takes what it shows of today and of its progress as widgets, which the 덱 tab builds from `TodayCounter` and `ProgressCounter`: the deck's places for what `study` draws ([`structure.md`](structure.md)).
 
 ### Tabs
@@ -67,7 +67,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - Under it, the deck's tile, its name at 22/800, and "카드 n장", with "· 공개" when the deck is published.
 - The navy card, read as "오늘 이 덱": "오늘 할 카드", the count with "장 · 약 m분", in a backlog "밀린 복습을 마칠 때까지 새 카드는 쉬어요.", "n / m 익힘", the progress bar in white on its faint white, and a white "학습하기", which opens a session over the deck whatever the count, 0 included, and while the count is pending or cannot be read ([ADR 0040](adr/0040-keep-every-study-button-enabled-at-zero-cards-left.md)). While the deck holds no card, the card shows no "학습하기" ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)).
 - Above the cards, while the deck has any, a row pinned under the top bar as the list scrolls (issue #142): "카드 n", the number of cards the list shows, read as a heading; and at its right "뜻 보기" and a switch, read together as "뜻 보기" with the switch's state. The label never changes; the switch shows the state.
-- Each card is a `CardAnswerRow`: its question, and its answer hidden behind a bar or shown ([`deck.md`](deck.md)). The deck screen holds what each row shows:
+- Each card is a `CardBackRow`: its front, and its back hidden behind a bar or shown ([`deck.md`](deck.md)). The deck screen holds what each row shows:
   - the switch is off each time the screen opens, so every answer is hidden; it is not remembered;
   - changing the switch sets every card to its state, a card the tap had set apart included;
   - a tap shows or hides that card alone, until the switch next changes;
