@@ -32,12 +32,15 @@ final class NoCardsFound extends PhotoImportFailure {
   String toString() => 'NoCardsFound';
 }
 
-/// The user has made today's extractions (`429`).
+/// The user has made today's extractions (`429`): [dailyLimit] photos a day
+/// on the user's plan, or null from a function that does not state it.
 final class DailyLimitReached extends PhotoImportFailure {
-  const DailyLimitReached();
+  const DailyLimitReached({this.dailyLimit});
+
+  final int? dailyLimit;
 
   @override
-  String toString() => 'DailyLimitReached';
+  String toString() => 'DailyLimitReached($dailyLimit)';
 }
 
 /// The model failed or answered invalidly twice (`502`).
