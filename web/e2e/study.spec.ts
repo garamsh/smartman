@@ -417,6 +417,12 @@ test("each page that waits on the server shows its skeleton, still under reduced
   await still.addCookies(await context.cookies());
   const skeletonPage = await still.newPage();
   const livePage = await context.newPage();
+  // A browser's first study session shows the coach, which moves and tilts the current card from
+  // 0.5 s on (#216); measured then, the card is off its place by its transform, not its layout.
+  // Marking the coach as shown keeps the card where the layout puts it.
+  await livePage.addInitScript(() => {
+    window.localStorage.setItem("studyCoachShown", "true");
+  });
   const pages = [
     {
       path: "/",

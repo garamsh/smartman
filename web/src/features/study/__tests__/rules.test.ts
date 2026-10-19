@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,10 @@ import * as queue from "../queue";
 
 const root = path.join(import.meta.dirname, "../../../../..");
 const queueDart = readFileSync(path.join(root, "app/lib/study/src/queue.dart"), "utf8");
+const migrationsDir = path.join(root, "supabase/migrations");
+const migrations = readdirSync(migrationsDir)
+  .filter((name) => name.endsWith(".sql"))
+  .map((name) => ({ name, text: readFileSync(path.join(migrationsDir, name), "utf8") }));
 
 /** Every whole-number top-level `const` queue.dart declares, by name. */
 function dartConstants(source: string): Map<string, number> {
@@ -55,4 +59,30 @@ describe("the queue rules", () => {
   it("are every rule queue.dart declares, so a new one is compared too", () => {
     expect([...dartConstants(queueDart).keys()].sort()).toEqual(Object.keys(shared).sort());
   });
+
+  it("start the server's study days at studyDayStartHour, as the latest migration defines it", () => {
+    expect(serverStartHour(migrations)).toBe(queue.studyDayStartHour);
+    // Control: a later migration that moves the hour is the one read.
+    const moved = [...migrations, { name: "99999999999999_moved.sql", text: hourFunction(5) }];
+    expect(serverStartHour(moved)).toBe(5);
+  });
 });
+
+/** A migration's definition of `public.study_day_start_hour()` returning [hour]. */
+function hourFunction(hour: number): string {
+  return `create or replace function public.study_day_start_hour() returns integer\nlanguage sql\nas $$\n  select ${String(hour)}\n$$;`;
+}
+
+/**
+ * The hour `public.study_day_start_hour()` returns in the last migration, in the order they are
+ * applied, that defines it; the server's study-day functions read their day's start from it.
+ */
+function serverStartHour(files: readonly { name: string; text: string }[]): number | undefined {
+  const definition =
+    /create (?:or replace )?function public\.study_day_start_hour\(\)[^$]*\$\$\s*select (\d+)\s*\$\$/g;
+  let hour: number | undefined;
+  for (const file of [...files].sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    for (const [, value] of file.text.matchAll(definition)) hour = Number(value);
+  }
+  return hour;
+}
