@@ -508,6 +508,10 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// The four tints a deck's initial tile is drawn on, in order.
   List<Color> get deckTints => [tintBlue, tintAmber, tintGreen, tintRed];
 
+  /// A chart's bar that is not the one it stresses: [color] a step back, ink's
+  /// still 3:1 on the surface. Derived, so no token holds it.
+  static Color quiet(Color color) => color.withValues(alpha: 0.55);
+
   /// The tokens of [context]'s theme.
   static AppColors of(BuildContext context) =>
       Theme.of(context).extension<AppColors>() ??

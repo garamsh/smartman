@@ -356,7 +356,7 @@ void main() {
         ];
         for (final mark in [
           ...bands,
-          _over(StatsStyle.quietWeek(colors), surface),
+          _over(AppColors.quiet(colors.ink), surface),
         ]) {
           expect(
             _contrast(mark, surface),

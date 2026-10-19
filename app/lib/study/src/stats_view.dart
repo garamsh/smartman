@@ -718,7 +718,7 @@ class _MasteredCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: index == weeks.length - 1
                             ? colors.ink
-                            : StatsStyle.quietWeek(colors),
+                            : AppColors.quiet(colors.ink),
                         borderRadius: BorderRadius.circular(AppSpace.s4),
                       ),
                       child: SizedBox(

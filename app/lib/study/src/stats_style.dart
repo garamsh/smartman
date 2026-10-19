@@ -45,11 +45,6 @@ abstract final class StatsStyle {
         colors.streak,
       );
 
-  /// A mastered week that is not this one: the ink a step back, 3:1 on the
-  /// surface.
-  static Color quietWeek(AppColors colors) =>
-      colors.ink.withValues(alpha: 0.55);
-
   /// A heatmap cell at each level, from a day without a card to the busiest
   /// third: the hairline, then the ink at three alphas, each level 1.5:1
   /// from the next.
