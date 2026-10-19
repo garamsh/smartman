@@ -251,6 +251,40 @@ void main() {
     }
   });
 
+  test("a daily limit's refusal carries the plan's limit the body states, and none from a body without it", () async {
+    final stated = _client(
+      (_) async => _json(429, {'error': 'rate_limited', 'daily_limit': 100}),
+    );
+    await expectLater(
+      _extract(stated),
+      throwsA(
+        isA<DailyLimitReached>().having(
+          (failure) => failure.dailyLimit,
+          'dailyLimit',
+          100,
+        ),
+      ),
+    );
+    for (final body in [
+      {'error': 'rate_limited'},
+      {'error': 'rate_limited', 'daily_limit': -1},
+      {'error': 'rate_limited', 'daily_limit': '100'},
+    ]) {
+      final unstated = _client((_) async => _json(429, body));
+      await expectLater(
+        _extract(unstated),
+        throwsA(
+          isA<DailyLimitReached>().having(
+            (failure) => failure.dailyLimit,
+            'dailyLimit',
+            isNull,
+          ),
+        ),
+        reason: '$body',
+      );
+    }
+  });
+
   test('a success body outside the contract is a service failure', () async {
     for (final body in [
       'not json',

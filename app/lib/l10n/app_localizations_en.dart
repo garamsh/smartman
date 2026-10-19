@@ -474,6 +474,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'You\'ve reached today\'s limit for photos. Try again tomorrow.';
 
   @override
+  String dailyLimitReachedOf(int limit) {
+    return 'You\'ve used today\'s $limit photos. Try again tomorrow.';
+  }
+
+  @override
   String get modelFailed =>
       'Couldn\'t read the cards. Please try again in a moment.';
 
