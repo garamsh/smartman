@@ -79,6 +79,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Table and cloze cards can\'t be edited yet. You can delete one.';
 
   @override
+  String get sensesEditNote =>
+      'Editing the answer saves labels such as [명] as plain text.';
+
+  @override
   String get duplicateTitle => 'This deck already has this card';
 
   @override

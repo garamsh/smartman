@@ -507,8 +507,14 @@ void main() {
         front: 'face',
         kind: CardKind.vocabulary,
         senses: [
-          Sense(pos: '[동]', meaning: '직면하다, 마주하다'),
-          Sense(pos: '[명]', meaning: '표면, 겉면'),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+            meaning: '직면하다, 마주하다',
+          ),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+            meaning: '표면, 겉면',
+          ),
         ],
         pronunciation: "['feis]",
         extras: [Extra(label: '유의어', text: 'confront')],
@@ -552,7 +558,7 @@ void main() {
         expect(_shown('빈출 숙어 1'), findsOneWidget);
         expect(_shown('Word → meaning'), findsNWidgets(2));
         expect(_shown('face'), findsOneWidget);
-        expect(_shown('[동] 직면하다, 마주하다\n[명] 표면, 겉면'), findsOneWidget);
+        expect(_shown('[동]직면하다, 마주하다\n[명]표면, 겉면'), findsOneWidget);
         expect(_shown('~뿐만 아니라'), findsOneWidget, reason: 'no label');
         for (final front in ['face', 'include', 'in addition']) {
           expect(import.included(front), isTrue, reason: front);
@@ -668,11 +674,11 @@ void main() {
 
         await import.menu('최빈출 단어');
         await import.pickItem('First meaning only');
-        expect(_shown('[동] 직면하다, 마주하다'), findsOneWidget);
+        expect(_shown('[동]직면하다, 마주하다'), findsOneWidget);
         await import.menu('최빈출 단어');
         await import.pickItem('Show part of speech');
         expect(_shown('직면하다, 마주하다'), findsOneWidget);
-        expect(_shown('[동] 직면하다, 마주하다'), findsNothing);
+        expect(_shown('[동]직면하다, 마주하다'), findsNothing);
 
         await import.tap(_shown('Add 3 cards'));
         expect((await import.cards(import.french)).take(2).toList(), [
@@ -708,7 +714,7 @@ void main() {
         await import.menu('최빈출 단어');
         await import.pickItem('Show synonyms and more');
         expect(
-          _shown('[동] 직면하다, 마주하다\n[명] 표면, 겉면\n유의어 confront'),
+          _shown('[동]직면하다, 마주하다\n[명]표면, 겉면\n유의어 confront'),
           findsOneWidget,
         );
         await import.close();
@@ -923,7 +929,7 @@ void main() {
 
         expect(_shown('Found 1 word'), findsOneWidget);
         expect(_shown('This page 1'), findsOneWidget);
-        expect(_shown('[동] 달리다\n[동] 경영하다'), findsOneWidget);
+        expect(_shown('[동]달리다\n[동]경영하다'), findsOneWidget);
         await import.close();
       },
     );
@@ -1077,7 +1083,7 @@ void main() {
         );
 
         expect(_shown('Found 1 word'), findsOneWidget);
-        expect(_shown('[동] 달리다'), findsOneWidget);
+        expect(_shown('[동]달리다'), findsOneWidget);
         await import.tap(_shown('Add 1 card'));
         expect(await import.cards(import.french), [
           ('run', '[동] 달리다', CardSource.import),
@@ -1116,9 +1122,18 @@ void main() {
         front: 'face',
         kind: CardKind.vocabulary,
         senses: [
-          Sense(pos: '[동]', meaning: '직면하다'),
-          Sense(pos: '[명]', meaning: '표면'),
-          Sense(pos: '[명]', meaning: '얼굴'),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+            meaning: '직면하다',
+          ),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+            meaning: '표면',
+          ),
+          CardSense(
+            labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+            meaning: '얼굴',
+          ),
         ],
       ),
     ];
@@ -1136,7 +1151,7 @@ void main() {
         await tester.tapAt(Offset.zero);
         await tester.pumpAndSettle();
         expect(
-          _shown('[동] 직면하다\n[명] 표면\n[명] 얼굴'),
+          _shown('[동]직면하다\n[명]표면\n[명]얼굴'),
           findsOneWidget,
           reason: 'dismissed',
         );
@@ -1146,7 +1161,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '겉면');
         await import.tap(_shown('Done'));
         expect(_shown('faces'), findsOneWidget);
-        expect(_shown('[동] 직면하다\n[명] 겉면\n[명] 얼굴'), findsOneWidget);
+        expect(_shown('[동]직면하다\n[명]겉면\n[명]얼굴'), findsOneWidget);
         await import.close();
       },
     );
@@ -1160,7 +1175,7 @@ void main() {
         await import.tap(_shown('face'));
         await import.tap(find.byType(Checkbox).at(1));
         await import.tap(_shown('Done'));
-        expect(_shown('[동] 직면하다\n[명] 얼굴'), findsOneWidget);
+        expect(_shown('[동]직면하다\n[명]얼굴'), findsOneWidget);
 
         await import.tap(_shown('face'));
         for (final i in [0, 2]) {
@@ -1194,7 +1209,7 @@ void main() {
       await tester.pumpAndSettle();
       await import.tap(_shown('Done'));
 
-      expect(_shown('[명] 얼굴\n[동] 직면하다\n[명] 표면'), findsOneWidget);
+      expect(_shown('[명]얼굴\n[동]직면하다\n[명]표면'), findsOneWidget);
       await import.tap(_shown('Add 1 card'));
       expect(await import.cards(import.french), [
         ('face', '[명] 얼굴 / [동] 직면하다 / [명] 표면', CardSource.import),
@@ -1448,5 +1463,11 @@ void main() {
 
 /// The text on screen that reads [text] once its word joiners are left out.
 Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
+  (widget) =>
+      widget is Text &&
+      (widget.data ?? widget.textSpan?.toPlainText())?.replaceAll(
+            '\u2060',
+            '',
+          ) ==
+          text,
 );

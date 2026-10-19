@@ -212,6 +212,12 @@ abstract class AppLocalizations {
   /// **'표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.'**
   String get wholeCardReadOnly;
 
+  /// In the card editor under the answer of a vocabulary card whose senses carry labels.
+  ///
+  /// In ko, this message translates to:
+  /// **'답을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
+  String get sensesEditNote;
+
   /// Title of the sheet shown when a card's front duplicates another in the deck.
   ///
   /// In ko, this message translates to:

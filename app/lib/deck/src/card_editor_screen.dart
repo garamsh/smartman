@@ -206,6 +206,16 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                   errorText: _requiredError(l10n, _back),
                   onChanged: (_) => setState(() {}),
                 ),
+                if (card?.back.any((block) => block is SensesContent) ??
+                    false) ...[
+                  const SizedBox(height: AppSpace.s8),
+                  Text(
+                    l10n.sensesEditNote,
+                    style: AppType.secondary.copyWith(
+                      color: AppColors.of(context).muted,
+                    ),
+                  ),
+                ],
               ],
             ),
       bottomNavigationBar: readOnly
@@ -269,8 +279,16 @@ class _DuplicateSheet extends StatelessWidget {
   }
 }
 
-/// [blocks] with its text replaced by [text]; blocks of other types are kept.
-List<Content> _replaceText(List<Content> blocks, String text) => [
-  TextContent(text),
-  ...blocks.where((block) => block is! TextContent),
-];
+/// [blocks] while [text] is still their text, so a side the user left as it
+/// was keeps its blocks, a senses block included; otherwise [text] as a text
+/// block, with blocks of other types kept. An edited senses side so becomes
+/// text, its labels as typed (ADR 0072).
+List<Content> _replaceText(List<Content> blocks, String text) =>
+    text == plainText(blocks)
+    ? blocks
+    : [
+        TextContent(text),
+        ...blocks.where(
+          (block) => block is! TextContent && block is! SensesContent,
+        ),
+      ];

@@ -3,7 +3,11 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/photo_import/src/import_list.dart';
 
-/// A word of [senses], each a part of speech and a meaning, in [topic].
+/// The parts of speech these tests print, as a page prints them.
+const _printed = {'[동]': PartOfSpeech.verb, '[명]': PartOfSpeech.noun};
+
+/// A word of [senses], each a printed part of speech or none and a meaning,
+/// in [topic].
 CandidateCard _word(
   String front,
   List<(String?, String)> senses, {
@@ -12,7 +16,14 @@ CandidateCard _word(
   front: front,
   kind: CardKind.vocabulary,
   senses: [
-    for (final (pos, meaning) in senses) Sense(pos: pos, meaning: meaning),
+    for (final (pos, meaning) in senses)
+      CardSense(
+        labels: [
+          if (pos != null)
+            PartOfSpeechLabel(_printed[pos]!, pos.substring(1, pos.length - 1)),
+        ],
+        meaning: meaning,
+      ),
   ],
   topic: topic,
 );
@@ -140,6 +151,37 @@ void main() {
     expect(list.toImport().first.front, [cloze]);
     // Control: the plain note in the same section swaps.
     expect(_sides(list), [(filled, filled), ('앞의 명사를 다시 가리킴', '재귀칭')]);
+  });
+
+  test('a vocabulary row saves its senses as a senses block with their labels and examples, '
+      'and Show part of speech off drops part-of-speech labels alone', () {
+    const train = CardSense(
+      labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명'), OtherLabel('사물')],
+      meaning: '철도 위를 다니는 긴 차',
+      examples: ['기차를 타다'],
+    );
+    final list = ImportList(const [
+      CandidateCard(
+        front: '기차',
+        kind: CardKind.vocabulary,
+        senses: [train],
+        topic: '단어',
+      ),
+    ], const {});
+
+    expect(list.toImport().single.back, [
+      const SensesContent([train]),
+    ]);
+    list.sections.single.form = const VocabularyForm(showPos: false);
+    expect(list.toImport().single.back, [
+      const SensesContent([
+        CardSense(
+          labels: [OtherLabel('사물')],
+          meaning: '철도 위를 다니는 긴 차',
+          examples: ['기차를 타다'],
+        ),
+      ]),
+    ]);
   });
 
   group('stored forms', () {

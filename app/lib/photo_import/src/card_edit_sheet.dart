@@ -122,7 +122,7 @@ class _CardEditSheetState extends State<_CardEditSheet> {
                           child: AppTextField(
                             label: [
                               l10n.editSense(i + 1),
-                              ?draft.sense.pos,
+                              ?draft.sense.labelText,
                             ].join(' · '),
                             controller: draft.controller,
                           ),

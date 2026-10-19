@@ -19,17 +19,24 @@ export 'src/card_list.dart'
     show CardAnswerRow, CardSplitRow, describeContent, spokenContent;
 export 'src/content.dart'
     show
+        CardSense,
         ClozeContent,
         Content,
+        OtherLabel,
+        PartOfSpeech,
+        PartOfSpeechLabel,
+        SenseLabel,
+        SensesContent,
         TableBlank,
         TableContent,
         TextContent,
         UnsupportedContent,
         clozeBlank,
         decodeContent,
+        decodeSense,
         isWholeCard,
         plainText;
-export 'src/content_view.dart' show ContentView;
+export 'src/content_view.dart' show ContentView, contentSpan, sensesSpan;
 export 'src/deck_repository.dart'
     show CardSaved, DeckRepository, DuplicateFront, SaveCardResult;
 export 'src/deck_row.dart' show DeckRow, DeckTile;

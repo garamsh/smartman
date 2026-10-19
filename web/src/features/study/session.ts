@@ -13,7 +13,17 @@ import { todayOf } from "./today-list";
  * it as and, for a table or cloze card, its [WholeFaces], which the server adds, since a client
  * module cannot import `decks`' entry point.
  */
-export type StudyCard = Card & { text: { front: string; back: string }; whole?: WholeFaces };
+export type StudyCard = Card & {
+  text: { front: string; back: string };
+  whole?: WholeFaces;
+  sides?: SideViews;
+};
+
+/**
+ * A card with a senses block drawn as `decks` draws its sides, each label as its own span with
+ * a narrow gap before the meaning (ADR 0072).
+ */
+export type SideViews = { front: ReactNode; back: ReactNode };
 
 /**
  * A table or cloze card as `decks` draws it whole: its front as a screen reader reads it with its

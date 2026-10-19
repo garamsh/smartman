@@ -94,15 +94,21 @@ final class NoteForm extends SectionForm {
 
 /// One sense of a row, which the user keeps or drops, edits and reorders.
 final class RowSense {
-  RowSense(this.pos, this.meaning);
+  RowSense(this.labels, this.meaning, this.examples);
 
-  final String? pos;
+  final List<SenseLabel> labels;
   String meaning;
+  final List<String> examples;
   bool kept = true;
+
+  /// The labels as a card shows them, `[명] [사물]`; null without one.
+  String? get labelText => labels.isEmpty
+      ? null
+      : [for (final label in labels) '[${label.shown}]'].join(' ');
 }
 
-/// A card a row saves: its two sides as plain text.
-typedef CardSides = ({String front, String back});
+/// A card a row saves: its two sides as content blocks.
+typedef CardSides = ({List<Content> front, List<Content> back});
 
 /// The candidates of one card key on the photo, combined into one row the
 /// user includes or leaves out, and edits.
@@ -111,7 +117,7 @@ final class ImportRow {
     : front = sources.first.front,
       senses = [
         for (final sense in {for (final card in sources) ...card.senses})
-          RowSense(sense.pos, sense.meaning),
+          RowSense(sense.labels, sense.meaning, sense.examples),
       ],
       answer = _mergedAnswer(sources);
 
@@ -158,19 +164,32 @@ final class ImportRow {
     _ => front,
   };
 
-  /// The meaning side in [form]: one line per kept sense, or the first alone,
-  /// each with its part of speech when shown, then each extra when shown.
-  String meaning(VocabularyForm form) {
+  /// The meaning side in [form]: a senses block of the kept senses, or the
+  /// first alone, each without its part-of-speech labels when the form hides
+  /// them, its other labels kept; then each extra, one per line, as a text
+  /// block when shown (ADR 0072).
+  List<Content> meaning(VocabularyForm form) {
     final kept = senses.where((sense) => sense.kept);
+    final shown = form.firstSenseOnly ? kept.take(1) : kept;
     return [
-      for (final sense in form.firstSenseOnly ? kept.take(1) : kept)
-        switch (sense.pos) {
-          final pos? when form.showPos => '$pos ${sense.meaning}',
-          _ => sense.meaning,
-        },
-      if (form.showExtras)
-        for (final extra in extras) '${extra.label} ${extra.text}',
-    ].join('\n');
+      if (shown.isNotEmpty)
+        SensesContent([
+          for (final sense in shown)
+            CardSense(
+              labels: [
+                for (final label in sense.labels)
+                  if (form.showPos || label is! PartOfSpeechLabel) label,
+              ],
+              meaning: sense.meaning,
+              examples: sense.examples,
+            ),
+        ]),
+      if (form.showExtras && extras.isNotEmpty)
+        TextContent(
+          [for (final extra in extras) '${extra.label} ${extra.text}']
+              .join('\n'),
+        ),
+    ];
   }
 
   /// A table or cloze row's front blocks, drawn whole; null for any other
@@ -178,20 +197,23 @@ final class ImportRow {
   List<Content>? get wholeFront => sources.first.wholeFront;
 
   /// The cards the row saves in [form]. A table or cloze row saves one, its
-  /// front's filled text on both sides, in any form; its front is saved as
-  /// [wholeFront] ([ImportList.toImport]).
+  /// [wholeFront] with that front's filled text as its back, in any form.
   List<CardSides> cards(SectionForm form) => switch (form) {
     _ when wholeFront != null => [
-      (front: plainText(wholeFront!), back: plainText(wholeFront!)),
+      (front: wholeFront!, back: [TextContent(plainText(wholeFront!))]),
     ],
     VocabularyForm(:final direction) when kind == CardKind.vocabulary => [
       if (direction != Direction.backward)
-        (front: word(form), back: meaning(form)),
+        (front: [TextContent(word(form))], back: meaning(form)),
       if (direction != Direction.forward)
-        (front: meaning(form), back: word(form)),
+        (front: meaning(form), back: [TextContent(word(form))]),
     ],
-    NoteForm(swapped: true) => [(front: answer, back: front)],
-    _ => [(front: front, back: answer)],
+    NoteForm(swapped: true) => [
+      (front: [TextContent(answer)], back: [TextContent(front)]),
+    ],
+    _ => [
+      (front: [TextContent(front)], back: [TextContent(answer)]),
+    ],
   };
 }
 
@@ -276,7 +298,7 @@ final class ImportList {
   /// "양쪽 다"'s reversed one, whose key the deck holds merges back when
   /// saved, as any duplicate does, and leaves the row included.
   bool isDuplicate(ImportRow row) => existingKeys.contains(
-    CardKey.fromFront(row.cards(sectionOf(row).form).first.front),
+    CardKey.fromFront(plainText(row.cards(sectionOf(row).form).first.front)),
   );
 
   /// Whether [row] is saved: as the user set it, else unless it is an
@@ -285,8 +307,7 @@ final class ImportList {
       row.savable &&
       (row.included ?? (row.type != CardType.identify && !isDuplicate(row)));
 
-  /// The cards to import, each as its section's form shows it, a table or
-  /// cloze row's front as its blocks. Each merges
+  /// The cards to import, each as its section's form shows it. Each merges
   /// back into a card with its key, the deck's or one written before it.
   List<ImportedCard> toImport() => [
     for (final section in sections)
@@ -294,8 +315,8 @@ final class ImportList {
         if (isIncluded(row))
           for (final card in row.cards(section.form))
             ImportedCard(
-              front: row.wholeFront ?? [TextContent(card.front)],
-              back: [TextContent(card.back)],
+              front: card.front,
+              back: card.back,
               onDuplicate: DuplicateChoice.mergeBack,
             ),
   ];

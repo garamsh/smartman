@@ -2,14 +2,56 @@
  * One block of a card side, as the phone stores it: a `{type, payload}` object in the side's
  * JSON array (`deck.md`). A text block; a cloze, its text writing each blank as `___` with what
  * fills each, in order; or a table, its column headers, its rows of cells and the cells to
- * recall (ADR 0068). A block of another type is shown as a placeholder naming it, so a card a
- * later version wrote is shown, not lost.
+ * recall (ADR 0068); or a vocabulary entry's senses (ADR 0072). A block of another type is
+ * shown as a placeholder naming it, so a card a later version wrote is shown, not lost.
  */
 export type Content =
   | { kind: "text"; text: string }
   | { kind: "cloze"; text: string; answers: string[] }
   | { kind: "table"; columns: string[]; rows: string[][]; blanks: TableBlank[] }
+  | { kind: "senses"; senses: Sense[] }
   | { kind: "unsupported"; type: string };
+
+/** Each part of speech a sense's label may name, with the short form every card shows it as. */
+export const partsOfSpeech = {
+  noun: "명",
+  verb: "동",
+  adjective: "형",
+  adverb: "부",
+  pronoun: "대",
+  preposition: "전",
+  conjunction: "접",
+  interjection: "감",
+  determiner: "관",
+  numeral: "수",
+  particle: "조",
+  auxiliary: "조동",
+  classifier: "양",
+  phrase: "구",
+} as const;
+
+export type PartOfSpeech = keyof typeof partsOfSpeech;
+
+/**
+ * A label the page prints for a sense, without its brackets: a part of speech, or any other
+ * label, such as a semantic class, as printed.
+ */
+export type SenseLabel =
+  | { kind: "part_of_speech"; category: PartOfSpeech; text: string }
+  | { kind: "other"; category: null; text: string };
+
+/** One meaning of a vocabulary entry, with the labels the page prints for it, and its examples. */
+export type Sense = { labels: SenseLabel[]; meaning: string; examples: string[] };
+
+/** What a card shows inside a label's brackets: a part of speech's short form, else the label as printed. */
+export function labelShown(label: SenseLabel): string {
+  return label.kind === "part_of_speech" ? partsOfSpeech[label.category] : label.text;
+}
+
+/** A sense as one line of text, each label in brackets and one space apart: `[명] 사과`. */
+export function senseLine(sense: Sense): string {
+  return [...sense.labels.map((label) => `[${labelShown(label)}]`), sense.meaning].join(" ");
+}
 
 /** A cell of a table block's rows to recall: its row and column, each counted from 0. */
 export type TableBlank = { row: number; column: number };
@@ -59,9 +101,43 @@ function parseTable(payload: Record<string, unknown>): Content | null {
   return { kind: "table", columns, rows: cells, blanks: parsed };
 }
 
+function isPartOfSpeech(value: unknown): value is PartOfSpeech {
+  return typeof value === "string" && Object.hasOwn(partsOfSpeech, value);
+}
+
+function parseLabel(value: unknown): SenseLabel | null {
+  if (!isRecord(value)) return null;
+  const { kind, category, text } = value;
+  if (typeof text !== "string" || text.trim() === "") return null;
+  if (kind === "part_of_speech" && isPartOfSpeech(category)) {
+    return { kind, category, text };
+  }
+  if (kind === "other" && category === null) return { kind, category, text };
+  return null;
+}
+
+function parseSense(value: unknown): Sense | null {
+  if (!isRecord(value)) return null;
+  const { labels, meaning, examples } = value;
+  if (!Array.isArray(labels) || typeof meaning !== "string" || meaning.trim() === "") return null;
+  if (!isStrings(examples)) return null;
+  const parsed = labels.map(parseLabel);
+  if (parsed.some((label) => label === null)) return null;
+  return { labels: parsed as SenseLabel[], meaning, examples };
+}
+
+/** One or more senses, each `{labels, meaning, examples}` as the phone writes it; null otherwise. */
+function parseSenses(payload: Record<string, unknown>): Content | null {
+  const { senses } = payload;
+  if (!Array.isArray(senses) || senses.length === 0) return null;
+  const parsed = senses.map(parseSense);
+  if (parsed.some((sense) => sense === null)) return null;
+  return { kind: "senses", senses: parsed as Sense[] };
+}
+
 /**
  * The blocks of a stored card side, or null when [value] is not an array of blocks each with
- * a string `type`, and a payload of its type's shape for a text, cloze or table block.
+ * a string `type`, and a payload of its type's shape for a text, cloze, table or senses block.
  */
 export function parseContent(value: unknown): Content[] | null {
   if (!Array.isArray(value)) return null;
@@ -71,7 +147,7 @@ export function parseContent(value: unknown): Content[] | null {
     const type = "type" in block ? block.type : null;
     const payload = "payload" in block ? block.payload : null;
     if (typeof type !== "string") return null;
-    if (type !== "text" && type !== "cloze" && type !== "table") {
+    if (type !== "text" && type !== "cloze" && type !== "table" && type !== "senses") {
       blocks.push({ kind: "unsupported", type });
       continue;
     }
@@ -83,7 +159,9 @@ export function parseContent(value: unknown): Content[] | null {
           : null
         : type === "cloze"
           ? parseCloze(payload)
-          : parseTable(payload);
+          : type === "table"
+            ? parseTable(payload)
+            : parseSenses(payload);
     if (!parsed) return null;
     blocks.push(parsed);
   }
@@ -122,6 +200,8 @@ export function describeContent(blocks: Content[]): string {
           return fillCloze(block.text, block.answers, (answer) => answer);
         case "table":
           return [block.columns, ...block.rows].map((cells) => cells.join(" | ")).join("\n");
+        case "senses":
+          return block.senses.map(senseLine).join("\n");
         case "unsupported":
           return `[이 버전에서 표시할 수 없는 내용: ${block.type}]`;
       }

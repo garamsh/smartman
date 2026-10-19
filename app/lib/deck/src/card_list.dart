@@ -5,6 +5,7 @@ import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'content.dart';
+import 'content_view.dart';
 import 'split_card.dart';
 import 'whole_card_view.dart';
 
@@ -38,9 +39,9 @@ class CardSplitRow extends StatelessWidget {
         : SplitCard(
             centred: false,
             front: (context, _) =>
-                Text(describeContent(l10n, front), style: AppType.label),
-            back: (context, _) => Text(
-              describeContent(l10n, back),
+                Text.rich(contentSpan(l10n, front), style: AppType.label),
+            back: (context, _) => Text.rich(
+              contentSpan(l10n, back),
               style: AppType.secondary.copyWith(color: colors.ink2),
             ),
           );
@@ -107,15 +108,15 @@ class CardAnswerRow extends StatelessWidget {
                     spacing: AppSpace.s12,
                     children: [
                       Expanded(
-                        child: Text(
-                          describeContent(l10n, front),
+                        child: Text.rich(
+                          contentSpan(l10n, front),
                           style: AppType.bodyStrong,
                         ),
                       ),
                       if (shown)
                         Expanded(
-                          child: Text(
-                            answer,
+                          child: Text.rich(
+                            contentSpan(l10n, back),
                             textAlign: TextAlign.end,
                             style: AppType.secondary.copyWith(
                               color: colors.ink2,
@@ -147,6 +148,7 @@ String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
       (block) => switch (block) {
         TextContent(:final text) => text,
         ClozeContent(:final filled) || TableContent(:final filled) => filled,
+        SensesContent(:final lines) => lines,
         UnsupportedContent(:final type) => l10n.unsupportedContent(type),
       },
     )

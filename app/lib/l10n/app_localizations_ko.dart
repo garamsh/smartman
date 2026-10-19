@@ -77,6 +77,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCardReadOnly => '표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요.';
 
   @override
+  String get sensesEditNote => '답을 고치면 [명] 같은 표시도 글자로 저장돼요.';
+
+  @override
   String get duplicateTitle => '이 덱에 이미 있는 카드예요';
 
   @override
