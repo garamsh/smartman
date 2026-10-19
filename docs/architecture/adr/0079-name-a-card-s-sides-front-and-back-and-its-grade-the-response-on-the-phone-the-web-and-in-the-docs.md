@@ -1,4 +1,4 @@
-# ADR 0078: Name a card's sides front and back and its grade the response, on the phone, the web and in the docs
+# ADR 0079: Name a card's sides front and back and its grade the response, on the phone, the web and in the docs
 
 > Status: accepted
 > Date: 2026-10-19

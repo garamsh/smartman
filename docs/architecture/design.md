@@ -61,7 +61,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 - Korean, in `app/lib/l10n/app_ko.arb`, is 해요체 throughout: plain, short, and consistent in its sentence endings ("아직 덱이 없어요.", "카드 3개를 찾았어요"). No sentence ends in 합쇼체 ("…ㅂ니다", "…ㅂ니까"). A label or a button names its action ("로그아웃", "그래도 추가").
 - English, in `app_en.arb`, matches it in tone: plain, second person, no exclamation marks.
-- **Terms** (#243, [ADR 0078](adr/0078-name-a-card-s-sides-front-and-back-and-its-grade-the-response-on-the-phone-the-web-and-in-the-docs.md)). A card's two sides are 앞면 and 뒷면, in English Front and Back, in every string, label and screen-reader text on the phone and the web, and in the docs; 문제 and 답 name no side. The grade a card is given, 안다 or 모른다, is 응답, in English Response, and answering it is 응답하다, to respond: "앞면: … 뒷면: … 응답: 안다". In code, `Answer` stays the grade, and a side is `front` or `back`, the type scale's `front` and `back` among them.
+- **Terms** (#243, [ADR 0079](adr/0079-name-a-card-s-sides-front-and-back-and-its-grade-the-response-on-the-phone-the-web-and-in-the-docs.md)). A card's two sides are 앞면 and 뒷면, in English Front and Back, in every string, label and screen-reader text on the phone and the web, and in the docs; 문제 and 답 name no side. The grade a card is given, 안다 or 모른다, is 응답, in English Response, and answering it is 응답하다, to respond: "앞면: … 뒷면: … 응답: 안다". In code, `Answer` stays the grade, and a side is `front` or `back`, the type scale's `front` and `back` among them.
 
 ### Where it lives
 
@@ -154,7 +154,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 ## Rationale
 
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the study screen these principles generalize.
-- [ADR 0078](adr/0078-name-a-card-s-sides-front-and-back-and-its-grade-the-response-on-the-phone-the-web-and-in-the-docs.md) records why a card's sides are 앞면 and 뒷면 and its grade 응답, and what keeps its wording.
+- [ADR 0079](adr/0079-name-a-card-s-sides-front-and-back-and-its-grade-the-response-on-the-phone-the-web-and-in-the-docs.md) records why a card's sides are 앞면 and 뒷면 and its grade 응답, and what keeps its wording.
 - [ADR 0023](adr/0023-scroll-the-current-study-card-with-the-stack-and-centre-each-half.md) records why the current card scrolls with the stack and why each half of a split card centres its content.
 - [ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md) records why the study screen shows two cards of one size, and why the previous card is re-decided by a swipe and opened on a tap.
 - [ADR 0035](adr/0035-show-the-previous-and-current-study-card-reach-earlier-cards-three-at-a-time-re-decide-the-centred-card-and-grade-each-card-by-its-colour-and-a-chip.md) records the study screen's grades by colour and chip, its answer buttons and first-run guide, the change of an answer by a drag on the centred card, the completion card's streak colour, mascot and "그만하기", and the split card drawn once in `deck`.
