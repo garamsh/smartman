@@ -185,7 +185,7 @@ The Supabase schema the app syncs to, and the extraction count, the plans, and t
 - `public.study_day_start_hour()` returns 4, the hour a study day starts at in local time, `studyDayStartHour` of `app/lib/study/src/queue.dart` and `web/src/features/study/queue.ts`. `study_streak_before`, `study_days_before` and `study_record_days` start each study day there, so the server holds the hour once (issue #220).
 - `web/src/features/study/__tests__/rules.test.ts` fails when the hour the latest migration defining the function returns differs from `queue.ts`'s, and `study_day_start_test.sql` when one of the three functions does not follow a change of it.
 - It is `immutable`, `security invoker`, and sets `search_path = ''`. `execute` is revoked from `public` and `anon` and granted to `authenticated`, which calls the three functions.
-- Migration `20261019120001_study_day_start.sql` added it and replaced the three functions with the same results, changing no row.
+- Migration `20261019180001_study_day_start.sql` added it and replaced the three functions with the same results, changing no row.
 
 ### Streak
 
