@@ -210,7 +210,11 @@ const twoCards = [{
   front: "run",
   answer: null,
   topic: "Unit 3 동사",
-  senses: [{ pos: "[동]", meaning: "달리다" }],
+  senses: [{
+    labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+    meaning: "달리다",
+    examples: [],
+  }],
   extras: [],
   pronunciation: null,
   examples: ["I run every morning."],
@@ -222,7 +226,7 @@ const twoCards = [{
   front: "river",
   answer: null,
   topic: "Unit 3 동사",
-  senses: [{ pos: null, meaning: "강" }],
+  senses: [{ labels: [], meaning: "강", examples: [] }],
   extras: [],
   pronunciation: null,
   examples: [],
@@ -254,7 +258,11 @@ const twoAnswered = [{
   back: "[동] 달리다",
   meaning: "달리다",
   partOfSpeech: "[동]",
-  senses: [{ pos: "[동]", meaning: "달리다" }],
+  senses: [{
+    labels: [{ kind: "part_of_speech", category: "verb", text: "동" }],
+    meaning: "달리다",
+    examples: [],
+  }],
 }, {
   kind: "vocabulary",
   type: "concept",
@@ -265,7 +273,7 @@ const twoAnswered = [{
   topic: "Unit 3 동사",
   back: "강",
   meaning: "강",
-  senses: [{ pos: null, meaning: "강" }],
+  senses: [{ labels: [], meaning: "강", examples: [] }],
 }, {
   kind: "note",
   type: "concept",
@@ -607,7 +615,7 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
   // Nothing outside the page enters a card.
   for (
     const kept of [
-      "never add a fact, a meaning, a part of speech, an extra, a pronunciation or an example the page does not show",
+      "never add a fact, a meaning, a label, an extra, a pronunciation or an example the page does not show",
       "A field the page does not print is null or empty.",
       "Never write an example of your own.",
     ]
@@ -634,13 +642,16 @@ Deno.test("the model is asked for atomic theory and exceptions, named by short k
       "A whole table is never one card.",
       'with one blank written "___"',
       "gets one cloze card per blank",
+      // v7: a sense's label copied verbatim with its brackets into "pos".
+      '"pos"',
+      "copied verbatim with its brackets",
     ]
   ) {
     assert.ok(!system.includes(dropped), `no longer asks: ${dropped}`);
   }
 });
 
-Deno.test("prompt v7 asks for #200's rules with a whole table on one table card and a cloze of one or more blanks, an exception card stating what the exception does, a type on every card, and a vocabulary entry's senses, extras and pronunciation", async () => {
+Deno.test("prompt v8 asks for #200's rules with a whole table on one table card and a cloze of one or more blanks, an exception card stating what the exception does, a type on every card, and a vocabulary entry's senses with their labels and examples, extras and pronunciation", async () => {
   const r = await run({ replies: [cardsReply(twoCards)] });
   const system = r.modelCalls[0].messages[0].content;
   const rules: Record<string, string[]> = {
@@ -714,15 +725,32 @@ Deno.test("prompt v7 asks for #200's rules with a whole table on one table card 
     ],
     "vocabulary form": [
       "\"senses\" are a vocabulary entry's meanings, in the page's order",
-      '"pos" is the part-of-speech label the page prints for that meaning, copied verbatim',
-      "or null when the page prints none",
+      '{"labels": [...], "meaning": "...", "examples": [...]}',
       "An entry with one meaning has one sense.",
-      '"extras" are anything else the page prints for a vocabulary entry, each with the page\'s own label verbatim',
+      '"extras" are anything else the page prints for a vocabulary entry as a whole, rather than for one meaning, each with the page\'s own label verbatim',
       '"pronunciation" is the pronunciation, phonetic transcription or reading the page prints for a vocabulary entry, verbatim',
       "when the page prints one per part of speech",
       'It is null for every vocabulary card, whose meanings go in "senses"',
     ],
+    "#228 labels transcribed, never inferred": [
+      '"labels" are the labels the page prints for that meaning, in the page\'s order, each transcribed, never inferred.',
+      'A part of speech is {"kind": "part_of_speech", "category": <name>, "text": <as printed>}',
+      '"noun", "verb", "adjective", "adverb", "pronoun", "preposition" (a postposition too), "conjunction", "interjection", "determiner" (an article too), "numeral", "particle", "auxiliary", "classifier", "phrase" (an idiom or set phrase)',
+      'Any other label is {"kind": "other", "category": null, "text": <as printed>}: a semantic class such as [사물], a register such as [구어], a field such as [의학], or a part of speech not on that list.',
+      '"text" is the label as printed, its dots kept, without the brackets or parentheses around it',
+      '"labels" is an empty list when the page prints no label for the meaning, even when its part of speech is plain: never add a label the page does not print.',
+      '"meaning" is the translation or the definition, exactly as written',
+    ],
+    "#228 examples per sense": [
+      '"examples" are the example sentences the page prints under that meaning',
+      'an example the page prints under one of its meanings goes in that sense\'s "examples" instead',
+    ],
+    "#228 other grammar in extras": [
+      "The entry's grammar beyond its parts of speech goes here too, verbatim under the page's label",
+      '{"label": "성", "text": "der"} for a gender, a measure word, a verb class, a plural or an irregular form',
+    ],
     cap: [
+      "at most 10 senses, 5 labels and 5 examples a sense, 10 extras and 10 cloze answers",
       "keep its definitions, rules, judgment cards, handwritten tips and marked exceptions before its table and cloze cards, and those before its identify cards",
       "a table at most 8 columns and 20 rows",
     ],
