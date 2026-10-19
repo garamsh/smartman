@@ -9,19 +9,22 @@ const button =
 
 /**
  * An admin action that records a reason: [label] opens a field for the reason, then [question]
- * with [confirmLabel] to act and "취소" to leave it; the action's sentence shows after.
+ * with "취소" to leave it and, last, [confirmLabel] to act, a red final button where the action
+ * is [final], cannot be undone; the action's sentence shows after.
  */
 export function ReasonAction({
   label,
   reasonLabel,
   question,
   confirmLabel,
+  final = false,
   action,
 }: {
   label: string;
   reasonLabel: string;
   question: string;
   confirmLabel: string;
+  final?: boolean;
   action: (reason: string) => Promise<ActionResult>;
 }) {
   const [open, setOpen] = useState(false);
@@ -60,6 +63,16 @@ export function ReasonAction({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              disabled={pending}
+              onClick={() => {
+                setOpen(false);
+              }}
+              className={`${button} border border-outline text-ink`}
+            >
+              취소
+            </button>
+            <button
+              type="button"
               disabled={pending || reason.trim() === ""}
               onClick={() => {
                 startTransition(async () => {
@@ -71,19 +84,9 @@ export function ReasonAction({
                   }
                 });
               }}
-              className={`${button} bg-ink text-surface`}
+              className={`${button} ${final ? "bg-dont-know-text text-on-dont-know-text" : "bg-ink text-surface"}`}
             >
               {confirmLabel}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                setOpen(false);
-              }}
-              className={`${button} border border-outline text-ink`}
-            >
-              취소
             </button>
           </div>
         </div>
