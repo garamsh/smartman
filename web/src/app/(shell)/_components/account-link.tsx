@@ -17,7 +17,7 @@ export async function AccountLink({ labelled = false }: { labelled?: boolean }) 
     return (
       <Link
         href="/account"
-        className="flex min-h-13 items-center gap-2.5 rounded-field px-2.5 text-secondary font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="pressable flex min-h-13 items-center gap-2.5 rounded-field px-2.5 text-secondary font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         {avatar}
         계정과 설정
@@ -28,7 +28,7 @@ export async function AccountLink({ labelled = false }: { labelled?: boolean }) 
     <Link
       href="/account"
       aria-label="계정과 설정"
-      className="flex size-tap-target items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="pressable flex size-tap-target items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       {avatar}
     </Link>
