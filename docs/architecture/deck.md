@@ -44,6 +44,11 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - Deleting a card sets its `deleted_at`. Its reviews and state stay in the database, out of every screen. The editor asks for confirmation first.
 - Every read leaves tombstoned decks and cards out: the lists, the counts, `listCards`, and the duplicate check.
 - Every write is local. Nothing in the domain touches the network or imports `sync`.
+- Stored vocabulary backs written as text with a printed label, such as `[명] 사과`, are to become senses blocks (#228). The migration is not written yet: its first step is `supabase/senses-dry-run.sh`, which runs `supabase/senses-dry-run.sql` read-only against a running local stack, such as one holding a copy of production, and writes a report for the PM.
+  - A card would convert only when its back is one text block and every non-empty line is a sense line: a known short form, Korean or English (`명`, `동`, `n`, `adj` …), in brackets, in parentheses, with a dot, or bare and followed by a space and more text.
+  - A card with any other line is left alone, so a note or free text is never touched.
+  - The report counts the live cards, those that would convert and those left alone, by reason, and gives each form's cards, lines and up to five samples, every bare-form line, as its label may be a meaning's first word, and up to five mixed cards.
+  - `supabase/senses-dry-run.test.sh`, in `make test`, checks it on a fixture of each form, a mixed card, a note, an unrecognised label, a back of two blocks and a deleted card, and that no row changes.
 
 ### Card key and duplicates
 
