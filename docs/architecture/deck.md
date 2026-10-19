@@ -100,21 +100,23 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 
 - The editor has a close button, the title "카드 추가" or "카드 편집", and the deck name on the right; when editing, also a delete button.
 - **Kinds** ([ADR 0083](adr/0083-write-every-card-kind-by-hand-in-a-form-of-its-own-chosen-by-a-kind-switch-each-deck-remembers.md)): a card is a cloze or a table when its front holds that block, a word when its back holds senses, and otherwise basic.
-  - A new card's editor opens with a segmented switch, "카드 종류", of "기본" and "단어", in the kind the deck's last new card was added in. It keeps that kind per deck on the device under `deckCardKinds`, and a write the device refuses shows a storage failure.
+  - A new card's editor opens with a segmented switch, "카드 종류", of "기본", "단어" and "빈칸", in the kind the deck's last new card was added in. It keeps that kind per deck on the device under `deckCardKinds`, and a write the device refuses shows a storage failure.
   - An existing card opens in its own kind, with no switch.
-- A live preview shows the card as the study screen's previous card shows it, front left and back right, each centred in its half and shrunk until its widest word fits, as the study card does. Below it come the multi-line field "앞면" and the kind's form:
+- A live preview shows the card as the study screen's previous card shows it, front left and back right, each centred in its half and shrunk until its widest word fits, as the study card does, its lines broken only between words (`keepWords`). Below it come the multi-line field "앞면" and the kind's form:
   - **basic:** the multi-line field "뒷면";
   - **word:** one bordered card per sense, "뜻 1" and on.
     - Each holds its labels as chips, each with a remove button named "[명] 표시 지우기", and "표시 추가".
     - "표시 추가" opens a sheet of the fourteen parts of speech, "[명] 명사" and so on, and a field "다른 표시" for any other label, added by "이 표시 추가".
     - Each sense also has the fields "뜻" and "예문", one example per line.
     - Its up, down and delete buttons are named "n번째 뜻을 위로", "n번째 뜻을 아래로" and "n번째 뜻 지우기", disabled where they cannot act, so a word keeps one sense. "뜻 추가" adds a sense under the last.
+  - **cloze:** "빈칸으로 할 낱말을 눌러요" and the words of the front, each a toggle chip read as the word, or "{word}, 빈칸" when chosen. A tap chooses a word as a blank or leaves it out, and adjacent chosen words make one blank. An edit to the front keeps a chosen word that the edit leaves whole, before or after the changed part, and leaves out one it changes. Once a word is chosen, the preview draws the card whole, its blanks filled.
 - The editor is a scrolling column, so every field is built.
-- On save, an empty front reads "내용을 입력하세요" under it, as does an empty basic back, and a sense without a meaning reads "뜻을 적어 주세요" under its field; nothing is saved.
+- On save, an empty front reads "내용을 입력하세요" under it, as does an empty basic back, and a sense without a meaning reads "뜻을 적어 주세요" under its field, and a cloze with no word chosen reads "빈칸으로 할 낱말을 하나 이상 골라 주세요" under its words; nothing is saved.
 - A word saves its front as text and its back as one senses block of its senses in order, each label as chosen, the meaning trimmed and each non-empty example line trimmed, followed by any other block the card's back held, such as its extras. Saved unchanged, it is stored as it was.
+- A cloze saves a cloze block of the front, each blank `___` with the words it covers as its answer, and the front filled as text as its back, as photo import writes one. Duplicates are keyed by the filled front. An existing cloze saved with its front and blanks unchanged is stored as it was, a blank inside a word included; once either is edited, every blank covers whole words.
 - Adding offers "저장", which saves and closes, and "저장하고 다음 카드", which saves and leaves the editor open and empty, in the same kind, with the focus on "앞면". Editing offers "저장" alone.
 - A side holding a senses block in the basic form, a reversed word's front, keeps it while its field's text is left as it was. An edited one becomes a text block, its labels as typed, as "앞면을 고치면 [명] 같은 표시도 글자로 저장돼요." under the front says.
-- A whole card opens read-only ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md)): its preview filled, "표 카드와 빈칸 카드는 아직 고칠 수 없어요. 지울 수는 있어요." under it, no field and no "저장", and the delete button. The cloze and table forms are the next steps of [ADR 0083](adr/0083-write-every-card-kind-by-hand-in-a-form-of-its-own-chosen-by-a-kind-switch-each-deck-remembers.md).
+- A table card opens read-only ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md)): its preview filled, "표 카드는 아직 고칠 수 없어요. 지울 수는 있어요." under it, no field and no "저장", and the delete button. The table form is the next step of [ADR 0083](adr/0083-write-every-card-kind-by-hand-in-a-form-of-its-own-chosen-by-a-kind-switch-each-deck-remembers.md).
 
 ### State and composition
 

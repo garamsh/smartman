@@ -76,7 +76,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wholeCardReadOnly =>
-      'Table and cloze cards can\'t be edited yet. You can delete one.';
+      'Table cards can\'t be edited yet. You can delete one.';
 
   @override
   String get sensesEditNote =>
@@ -87,6 +87,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardKindWord => 'Word';
+
+  @override
+  String get cardKindCloze => 'Cloze';
+
+  @override
+  String get clozeWordsHint => 'Tap the words to make blanks';
+
+  @override
+  String clozeWord(String word) {
+    return '$word';
+  }
+
+  @override
+  String clozeWordBlank(String word) {
+    return '$word, blank';
+  }
+
+  @override
+  String get clozeBlankRequired => 'Choose at least one word as a blank';
 
   @override
   String get cardKindLabel => 'Card kind';
