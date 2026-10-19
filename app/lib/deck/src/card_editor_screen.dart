@@ -10,6 +10,7 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_kind.dart';
 import 'card_preview.dart';
+import 'cloze_form.dart';
 import 'content.dart';
 import 'deck_repository.dart';
 import 'failure_message.dart';
@@ -19,10 +20,11 @@ import 'word_form.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
 /// of the card as the study screen shows it, in the form of its kind: a text
-/// front and back, or a word with its senses. A new card starts in the kind
+/// front and back, a word with its senses, or a line with blanks. A new card
+/// starts in the kind
 /// the deck's last new card was added in, and a switch at the top changes it;
-/// a card being edited keeps its kind (ADR 0083). A table or cloze card is
-/// shown read-only, with a note, as it cannot be edited yet (ADR 0068).
+/// a card being edited keeps its kind (ADR 0083). A table card is shown
+/// read-only, with a note, as it cannot be edited yet (ADR 0068).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -58,6 +60,18 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// The word form's senses: those of the card's back, or one empty sense.
   late final List<SenseDraft> _senses = _draftsOf(widget.card?.back);
 
+  /// The cloze form's blanks: the card's own, or none.
+  late ClozeDraft _cloze = switch (widget.card?.front
+      .whereType<ClozeContent>()
+      .firstOrNull) {
+    final cloze? => ClozeDraft.of(cloze),
+    null => ClozeDraft(),
+  };
+
+  /// Whether the cloze's line or blanks were changed; until then, an existing
+  /// cloze card keeps its own blocks, a blank inside a word included.
+  bool _clozeEdited = false;
+
   bool get _isNew => widget.card == null;
 
   @override
@@ -77,12 +91,20 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       switch (_kind) {
         CardKind.basic => _back.text.trim().isNotEmpty,
         CardKind.word => !_senses.any((sense) => sense.isBlank),
+        CardKind.cloze => _cloze.content != null,
       };
+
+  /// The card's own front and back while its cloze is left as it was.
+  bool get _keepsCloze => widget.card != null && !_clozeEdited;
 
   /// The front as saved: the text typed, or the card's own blocks while their
   /// text is left as it was.
-  List<Content> get _frontBlocks =>
-      _replaceText(widget.card?.front ?? const [], _front.text);
+  List<Content> get _frontBlocks => switch (_kind) {
+    CardKind.cloze when _keepsCloze => widget.card!.front,
+    // The line itself, while it has no blank, so the preview shows it.
+    CardKind.cloze => [_cloze.content ?? TextContent(_front.text)],
+    _ => _replaceText(widget.card?.front ?? const [], _front.text),
+  };
 
   /// The back as saved: the text typed, as [_frontBlocks]; or a word's senses,
   /// then any other block the card's back holds, such as its extras.
@@ -92,6 +114,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       SensesContent([for (final sense in _senses) sense.sense]),
       ...?widget.card?.back.where((block) => block is! SensesContent),
     ],
+    CardKind.cloze when _keepsCloze => widget.card!.back,
+    // The line with its blanks filled, as photo import writes a cloze's back.
+    CardKind.cloze => [TextContent(_cloze.content?.filled ?? _front.text)],
   };
 
   Future<void> _chooseKind(CardKind kind) async {
@@ -142,6 +167,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             _senses
               ..clear()
               ..add(SenseDraft());
+            _cloze = ClozeDraft();
             _showRequired = false;
           });
           _frontFocus.requestFocus();
@@ -194,8 +220,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final card = widget.card;
-    // A table or cloze card cannot be edited yet, so it is shown read-only.
-    final readOnly = card != null && isWholeCard(card.front);
+    // A table card cannot be edited yet, so it is shown read-only.
+    final readOnly =
+        card != null && card.front.any((block) => block is TableContent);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -257,6 +284,10 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                             value: CardKind.word,
                             label: Text(l10n.cardKindWord),
                           ),
+                          ButtonSegment(
+                            value: CardKind.cloze,
+                            label: Text(l10n.cardKindCloze),
+                          ),
                         ],
                         selected: {_kind},
                         onSelectionChanged: (kinds) =>
@@ -275,7 +306,10 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                     minLines: 2,
                     maxLines: null,
                     errorText: _requiredError(l10n, _front),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (text) => setState(() {
+                      _cloze.update(text);
+                      _clozeEdited = true;
+                    }),
                   ),
                   if (card?.front.any((block) => block is SensesContent) ??
                       false) ...[
@@ -301,6 +335,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                       senses: _senses,
                       showErrors: _showRequired,
                       onChanged: () => setState(() {}),
+                    ),
+                    CardKind.cloze => ClozeWords(
+                      line: _front.text,
+                      draft: _cloze,
+                      showError: _showRequired,
+                      onChanged: () => setState(() => _clozeEdited = true),
                     ),
                   },
                 ],

@@ -7,13 +7,15 @@ import 'content.dart';
 import 'failure.dart';
 import 'model.dart';
 
-/// The form a card is written in: a front and a back of text, or a word with
-/// its senses (ADR 0083).
-enum CardKind { basic, word }
+/// The form a card is written in: a front and a back of text, a word with its
+/// senses, or a line with blanks (ADR 0083).
+enum CardKind { basic, word, cloze }
 
-/// The kind [card] is edited in: a word when its back holds senses, and
-/// otherwise basic.
-CardKind kindOf(Card card) => card.back.any((block) => block is SensesContent)
+/// The kind [card] is edited in: a cloze when its front holds one, a word when
+/// its back holds senses, and otherwise basic.
+CardKind kindOf(Card card) => card.front.any((block) => block is ClozeContent)
+    ? CardKind.cloze
+    : card.back.any((block) => block is SensesContent)
     ? CardKind.word
     : CardKind.basic;
 

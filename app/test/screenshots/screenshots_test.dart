@@ -626,6 +626,58 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('the cloze form in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardEditorScreen(deck: deck),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.cardKindCloze));
+      await tester.enterText(
+        find.widgetWithText(AppTextField, ko.cardFront),
+        'She gave me a present for my birthday',
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(ko.save));
+      await tap(tester, find.text(ko.save));
+      await shot(tester, '05f-card-editor-cloze-error');
+      for (final word in ['a', 'present']) {
+        final chip = find.widgetWithText(FilterChip, word);
+        await tester.ensureVisible(chip);
+        await tap(tester, chip);
+      }
+      await tester.ensureVisible(find.text(ko.cardKindCloze));
+      await tester.pumpAndSettle();
+      await shot(tester, '05g-card-editor-cloze');
+      await unmount(tester);
+    });
+
     testWidgets('the record tab over twelve weeks in $mode', skip: !_capture, (
       tester,
     ) async {

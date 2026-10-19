@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_list.dart';
 import 'card_text.dart';
@@ -10,9 +11,9 @@ import 'split_card.dart';
 import 'whole_card_view.dart';
 
 /// A card as the study screen shows it with its back revealed: the front on
-/// the left half and the back on the right, each centred and fitted to
-/// its half, or a whole card's front with its blanks filled, on a rounded
-/// surface.
+/// the left half and the back on the right, each centred and fitted to its
+/// half, its lines broken only between words, or a whole card's front with
+/// its blanks filled, on a rounded surface.
 class CardPreview extends StatelessWidget {
   const CardPreview({super.key, required this.front, required this.back});
 
@@ -52,14 +53,14 @@ class CardPreview extends StatelessWidget {
             : SplitCard(
                 front: (context, width) => CardText(
                   describeContent(l10n, front),
-                  span: contentSpan(l10n, front),
+                  span: contentSpan(l10n, front, wrap: keepWords),
                   style: AppType.front,
                   minFontSize: AppType.frontFloor,
                   width: width,
                 ),
                 back: (context, width) => CardText(
                   describeContent(l10n, back),
-                  span: contentSpan(l10n, back),
+                  span: contentSpan(l10n, back, wrap: keepWords),
                   style: AppType.back,
                   minFontSize: AppType.backFloor,
                   width: width,
