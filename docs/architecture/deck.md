@@ -78,7 +78,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
   - a colliding key is the save result `DuplicateFront`;
   - a block of an unknown type is `UnsupportedContent`;
   - a database exception is `StorageFailure`;
-  - stored content that cannot be decoded is `UnreadableCard`;
+  - stored content that cannot be decoded is `UnreadableCard`. `addCard` and `editCard` read the row they wrote back inside their transaction, so content the decoder refuses fails the save as `UnreadableCard` and is never stored (issue #306);
   - a write into a deck that was deleted is `DeckDeleted`.
 - `StorageFailure`, `UnreadableCard` and `DeckDeleted` are `DeckFailure`s the repository throws, or emits on a watched stream.
 - The screens show a `DeckFailure` to the user as a localized message, in a snack bar for an action or in place of a list. Any other error propagates.
@@ -115,7 +115,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
     - "빈칸 고르기" reads "빈칸으로 할 칸을 눌러요" over the headers as text and each cell as a tile, filled in `brandTint` when chosen; a tap chooses it or leaves it out. A screen reader reads a cell's text, or "내용 없음", its place and "빈칸" when chosen, and offers the action "빈칸으로" or "빈칸 해제".
     - The preview draws the table whole, its blanks filled.
 - The editor is a scrolling column, so every field is built.
-- On save, an empty front reads "내용을 입력하세요" under it, as does an empty basic back, and a sense without a meaning reads "뜻을 적어 주세요" under its field, a cloze with no word chosen reads "빈칸으로 할 낱말을 하나 이상 골라 주세요" under its words, and a table with no blank "빈칸으로 할 칸을 하나 이상 골라 주세요" under its grid, or, with a blank on an empty cell, "빈칸으로 고른 칸에 내용을 적어 주세요", that cell outlined in `dontKnowText`; nothing is saved.
+- On save, an empty front reads "내용을 입력하세요" under it, as does an empty basic back, and a sense without a meaning reads "뜻을 적어 주세요" under its field, a cloze with no word chosen reads "빈칸으로 할 낱말을 하나 이상 골라 주세요" under its words, a cloze line holding `___`, or a longer run of underscores, that would read as a blank with no answer "___는 빈칸 표시라 줄에 쓸 수 없어요" (issue #306), and a table with no blank "빈칸으로 할 칸을 하나 이상 골라 주세요" under its grid, or, with a blank on an empty cell, "빈칸으로 고른 칸에 내용을 적어 주세요", that cell outlined in `dontKnowText`; nothing is saved.
 - A word saves its front as text and its back as one senses block of its senses in order, each label as chosen, the meaning trimmed and each non-empty example line trimmed, followed by any other block the card's back held, such as its extras. Saved unchanged, it is stored as it was.
 - A cloze saves a cloze block of the front, each blank `___` with the words it covers as its answer, and the front filled as text as its back, as photo import writes one. Duplicates are keyed by the filled front. An existing cloze saved with its front and blanks unchanged is stored as it was, a blank inside a word included; once either is edited, every blank covers whole words.
 - A table saves its front as the name in a text block and then a table block of its headers and cells, each trimmed, and its blanks in the order chosen, and its back as the table filled as text, as photo import writes one. Duplicates are keyed by the name and the filled table. Saved unchanged, it is stored as it was.
