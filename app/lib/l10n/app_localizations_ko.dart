@@ -102,6 +102,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankRequired => '빈칸으로 할 낱말을 하나 이상 골라 주세요';
 
   @override
+  String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
+
+  @override
   String get cardKindTable => '표';
 
   @override

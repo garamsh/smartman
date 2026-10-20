@@ -173,6 +173,64 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a new line holding ___ or a longer run of underscores is refused with a message under its words, and the deck still lists',
+    (tester) async {
+      final screens = await openCloze(tester);
+      for (final line in ['capital ___ Paris', 'capital ____ Paris']) {
+        await typeLine(tester, line);
+        if (!chosen(tester, 'Paris')) await toggle(screens, 'Paris');
+        await save(screens);
+        expect(
+          find.text("___ marks a blank, so the line can't contain it"),
+          findsOneWidget,
+          reason: line,
+        );
+        expect(find.byType(SnackBar), findsNothing);
+        expect(await screens.cards(), isEmpty, reason: 'it lists, empty');
+      }
+
+      await typeLine(tester, 'capital of France Paris');
+      await save(screens);
+      expect((await _stored(screens)).front, [
+        const ClozeContent('capital of France ___', ['Paris']),
+      ], reason: 'control: without the underscores, it saves');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'an edit of a stored cloze that types ___ into its line is refused, the card is kept as stored, and the deck still lists',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const cloze = ClozeContent('a ___ b', ['x']);
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [cloze],
+          back: [const TextContent('a x b')],
+        ),
+      );
+      final card = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await typeLine(tester, 'a x b ___ c');
+      await save(screens);
+      expect(
+        find.text("___ marks a blank, so the line can't contain it"),
+        findsOneWidget,
+      );
+      expect(find.byType(SnackBar), findsNothing);
+      expect((await _stored(screens)).front, [cloze]);
+
+      await typeLine(tester, 'a x b c');
+      await save(screens);
+      expect((await _stored(screens)).front, [
+        const ClozeContent('a ___ b c', ['x']),
+      ], reason: 'control: without the underscores, the edit saves');
+      await screens.close();
+    },
+  );
+
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
       'in the ${mode.name} theme the cloze form meets the tap target, label and contrast guidelines',
