@@ -629,6 +629,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get discardImport => '버리기';
 
   @override
+  String get navigateBack => '뒤로';
+
+  @override
+  String get photoImportBusy => '읽고 있는 사진이 있어요. 끝난 뒤에 새로 가져올 수 있어요.';
+
+  @override
+  String importBarReading(int read, int total) {
+    return '사진 읽는 중 $read/$total';
+  }
+
+  @override
+  String importBarReady(int count) {
+    return '카드 $count장 확인하기';
+  }
+
+  @override
+  String importBarPaused(int count) {
+    return '읽던 사진 $count장 이어서 읽기';
+  }
+
+  @override
+  String resumeImportTitle(int count) {
+    return '읽던 사진 $count장을 이어서 읽을까요?';
+  }
+
+  @override
+  String get resumeImportBody => '이미 읽은 사진은 다시 보내지 않아요.';
+
+  @override
+  String get resumeImport => '이어서 읽기';
+
+  @override
   String photoView(int number) {
     return '사진 $number 크게 보기';
   }

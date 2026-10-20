@@ -14,6 +14,11 @@ enum PhotoOrigin {
   album,
 }
 
+/// A photo picked, prepared when it is called: resolves to the photo, or
+/// throws [PhotoUnreadable] when it cannot be read. A pick of many photos
+/// prepares each in its turn, so they are not all decoded at once.
+typedef PickedPhoto = Future<JpegPhoto> Function();
+
 /// Where a photo comes from: the system camera, or the photo library.
 abstract interface class PhotoSource {
   /// Lets the user take one photo with the system camera; null when they
@@ -22,10 +27,9 @@ abstract interface class PhotoSource {
   Future<JpegPhoto?> takePhoto();
 
   /// Lets the user pick up to [limit] photos, in the order they picked them;
-  /// null when they cancel. Each resolves to its photo, or throws
-  /// [PhotoUnreadable] when it cannot be read, so one unreadable photo leaves
-  /// the others. Throws [PhotoAccessDenied].
-  Future<List<Future<JpegPhoto>>?> pickFromLibrary({int limit = 1});
+  /// null when they cancel. One unreadable photo leaves the others. Throws
+  /// [PhotoAccessDenied].
+  Future<List<PickedPhoto>?> pickFromLibrary({int limit = 1});
 
   /// Opens this app's page in the system settings, where camera and photo
   /// access are allowed; false when it could not.
@@ -62,7 +66,7 @@ final class DevicePhotoSource implements PhotoSource {
   }
 
   @override
-  Future<List<Future<JpegPhoto>>?> pickFromLibrary({int limit = 1}) async {
+  Future<List<PickedPhoto>?> pickFromLibrary({int limit = 1}) async {
     final List<XFile> files;
     try {
       files = await ImagePicker().pickMultiImage(
@@ -74,7 +78,9 @@ final class DevicePhotoSource implements PhotoSource {
     } on PlatformException catch (error) {
       throw _failureOf(error);
     }
-    return files.isEmpty ? null : [for (final file in files) _prepare(file)];
+    return files.isEmpty
+        ? null
+        : [for (final file in files) () => _prepare(file)];
   }
 
   /// iOS's address of this app's settings page. Android never reports a

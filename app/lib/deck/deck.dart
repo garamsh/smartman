@@ -34,6 +34,7 @@ export 'src/content.dart'
         UnsupportedContent,
         clozeBlank,
         decodeContent,
+        encodeContent,
         decodeSense,
         isWholeCard,
         plainText;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -6,7 +8,9 @@ import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
+import 'deck_screen.dart';
 import 'decks_tab.dart';
 import 'first_run.dart';
 import 'new_deck_sheet.dart';
@@ -29,10 +33,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _recordShown = false;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_offerResume());
+  }
+
+  /// Offers to resume a photo import a closed app left with photos to read.
+  Future<void> _offerResume() async {
+    final imports = ref.read(photoImportsProvider);
+    if (imports == null) return;
+    await imports.restored;
+    if (!mounted) return;
+    if (imports.job case final job? when job.paused) {
+      await offerPhotoImportResume(context, imports, job);
+    }
+  }
+
+  /// Opens the photo import under way, then the deck it saved into.
+  Future<void> _openImport(PhotoImports imports) async {
+    final navigator = Navigator.of(context);
+    final deck = await openPhotoImport(context, imports);
+    if (deck == null || !mounted) return;
+    await navigator.push(
+      MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final sharing = ref.watch(sharingServiceProvider);
+    final imports = ref.watch(photoImportsProvider);
+    final importBar = imports == null
+        ? null
+        : PhotoImportBar(
+            imports: imports,
+            onOpen: () => _openImport(imports),
+          );
     return switch ((ref.watch(decksProvider), ref.watch(cardCountsProvider))) {
       (AsyncData(value: final decks), AsyncData(value: final counts)) =>
         decks.isEmpty
@@ -42,6 +80,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   title: const BrandTitle(),
                   actions: const [AccountButton()],
                 ),
+                bottomNavigationBar: importBar == null
+                    ? null
+                    : SafeArea(child: importBar),
                 body: _EmptyHome(
                   onCreate: () => showNewDeckSheet(context, ref),
                   onBrowse: sharing == null
@@ -78,12 +119,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const SizedBox.shrink(),
                     ],
                   ),
-                  bottomNavigationBar: _TabBar(
-                    selected: _tab,
-                    onSelect: (tab) => setState(() {
-                      _tab = tab;
-                      _recordShown |= tab == 2;
-                    }),
+                  bottomNavigationBar: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ?importBar,
+                      _TabBar(
+                        selected: _tab,
+                        onSelect: (tab) => setState(() {
+                          _tab = tab;
+                          _recordShown |= tab == 2;
+                        }),
+                      ),
+                    ],
                   ),
                 ),
               ),

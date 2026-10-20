@@ -405,6 +405,34 @@
   },
   "discardImport": "버리기",
   "@discardImport": {"description": "Confirms discarding the cards a photo import found."},
+  "navigateBack": "뒤로",
+  "@navigateBack": {"description": "Leaves a screen for the one under it, keeping what the screen was doing."},
+  "photoImportBusy": "읽고 있는 사진이 있어요. 끝난 뒤에 새로 가져올 수 있어요.",
+  "@photoImportBusy": {"description": "Says a new photo import cannot start while one is under way."},
+  "importBarReading": "사진 읽는 중 {read}/{total}",
+  "@importBarReading": {
+    "description": "The bar over the tab bar while a photo import reads: the photos read of all.",
+    "placeholders": {"read": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "importBarReady": "카드 {count}장 확인하기",
+  "@importBarReady": {
+    "description": "The bar over the tab bar once a photo import's list waits: how many cards it would add.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "importBarPaused": "읽던 사진 {count}장 이어서 읽기",
+  "@importBarPaused": {
+    "description": "The bar over the tab bar while a photo import restored from a closed app waits to resume.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "resumeImportTitle": "읽던 사진 {count}장을 이어서 읽을까요?",
+  "@resumeImportTitle": {
+    "description": "Title of the offer, on opening the app, to resume a photo import a closed app left.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "resumeImportBody": "이미 읽은 사진은 다시 보내지 않아요.",
+  "@resumeImportBody": {"description": "Body of the offer to resume a photo import: photos already read are not sent again."},
+  "resumeImport": "이어서 읽기",
+  "@resumeImport": {"description": "Resumes a photo import a closed app left."},
   "photoView": "사진 {number} 크게 보기",
   "@photoView": {
     "description": "Screen reader name of a photo import thumbnail, which opens the photo full screen.",
