@@ -398,6 +398,15 @@
   "@photoDrop": {"description": "Leaves a photo that failed out of the import."},
   "addPhotos": "사진 더 추가",
   "@addPhotos": {"description": "Adds more photos to the import, from the camera or the album."},
+  "discardImportTitle": "찾은 카드를 버릴까요?",
+  "@discardImportTitle": {"description": "Title of the confirmation before leaving or retaking a photo import list that holds cards."},
+  "discardImportBody": "찾은 카드 {count}장이 사라져요. 다시 읽으면 오늘 사진 한도가 다시 쓰여요.",
+  "@discardImportBody": {
+    "description": "Body of the confirmation before leaving a photo import list: its cards are lost, and reading the photos again counts against today's limit again.",
+    "placeholders": {"count": {"type": "int"}}
+  },
+  "discardImport": "버리기",
+  "@discardImport": {"description": "Confirms discarding the cards a photo import found."},
   "duplicateSkip": "건너뛰기",
   "@duplicateSkip": {"description": "Duplicate option: write nothing for this candidate."},
   "duplicateMergeBack": "뒷면 합치기",

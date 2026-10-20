@@ -658,6 +658,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addPhotos => 'Add more photos';
 
   @override
+  String get discardImportTitle => 'Discard the cards found?';
+
+  @override
+  String discardImportBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count cards found will be lost.',
+      one: 'The 1 card found will be lost.',
+    );
+    return '$_temp0 Reading the photos again uses today\'s photo limit again.';
+  }
+
+  @override
+  String get discardImport => 'Discard';
+
+  @override
   String get duplicateSkip => 'Skip';
 
   @override

@@ -1129,6 +1129,24 @@ abstract class AppLocalizations {
   /// **'사진 더 추가'**
   String get addPhotos;
 
+  /// Title of the confirmation before leaving or retaking a photo import list that holds cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾은 카드를 버릴까요?'**
+  String get discardImportTitle;
+
+  /// Body of the confirmation before leaving a photo import list: its cards are lost, and reading the photos again counts against today's limit again.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾은 카드 {count}장이 사라져요. 다시 읽으면 오늘 사진 한도가 다시 쓰여요.'**
+  String discardImportBody(int count);
+
+  /// Confirms discarding the cards a photo import found.
+  ///
+  /// In ko, this message translates to:
+  /// **'버리기'**
+  String get discardImport;
+
   /// Duplicate option: write nothing for this candidate.
   ///
   /// In ko, this message translates to:
