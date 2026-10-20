@@ -1,15 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  dailyMinutePresets,
-  defaultDailyMinutes,
-  maxDailyMinutes,
-  minDailyMinutes,
-  studyDayStart,
-} from "../queue";
+import { dailyMinuteStep, defaultDailyMinutes, maxDailyMinutes, minDailyMinutes } from "../queue";
 import {
   dailyNewCards,
-  lastNewCardDay,
+  daysToStartAll,
   type MinutesPlan,
   minutesPreview,
   paceOf,
@@ -60,30 +54,29 @@ describe("the figure", () => {
     expect(dailyNewCards({ minutes: 4, due: 58, pace })).toBe(1);
   });
 
-  it("defaults to 20 minutes, offers 5 to 180, and takes every answer at 10 s with no history", () => {
+  it("defaults to 20 minutes, offers 5 to 180 in steps of 5, and takes every answer at 10 s with no history", () => {
     expect(defaultDailyMinutes).toBe(20);
-    expect(dailyMinutePresets).toEqual([10, 15, 20, 30, 45, 60]);
+    expect(dailyMinuteStep).toBe(5);
     expect([minDailyMinutes, maxDailyMinutes]).toEqual([5, 180]);
     expect(paceOf([])).toEqual(unknownPace);
     // 20 minutes of 10 s answers, from the first day: no cold start.
     expect(dailyNewCards({ minutes: defaultDailyMinutes, due: 0, pace: unknownPace })).toBe(120);
   });
 
-  it("names the day the last new card is first answered: today when today takes them all, later at the daily figure, and never with none a day", () => {
-    const today = studyDayStart(Date.UTC(2026, 9, 14, 9), "UTC");
-    const last = (remaining: number, todayTakes: number, perDay: number) =>
-      lastNewCardDay({ remaining, today: todayTakes, perDay, todayStart: today, timeZone: "UTC" });
+  it("counts the days after today until the new cards are all started: none when today takes them all, by the daily figure after, and never with none a day", () => {
+    const days = (remaining: number, today: number, perDay: number) =>
+      daysToStartAll({ remaining, today, perDay });
 
-    expect(last(10, 15, 15)).toBe(today);
-    expect(last(15, 15, 15)).toBe(today);
-    // 85 left after today, 15 a day: the sixth day after today.
-    expect(last(100, 15, 15)).toBe(Date.UTC(2026, 9, 20, 4));
-    expect(last(16, 15, 15)).toBe(Date.UTC(2026, 9, 15, 4));
+    expect(days(10, 15, 15)).toBe(0);
+    expect(days(15, 15, 15)).toBe(0);
+    // 85 left after today, 15 a day: six more days.
+    expect(days(100, 15, 15)).toBe(6);
+    expect(days(16, 15, 15)).toBe(1);
     // 30 left after today, 15 a day: exactly two more days.
-    expect(last(45, 15, 15)).toBe(Date.UTC(2026, 9, 16, 4));
+    expect(days(45, 15, 15)).toBe(2);
     // Control: none a day after today never takes them all.
-    expect(last(16, 15, 0)).toBeNull();
-    expect(last(15, 15, 0)).toBe(today);
+    expect(days(16, 15, 0)).toBeNull();
+    expect(days(15, 15, 0)).toBe(0);
   });
 
   it("lets a recent fast week outweigh an older slow month in the review pace", () => {
@@ -113,22 +106,19 @@ describe("the figure", () => {
 
 // The same plans as app/test/study/daily_minutes_test.dart, with the same figures.
 describe("what a choice of minutes means", () => {
-  const today = Date.UTC(2026, 9, 15, 4);
   const plan = (fields: Partial<MinutesPlan> & { unstarted: number }): MinutesPlan => ({
     due: 0,
     started: 0,
     backlog: false,
     pace: unknownPace,
-    todayStart: today,
-    timeZone: "UTC",
     ...fields,
   });
 
   it("takes today the new cards the minutes leave room for, less those started today", () => {
-    // 20 min at 10 s: 120 a day, of which 20 were started today; 400 left after today.
+    // 20 min at 10 s: 120 a day, of which 20 were started today; 400 left after today: four more days.
     expect(minutesPreview(plan({ started: 20, unstarted: 500 }), 20)).toEqual({
       fresh: 100,
-      lastDay: Date.UTC(2026, 9, 19, 4),
+      after: 4,
     });
   });
 
@@ -136,7 +126,7 @@ describe("what a choice of minutes means", () => {
     // 60 due reviews at 10 s fill 10 minutes.
     expect(minutesPreview(plan({ due: 60, unstarted: 50 }), 10)).toEqual({
       fresh: 0,
-      lastDay: null,
+      after: null,
     });
     // Control: five more minutes leave room for 30.
     expect(minutesPreview(plan({ due: 60, unstarted: 50 }), 15).fresh).toBe(30);
@@ -145,12 +135,12 @@ describe("what a choice of minutes means", () => {
   it("takes no new card in a backlog, whatever the minutes", () => {
     expect(minutesPreview(plan({ unstarted: 50, backlog: true }), 60)).toEqual({
       fresh: 0,
-      lastDay: null,
+      after: null,
     });
   });
 
-  it("takes no more than the cards left, and with none left names no day", () => {
-    expect(minutesPreview(plan({ unstarted: 7 }), 20)).toEqual({ fresh: 7, lastDay: today });
-    expect(minutesPreview(plan({ unstarted: 0 }), 20)).toEqual({ fresh: 0, lastDay: null });
+  it("takes no more than the cards left, and with none left counts no day", () => {
+    expect(minutesPreview(plan({ unstarted: 7 }), 20)).toEqual({ fresh: 7, after: 0 });
+    expect(minutesPreview(plan({ unstarted: 0 }), 20)).toEqual({ fresh: 0, after: null });
   });
 });

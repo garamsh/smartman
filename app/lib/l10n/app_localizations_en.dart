@@ -1482,33 +1482,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dailyMinutesCustom => 'Custom';
-
-  @override
-  String dailyMinutesCustomValue(int minutes) {
-    return 'Custom · $minutes min';
-  }
-
-  @override
   String get dailyMinutesLess => '5 minutes less';
 
   @override
   String get dailyMinutesMore => '5 minutes more';
-
-  @override
-  String dailyMinutesToday(int fresh, int reviews) {
-    return 'About $fresh new cards today · $reviews reviews';
-  }
-
-  @override
-  String dailyMinutesForecast(int cards, String date) {
-    return 'At this pace you start the $cards new cards left by about $date';
-  }
-
-  @override
-  String dailyMinutesForecastToday(int cards) {
-    return 'You start the $cards new cards left today';
-  }
 
   @override
   String get dailyMinutesNoTime =>
@@ -1584,4 +1561,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weekOpenRecord => 'open Record';
+
+  @override
+  String get dailyMinutesUnit => 'min';
+
+  @override
+  String dailyMinutesNumberSemantics(int minutes) {
+    return '$minutes minutes a day, tap to type';
+  }
+
+  @override
+  String get dailyMinutesInput => 'Daily study time (minutes)';
+
+  @override
+  String get dailyMinutesOutOfRange => 'Enter 5 to 180 minutes';
+
+  @override
+  String get dailyMinutesFreshTitle => 'New cards a day';
+
+  @override
+  String dailyMinutesFreshValue(int count) {
+    return 'About $count';
+  }
+
+  @override
+  String get dailyMinutesAllTitle => 'All new cards started';
+
+  @override
+  String dailyMinutesAfterDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'In $days days',
+      one: 'In 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dailyMinutesAfterToday => 'Today';
 }

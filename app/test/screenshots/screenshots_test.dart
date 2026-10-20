@@ -292,17 +292,31 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.tabToday));
       // Once a deck has cards, the first-run step asks for the daily minutes.
-      await waitForChoices(tester, choice: ko.dailyMinutesChoice(10));
+      await waitForPicker(tester, more: ko.dailyMinutesMore);
       await shot(tester, '16a0-daily-minutes-first');
       await tap(tester, find.text(ko.dailyMinutesSkip));
       await shot(tester, '16a-today');
-      // The today card's control opens the sheet; a choice moves the preview.
+      // The today card's control opens the sheet; + moves the number and the
+      // tiles follow.
       await tap(tester, find.text(ko.dailyMinutesControl(20)));
-      await waitForChoices(tester, choice: ko.dailyMinutesChoice(10));
-      await tap(tester, find.text(ko.dailyMinutesChoice(30)));
+      await waitForPicker(tester, more: ko.dailyMinutesMore);
+      await tap(tester, find.byTooltip(ko.dailyMinutesMore));
       await shot(tester, '16g-daily-minutes-sheet');
-      await tap(tester, find.text(ko.dailyMinutesCustom));
-      await shot(tester, '16h-daily-minutes-custom');
+      // The number typed in place, out of range, above the keypad's space:
+      // the test renderer draws no system keyboard, so its inset stands in.
+      await tap(
+        tester,
+        find.bySemanticsLabel(ko.dailyMinutesNumberSemantics(25)),
+      );
+      await tester.enterText(find.byType(TextField), '200');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 690);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await shot(tester, '16h-daily-minutes-keypad');
+      tester.view.resetViewInsets();
+      await tester.enterText(find.byType(TextField), '');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.tabDecks));

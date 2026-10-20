@@ -2365,18 +2365,6 @@ abstract class AppLocalizations {
   /// **'{minutes}분'**
   String dailyMinutesChoice(int minutes);
 
-  /// The sheet's choice that sets the minutes by steps of 5.
-  ///
-  /// In ko, this message translates to:
-  /// **'직접 정하기'**
-  String get dailyMinutesCustom;
-
-  /// The custom choice once chosen, with its minutes.
-  ///
-  /// In ko, this message translates to:
-  /// **'직접 · {minutes}분'**
-  String dailyMinutesCustomValue(int minutes);
-
   /// Tooltip of the button that lowers the custom minutes by 5.
   ///
   /// In ko, this message translates to:
@@ -2388,24 +2376,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'5분 늘리기'**
   String get dailyMinutesMore;
-
-  /// The sheet's preview: the new cards and reviews left today at the chosen minutes.
-  ///
-  /// In ko, this message translates to:
-  /// **'오늘 새 카드 약 {fresh}장 · 복습 {reviews}장'**
-  String dailyMinutesToday(int fresh, int reviews);
-
-  /// The sheet's preview: the date by which every unstarted card is started at the chosen minutes.
-  ///
-  /// In ko, this message translates to:
-  /// **'이대로면 남은 새 카드 {cards}장을 {date}쯤 다 시작해요'**
-  String dailyMinutesForecast(int cards, String date);
-
-  /// The sheet's preview when today takes every unstarted card.
-  ///
-  /// In ko, this message translates to:
-  /// **'남은 새 카드 {cards}장을 오늘 다 시작해요'**
-  String dailyMinutesForecastToday(int cards);
 
   /// The sheet's preview when the reviews fill the chosen minutes.
   ///
@@ -2490,6 +2460,60 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'기록 열기'**
   String get weekOpenRecord;
+
+  /// After the daily study minutes' large number.
+  ///
+  /// In ko, this message translates to:
+  /// **'분'**
+  String get dailyMinutesUnit;
+
+  /// What a screen reader reads for the large number, which opens the keypad.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 {minutes}분, 눌러서 직접 입력'**
+  String dailyMinutesNumberSemantics(int minutes);
+
+  /// The label a screen reader reads for the number while it is typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 공부 시간(분)'**
+  String get dailyMinutesInput;
+
+  /// Under the typed number when it is outside 5 to 180; saving waits until it is fixed.
+  ///
+  /// In ko, this message translates to:
+  /// **'5분에서 180분 사이로 적어 주세요'**
+  String get dailyMinutesOutOfRange;
+
+  /// The first tile's label: today's new cards at the chosen minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'하루 새 카드'**
+  String get dailyMinutesFreshTitle;
+
+  /// The first tile's value: today's new cards at the chosen minutes.
+  ///
+  /// In ko, this message translates to:
+  /// **'약 {count}장'**
+  String dailyMinutesFreshValue(int count);
+
+  /// The second tile's label: when every unstarted card has been started.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 카드 모두 시작'**
+  String get dailyMinutesAllTitle;
+
+  /// The second tile's value: in how many study days every unstarted card has been started.
+  ///
+  /// In ko, this message translates to:
+  /// **'{days}일 뒤'**
+  String dailyMinutesAfterDays(int days);
+
+  /// The second tile's value when today starts every unstarted card.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘'**
+  String get dailyMinutesAfterToday;
 }
 
 class _AppLocalizationsDelegate

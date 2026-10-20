@@ -1341,8 +1341,11 @@ void main() {
 
       await tester.tap(line);
       await tester.pumpAndSettle();
-      await waitForChoices(tester);
-      await tester.tap(find.text('30 min'));
+      await waitForPicker(tester);
+      await tester.tap(find.bySemanticsLabel('5 minutes a day, tap to type'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '30');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();

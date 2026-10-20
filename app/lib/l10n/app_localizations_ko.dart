@@ -1379,33 +1379,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dailyMinutesCustom => '직접 정하기';
-
-  @override
-  String dailyMinutesCustomValue(int minutes) {
-    return '직접 · $minutes분';
-  }
-
-  @override
   String get dailyMinutesLess => '5분 줄이기';
 
   @override
   String get dailyMinutesMore => '5분 늘리기';
-
-  @override
-  String dailyMinutesToday(int fresh, int reviews) {
-    return '오늘 새 카드 약 $fresh장 · 복습 $reviews장';
-  }
-
-  @override
-  String dailyMinutesForecast(int cards, String date) {
-    return '이대로면 남은 새 카드 $cards장을 $date쯤 다 시작해요';
-  }
-
-  @override
-  String dailyMinutesForecastToday(int cards) {
-    return '남은 새 카드 $cards장을 오늘 다 시작해요';
-  }
 
   @override
   String get dailyMinutesNoTime => '이 시간은 복습으로 차서 새 카드는 시작하지 않아요';
@@ -1462,4 +1439,37 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get weekOpenRecord => '기록 열기';
+
+  @override
+  String get dailyMinutesUnit => '분';
+
+  @override
+  String dailyMinutesNumberSemantics(int minutes) {
+    return '하루 $minutes분, 눌러서 직접 입력';
+  }
+
+  @override
+  String get dailyMinutesInput => '하루 공부 시간(분)';
+
+  @override
+  String get dailyMinutesOutOfRange => '5분에서 180분 사이로 적어 주세요';
+
+  @override
+  String get dailyMinutesFreshTitle => '하루 새 카드';
+
+  @override
+  String dailyMinutesFreshValue(int count) {
+    return '약 $count장';
+  }
+
+  @override
+  String get dailyMinutesAllTitle => '새 카드 모두 시작';
+
+  @override
+  String dailyMinutesAfterDays(int days) {
+    return '$days일 뒤';
+  }
+
+  @override
+  String get dailyMinutesAfterToday => '오늘';
 }

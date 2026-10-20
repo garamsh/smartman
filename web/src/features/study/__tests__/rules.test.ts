@@ -59,9 +59,7 @@ describe("the queue rules", () => {
     expect([...dartConstants(queueDart).keys()].sort()).toEqual(Object.keys(shared).sort());
   });
 
-  it("offer the phone's daily minute choices, and the server's bounds on the minutes", () => {
-    const presets = /^const dailyMinutePresets = \[([\d, ]+)\];$/m.exec(queueDart)?.[1];
-    expect(presets?.split(", ").map(Number)).toEqual([...queue.dailyMinutePresets]);
+  it("keep the minutes within the server's bounds", () => {
     const check =
       /daily_minutes integer not null check \(daily_minutes between (\d+) and (\d+)\)/.exec(
         migrations.map((file) => file.text).join("\n"),

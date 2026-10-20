@@ -152,9 +152,25 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   // The today card's control opens the daily study minutes' dialog, which saves on the server.
   await page.getByRole("button", { name: "하루 공부 시간 20분, 바꾸기", exact: true }).click();
   const minutes = page.getByRole("dialog", { name: "하루 공부 시간" });
-  await minutes.getByRole("button", { name: "30분", exact: true }).click();
-  await expect(minutes.getByRole("status")).toContainText("오늘 새 카드 약 2장 · 복습 0장");
+  // The tiles' region holds both tiles, so each value is matched as part of it.
+  await expect(minutes.getByRole("status")).toContainText("약 2장");
   await shot(page, "01c-daily-minutes");
+  // The number is typed in place; a number outside 5 to 180 holds 저장 until it is fixed.
+  await minutes.getByRole("button", { name: "하루 20분, 눌러서 직접 입력", exact: true }).click();
+  const typed = minutes.getByRole("textbox", { name: "하루 공부 시간(분)", exact: true });
+  await typed.fill("200");
+  await expect(
+    minutes.getByText("5분에서 180분 사이로 적어 주세요", { exact: true }),
+  ).toBeVisible();
+  await expect(minutes.getByRole("button", { name: "저장", exact: true })).toBeDisabled();
+  await shot(page, "01c-daily-minutes-typed");
+  await typed.fill("30");
+  await typed.press("Enter");
+  await expect(
+    minutes.getByRole("button", { name: "하루 30분, 눌러서 직접 입력", exact: true }),
+  ).toBeFocused();
+  // Both cards start today; matched as part of the tiles' region, as above.
+  await expect(minutes.getByRole("status")).toContainText("오늘");
   await minutes.getByRole("button", { name: "저장", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "하루 공부 시간 30분, 바꾸기", exact: true }),

@@ -98,8 +98,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(StudyScreen), findsNothing);
-      await waitForChoices(tester);
-      await screens.tap(find.text('Custom'));
+      await waitForPicker(tester);
       await screens.tap(find.byTooltip('5 minutes less'));
       await screens.tap(find.text('Save'));
 

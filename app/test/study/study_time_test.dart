@@ -62,10 +62,10 @@ void main() {
       expect(dailyNewCards(minutes: 4, due: 58, pace: pace), 1);
     });
 
-    test('the default is 20 minutes, the choices run from 5 to 180, and with no history every answer takes 10 s', () {
+    test('the default is 20 minutes, the minutes run from 5 to 180 in steps of 5, and with no history every answer takes 10 s', () {
       expect(defaultDailyMinutes, 20);
-      expect(dailyMinutePresets, [10, 15, 20, 30, 45, 60]);
       expect((minDailyMinutes, maxDailyMinutes), (5, 180));
+      expect(dailyMinuteStep, 5);
       expect(paceOf(const []), Pace.unknown);
       // 20 minutes of 10 s answers, from the first day: no cold start.
       expect(
@@ -74,27 +74,23 @@ void main() {
       );
     });
 
-    test('the day the last new card is first answered: today when today takes them all, later at the daily figure, and never with none a day', () {
-      final today = studyDayStart(_now, _utc);
-      DateTime? last(int remaining, int todayTakes, int perDay) =>
-          lastNewCardDay(
-            remaining: remaining,
-            today: todayTakes,
-            perDay: perDay,
-            todayStart: today,
-            offsetAt: _utc,
-          );
+    test('the days until the last new card is first answered: none when today takes them all, then as many days of the daily figure as the rest needs, and never with none a day', () {
+      int? days(int remaining, int todayTakes, int perDay) => daysToStartAll(
+        remaining: remaining,
+        today: todayTakes,
+        perDay: perDay,
+      );
 
-      expect(last(10, 15, 15), today);
-      expect(last(15, 15, 15), today);
+      expect(days(10, 15, 15), 0);
+      expect(days(15, 15, 15), 0);
       // 85 left after today, 15 a day: the sixth day after today.
-      expect(last(100, 15, 15), DateTime.utc(2026, 10, 20, 4));
-      expect(last(16, 15, 15), DateTime.utc(2026, 10, 15, 4));
+      expect(days(100, 15, 15), 6);
+      expect(days(16, 15, 15), 1);
       // 30 left after today, 15 a day: exactly two more days.
-      expect(last(45, 15, 15), DateTime.utc(2026, 10, 16, 4));
+      expect(days(45, 15, 15), 2);
       // Control: none a day after today never takes them all.
-      expect(last(16, 15, 0), isNull);
-      expect(last(15, 15, 0), today);
+      expect(days(16, 15, 0), isNull);
+      expect(days(15, 15, 0), 0);
     });
 
     test(

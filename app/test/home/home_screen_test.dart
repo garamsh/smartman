@@ -704,7 +704,7 @@ void main() {
     });
 
     testWidgets(
-      'the sheet previews today\'s new cards and reviews and the day the last new card starts, following the choice, and saving updates today\'s count at once',
+      'the sheet shows the minutes as one number between − and +, typed in place on the keypad, its tiles following it, and saving updates today\'s count at once',
       (tester) async {
         final list = await _open(
           tester,
@@ -716,49 +716,66 @@ void main() {
         // 20 minutes at the unknown pace of 10 s: 120 new cards.
         expect(find.bySemanticsLabel('120 cards for today'), findsOneWidget);
         await tester.tap(find.text('20 min a day'));
-        await waitForChoices(tester);
+        await waitForPicker(tester);
+        AppButton save() =>
+            tester.widget<AppButton>(find.widgetWithText(AppButton, 'Save'));
+        Finder tile(String text) => find.descendant(
+          of: find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics && widget.properties.liveRegion == true,
+          ),
+          matching: find.text(text),
+        );
 
-        expect(
-          tester.getSemantics(find.text('20 min').last),
-          isSemantics(isSelected: true, hasSelectedState: true),
-        );
-        expect(
-          find.text('About 120 new cards today · 0 reviews'),
-          findsOneWidget,
-        );
+        // No choices to pick from: the number, its steps and two tiles.
+        expect(find.text('10 min'), findsNothing);
+        expect(find.text('Custom'), findsNothing);
+        final number = find.bySemanticsLabel('20 minutes a day, tap to type');
+        expect(number, findsOneWidget);
+        expect(tile('New cards a day'), findsOneWidget);
+        expect(tile('About 120'), findsOneWidget);
         // 120 today, the other 30 tomorrow.
-        expect(
-          find.text(
-            'At this pace you start the 150 new cards left by about Oct 16',
-          ),
-          findsOneWidget,
-        );
+        expect(tile('All new cards started'), findsOneWidget);
+        expect(tile('In 1 day'), findsOneWidget);
 
-        await tester.tap(find.text('10 min'));
+        // The number opens the keypad in its place; the tiles follow what is
+        // typed before it is committed.
+        await tester.tap(number);
         await tester.pumpAndSettle();
-        expect(
-          find.text('About 60 new cards today · 0 reviews'),
-          findsOneWidget,
-        );
-        // 60 today, 60 tomorrow and 30 the day after.
-        expect(
-          find.text(
-            'At this pace you start the 150 new cards left by about Oct 17',
-          ),
-          findsOneWidget,
-        );
-        // Nothing is stored until Save.
-        expect(await list.storedMinutes(), isNull);
+        expect(find.byType(TextField), findsOneWidget);
+        await tester.enterText(find.byType(TextField), '10');
+        await tester.pumpAndSettle();
+        expect(tile('About 60'), findsOneWidget);
+        // 60 today, then 60 and 30.
+        expect(tile('In 2 days'), findsOneWidget);
 
-        await tester.tap(find.text('Custom'));
+        // Outside 5 to 180: a line says so and saving waits for a fix.
+        await tester.enterText(find.byType(TextField), '200');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pumpAndSettle();
-        await tester.tap(find.byTooltip('5 minutes less'));
+        expect(find.text('Enter 5 to 180 minutes'), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget);
+        expect(save().onPressed, isNull);
+
+        // An empty field keeps the minutes as they were.
+        await tester.enterText(find.byType(TextField), '');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pumpAndSettle();
-        expect(find.text('Custom · 5 min'), findsOneWidget);
+        expect(find.byType(TextField), findsNothing);
+        expect(number, findsOneWidget);
+        expect(save().onPressed, isNotNull);
+
+        // Any whole number in the bounds, committed with Done.
+        await tester.tap(number);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), '5');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
         expect(
-          find.text('About 30 new cards today · 0 reviews'),
+          find.bySemanticsLabel('5 minutes a day, tap to type'),
           findsOneWidget,
         );
+        expect(tile('About 30'), findsOneWidget);
         // Five is the floor.
         expect(
           tester
@@ -768,6 +785,8 @@ void main() {
               .onPressed,
           isNull,
         );
+        // Nothing is stored until Save.
+        expect(await list.storedMinutes(), isNull);
 
         await list.tap('Save');
 
@@ -778,6 +797,28 @@ void main() {
         await list.close();
       },
     );
+
+    testWidgets('leaving the typed number commits it, as Done does', (
+      tester,
+    ) async {
+      final list = await _open(tester, decks: ['Alpha'], fresh: {'Alpha': 3});
+      await tester.tap(find.text('20 min a day'));
+      await waitForPicker(tester);
+      await tester.tap(find.bySemanticsLabel('20 minutes a day, tap to type'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '37');
+      await tester.pumpAndSettle();
+
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(
+        find.bySemanticsLabel('37 minutes a day, tap to type'),
+        findsOneWidget,
+      );
+      await list.close();
+    });
 
     testWidgets(
       'once a deck has cards, the sheet shows once as a first-run step whose Skip keeps the default',
@@ -793,7 +834,7 @@ void main() {
           find.text('How many minutes a day will you study?'),
           findsOneWidget,
         );
-        await waitForChoices(tester);
+        await waitForPicker(tester);
         await list.tap('Skip');
         expect(find.byType(BottomSheet), findsNothing);
         expect(await list.storedMinutes(), isNull);
@@ -809,7 +850,7 @@ void main() {
 
     for (final (name, theme) in [('light', lightTheme), ('dark', darkTheme)]) {
       testWidgets(
-        'in the $name theme the control, the sheet and its custom steps meet the tap target and contrast guidelines',
+        'in the $name theme the control, the sheet and its typed number meet the tap target and contrast guidelines',
         (tester) async {
           Future<void> meetsGuidelines() async {
             await expectLater(
@@ -826,9 +867,15 @@ void main() {
           final list = await _open(tester, fresh: {'Alpha': 3}, theme: theme);
           await meetsGuidelines();
           await tester.tap(find.text('20 min a day'));
-          await waitForChoices(tester);
+          await waitForPicker(tester);
           await meetsGuidelines();
-          await list.tap('Custom');
+          // With the keypad's field and a number outside the bounds.
+          await tester.tap(
+            find.bySemanticsLabel('20 minutes a day, tap to type'),
+          );
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField), '200');
+          await tester.pumpAndSettle();
           await meetsGuidelines();
           await list.close();
         },

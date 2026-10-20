@@ -123,15 +123,12 @@ export async function Today() {
   const minutesControl = (onHero: boolean) => (
     <DailyMinutes
       minutes={dailyMinutes}
-      reviews={count.review}
       plan={{
         due: today.today.dueAtStart,
         started: today.today.startedToday,
         unstarted: newCards(cards, states).length,
         backlog: count.backlog,
         pace,
-        todayStart: day.start,
-        timeZone,
       }}
       onHero={onHero}
     />
