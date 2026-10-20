@@ -1596,4 +1596,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => 'Today';
+
+  @override
+  String get discardCardTitle => 'Discard this card?';
+
+  @override
+  String get discardCardBody => 'What you typed won\'t be saved.';
+
+  @override
+  String get discardCard => 'Discard';
+
+  @override
+  String get keepWriting => 'Keep writing';
 }

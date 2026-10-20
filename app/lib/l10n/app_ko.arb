@@ -890,5 +890,13 @@
   "dailyMinutesAfterDays": "{days}일 뒤",
   "@dailyMinutesAfterDays": {"description": "The second tile's value: in how many study days every unstarted card has been started.", "placeholders": {"days": {"type": "int"}}},
   "dailyMinutesAfterToday": "오늘",
-  "@dailyMinutesAfterToday": {"description": "The second tile's value when today starts every unstarted card."}
+  "@dailyMinutesAfterToday": {"description": "The second tile's value when today starts every unstarted card."},
+  "discardCardTitle": "작성 중인 카드를 버릴까요?",
+  "@discardCardTitle": {"description": "Title of the sheet asked before leaving the card editor with changes."},
+  "discardCardBody": "입력한 내용은 저장되지 않아요.",
+  "@discardCardBody": {"description": "Consequence on the sheet asked before leaving the card editor with changes."},
+  "discardCard": "버리기",
+  "@discardCard": {"description": "The sheet's destructive button: leave the card editor without saving."},
+  "keepWriting": "계속 쓰기",
+  "@keepWriting": {"description": "The sheet's cancel: stay in the card editor with what was typed."}
 }

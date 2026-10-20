@@ -2508,6 +2508,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘'**
   String get dailyMinutesAfterToday;
+
+  /// Title of the sheet asked before leaving the card editor with changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'작성 중인 카드를 버릴까요?'**
+  String get discardCardTitle;
+
+  /// Consequence on the sheet asked before leaving the card editor with changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'입력한 내용은 저장되지 않아요.'**
+  String get discardCardBody;
+
+  /// The sheet's destructive button: leave the card editor without saving.
+  ///
+  /// In ko, this message translates to:
+  /// **'버리기'**
+  String get discardCard;
+
+  /// The sheet's cancel: stay in the card editor with what was typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속 쓰기'**
+  String get keepWriting;
 }
 
 class _AppLocalizationsDelegate

@@ -1467,4 +1467,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => '오늘';
+
+  @override
+  String get discardCardTitle => '작성 중인 카드를 버릴까요?';
+
+  @override
+  String get discardCardBody => '입력한 내용은 저장되지 않아요.';
+
+  @override
+  String get discardCard => '버리기';
+
+  @override
+  String get keepWriting => '계속 쓰기';
 }

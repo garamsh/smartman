@@ -837,6 +837,9 @@ void main() {
         );
         await tester.pumpAndSettle();
         await shot(tester, '05k-card-editor-keyboard');
+        tester.view.resetViewInsets();
+        await tap(tester, find.byTooltip(ko.close));
+        await shot(tester, '05l-card-editor-discard');
         await unmount(tester);
       },
     );
