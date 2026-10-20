@@ -2,7 +2,15 @@
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import {
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { v7 } from "uuid";
 
 import type { Answer, AnswerWrite } from "../answer-write";
@@ -15,6 +23,7 @@ import { AnswerList } from "./answer-list";
 import { CardDetail } from "./card-detail";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
+import { LeaveConfirm } from "./leave-confirm";
 import { PreviousPlaceholder } from "./previous-placeholder";
 import { answerTints, GradedCard, grades, tiltPerPixel } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
@@ -162,6 +171,11 @@ function Session({ plan }: { plan: SessionPlan }) {
   const helpButton = useRef<HTMLButtonElement>(null);
   const closeLink = useRef<HTMLAnchorElement>(null);
   const status = useSyncExternalStore(writes.subscribe, writes.getStatus, writes.getStatus);
+  const router = useRouter();
+  /** Where a leave held back by unsaved answers was going, while the screen asks; else null. */
+  const [leaving, setLeaving] = useState<string | null>(null);
+  /** The control that asked to leave, which takes the focus back if the user stays. */
+  const leaveFrom = useRef<HTMLElement | null>(null);
   /** The coach's step; null while it does not show. */
   const [coach, setCoach] = useState<CoachStep | null>(null);
   /** Whether a card has been on screen, after which the coach no longer starts on its own. */
@@ -226,6 +240,23 @@ function Session({ plan }: { plan: SessionPlan }) {
   function leave() {
     closeLink.current?.click();
   }
+  /**
+   * A link out of the page while answers wait to be saved: instead of following it, sends them,
+   * the failed one again first, then goes to [href], or asks before leaving if one fails again.
+   */
+  function exit(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (writes.getStatus().pending === 0) return;
+    event.preventDefault();
+    leaveFrom.current = event.currentTarget;
+    void writes.flush().then((saved) => {
+      if (saved) router.push(href);
+      else setLeaving(href);
+    });
+  }
+  function stay() {
+    setLeaving(null);
+    leaveFrom.current?.focus();
+  }
   function studyOn() {
     session.studyOn();
     setView(session.view());
@@ -244,6 +275,13 @@ function Session({ plan }: { plan: SessionPlan }) {
   useEffect(() => {
     keys.current = (event) => {
       if (isForeign(event)) return;
+      if (leaving !== null) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          stay();
+        }
+        return;
+      }
       if (helpOpen) {
         if (event.key === "Escape" || event.key === "?") {
           event.preventDefault();
@@ -301,7 +339,8 @@ function Session({ plan }: { plan: SessionPlan }) {
     };
   }, [session]);
 
-  // Leaving the page drops the writes still waiting, so the browser asks first.
+  // Unloading the page drops the writes still waiting, so the browser asks first; the page's own
+  // links out go through [exit].
   const unsaved = status.pending > 0;
   useEffect(() => {
     if (!unsaved) return;
@@ -331,7 +370,13 @@ function Session({ plan }: { plan: SessionPlan }) {
         currentCard
       )
     ) : view.kind === "complete" ? (
-      <CompletionCard completion={view.completion} onStudyOn={view.more ? studyOn : null} />
+      <CompletionCard
+        completion={view.completion}
+        onStudyOn={view.more ? studyOn : null}
+        onStop={(event) => {
+          exit(event, "/");
+        }}
+      />
     ) : null;
 
   return (
@@ -340,6 +385,9 @@ function Session({ plan }: { plan: SessionPlan }) {
         <Link
           ref={closeLink}
           href="/"
+          onClick={(event) => {
+            exit(event, "/");
+          }}
           aria-label="그만하기"
           aria-keyshortcuts="Escape"
           title="그만하기 (Esc)"
@@ -509,6 +557,15 @@ function Session({ plan }: { plan: SessionPlan }) {
       )}
 
       {helpOpen && <ShortcutHelp onClose={closeHelp} />}
+      {leaving !== null && (
+        <LeaveConfirm
+          count={status.pending}
+          onStay={stay}
+          onLeave={() => {
+            router.push(leaving);
+          }}
+        />
+      )}
       {detailOpen && shown && <CardDetail answer={shown} onClose={closeDetail} />}
     </main>
   );
