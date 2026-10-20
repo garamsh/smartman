@@ -12,7 +12,7 @@ export type WriteStatus = { pending: number; failure: string | null };
 export class WriteQueue {
   private readonly writes: AnswerWrite[] = [];
   private failure: string | null = null;
-  private running = false;
+  private running: Promise<void> | null = null;
   private status: WriteStatus = { pending: 0, failure: null };
   private readonly listeners = new Set<() => void>();
 
@@ -33,6 +33,20 @@ export class WriteQueue {
     void this.run();
   }
 
+  /**
+   * Sends every waiting write, the failed one again first, and resolves to whether all were
+   * saved; a write that fails again stops it, as it stops the queue.
+   */
+  async flush(): Promise<boolean> {
+    if (this.failure !== null) {
+      this.failure = null;
+      this.changed();
+    }
+    await this.run();
+    while (this.running) await this.running;
+    return this.writes.length === 0;
+  }
+
   /** The current status; the same object until it changes. */
   getStatus = (): WriteStatus => this.status;
 
@@ -42,9 +56,18 @@ export class WriteQueue {
     return () => this.listeners.delete(listener);
   };
 
-  private async run(): Promise<void> {
-    if (this.running) return;
-    this.running = true;
+  /** Sends the writes in order until none is left or one fails; one run at a time. */
+  private run(): Promise<void> {
+    this.running ??= this.drain().finally(() => {
+      this.running = null;
+      this.changed();
+      // A write queued while the run was ending is sent by a run of its own.
+      if (this.failure === null && this.writes.length > 0) void this.run();
+    });
+    return this.running;
+  }
+
+  private async drain(): Promise<void> {
     while (this.failure === null) {
       const next = this.writes[0];
       if (!next) break;
@@ -59,8 +82,6 @@ export class WriteQueue {
         this.failure = result.message;
       }
     }
-    this.running = false;
-    this.changed();
   }
 
   private changed(): void {

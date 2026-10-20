@@ -19,6 +19,7 @@ import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
+import { testRouter } from "@/testing/router";
 import { signedInCookies } from "@/testing/session";
 import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
@@ -228,6 +229,112 @@ describe("the study page", () => {
       });
       expect(postgrest.rows.reviews).toHaveLength(2);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("leaving with answers not saved", () => {
+    /** The page's three ways out: the top bar's close, Esc, and the completion card's 그만하기. */
+    const exits = {
+      close: async () => {
+        await userEvent.setup().click(closeLink());
+      },
+      Esc: async () => {
+        await userEvent.setup().keyboard("{Escape}");
+      },
+      "the completion card": async () => {
+        const completion = screen.getByRole("region", { name: "오늘 학습 완료" });
+        await userEvent.setup().click(within(completion).getByRole("link", { name: "그만하기" }));
+      },
+    };
+    const confirm = () => screen.queryByRole("dialog", { name: "저장하지 못한 응답이 있어요" });
+    /** The top bar's close, the 그만하기 that Esc follows. */
+    const closeLink = () => {
+      const link = screen
+        .getAllByRole("link", { name: "그만하기" })
+        .find((candidate) => candidate.getAttribute("aria-keyshortcuts") === "Escape");
+      if (!link) throw new Error("no close in the top bar");
+      return link;
+    };
+
+    it.each(Object.keys(exits) as (keyof typeof exits)[])(
+      "by %s, sends the failed write again and, when it fails again, asks before leaving without it",
+      async (way) => {
+        seedDeck(postgrest, "d1", ["un"]);
+        await open("d1");
+        postgrest.fail("reviews", 500);
+        await userEvent.setup().keyboard("{ArrowRight}");
+        await screen.findByRole("alert");
+        // The one card is answered, so the completion card shows.
+        expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+
+        await exits[way]();
+
+        const dialog = await screen.findByRole("dialog", { name: "저장하지 못한 응답이 있어요" });
+        expect(dialog).toHaveTextContent("지금 나가면 저장하지 못한 응답 1개가 사라져요.");
+        // The dialog takes the focus once it has mounted.
+        await waitFor(() => {
+          expect(within(dialog).getByRole("button", { name: "취소" })).toHaveFocus();
+        });
+        expect(testRouter.push).not.toHaveBeenCalled();
+        // 취소 stays, the answer still waiting.
+        await userEvent.setup().click(within(dialog).getByRole("button", { name: "취소" }));
+        expect(confirm()).not.toBeInTheDocument();
+        expect(screen.getByRole("alert")).toBeInTheDocument();
+        expect(testRouter.push).not.toHaveBeenCalled();
+
+        await exits[way]();
+        await userEvent
+          .setup()
+          .click(
+            within(
+              await screen.findByRole("dialog", { name: "저장하지 못한 응답이 있어요" }),
+            ).getByRole("button", { name: "나가기" }),
+          );
+        expect(testRouter.push).toHaveBeenCalledExactlyOnceWith("/");
+        expect(postgrest.rows.reviews).toHaveLength(0);
+      },
+    );
+
+    it("sends the waiting answers and then leaves, without asking, when the server answers again", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      const stop = postgrest.fail("reviews", 500);
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await screen.findByRole("alert");
+      stop();
+
+      await exits.close();
+
+      await waitFor(() => {
+        expect(testRouter.push).toHaveBeenCalledExactlyOnceWith("/");
+      });
+      expect(confirm()).not.toBeInTheDocument();
+      expect(postgrest.rows.reviews).toHaveLength(1);
+    });
+
+    it("follows the close at once when every answer is saved", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await waitFor(() => {
+        expect(postgrest.rows.reviews).toHaveLength(1);
+      });
+      // Read after the screen's own handler, which runs at React's root, below the document.
+      const heldBack: boolean[] = [];
+      const listener = (event: Event) => {
+        heldBack.push(event.defaultPrevented);
+        event.preventDefault();
+      };
+      document.addEventListener("click", listener);
+      try {
+        await userEvent.setup().click(closeLink());
+      } finally {
+        document.removeEventListener("click", listener);
+      }
+
+      expect(heldBack).toEqual([false]);
+      expect(testRouter.push).not.toHaveBeenCalled();
+      expect(confirm()).not.toBeInTheDocument();
     });
   });
 
