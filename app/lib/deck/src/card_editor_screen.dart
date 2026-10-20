@@ -265,100 +265,107 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           ),
         ],
       ),
-      // A column, not a lazy list, so every field of a long word is built and
-      // its error shows wherever it scrolls.
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpace.gutter),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_isNew) ...[
-              Semantics(
-                label: l10n.cardKindLabel,
-                child: SegmentedButton<CardKind>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(
-                      value: CardKind.basic,
-                      label: Text(l10n.cardKindBasic),
+      // The actions sit in the body under the form, not in the bottom bar, so
+      // they stay above the keyboard, which shrinks the body (issue #307).
+      body: Column(
+        children: [
+          Expanded(
+            // A column, not a lazy list, so every field of a long word is built and
+            // its error shows wherever it scrolls.
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpace.gutter),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_isNew) ...[
+                    Semantics(
+                      label: l10n.cardKindLabel,
+                      child: SegmentedButton<CardKind>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(
+                            value: CardKind.basic,
+                            label: Text(l10n.cardKindBasic),
+                          ),
+                          ButtonSegment(
+                            value: CardKind.word,
+                            label: Text(l10n.cardKindWord),
+                          ),
+                          ButtonSegment(
+                            value: CardKind.cloze,
+                            label: Text(l10n.cardKindCloze),
+                          ),
+                          ButtonSegment(
+                            value: CardKind.table,
+                            label: Text(l10n.cardKindTable),
+                          ),
+                        ],
+                        selected: {_kind},
+                        onSelectionChanged: (kinds) =>
+                            _chooseKind(kinds.single),
+                      ),
                     ),
-                    ButtonSegment(
-                      value: CardKind.word,
-                      label: Text(l10n.cardKindWord),
-                    ),
-                    ButtonSegment(
-                      value: CardKind.cloze,
-                      label: Text(l10n.cardKindCloze),
-                    ),
-                    ButtonSegment(
-                      value: CardKind.table,
-                      label: Text(l10n.cardKindTable),
+                    const SizedBox(height: AppSpace.s24),
+                  ],
+                  CardPreview(front: _frontBlocks, back: _backBlocks),
+                  const SizedBox(height: AppSpace.s24),
+                  AppTextField(
+                    label: l10n.cardFront,
+                    controller: _front,
+                    hint: _kind == CardKind.table ? l10n.tableNameHint : null,
+                    focusNode: _frontFocus,
+                    autofocus: _isNew,
+                    minLines: 2,
+                    maxLines: null,
+                    errorText: _requiredError(l10n, _front),
+                    onChanged: (text) => setState(() {
+                      _cloze.update(text);
+                      _clozeEdited = true;
+                    }),
+                  ),
+                  if (card?.front.any((block) => block is SensesContent) ??
+                      false) ...[
+                    const SizedBox(height: AppSpace.s8),
+                    Text(
+                      l10n.sensesEditNote,
+                      style: AppType.secondary.copyWith(
+                        color: AppColors.of(context).muted,
+                      ),
                     ),
                   ],
-                  selected: {_kind},
-                  onSelectionChanged: (kinds) => _chooseKind(kinds.single),
-                ),
+                  const SizedBox(height: AppSpace.s16),
+                  switch (_kind) {
+                    CardKind.basic => AppTextField(
+                      label: l10n.cardBack,
+                      controller: _back,
+                      minLines: 2,
+                      maxLines: null,
+                      errorText: _requiredError(l10n, _back),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    CardKind.word => SenseFields(
+                      senses: _senses,
+                      showErrors: _showRequired,
+                      onChanged: () => setState(() {}),
+                    ),
+                    CardKind.cloze => ClozeWords(
+                      line: _front.text,
+                      draft: _cloze,
+                      showError: _showRequired,
+                      onChanged: () => setState(() => _clozeEdited = true),
+                    ),
+                    CardKind.table => TableFields(
+                      draft: _table,
+                      showErrors: _showRequired,
+                      onChanged: () => setState(() {}),
+                    ),
+                  },
+                ],
               ),
-              const SizedBox(height: AppSpace.s24),
-            ],
-            CardPreview(front: _frontBlocks, back: _backBlocks),
-            const SizedBox(height: AppSpace.s24),
-            AppTextField(
-              label: l10n.cardFront,
-              controller: _front,
-              hint: _kind == CardKind.table ? l10n.tableNameHint : null,
-              focusNode: _frontFocus,
-              autofocus: _isNew,
-              minLines: 2,
-              maxLines: null,
-              errorText: _requiredError(l10n, _front),
-              onChanged: (text) => setState(() {
-                _cloze.update(text);
-                _clozeEdited = true;
-              }),
             ),
-            if (card?.front.any((block) => block is SensesContent) ??
-                false) ...[
-              const SizedBox(height: AppSpace.s8),
-              Text(
-                l10n.sensesEditNote,
-                style: AppType.secondary.copyWith(
-                  color: AppColors.of(context).muted,
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpace.s16),
-            switch (_kind) {
-              CardKind.basic => AppTextField(
-                label: l10n.cardBack,
-                controller: _back,
-                minLines: 2,
-                maxLines: null,
-                errorText: _requiredError(l10n, _back),
-                onChanged: (_) => setState(() {}),
-              ),
-              CardKind.word => SenseFields(
-                senses: _senses,
-                showErrors: _showRequired,
-                onChanged: () => setState(() {}),
-              ),
-              CardKind.cloze => ClozeWords(
-                line: _front.text,
-                draft: _cloze,
-                showError: _showRequired,
-                onChanged: () => setState(() => _clozeEdited = true),
-              ),
-              CardKind.table => TableFields(
-                draft: _table,
-                showErrors: _showRequired,
-                onChanged: () => setState(() {}),
-              ),
-            },
-          ],
-        ),
-      ),
-      bottomNavigationBar: _isNew
-          ? BottomActions(
+          ),
+          if (_isNew)
+            BottomActions(
               secondary: AppButton(
                 label: l10n.save,
                 variant: AppButtonVariant.secondary,
@@ -371,13 +378,16 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 onPressed: () => _save(_AfterSave.next),
               ),
             )
-          : BottomActions(
+          else
+            BottomActions(
               secondary: AppButton(
                 label: l10n.save,
                 size: AppButtonSize.cta,
                 onPressed: () => _save(_AfterSave.close),
               ),
             ),
+        ],
+      ),
     );
   }
 }
