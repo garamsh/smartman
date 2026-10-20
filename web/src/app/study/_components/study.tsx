@@ -19,6 +19,7 @@ import {
   readyServerEngine,
   studyDecks,
   StudyScreen,
+  studyReturn,
 } from "@/features/study";
 
 import { StudySkeleton } from "./study-skeleton";
@@ -35,12 +36,13 @@ export async function Study({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { decks } = await searchParams;
+  const { decks, from } = await searchParams;
   const named = studyDecks(decks);
   if (named.length === 0) notFound();
+  const back = studyReturn(from, named);
   const [read, today] = await Promise.all([readLibrary(named), readToday({ streak: true })]);
-  if ("failure" in read) return <Failure failure={read.failure} />;
-  if ("failure" in today) return <Failure failure={today.failure} />;
+  if ("failure" in read) return <Failure failure={read.failure} back={back} />;
+  if ("failure" in today) return <Failure failure={today.failure} back={back} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
   // Each side's text, and a whole card's faces, for the client, which cannot import decks' entry
@@ -86,6 +88,7 @@ export async function Study({
   }
   return (
     <StudyScreen
+      back={back}
       loading={<StudySkeleton />}
       plan={{
         startedAt: readAt,
@@ -113,13 +116,16 @@ export async function Study({
   );
 }
 
-/** The decks' read failure, with "그만하기" back to 오늘, since no shell surrounds the page. */
-function Failure({ failure }: { failure: LibraryFailure }) {
+/**
+ * The decks' read failure, with "그만하기" to [back], where the session was opened from, since no
+ * shell surrounds the page.
+ */
+function Failure({ failure, back }: { failure: LibraryFailure; back: string }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-4 px-gutter py-6">
       <ReadFailure failure={failure} />
       <Link
-        href="/"
+        href={back}
         className="pressable flex min-h-button items-center justify-center self-start rounded-button border border-outline bg-surface px-5 text-label text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         그만하기
