@@ -620,8 +620,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
-  String readingTitle(int current, int total) {
-    return 'Reading photo $current of $total';
+  String readingTitle(int read, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Read $read of $total photos',
+      one: 'Read $read of 1 photo',
+    );
+    return '$_temp0';
   }
 
   @override
