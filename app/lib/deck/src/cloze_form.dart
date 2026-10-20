@@ -188,9 +188,17 @@ class ClozeWords extends StatelessWidget {
                   draft.toggle(index);
                   onChanged();
                 },
+                // A chosen word is drawn as the preview draws a blank.
                 child: FilterChip(
                   label: Text(line.substring(word.start, word.end)),
                   showCheckmark: false,
+                  selectedColor: colors.brandTint,
+                  labelStyle: draft.chosen.contains(index)
+                      ? TextStyle(color: colors.ink)
+                      : null,
+                  side: draft.chosen.contains(index)
+                      ? BorderSide(color: colors.ink)
+                      : null,
                   selected: draft.chosen.contains(index),
                   onSelected: (_) {
                     draft.toggle(index);

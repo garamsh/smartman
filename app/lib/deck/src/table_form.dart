@@ -168,22 +168,41 @@ class _TableFieldsState extends State<TableFields> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: AppSpace.s12,
       children: [
+        // The table's own switch: a label and two chips, not a second
+        // segmented bar under the kind switch (issue #313).
         Semantics(
           label: l10n.tableModeLabel,
-          child: SegmentedButton<_Mode>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: _Mode.cells,
-                label: Text(l10n.tableModeCells),
+          container: true,
+          child: Wrap(
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ExcludeSemantics(
+                child: Text(
+                  l10n.tableModeLabel,
+                  style: AppType.section.copyWith(color: colors.ink2),
+                ),
               ),
-              ButtonSegment(
-                value: _Mode.blanks,
-                label: Text(l10n.tableModeBlanks),
-              ),
+              for (final mode in _Mode.values)
+                ChoiceChip(
+                  label: Text(switch (mode) {
+                    _Mode.cells => l10n.tableModeCells,
+                    _Mode.blanks => l10n.tableModeBlanks,
+                  }),
+                  showCheckmark: false,
+                  selected: _mode == mode,
+                  selectedColor: colors.brandTint,
+                  labelStyle: _mode == mode
+                      ? TextStyle(
+                          color: colors.ink,
+                          fontWeight: FontWeight.w700,
+                        )
+                      : null,
+                  side: _mode == mode ? BorderSide(color: colors.ink) : null,
+                  onSelected: (_) => setState(() => _mode = mode),
+                ),
             ],
-            selected: {_mode},
-            onSelectionChanged: (modes) => setState(() => _mode = modes.single),
           ),
         ),
         Text(switch (_mode) {

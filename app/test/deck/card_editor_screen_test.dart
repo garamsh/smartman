@@ -174,6 +174,38 @@ void main() {
     );
   });
 
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'at $scale times the text size a long deck name leaves the title readable and nothing in the top bar overflows, for a new card and an edited one',
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+        const name = '토익 실전 어휘 900 — 2026 개정판 Part 5 & 6 집중 대비 단어장';
+        final deck = Deck(
+          id: screens.deck.id,
+          name: name,
+          createdAt: screens.deck.createdAt,
+          updatedAt: screens.deck.updatedAt,
+        );
+        final card = (await screens.cards()).single;
+        for (final (title, editor) in [
+          ('Add card', CardEditorScreen(deck: deck)),
+          ('Edit card', CardEditorScreen(deck: deck, card: card)),
+        ]) {
+          await screens.push((_) => editor);
+          expect(tester.takeException(), isNull, reason: title);
+          expect(find.text(title), findsOneWidget);
+          // The title is drawn whole, inside the screen.
+          expect(tester.getRect(find.text(title)).right, lessThan(390));
+          expect(find.text(name), findsOneWidget, reason: 'the deck shows');
+          await screens.tap(find.byTooltip('Close'));
+        }
+        await screens.close();
+      },
+    );
+  }
+
   testWidgets('Save stores the card and closes the editor', (tester) async {
     final screens = await openNew(tester);
 
