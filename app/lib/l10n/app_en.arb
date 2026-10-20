@@ -402,5 +402,9 @@
   "dailyMinutesFreshValue": "About {count}",
   "dailyMinutesAllTitle": "All new cards started",
   "dailyMinutesAfterDays": "{days, plural, =1{In 1 day} other{In {days} days}}",
-  "dailyMinutesAfterToday": "Today"
+  "dailyMinutesAfterToday": "Today",
+  "discardCardTitle": "Discard this card?",
+  "discardCardBody": "What you typed won't be saved.",
+  "discardCard": "Discard",
+  "keepWriting": "Keep writing"
 }

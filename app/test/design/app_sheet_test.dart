@@ -228,6 +228,33 @@ void main() {
       );
     }
 
+    testWidgets(
+      'its cancel takes the label it is given, and resolves to false',
+      (tester) async {
+        final results = <Object?>[];
+        await pumpComponent(
+          tester,
+          _opener(
+            (context) => showAppConfirm(
+              context,
+              title: 'Discard this card?',
+              consequence: "What you typed won't be saved.",
+              confirmLabel: 'Discard',
+              cancelLabel: 'Keep writing',
+            ),
+            results,
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cancel'), findsNothing);
+
+        await tester.tap(find.text('Keep writing'));
+        await tester.pumpAndSettle();
+        expect(results, [false]);
+      },
+    );
+
     for (final (action, expected) in [
       ('Delete', true),
       ('Cancel', false),
