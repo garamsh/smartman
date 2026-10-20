@@ -193,6 +193,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addSense => 'Add meaning';
 
   @override
+  String get wordExtra => 'More on the back';
+
+  @override
   String moveSenseUp(int number) {
     return 'Move meaning $number up';
   }

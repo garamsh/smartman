@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/deck/src/content.dart' show encodeContent;
 import 'package:smartman/design/app_text_field.dart';
 
 import '../home/deck_screens.dart';
@@ -151,6 +152,57 @@ void main() {
         ]),
         extras,
       ]);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'each text block beside a word\'s senses has a field: untouched the back is stored as it was, edited it saves the text, cleared the block goes, and a block of an unknown type stays',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const senses = SensesContent([
+        CardSense(labels: [_noun], meaning: '얼굴'),
+      ]);
+      const unknown = UnsupportedContent('future', {'x': 1});
+      final back = <Content>[
+        senses,
+        const TextContent('유의어 confront'),
+        unknown,
+        const TextContent('a merged line'),
+      ];
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [const TextContent('face')],
+          back: back,
+        ),
+      );
+      final card = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      expect(_field('More on the back'), findsOneWidget);
+      expect(_field('More on the back', 1), findsOneWidget);
+      expect(find.widgetWithText(TextField, '유의어 confront'), findsOneWidget);
+
+      await tap(screens, find.text('Save'));
+      expect(
+        encodeContent((await _stored(screens)).back),
+        encodeContent(back),
+        reason: 'untouched, stored as it was',
+      );
+
+      final saved = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: saved));
+      await enter(tester, 'More on the back', '유의어 confront, encounter');
+      await enter(tester, 'More on the back', '', 1);
+      await tap(screens, find.text('Save'));
+      expect(
+        encodeContent((await _stored(screens)).back),
+        encodeContent([
+          senses,
+          const TextContent('유의어 confront, encounter'),
+          unknown,
+        ]),
+      );
       await screens.close();
     },
   );

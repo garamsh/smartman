@@ -110,6 +110,8 @@
   "@senseMeaningRequired": {"description": "Error under a sense whose meaning is empty when the word is saved."},
   "addSense": "뜻 추가",
   "@addSense": {"description": "Button under the senses of the word form that adds an empty sense."},
+  "wordExtra": "덧붙인 내용",
+  "@wordExtra": {"description": "Label of a field in the word form holding a text block of the back besides its senses, such as photo import's extras or a merged back."},
   "moveSenseUp": "{number}번째 뜻을 위로",
   "@moveSenseUp": {"description": "Screen-reader name of the button that moves a sense up one place.", "placeholders": {"number": {"type": "int"}}},
   "moveSenseDown": "{number}번째 뜻을 아래로",
