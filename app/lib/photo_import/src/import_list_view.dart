@@ -10,7 +10,6 @@ import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_edit_sheet.dart';
 import 'import_list.dart';
-import 'photo.dart';
 import 'photo_viewer.dart';
 
 /// The cards made from the photo, as one list in sections by topic: each row
@@ -37,7 +36,7 @@ class ImportListView extends StatefulWidget {
   final ImportList list;
 
   /// The photos the rows come from, in the list's order.
-  final List<JpegPhoto> photos;
+  final List<ImageProvider> photos;
   final List<Deck> decks;
 
   /// The deck the cards go into; null for a new deck.
@@ -738,7 +737,7 @@ class _PhotoHeader extends StatelessWidget {
   final int number;
 
   /// Every photo of the import in pick order; this group's is [number]'s.
-  final List<JpegPhoto> photos;
+  final List<ImageProvider> photos;
   final int rows;
   final bool expanded;
   final VoidCallback onToggle;

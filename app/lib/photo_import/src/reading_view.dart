@@ -6,8 +6,7 @@ import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure_message.dart';
-import 'photo.dart';
-import 'photo_batch.dart';
+import 'import_job.dart';
 import 'photo_viewer.dart';
 
 /// Several photos being read: "사진 n장 중 k장 읽음" over a bar of the same k, and
@@ -18,37 +17,47 @@ import 'photo_viewer.dart';
 class ReadingView extends StatelessWidget {
   const ReadingView({
     super.key,
-    required this.batch,
-    required this.note,
-    required this.onRetry,
-    required this.onDrop,
+    required this.job,
+    required this.onBack,
     required this.onCancel,
   });
 
-  final PhotoBatch batch;
+  /// The job whose batch is read.
+  final ImportJob job;
 
-  /// Why fewer photos are read than were picked; null when all are.
-  final String? note;
+  /// Leaves the screen while the photos go on being read.
+  final VoidCallback onBack;
 
-  final ValueChanged<PhotoJob> onRetry;
-  final ValueChanged<PhotoJob> onDrop;
+  /// Stops reading and leaves the batch out.
   final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final jobs = batch.jobs;
-    final read = jobs.where((job) => job.state is PhotoRead).length;
-    final failed = jobs.where((job) => job.state is PhotoFailed).length;
+    final jobs = job.batch;
+    final images = [for (final photo in jobs) job.imageOf(photo)];
+    final read = jobs.where((photo) => photo.state is PhotoRead).length;
+    final failed = jobs.where((photo) => photo.state is PhotoFailed).length;
     final busy = jobs.any(
-      (job) => job.state is PhotoReading || job.state is PhotoWaiting,
+      (photo) => photo.state is PhotoReading || photo.state is PhotoWaiting,
     );
     final title = busy || failed == 0
         ? l10n.readingTitle(read, jobs.length)
         : l10n.readingFailed(failed);
-    final note = this.note;
+    final note = switch (job.leftToday) {
+      final left? => l10n.photosLeftToday(left),
+      null => null,
+    };
     return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: l10n.navigateBack,
+          icon: const Icon(LucideIcons.chevronLeft),
+          onPressed: onBack,
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -77,15 +86,15 @@ class ReadingView extends StatelessWidget {
               Text(note, style: AppType.body.copyWith(color: colors.ink2)),
             ],
             const SizedBox(height: AppSpace.s20),
-            for (final (i, job) in jobs.indexed) ...[
+            for (final (i, photo) in jobs.indexed) ...[
               if (i > 0) const SizedBox(height: AppSpace.rowGap),
               _PhotoRow(
-                key: ObjectKey(job),
-                job: job,
-                photos: [for (final job in jobs) job.photo],
+                key: ObjectKey(photo),
+                state: photo.state,
+                photos: images,
                 number: i + 1,
-                onRetry: () => onRetry(job),
-                onDrop: () => onDrop(job),
+                onRetry: () => job.retry(photo),
+                onDrop: () => job.drop(photo),
               ),
             ],
             const SizedBox(height: AppSpace.s20),
@@ -122,17 +131,17 @@ class ReadingView extends StatelessWidget {
 class _PhotoRow extends StatelessWidget {
   const _PhotoRow({
     super.key,
-    required this.job,
+    required this.state,
     required this.photos,
     required this.number,
     required this.onRetry,
     required this.onDrop,
   });
 
-  final PhotoJob job;
+  final PhotoState state;
 
   /// Every photo of the batch in pick order, for the viewer.
-  final List<JpegPhoto?> photos;
+  final List<ImageProvider?> photos;
   final int number;
   final VoidCallback onRetry;
   final VoidCallback onDrop;
@@ -141,7 +150,7 @@ class _PhotoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final (IconData icon, Color iconColor, String status) = switch (job.state) {
+    final (IconData icon, Color iconColor, String status) = switch (state) {
       PhotoWaiting() => (LucideIcons.clock, colors.muted, l10n.photoWaiting),
       PhotoReading() => (LucideIcons.loader, colors.ink, l10n.photoReading),
       PhotoRead(:final cards) => (
@@ -155,7 +164,7 @@ class _PhotoRow extends StatelessWidget {
         describePhotoImportFailure(l10n, failure),
       ),
     };
-    final failure = switch (job.state) {
+    final failure = switch (state) {
       PhotoFailed(:final failure) => failure,
       _ => null,
     };

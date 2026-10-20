@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -31,6 +33,10 @@ final class FakePhotoSource implements PhotoSource {
   /// photo or its failure; null picks [libraryPhoto] alone.
   List<Future<JpegPhoto>>? libraryPhotos;
 
+  /// How many picked photos were prepared, which a pick does only as each
+  /// one's turn comes.
+  int prepared = 0;
+
   /// The limit of each library pick, in order.
   final libraryLimits = <int>[];
 
@@ -52,13 +58,26 @@ final class FakePhotoSource implements PhotoSource {
   }
 
   @override
-  Future<List<Future<JpegPhoto>>?> pickFromLibrary({int limit = 1}) async {
+  Future<List<PickedPhoto>?> pickFromLibrary({int limit = 1}) async {
     libraryCalls++;
     libraryLimits.add(limit);
     if (libraryFailure case final failure?) throw failure;
-    if (libraryPhotos case final photos?) return photos.take(limit).toList();
+    if (libraryPhotos case final photos?) {
+      return [
+        for (final photo in photos.take(limit))
+          () {
+            prepared++;
+            return photo;
+          },
+      ];
+    }
     return switch (libraryPhoto) {
-      final photo? => [Future.value(photo)],
+      final photo? => [
+        () async {
+          prepared++;
+          return photo;
+        },
+      ],
       null => null,
     };
   }
@@ -120,6 +139,44 @@ final class FakeExtractionClient implements ExtractionClient {
   /// Answers the last call with [failure].
   void fail(PhotoImportFailure failure) =>
       calls.last.answer.completeError(failure);
+}
+
+/// A photo import job's store in memory, for a test that reads what a job
+/// kept, or restores it as a closed app's next open does.
+final class MemoryImportJobStore implements ImportJobStore {
+  final photos = <String, Uint8List>{};
+  String? state;
+  var _next = 0;
+
+  @override
+  Future<String> putPhoto(Uint8List jpeg) async {
+    final key = 'photo${_next++}';
+    photos[key] = jpeg;
+    return key;
+  }
+
+  @override
+  Future<Uint8List> photo(String key) async =>
+      photos[key] ?? (throw StateError('No photo kept under $key.'));
+
+  @override
+  ImageProvider image(String key, {int? width}) => ResizeImage.resizeIfNeeded(
+    width,
+    null,
+    MemoryImage(photos[key] ?? (throw StateError('No photo kept under $key.'))),
+  );
+
+  @override
+  Future<String?> readState() async => state;
+
+  @override
+  Future<void> writeState(String state) async => this.state = state;
+
+  @override
+  Future<void> clear() async {
+    photos.clear();
+    state = null;
+  }
 }
 
 /// Device storage over memory that refuses every write, as a full disk does.

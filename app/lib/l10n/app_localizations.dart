@@ -1177,6 +1177,54 @@ abstract class AppLocalizations {
   /// **'버리기'**
   String get discardImport;
 
+  /// Leaves a screen for the one under it, keeping what the screen was doing.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒤로'**
+  String get navigateBack;
+
+  /// Says a new photo import cannot start while one is under way.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽고 있는 사진이 있어요. 끝난 뒤에 새로 가져올 수 있어요.'**
+  String get photoImportBusy;
+
+  /// The bar over the tab bar while a photo import reads: the photos read of all.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 읽는 중 {read}/{total}'**
+  String importBarReading(int read, int total);
+
+  /// The bar over the tab bar once a photo import's list waits: how many cards it would add.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 {count}장 확인하기'**
+  String importBarReady(int count);
+
+  /// The bar over the tab bar while a photo import restored from a closed app waits to resume.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽던 사진 {count}장 이어서 읽기'**
+  String importBarPaused(int count);
+
+  /// Title of the offer, on opening the app, to resume a photo import a closed app left.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽던 사진 {count}장을 이어서 읽을까요?'**
+  String resumeImportTitle(int count);
+
+  /// Body of the offer to resume a photo import: photos already read are not sent again.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 읽은 사진은 다시 보내지 않아요.'**
+  String get resumeImportBody;
+
+  /// Resumes a photo import a closed app left.
+  ///
+  /// In ko, this message translates to:
+  /// **'이어서 읽기'**
+  String get resumeImport;
+
   /// Screen reader name of a photo import thumbnail, which opens the photo full screen.
   ///
   /// In ko, this message translates to:
