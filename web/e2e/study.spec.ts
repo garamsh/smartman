@@ -203,7 +203,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "02b-deck-answers");
   // Enter opens the deck's session.
   await page.getByRole("heading", { name: "French", exact: true }).click();
-  const studyPath = new RegExp(`/study\\?decks=${deckId}$`);
+  const studyPath = new RegExp(`/study\\?decks=${deckId}&from=deck$`);
   await untilReacted(
     () => page.keyboard.press("Enter"),
     () => Promise.resolve(studyPath.test(page.url())),
@@ -311,9 +311,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
 
-  // Esc leaves for the deck list.
+  // Esc returns to the deck page the session was opened from.
   await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(`${baseURL}/`);
+  await expect(page).toHaveURL(`${baseURL}/decks/${deckId}`);
 
   // A deck whose one card is due next week, and was not answered today, has nothing to study.
   const laterDeck = randomUUID();
