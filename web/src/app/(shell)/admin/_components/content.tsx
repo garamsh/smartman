@@ -28,7 +28,7 @@ import {
   readPublicDecks,
   readReportedDecks,
   readUser,
-  searchUsers,
+  searchUsersThrough,
   ReportedDecks,
   UserSearch,
   UserView,
@@ -38,6 +38,11 @@ import {
 /** The text of a search parameter, or "" when it is absent or repeated. */
 function searchText(value: string | string[] | undefined): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+/** The last page of the user search an address names, 0 when it names none or no whole number. */
+function pageIndex(value: string | string[] | undefined): number {
+  return typeof value === "string" && /^\d{1,3}$/.test(value) ? Number(value) : 0;
 }
 
 export async function OverviewContent() {
@@ -114,15 +119,19 @@ export async function UsersContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = searchText((await searchParams).q);
+  const { q, page } = await searchParams;
+  const query = searchText(q);
+  const shown = pageIndex(page);
   const timeZone = await adminTimeZone();
-  // An address with a query opens on its first page, read on the server.
-  const read = query === "" ? null : await searchUsers(query, 0);
+  // An address with a query opens on the pages it names, read on the server, so a search the
+  // admin left for a user's page comes back as it was.
+  const read = query === "" ? null : await searchUsersThrough(query, shown);
   return (
     <>
       <UserSearch
         initialQuery={query}
         initialPage={read === null || "failure" in read ? null : read.data}
+        initialPageIndex={shown}
         timeZone={timeZone}
       />
       {read !== null && "failure" in read && <AdminFailureMessage failure={read.failure} />}

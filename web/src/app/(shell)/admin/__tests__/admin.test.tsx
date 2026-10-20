@@ -512,6 +512,46 @@ describe("the users pages", () => {
     expect(screen.queryByRole("button", { name: "더 보기" })).not.toBeInTheDocument();
   });
 
+  it("keeps the search and the pages shown in the address, so coming back from a user shows them again", async () => {
+    const user = userEvent.setup();
+    seedUsers(21);
+    window.history.replaceState(null, "", "/admin/users");
+    const view = await render(UsersContent, { searchParams: Promise.resolve({}) });
+
+    await user.type(screen.getByRole("searchbox", { name: "이메일 검색" }), "user");
+    await vi.waitFor(() => {
+      expect(listedEmails()).toHaveLength(20);
+    });
+    expect(window.location.pathname + window.location.search).toBe("/admin/users?q=user");
+    await user.click(screen.getByRole("button", { name: "더 보기" }));
+    await vi.waitFor(() => {
+      expect(listedEmails()).toHaveLength(21);
+    });
+    expect(window.location.search).toBe("?q=user&page=1");
+
+    // Back from a user's page opens the address again, which reads both pages on the server.
+    view.unmount();
+    const params = Object.fromEntries(new URLSearchParams(window.location.search));
+    await render(UsersContent, { searchParams: Promise.resolve(params) });
+    expect(screen.getByRole("searchbox", { name: "이메일 검색" })).toHaveValue("user");
+    expect(listedEmails()).toHaveLength(21);
+    expect(screen.queryByRole("button", { name: "더 보기" })).not.toBeInTheDocument();
+  });
+
+  it("reads the first page alone for an address whose page is no whole number", async () => {
+    seedUsers(21);
+    for (const page of ["x", "-1", "1.5", ""]) {
+      const view = await render(UsersContent, {
+        searchParams: Promise.resolve({ q: "user", page }),
+      });
+      expect(listedEmails(), page).toHaveLength(20);
+      view.unmount();
+    }
+    // Control: a whole number reads through that page.
+    await render(UsersContent, { searchParams: Promise.resolve({ q: "user", page: "1" }) });
+    expect(listedEmails()).toHaveLength(21);
+  });
+
   it("lists every live deck of a user, private ones too, each opening the deck", async () => {
     await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
     const decks = within(screen.getByRole("region", { name: "덱" }));
