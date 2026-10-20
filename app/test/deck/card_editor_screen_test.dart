@@ -111,6 +111,69 @@ void main() {
     },
   );
 
+  group('leaving', () {
+    testWidgets(
+      'with changes, Close and the system back ask first: Keep writing stays with the text, Discard leaves and stores nothing',
+      (tester) async {
+        final screens = await openNew(tester);
+        await screens.enter('Front', 'ephemeral');
+        await screens.enter('Back', '덧없는');
+
+        await screens.tap(find.byTooltip('Close'));
+        expect(find.text('Discard this card?'), findsOneWidget);
+        await screens.tap(find.text('Keep writing'));
+        expect(find.byType(CardEditorScreen), findsOneWidget);
+        expect(find.widgetWithText(TextField, 'ephemeral'), findsOneWidget);
+
+        // Android's back, as the platform sends it.
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.text('Discard this card?'), findsOneWidget);
+        await screens.tap(find.text('Discard'));
+        expect(find.byType(CardEditorScreen), findsNothing);
+        expect(await screens.cards(), isEmpty);
+        await screens.close();
+      },
+    );
+
+    testWidgets(
+      'without changes, Close leaves at once, a kind switch being no change, and Save and next card starts unchanged again',
+      (tester) async {
+        final screens = await openNew(tester);
+        await screens.tap(find.text('Word'));
+        await screens.tap(find.byTooltip('Close'));
+        expect(find.text('Discard this card?'), findsNothing);
+        expect(find.byType(CardEditorScreen), findsNothing);
+
+        await screens.push((deck) => CardEditorScreen(deck: deck));
+        await screens.tap(find.text('Basic'));
+        await screens.enter('Front', 'Chat');
+        await screens.enter('Back', 'cat');
+        await screens.tap(find.text('Save and next card'));
+        await screens.tap(find.byTooltip('Close'));
+        expect(find.byType(CardEditorScreen), findsNothing);
+        expect(await _stored(screens), [('Chat', 'cat')]);
+        await screens.close();
+      },
+    );
+
+    testWidgets(
+      'with changes the route refuses a pop, which disables the iOS back swipe, and without it allows one',
+      (tester) async {
+        final screens = await openNew(tester);
+        // What the iOS back swipe asks before it starts.
+        RoutePopDisposition disposition() =>
+            ModalRoute.of(tester.element(find.byType(CardEditorScreen)))!
+                .popDisposition;
+        expect(disposition(), RoutePopDisposition.pop);
+
+        await screens.enter('Front', 'ephemeral');
+        expect(disposition(), RoutePopDisposition.doNotPop);
+        await screens.close();
+      },
+    );
+  });
+
   testWidgets('Save stores the card and closes the editor', (tester) async {
     final screens = await openNew(tester);
 
@@ -274,19 +337,24 @@ void main() {
       await screens.close();
     });
 
-    testWidgets('Open existing card opens it and stores nothing', (
-      tester,
-    ) async {
-      final screens = await collide(tester);
+    testWidgets(
+      'Open existing card opens it over the editor and stores nothing, and closing it returns to the typed card',
+      (tester) async {
+        final screens = await collide(tester);
 
-      await screens.tap(find.text('Open existing card'));
+        await screens.tap(find.text('Open existing card'));
 
-      expect(find.text('Edit card'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'cat'), findsOneWidget);
-      expect(await _stored(screens), [('Chat', 'cat')]);
-      await screens.close();
-    });
+        expect(find.text('Edit card'), findsOneWidget);
+        expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
+        expect(find.widgetWithText(TextField, 'cat'), findsOneWidget);
+        expect(await _stored(screens), [('Chat', 'cat')]);
+
+        await screens.tap(find.byTooltip('Close'));
+        expect(find.text('Add card'), findsOneWidget);
+        expect(find.widgetWithText(TextField, 'chat (talk)'), findsOneWidget);
+        await screens.close();
+      },
+    );
 
     testWidgets(
       'the sheet offers no cancel, and dismissing it returns to the editor and stores nothing',
