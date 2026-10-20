@@ -1069,8 +1069,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String goalRingSemantics(int done, int goal) {
-    return '$done of today\'s goal of $goal';
+  String todayOfGoal(int goal) {
+    return ' / $goal';
+  }
+
+  @override
+  String todayAbout(int minutes) {
+    return 'About $minutes min';
+  }
+
+  @override
+  String todayAboutLeft(int minutes) {
+    return 'About $minutes min left';
+  }
+
+  @override
+  String todayProgress(int goal, int done) {
+    return '$done of $goal cards';
   }
 
   @override
@@ -1457,16 +1472,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachStart => 'Start';
 
   @override
-  String dailyMinutesControl(int minutes) {
-    return '$minutes min a day';
-  }
-
-  @override
-  String dailyMinutesControlSemantics(int minutes) {
-    return 'Daily study time $minutes minutes, change';
-  }
-
-  @override
   String get dailyMinutesTitle => 'Daily study time';
 
   @override
@@ -1496,19 +1501,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyMinutesSkip => 'Skip';
-
-  @override
-  String completionTomorrow(int minutes) {
-    return '$minutes min again tomorrow';
-  }
-
-  @override
-  String get completionChange => 'Change';
-
-  @override
-  String completionTomorrowSemantics(int minutes) {
-    return '$minutes min again tomorrow, change';
-  }
 
   @override
   String get settingsStudy => 'Study';

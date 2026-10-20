@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Pencil, Plus, X } from "lucide-react";
+import { ChevronRight, Minus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -11,20 +11,12 @@ import { dailyMinuteStep, maxDailyMinutes, minDailyMinutes } from "../queue";
 import { type MinutesPlan, minutesPreview } from "../study-time";
 
 /**
- * The daily study minutes, "하루 n분" after a pencil, read as "하루 공부 시간 n분, 바꾸기", which
- * opens the dialog that changes them: the minutes as one large number between − and +, typed in
- * place when the number is pressed, two tiles of what they mean for the new cards by [plan], and
- * "저장", after which the page is read again. [onHero] draws it on the navy card.
+ * The daily study minutes as the account page's row, "하루 공부 시간" with the minutes and a chevron,
+ * which opens the dialog that changes them: the minutes as one large number between − and +, typed
+ * in place when the number is pressed, two tiles of what they mean for the new cards by [plan], and
+ * "저장", after which the page is read again.
  */
-export function DailyMinutes({
-  minutes,
-  plan,
-  onHero = false,
-}: {
-  minutes: number;
-  plan: MinutesPlan;
-  onHero?: boolean;
-}) {
+export function DailyMinutes({ minutes, plan }: { minutes: number; plan: MinutesPlan }) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   return (
@@ -32,19 +24,18 @@ export function DailyMinutes({
       <button
         ref={trigger}
         type="button"
-        aria-label={`하루 공부 시간 ${String(minutes)}분, 바꾸기`}
+        aria-label={`하루 공부 시간 ${String(minutes)}분`}
         aria-haspopup="dialog"
         onClick={() => {
           setOpen(true);
         }}
-        className={`pressable flex min-h-tap-target items-center gap-2 self-start rounded-full border px-4 text-label focus-visible:outline-2 focus-visible:outline-offset-2 ${
-          onHero
-            ? "border-on-hero text-on-hero focus-visible:outline-on-hero"
-            : "border-outline bg-surface text-ink focus-visible:outline-ink"
-        }`}
+        className="pressable flex min-h-button items-center justify-between gap-3 rounded-row bg-surface px-4 py-3 text-left text-body-strong text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
-        하루 {minutes}분
-        <Pencil aria-hidden className="size-small-icon" strokeWidth={2} />
+        하루 공부 시간
+        <span className="flex items-center gap-1 text-secondary font-normal text-ink-2">
+          {minutes}분
+          <ChevronRight aria-hidden className="size-5" strokeWidth={2} />
+        </span>
       </button>
       {open && (
         <MinutesDialog
@@ -178,7 +169,8 @@ function MinutesDialog({
             <X aria-hidden className="size-5" strokeWidth={2} />
           </button>
         </div>
-        <div className="flex items-center justify-between gap-3">
+        {/* One height for the number and its input, so the row does not move when it is typed. */}
+        <div className="flex h-18 items-center justify-between gap-3">
           <button
             ref={less}
             type="button"

@@ -13,8 +13,8 @@ The web's `account` feature: the sign-in page with Google's button, the code exc
 
 ### Account page and sign-out
 
-- `/account` reads the session on the server and shows the account's initial and email and "로그아웃", or that the server cannot be reached with "다시 시도", which reads the page again, above "화면", which needs no server (#276); the shell's account link opens it.
-- `/account` shows "계정과 설정", the profile card, "화면" with the theme choice, "계정" with "로그아웃", and the mascot and the legal links at its foot;
+- `/account` reads the session on the server and shows the account's initial and email, the daily study minutes with what they mean for today's new cards, read over every deck as the 오늘 page reads its day, or why they could not be read, and "로그아웃", or that the server cannot be reached with "다시 시도", which reads the page again, above "화면", which needs no server (#276); the shell's account link opens it.
+- `/account` shows "계정과 설정", the profile card, "공부" with the daily study minutes' row, "하루 공부 시간" with the minutes and a chevron, read as "하루 공부 시간 n분", which opens `study`'s dialog that changes them, the one place they change on the web ([ADR 0091](adr/0091-draw-the-today-card-as-a-progress-bar-and-change-the-daily-study-minutes-only-in-settings.md), [`web-study.md`](web-study.md)), "화면" with the theme choice, "계정" with "로그아웃", and the mascot and the legal links at its foot;
 - Sign-out is the Server Action `signOut`, through the `account` feature's `actions.ts`; while it runs, the row shows progress in place of its icon and cannot be pressed again. It revokes this browser's session alone (`scope: "local"`), so the phone stays signed in, and opens `/login`. When Supabase cannot be reached it returns the sentence the form shows.
 
 ### Tests
@@ -25,6 +25,7 @@ Each line names a file and what it covers; the file holds the cases.
 - `web/src/features/account/__tests__/sign-in-button.test.tsx` — the button's two marks, its pending state and its failures; `web/src/features/account/__tests__/google-mark.test.ts` — each web mark byte for byte the app's 4x PNG.
 - `web/src/app/auth/callback/__tests__/route.test.ts` — the code exchange and each error it opens `/login` with; `web/src/app/login/__tests__/` — the sentence `/login` shows for each.
 - `web/src/features/account/__tests__/` — sign-out.
+- `web/src/app/(shell)/account/__tests__/daily-minutes.test.tsx` — the "공부" row and its dialog: the row read as the time with no icon but its chevron, the number, steps, typed number and tiles, the number committed on blur, a step disabled under the focus handing it to the other, saving with the row and the 오늘 page read again, closing without saving, and `.pressable` on the row and every button of the dialog.
 - `web/src/app/(shell)/account/__tests__/account.test.tsx` — the account page's profile, the shell's account link, the legal links, the unreachable state with its retry and theme choice, and the redirect without a session.
 
 ## Rationale

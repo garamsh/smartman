@@ -1777,11 +1777,29 @@ abstract class AppLocalizations {
   /// **'{front}, 뒷면 {back}'**
   String cardBackShown(String front, String back);
 
-  /// What a screen reader reads for the today card's goal ring.
+  /// The today card's day's cards after the large count of those done: "d / n장".
   ///
   /// In ko, this message translates to:
-  /// **'하루 목표 {goal}장 중 {done}장'**
-  String goalRingSemantics(int done, int goal);
+  /// **' / {goal}장'**
+  String todayOfGoal(int goal);
+
+  /// The today card's minutes for the cards left, before any is done today.
+  ///
+  /// In ko, this message translates to:
+  /// **'약 {minutes}분'**
+  String todayAbout(int minutes);
+
+  /// The today card's minutes for the cards left, once some are done today.
+  ///
+  /// In ko, this message translates to:
+  /// **'약 {minutes}분 남음'**
+  String todayAboutLeft(int minutes);
+
+  /// What a screen reader reads for the today card's bar of the cards done over the day's cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'{goal}장 중 {done}장'**
+  String todayProgress(int goal, int done);
 
   /// On the today card, where the user stands: nothing studied today yet, on a streak of this many days.
   ///
@@ -2329,18 +2347,6 @@ abstract class AppLocalizations {
   /// **'시작하기'**
   String get coachStart;
 
-  /// The today card's control: the daily study minutes, which opens the sheet that changes them.
-  ///
-  /// In ko, this message translates to:
-  /// **'하루 {minutes}분'**
-  String dailyMinutesControl(int minutes);
-
-  /// What a screen reader reads for the daily study minutes control.
-  ///
-  /// In ko, this message translates to:
-  /// **'하루 공부 시간 {minutes}분, 바꾸기'**
-  String dailyMinutesControlSemantics(int minutes);
-
   /// The title of the sheet that changes the daily study minutes, and the account screen's row.
   ///
   /// In ko, this message translates to:
@@ -2394,24 +2400,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'건너뛰기'**
   String get dailyMinutesSkip;
-
-  /// The completion card's quiet line: the daily study minutes tomorrow.
-  ///
-  /// In ko, this message translates to:
-  /// **'내일도 하루 {minutes}분'**
-  String completionTomorrow(int minutes);
-
-  /// After the completion card's minutes: opens the sheet that changes them.
-  ///
-  /// In ko, this message translates to:
-  /// **'바꾸기'**
-  String get completionChange;
-
-  /// What a screen reader reads for the completion card's minutes line.
-  ///
-  /// In ko, this message translates to:
-  /// **'내일도 하루 {minutes}분, 바꾸기'**
-  String completionTomorrowSemantics(int minutes);
 
   /// The account screen's section label over the daily study minutes.
   ///
