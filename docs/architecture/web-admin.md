@@ -30,6 +30,7 @@ The web's `admin` feature: the admin area at `/admin`, its gate, sections, actio
 Each line names a file and what it covers; the file holds the cases.
 
 - `web/src/app/(shell)/admin/__tests__/admin.test.tsx` — the area against the server's admin functions, substituted by `web/src/testing/mocks/admin.ts`, which answers for an admin and refuses anyone else with `42501`: the gate, each section, each action asked first and refused to a user who is not an admin, the plans with OpenRouter's model list substituted, and the audit log.
+- `web/src/app/(shell)/admin/__tests__/overview-heading.test.tsx` — the overview's heading, the menu's name for it.
 - `web/src/app/(shell)/admin/__tests__/prompts.test.tsx` — the prompts pages with `extract-cards` substituted and the browser's downscale passed through: saving, the diff, the labels, the trial and their refusals.
 - `web/src/features/admin/__tests__/usage.test.ts` — the usage the overview charts; `usage-charts.test.tsx` — the charts, given a size as jsdom lays nothing out, with their named image and patterns.
 - `web/src/features/admin/__tests__/prompt-diff.test.ts` — the line diff.
