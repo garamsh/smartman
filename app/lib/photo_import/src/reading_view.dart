@@ -8,7 +8,7 @@ import '../../l10n/app_localizations.dart';
 import 'failure_message.dart';
 import 'photo_batch.dart';
 
-/// Several photos being read: "사진 k/n 읽는 중", a bar of the photos read, and
+/// Several photos being read: "사진 n장 중 k장 읽음" over a bar of the same k, and
 /// one row per photo with its thumbnail and state. A photo that failed says
 /// why, with a retry where sending it again can help and a way to leave it
 /// out. [note] says when today's limit left photos out; the privacy note and
@@ -43,10 +43,7 @@ class ReadingView extends StatelessWidget {
       (job) => job.state is PhotoReading || job.state is PhotoWaiting,
     );
     final title = busy || failed == 0
-        ? l10n.readingTitle(
-            (read + failed + 1).clamp(1, jobs.length),
-            jobs.length,
-          )
+        ? l10n.readingTitle(read, jobs.length)
         : l10n.readingFailed(failed);
     final note = this.note;
     return Scaffold(

@@ -321,13 +321,40 @@ void main() {
         final import = await _Import.open(tester);
         await import.pickSeveral(3);
 
-        expect(find.bySemanticsLabel('Reading photo 1 of 3'), findsOneWidget);
+        expect(find.bySemanticsLabel('Read 0 of 3 photos'), findsOneWidget);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 1\nReading')), findsOne);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 3\nWaiting')), findsOne);
         await import.answerCall(0, {'chat': 'cat'});
         expect(find.bySemanticsLabel(RegExp(r'^Photo 1\n1 card')), findsOne);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 3\nReading')), findsOne);
-        expect(find.bySemanticsLabel('Reading photo 2 of 3'), findsOneWidget);
+        expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'with a failure among photos still reading, the heading and the bar count the same photos read',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+        double? bar() => tester
+            .widget<LinearProgressIndicator>(
+              find.byType(LinearProgressIndicator),
+            )
+            .value;
+
+        import.calls(0).answer.completeError(const ModelFailed());
+        await import.frames();
+        expect(find.bySemanticsLabel('Read 0 of 3 photos'), findsOneWidget);
+        expect(bar(), 0);
+
+        await import.answerCall(1, {'chien': 'dog'});
+        expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
+        expect(bar(), closeTo(1 / 3, 1e-9));
+
+        await import.answerCall(2, {'oiseau': 'bird'});
+        expect(find.bySemanticsLabel("Couldn't read 1 photo"), findsOneWidget);
+        expect(bar(), closeTo(2 / 3, 1e-9));
         await import.close();
       },
     );
@@ -406,7 +433,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.bySemanticsLabel('Reading photo 1 of 2'), findsOneWidget);
+        expect(find.bySemanticsLabel('Read 0 of 2 photos'), findsOneWidget);
         await import.answerCall(0, {'chat': 'cat'});
         await import.answerCall(1, {'chien': 'dog'});
         expect(import.client.calls, hasLength(2));
@@ -482,6 +509,17 @@ void main() {
         await import.close();
       },
     );
+
+    testWidgets("the list's title is drawn as a pushed screen's title", (
+      tester,
+    ) async {
+      final import = await _Import.open(tester);
+      await import.extract({'chat': 'cat'});
+      final title = tester.widget<Text>(_shown('Found 1 word'));
+      expect(title.style?.fontSize, AppType.title.fontSize);
+      expect(title.style?.height, AppType.title.height);
+      await import.close();
+    });
 
     testWidgets(
       'one photo keeps its list as before: no photo groups, and the retake in place of adding photos only',
@@ -1351,7 +1389,7 @@ void main() {
           await import.tap(_shown('Add more photos'));
           await tester.tap(_shown('Choose from album'));
           await import.frames();
-          expect(find.bySemanticsLabel('Reading photo 1 of 1'), findsOneWidget);
+          expect(find.bySemanticsLabel('Read 0 of 1 photo'), findsOneWidget);
 
           await tester.binding.handlePopRoute();
           await import.frames();

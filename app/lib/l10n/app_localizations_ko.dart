@@ -586,8 +586,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
-  String readingTitle(int current, int total) {
-    return '사진 $current/$total 읽는 중';
+  String readingTitle(int read, int total) {
+    return '사진 $total장 중 $read장 읽음';
   }
 
   @override
