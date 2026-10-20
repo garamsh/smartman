@@ -76,7 +76,7 @@ describe("the deck page", () => {
     expect(summary()).toEqual({ cards: "3", today: "2" });
     expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "href",
-      `/study?decks=${uuidOf("d-fr")}`,
+      `/study?decks=${uuidOf("d-fr")}&from=deck`,
     );
     expect(screen.getByRole("link", { name: "학습하기" })).toHaveAttribute(
       "aria-keyshortcuts",
@@ -114,7 +114,7 @@ describe("the deck page", () => {
 
       expect(summary(), answered).toEqual({ cards: "1", today: "0" });
       const href = screen.getByRole("link", { name: "학습하기" }).getAttribute("href");
-      expect(href, answered).toBe(`/study?decks=${uuidOf("d-done")}`);
+      expect(href, answered).toBe(`/study?decks=${uuidOf("d-done")}&from=deck`);
 
       cleanup();
       await render(Study, {
@@ -128,6 +128,12 @@ describe("the deck page", () => {
         expect(screen.getByText("오늘은 학습할 카드가 없어요")).toBeInTheDocument();
       } else {
         expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+      }
+      // Every 그만하기, the close and the completion card's, returns to this deck's page.
+      const ways = screen.getAllByRole("link", { name: "그만하기" });
+      expect(ways.length, answered).toBe(answered === "yesterday" ? 1 : 2);
+      for (const way of ways) {
+        expect(way, answered).toHaveAttribute("href", `/decks/${uuidOf("d-done")}`);
       }
       cleanup();
     }
