@@ -1075,6 +1075,54 @@ abstract class AppLocalizations {
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
 
+  /// Heading while several photos are read, announced to screen readers: the photo being read now and how many there are.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {current}/{total} 읽는 중'**
+  String readingTitle(int current, int total);
+
+  /// Heading once every photo that could be read is read and some failed; each failed photo offers retry or remove.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {count}장을 읽지 못했어요'**
+  String readingFailed(int count);
+
+  /// Shown before reading when fewer photos are left in today's limit than were picked.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 {count}장 더 만들 수 있어요. 처음 {count}장만 읽어요.'**
+  String photosLeftToday(int count);
+
+  /// One photo of an import, by its place in the order picked.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {number}'**
+  String photoNumber(int number);
+
+  /// A photo waiting for its turn to be read.
+  ///
+  /// In ko, this message translates to:
+  /// **'기다리는 중'**
+  String get photoWaiting;
+
+  /// A photo being read now.
+  ///
+  /// In ko, this message translates to:
+  /// **'읽는 중'**
+  String get photoReading;
+
+  /// Leaves a photo that failed out of the import.
+  ///
+  /// In ko, this message translates to:
+  /// **'빼기'**
+  String get photoDrop;
+
+  /// Adds more photos to the import, from the camera or the album.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 더 추가'**
+  String get addPhotos;
+
   /// Duplicate option: write nothing for this candidate.
   ///
   /// In ko, this message translates to:

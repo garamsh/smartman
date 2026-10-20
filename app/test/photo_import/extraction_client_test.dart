@@ -18,10 +18,12 @@ final _photo = downscalePhoto(img.encodePng(img.Image(width: 4, height: 3)));
 HttpExtractionClient _client(
   MockClientHandler handler, {
   String? token = 'user-token',
+  Future<Object?> Function()? readAllowance,
 }) => HttpExtractionClient(
   MockClient(handler),
   functionUrl: _url,
   accessToken: () async => token,
+  readAllowance: readAllowance ?? () async => null,
 );
 
 /// A JSON answer as the function sends it: UTF-8, typed `application/json`.
@@ -557,6 +559,7 @@ void main() {
       }),
       functionUrl: _url,
       accessToken: () async => 'user-token',
+      readAllowance: () async => null,
     );
 
     final result = client.extract(_photo, cancel: cancel.future);
@@ -592,6 +595,41 @@ void main() {
     expect(
       () => extractCardsUrl('https://abc.supabase.co/auth/v1'),
       throwsArgumentError,
+    );
+  });
+
+  test("today's allowance is the one row extraction_allowance answers, and "
+      'unknown when the answer is anything else or the call fails', () async {
+    Future<ExtractionAllowance?> read(Future<Object?> Function() rows) =>
+        _client((_) async => _json(200, {}), readAllowance: rows).allowance();
+
+    expect(
+      await read(
+        () async => [
+          {'daily_limit': 30, 'used': 28},
+        ],
+      ),
+      (dailyLimit: 30, used: 28),
+    );
+    for (final rows in <Object?>[
+      null,
+      <Object>[],
+      [
+        {'daily_limit': 30},
+      ],
+      [
+        {'daily_limit': -1, 'used': 0},
+      ],
+      [
+        {'daily_limit': '30', 'used': 0},
+      ],
+    ]) {
+      expect(await read(() async => rows), isNull, reason: '$rows');
+    }
+    expect(
+      await read(() async => throw http.ClientException('offline')),
+      isNull,
+      reason: 'a call that fails is an allowance that cannot be read',
     );
   });
 }

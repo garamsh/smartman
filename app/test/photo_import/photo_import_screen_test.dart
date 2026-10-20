@@ -28,7 +28,7 @@ class _Import {
   );
 
   final WidgetTester tester;
-  final UnreadableDecks repository;
+  final _CountingDecks repository;
   final Deck french;
   final Deck spanish;
   final SharedPreferencesWithCache preferences;
@@ -59,7 +59,7 @@ class _Import {
     addTearDown(db.close);
     var ids = 0;
     var tick = 0;
-    final repository = UnreadableDecks(
+    final repository = _CountingDecks(
       db,
       clock: () => DateTime.utc(2026, 10, 15).add(Duration(seconds: tick++)),
       newId: () => 'id${ids++}',
@@ -126,6 +126,34 @@ class _Import {
   }
 
   bool get hasPopped => !identical(popped, _notPopped);
+
+  /// Starts the import with [count] photos picked from the album, each read
+  /// in its turn, and pumps frames, as [shoot] does.
+  Future<void> pickSeveral(int count) async {
+    photos.libraryPhotos = [
+      for (var i = 0; i < count; i++) Future.value(testPhoto),
+    ];
+    await _from(PhotoOrigin.album);
+  }
+
+  /// Pumps a few frames, for what the reads change.
+  Future<void> frames() async {
+    for (var frame = 0; frame < 5; frame++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+  }
+
+  /// Answers the open call reading the photo numbered [index] from 0 in the
+  /// order the calls started, with one word, and pumps.
+  Future<void> answerCall(int index, Map<String, String> cards) async {
+    calls(index).answer.complete([
+      for (final MapEntry(key: front, value: meaning) in cards.entries)
+        word(front: front, meaning: meaning),
+    ]);
+    await frames();
+  }
+
+  PendingExtraction calls(int index) => client.calls[index];
 
   Future<void> tap(Finder finder) async {
     await tester.tap(finder);
@@ -230,8 +258,249 @@ class _Import {
   }
 }
 
+/// The decks, counting each [addCards], so a test sees one write per save.
+class _CountingDecks extends UnreadableDecks {
+  _CountingDecks(super.db, {required super.clock, required super.newId});
+
+  int addCalls = 0;
+
+  @override
+  Future<CardsAdded> addCards(
+    AddTarget target,
+    List<IncomingCard> cards, {
+    AddSource source = const FromPhoto(),
+  }) {
+    addCalls++;
+    return super.addCards(target, cards, source: source);
+  }
+}
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  group('several photos', () {
+    testWidgets(
+      'up to 10 photos are picked from the album and read at most 2 at a time, in the order picked',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+
+        expect(import.photos.libraryLimits, [10]);
+        expect(import.client.calls, hasLength(2), reason: 'two read at once');
+        await import.answerCall(0, {'chat': 'cat'});
+        expect(import.client.calls, hasLength(3), reason: 'the third starts');
+        await import.answerCall(1, {'chien': 'dog'});
+        await import.answerCall(2, {'oiseau': 'bird'});
+        await tester.pumpAndSettle();
+        expect(_shown('Found 3 words'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'each photo shows its state, and the heading is read as the photo being read of all',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+
+        expect(find.bySemanticsLabel('Reading photo 1 of 3'), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 1\nReading')), findsOne);
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 3\nWaiting')), findsOne);
+        await import.answerCall(0, {'chat': 'cat'});
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 1\n1 card')), findsOne);
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 3\nReading')), findsOne);
+        expect(find.bySemanticsLabel('Reading photo 2 of 3'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'one photo that fails waits for a retry while the others go on, and a retry reads it again',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+        import.calls(0).answer.completeError(const ModelFailed());
+        await import.frames();
+        expect(import.client.calls, hasLength(3), reason: 'the rest go on');
+        await import.answerCall(1, {'chien': 'dog'});
+        await import.answerCall(2, {'oiseau': 'bird'});
+        expect(find.bySemanticsLabel("Couldn't read 1 photo"), findsOneWidget);
+        expect(find.textContaining("Couldn't read the cards"), findsOneWidget);
+
+        await tester.tap(_shown('Try again'));
+        await import.frames();
+        expect(import.client.calls, hasLength(4));
+        await import.answerCall(3, {'chat': 'cat'});
+        await tester.pumpAndSettle();
+        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('^Photo 1, ')), findsOne);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a photo that fails can be left out, and the others make the list',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(2);
+        import.calls(0).answer.completeError(const ModelFailed());
+        await import.frames();
+        await import.answerCall(1, {'chien': 'dog'});
+
+        await tester.tap(_shown('Remove'));
+        await tester.pumpAndSettle();
+        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('chien'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'cancel stops every read in progress, starts no other and closes the screen',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+
+        await tester.tap(_shown('Cancel'));
+        await tester.pumpAndSettle();
+        expect(import.hasPopped, isTrue);
+        expect(
+          [for (final call in import.client.calls) call.cancelled],
+          [true, true],
+        );
+        expect(import.client.calls, hasLength(2), reason: 'no third read');
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      "past today's limit only the photos it leaves are read, as a note says first, and with none left the limit shows",
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) =>
+              import.client.todayAllowance = (dailyLimit: 30, used: 28),
+        );
+        await import.pickSeveral(3);
+        expect(
+          _shown(
+            'You can read 2 more today, so only the first 2 will be read.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Reading photo 1 of 2'), findsOneWidget);
+        await import.answerCall(0, {'chat': 'cat'});
+        await import.answerCall(1, {'chien': 'dog'});
+        expect(import.client.calls, hasLength(2));
+        await import.close();
+
+        final full = await _Import.open(
+          tester,
+          before: (import) =>
+              import.client.todayAllowance = (dailyLimit: 30, used: 30),
+        );
+        await full.pickSeveral(3);
+        await tester.pumpAndSettle();
+        expect(full.client.calls, isEmpty);
+        expect(
+          _shown("You've used today's 30 photos. Try again tomorrow."),
+          findsOneWidget,
+        );
+        await full.close();
+      },
+    );
+
+    testWidgets(
+      "with today's allowance unknown, every photo is read and each refusal shows on its photo",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(2);
+        expect(find.textContaining('more today'), findsNothing);
+        import
+            .calls(0)
+            .answer
+            .completeError(const DailyLimitReached(dailyLimit: 30));
+        await import.frames();
+        expect(
+          find.textContaining("You've used today's 30 photos."),
+          findsOneWidget,
+        );
+        expect(_shown('Try again'), findsNothing, reason: 'no retry past it');
+        expect(_shown('Remove'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'the list groups the cards by photo, each group a heading that collapses and expands, and one save writes every card',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(2);
+        await import.answerCall(0, {'chat': 'cat'});
+        await import.answerCall(1, {'chien': 'dog', 'oiseau': 'bird'});
+        await tester.pumpAndSettle();
+
+        final first = find.bySemanticsLabel('Photo 1, 1 card');
+        expect(
+          tester.getSemantics(first),
+          isSemantics(isHeader: true, isButton: true, isExpanded: true),
+        );
+        expect(_shown('Photo 2'), findsOneWidget);
+        expect(_shown('chat'), findsOneWidget);
+        await import.tap(first);
+        expect(_shown('chat'), findsNothing, reason: 'its rows are hidden');
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Photo 1, 1 card')),
+          isSemantics(isExpanded: false),
+        );
+        expect(_shown('chien'), findsOneWidget, reason: 'the other stays');
+        await import.tap(find.bySemanticsLabel('Photo 1, 1 card'));
+
+        await import.tap(_shown('Add 3 cards'));
+        expect(import.repository.addCalls, 1);
+        expect([
+          for (final (front, _, _) in await import.cards(import.french)) front,
+        ], unorderedEquals(['chat', 'chien', 'oiseau']));
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'one photo keeps its list as before: no photo groups, and the retake in place of adding photos only',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extract({'chat': 'cat'});
+        expect(_shown('Photo 1'), findsNothing);
+        expect(_shown('Retake'), findsOneWidget);
+        expect(_shown('Add more photos'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'adding photos reads them into the same list, keeping what was set on the earlier rows',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.extract({'chat': 'cat', 'chien': 'dog'});
+        await import.tap(import.check('chien'));
+        expect(import.included('chien'), isFalse);
+
+        import.photos.libraryPhotos = [Future.value(testPhoto)];
+        await import.tap(_shown('Add more photos'));
+        await tester.tap(_shown('Choose from album'));
+        await import.frames();
+        expect(import.photos.libraryLimits, [9], reason: 'up to 10 in all');
+        await import.answerCall(1, {'oiseau': 'bird'});
+        await tester.pumpAndSettle();
+
+        expect(_shown('Photo 2'), findsOneWidget);
+        expect(_shown('oiseau'), findsOneWidget);
+        expect(import.included('chien'), isFalse);
+        expect(_shown('Retake'), findsNothing);
+        await import.close();
+      },
+    );
+  });
 
   group('photo source', () {
     testWidgets(
@@ -1335,6 +1604,48 @@ void main() {
 
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets(
+        'several photos being read, one failed, and their grouped list meet the guidelines in ${mode.name}',
+        (tester) async {
+          final import = await _Import.open(
+            tester,
+            themeMode: mode,
+            before: (import) =>
+                import.client.todayAllowance = (dailyLimit: 30, used: 28),
+          );
+          Future<void> check() async {
+            await expectLater(
+              tester,
+              meetsGuideline(labeledTapTargetGuideline),
+            );
+            await expectLater(
+              tester,
+              meetsGuideline(androidTapTargetGuideline),
+            );
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+          }
+
+          await import.pickSeveral(3);
+          import.calls(0).answer.completeError(const ModelFailed());
+          await import.frames();
+          await check();
+          await tester.tap(_shown('Remove'));
+          await import.frames();
+          import.photos.libraryPhotos = [Future.value(testPhoto)];
+          await import.answerCall(1, {'chien': 'dog'});
+          await tester.pumpAndSettle();
+          await import.tap(_shown('Add more photos'));
+          await check();
+          await tester.tap(_shown('Choose from album'));
+          await import.frames();
+          await import.answerCall(2, {'chat': 'cat'});
+          await tester.pumpAndSettle();
+          expect(_shown('Photo 2'), findsOneWidget);
+          await check();
+          await import.close();
+        },
+      );
+
       testWidgets(
         'extracting, the list with a row left out and a row held, its form menu, the edit sheet, the deck sheet, a failure and a refusal meet the guidelines in ${mode.name}',
         (tester) async {

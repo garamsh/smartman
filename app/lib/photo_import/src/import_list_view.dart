@@ -10,6 +10,7 @@ import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_edit_sheet.dart';
 import 'import_list.dart';
+import 'photo.dart';
 
 /// The cards made from the photo, as one list in sections by topic: each row
 /// included or left out by its check or a swipe left, and edited in a sheet
@@ -19,6 +20,7 @@ class ImportListView extends StatefulWidget {
   const ImportListView({
     super.key,
     required this.list,
+    required this.photos,
     required this.decks,
     required this.target,
     required this.onTarget,
@@ -27,10 +29,14 @@ class ImportListView extends StatefulWidget {
     required this.onCancel,
     required this.onRetake,
     required this.retakeLabel,
+    required this.onAddPhotos,
     required this.onSave,
   });
 
   final ImportList list;
+
+  /// The photos the rows come from, in the list's order.
+  final List<JpegPhoto> photos;
   final List<Deck> decks;
 
   /// The deck the cards go into; null for a new deck.
@@ -45,11 +51,17 @@ class ImportListView extends StatefulWidget {
   final VoidCallback onChanged;
 
   final VoidCallback onCancel;
-  final VoidCallback onRetake;
+
+  /// Takes another photo in place of the one there is; null with several.
+  final VoidCallback? onRetake;
 
   /// What the retake is called: "다시 찍기", or "다른 사진 고르기" for a photo
   /// from the album.
   final String retakeLabel;
+
+  /// Adds more photos to the import; null once it holds as many as it can.
+  final VoidCallback? onAddPhotos;
+
   final VoidCallback onSave;
 
   @override
@@ -58,6 +70,9 @@ class ImportListView extends StatefulWidget {
 
 class _ImportListViewState extends State<ImportListView> {
   ImportList get _list => widget.list;
+
+  /// The photos whose groups are collapsed, counted from 0.
+  final _collapsed = <int>{};
 
   void _change(VoidCallback change) {
     setState(change);
@@ -71,6 +86,49 @@ class _ImportListViewState extends State<ImportListView> {
     if (await showCardEditSheet(context, row)) {
       _change(() => row.included ??= included);
     }
+  }
+
+  /// A section's header and its rows.
+  List<Widget> _section(ImportSection section) {
+    final colors = AppColors.of(context);
+    return [
+      const SizedBox(height: AppSpace.s20),
+      _SectionHeader(
+        list: _list,
+        section: section,
+        onChanged: () => _change(() {}),
+      ),
+      const SizedBox(height: AppSpace.s8),
+      DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.field),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.field),
+          child: Column(
+            children: [
+              for (final (i, row) in section.rows.indexed)
+                _RowTile(
+                  key: ObjectKey(row),
+                  sides: row.cards(section.form).first,
+                  wholeFront: row.wholeFront,
+                  included: _list.isIncluded(row),
+                  inDeck: _list.isDuplicate(row),
+                  first: i == 0,
+                  onCheck: row.savable
+                      ? () =>
+                            _change(() => row.included = !_list.isIncluded(row))
+                      : null,
+                  onExclude: () => _change(() => row.included = false),
+                  // A table or cloze row cannot be edited yet.
+                  onEdit: row.wholeFront == null ? () => _edit(row) : null,
+                ),
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 
   @override
@@ -91,14 +149,15 @@ class _ImportListViewState extends State<ImportListView> {
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpace.s4),
-            child: AppButton(
-              label: widget.retakeLabel,
-              variant: AppButtonVariant.text,
-              onPressed: widget.onRetake,
+          if (widget.onRetake case final onRetake?)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpace.s4),
+              child: AppButton(
+                label: widget.retakeLabel,
+                variant: AppButtonVariant.text,
+                onPressed: onRetake,
+              ),
             ),
-          ),
         ],
       ),
       body: Stack(
@@ -124,46 +183,40 @@ class _ImportListViewState extends State<ImportListView> {
                 name: widget.target?.name ?? l10n.newDeck,
                 onTap: () => _chooseTarget(context),
               ),
-              for (final section in _list.sections) ...[
-                const SizedBox(height: AppSpace.s20),
-                _SectionHeader(
-                  list: _list,
-                  section: section,
-                  onChanged: () => _change(() {}),
-                ),
-                const SizedBox(height: AppSpace.s8),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.field),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.field),
-                    child: Column(
-                      children: [
-                        for (final (i, row) in section.rows.indexed)
-                          _RowTile(
-                            key: ObjectKey(row),
-                            sides: row.cards(section.form).first,
-                            wholeFront: row.wholeFront,
-                            included: _list.isIncluded(row),
-                            inDeck: _list.isDuplicate(row),
-                            first: i == 0,
-                            onCheck: row.savable
-                                ? () => _change(
-                                    () => row.included = !_list.isIncluded(row),
-                                  )
-                                : null,
-                            onExclude: () =>
-                                _change(() => row.included = false),
-                            // A table or cloze row cannot be edited yet.
-                            onEdit: row.wholeFront == null
-                                ? () => _edit(row)
-                                : null,
-                          ),
-                      ],
+              if (_list.photoCount <= 1)
+                for (final section in _list.sections) ..._section(section)
+              else
+                for (var photo = 0; photo < _list.photoCount; photo++) ...[
+                  const SizedBox(height: AppSpace.s28),
+                  _PhotoHeader(
+                    number: photo + 1,
+                    photo: photo < widget.photos.length
+                        ? widget.photos[photo]
+                        : null,
+                    rows: _list
+                        .sectionsOf(photo)
+                        .fold(
+                          0,
+                          (count, section) => count + section.rows.length,
+                        ),
+                    expanded: !_collapsed.contains(photo),
+                    onToggle: () => setState(
+                      () => _collapsed.contains(photo)
+                          ? _collapsed.remove(photo)
+                          : _collapsed.add(photo),
                     ),
                   ),
+                  if (!_collapsed.contains(photo))
+                    for (final section in _list.sectionsOf(photo))
+                      ..._section(section),
+                ],
+              if (widget.onAddPhotos case final onAddPhotos?) ...[
+                const SizedBox(height: AppSpace.s24),
+                AppButton(
+                  label: AppLocalizations.of(context).addPhotos,
+                  icon: LucideIcons.imagePlus,
+                  variant: AppButtonVariant.secondary,
+                  onPressed: onAddPhotos,
                 ),
               ],
             ],
@@ -668,6 +721,81 @@ class _Check extends StatelessWidget {
               color: colors.onPrimary,
             )
           : null,
+    );
+  }
+}
+
+/// One photo's group: its thumbnail, "사진 n" as a heading and its card
+/// count, and a chevron; a tap collapses or expands the photo's sections.
+class _PhotoHeader extends StatelessWidget {
+  const _PhotoHeader({
+    required this.number,
+    required this.photo,
+    required this.rows,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final int number;
+  final JpegPhoto? photo;
+  final int rows;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final photo = this.photo;
+    return Semantics(
+      header: true,
+      button: true,
+      expanded: expanded,
+      label: '${l10n.photoNumber(number)}, ${l10n.cardCount(rows)}',
+      excludeSemantics: true,
+      onTap: onToggle,
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(AppRadius.field),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSize.tapTarget),
+          child: Row(
+            spacing: AppSpace.s12,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.button / 2),
+                child: SizedBox(
+                  width: 40,
+                  height: 52,
+                  child: photo == null
+                      ? ColoredBox(color: colors.hairline)
+                      : Image.memory(photo.bytes, fit: BoxFit.cover),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.photoNumber(number),
+                      style: AppType.headline.copyWith(color: colors.ink),
+                    ),
+                    Text(
+                      l10n.cardCount(rows),
+                      style: AppType.secondary.copyWith(color: colors.ink2),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                expanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                size: AppSize.smallIcon,
+                color: colors.ink2,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-/// The photo_import domain: one photo of a page turned into cards the user
+/// The photo_import domain: photos of pages turned into cards the user
 /// reviews and saves into a deck.
 library;
 
@@ -8,6 +8,7 @@ export 'src/extraction_client.dart'
         CardKind,
         CardType,
         Extra,
+        ExtractionAllowance,
         ExtractionClient,
         extractCardsUrl,
         HttpExtractionClient;

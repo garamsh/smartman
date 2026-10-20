@@ -616,6 +616,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
+  String readingTitle(int current, int total) {
+    return 'Reading photo $current of $total';
+  }
+
+  @override
+  String readingFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Couldn\'t read $count photos',
+      one: 'Couldn\'t read 1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String photosLeftToday(int count) {
+    return 'You can read $count more today, so only the first $count will be read.';
+  }
+
+  @override
+  String photoNumber(int number) {
+    return 'Photo $number';
+  }
+
+  @override
+  String get photoWaiting => 'Waiting';
+
+  @override
+  String get photoReading => 'Reading';
+
+  @override
+  String get photoDrop => 'Remove';
+
+  @override
+  String get addPhotos => 'Add more photos';
+
+  @override
   String get duplicateSkip => 'Skip';
 
   @override

@@ -110,7 +110,7 @@ final class RowSense {
 /// A card a row saves: its two sides as content blocks.
 typedef CardSides = ({List<Content> front, List<Content> back});
 
-/// The candidates of one card key on the photo, combined into one row the
+/// The candidates of one card key on one photo, combined into one row the
 /// user includes or leaves out, and edits.
 final class ImportRow {
   ImportRow(this.sources)
@@ -217,13 +217,14 @@ final class ImportRow {
   };
 }
 
-/// The rows of one topic, of one kind, identify cards apart, with the form
-/// their cards take.
+/// The rows of one topic of one photo, of one kind, identify cards apart,
+/// with the form their cards take.
 final class ImportSection {
   ImportSection({
     required this.topic,
     required this.kind,
     required this.identify,
+    this.photo = 0,
   }) : form = kind == CardKind.vocabulary && !identify
            ? const VocabularyForm()
            : const NoteForm();
@@ -236,6 +237,9 @@ final class ImportSection {
   /// Whether the section holds the topic's identify cards.
   final bool identify;
 
+  /// The photo the rows come from, counted from 0 in the order read.
+  final int photo;
+
   final rows = <ImportRow>[];
 
   SectionForm form;
@@ -244,10 +248,26 @@ final class ImportSection {
   String get formKey => '${identify ? 'identify:' : ''}${kind.name}:$topic';
 }
 
-/// The rows of a photo, in sections by topic, against the keys the deck they
-/// go into already holds.
+/// The rows of one or more photos, by photo and then in sections by topic,
+/// against the keys the deck they go into already holds.
 final class ImportList {
+  /// The rows of one photo's [cards]; [addPhoto] adds each later photo.
   ImportList(List<CandidateCard> cards, this.existingKeys) {
+    addPhoto(cards);
+  }
+
+  /// The sections, photo by photo, each photo's in the order each first
+  /// appears, identify cards after the page's own.
+  final sections = <ImportSection>[];
+
+  /// How many photos the rows come from.
+  int photoCount = 0;
+
+  /// Adds the rows of another photo's [cards] after every row there is, in
+  /// sections of their own; returns those sections.
+  List<ImportSection> addPhoto(List<CandidateCard> cards) {
+    final photo = photoCount++;
+    final added = <ImportSection>[];
     final groups = <CardKey, List<CandidateCard>>{};
     for (final card in cards) {
       (groups[CardKey.fromFront(card.front)] ??= []).add(card);
@@ -255,7 +275,7 @@ final class ImportList {
     for (final group in groups.values) {
       final row = ImportRow(group);
       final identify = row.type == CardType.identify;
-      var section = sections
+      var section = added
           .where(
             (section) =>
                 section.topic == row.topic &&
@@ -268,16 +288,19 @@ final class ImportList {
           topic: row.topic,
           kind: row.kind,
           identify: identify,
+          photo: photo,
         );
-        sections.add(section);
+        added.add(section);
       }
       section.rows.add(row);
     }
+    sections.addAll(added);
+    return added;
   }
 
-  /// The sections, in the order each first appears, identify cards after the
-  /// page's own.
-  final sections = <ImportSection>[];
+  /// The sections of the photo counted [photo] from 0.
+  Iterable<ImportSection> sectionsOf(int photo) =>
+      sections.where((section) => section.photo == photo);
 
   /// The keys the deck the rows go into holds; replaced when the user
   /// chooses another deck.
@@ -359,11 +382,16 @@ final class SectionForms {
     });
   }
 
-  /// Applies the forms remembered for [deck] to [list]'s sections of the same
-  /// kind; a section with none keeps its own.
-  void applyTo(ImportList list, DeckId deck) {
+  /// Applies the forms remembered for [deck] to [sections], [list]'s every
+  /// section unless given, where they are of the same kind; a section with
+  /// none keeps its own.
+  void applyTo(
+    ImportList list,
+    DeckId deck, {
+    Iterable<ImportSection>? sections,
+  }) {
     final remembered = _stored[deck.value] ?? const {};
-    for (final section in list.sections) {
+    for (final section in sections ?? list.sections) {
       final form = SectionForm.fromJson(remembered[section.formKey]);
       if (form != null && form.runtimeType == section.form.runtimeType) {
         section.form = form;
