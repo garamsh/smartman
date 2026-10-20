@@ -890,6 +890,12 @@ void main() {
       await tester.ensureVisible(find.text(ko.cardKindCloze));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
+      final pick = find.text(ko.clozePickLetters).last;
+      await tester.ensureVisible(pick);
+      await tap(tester, pick);
+      await tap(tester, find.text('p'));
+      await tap(tester, find.text('s'));
+      await shot(tester, '05m-card-editor-cloze-letters');
       await unmount(tester);
     });
 

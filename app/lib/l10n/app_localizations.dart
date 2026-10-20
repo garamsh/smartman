@@ -260,6 +260,36 @@ abstract class AppLocalizations {
   /// **'___는 빈칸 표시라 줄에 쓸 수 없어요'**
   String get clozeBlankMarker;
 
+  /// A blank of the cloze form, numbered in the order of the line, with its answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 {number}: {answer}'**
+  String clozeBlankLine(int number, String answer);
+
+  /// Button beside a blank of the cloze form: narrows the blank to letters of its word.
+  ///
+  /// In ko, this message translates to:
+  /// **'글자 고르기'**
+  String get clozePickLetters;
+
+  /// Title of the sheet that narrows a cloze blank to letters of its word.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 글자를 골라요'**
+  String get clozeLettersTitle;
+
+  /// Body of the letters sheet: tap the first letter, then the last.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음 글자와 끝 글자를 차례로 눌러요'**
+  String get clozeLettersBody;
+
+  /// The letters sheet's button: make the chosen letters the blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 글자로'**
+  String get clozeLettersDone;
+
   /// The table kind's segment in the card editor's kind switch.
   ///
   /// In ko, this message translates to:

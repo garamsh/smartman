@@ -105,6 +105,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
 
   @override
+  String clozeBlankLine(int number, String answer) {
+    return '빈칸 $number: $answer';
+  }
+
+  @override
+  String get clozePickLetters => '글자 고르기';
+
+  @override
+  String get clozeLettersTitle => '빈칸으로 할 글자를 골라요';
+
+  @override
+  String get clozeLettersBody => '처음 글자와 끝 글자를 차례로 눌러요';
+
+  @override
+  String get clozeLettersDone => '이 글자로';
+
+  @override
   String get cardKindTable => '표';
 
   @override
