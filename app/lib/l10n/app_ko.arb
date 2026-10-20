@@ -58,6 +58,8 @@
   "@clozeWordBlank": {"description": "What a screen reader reads for a word of the cloze form chosen as a blank.", "placeholders": {"word": {"type": "String"}}},
   "clozeBlankRequired": "빈칸으로 할 낱말을 하나 이상 골라 주세요",
   "@clozeBlankRequired": {"description": "Error under the cloze form's words when a cloze is saved with no blank."},
+  "clozeBlankMarker": "___는 빈칸 표시라 줄에 쓸 수 없어요",
+  "@clozeBlankMarker": {"description": "Error under the cloze form's words when the line holds underscores that would read as a blank of its own."},
   "cardKindTable": "표",
   "@cardKindTable": {"description": "The table kind's segment in the card editor's kind switch."},
   "tableNameHint": "표의 이름",

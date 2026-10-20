@@ -104,6 +104,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clozeBlankRequired => 'Choose at least one word as a blank';
 
   @override
+  String get clozeBlankMarker =>
+      '___ marks a blank, so the line can\'t contain it';
+
+  @override
   String get cardKindTable => 'Table';
 
   @override

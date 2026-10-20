@@ -392,6 +392,43 @@ void main() {
       },
     );
 
+    test('an edit whose content the decoder refuses is not stored, and the deck still lists, where a readable edit is', () async {
+      final deck = await repository.createDeck('French');
+      final saved = await repository.addCard(
+        deck.id,
+        front: [
+          const ClozeContent('a ___ b', ['x']),
+        ],
+        back: [const TextContent('a x b')],
+      );
+      final card = (saved as CardSaved).card;
+
+      // Two blank markers for one answer: a shape the decoder refuses.
+      await expectLater(
+        repository.editCard(
+          card,
+          front: [
+            const ClozeContent('a ___ b ___ c', ['x']),
+          ],
+          back: [const TextContent('a x b ___ c')],
+        ),
+        throwsA(isA<UnreadableCard>()),
+      );
+      expect((await cardsOf(deck.id)).single.front, card.front);
+
+      // Control: a readable edit of the same card is stored.
+      await repository.editCard(
+        card,
+        front: [
+          const ClozeContent('a ___ b c', ['x']),
+        ],
+        back: [const TextContent('a x b c')],
+      );
+      expect((await cardsOf(deck.id)).single.front, [
+        const ClozeContent('a ___ b c', ['x']),
+      ]);
+    });
+
     test('the cards table indexes deck id and card key', () async {
       final indexes = await db
           .customSelect(

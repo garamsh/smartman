@@ -26,6 +26,7 @@
   "clozeWord": "{word}",
   "clozeWordBlank": "{word}, blank",
   "clozeBlankRequired": "Choose at least one word as a blank",
+  "clozeBlankMarker": "___ marks a blank, so the line can't contain it",
   "cardKindTable": "Table",
   "tableNameHint": "The table's name",
   "tableModeLabel": "Table editing",
