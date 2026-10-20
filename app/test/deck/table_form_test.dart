@@ -4,8 +4,10 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/deck/src/card_kind.dart';
 import 'package:smartman/deck/src/table_form.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/l10n/app_localizations.dart';
 
 import '../home/deck_screens.dart';
 import 'whole_cards.dart';
@@ -62,7 +64,11 @@ void main() {
   /// already there.
   Future<void> typeCapitals(DeckScreens screens) async {
     final tester = screens.tester;
-    await enter(tester, find.widgetWithText(AppTextField, 'Front'), 'Capitals');
+    await enter(
+      tester,
+      find.widgetWithText(AppTextField, 'Front · table name'),
+      'Capitals',
+    );
     final cells = [
       ..._capitals.columns,
       ..._capitals.rows.expand((row) => row),
@@ -243,6 +249,42 @@ void main() {
   );
 
   testWidgets(
+    'the table names its front field as the name while it holds text, and its mode switch is two chips under a label, sharing no label with the kind switch',
+    (tester) async {
+      final screens = await openTable(tester);
+      await typeCapitals(screens);
+      expect(
+        find.widgetWithText(AppTextField, 'Front · table name'),
+        findsOneWidget,
+        reason: 'named while it holds "Capitals"',
+      );
+      // One segmented bar, the kind switch; the modes are chips.
+      expect(find.byType(SegmentedButton<CardKind>), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNWidgets(2));
+      final kinds = {'Basic', 'Word', 'Sentence', 'Table'};
+      final modes = {'Type cells', 'Choose blanks'};
+      for (final label in [...kinds, ...modes]) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      // In Korean, where "빈칸" named both the cloze kind and a table mode, no
+      // kind's label is a word of a mode's.
+      final ko = lookupAppLocalizations(const Locale('ko'));
+      final kindWords = {
+        ko.cardKindBasic,
+        ko.cardKindWord,
+        ko.cardKindCloze,
+        ko.cardKindTable,
+      };
+      final modeWords = {
+        for (final mode in [ko.tableModeCells, ko.tableModeBlanks])
+          ...mode.split(' '),
+      };
+      expect(kindWords.intersection(modeWords), isEmpty);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
     'a stored table card opens in the table form, its name in the front, and still deletes',
     (tester) async {
       final screens = await DeckScreens.open(tester);
@@ -259,7 +301,7 @@ void main() {
         tester
             .widget<TextField>(
               find.descendant(
-                of: find.widgetWithText(AppTextField, 'Front'),
+                of: find.widgetWithText(AppTextField, 'Front · table name'),
                 matching: find.byType(TextField),
               ),
             )
@@ -338,7 +380,7 @@ void main() {
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       await enter(
         tester,
-        find.widgetWithText(AppTextField, 'Front'),
+        find.widgetWithText(AppTextField, 'Front · table name'),
         'New capitals',
       );
       await save(screens);
@@ -391,7 +433,11 @@ void main() {
         await meetsGuidelines();
         await tap(screens, find.text('Choose blanks'));
         await tap(screens, _blankCell('Paris'));
-        await enter(tester, find.widgetWithText(AppTextField, 'Front'), '');
+        await enter(
+          tester,
+          find.widgetWithText(AppTextField, 'Front · table name'),
+          '',
+        );
         await save(screens);
         expect(find.text('Enter some text'), findsOneWidget);
         await meetsGuidelines();
