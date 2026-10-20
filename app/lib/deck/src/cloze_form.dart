@@ -86,9 +86,9 @@ class ClozeDraft {
     if (!chosen.remove(index)) chosen.add(index);
   }
 
-  /// The cloze the line and its chosen words make, each run of adjacent
-  /// chosen words one blank and its answer, or null with no blank.
-  ClozeContent? get content {
+  /// The line with each run of adjacent chosen words as one `___` blank,
+  /// and the answers in order.
+  (String, List<String>) get _built {
     final words = wordsOf(_line);
     final text = StringBuffer();
     final answers = <String>[];
@@ -111,15 +111,38 @@ class ClozeDraft {
       at = end;
       index++;
     }
-    if (answers.isEmpty) return null;
     text.write(_line.substring(at));
-    return ClozeContent(text.toString(), answers);
+    return (text.toString(), answers);
+  }
+
+  /// Why the line cannot be saved yet: no blank chosen, or underscores in
+  /// the line that would read as more blanks than it has answers; null once
+  /// it can.
+  ClozeProblem? get problem {
+    final (text, answers) = _built;
+    if (answers.isEmpty) return ClozeProblem.noBlank;
+    if (text.split(clozeBlank).length - 1 != answers.length) {
+      return ClozeProblem.blankMarker;
+    }
+    return null;
+  }
+
+  /// The cloze the line and its chosen words make, each run of adjacent
+  /// chosen words one blank and its answer, or null while it has a
+  /// [problem].
+  ClozeContent? get content {
+    if (problem != null) return null;
+    final (text, answers) = _built;
+    return ClozeContent(text, answers);
   }
 }
 
+/// Why a cloze cannot be saved yet.
+enum ClozeProblem { noBlank, blankMarker }
+
 /// The line's words as toggle buttons under the line, each read as a word and
-/// whether it is a blank; a tap chooses or leaves out one. With [showError]
-/// and no blank chosen, a line under them says one is needed.
+/// whether it is a blank; a tap chooses or leaves out one. With [showError],
+/// a line under them says what keeps the cloze from being saved.
 class ClozeWords extends StatelessWidget {
   const ClozeWords({
     super.key,
@@ -177,11 +200,11 @@ class ClozeWords extends StatelessWidget {
               ),
           ],
         ),
-        if (showError && draft.content == null)
-          Text(
-            l10n.clozeBlankRequired,
-            style: AppType.caption.copyWith(color: colors.dontKnowText),
-          ),
+        if (showError ? draft.problem : null case final problem?)
+          Text(switch (problem) {
+            ClozeProblem.noBlank => l10n.clozeBlankRequired,
+            ClozeProblem.blankMarker => l10n.clozeBlankMarker,
+          }, style: AppType.caption.copyWith(color: colors.dontKnowText)),
       ],
     );
   }
