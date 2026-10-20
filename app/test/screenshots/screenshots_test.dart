@@ -1328,6 +1328,8 @@ void main() {
       await tester.tap(find.text(ko.photoDrop));
       await tester.pumpAndSettle();
       await shot(tester, '26a-photo-groups');
+      await tap(tester, find.bySemanticsLabel(ko.photoView(1)));
+      await shot(tester, '26b-photo-viewer');
 
       await unmount(tester);
       semantics.dispose();

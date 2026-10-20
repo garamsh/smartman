@@ -1177,6 +1177,18 @@ abstract class AppLocalizations {
   /// **'버리기'**
   String get discardImport;
 
+  /// Screen reader name of a photo import thumbnail, which opens the photo full screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {number} 크게 보기'**
+  String photoView(int number);
+
+  /// Heading of the full-screen photo viewer: the photo shown and how many the import holds.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {current}/{total}'**
+  String photoViewerTitle(int current, int total);
+
   /// Duplicate option: write nothing for this candidate.
   ///
   /// In ko, this message translates to:
