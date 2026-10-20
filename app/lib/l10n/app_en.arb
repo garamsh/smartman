@@ -173,6 +173,8 @@
   "discardImportTitle": "Discard the cards found?",
   "discardImportBody": "{count, plural, =1{The 1 card found will be lost.} other{The {count} cards found will be lost.}} Reading the photos again uses today's photo limit again.",
   "discardImport": "Discard",
+  "photoView": "View photo {number}",
+  "photoViewerTitle": "Photo {current} of {total}",
   "duplicateSkip": "Skip",
   "duplicateMergeBack": "Merge back",
   "duplicateAddNew": "Add as new",
