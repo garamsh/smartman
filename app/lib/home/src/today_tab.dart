@@ -247,9 +247,9 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-/// Today's cards over every deck on the navy card: the count and its minutes
-/// beside the goal ring, the streak and where the user stands today
-/// ([TodayStatus]), and 모두 학습.
+/// Today's cards over every deck on the navy card: "오늘 할 카드" with the
+/// streak, the cards done over the day's cards with their minutes, a bar of
+/// them, where the user stands today ([TodayStatus]), and 모두 학습.
 class _TodayCard extends StatelessWidget {
   const _TodayCard({required this.overview, required this.onStudy});
 
@@ -264,31 +264,57 @@ class _TodayCard extends StatelessWidget {
     final TodayOverview(:count, :goal, :streak) = overview;
     return _HeroCard(
       children: [
-        Row(
-          spacing: AppSpace.s16,
+        // A wrap, so a long streak at a large text size goes under the title.
+        Wrap(
+          spacing: AppSpace.s8,
+          runSpacing: AppSpace.s8,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: AppSpace.s4,
-                children: [
-                  Text(l10n.todayTitle, style: quiet),
-                  HeroCount(
-                    count: count.total,
-                    unit: l10n.todayCountMinutes(count.minutes),
-                    semantics: l10n.todayCards(count.total),
-                  ),
-                ],
-              ),
-            ),
-            _GoalRing(goal: goal),
+            Text(l10n.todayTitle, style: quiet),
+            if (streak > 0) _StreakChip(days: streak, onHero: true),
           ],
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: DailyMinutesButton(
-            minutes: overview.dailyMinutes,
-            onHero: true,
+        Wrap(
+          spacing: AppSpace.s8,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.end,
+          children: [
+            // The bar under it reads the same figures.
+            ExcludeSemantics(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: '${goal.done}', style: AppType.figure),
+                    TextSpan(
+                      text: l10n.todayOfGoal(goal.goal),
+                      style: AppType.headline.copyWith(
+                        color: heroQuiet(colors),
+                      ),
+                    ),
+                  ],
+                ),
+                style: TextStyle(color: colors.onHero),
+              ),
+            ),
+            Text(
+              goal.done == 0
+                  ? l10n.todayAbout(count.minutes)
+                  : l10n.todayAboutLeft(count.minutes),
+              style: quiet,
+            ),
+          ],
+        ),
+        // A node of its own, so the card's text is not read as the bar.
+        Semantics(
+          container: true,
+          child: LinearProgressIndicator(
+            value: goal.goal == 0 ? 0 : goal.done / goal.goal,
+            semanticsLabel: l10n.todayProgress(goal.goal, goal.done),
+            minHeight: AppSpace.s8,
+            borderRadius: BorderRadius.circular(AppSpace.s8),
+            color: colors.onHero,
+            backgroundColor: heroTrack(colors),
           ),
         ),
         Wrap(
@@ -296,9 +322,6 @@ class _TodayCard extends StatelessWidget {
           runSpacing: AppSpace.s8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            if (streak > 0) _StreakChip(days: streak, onHero: true),
-            if (overview.extra > 0)
-              _ExtraPill(count: overview.extra, onHero: true),
             Text(
               keepWords(switch (TodayStatus.of(goal, streak: streak)) {
                 StatusStreak(:final days) => l10n.statusStreak(days),
@@ -309,6 +332,8 @@ class _TodayCard extends StatelessWidget {
               }),
               style: quiet,
             ),
+            if (overview.extra > 0)
+              _ExtraPill(count: overview.extra, onHero: true),
           ],
         ),
         AppButton(
@@ -390,16 +415,11 @@ class _BacklogCard extends StatelessWidget {
             ),
           ],
         ),
-        Wrap(
-          spacing: AppSpace.s8,
-          runSpacing: AppSpace.s8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            DailyMinutesButton(minutes: overview.dailyMinutes, onHero: true),
-            if (overview.streak > 0)
-              _StreakChip(days: overview.streak, onHero: true),
-          ],
-        ),
+        if (overview.streak > 0)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _StreakChip(days: overview.streak, onHero: true),
+          ),
         AppButton(
           label: l10n.backlogStudy(count.total, count.minutes),
           icon: LucideIcons.play,
@@ -409,90 +429,6 @@ class _BacklogCard extends StatelessWidget {
       ],
     );
   }
-}
-
-/// The daily goal as a ring on the navy card, done over goal in its middle.
-class _GoalRing extends StatelessWidget {
-  const _GoalRing({required this.goal});
-
-  final DailyGoal goal;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    // The ring grows with the text size, so its figures stay inside it.
-    final size = MediaQuery.textScalerOf(context)
-        .scale(AppSize.mascotMedium - AppSpace.s8);
-    return Semantics(
-      container: true,
-      label: AppLocalizations.of(context)
-          .goalRingSemantics(goal.done, goal.goal),
-      excludeSemantics: true,
-      child: SizedBox.square(
-        dimension: size,
-        child: CustomPaint(
-          painter: _RingPainter(
-            fraction: goal.goal == 0 ? 0 : goal.done / goal.goal,
-            track: heroTrack(colors),
-            ink: colors.onHero,
-            stroke: AppSpace.s8,
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${goal.done}',
-                  style: AppType.bodyStrong.copyWith(color: colors.onHero),
-                ),
-                Text(
-                  '/ ${goal.goal}',
-                  style: AppType.micro.copyWith(color: heroQuiet(colors)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({
-    required this.fraction,
-    required this.track,
-    required this.ink,
-    required this.stroke,
-  });
-
-  final double fraction;
-  final Color track;
-  final Color ink;
-  final double stroke;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(stroke / 2);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, 0, 2 * pi, false, paint..color = track);
-    if (fraction > 0) {
-      canvas.drawArc(
-        rect,
-        -pi / 2,
-        2 * pi * fraction,
-        false,
-        paint..color = ink,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.fraction != fraction || old.track != track || old.ink != ink;
 }
 
 /// "n일 연속" after a flame, on the navy card or on the surface.
@@ -638,7 +574,6 @@ class _DoneCard extends StatelessWidget {
               alignment: WrapAlignment.center,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                DailyMinutesButton(minutes: overview.dailyMinutes),
                 if (overview.streak > 0)
                   _StreakChip(days: overview.streak, onHero: false),
                 if (overview.goal.reached)

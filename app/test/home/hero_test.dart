@@ -30,8 +30,8 @@ void main() {
           _contrast(_over(heroQuiet(colors), hero), hero),
           greaterThanOrEqualTo(4.5),
         );
-        // Marks and bars, at 3:1: the streak's flame on the navy, the goal
-        // ring's white on its track, and a quiet bar on the surface.
+        // Marks and bars, at 3:1: the streak's flame on the navy, the today
+        // card's bar in white on its track, and a quiet bar on the surface.
         for (final (mark, ground) in [
           (colors.streak, hero),
           (colors.onHero, _over(heroTrack(colors), hero)),

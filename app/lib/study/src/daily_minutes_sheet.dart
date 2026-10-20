@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../deck/deck.dart' show DeckFailure, describeFailure;
 import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
+import '../../design/bottom_actions.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -17,14 +18,11 @@ import 'failure_message.dart';
 import 'providers.dart';
 import 'queue.dart';
 
-/// Opens the sheet that sets the daily study minutes. With [first] it is the
-/// first-run step, titled as a question, whose "건너뛰기" keeps the minutes as
-/// they are. Resolves to the minutes saved, or null when none were.
-Future<int?> showDailyMinutesSheet(
-  BuildContext context, {
-  bool first = false,
-}) =>
-    showAppSheet<int>(context, builder: (_) => DailyMinutesSheet(first: first));
+/// Opens the screen that sets the daily study minutes, over the current one,
+/// with a back button. Resolves to the minutes saved, or null when none were.
+Future<int?> openDailyMinutesScreen(BuildContext context) => Navigator.of(
+  context,
+).push(MaterialPageRoute<int>(builder: (_) => const DailyMinutesPicker()));
 
 /// Shows the first-run step once on this device, while no daily study
 /// minutes are stored from any device, and stores that it has shown; null,
@@ -43,7 +41,10 @@ Future<void>? askDailyMinutesOnce(BuildContext context) {
       return;
     }
     if (stored != null || !context.mounted) return;
-    await showDailyMinutesSheet(context, first: true);
+    await showAppSheet<int>(
+      context,
+      builder: (_) => const DailyMinutesPicker(first: true),
+    );
   }();
 }
 
@@ -80,66 +81,9 @@ class _FirstDailyMinutesState extends State<FirstDailyMinutes> {
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
-/// The daily study minutes, "하루 n분" after a pencil, read as "하루 공부 시간
-/// n분, 바꾸기", which opens the sheet that changes them; [onHero] draws it
-/// on the navy cards.
-class DailyMinutesButton extends StatelessWidget {
-  const DailyMinutesButton({
-    super.key,
-    required this.minutes,
-    this.onHero = false,
-  });
-
-  final int minutes;
-  final bool onHero;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final ink = onHero ? colors.onHero : colors.ink;
-    return Semantics(
-      container: true,
-      button: true,
-      label: l10n.dailyMinutesControlSemantics(minutes),
-      excludeSemantics: true,
-      child: Material(
-        // Off the navy it is the surface, as the done card's pills are.
-        color: onHero ? colors.hero : colors.surface,
-        shape: StadiumBorder(
-          side: BorderSide(color: onHero ? colors.onHero : colors.outline),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => unawaited(showDailyMinutesSheet(context)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSize.tapTarget),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpace.s16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: AppSpace.s8,
-                children: [
-                  Flexible(
-                    child: Text(
-                      l10n.dailyMinutesControl(minutes),
-                      style: AppType.label.copyWith(color: ink),
-                    ),
-                  ),
-                  Icon(LucideIcons.pencil, size: AppSize.smallIcon, color: ink),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// The daily study minutes as a row, "하루 공부 시간" with the minutes, which
-/// opens the sheet that changes them and shows those saved: the account
-/// screen's setting.
+/// opens the screen that changes them and shows those saved: the account
+/// screen's setting, the one place they are changed after the first-run step.
 class DailyMinutesRow extends ConsumerStatefulWidget {
   const DailyMinutesRow({super.key});
 
@@ -157,7 +101,6 @@ class _DailyMinutesRowState extends ConsumerState<DailyMinutesRow> {
       future: _minutes,
       builder: (context, read) => AppListRow(
         title: l10n.dailyMinutesTitle,
-        leading: const Icon(LucideIcons.timer),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: AppSpace.s4,
@@ -173,7 +116,7 @@ class _DailyMinutesRowState extends ConsumerState<DailyMinutesRow> {
           ],
         ),
         onTap: () async {
-          final saved = await showDailyMinutesSheet(context);
+          final saved = await openDailyMinutesScreen(context);
           if (saved != null && mounted) {
             setState(() {
               _minutes = Future.value(saved);
@@ -185,20 +128,22 @@ class _DailyMinutesRowState extends ConsumerState<DailyMinutesRow> {
   }
 }
 
-/// The sheet that sets the daily study minutes: the minutes as one large
+/// The picker that sets the daily study minutes: the minutes as one large
 /// number between − and +, typed on the keypad when the number is tapped, two
-/// tiles of what they mean for the new cards, and "저장".
-class DailyMinutesSheet extends ConsumerStatefulWidget {
-  const DailyMinutesSheet({super.key, this.first = false});
+/// tiles of what they mean for the new cards, and "저장". With [first] it is
+/// the first-run step, a sheet titled as a question whose "건너뛰기" keeps the
+/// minutes as they are; otherwise a screen with a back button.
+class DailyMinutesPicker extends ConsumerStatefulWidget {
+  const DailyMinutesPicker({super.key, this.first = false});
 
-  /// Whether the sheet is the first-run step.
+  /// Whether the picker is the first-run step.
   final bool first;
 
   @override
-  ConsumerState<DailyMinutesSheet> createState() => _DailyMinutesSheetState();
+  ConsumerState<DailyMinutesPicker> createState() => _DailyMinutesPickerState();
 }
 
-class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
+class _DailyMinutesPickerState extends ConsumerState<DailyMinutesPicker> {
   late final Future<MinutesPlan> _plan = readMinutesPlan(ref);
 
   /// The minutes chosen; null until they differ from the stored ones.
@@ -387,28 +332,52 @@ class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
       builder: (context, read) {
         final plan = read.data;
         final minutes = _minutes(plan);
-        return AppSheet(
-          title: widget.first
-              ? l10n.dailyMinutesFirstTitle
-              : l10n.dailyMinutesTitle,
-          body: l10n.dailyMinutesBody,
-          content: _content(context, read, plan, minutes),
-          actions: [
-            if (widget.first)
-              AppButton(
-                label: l10n.dailyMinutesSkip,
-                variant: AppButtonVariant.text,
-                onPressed: _saving ? null : () => Navigator.of(context).pop(),
+        final content = _content(context, read, plan, minutes);
+        final save = AppButton(
+          label: l10n.save,
+          size: AppButtonSize.cta,
+          loading: _saving,
+          // A number outside the bounds is fixed before it is saved.
+          onPressed: minutes == null || _outOfRange
+              ? null
+              : () => _save(minutes),
+        );
+        if (!widget.first) {
+          return Scaffold(
+            appBar: AppBar(title: Text(l10n.dailyMinutesTitle)),
+            // A list, so the tiles scroll above the keypad.
+            body: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.gutter,
+                AppSpace.s8,
+                AppSpace.gutter,
+                AppSpace.s24,
               ),
-            AppButton(
-              label: l10n.save,
-              size: AppButtonSize.cta,
-              loading: _saving,
-              // A number outside the bounds is fixed before it is saved.
-              onPressed: minutes == null || _outOfRange
-                  ? null
-                  : () => _save(minutes),
+              children: [
+                Text(
+                  l10n.dailyMinutesBody,
+                  style: AppType.secondary.copyWith(
+                    color: AppColors.of(context).muted,
+                  ),
+                ),
+                const SizedBox(height: AppSpace.s24),
+                content,
+              ],
             ),
+            bottomNavigationBar: BottomActions(secondary: save),
+          );
+        }
+        return AppSheet(
+          title: l10n.dailyMinutesFirstTitle,
+          body: l10n.dailyMinutesBody,
+          content: content,
+          actions: [
+            AppButton(
+              label: l10n.dailyMinutesSkip,
+              variant: AppButtonVariant.text,
+              onPressed: _saving ? null : () => Navigator.of(context).pop(),
+            ),
+            save,
           ],
         );
       },
