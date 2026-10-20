@@ -10,7 +10,7 @@ import { GradeChip, grades } from "./graded-card";
 
 /**
  * The whole of a card answered earlier, front and back, or a whole card's front with its blanks
- * filled, over the screen until it is closed.
+ * filled, over the screen until it is closed by "닫기", Esc or a click outside it.
  */
 export function CardDetail({
   answer,
@@ -25,7 +25,12 @@ export function CardDetail({
   }, []);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-shadow/40 px-4">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-shadow/40 px-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
