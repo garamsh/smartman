@@ -53,7 +53,7 @@ void main() {
   }
 
   testWidgets(
-    'a new card starts basic, the switch makes it a word, and the deck starts its next new card in that kind',
+    'a new card starts basic, the switch makes it a word, and the deck starts its next new card in the kind of the last card added, not of the last switch tapped',
     (tester) async {
       final screens = await openNew(tester);
       expect(find.text('Meaning 1'), findsNothing);
@@ -63,17 +63,24 @@ void main() {
       expect(find.text('Meaning 1'), findsOneWidget);
       expect(find.widgetWithText(AppTextField, 'Back'), findsNothing);
 
-      await screens.tap(find.byTooltip('Close'));
-      await screens.push((deck) => CardEditorScreen(deck: deck));
-      expect(find.text('Meaning 1'), findsOneWidget, reason: 'remembered');
-
-      await screens.tap(find.text('Basic'));
+      // Closed with nothing added: the switch alone is not remembered.
       await screens.tap(find.byTooltip('Close'));
       await screens.push((deck) => CardEditorScreen(deck: deck));
       expect(
         find.widgetWithText(AppTextField, 'Back'),
         findsOneWidget,
-        reason: 'control: the switch back to basic is remembered too',
+        reason: 'not remembered without a card added',
+      );
+
+      await screens.tap(find.text('Word'));
+      await enter(tester, 'Front', 'apple');
+      await enter(tester, 'Meaning', '사과');
+      await tap(screens, find.text('Save'));
+      await screens.push((deck) => CardEditorScreen(deck: deck));
+      expect(
+        find.text('Meaning 1'),
+        findsOneWidget,
+        reason: 'control: a word added is remembered',
       );
       await screens.close();
     },
