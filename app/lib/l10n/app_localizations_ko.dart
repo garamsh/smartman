@@ -629,6 +629,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get discardImport => '버리기';
 
   @override
+  String photoView(int number) {
+    return '사진 $number 크게 보기';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return '사진 $current/$total';
+  }
+
+  @override
   String get duplicateSkip => '건너뛰기';
 
   @override

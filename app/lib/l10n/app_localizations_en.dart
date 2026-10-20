@@ -677,6 +677,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discardImport => 'Discard';
 
   @override
+  String photoView(int number) {
+    return 'View photo $number';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return 'Photo $current of $total';
+  }
+
+  @override
   String get duplicateSkip => 'Skip';
 
   @override
