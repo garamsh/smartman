@@ -2,12 +2,7 @@
 /// them with the Rust engine.
 library;
 
-export 'src/daily_minutes_sheet.dart'
-    show
-        DailyMinutesButton,
-        DailyMinutesRow,
-        FirstDailyMinutes,
-        showDailyMinutesSheet;
+export 'src/daily_minutes_sheet.dart' show DailyMinutesRow, FirstDailyMinutes;
 export 'src/model.dart' show CardState, FuzzFactor, Review;
 export 'src/providers.dart'
     show

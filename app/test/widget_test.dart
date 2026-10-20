@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -381,7 +383,7 @@ void main() {
       await tester.pumpAndSettle();
       await showTab(tester, 'Today');
 
-      expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
+      expect(find.bySemanticsLabel('0 of 3 cards'), findsOneWidget);
       await tester.tap(find.text('Study all'));
       await tester.pumpAndSettle();
 
@@ -495,6 +497,14 @@ void main() {
         100,
         scrollable: find.byType(Scrollable).first,
       );
+      // Centred, so the tab bar does not cover it.
+      unawaited(
+        Scrollable.ensureVisible(
+          tester.element(find.text('Study')),
+          alignment: 0.5,
+        ),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
       expect(find.text('Done for today'), findsOneWidget);
@@ -514,6 +524,28 @@ void main() {
     expect(find.text('ada@example.com'), findsOneWidget);
     await unmountApp(tester);
   });
+
+  testWidgets(
+    "the account screen's 하루 공부 시간 row opens the minutes picker as a screen, whose Save the row then shows",
+    (tester) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Study'), findsOneWidget);
+      await tester.tap(find.text('Daily study time'));
+      await waitForPicker(tester);
+      expect(find.byType(BottomSheet), findsNothing);
+      await tester.tap(find.byTooltip('5 minutes less'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AccountScreen), findsOneWidget);
+      expect(find.text('15 min'), findsOneWidget);
+      await unmountApp(tester);
+    },
+  );
 
   testWidgets('the theme follows the system until a choice overrides it', (
     tester,

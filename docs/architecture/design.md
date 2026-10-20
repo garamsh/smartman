@@ -15,7 +15,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
    - 덱 tab: "새 덱 만들기" under the rows, before "공개 덱 둘러보기", its ways in a sheet that also holds the photo's source; first-run home: "덱 만들기", which opens the same sheet; and nothing in the top bar but the title; deck screen: "학습하기" on the navy card and "카드 추가" in the bottom bar, or, while the deck holds no card, "카드 추가" alone as the primary ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), `BottomActions`; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
-   - Daily study minutes: the sheet's one primary is "저장", with the first-run step's quiet "건너뛰기" above it; the minutes are one large number in the figure style between a − and a +, typed in place on the number keypad, with no choice to pick from ([ADR 0090](adr/0090-pick-the-daily-study-minutes-as-one-large-number-between-minus-and-plus-typed-in-place-with-two-tiles-of-what-they-mean.md), [ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md)).
+   - Daily study minutes: the first-run sheet's one primary is "저장", with its quiet "건너뛰기" above it, and the settings screen's "저장" is pinned at its foot ([ADR 0091](adr/0091-draw-the-today-card-as-a-progress-bar-and-change-the-daily-study-minutes-only-in-settings.md)); the minutes are one large number in the figure style between a − and a +, typed in place on the number keypad, with no choice to pick from ([ADR 0090](adr/0090-pick-the-daily-study-minutes-as-one-large-number-between-minus-and-plus-typed-in-place-with-two-tiles-of-what-they-mean.md), [ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md)).
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
@@ -23,7 +23,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Deck screen: each row shows the front, its back hidden until a tap or the "뜻 보기" switch; the deck name is the only title, and the row above the cards a quiet "카드 n".
    - Tabs: no line explains a long-press or a tab; 기록 has no explanatory paragraph, only each chart's heading, its figures and a line beside the heading.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
-   - Daily study minutes: the control says only "하루 n분" beside a pencil, and the sheet one sentence, with the preview's two lines saying what the choice means rather than how it is computed.
+   - Daily study minutes: the account row says only "하루 공부 시간" and the minutes, and the picker one sentence, with its two tiles saying what the choice means rather than how it is computed.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
    - Study: a horizontal swipe answers, with the answer buttons and the custom actions "안다" and "모른다", and on the web a touch swipe answers the same, with the buttons and the arrow keys ([ADR 0084](adr/0084-answer-the-web-s-current-study-card-by-a-touch-swipe-as-the-phone-does.md)); a horizontal drag on the previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기", and a tap on it opens the whole card; a drag on either card moves that card alone.
    - Deck screen: a long-press opens a card, and a screen reader reaches the same through the row's "카드 편집" action.
@@ -51,7 +51,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - 덱 tab, 오늘 tab and deck screen: rows on rounded surfaces over the ground; the navy cards over them.
    - Every screen and sheet: the tokens below and the components that use them.
    - At a larger system text size nothing is cut (issue #295):
-     - a box sized for its text grows with it: the tab bar from its 64 and the today card's goal ring, 76 across, by the text scale;
+     - a box sized for its text grows with it: the tab bar from its 64 by the text scale;
      - a pill's label wraps inside the pill;
      - a figure or label a narrow column holds, the day bars' among them, stays on one line and shrinks to the column only where it is wider, so a word never breaks inside itself.
 7. **Meaningful motion** that shows where things go. Reduce motion is respected.
