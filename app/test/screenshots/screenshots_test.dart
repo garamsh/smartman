@@ -257,7 +257,9 @@ void main() {
       // Above a tall sheet, where the barrier's centre is not.
       await tester.tapAt(const Offset(20, 100));
       await tester.pumpAndSettle();
+      // Leaving the typed card asks first.
       await tap(tester, find.byTooltip(ko.close));
+      await tap(tester, find.text(ko.discardCard));
       await shot(tester, '07-card-list');
       await tap(tester, find.text('ubiquitous'));
       await shot(tester, '07b-card-answer-shown');
