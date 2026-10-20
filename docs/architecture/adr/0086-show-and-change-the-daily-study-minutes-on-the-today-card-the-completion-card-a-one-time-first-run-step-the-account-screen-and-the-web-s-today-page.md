@@ -1,6 +1,6 @@
 # ADR 0086: Show and change the daily study minutes on the today card, the completion card, a one-time first-run step, the account screen and the web's today page
 
-> Status: accepted
+> Status: accepted; its six choices, its custom value in steps of 5 with no typed value, and its preview's sentences superseded by ADR-0090
 > Date: 2026-10-20
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

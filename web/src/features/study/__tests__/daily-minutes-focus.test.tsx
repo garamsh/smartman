@@ -11,15 +11,12 @@ describe("the daily minutes dialog", () => {
       <>
         <DailyMinutes
           minutes={20}
-          reviews={0}
           plan={{
             due: 0,
             started: 0,
             unstarted: 30,
             backlog: false,
             pace: unknownPace,
-            todayStart: Date.UTC(2026, 0, 15, 19),
-            timeZone: "Asia/Seoul",
           }}
         />
         <button type="button">뒤의 버튼</button>
@@ -33,7 +30,9 @@ describe("the daily minutes dialog", () => {
     const controls = within(dialog).getAllByRole("button");
     const [first] = controls;
     const last = controls.at(-1);
-    expect(within(dialog).getByRole("button", { name: "20분" })).toHaveFocus();
+    expect(
+      within(dialog).getByRole("button", { name: "하루 20분, 눌러서 직접 입력" }),
+    ).toHaveFocus();
 
     last?.focus();
     await user.tab();

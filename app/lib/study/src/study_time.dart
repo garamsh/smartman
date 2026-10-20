@@ -79,24 +79,18 @@ int dailyNewCards({
   required Pace pace,
 }) => max(0, (minutes * 60000 - due * pace.reviewMs) ~/ pace.firstMs);
 
-/// The study day on which the last of [remaining] never-reviewed cards is
-/// first answered, as its start, when the day starting [todayStart] takes
-/// [today] more of them and every later day [perDay]; null when they are never
+/// How many study days after today the last of [remaining] never-reviewed
+/// cards is first answered, when today takes [today] more of them and every
+/// later day [perDay]: 0 when today takes them all; null when they are never
 /// all taken, with [perDay] zero and more left than today takes.
-DateTime? lastNewCardDay({
+int? daysToStartAll({
   required int remaining,
   required int today,
   required int perDay,
-  required DateTime todayStart,
-  UtcOffsetAt offsetAt = localOffsetAt,
 }) {
-  if (remaining <= today) return todayStart;
+  if (remaining <= today) return 0;
   if (perDay <= 0) return null;
-  var day = todayStart;
-  for (var left = remaining - today; left > 0; left -= perDay) {
-    day = studyDayEnd(day, offsetAt);
-  }
-  return day;
+  return (remaining - today + perDay - 1) ~/ perDay;
 }
 
 /// [answers] by study day in the zone [offsetAt] gives, oldest first, each

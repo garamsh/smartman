@@ -1,6 +1,6 @@
 # ADR 0085: Fill each day's new cards from the daily study minutes the user sets, stored per user on the server and synced
 
-> Status: accepted
+> Status: accepted; its preview's day the last new card starts superseded by ADR-0090
 > Date: 2026-10-20
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

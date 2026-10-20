@@ -440,7 +440,7 @@ void main() {
 
       await tester.tap(find.text('Today'));
       await tester.pumpAndSettle();
-      await waitForChoices(tester);
+      await waitForPicker(tester);
       expect(
         find.text('How many minutes a day will you study?'),
         findsOneWidget,

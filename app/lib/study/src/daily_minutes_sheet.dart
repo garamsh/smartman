@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart' show DeckFailure, describeFailure;
@@ -186,9 +185,9 @@ class _DailyMinutesRowState extends ConsumerState<DailyMinutesRow> {
   }
 }
 
-/// The sheet that sets the daily study minutes: the choices, a custom value
-/// in steps of five, a preview of today's new cards and reviews and of when
-/// the last new card starts, and "저장".
+/// The sheet that sets the daily study minutes: the minutes as one large
+/// number between − and +, typed on the keypad when the number is tapped, two
+/// tiles of what they mean for the new cards, and "저장".
 class DailyMinutesSheet extends ConsumerStatefulWidget {
   const DailyMinutesSheet({super.key, this.first = false});
 
@@ -202,13 +201,87 @@ class DailyMinutesSheet extends ConsumerStatefulWidget {
 class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
   late final Future<MinutesPlan> _plan = readMinutesPlan(ref);
 
-  /// The minutes chosen; null until a choice differs from the stored ones.
+  /// The minutes chosen; null until they differ from the stored ones.
   int? _chosen;
 
-  /// Whether the custom choice is selected; null until a choice is made.
-  bool? _custom;
+  /// The minutes as typed while the number is edited; null otherwise.
+  String? _typed;
+  final _input = TextEditingController();
+  final _inputFocus = FocusNode();
+  final _less = FocusNode();
+  final _more = FocusNode();
   var _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Leaving the field commits it, as Done does.
+    _inputFocus.addListener(() {
+      if (!_inputFocus.hasFocus && _typed != null) _commit();
+    });
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    _inputFocus.dispose();
+    _less.dispose();
+    _more.dispose();
+    super.dispose();
+  }
+
+  /// The whole number [_typed] holds within the bounds, or null.
+  int? get _typedMinutes => switch (int.tryParse(_typed ?? '')) {
+    final value? when value >= minDailyMinutes && value <= maxDailyMinutes =>
+      value,
+    _ => null,
+  };
+
+  /// Whether a number is typed that cannot be saved.
+  bool get _outOfRange => switch (_typed) {
+    final typed? when typed.isNotEmpty => _typedMinutes == null,
+    _ => false,
+  };
+
+  /// The minutes the tiles show and "저장" saves: those typed, while they are
+  /// within the bounds, or those chosen.
+  int? _minutes(MinutesPlan? plan) => _typedMinutes ?? _chosen ?? plan?.current;
+
+  void _edit(int minutes) {
+    _input.text = '$minutes';
+    _input.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _input.text.length,
+    );
+    setState(() => _typed = _input.text);
+    _inputFocus.requestFocus();
+  }
+
+  /// Ends the edit: an empty field keeps the minutes as they were, a number
+  /// within the bounds becomes them, and one outside keeps the field open.
+  void _commit() {
+    if (_outOfRange) return;
+    setState(() {
+      _chosen = _typedMinutes ?? _chosen;
+      _typed = null;
+    });
+  }
+
+  /// Moves the minutes by [delta] within the bounds; when that disables the
+  /// step pressed, the focus moves to the other, so it is never disabled under
+  /// the user.
+  void _step(int from, int delta) {
+    final next = (from + delta).clamp(minDailyMinutes, maxDailyMinutes);
+    final pressed = delta < 0 ? _less : _more;
+    final other = delta < 0 ? _more : _less;
+    final atBound = next == minDailyMinutes || next == maxDailyMinutes;
+    setState(() {
+      _chosen = next;
+      _typed = null;
+    });
+    if (atBound && pressed.hasFocus) other.requestFocus();
+  }
 
   Future<void> _save(int minutes) async {
     setState(() {
@@ -230,45 +303,79 @@ class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
   }
 
   /// The sheet's content: why the plan could not be read, its place while it
-  /// is read, or the choices.
+  /// is read, or the picker.
   Widget _content(
     BuildContext context,
     AsyncSnapshot<MinutesPlan> read,
     MinutesPlan? plan,
     int? minutes,
-    bool custom,
   ) {
     final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
     if (read case AsyncSnapshot(hasError: true, :final error?)) {
-      return Text(
-        switch (error) {
-          DeckFailure() => describeFailure(l10n, error),
-          StudyFailure() => describeStudyFailure(l10n, error),
-          _ => Error.throwWithStackTrace(
-            error,
-            read.stackTrace ?? StackTrace.empty,
-          ),
-        },
-        style: AppType.secondary.copyWith(
-          color: AppColors.of(context).dontKnowText,
+      return Text(switch (error) {
+        DeckFailure() => describeFailure(l10n, error),
+        StudyFailure() => describeStudyFailure(l10n, error),
+        _ => Error.throwWithStackTrace(
+          error,
+          read.stackTrace ?? StackTrace.empty,
         ),
-      );
+      }, style: AppType.secondary.copyWith(color: colors.dontKnowText));
     }
     if (plan == null || minutes == null) {
-      // The choices' height, so the sheet does not jump.
-      return const SizedBox(
-        height: AppSize.cta + AppSize.cta + AppSize.cta + AppSpace.s16,
-      );
+      // The picker's height, so the sheet does not jump.
+      return const SizedBox(height: AppSize.cta + AppSize.cta + AppSpace.s40);
     }
-    return _Choices(
-      plan: plan,
-      minutes: minutes,
-      custom: custom,
-      error: _error,
-      onChoose: (value, {required custom}) => setState(() {
-        _chosen = value;
-        _custom = custom;
-      }),
+    final shown = _chosen ?? plan.current;
+    final error = _error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: AppSpace.s12,
+      children: [
+        Row(
+          children: [
+            _Step(
+              focusNode: _less,
+              icon: LucideIcons.minus,
+              tooltip: l10n.dailyMinutesLess,
+              onPressed: minutes > minDailyMinutes
+                  ? () => _step(minutes, -dailyMinuteStep)
+                  : null,
+            ),
+            Expanded(
+              child: _typed == null
+                  ? _Number(minutes: shown, onTap: () => _edit(shown))
+                  : _NumberInput(
+                      controller: _input,
+                      focusNode: _inputFocus,
+                      outOfRange: _outOfRange,
+                      onChanged: (text) => setState(() => _typed = text),
+                      onSubmitted: (_) => _commit(),
+                    ),
+            ),
+            _Step(
+              focusNode: _more,
+              icon: LucideIcons.plus,
+              tooltip: l10n.dailyMinutesMore,
+              onPressed: minutes < maxDailyMinutes
+                  ? () => _step(minutes, dailyMinuteStep)
+                  : null,
+            ),
+          ],
+        ),
+        if (_outOfRange)
+          Text(
+            l10n.dailyMinutesOutOfRange,
+            textAlign: TextAlign.center,
+            style: AppType.caption.copyWith(color: colors.dontKnowText),
+          ),
+        _Tiles(plan: plan, minutes: minutes),
+        if (error != null)
+          Text(
+            error,
+            style: AppType.caption.copyWith(color: colors.dontKnowText),
+          ),
+      ],
     );
   }
 
@@ -279,16 +386,13 @@ class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
       future: _plan,
       builder: (context, read) {
         final plan = read.data;
-        final minutes = _chosen ?? plan?.current;
-        final custom =
-            _custom ??
-            !dailyMinutePresets.contains(minutes ?? defaultDailyMinutes);
+        final minutes = _minutes(plan);
         return AppSheet(
           title: widget.first
               ? l10n.dailyMinutesFirstTitle
               : l10n.dailyMinutesTitle,
           body: l10n.dailyMinutesBody,
-          content: _content(context, read, plan, minutes, custom),
+          content: _content(context, read, plan, minutes),
           actions: [
             if (widget.first)
               AppButton(
@@ -300,7 +404,10 @@ class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
               label: l10n.save,
               size: AppButtonSize.cta,
               loading: _saving,
-              onPressed: minutes == null ? null : () => _save(minutes),
+              // A number outside the bounds is fixed before it is saved.
+              onPressed: minutes == null || _outOfRange
+                  ? null
+                  : () => _save(minutes),
             ),
           ],
         );
@@ -309,139 +416,47 @@ class _DailyMinutesSheetState extends ConsumerState<DailyMinutesSheet> {
   }
 }
 
-/// The choices, the custom steps of [dailyMinuteStep] while custom is chosen, and the preview of
-/// [minutes] by [plan].
-class _Choices extends StatelessWidget {
-  const _Choices({
-    required this.plan,
-    required this.minutes,
-    required this.custom,
-    required this.error,
-    required this.onChoose,
-  });
+/// The minutes as one large number with "분", read as a button that opens the
+/// keypad.
+class _Number extends StatelessWidget {
+  const _Number({required this.minutes, required this.onTap});
 
-  final MinutesPlan plan;
   final int minutes;
-  final bool custom;
-  final String? error;
-  final void Function(int minutes, {required bool custom}) onChoose;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    const perRow = 3;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s8,
-      children: [
-        for (var row = 0; row < dailyMinutePresets.length; row += perRow)
-          Row(
-            spacing: AppSpace.s8,
-            children: [
-              for (final preset in dailyMinutePresets.skip(row).take(perRow))
-                Expanded(
-                  child: _Choice(
-                    label: l10n.dailyMinutesChoice(preset),
-                    selected: !custom && minutes == preset,
-                    onTap: () => onChoose(preset, custom: false),
-                  ),
-                ),
-            ],
-          ),
-        _Choice(
-          label: custom
-              ? l10n.dailyMinutesCustomValue(minutes)
-              : l10n.dailyMinutesCustom,
-          selected: custom,
-          onTap: () => onChoose(minutes, custom: true),
-        ),
-        if (custom)
-          Row(
-            children: [
-              _Step(
-                icon: LucideIcons.minus,
-                tooltip: l10n.dailyMinutesLess,
-                onPressed: minutes > minDailyMinutes
-                    ? () => onChoose(
-                        max(minDailyMinutes, minutes - dailyMinuteStep),
-                        custom: true,
-                      )
-                    : null,
-              ),
-              Expanded(
-                child: ExcludeSemantics(
-                  child: Text(
-                    l10n.dailyMinutesChoice(minutes),
-                    textAlign: TextAlign.center,
-                    style: AppType.headline,
-                  ),
-                ),
-              ),
-              _Step(
-                icon: LucideIcons.plus,
-                tooltip: l10n.dailyMinutesMore,
-                onPressed: minutes < maxDailyMinutes
-                    ? () => onChoose(
-                        min(maxDailyMinutes, minutes + dailyMinuteStep),
-                        custom: true,
-                      )
-                    : null,
-              ),
-            ],
-          ),
-        const SizedBox(height: AppSpace.s4),
-        _Preview(plan: plan, minutes: minutes),
-        if (error case final error?)
-          Text(
-            error,
-            style: AppType.caption.copyWith(color: colors.dontKnowText),
-          ),
-      ],
-    );
-  }
-}
-
-/// A large choice, the primary fill while [selected], read as a button in a
-/// group of which one is selected.
-class _Choice extends StatelessWidget {
-  const _Choice({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
     return Semantics(
       container: true,
       button: true,
-      selected: selected,
-      inMutuallyExclusiveGroup: true,
-      label: label,
+      label: l10n.dailyMinutesNumberSemantics(minutes),
       excludeSemantics: true,
       child: Material(
-        color: selected ? colors.ink : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.button),
-          side: BorderSide(color: selected ? colors.ink : colors.outline),
-        ),
+        type: MaterialType.transparency,
+        borderRadius: BorderRadius.circular(AppRadius.button),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: SizedBox(
-            height: AppSize.cta,
-            child: Center(
-              child: Text(
-                label,
-                style: AppType.label.copyWith(
-                  color: selected ? colors.onPrimary : colors.ink,
-                ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: AppSize.cta),
+            // At a large text size the number shrinks to fit between the steps.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                spacing: AppSpace.s4,
+                children: [
+                  Text('$minutes', style: AppType.figure),
+                  Text(
+                    l10n.dailyMinutesUnit,
+                    style: AppType.headline.copyWith(color: colors.ink2),
+                  ),
+                ],
               ),
             ),
           ),
@@ -451,20 +466,91 @@ class _Choice extends StatelessWidget {
   }
 }
 
-/// A step of the custom minutes, an outlined icon button.
+/// The minutes typed in place of the number, on the number keypad.
+class _NumberInput extends StatelessWidget {
+  const _NumberInput({
+    required this.controller,
+    required this.focusNode,
+    required this.outOfRange,
+    required this.onChanged,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool outOfRange;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final line = outOfRange ? colors.dontKnowText : colors.ink;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      spacing: AppSpace.s4,
+      children: [
+        // Wide enough for three figures, so "분" stays beside the number.
+        SizedBox(
+          width: AppSize.cta + AppSize.cta,
+          child: Semantics(
+            label: l10n.dailyMinutesInput,
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(3),
+              ],
+              textAlign: TextAlign.center,
+              style: AppType.figure.copyWith(color: line),
+              decoration: InputDecoration(
+                isDense: true,
+                filled: false,
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: line),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: line),
+                ),
+              ),
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
+            ),
+          ),
+        ),
+        Text(
+          l10n.dailyMinutesUnit,
+          style: AppType.headline.copyWith(color: colors.ink2),
+        ),
+      ],
+    );
+  }
+}
+
+/// A step of the minutes, an outlined icon button.
 class _Step extends StatelessWidget {
   const _Step({
+    required this.focusNode,
     required this.icon,
     required this.tooltip,
     required this.onPressed,
   });
 
+  final FocusNode focusNode;
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) => IconButton(
+    focusNode: focusNode,
     tooltip: tooltip,
     onPressed: onPressed,
     icon: Icon(icon),
@@ -475,11 +561,11 @@ class _Step extends StatelessWidget {
   );
 }
 
-/// What [minutes] a day means, on the brand tint: today's new cards and
-/// reviews, and when the last new card starts; in a backlog, that new cards
-/// wait. A screen reader hears it again whenever it changes.
-class _Preview extends StatelessWidget {
-  const _Preview({required this.plan, required this.minutes});
+/// What [minutes] a day means, in two tiles on the brand tint: today's new
+/// cards, and in how many days the last unstarted card starts; in a backlog,
+/// that new cards wait. A screen reader hears them again whenever they change.
+class _Tiles extends StatelessWidget {
+  const _Tiles({required this.plan, required this.minutes});
 
   final MinutesPlan plan;
   final int minutes;
@@ -487,55 +573,65 @@ class _Preview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final (:fresh, :lastDay) = plan.at(minutes);
-    final lines = plan.backlog
-        ? [l10n.backlogPaused]
-        : [
-            l10n.dailyMinutesToday(fresh, plan.reviews),
-            switch (lastDay) {
-              _ when plan.unstarted == 0 => l10n.dailyMinutesAllStarted,
-              null => l10n.dailyMinutesNoTime,
-              final day when day == plan.todayStart =>
-                l10n.dailyMinutesForecastToday(plan.unstarted),
-              final day => l10n.dailyMinutesForecast(
-                plan.unstarted,
-                _date(context, day, plan.offsetAt),
-              ),
-            },
-          ];
+    final (:fresh, :after) = plan.at(minutes);
+    Widget tile(String title, String value) => Expanded(
+      child: _Tile(title: title, value: value),
+    );
     return Semantics(
       container: true,
       liveRegion: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.brandTint,
-          borderRadius: BorderRadius.circular(AppRadius.row),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.s16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: AppSpace.s4,
-            children: [
-              Text(lines.first, style: AppType.bodyStrong),
-              for (final line in lines.skip(1))
-                Text(
-                  line,
-                  style: AppType.secondary.copyWith(color: colors.ink2),
-                ),
-            ],
-          ),
-        ),
-      ),
+      child: plan.backlog
+          ? _Tile(title: null, value: l10n.backlogPaused)
+          : IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: AppSpace.s8,
+                children: [
+                  tile(
+                    l10n.dailyMinutesFreshTitle,
+                    l10n.dailyMinutesFreshValue(fresh),
+                  ),
+                  tile(l10n.dailyMinutesAllTitle, switch (after) {
+                    _ when plan.unstarted == 0 => l10n.dailyMinutesAllStarted,
+                    null => l10n.dailyMinutesNoTime,
+                    0 => l10n.dailyMinutesAfterToday,
+                    final days => l10n.dailyMinutesAfterDays(days),
+                  }),
+                ],
+              ),
+            ),
     );
   }
 }
 
-/// The calendar date of the study day starting at [start], month and day, in
-/// the app's language.
-String _date(BuildContext context, DateTime start, UtcOffsetAt offsetAt) {
-  final wall = start.toUtc().add(offsetAt(start));
-  return DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag())
-      .format(DateTime.utc(wall.year, wall.month, wall.day));
+/// A tile on the brand tint: an optional [title] over its [value].
+class _Tile extends StatelessWidget {
+  const _Tile({required this.title, required this.value});
+
+  final String? title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final title = this.title;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.brandTint,
+        borderRadius: BorderRadius.circular(AppRadius.row),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: AppSpace.s4,
+          children: [
+            if (title != null)
+              Text(title, style: AppType.caption.copyWith(color: colors.ink2)),
+            Text(value, style: AppType.bodyStrong),
+          ],
+        ),
+      ),
+    );
+  }
 }
