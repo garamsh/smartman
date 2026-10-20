@@ -523,6 +523,10 @@ describe("the users pages", () => {
       expect(listedEmails()).toHaveLength(20);
     });
     expect(window.location.pathname + window.location.search).toBe("/admin/users?q=user");
+    // 더 보기 stays disabled until the search's transition has settled.
+    await vi.waitFor(() => {
+      expect(screen.getByRole("button", { name: "더 보기" })).toBeEnabled();
+    });
     await user.click(screen.getByRole("button", { name: "더 보기" }));
     await vi.waitFor(() => {
       expect(listedEmails()).toHaveLength(21);
