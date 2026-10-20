@@ -312,6 +312,27 @@ describe("the study page", () => {
       expect(postgrest.rows.reviews).toHaveLength(1);
     });
 
+    it("sends the waiting answers and then returns to the deck page the session was opened from", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      vi.setSystemTime(start);
+      await render(Study, {
+        searchParams: Promise.resolve({ decks: uuidOf("d1"), from: "deck" }),
+      });
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+      });
+      const stop = postgrest.fail("reviews", 500);
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await screen.findByRole("alert");
+      stop();
+
+      await exits.close();
+
+      await waitFor(() => {
+        expect(testRouter.push).toHaveBeenCalledExactlyOnceWith(`/decks/${uuidOf("d1")}`);
+      });
+    });
+
     it("follows the close at once when every answer is saved", async () => {
       seedDeck(postgrest, "d1", ["un", "deux"]);
       await open("d1");
@@ -1020,6 +1041,27 @@ describe("the study page", () => {
       expect(toggle.className.split(" ")).not.toContain("hidden");
       await user.click(toggle);
       expect(stack()[1]).toMatch(/응답: 모른다$/);
+    });
+
+    it("leaves on Esc for the deck page it was opened from", async () => {
+      cleanup();
+      await render(Study, {
+        searchParams: Promise.resolve({ decks: uuidOf("d1"), from: "deck" }),
+      });
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+      });
+      const close = screen.getByRole("link", { name: "그만하기" });
+      const followed = vi.fn();
+      close.addEventListener("click", (event) => {
+        event.preventDefault();
+        followed();
+      });
+
+      await userEvent.setup().keyboard("{Escape}");
+
+      expect(close).toHaveAttribute("href", `/decks/${uuidOf("d1")}`);
+      expect(followed).toHaveBeenCalledOnce();
     });
 
     it("leaves for 오늘 on Esc", async () => {
