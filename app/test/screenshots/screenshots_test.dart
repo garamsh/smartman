@@ -257,7 +257,9 @@ void main() {
       // Above a tall sheet, where the barrier's centre is not.
       await tester.tapAt(const Offset(20, 100));
       await tester.pumpAndSettle();
+      // Leaving the typed card asks first.
       await tap(tester, find.byTooltip(ko.close));
+      await tap(tester, find.text(ko.discardCard));
       await shot(tester, '07-card-list');
       await tap(tester, find.text('ubiquitous'));
       await shot(tester, '07b-card-answer-shown');
@@ -984,7 +986,7 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.cardKindTable));
       await tester.enterText(
-        find.widgetWithText(AppTextField, ko.cardFront),
+        find.widgetWithText(AppTextField, ko.tableNameLabel),
         '불규칙 동사',
       );
       // The table's fields follow the front's: its headers, then its cells.

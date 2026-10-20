@@ -227,7 +227,7 @@ abstract class AppLocalizations {
   /// The card editor's kind switch: a line with the words to recall as blanks.
   ///
   /// In ko, this message translates to:
-  /// **'빈칸'**
+  /// **'문장'**
   String get cardKindCloze;
 
   /// Above the cloze form's word buttons: tap a word to make it a blank.
@@ -272,6 +272,12 @@ abstract class AppLocalizations {
   /// **'표의 이름'**
   String get tableNameHint;
 
+  /// Label of the front field in the table form, where the table's name is written; it stays the front by the Terms rule.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면 · 표 이름'**
+  String get tableNameLabel;
+
   /// What a screen reader reads for the table form's switch between typing cells and choosing blanks.
   ///
   /// In ko, this message translates to:
@@ -293,7 +299,7 @@ abstract class AppLocalizations {
   /// Above the table form's grid while cells are typed.
   ///
   /// In ko, this message translates to:
-  /// **'제목과 칸에 내용을 적어요'**
+  /// **'머리글과 칸에 내용을 적어요'**
   String get tableCellsHint;
 
   /// Above the table form's grid while blanks are chosen: tap a cell to make it a blank.
@@ -305,7 +311,7 @@ abstract class AppLocalizations {
   /// What a screen reader reads for a column's header field in the table form.
   ///
   /// In ko, this message translates to:
-  /// **'{column}열 제목'**
+  /// **'{column}열 머리글'**
   String tableHeaderCell(int column);
 
   /// A cell's place in the table form, as a screen reader reads it; rows count the table's body from 1.
@@ -373,6 +379,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'카드 종류'**
   String get cardKindLabel;
+
+  /// What a screen reader reads for the deck name at the top of the card editor.
+  ///
+  /// In ko, this message translates to:
+  /// **'{deck} 덱'**
+  String cardDeck(String deck);
 
   /// Heading of one sense in the word form, numbered from 1.
   ///
