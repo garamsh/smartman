@@ -93,7 +93,9 @@ void main() {
       await save(screens);
       final card = await _stored(screens);
       expect(card.front, [const TextContent('Capitals'), _capitals]);
-      expect(card.back, [TextContent(_capitals.filled)]);
+      // The name, then the filled table: the front's text, as photo import
+      // writes a table card's back.
+      expect(card.back, [TextContent('Capitals\n${_capitals.filled}')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       expect(find.text('Basic'), findsNothing, reason: 'no switch on edit');
@@ -272,6 +274,33 @@ void main() {
       await screens.tap(find.byTooltip('Delete card'));
       await screens.tap(find.text('Delete'));
       expect(await screens.cards(), isEmpty);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a table card as photo import writes it, its back the name and the filled table, is stored as it was when saved unchanged',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const front = [TextContent('Capitals'), _capitals];
+      final back = [TextContent(plainText(front))];
+      // The setup is photo import's shape: the name line, then the table.
+      expect(back.single.text, startsWith('Capitals\n'));
+      await tester.runAsync(
+        () => screens.repository.addCards(AddToDeck(screens.deck.id), [
+          IncomingCard(
+            front: front,
+            back: back,
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]),
+      );
+      final card = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await save(screens);
+      final saved = await _stored(screens);
+      expect(saved.front, front);
+      expect(saved.back, back);
       await screens.close();
     },
   );
