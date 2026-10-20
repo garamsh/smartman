@@ -1148,7 +1148,9 @@ void main() {
       await shot(tester, '21-photo-deck-sheet');
       await dismissSheet(tester);
 
-      await shoot(find.text(ko.retake));
+      await tap(tester, find.text(ko.retake));
+      await shot(tester, '22d-photo-discard');
+      await shoot(find.text(ko.discardImport));
       client.answerCards(const [
         CandidateCard(
           front: '양성모음',
@@ -1175,7 +1177,8 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-notes');
 
-      await shoot(find.text(ko.retake));
+      await tap(tester, find.text(ko.retake));
+      await shoot(find.text(ko.discardImport));
       client.fail(const ModelFailed());
       await tester.pumpAndSettle();
       await shot(tester, '24-photo-failure');

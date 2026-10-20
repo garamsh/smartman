@@ -618,6 +618,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addPhotos => '사진 더 추가';
 
   @override
+  String get discardImportTitle => '찾은 카드를 버릴까요?';
+
+  @override
+  String discardImportBody(int count) {
+    return '찾은 카드 $count장이 사라져요. 다시 읽으면 오늘 사진 한도가 다시 쓰여요.';
+  }
+
+  @override
+  String get discardImport => '버리기';
+
+  @override
   String get duplicateSkip => '건너뛰기';
 
   @override

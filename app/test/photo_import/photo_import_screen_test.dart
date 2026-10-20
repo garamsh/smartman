@@ -180,9 +180,27 @@ class _Import {
     await _pumpPast(_shown('open'));
   }
 
-  /// Taps the retake, named [label], which takes the next photo at once, as
-  /// [shoot] does.
-  Future<void> retake([String label = 'Retake']) => _pumpPast(_shown(label));
+  /// Taps the retake, named [label], confirms discarding the list's cards
+  /// where it asks, and takes the next photo at once, as [shoot] does.
+  Future<void> retake([String label = 'Retake']) async {
+    await _pumpPast(_shown(label));
+    if (_shown('Discard').evaluate().isNotEmpty) {
+      await _pumpPast(_shown('Discard'));
+    }
+  }
+
+  /// Presses the system back, as Android's back button does.
+  Future<void> back() async {
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+  }
+
+  /// Edits the front of the row reading [front] to [to] in its edit sheet.
+  Future<void> editFront(String front, String to) async {
+    await tap(_shown(front));
+    await tester.enterText(find.byType(TextField).first, to);
+    await tap(_shown('Done'));
+  }
 
   Future<void> _pumpPast(Finder finder) async {
     await tester.tap(finder);
@@ -1232,6 +1250,134 @@ void main() {
       },
     );
 
+    group('leaving a list that holds cards', () {
+      const prompt = 'Discard the cards found?';
+      const consequence =
+          'The 2 cards found will be lost. Reading the photos again uses '
+          "today's photo limit again.";
+
+      /// A list of three words, one left out and one edited, so a kept list
+      /// shows both.
+      Future<_Import> edited(WidgetTester tester) async {
+        final import = await _Import.open(tester);
+        await import.extract({
+          'chat': 'cat',
+          'chien': 'dog',
+          'cheval': 'horse',
+        });
+        await import.tap(import.check('cheval'));
+        await import.editFront('chien', 'chiot');
+        expect(import.included('cheval'), isFalse);
+        expect(_shown('chiot'), findsOneWidget);
+        return import;
+      }
+
+      Future<void> expectKept(_Import import) async {
+        expect(_shown(prompt), findsNothing);
+        expect(import.hasPopped, isFalse);
+        expect(import.included('cheval'), isFalse, reason: 'its check kept');
+        expect(_shown('chiot'), findsOneWidget, reason: 'its edit kept');
+      }
+
+      for (final (way, leave) in [
+        ('the system back', (_Import import) => import.back()),
+        ('"Cancel"', (_Import import) => import.tap(_shown('Cancel'))),
+      ]) {
+        testWidgets(
+          '$way asks first, its cancel keeps every check and edit, and discarding closes the screen with nothing written',
+          (tester) async {
+            final import = await edited(tester);
+
+            await leave(import);
+            expect(_shown(prompt), findsOneWidget);
+            expect(_shown(consequence), findsOneWidget);
+            await import.tap(_shown('Cancel').last);
+            await expectKept(import);
+            expect(import.client.calls, hasLength(1));
+
+            await leave(import);
+            await import.tap(_shown('Discard'));
+            expect(import.hasPopped, isTrue);
+            expect(import.popped, isNull);
+            expect(await import.cards(import.french), isEmpty);
+            await import.close();
+          },
+        );
+      }
+
+      testWidgets(
+        'the retake asks first, and its cancel keeps the list and takes no photo',
+        (tester) async {
+          final import = await edited(tester);
+
+          await import.tap(_shown('Retake'));
+          expect(_shown(prompt), findsOneWidget);
+          await import.tap(_shown('Cancel').last);
+          await expectKept(import);
+          expect(import.photos.cameraCalls, 1);
+
+          await import.retake();
+          expect(import.photos.cameraCalls, 2);
+          expect(import.client.calls, hasLength(2));
+          await import.close();
+        },
+      );
+
+      testWidgets(
+        'with every row left out, "Cancel" and the system back close at once',
+        (tester) async {
+          final import = await _Import.open(tester);
+          await import.extract({'chat': 'cat'});
+          await import.tap(import.check('chat'));
+          await import.tap(_shown('Cancel'));
+          expect(_shown(prompt), findsNothing);
+          expect(import.hasPopped, isTrue);
+          await import.close();
+
+          final other = await _Import.open(tester);
+          await other.extract({'chat': 'cat'});
+          await other.tap(other.check('chat'));
+          await other.back();
+          expect(other.hasPopped, isTrue);
+          await other.close();
+        },
+      );
+
+      testWidgets(
+        'a back while photos are added goes back to the list as it was, and a back while the first photos are read or one is extracted closes at once',
+        (tester) async {
+          final import = await edited(tester);
+          import.photos.libraryPhotos = [Future.value(testPhoto)];
+          await import.tap(_shown('Add more photos'));
+          await tester.tap(_shown('Choose from album'));
+          await import.frames();
+          expect(find.bySemanticsLabel('Reading photo 1 of 1'), findsOneWidget);
+
+          await tester.binding.handlePopRoute();
+          await import.frames();
+          expect(import.calls(1).cancelled, isTrue);
+          await expectKept(import);
+          await import.close();
+
+          final first = await _Import.open(tester);
+          await first.pickSeveral(2);
+          await tester.binding.handlePopRoute();
+          await first.frames();
+          expect(first.hasPopped, isTrue);
+          await first.close();
+
+          final one = await _Import.open(tester);
+          await one.shoot();
+          expect(_shown('Finding cards'), findsOneWidget);
+          await tester.binding.handlePopRoute();
+          await one.frames();
+          expect(one.hasPopped, isTrue);
+          expect(one.client.calls.single.cancelled, isTrue);
+          await one.close();
+        },
+      );
+    });
+
     testWidgets(
       'cancel closes the list, writes nothing and pops with nothing',
       (tester) async {
@@ -1239,6 +1385,7 @@ void main() {
         await import.extract({'a': '1'});
 
         await import.tap(_shown('Cancel'));
+        await import.tap(_shown('Discard'));
 
         expect(import.hasPopped, isTrue);
         expect(import.popped, isNull);
