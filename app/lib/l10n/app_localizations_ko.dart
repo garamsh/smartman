@@ -994,8 +994,23 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String goalRingSemantics(int done, int goal) {
-    return '하루 목표 $goal장 중 $done장';
+  String todayOfGoal(int goal) {
+    return ' / $goal장';
+  }
+
+  @override
+  String todayAbout(int minutes) {
+    return '약 $minutes분';
+  }
+
+  @override
+  String todayAboutLeft(int minutes) {
+    return '약 $minutes분 남음';
+  }
+
+  @override
+  String todayProgress(int goal, int done) {
+    return '$goal장 중 $done장';
   }
 
   @override
@@ -1358,16 +1373,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachStart => '시작하기';
 
   @override
-  String dailyMinutesControl(int minutes) {
-    return '하루 $minutes분';
-  }
-
-  @override
-  String dailyMinutesControlSemantics(int minutes) {
-    return '하루 공부 시간 $minutes분, 바꾸기';
-  }
-
-  @override
   String get dailyMinutesTitle => '하루 공부 시간';
 
   @override
@@ -1395,19 +1400,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyMinutesSkip => '건너뛰기';
-
-  @override
-  String completionTomorrow(int minutes) {
-    return '내일도 하루 $minutes분';
-  }
-
-  @override
-  String get completionChange => '바꾸기';
-
-  @override
-  String completionTomorrowSemantics(int minutes) {
-    return '내일도 하루 $minutes분, 바꾸기';
-  }
 
   @override
   String get settingsStudy => '공부';

@@ -4,14 +4,18 @@ import { RetryButton } from "@/design/retry-button";
 import { ThemeChoice } from "@/design/theme-choice";
 import { AccountAvatar, getSession, SignOutForm } from "@/features/account";
 
+import { readStudySetting, StudySetting } from "./study-setting";
+
 /**
- * Who is signed in, read from the session on the server, the theme the web is drawn in, and the
- * account's actions; while the server cannot be reached, "다시 시도" and the theme.
+ * Who is signed in, read from the session on the server, the daily study minutes, the theme the web
+ * is drawn in, and the account's actions; while the server cannot be reached, "다시 시도" and the
+ * theme.
  */
 export async function Profile() {
   const session = await getSession();
   switch (session.kind) {
-    case "signed-in":
+    case "signed-in": {
+      const study = await readStudySetting();
       return (
         <>
           <section
@@ -21,6 +25,7 @@ export async function Profile() {
             <AccountAvatar email={session.email} size="large" />
             <p className="min-w-0 text-body-strong break-all">{session.email}</p>
           </section>
+          <StudySetting setting={study} />
           <Display />
           <section aria-labelledby="account-section" className="flex flex-col gap-3">
             <h2 id="account-section" className="text-section text-ink-2">
@@ -30,6 +35,7 @@ export async function Profile() {
           </section>
         </>
       );
+    }
     case "unreachable":
       return (
         <>

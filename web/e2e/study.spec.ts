@@ -140,17 +140,21 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   ).toBeNull();
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "오늘 할 카드 2장", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "하루 목표 2장 중 0장", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "오늘 할 카드", exact: true })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: "2장 중 0장", exact: true })).toBeVisible();
+  // The minutes are set in 계정과 설정 alone.
+  await expect(page.getByRole("button", { name: /하루 공부 시간/ })).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "French, 오늘 2장 학습", exact: true }),
   ).toHaveAttribute("href", `/study?decks=${deckId}`);
-  // 오늘 carries no account content; the account page, the control below, does.
+  // 오늘 carries no account content; the account page does.
   await expect(page.getByText(email)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "로그아웃" })).toHaveCount(0);
   await shot(page, "01-today");
-  // The today card's control opens the daily study minutes' dialog, which saves on the server.
-  await page.getByRole("button", { name: "하루 공부 시간 20분, 바꾸기", exact: true }).click();
+  // The account page's 하루 공부 시간 row opens the daily study minutes' dialog, which saves on
+  // the server.
+  await page.goto("/account");
+  await page.getByRole("button", { name: "하루 공부 시간 20분", exact: true }).click();
   const minutes = page.getByRole("dialog", { name: "하루 공부 시간" });
   // The tiles' region holds both tiles, so each value is matched as part of it.
   await expect(minutes.getByRole("status")).toContainText("약 2장");
@@ -173,11 +177,11 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(minutes.getByRole("status")).toContainText("오늘");
   await minutes.getByRole("button", { name: "저장", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "하루 공부 시간 30분, 바꾸기", exact: true }),
+    page.getByRole("button", { name: "하루 공부 시간 30분", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "하루 공부 시간 30분, 바꾸기", exact: true }),
+    page.getByRole("button", { name: "하루 공부 시간 30분", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "주 메뉴" })
@@ -235,6 +239,19 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(coach).toHaveCount(0);
   await expect(page.getByRole("region", { name: "응답한 카드가 여기에 쌓여요" })).toHaveCount(0);
   await shot(page, "05-study-stack");
+  // The today card once one of the day's two cards is done, in a second tab: its count and bar,
+  // and the minutes left, once the answer's write has landed.
+  const todayTab = await page.context().newPage();
+  await todayTab.goto("/");
+  await expect(async () => {
+    await todayTab.reload();
+    await expect(
+      todayTab.getByRole("progressbar", { name: "2장 중 1장", exact: true }),
+    ).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(todayTab.getByText(/^약 \d+분 남음$/)).toBeVisible();
+  await shot(todayTab, "01a-today-started");
+  await todayTab.close();
   // A click on the previous card opens it whole; Esc closes it, and the session goes on.
   await page.getByRole("button", { name: "카드 전체 보기", exact: true }).click();
   const detail = page.getByRole("dialog", { name: "카드", exact: true });

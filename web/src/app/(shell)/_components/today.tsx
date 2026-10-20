@@ -12,13 +12,11 @@ import {
 import {
   catchUp,
   countDay,
-  DailyMinutes,
   dailyGoal,
   dailyLoad,
   dayPlanOf,
   deckProgress,
   lastWeek,
-  newCards,
   nextReviewOf,
   readRecentRetention,
   readToday,
@@ -90,7 +88,7 @@ export async function Today() {
   if ("failure" in today) return failed(today.failure);
   if ("failure" in retention) return failed(retention.failure);
   const { decks, cards } = read.library;
-  const { day, states, pace, answers, streakBefore, timeZone, dailyMinutes } = today.today;
+  const { day, states, pace, answers, streakBefore, timeZone } = today.today;
   if (decks.length === 0) {
     return (
       <>
@@ -120,19 +118,6 @@ export async function Today() {
   const streak = streakBefore + (answers.length > 0 ? 1 : 0);
   const stored = Object.values(states).flatMap((state) => (state ? [state] : []));
   const href = studyHref(decks.map((deck) => deck.id));
-  const minutesControl = (onHero: boolean) => (
-    <DailyMinutes
-      minutes={dailyMinutes}
-      plan={{
-        due: today.today.dueAtStart,
-        started: today.today.startedToday,
-        unstarted: newCards(cards, states).length,
-        backlog: count.backlog,
-        pace,
-      }}
-      onHero={onHero}
-    />
-  );
   const week = (
     <LastWeek
       week={lastWeek({
@@ -204,7 +189,6 @@ export async function Today() {
                 : "앞으로 7일 동안 복습할 카드가 없어요"}
             </p>
             <p className="flex flex-wrap items-center justify-center gap-2 text-secondary">
-              {minutesControl(false)}
               {streakChip("bg-surface")}
               {goal.goal > 0 && (
                 <span className="flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-bold">
@@ -252,10 +236,11 @@ export async function Today() {
                 </p>
               </div>
             </div>
-            <p className="flex flex-wrap items-center gap-2 text-secondary">
-              {minutesControl(true)}
-              {streakChip("border border-on-hero/40")}
-            </p>
+            {streak > 0 && (
+              <p className="flex flex-wrap items-center gap-2 text-secondary">
+                {streakChip("border border-on-hero/40")}
+              </p>
+            )}
             {/* A row, so the link keeps its row sizes inside the card's column. */}
             <div className="flex flex-wrap">
               <EnterLink href={href} label={`${String(total)}장 학습 · 약 ${String(minutes)}분`} />
@@ -274,23 +259,45 @@ export async function Today() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="today-title"
-          className="flex flex-wrap items-center gap-6 rounded-card bg-hero p-6 text-on-hero shadow-card lg:col-span-2 lg:p-7"
+          className="flex flex-col gap-4 rounded-card bg-hero p-6 text-on-hero shadow-card lg:col-span-2 lg:p-7"
         >
-          <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-2">
-            <p className="text-label font-normal">오늘 할 카드</p>
-            <h2 id="today-title" aria-label={`오늘 할 카드 ${String(total)}장`}>
-              <span className="text-figure">{total}</span>{" "}
-              <span className="text-headline">장 · 약 {minutes}분</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-secondary">
+            <h2 id="today-title" className="text-label font-normal">
+              오늘 할 카드
             </h2>
-            <p className="flex flex-wrap items-center gap-2 text-secondary">
-              {streakChip("border border-on-hero/40")}
-              <span className="break-keep">{statusLine(todayStatus(goal, streak))}</span>
-              {extraPill("border border-on-hero/40")}
-            </p>
-            {minutesControl(true)}
+            {streakChip("border border-on-hero/40")}
           </div>
-          <GoalRing done={goal.done} goal={goal.goal} />
-          <EnterLink href={href} label="모두 학습" />
+          <div className="flex flex-wrap items-end justify-between gap-x-3">
+            {/* The bar under it reads the same figures. */}
+            <p id="today-count" aria-hidden>
+              <span className="text-figure">{goal.done}</span>
+              <span className="text-headline text-on-hero/80"> / {goal.goal}장</span>
+            </p>
+            <p id="today-time" className="text-secondary">
+              약 {minutes}분{goal.done > 0 && " 남음"}
+            </p>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={`${String(goal.goal)}장 중 ${String(goal.done)}장`}
+            aria-valuemin={0}
+            aria-valuemax={goal.goal}
+            aria-valuenow={goal.done}
+            className="h-progress overflow-hidden rounded-full bg-on-hero/20"
+          >
+            <div
+              className="h-full rounded-full bg-on-hero"
+              style={{ width: `${String(goal.goal === 0 ? 0 : (goal.done / goal.goal) * 100)}%` }}
+            />
+          </div>
+          <p className="flex flex-wrap items-center gap-2 text-secondary">
+            <span className="break-keep">{statusLine(todayStatus(goal, streak))}</span>
+            {extraPill("border border-on-hero/40")}
+          </p>
+          {/* A row, so the link keeps its row sizes inside the card's column. */}
+          <div className="flex flex-wrap">
+            <EnterLink href={href} label="모두 학습" />
+          </div>
         </section>
         {week}
         {rows.length > 0 && <TodayDecks rows={rows} />}
@@ -349,48 +356,6 @@ function CatchUp({
       </div>
       <p className="text-caption text-muted">하루 {perDay}장씩 했을 때 남는 밀린 복습이에요</p>
     </section>
-  );
-}
-
-/** The daily goal as a ring, done over goal in its middle, read as one sentence. */
-function GoalRing({ done, goal }: { done: number; goal: number }) {
-  const radius = 42;
-  const length = 2 * Math.PI * radius;
-  const fraction = goal === 0 ? 0 : done / goal;
-  return (
-    <div
-      role="img"
-      aria-label={`하루 목표 ${String(goal)}장 중 ${String(done)}장`}
-      className="relative flex size-24 shrink-0 items-center justify-center"
-    >
-      <svg aria-hidden viewBox="0 0 96 96" className="absolute inset-0 size-full -rotate-90">
-        <circle
-          cx="48"
-          cy="48"
-          r={radius}
-          fill="none"
-          strokeWidth="8"
-          className="stroke-on-hero/20"
-        />
-        {/* At zero a round cap would still draw a dot. */}
-        {fraction > 0 && (
-          <circle
-            cx="48"
-            cy="48"
-            r={radius}
-            fill="none"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={`${String(length * fraction)} ${String(length)}`}
-            className="stroke-on-hero"
-          />
-        )}
-      </svg>
-      <span className="flex flex-col items-center">
-        <span className="text-headline">{done}</span>
-        <span className="text-micro">/ {goal}</span>
-      </span>
-    </div>
   );
 }
 
