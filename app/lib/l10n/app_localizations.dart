@@ -1075,11 +1075,11 @@ abstract class AppLocalizations {
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
 
-  /// Heading while several photos are read, announced to screen readers: the photo being read now and how many there are.
+  /// Heading while several photos are read, announced to screen readers: how many photos are read, as the bar under it shows, of how many.
   ///
   /// In ko, this message translates to:
-  /// **'사진 {current}/{total} 읽는 중'**
-  String readingTitle(int current, int total);
+  /// **'사진 {total}장 중 {read}장 읽음'**
+  String readingTitle(int read, int total);
 
   /// Heading once every photo that could be read is read and some failed; each failed photo offers retry or remove.
   ///

@@ -176,7 +176,7 @@ class _ImportListViewState extends State<ImportListView> {
                   _list.allVocabulary
                       ? l10n.importTitleWords(rows)
                       : l10n.importTitleCards(rows),
-                  style: AppType.display.copyWith(color: colors.ink),
+                  style: AppType.title.copyWith(color: colors.ink),
                 ),
               ),
               _DeckLine(
