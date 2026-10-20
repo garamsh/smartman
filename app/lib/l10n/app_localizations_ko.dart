@@ -1205,6 +1205,20 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks주 전';
+  }
+
+  @override
+  String get masteredThisWeek => '이번 주';
+
+  @override
+  String get studyDaysFewer => '적게';
+
+  @override
+  String get studyDaysMore => '많이';
+
+  @override
   String studyDaysSemantics(int count, String days) {
     return '최근 12주 동안 $count일 학습했어요: $days';
   }
