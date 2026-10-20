@@ -41,7 +41,7 @@
   "blank": "빈칸",
   "@blank": {"description": "How a screen reader reads an empty blank of a table or cloze card."},
   "wholeCard": "카드",
-  "@wholeCard": {"description": "Title of the sheet that shows a table or cloze card whole, its blanks filled."},
+  "@wholeCard": {"description": "Title of the sheet that shows a card whole: its front and back under labels of the same rank, or a table or cloze card with its blanks filled."},
   "sensesEditNote": "앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.",
   "@sensesEditNote": {"description": "In the card editor under the front of a card whose front holds senses, such as a reversed vocabulary card: editing that front saves it as text."},
   "cardKindBasic": "기본",
@@ -249,7 +249,7 @@
     "description": "The completion card's time on screen today, in whole minutes rounded up.",
     "placeholders": {"minutes": {"type": "int"}}
   },
-  "completionStreak": "{days}일",
+  "completionStreak": "{days}일 연속",
   "@completionStreak": {
     "description": "The completion card's streak, after a flame icon: study days in a row.",
     "placeholders": {"days": {"type": "int"}}

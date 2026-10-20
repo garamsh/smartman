@@ -9,7 +9,7 @@ The app's design language: the principles every screen follows for usability and
 Every screen is designed to be simple, intuitive and easy to use. A new screen or a change to one follows these, and copies the idiom named under each.
 
 1. **One primary action per screen.** It is the most prominent element and sits in thumb reach, at the bottom. Secondary actions are quieter or live in a menu.
-   - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it.
+   - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it; with none left, "그만하기" is the primary fill at the cta height under "더 학습할 카드가 없어요" ([ADR 0092](adr/0092-make-stopping-the-finished-completion-card-s-primary-and-show-the-resume-notice-in-the-progress-bar-s-place-on-the-phone.md)). The whole-card sheet is titled "카드", its "앞면" and "뒷면" two section labels of one rank, since neither side is the sheet's subject (#318).
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
    - Card editor: a new card's kind is a segmented switch at the top, quieter than the bottom bar's actions; "뜻 추가" is outlined, and "표시 추가" a text button.
    - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
@@ -146,7 +146,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   - actions are always full width, with the primary one last.
 - **`showAppConfirm`** — every irreversible action: a sheet that states the consequence in one sentence, with a cancel and, last, a red final button. It is the one sheet with a cancel.
 - **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the option sheets' rows, the browse rows, the photo import source sheet and deck chooser, and the account screen's sign-out and deletion. A destructive row, the deletion, draws its title and leading icon in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the skeleton rows and the account screen's theme control. On a sheet a row takes the ground colour.
-- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "화면", "계정", the import sheet's duplicate options, and the answer in the whole-card sheet.
+- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "화면", "계정", the import sheet's duplicate options, and the front and the back in the whole-card sheet.
 - **`BottomActions`** — a screen's bottom bar: a secondary action, and a primary one beside it when the screen offers one: the deck screen and the card editor.
 - **`AppChip`** — a fully rounded label in a tone, neutral (the surface inside an outline) or brand (the brand tint): the brand-tint "오늘 n" chip and the "공개" chip. `app/test/design/app_rows_test.dart` checks both tones.
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
