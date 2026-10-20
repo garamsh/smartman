@@ -69,7 +69,7 @@ export async function Study({
   const own = answers.filter((answer) => ids.has(answer.cardId));
   // Today's list keeps a card answered "모른다" last today, which its state no longer makes due.
   const engine = await readyServerEngine();
-  if ("failure" in engine) return <Failure failure={engine.failure} />;
+  if ("failure" in engine) return <Failure failure={engine.failure} back={back} />;
   const plan = dayPlanOf(cards, states, day, own);
   const taken = new Set([...plan.selected.cards, ...plan.relearn].map((card) => card.id));
   const more = newCards(cards, states).filter((card) => !taken.has(card.id));
