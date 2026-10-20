@@ -1024,7 +1024,7 @@ describe("the study page", () => {
 
     it("leaves for 오늘 on Esc", async () => {
       const user = userEvent.setup();
-      const close = closeLink();
+      const close = screen.getByRole("link", { name: "그만하기" });
       const followed = vi.fn();
       close.addEventListener("click", (event) => {
         event.preventDefault();
