@@ -66,6 +66,51 @@ void main() {
     },
   );
 
+  testWidgets(
+    'with the keyboard up, both save actions sit above it and add cards in a row, and an edit Save does too',
+    (tester) async {
+      final screens = await openNew(tester);
+      // A phone keyboard 336 high over the 844 high screen.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      const keyboardTop = 844.0 - 336;
+      expect(
+        MediaQuery.viewInsetsOf(tester.element(find.byType(Scaffold).last))
+            .bottom,
+        336,
+        reason: 'the setup: the keyboard is up',
+      );
+
+      for (final action in ['Save', 'Save and next card']) {
+        expect(
+          tester.getRect(find.text(action)).bottom,
+          lessThanOrEqualTo(keyboardTop),
+          reason: action,
+        );
+      }
+      for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
+        await screens.enter('Front', front);
+        await screens.enter('Back', back);
+        await tester.tap(find.text('Save and next card'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+      final cards = await _stored(screens);
+      expect(cards, unorderedEquals([('Chat', 'cat'), ('Chien', 'dog')]));
+
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      final card = (await screens.cards()).first;
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      expect(
+        tester.getRect(find.text('Save')).bottom,
+        lessThanOrEqualTo(keyboardTop),
+        reason: 'editing',
+      );
+      await screens.close();
+    },
+  );
+
   testWidgets('Save stores the card and closes the editor', (tester) async {
     final screens = await openNew(tester);
 

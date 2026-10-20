@@ -254,6 +254,12 @@ abstract class AppLocalizations {
   /// **'빈칸으로 할 낱말을 하나 이상 골라 주세요'**
   String get clozeBlankRequired;
 
+  /// Error under the cloze form's words when the line holds underscores that would read as a blank of its own.
+  ///
+  /// In ko, this message translates to:
+  /// **'___는 빈칸 표시라 줄에 쓸 수 없어요'**
+  String get clozeBlankMarker;
+
   /// The table kind's segment in the card editor's kind switch.
   ///
   /// In ko, this message translates to:

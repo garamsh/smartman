@@ -792,6 +792,55 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets(
+      'the card editor with the keyboard up in $mode',
+      skip: !_capture,
+      (tester) async {
+        phone(tester);
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        var ids = 0;
+        final repository = DeckRepository(
+          db,
+          clock: () => homeNow,
+          newId: () => 'id${ids++}',
+        );
+        final deck = (await tester.runAsync(
+          () => repository.createDeck('영단어 기본'),
+        ))!;
+        final storage = await openStudyStorage(tester);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              deckRepositoryProvider.overrideWithValue(repository),
+              deckStorageProvider.overrideWithValue(storage),
+            ],
+            child: MaterialApp(
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: ThemeMode.values.byName(mode),
+              locale: const Locale('ko'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: CardEditorScreen(deck: deck),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tap(tester, find.text(ko.cardKindBasic));
+        // A phone keyboard 336 points high, given in physical pixels.
+        tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.enterText(
+          find.widgetWithText(AppTextField, ko.cardFront),
+          'ephemeral',
+        );
+        await tester.pumpAndSettle();
+        await shot(tester, '05k-card-editor-keyboard');
+        await unmount(tester);
+      },
+    );
+
     testWidgets('the cloze form in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());

@@ -219,7 +219,8 @@ class DeckRepository {
   }
 
   /// Replaces [card]'s front and back. Another card in the same deck with an
-  /// equal key blocks the save unless [allowDuplicate] is set.
+  /// equal key blocks the save unless [allowDuplicate] is set. Content that
+  /// cannot be read back is not stored: the save fails as [UnreadableCard].
   Future<SaveCardResult> editCard(
     Card card, {
     required List<Content> front,
@@ -247,18 +248,12 @@ class DeckRepository {
             dirty: const Value(true),
           ),
         );
-        return CardSaved(
-          Card(
-            id: card.id,
-            deckId: card.deckId,
-            front: front,
-            back: back,
-            cardKey: key,
-            source: card.source,
-            createdAt: card.createdAt,
-            updatedAt: now,
-          ),
-        );
+        // Read back as any card is read, so content the decoder refuses
+        // throws here and the write rolls back, as an add's does.
+        final row = await (_db.select(
+          _db.cards,
+        )..where((row) => row.id.equals(card.id.value))).getSingle();
+        return CardSaved(_toCard(row));
       }),
     );
   }
