@@ -158,20 +158,15 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     CardKind.cloze when _keepsCloze => widget.card!.back,
     // The line with its blanks filled, as photo import writes a cloze's back.
     CardKind.cloze => [TextContent(_cloze.content?.filled ?? _front.text)],
-    // The table with every cell shown, as photo import writes a table's back.
-    CardKind.table => [TextContent(_table.table.filled)],
+    // The name, then the table with every cell shown: the front's text, as
+    // photo import writes a table card's back.
+    CardKind.table => [TextContent(plainText(_frontBlocks))],
   };
 
-  Future<void> _chooseKind(CardKind kind) async {
-    setState(() {
-      _kind = kind;
-      _showRequired = false;
-    });
-    await reportingFailure(
-      context,
-      () => rememberKind(ref.read(deckStorageProvider), widget.deck.id, kind),
-    );
-  }
+  void _chooseKind(CardKind kind) => setState(() {
+    _kind = kind;
+    _showRequired = false;
+  });
 
   Future<void> _save(_AfterSave after, {bool allowDuplicate = false}) async {
     if (!_isComplete) {
@@ -179,6 +174,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       return;
     }
     final repository = ref.read(deckRepositoryProvider);
+    final storage = ref.read(deckStorageProvider);
+    final kind = _kind;
     final card = widget.card;
     final front = _frontBlocks;
     final back = _backBlocks;
@@ -219,6 +216,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           _frontFocus.requestFocus();
         case (DuplicateFront(:final existing), _):
           await _resolveDuplicate(existing, after);
+      }
+      // The deck's next new card opens in the kind of the last one added,
+      // not of the last switch tapped (issue #311).
+      if (card == null && result is CardSaved) {
+        await rememberKind(storage, widget.deck.id, kind);
       }
     });
   }
