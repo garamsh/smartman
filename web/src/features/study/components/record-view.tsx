@@ -52,64 +52,84 @@ function dateLabel(date: number): string {
 }
 
 /**
- * The 기록 page's content (ADR 0037): the 7일, 30일 and 전체 selector, which governs the retention
- * alone; the retention against its target with the gap and a line of each study day; the recall
- * bands now; the mastered cards of the last eight weeks; and twelve weeks of study days with the
- * current and the best streak. Each chart is read as one label that states its values.
+ * The 기록 page's content (ADR 0037): the retention against its target with the gap and a line of
+ * each study day, with the 7일, 30일 and 전체 selector it alone follows beside its heading; the
+ * recall bands now; the mastered cards now and over the last eight weeks; and twelve weeks of study
+ * days, today's ringed, with the current and the best streak. Each chart is read as one label that
+ * states its values.
  */
 export function RecordView(props: RecordViewProps) {
   const [period, setPeriod] = useState<StatsPeriod>("month");
-  const label = useId();
   return (
-    <div className="flex flex-col gap-3">
-      <div
-        role="radiogroup"
-        aria-labelledby={label}
-        className="grid grid-cols-3 gap-1 self-start rounded-field bg-brand-tint p-1"
-      >
-        <span id={label} className="sr-only">
-          기간
-        </span>
-        {periods.map(({ value, label: name }) => (
-          <label key={value} className="flex">
-            <input
-              type="radio"
-              name="period"
-              value={value}
-              checked={period === value}
-              onChange={() => {
-                setPeriod(value);
-              }}
-              className="peer sr-only"
-            />
-            <span className="flex min-h-tap-target min-w-16 flex-1 cursor-pointer items-center justify-center rounded-button px-3 text-secondary font-semibold text-ink-2 peer-checked:bg-raised peer-checked:font-bold peer-checked:text-ink peer-checked:shadow-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
-              {name}
-            </span>
-          </label>
-        ))}
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className="lg:col-span-2">
+        <RetentionCard
+          {...props}
+          period={period}
+          control={<PeriodChoice period={period} onChange={setPeriod} />}
+        />
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="lg:col-span-2">
-          <RetentionCard {...props} period={period} />
-        </div>
-        <RecallCard bands={props.recall} />
-        <MasteredCard weeks={props.mastered} />
-        <div className="lg:col-span-2">
-          <StudyDaysCard days={props.studyDays} streak={props.streak} best={props.bestStreak} />
-        </div>
+      <RecallCard bands={props.recall} />
+      <MasteredCard weeks={props.mastered} />
+      <div className="lg:col-span-2">
+        <StudyDaysCard days={props.studyDays} streak={props.streak} best={props.bestStreak} />
       </div>
     </div>
   );
 }
 
-/** A chart on the surface under its heading, with an optional line beside the heading. */
+/** 7일, 30일 and 전체, the periods the retention is read over, as one radio group named "기간". */
+function PeriodChoice({
+  period,
+  onChange,
+}: {
+  period: StatsPeriod;
+  onChange: (period: StatsPeriod) => void;
+}) {
+  const label = useId();
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby={label}
+      className="grid grid-cols-3 gap-1 rounded-field bg-brand-tint p-1"
+    >
+      <span id={label} className="sr-only">
+        기간
+      </span>
+      {periods.map(({ value, label: name }) => (
+        <label key={value} className="flex">
+          <input
+            type="radio"
+            name="period"
+            value={value}
+            checked={period === value}
+            onChange={() => {
+              onChange(value);
+            }}
+            className="peer sr-only"
+          />
+          <span className="flex min-h-tap-target min-w-16 flex-1 cursor-pointer items-center justify-center rounded-button px-3 text-secondary font-semibold text-ink-2 peer-checked:bg-raised peer-checked:font-bold peer-checked:text-ink peer-checked:shadow-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
+            {name}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A chart on the surface under its heading, with an optional line or [control] beside the heading;
+ * the control goes under it where both do not fit.
+ */
 function Card({
   title,
   trailing,
+  control,
   children,
 }: {
   title: string;
   trailing?: string | null;
+  control?: ReactNode;
   children: ReactNode;
 }) {
   const heading = useId();
@@ -118,11 +138,14 @@ function Card({
       aria-labelledby={heading}
       className="flex h-full flex-col gap-3 rounded-previous bg-surface p-4"
     >
-      <div className="flex items-baseline justify-between gap-2">
+      <div
+        className={`flex justify-between gap-2 ${control ? "flex-wrap items-center" : "items-baseline"}`}
+      >
         <h2 id={heading} className="text-label text-ink">
           {title}
         </h2>
         {trailing && <p className="text-caption text-ink-2">{trailing}</p>}
+        {control}
       </div>
       {children}
     </section>
@@ -135,13 +158,19 @@ function Empty({ children }: { children: string }) {
 }
 
 /** The retention over [period]: its value against the target, the gap, and each day's share. */
-function RetentionCard({ days, now, timeZone, period }: RecordViewProps & { period: StatsPeriod }) {
+function RetentionCard({
+  days,
+  now,
+  timeZone,
+  period,
+  control,
+}: RecordViewProps & { period: StatsPeriod; control: ReactNode }) {
   const shown = retentionIn(days, period, now, timeZone);
   const total = retentionOver(shown);
   const target = percent(targetRetention);
   if (!total) {
     return (
-      <Card title="복습에서 맞힌 비율">
+      <Card title="복습에서 맞힌 비율" control={control}>
         <Empty>이 기간에 복습한 카드가 없어요.</Empty>
       </Card>
     );
@@ -165,7 +194,7 @@ function RetentionCard({ days, now, timeZone, period }: RecordViewProps & { peri
     .join(", ");
   const periodDays = period === "week" ? 7 : period === "month" ? 30 : null;
   return (
-    <Card title="복습에서 맞힌 비율">
+    <Card title="복습에서 맞힌 비율" control={control}>
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="flex items-end gap-4">
           <p className="text-figure text-ink">{value}%</p>
@@ -346,7 +375,10 @@ function RecallCard({ bands }: { bands: RecallBands }) {
   );
 }
 
-/** The mastered cards at the end of each of the last eight weeks, this week's in ink. */
+/**
+ * The mastered cards now as the figure, then at the end of each of the last eight weeks, this
+ * week's in ink, the first and the last week named under them.
+ */
 function MasteredCard({ weeks }: { weeks: number[] }) {
   const most = Math.max(...weeks);
   if (most === 0) {
@@ -359,6 +391,7 @@ function MasteredCard({ weeks }: { weeks: number[] }) {
   const gain = masteredGain(weeks);
   return (
     <Card title="익힌 카드" trailing={gain === null ? null : `4주 +${String(gain)}장`}>
+      <p className="text-figure text-ink">{weeks[weeks.length - 1] ?? 0}장</p>
       <div
         role="img"
         aria-label={`주별 익힌 카드, 8주 전부터 이번 주까지: ${weeks.map((count) => `${String(count)}장`).join(", ")}`}
@@ -373,11 +406,19 @@ function MasteredCard({ weeks }: { weeks: number[] }) {
           />
         ))}
       </div>
+      {/* The chart's label names every week; these name its two ends. */}
+      <div aria-hidden className="flex justify-between text-caption text-muted">
+        <span>{weeks.length}주 전</span>
+        <span>이번 주</span>
+      </div>
     </Card>
   );
 }
 
-/** Twelve weeks of study days, a column a week, shaded by the cards answered, with the streaks. */
+/**
+ * Twelve weeks of study days, a column a week, shaded by the cards answered, today's ringed in ink,
+ * with the streaks; under them the first day's date, the shades' key and 오늘.
+ */
 function StudyDaysCard({
   days,
   streak,
@@ -400,12 +441,30 @@ function StudyDaysCard({
         }
         className="grid max-w-list grid-flow-col grid-rows-7 gap-1"
       >
-        {days.map((day) => (
+        {days.map((day, index) => (
           <span
             key={day.date}
-            className={`aspect-square rounded-sm ${heatShades[heatLevel(day.cards, most)] ?? heatShades[0]}`}
+            className={`aspect-square rounded-sm ${heatShades[heatLevel(day.cards, most)] ?? heatShades[0]} ${
+              index === days.length - 1 ? "ring-2 ring-ink ring-inset" : ""
+            }`}
           />
         ))}
+      </div>
+      {/* The label above reads every study day by its date; these place the grid in time and key
+          its shades for the eye. */}
+      <div
+        aria-hidden
+        className="flex max-w-list flex-wrap items-center justify-between gap-x-2 gap-y-1 text-caption text-muted"
+      >
+        <span>{days[0] ? dateLabel(days[0].date) : null}</span>
+        <span className="flex items-center gap-1">
+          적게
+          {heatShades.map((shade) => (
+            <span key={shade} className={`size-3 rounded-xs ${shade}`} />
+          ))}
+          많이
+        </span>
+        <span>오늘</span>
       </div>
     </Card>
   );

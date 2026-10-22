@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -106,6 +106,53 @@ describe("the record page", () => {
     expect(screen.getByText("목표보다 30%p 낮아요")).toBeInTheDocument();
   });
 
+  it("puts the period selector in the retention card beside its heading, which alone follows it", async () => {
+    seedHistory();
+    await render(RecordContent, {});
+
+    const retention = within(screen.getByRole("region", { name: "복습에서 맞힌 비율" }));
+    const choice = retention.getByRole("radiogroup", { name: "기간" });
+    // One selector on the page, in the heading's row: the heading's next siblings hold it.
+    expect(screen.getAllByRole("radiogroup")).toHaveLength(1);
+    expect(retention.getByRole("heading", { name: "복습에서 맞힌 비율" }).parentElement).toBe(
+      choice.parentElement,
+    );
+    // Another period changes the retention, and no other card.
+    const mastered = screen.getByRole("region", { name: "익힌 카드" }).textContent;
+    const days = screen.getByRole("region", { name: "학습한 날" }).textContent;
+    await userEvent.click(retention.getByRole("radio", { name: "7일" }));
+    expect(retention.getByText("67%")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "익힌 카드" }).textContent).toBe(mastered);
+    expect(screen.getByRole("region", { name: "학습한 날" }).textContent).toBe(days);
+  });
+
+  it("shows the cards mastered now as the mastered card's figure, and names the first and the last week under its bars", async () => {
+    seedHistory();
+    await render(RecordContent, {});
+
+    const card = within(screen.getByRole("region", { name: "익힌 카드" }));
+    // The figure is the label's last week.
+    const now = /(\d+)장$/.exec(label("주별 익힌 카드") ?? "")?.[1];
+    expect(card.getByText(`${String(now)}장`)).toHaveClass("text-figure");
+    expect(card.getByText("8주 전")).toBeInTheDocument();
+    expect(card.getByText("이번 주")).toBeInTheDocument();
+  });
+
+  it("rings today's study day and places the grid in time with its first day, 오늘 and a key to its shades", async () => {
+    seedHistory();
+    await render(RecordContent, {});
+
+    const card = within(screen.getByRole("region", { name: "학습한 날" }));
+    // 84 study days back from 15 January: the first is 24 October.
+    expect(card.getByText("10월 24일")).toBeInTheDocument();
+    expect(card.getByText("오늘")).toBeInTheDocument();
+    expect(card.getByText(/적게/)).toHaveTextContent("적게많이");
+    const cells = [...card.getByRole("img", { name: /^최근 12주/ }).children];
+    expect(cells).toHaveLength(84);
+    // Only the last cell, today's, is ringed.
+    expect(cells.filter((cell) => cell.classList.contains("ring-2"))).toEqual([cells.at(-1)]);
+  });
+
   it("labels the retention scale's floor and names the target above the plot, clear of the line (#155)", async () => {
     seedHistory();
     await render(RecordContent, {});
@@ -147,6 +194,12 @@ describe("the record page", () => {
     await render(RecordContent, {});
 
     expect(screen.getByText("이 기간에 복습한 카드가 없어요.")).toBeInTheDocument();
+    // The period stays in the card, so another can be chosen.
+    expect(
+      within(screen.getByRole("region", { name: "복습에서 맞힌 비율" })).getByRole("radiogroup", {
+        name: "기간",
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText("아직 복습한 카드가 없어요.")).toBeInTheDocument();
     expect(screen.getByText("아직 익힌 카드가 없어요.")).toBeInTheDocument();
     expect(label("최근 12주")).toBe("최근 12주 동안 학습한 날이 없어요");

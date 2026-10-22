@@ -1322,6 +1322,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks weeks ago';
+  }
+
+  @override
+  String get masteredThisWeek => 'This week';
+
+  @override
+  String get studyDaysFewer => 'Fewer';
+
+  @override
+  String get studyDaysMore => 'More';
+
+  @override
   String studyDaysSemantics(int count, String days) {
     return 'Studied on $count days in the last 12 weeks: $days';
   }

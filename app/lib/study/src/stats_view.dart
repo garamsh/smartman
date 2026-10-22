@@ -16,9 +16,10 @@ import 'queue.dart';
 import 'stats.dart';
 import 'stats_style.dart';
 
-/// The 기록 tab's content: [title] beside the period selector, then the
-/// retention against its target, the recall bands, the mastered weeks and
-/// the study days, read from the device by [readStats] over [decks].
+/// The 기록 tab's content: [title], then the retention against its target
+/// with the period selector it alone follows, the recall bands, the mastered
+/// weeks and the study days, read from the device by [readStats] over
+/// [decks].
 ///
 /// It is read again when [decks] changes and whenever the route that shows
 /// it comes back on top.
@@ -80,46 +81,7 @@ class _StatsViewState extends ConsumerState<StatsView> {
         AppSpace.s28,
       ),
       children: [
-        // The selector sits beside the title, or under it where both do not
-        // fit.
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: AppSpace.s12,
-          runSpacing: AppSpace.s8,
-          children: [
-            widget.title,
-            Semantics(
-              container: true,
-              label: l10n.statsPeriod,
-              child: SegmentedButton<StatsPeriod>(
-                showSelectedIcon: false,
-                style: SegmentedButton.styleFrom(
-                  textStyle: AppType.section,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
-                  minimumSize: const Size(AppSize.tapTarget, AppSize.tapTarget),
-                ),
-                segments: [
-                  ButtonSegment(
-                    value: StatsPeriod.week,
-                    label: Text(l10n.statsPeriodWeek),
-                  ),
-                  ButtonSegment(
-                    value: StatsPeriod.month,
-                    label: Text(l10n.statsPeriodMonth),
-                  ),
-                  ButtonSegment(
-                    value: StatsPeriod.all,
-                    label: Text(l10n.statsPeriodAll),
-                  ),
-                ],
-                selected: {_period},
-                onSelectionChanged: (selected) =>
-                    setState(() => _period = selected.single),
-              ),
-            ),
-          ],
-        ),
+        widget.title,
         const SizedBox(height: AppSpace.s16),
         FutureBuilder(
           future: _stats,
@@ -139,7 +101,11 @@ class _StatsViewState extends ConsumerState<StatsView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: AppSpace.s12,
               children: [
-                _RetentionCard(read: data, period: _period),
+                _RetentionCard(
+                  read: data,
+                  period: _period,
+                  onPeriod: (period) => setState(() => _period = period),
+                ),
                 _RecallCard(bands: data.stats.recall),
                 _MasteredCard(weeks: data.stats.mastered),
                 _StudyDaysCard(stats: data.stats),
@@ -154,19 +120,33 @@ class _StatsViewState extends ConsumerState<StatsView> {
   }
 }
 
-/// A chart on the surface: its [title], an optional [trailing] line beside
-/// it, and the [content] under them.
+/// A chart on the surface: its [title], an optional [trailing] line or
+/// [control] beside it, and the [content] under them.
 class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.title, required this.content, this.trailing});
+  const _StatsCard({
+    required this.title,
+    required this.content,
+    this.trailing,
+    this.control,
+  });
 
   final String title;
   final String? trailing;
+
+  /// What the chart follows, beside its heading, or under it where both do
+  /// not fit.
+  final Widget? control;
   final List<Widget> content;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final trailing = this.trailing;
+    final control = this.control;
+    final heading = Semantics(
+      header: true,
+      child: Text(title, style: AppType.label.copyWith(color: colors.ink)),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -178,27 +158,28 @@ class _StatsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: AppSpace.s12,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              spacing: AppSpace.s8,
-              children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      title,
-                      style: AppType.label.copyWith(color: colors.ink),
+            if (control != null)
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpace.s12,
+                runSpacing: AppSpace.s8,
+                children: [heading, control],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                spacing: AppSpace.s8,
+                children: [
+                  Expanded(child: heading),
+                  if (trailing != null)
+                    Text(
+                      trailing,
+                      style: AppType.caption.copyWith(color: colors.ink2),
                     ),
-                  ),
-                ),
-                if (trailing != null)
-                  Text(
-                    trailing,
-                    style: AppType.caption.copyWith(color: colors.ink2),
-                  ),
-              ],
-            ),
+                ],
+              ),
             ...content,
           ],
         ),
@@ -218,18 +199,65 @@ String _date(BuildContext context, DateTime day, UtcOffsetAt zone) {
       .format(DateTime(wall.year, wall.month, wall.day));
 }
 
+/// 7일, 30일 and 전체, the periods the retention is read over.
+class _PeriodChoice extends StatelessWidget {
+  const _PeriodChoice({required this.period, required this.onChanged});
+
+  final StatsPeriod period;
+  final ValueChanged<StatsPeriod> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+      container: true,
+      label: l10n.statsPeriod,
+      child: SegmentedButton<StatsPeriod>(
+        showSelectedIcon: false,
+        style: SegmentedButton.styleFrom(
+          textStyle: AppType.section,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s12),
+          minimumSize: const Size(AppSize.tapTarget, AppSize.tapTarget),
+        ),
+        segments: [
+          ButtonSegment(
+            value: StatsPeriod.week,
+            label: Text(l10n.statsPeriodWeek),
+          ),
+          ButtonSegment(
+            value: StatsPeriod.month,
+            label: Text(l10n.statsPeriodMonth),
+          ),
+          ButtonSegment(
+            value: StatsPeriod.all,
+            label: Text(l10n.statsPeriodAll),
+          ),
+        ],
+        selected: {period},
+        onSelectionChanged: (selected) => onChanged(selected.single),
+      ),
+    );
+  }
+}
+
 /// The retention over [period]: its value against the target with the gap,
 /// and a line of each study day's share against the dashed target.
 class _RetentionCard extends StatelessWidget {
-  const _RetentionCard({required this.read, required this.period});
+  const _RetentionCard({
+    required this.read,
+    required this.period,
+    required this.onPeriod,
+  });
 
   final _Read read;
   final StatsPeriod period;
+  final ValueChanged<StatsPeriod> onPeriod;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
+    final choice = _PeriodChoice(period: period, onChanged: onPeriod);
     final zone = read.zone;
     final days = retentionIn(
       read.stats.retention,
@@ -242,6 +270,7 @@ class _RetentionCard extends StatelessWidget {
     if (total == null) {
       return _StatsCard(
         title: l10n.retentionTitle,
+        control: choice,
         content: [
           Text(
             l10n.retentionEmpty,
@@ -272,6 +301,7 @@ class _RetentionCard extends StatelessWidget {
     final quiet = AppType.caption.copyWith(color: colors.muted);
     return _StatsCard(
       title: l10n.retentionTitle,
+      control: choice,
       content: [
         // The gap sits at the right, or under the figures where both do not
         // fit.
@@ -671,8 +701,9 @@ class _RecallCard extends StatelessWidget {
   }
 }
 
-/// The mastered cards at the end of each of the last eight weeks, this
-/// week's in ink, with the gain over four weeks beside the heading.
+/// The mastered cards now as the figure, then at the end of each of the last
+/// eight weeks, this week's in ink, the first and the last week named under
+/// them, with the gain over four weeks beside the heading.
 class _MasteredCard extends StatelessWidget {
   const _MasteredCard({required this.weeks});
 
@@ -684,6 +715,7 @@ class _MasteredCard extends StatelessWidget {
     final colors = AppColors.of(context);
     final most = weeks.reduce(max);
     final gain = masteredGain(weeks);
+    final quiet = AppType.caption.copyWith(color: colors.muted);
     if (most == 0) {
       return _StatsCard(
         title: l10n.masteredTitle,
@@ -699,6 +731,10 @@ class _MasteredCard extends StatelessWidget {
       title: l10n.masteredTitle,
       trailing: gain == null ? null : l10n.masteredGain(gain),
       content: [
+        Text(
+          l10n.statsCards(weeks.last),
+          style: AppType.figure.copyWith(color: colors.ink),
+        ),
         Semantics(
           container: true,
           image: true,
@@ -730,13 +766,25 @@ class _MasteredCard extends StatelessWidget {
             ),
           ),
         ),
+        // The chart's label names every week; these name its two ends.
+        ExcludeSemantics(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(l10n.masteredWeeksAgo(weeks.length), style: quiet),
+              Text(l10n.masteredThisWeek, style: quiet),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
 /// The last twelve weeks of study days, a column a week and a cell a day,
-/// shaded by the cards answered, with the current and the best streak.
+/// shaded by the cards answered, today's ringed in ink, with the current and
+/// the best streak; under them the first day's date, the shades' key and
+/// 오늘.
 class _StudyDaysCard extends StatelessWidget {
   const _StudyDaysCard({required this.stats});
 
@@ -749,6 +797,7 @@ class _StudyDaysCard extends StatelessWidget {
     final days = stats.days;
     final most = days.map((day) => day.cards).reduce(max);
     final shades = StatsStyle.heat(colors);
+    final quiet = AppType.caption.copyWith(color: colors.muted);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final studied = [
       for (final (:date, :cards) in days)
@@ -791,12 +840,62 @@ class _StudyDaysCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(
                                 StatsStyle.cellRadius,
                               ),
+                              // Today, the grid's last cell.
+                              border: week * 7 + day == days.length - 1
+                                  ? Border.all(
+                                      color: colors.ink,
+                                      width: StatsStyle.todayRing,
+                                    )
+                                  : null,
                             ),
                           ),
                         ),
                     ],
                   ),
                 ),
+            ],
+          ),
+        ),
+        // The label above reads every study day by its date; these place the
+        // grid in time and key its shades for the eye.
+        ExcludeSemantics(
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpace.s8,
+            runSpacing: AppSpace.s4,
+            children: [
+              Text(
+                DateFormat.MMMd(locale).format(
+                  DateTime(
+                    days.first.date.year,
+                    days.first.date.month,
+                    days.first.date.day,
+                  ),
+                ),
+                style: quiet,
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: AppSpace.s4,
+                children: [
+                  Text(l10n.studyDaysFewer, style: quiet),
+                  for (final shade in shades)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: shade,
+                        borderRadius: BorderRadius.circular(
+                          StatsStyle.cellRadius / 2,
+                        ),
+                      ),
+                      child: const SizedBox.square(
+                        dimension: StatsStyle.swatch + AppSpace.s4,
+                      ),
+                    ),
+                  Text(l10n.studyDaysMore, style: quiet),
+                ],
+              ),
+              Text(l10n.dayToday, style: quiet),
             ],
           ),
         ),
