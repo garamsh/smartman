@@ -6,9 +6,11 @@ import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure_message.dart';
+import 'photo.dart';
 import 'photo_batch.dart';
+import 'photo_viewer.dart';
 
-/// Several photos being read: "사진 k/n 읽는 중", a bar of the photos read, and
+/// Several photos being read: "사진 n장 중 k장 읽음" over a bar of the same k, and
 /// one row per photo with its thumbnail and state. A photo that failed says
 /// why, with a retry where sending it again can help and a way to leave it
 /// out. [note] says when today's limit left photos out; the privacy note and
@@ -43,10 +45,7 @@ class ReadingView extends StatelessWidget {
       (job) => job.state is PhotoReading || job.state is PhotoWaiting,
     );
     final title = busy || failed == 0
-        ? l10n.readingTitle(
-            (read + failed + 1).clamp(1, jobs.length),
-            jobs.length,
-          )
+        ? l10n.readingTitle(read, jobs.length)
         : l10n.readingFailed(failed);
     final note = this.note;
     return Scaffold(
@@ -83,6 +82,7 @@ class ReadingView extends StatelessWidget {
               _PhotoRow(
                 key: ObjectKey(job),
                 job: job,
+                photos: [for (final job in jobs) job.photo],
                 number: i + 1,
                 onRetry: () => onRetry(job),
                 onDrop: () => onDrop(job),
@@ -123,12 +123,16 @@ class _PhotoRow extends StatelessWidget {
   const _PhotoRow({
     super.key,
     required this.job,
+    required this.photos,
     required this.number,
     required this.onRetry,
     required this.onDrop,
   });
 
   final PhotoJob job;
+
+  /// Every photo of the batch in pick order, for the viewer.
+  final List<JpegPhoto?> photos;
   final int number;
   final VoidCallback onRetry;
   final VoidCallback onDrop;
@@ -137,7 +141,6 @@ class _PhotoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final photo = job.photo;
     final (IconData icon, Color iconColor, String status) = switch (job.state) {
       PhotoWaiting() => (LucideIcons.clock, colors.muted, l10n.photoWaiting),
       PhotoReading() => (LucideIcons.loader, colors.ink, l10n.photoReading),
@@ -162,54 +165,55 @@ class _PhotoRow extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MergeSemantics(
-              child: Row(
-                spacing: AppSpace.s12,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.button / 2),
-                    child: SizedBox(
-                      width: 48,
-                      height: 64,
-                      child: photo == null
-                          ? ColoredBox(color: colors.hairline)
-                          : Image.memory(
-                              photo.bytes,
-                              fit: BoxFit.cover,
-                              excludeFromSemantics: true,
-                            ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: AppSpace.s4,
+            Row(
+              spacing: AppSpace.s12,
+              children: [
+                PhotoThumbnail(
+                  photos: photos,
+                  index: number - 1,
+                  width: 48,
+                  height: 64,
+                ),
+                Expanded(
+                  child: MergeSemantics(
+                    child: Row(
+                      spacing: AppSpace.s12,
                       children: [
-                        Text(
-                          l10n.photoNumber(number),
-                          style: AppType.bodyStrong,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: AppSpace.s4,
+                            children: [
+                              Text(
+                                l10n.photoNumber(number),
+                                style: AppType.bodyStrong,
+                              ),
+                              Semantics(
+                                liveRegion: failure != null,
+                                child: Text(
+                                  status,
+                                  style: AppType.body.copyWith(
+                                    color: failure == null
+                                        ? colors.ink2
+                                        : colors.ink,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Semantics(
-                          liveRegion: failure != null,
-                          child: Text(
-                            status,
-                            style: AppType.body.copyWith(
-                              color: failure == null ? colors.ink2 : colors.ink,
-                            ),
+                        ExcludeSemantics(
+                          child: Icon(
+                            icon,
+                            size: AppSize.smallIcon,
+                            color: iconColor,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  ExcludeSemantics(
-                    child: Icon(
-                      icon,
-                      size: AppSize.smallIcon,
-                      color: iconColor,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             if (failure != null) ...[
               const SizedBox(height: AppSpace.s12),

@@ -437,7 +437,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days d';
+    return '$days-day streak';
   }
 
   @override
@@ -637,8 +637,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
-  String readingTitle(int current, int total) {
-    return 'Reading photo $current of $total';
+  String readingTitle(int read, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Read $read of $total photos',
+      one: 'Read $read of 1 photo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -690,6 +696,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discardImport => 'Discard';
+
+  @override
+  String photoView(int number) {
+    return 'View photo $number';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return 'Photo $current of $total';
+  }
 
   @override
   String get duplicateSkip => 'Skip';
@@ -1327,7 +1343,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return 'Mastered cards by week, from 8 weeks ago to this week: $counts';
+    return 'Mastered cards by week, from 7 weeks ago to this week: $counts';
   }
 
   @override
@@ -1337,6 +1353,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current-day streak · best $best';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks weeks ago';
+  }
+
+  @override
+  String get masteredThisWeek => 'This week';
+
+  @override
+  String get studyDaysFewer => 'Fewer';
+
+  @override
+  String get studyDaysMore => 'More';
 
   @override
   String studyDaysSemantics(int count, String days) {

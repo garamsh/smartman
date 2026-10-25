@@ -424,7 +424,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days일';
+    return '$days일 연속';
   }
 
   @override
@@ -606,8 +606,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
-  String readingTitle(int current, int total) {
-    return '사진 $current/$total 읽는 중';
+  String readingTitle(int read, int total) {
+    return '사진 $total장 중 $read장 읽음';
   }
 
   @override
@@ -647,6 +647,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get discardImport => '버리기';
+
+  @override
+  String photoView(int number) {
+    return '사진 $number 크게 보기';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return '사진 $current/$total';
+  }
 
   @override
   String get duplicateSkip => '건너뛰기';
@@ -1236,7 +1246,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return '주별 익힌 카드, 8주 전부터 이번 주까지: $counts';
+    return '주별 익힌 카드, 7주 전부터 이번 주까지: $counts';
   }
 
   @override
@@ -1246,6 +1256,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current일 연속 · 최고 $best일';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks주 전';
+  }
+
+  @override
+  String get masteredThisWeek => '이번 주';
+
+  @override
+  String get studyDaysFewer => '적게';
+
+  @override
+  String get studyDaysMore => '많이';
 
   @override
   String studyDaysSemantics(int count, String days) {

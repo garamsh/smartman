@@ -9,7 +9,7 @@ The app's design language: the principles every screen follows for usability and
 Every screen is designed to be simple, intuitive and easy to use. A new screen or a change to one follows these, and copies the idiom named under each.
 
 1. **One primary action per screen.** It is the most prominent element and sits in thumb reach, at the bottom. Secondary actions are quieter or live in a menu.
-   - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it.
+   - Study: the current card, low on the screen, with its two answer buttons under it; closing is a small icon at the top. On the completion card, "학습하기" is the one primary fill while new cards are left past today's, with "그만하기" a quiet text button below it; with none left, "그만하기" is the primary fill at the cta height under "더 학습할 카드가 없어요" ([ADR 0093](adr/0093-make-stopping-the-finished-completion-card-s-primary-and-show-the-resume-notice-in-the-progress-bar-s-place-on-the-phone.md)). The whole-card sheet is titled "카드", its "앞면" and "뒷면" two section labels of one rank, since neither side is the sheet's subject (#318).
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
    - Card editor: a new card's kind is a segmented switch at the top, quieter than the bottom bar's actions; "뜻 추가" is outlined, and "표시 추가" a text button.
    - 오늘 tab: the navy card's white button, "모두 학습", the backlog card's "n장 학습", or on the done card "학습하기" as the one navy fill.
@@ -33,7 +33,8 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
-   - Photo import of several photos: one screen states "사진 k/n 읽는 중" as a heading a screen reader hears as it changes, a bar of the photos read, and each photo's row with its thumbnail and its state in words beside an icon, so colour never carries it alone; a failure shows on its row with its actions, and the other photos go on ([ADR 0089](adr/0089-import-up-to-ten-photos-into-one-list-read-two-at-a-time-and-state-today-s-limit-before-reading.md)).
+   - Photo import of several photos: one screen states "사진 n장 중 k장 읽음" as a heading a screen reader hears as it changes, over a bar of the same k photos read, and each photo's row with its thumbnail and its state in words beside an icon, so colour never carries it alone; a failure shows on its row with its actions, and the other photos go on ([ADR 0089](adr/0089-import-up-to-ten-photos-into-one-list-read-two-at-a-time-and-state-today-s-limit-before-reading.md)).
+   - Photo import: a photo's thumbnail opens it full screen, a button named "사진 i 크게 보기"; the viewer's swipes across, swipe down and pinch have its close, the system back and the thumbnails' order as alternatives.
    - Photo import list of several photos: each photo's group is headed by its thumbnail, "사진 i" and its row count, read as a heading and a button whose state is expanded or collapsed, at least a tap target high; a tap collapses or expands it.
    - Account: a theme choice applies at once and is stored after.
    - Daily study minutes: "저장" stores them on the device, sync pushes them after, and the counts behind the sheet are read again as it closes; the preview moves with each choice before anything is stored.
@@ -115,7 +116,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   | Role | Size / line / weight | Use |
   |---|---|---|
   | display | 28 / 36 / 800, −0.8 | Material's display styles; no screen draws it since the lockup heads the 오늘 tab |
-  | title | 22 / 30 / 800, −0.4 | a pushed screen's title, the deck name on its screen, the first-run heading, the completion and done cards' headings |
+  | title | 22 / 30 / 800, −0.4 | a pushed screen's title, the photo import list's title, the deck name on its screen, the first-run heading, the completion and done cards' headings |
   | deckTitle | 26 / 34 / 800, −0.6 | the 덱 and 기록 tabs' titles |
   | figure | 36 / 44 / 800, −0.8 | the navy cards' count |
   | headline | 18 / 26 / 700 | a sheet's title, a deck tile's letter |
@@ -146,7 +147,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   - actions are always full width, with the primary one last.
 - **`showAppConfirm`** — every irreversible action: a sheet that states the consequence in one sentence, with a cancel, "취소" unless the caller names it, and, last, a red final button. It is the one sheet with a cancel.
 - **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the option sheets' rows, the browse rows, the photo import source sheet and deck chooser, and the account screen's sign-out and deletion. A destructive row, the deletion, draws its title and leading icon in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the skeleton rows and the account screen's theme control. On a sheet a row takes the ground colour.
-- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "화면", "계정", the import sheet's duplicate options, and the answer in the whole-card sheet.
+- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "화면", "계정", the import sheet's duplicate options, and the front and the back in the whole-card sheet.
 - **`BottomActions`** — a screen's bottom bar: a secondary action, and a primary one beside it when the screen offers one: the deck screen and the card editor.
 - **`AppChip`** — a fully rounded label in a tone, neutral (the surface inside an outline) or brand (the brand tint): the brand-tint "오늘 n" chip and the "공개" chip. `app/test/design/app_rows_test.dart` checks both tones.
 - **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
