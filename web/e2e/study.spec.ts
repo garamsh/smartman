@@ -759,7 +759,7 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
       page.getByRole("img", { name: new RegExp(`^${String(cards.length)}장 중 단단함 `) }),
     ).toBeVisible();
     await expect(
-      page.getByRole("img", { name: /^주별 익힌 카드, 8주 전부터 이번 주까지: / }),
+      page.getByRole("img", { name: /^주별 익힌 카드, 7주 전부터 이번 주까지: / }),
     ).toBeVisible();
     await expect(
       page.getByRole("img", { name: /^최근 12주 동안 \d+일 학습했어요: / }),

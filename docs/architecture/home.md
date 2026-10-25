@@ -60,7 +60,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 
 ### The record tab
 
-- The tab is `study`'s `StatsView` over every deck, given "기록" at 26/800, read as a heading, as the title it shows beside its period selector ([`study.md`](study.md)). There is no Plus badge: gating waits for the subscription issue (issue #90).
+- The tab is `study`'s `StatsView` over every deck, given "기록" at 26/800, read as a heading, as the title it shows alone above its charts. The period selector sits in the retention card beside its heading, since it changes that chart alone and three charts left unchanged under a page-wide control read as a control not working (issue #317, the PM's answer there) ([`study.md`](study.md)). There is no Plus badge: gating waits for the subscription issue (issue #90).
 - The tab is built the first time it is shown, not when the tabs open, since its read folds every review through the engine; after that it keeps its state as the other tabs do.
 
 ### The deck screen

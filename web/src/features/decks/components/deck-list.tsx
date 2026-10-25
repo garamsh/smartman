@@ -71,7 +71,7 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
                       style={{ width: `${String(share(mastered, cards))}%` }}
                     />
                     <span
-                      className="bg-muted"
+                      className="bg-ink/45"
                       style={{ width: `${String(share(learning, cards))}%` }}
                     />
                   </span>

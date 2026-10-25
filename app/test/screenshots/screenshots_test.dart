@@ -397,8 +397,9 @@ void main() {
       await shot(tester, '16-deck-list');
       await showRecord(tester);
       await shot(tester, '16c-record');
-      // Today's cards done: the done card and the next seven days.
-      await tap(tester, find.text(ko.tabToday));
+      // Today's cards done: the done card and the next seven days. The tab
+      // bar's 오늘, the last, since the study days name today too.
+      await tap(tester, find.text(ko.tabToday).last);
       await shot(tester, '16b-today-done');
 
       await tap(tester, find.byTooltip(ko.account));
@@ -1333,6 +1334,8 @@ void main() {
       await tester.tap(find.text(ko.photoDrop));
       await tester.pumpAndSettle();
       await shot(tester, '26a-photo-groups');
+      await tap(tester, find.bySemanticsLabel(ko.photoView(1)));
+      await shot(tester, '26b-photo-viewer');
 
       await unmount(tester);
       semantics.dispose();

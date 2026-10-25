@@ -1177,6 +1177,18 @@ abstract class AppLocalizations {
   /// **'버리기'**
   String get discardImport;
 
+  /// Screen reader name of a photo import thumbnail, which opens the photo full screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {number} 크게 보기'**
+  String photoView(int number);
+
+  /// Heading of the full-screen photo viewer: the photo shown and how many the import holds.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {current}/{total}'**
+  String photoViewerTitle(int current, int total);
+
   /// Duplicate option: write nothing for this candidate.
   ///
   /// In ko, this message translates to:
@@ -2140,7 +2152,7 @@ abstract class AppLocalizations {
   /// What a screen reader reads for the mastered bars, before each week's count.
   ///
   /// In ko, this message translates to:
-  /// **'주별 익힌 카드, 8주 전부터 이번 주까지: {counts}'**
+  /// **'주별 익힌 카드, 7주 전부터 이번 주까지: {counts}'**
   String masteredSemantics(String counts);
 
   /// Heading of the study-day heatmap.
@@ -2154,6 +2166,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{current}일 연속 · 최고 {best}일'**
   String studyDaysStreak(int current, int best);
+
+  /// Under the mastered cards' bars, at the first: how many weeks before this one it ends.
+  ///
+  /// In ko, this message translates to:
+  /// **'{weeks}주 전'**
+  String masteredWeeksAgo(int weeks);
+
+  /// Under the mastered cards' bars, at the last: this week.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 주'**
+  String get masteredThisWeek;
+
+  /// The study days' shade key, before its palest shade.
+  ///
+  /// In ko, this message translates to:
+  /// **'적게'**
+  String get studyDaysFewer;
+
+  /// The study days' shade key, after its darkest shade.
+  ///
+  /// In ko, this message translates to:
+  /// **'많이'**
+  String get studyDaysMore;
 
   /// What a screen reader reads for the heatmap, before each studied day and its cards.
   ///

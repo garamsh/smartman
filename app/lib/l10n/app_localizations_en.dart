@@ -698,6 +698,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discardImport => 'Discard';
 
   @override
+  String photoView(int number) {
+    return 'View photo $number';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return 'Photo $current of $total';
+  }
+
+  @override
   String get duplicateSkip => 'Skip';
 
   @override
@@ -1333,7 +1343,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return 'Mastered cards by week, from 8 weeks ago to this week: $counts';
+    return 'Mastered cards by week, from 7 weeks ago to this week: $counts';
   }
 
   @override
@@ -1343,6 +1353,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current-day streak · best $best';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks weeks ago';
+  }
+
+  @override
+  String get masteredThisWeek => 'This week';
+
+  @override
+  String get studyDaysFewer => 'Fewer';
+
+  @override
+  String get studyDaysMore => 'More';
 
   @override
   String studyDaysSemantics(int count, String days) {
