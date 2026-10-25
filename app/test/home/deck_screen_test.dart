@@ -590,7 +590,15 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(find.text('Its 3 cards will be deleted too.'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'Its 3 cards will be deleted too.',
+        ),
+        findsOneWidget,
+      );
       await screens.tap(find.text('Delete'));
 
       expect(find.byType(DeckScreen), findsNothing);

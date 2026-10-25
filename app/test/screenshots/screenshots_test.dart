@@ -1582,7 +1582,14 @@ void main() {
         find.widgetWithText(AppTextField, ko.displayName),
         '아다',
       );
-      await tap(tester, find.text(ko.publishAgreement));
+      await tap(
+        tester,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') == ko.publishAgreement,
+        ),
+      );
       await tap(tester, find.text(ko.publishConfirm));
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();

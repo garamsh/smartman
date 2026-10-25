@@ -298,8 +298,8 @@ void main() {
       (tester) async {
         final list = await _open(tester, decks: ['Alpha']);
 
-        expect(find.text('Make your first card?'), findsOneWidget);
-        expect(find.text('Add cards to a deck to start'), findsOneWidget);
+        expect(_shown('Make your first card?'), findsOneWidget);
+        expect(_shown('Add cards to a deck to start'), findsOneWidget);
         expect(find.text("You've done today's cards"), findsNothing);
         AppButton button(String label) =>
             tester.widget<AppButton>(find.widgetWithText(AppButton, label));
@@ -321,7 +321,7 @@ void main() {
       (tester) async {
         final list = await _open(tester);
 
-        expect(find.text('Make your first card?'), findsOneWidget);
+        expect(_shown('Make your first card?'), findsOneWidget);
         await list.tap('Add cards in a deck');
         expect(find.text('My decks 3'), findsOneWidget);
         await list.close();
@@ -333,7 +333,7 @@ void main() {
     ) async {
       final list = await _open(tester, decks: ['Alpha'], fresh: {'Alpha': 1});
 
-      expect(find.text('Make your first card?'), findsNothing);
+      expect(_shown('Make your first card?'), findsNothing);
       expect(find.text('Study all'), findsOneWidget);
       await list.close();
     });
@@ -877,7 +877,7 @@ void main() {
         );
 
         expect(
-          find.text('How many minutes a day will you study?'),
+          _shown('How many minutes a day will you study?'),
           findsOneWidget,
         );
         await waitForPicker(tester);
@@ -931,7 +931,7 @@ void main() {
     testWidgets('without a card the first-run step waits', (tester) async {
       final list = await _open(tester, decks: ['Alpha'], minutesAsked: false);
 
-      expect(find.text('Make your first card?'), findsOneWidget);
+      expect(_shown('Make your first card?'), findsOneWidget);
       expect(find.byType(BottomSheet), findsNothing);
       await list.close();
     });
@@ -962,13 +962,13 @@ void main() {
 
         await list.newDeck();
         // The sheet's title over the entry that opened it.
-        expect(find.text('Create a deck'), findsNWidgets(2));
+        expect(_shown('Create a deck'), findsNWidgets(2));
         expect(find.text('Create by hand'), findsOneWidget);
         expect(find.text('Take photo'), findsNothing);
         expect(find.text('Choose from album'), findsNothing);
         await list.tap('Create by hand');
         // The name sheet is "New deck", as photo import's is.
-        expect(find.text('New deck'), findsOneWidget);
+        expect(_shown('New deck'), findsOneWidget);
         await tester.enterText(find.byType(EditableText).last, 'Delta');
         await list.tap('Create');
 
@@ -1101,9 +1101,9 @@ void main() {
         await tester.pageBack();
         await tester.pumpAndSettle();
 
-        await tester.ensureVisible(find.text('Create a deck'));
+        await tester.ensureVisible(_shown('Create a deck'));
         expect(
-          tester.getRect(find.text('Create a deck')).top,
+          tester.getRect(_shown('Create a deck')).top,
           greaterThan(tester.getRect(find.text('Gamma')).bottom),
         );
         // Control: without sharing there is no way to public decks beside it.
