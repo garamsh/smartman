@@ -186,6 +186,7 @@ void main() {
           storage,
           // The first-run home shows every way to start.
           FakeExtractionClient(),
+          MemoryImportJobStore(),
           FakeSharingServer(),
           FakeReachability(),
           '1.0.0',
@@ -1123,11 +1124,15 @@ void main() {
                   child: TextButton(
                     onPressed: () => importFromPhoto(
                       context,
+                      imports: PhotoImports(
+                        client: client,
+                        photos: photos,
+                        preferences: preferences,
+                        store: MemoryImportJobStore(),
+                        decks: repository,
+                      ),
                       deck: deck.id,
                       origin: PhotoOrigin.camera,
-                      client: client,
-                      photos: photos,
-                      preferences: preferences,
                     ),
                     child: const Text('open'),
                   ),
@@ -1293,11 +1298,15 @@ void main() {
                   child: TextButton(
                     onPressed: () => importFromPhoto(
                       context,
+                      imports: PhotoImports(
+                        client: client,
+                        photos: photos,
+                        preferences: preferences,
+                        store: MemoryImportJobStore(),
+                        decks: repository,
+                      ),
                       deck: deck.id,
                       origin: PhotoOrigin.album,
-                      client: client,
-                      photos: photos,
-                      preferences: preferences,
                     ),
                     child: const Text('open'),
                   ),

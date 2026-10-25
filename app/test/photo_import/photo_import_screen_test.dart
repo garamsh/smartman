@@ -26,6 +26,7 @@ class _Import {
     this.french,
     this.spanish,
     this.preferences,
+    this.store,
   );
 
   final WidgetTester tester;
@@ -35,7 +36,10 @@ class _Import {
   final SharedPreferencesWithCache preferences;
   final photos = FakePhotoSource();
   final client = FakeExtractionClient();
-  final store = MemoryImportJobStore();
+
+  /// Where the job is kept, which a later [open] given it restores from, as
+  /// the app's next open does.
+  final MemoryImportJobStore store;
 
   /// The app's photo import jobs, as the composition site makes them.
   late final imports = PhotoImports(
@@ -64,6 +68,7 @@ class _Import {
     ThemeMode themeMode = ThemeMode.light,
     bool disableAnimations = false,
     bool refuseWrites = false,
+    MemoryImportJobStore? restoring,
     void Function(_Import import)? before,
   }) async {
     final db = AppDatabase(NativeDatabase.memory());
@@ -94,8 +99,10 @@ class _Import {
       frenchDeck,
       spanishDeck,
       preferences,
+      restoring ?? MemoryImportJobStore(),
     );
     import._semantics;
+    if (restoring != null) await import.imports.restore();
     before?.call(import);
     final target = deck == null ? frenchDeck.id : deck(import);
     await tester.pumpWidget(
@@ -126,14 +133,14 @@ class _Import {
                 },
                 child: const Text('open'),
               ),
-              bottomNavigationBar: TextButton(
-                onPressed: () async {
+              bottomNavigationBar: PhotoImportBar(
+                imports: import.imports,
+                onOpen: () async {
                   import.popped = await openPhotoImport(
                     context,
                     import.imports,
                   );
                 },
-                child: const Text('reopen'),
               ),
             ),
           ),
@@ -207,11 +214,27 @@ class _Import {
     }
   }
 
-  /// Opens the job again, as the bar over the tab bar does.
+  /// Opens the job again by the bar over the tab bar.
   Future<void> reopen() async {
     popped = _notPopped;
-    await tap(_shown('reopen'));
+    await tester.tap(find.byType(PhotoImportBar));
+    await frames();
   }
+
+  /// What the bar over the tab bar reads; null while it draws nothing.
+  String? get bar => switch ([
+    for (final text in tester.widgetList<Text>(
+      find.descendant(
+        of: find.byType(PhotoImportBar),
+        matching: find.byType(Text),
+      ),
+    ))
+      text.data,
+  ]) {
+    [] => null,
+    [final label] => label,
+    final labels => throw StateError('The bar reads $labels.'),
+  };
 
   /// Presses the system back, as Android's back button does.
   Future<void> back() async {
@@ -319,6 +342,147 @@ class _CountingDecks extends UnreadableDecks {
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  group('the job', () {
+    testWidgets(
+      'the bar reads the photos read of all while they are read, then the cards to review, opens the list, and goes once the job is discarded',
+      (tester) async {
+        final import = await _Import.open(tester);
+        expect(import.bar, isNull, reason: 'no job, no bar');
+        await import.pickSeveral(3);
+        await import.back();
+
+        expect(import.bar, 'Reading photos 0/3');
+        await import.answerCall(0, {'chat': 'cat'});
+        expect(import.bar, 'Reading photos 1/3');
+        await import.answerCall(1, {'chien': 'dog'});
+        await import.answerCall(2, {'oiseau': 'bird', 'cheval': 'horse'});
+        expect(import.bar, 'Review 4 cards');
+
+        await import.reopen();
+        expect(_shown('Found 4 words'), findsOneWidget);
+        await import.tap(_shown('Cancel'));
+        await import.tap(_shown('Discard'));
+        expect(import.bar, isNull);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a job a closed app left keeps its read cards, offers to resume its unread photos, and sends none read before again',
+      (tester) async {
+        final first = await _Import.open(tester);
+        await first.pickSeveral(3);
+        await first.answerCall(0, {'chat': 'cat'});
+        expect(first.client.calls, hasLength(3));
+        await first.close();
+
+        final next = await _Import.open(tester, restoring: first.store);
+        expect(next.imports.job?.photos, hasLength(3), reason: 'restored');
+        expect(next.bar, 'Resume reading 2 photos');
+        expect(next.client.calls, isEmpty, reason: 'nothing read until asked');
+
+        await next.reopen();
+        expect(_shown('Resume reading 2 photos?'), findsOneWidget);
+        await next.tap(_shown('Resume'));
+        expect(next.client.calls, hasLength(2), reason: 'the unread alone');
+        expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
+        await next.answerCall(0, {'chien': 'dog'});
+        await next.answerCall(1, {'oiseau': 'bird'});
+        await tester.pumpAndSettle();
+        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(_shown('chat'), findsOneWidget, reason: 'read before the close');
+        expect(next.client.calls, hasLength(2), reason: 'nothing resent');
+        await next.close();
+      },
+    );
+
+    testWidgets(
+      'discarding a job a closed app left forgets it and its photos and reads nothing',
+      (tester) async {
+        final first = await _Import.open(tester);
+        await first.pickSeveral(2);
+        await first.close();
+        expect(first.store.photos, hasLength(2), reason: 'kept on the device');
+
+        final next = await _Import.open(tester, restoring: first.store);
+        await next.reopen();
+        await next.tap(_shown('Discard'));
+        expect(next.imports.job, isNull);
+        expect(next.store.state, isNull);
+        expect(next.store.photos, isEmpty);
+        expect(next.bar, isNull);
+        expect(next.client.calls, isEmpty);
+        await next.close();
+      },
+    );
+
+    testWidgets(
+      'a list a closed app left waits in the bar, and opening it reads nothing',
+      (tester) async {
+        final first = await _Import.open(tester);
+        await first.pickSeveral(2);
+        await first.answerCall(0, {'chat': 'cat'});
+        await first.answerCall(1, {'chien': 'dog'});
+        await first.close();
+
+        final next = await _Import.open(tester, restoring: first.store);
+        expect(next.bar, 'Review 2 cards');
+        await next.reopen();
+        expect(_shown('Resume'), findsNothing, reason: 'nothing to resume');
+        expect(_shown('Found 2 words'), findsOneWidget);
+        expect(next.client.calls, isEmpty);
+        await next.close();
+      },
+    );
+
+    testWidgets(
+      'more photos are added to a list until it holds 50, and then none',
+      (tester) async {
+        final import = await _Import.open(tester);
+
+        /// Scrolls the list to its end, where "Add more photos" is drawn
+        /// when it is offered.
+        Future<void> toEnd() async {
+          final list = tester.state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(ListView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          while (list.position.pixels < list.position.maxScrollExtent) {
+            list.position.jumpTo(list.position.maxScrollExtent);
+            await tester.pump();
+          }
+        }
+
+        await import.pickSeveral(49);
+        for (var i = 0; i < 49; i++) {
+          await import.answerCall(i, {'w$i': 'm$i'});
+        }
+        await tester.pumpAndSettle();
+        expect(_shown('Found 49 words'), findsOneWidget);
+        await toEnd();
+        expect(_shown('Add more photos'), findsOneWidget, reason: 'under 50');
+
+        import.photos.libraryPhotos = [Future.value(testPhoto)];
+        await import.tap(_shown('Add more photos'));
+        await tester.tap(_shown('Choose from album'));
+        await import.frames();
+        expect(import.photos.libraryLimits, [50, 1]);
+        await import.answerCall(49, {'w49': 'm49'});
+        await tester.pumpAndSettle();
+        expect(import.imports.job?.photos, hasLength(50));
+        expect(import.imports.job?.list?.cardCount, 50);
+        await toEnd();
+        expect(_shown('w49'), findsOneWidget, reason: 'at the end');
+        expect(_shown('Add more photos'), findsNothing);
+        await import.close();
+      },
+    );
+  });
 
   group('several photos', () {
     testWidgets(
