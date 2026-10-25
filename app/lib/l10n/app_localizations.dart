@@ -260,6 +260,36 @@ abstract class AppLocalizations {
   /// **'___는 빈칸 표시라 줄에 쓸 수 없어요'**
   String get clozeBlankMarker;
 
+  /// A blank of the cloze form, numbered in the order of the line, with its answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 {number}: {answer}'**
+  String clozeBlankLine(int number, String answer);
+
+  /// Button beside a blank of the cloze form: narrows the blank to letters of its word.
+  ///
+  /// In ko, this message translates to:
+  /// **'글자 고르기'**
+  String get clozePickLetters;
+
+  /// Title of the sheet that narrows a cloze blank to letters of its word.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 글자를 골라요'**
+  String get clozeLettersTitle;
+
+  /// Body of the letters sheet: tap the first letter, then the last.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음 글자와 끝 글자를 차례로 눌러요'**
+  String get clozeLettersBody;
+
+  /// The letters sheet's button: make the chosen letters the blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 글자로'**
+  String get clozeLettersDone;
+
   /// The table kind's segment in the card editor's kind switch.
   ///
   /// In ko, this message translates to:
@@ -1081,11 +1111,11 @@ abstract class AppLocalizations {
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
 
-  /// Heading while several photos are read, announced to screen readers: the photo being read now and how many there are.
+  /// Heading while several photos are read, announced to screen readers: how many photos are read, as the bar under it shows, of how many.
   ///
   /// In ko, this message translates to:
-  /// **'사진 {current}/{total} 읽는 중'**
-  String readingTitle(int current, int total);
+  /// **'사진 {total}장 중 {read}장 읽음'**
+  String readingTitle(int read, int total);
 
   /// Heading once every photo that could be read is read and some failed; each failed photo offers retry or remove.
   ///
@@ -1128,6 +1158,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'사진 더 추가'**
   String get addPhotos;
+
+  /// Title of the confirmation before leaving or retaking a photo import list that holds cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾은 카드를 버릴까요?'**
+  String get discardImportTitle;
+
+  /// Body of the confirmation before leaving a photo import list: its cards are lost, and reading the photos again counts against today's limit again.
+  ///
+  /// In ko, this message translates to:
+  /// **'찾은 카드 {count}장이 사라져요. 다시 읽으면 오늘 사진 한도가 다시 쓰여요.'**
+  String discardImportBody(int count);
+
+  /// Confirms discarding the cards a photo import found.
+  ///
+  /// In ko, this message translates to:
+  /// **'버리기'**
+  String get discardImport;
 
   /// Duplicate option: write nothing for this candidate.
   ///
@@ -1783,11 +1831,29 @@ abstract class AppLocalizations {
   /// **'{front}, 뒷면 {back}'**
   String cardBackShown(String front, String back);
 
-  /// What a screen reader reads for the today card's goal ring.
+  /// The today card's day's cards after the large count of those done: "d / n장".
   ///
   /// In ko, this message translates to:
-  /// **'하루 목표 {goal}장 중 {done}장'**
-  String goalRingSemantics(int done, int goal);
+  /// **' / {goal}장'**
+  String todayOfGoal(int goal);
+
+  /// The today card's minutes for the cards left, before any is done today.
+  ///
+  /// In ko, this message translates to:
+  /// **'약 {minutes}분'**
+  String todayAbout(int minutes);
+
+  /// The today card's minutes for the cards left, once some are done today.
+  ///
+  /// In ko, this message translates to:
+  /// **'약 {minutes}분 남음'**
+  String todayAboutLeft(int minutes);
+
+  /// What a screen reader reads for the today card's bar of the cards done over the day's cards.
+  ///
+  /// In ko, this message translates to:
+  /// **'{goal}장 중 {done}장'**
+  String todayProgress(int goal, int done);
 
   /// On the today card, where the user stands: nothing studied today yet, on a streak of this many days.
   ///
@@ -2335,18 +2401,6 @@ abstract class AppLocalizations {
   /// **'시작하기'**
   String get coachStart;
 
-  /// The today card's control: the daily study minutes, which opens the sheet that changes them.
-  ///
-  /// In ko, this message translates to:
-  /// **'하루 {minutes}분'**
-  String dailyMinutesControl(int minutes);
-
-  /// What a screen reader reads for the daily study minutes control.
-  ///
-  /// In ko, this message translates to:
-  /// **'하루 공부 시간 {minutes}분, 바꾸기'**
-  String dailyMinutesControlSemantics(int minutes);
-
   /// The title of the sheet that changes the daily study minutes, and the account screen's row.
   ///
   /// In ko, this message translates to:
@@ -2400,24 +2454,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'건너뛰기'**
   String get dailyMinutesSkip;
-
-  /// The completion card's quiet line: the daily study minutes tomorrow.
-  ///
-  /// In ko, this message translates to:
-  /// **'내일도 하루 {minutes}분'**
-  String completionTomorrow(int minutes);
-
-  /// After the completion card's minutes: opens the sheet that changes them.
-  ///
-  /// In ko, this message translates to:
-  /// **'바꾸기'**
-  String get completionChange;
-
-  /// What a screen reader reads for the completion card's minutes line.
-  ///
-  /// In ko, this message translates to:
-  /// **'내일도 하루 {minutes}분, 바꾸기'**
-  String completionTomorrowSemantics(int minutes);
 
   /// The account screen's section label over the daily study minutes.
   ///

@@ -105,6 +105,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
 
   @override
+  String clozeBlankLine(int number, String answer) {
+    return '빈칸 $number: $answer';
+  }
+
+  @override
+  String get clozePickLetters => '글자 고르기';
+
+  @override
+  String get clozeLettersTitle => '빈칸으로 할 글자를 골라요';
+
+  @override
+  String get clozeLettersBody => '처음 글자와 끝 글자를 차례로 눌러요';
+
+  @override
+  String get clozeLettersDone => '이 글자로';
+
+  @override
   String get cardKindTable => '표';
 
   @override
@@ -589,8 +606,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
-  String readingTitle(int current, int total) {
-    return '사진 $current/$total 읽는 중';
+  String readingTitle(int read, int total) {
+    return '사진 $total장 중 $read장 읽음';
   }
 
   @override
@@ -619,6 +636,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get addPhotos => '사진 더 추가';
+
+  @override
+  String get discardImportTitle => '찾은 카드를 버릴까요?';
+
+  @override
+  String discardImportBody(int count) {
+    return '찾은 카드 $count장이 사라져요. 다시 읽으면 오늘 사진 한도가 다시 쓰여요.';
+  }
+
+  @override
+  String get discardImport => '버리기';
 
   @override
   String get duplicateSkip => '건너뛰기';
@@ -994,8 +1022,23 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String goalRingSemantics(int done, int goal) {
-    return '하루 목표 $goal장 중 $done장';
+  String todayOfGoal(int goal) {
+    return ' / $goal장';
+  }
+
+  @override
+  String todayAbout(int minutes) {
+    return '약 $minutes분';
+  }
+
+  @override
+  String todayAboutLeft(int minutes) {
+    return '약 $minutes분 남음';
+  }
+
+  @override
+  String todayProgress(int goal, int done) {
+    return '$goal장 중 $done장';
   }
 
   @override
@@ -1358,16 +1401,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachStart => '시작하기';
 
   @override
-  String dailyMinutesControl(int minutes) {
-    return '하루 $minutes분';
-  }
-
-  @override
-  String dailyMinutesControlSemantics(int minutes) {
-    return '하루 공부 시간 $minutes분, 바꾸기';
-  }
-
-  @override
   String get dailyMinutesTitle => '하루 공부 시간';
 
   @override
@@ -1395,19 +1428,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyMinutesSkip => '건너뛰기';
-
-  @override
-  String completionTomorrow(int minutes) {
-    return '내일도 하루 $minutes분';
-  }
-
-  @override
-  String get completionChange => '바꾸기';
-
-  @override
-  String completionTomorrowSemantics(int minutes) {
-    return '내일도 하루 $minutes분, 바꾸기';
-  }
 
   @override
   String get settingsStudy => '공부';

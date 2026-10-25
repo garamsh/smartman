@@ -108,6 +108,23 @@ class AppLocalizationsEn extends AppLocalizations {
       '___ marks a blank, so the line can\'t contain it';
 
   @override
+  String clozeBlankLine(int number, String answer) {
+    return 'Blank $number: $answer';
+  }
+
+  @override
+  String get clozePickLetters => 'Pick letters';
+
+  @override
+  String get clozeLettersTitle => 'Choose the letters to blank';
+
+  @override
+  String get clozeLettersBody => 'Tap the first letter, then the last';
+
+  @override
+  String get clozeLettersDone => 'Use these letters';
+
+  @override
   String get cardKindTable => 'Table';
 
   @override
@@ -620,8 +637,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
-  String readingTitle(int current, int total) {
-    return 'Reading photo $current of $total';
+  String readingTitle(int read, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Read $read of $total photos',
+      one: 'Read $read of 1 photo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -656,6 +679,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addPhotos => 'Add more photos';
+
+  @override
+  String get discardImportTitle => 'Discard the cards found?';
+
+  @override
+  String discardImportBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count cards found will be lost.',
+      one: 'The 1 card found will be lost.',
+    );
+    return '$_temp0 Reading the photos again uses today\'s photo limit again.';
+  }
+
+  @override
+  String get discardImport => 'Discard';
 
   @override
   String get duplicateSkip => 'Skip';
@@ -1073,8 +1113,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String goalRingSemantics(int done, int goal) {
-    return '$done of today\'s goal of $goal';
+  String todayOfGoal(int goal) {
+    return ' / $goal';
+  }
+
+  @override
+  String todayAbout(int minutes) {
+    return 'About $minutes min';
+  }
+
+  @override
+  String todayAboutLeft(int minutes) {
+    return 'About $minutes min left';
+  }
+
+  @override
+  String todayProgress(int goal, int done) {
+    return '$done of $goal cards';
   }
 
   @override
@@ -1461,16 +1516,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coachStart => 'Start';
 
   @override
-  String dailyMinutesControl(int minutes) {
-    return '$minutes min a day';
-  }
-
-  @override
-  String dailyMinutesControlSemantics(int minutes) {
-    return 'Daily study time $minutes minutes, change';
-  }
-
-  @override
   String get dailyMinutesTitle => 'Daily study time';
 
   @override
@@ -1500,19 +1545,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyMinutesSkip => 'Skip';
-
-  @override
-  String completionTomorrow(int minutes) {
-    return '$minutes min again tomorrow';
-  }
-
-  @override
-  String get completionChange => 'Change';
-
-  @override
-  String completionTomorrowSemantics(int minutes) {
-    return '$minutes min again tomorrow, change';
-  }
 
   @override
   String get settingsStudy => 'Study';

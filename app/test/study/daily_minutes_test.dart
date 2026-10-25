@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/daily_minutes.dart';
@@ -34,8 +35,11 @@ MinutesPlan _plan({
 );
 
 /// Shows [DailyMinutesRow] over an in-memory database at [homeNow], on a
-/// phone's screen.
-Future<AppDatabase> _pumpRow(WidgetTester tester) async {
+/// phone's screen, in [locale].
+Future<AppDatabase> _pumpRow(
+  WidgetTester tester, {
+  Locale locale = const Locale('en'),
+}) async {
   // A phone's screen, so the sheet's choices are on it.
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
@@ -57,7 +61,7 @@ Future<AppDatabase> _pumpRow(WidgetTester tester) async {
       ],
       child: MaterialApp(
         theme: lightTheme,
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const Scaffold(body: DailyMinutesRow()),
@@ -101,11 +105,39 @@ void main() {
   });
 
   testWidgets(
-    "the account screen's row shows the minutes, and opens the sheet, then shows those saved",
+    "the account screen's row, with no icon, shows the minutes and opens the picker as a screen with a back button, which stores nothing, then shows those saved",
     (tester) async {
       final db = await _pumpRow(tester);
+      Future<int?> stored() => tester.runAsync<int?>(
+        () => StudyRepository(db, newId: () => 'unused').dailyMinutes(),
+      );
 
       expect(find.text('Daily study time'), findsOneWidget);
+      expect(find.text('20 min'), findsOneWidget);
+      expect(
+        tester.widget<AppListRow>(find.byType(AppListRow)).leading,
+        isNull,
+      );
+
+      await tester.tap(find.text('Daily study time'));
+      await tester.pumpAndSettle();
+      await waitForPicker(tester);
+      // A screen of its own, not a sheet, titled as the row.
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Daily study time'),
+        ),
+        findsOneWidget,
+      );
+      // Back leaves the minutes as they were.
+      await tester.tap(find.byTooltip('5 minutes more'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(DailyMinutesPicker), findsNothing);
+      expect(await stored(), isNull);
       expect(find.text('20 min'), findsOneWidget);
 
       await tester.tap(find.text('Daily study time'));
@@ -118,16 +150,18 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(DailyMinutesSheet), findsNothing);
-      expect(
-        await tester.runAsync<int?>(
-          () => StudyRepository(db, newId: () => 'unused').dailyMinutes(),
-        ),
-        45,
-      );
+      expect(find.byType(DailyMinutesPicker), findsNothing);
+      expect(await stored(), 45);
       expect(find.text('45 min'), findsOneWidget);
     },
   );
+
+  testWidgets('in Korean the row reads 하루 공부 시간 and 20분', (tester) async {
+    await _pumpRow(tester, locale: const Locale('ko'));
+
+    expect(find.text('하루 공부 시간'), findsOneWidget);
+    expect(find.text('20분'), findsOneWidget);
+  });
 
   testWidgets(
     'the − and + move the minutes by 5 within 5 to 180, each disabled at its bound, read by their names',

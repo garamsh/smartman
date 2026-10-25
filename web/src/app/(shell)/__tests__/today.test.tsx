@@ -1,11 +1,10 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine, timeZoneCookie } from "@/features/study";
 
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { otherUser, supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
-import { testRouter } from "@/testing/router";
 import { server } from "@/testing/mocks/server";
 import { cardRow, day, deckRow, reviewRow, start, stateRow, uuidOf } from "@/testing/library";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -57,8 +56,19 @@ describe("the 오늘 and 덱 pages", () => {
   const deckList = () => within(screen.getByRole("region", { name: "덱 목록" }));
   const row = (name: string) =>
     deckList().getByRole("link", { name: new RegExp(`^${name}, 카드`) });
-  /** The today card's count and minutes, as its heading reads them: "n 장 · 약 m분". */
-  const todayLine = () => document.getElementById("today-title")?.textContent;
+  /**
+   * The today card's done count over the day's cards and its minutes, as drawn: "d / n장 · 약 m분",
+   * the minutes ending "남음" once a card is done.
+   */
+  const todayLine = () =>
+    `${document.getElementById("today-count")?.textContent ?? ""} · ${
+      document.getElementById("today-time")?.textContent ?? ""
+    }`;
+  /** The cards left on the today card: the day's cards less those done. */
+  const cardsLeft = () => {
+    const [, done, goal] = /^(\d+) \/ (\d+)장/.exec(todayLine()) ?? [];
+    return Number(goal) - Number(done);
+  };
   /** The deck rows' names, without the progress each ends with. */
   const rowNames = () =>
     deckList()
@@ -79,8 +89,9 @@ describe("the 오늘 and 덱 pages", () => {
 
     await renderBoth();
 
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 2장" })).toBeInTheDocument();
-    expect(todayLine()).toBe("2 장 · 약 1분");
+    expect(screen.getByRole("heading", { name: "오늘 할 카드" })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "2장 중 0장" })).toBeInTheDocument();
+    expect(todayLine()).toBe("0 / 2장 · 약 1분");
     expect(screen.getByRole("link", { name: "모두 학습" })).toHaveAttribute(
       "href",
       `/study?decks=${uuidOf("d-fr")},${uuidOf("d-es")}`,
@@ -112,7 +123,7 @@ describe("the 오늘 and 덱 pages", () => {
 
     // Without the cookie the day is read in Seoul.
     await renderBoth();
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 30장" })).toBeInTheDocument();
+    expect(cardsLeft()).toBe(30);
     cleanup();
 
     setRequestCookies([
@@ -120,7 +131,7 @@ describe("the 오늘 and 덱 pages", () => {
       { name: "smartman-tz", value: "America/Los_Angeles" },
     ]);
     await renderBoth();
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 29장" })).toBeInTheDocument();
+    expect(cardsLeft()).toBe(29);
     expect(rowNames()).toEqual(["Alpha, 카드 35장, 오늘 29", "Beta, 카드 1장"]);
   });
 
@@ -131,7 +142,7 @@ describe("the 오늘 and 덱 pages", () => {
     postgrest.seed("card_states", stateRow("fr-due", due));
     // Control: one card due every three days is not a backlog, so the today card shows.
     await renderBoth();
-    expect(todayLine()).toBe("2 장 · 약 1분");
+    expect(todayLine()).toBe("0 / 2장 · 약 1분");
     expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
     cleanup();
 
@@ -147,6 +158,8 @@ describe("the 오늘 and 덱 pages", () => {
     await renderBoth();
 
     const card = within(screen.getByRole("region", { name: title }));
+    // The minutes are set in 계정과 설정 alone.
+    expect(card.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
     expect(
       card.getByText("밀린 복습 3장을 급한 것부터 해요. 새 카드는 잠시 쉬어요."),
     ).toBeInTheDocument();
@@ -181,7 +194,7 @@ describe("the 오늘 and 덱 pages", () => {
 
     expect(screen.queryByText("Old")).not.toBeInTheDocument();
     expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+    expect(cardsLeft()).toBe(1);
     // Control: the live deck and its live card are read and shown.
     expect(screen.getByRole("heading", { name: "내 덱 1" })).toBeInTheDocument();
   });
@@ -202,7 +215,7 @@ describe("the 오늘 and 덱 pages", () => {
 
     // Control: the user's own deck is read and counted.
     expect(rowNames()).toEqual(["French, 카드 1장, 오늘 1"]);
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+    expect(cardsLeft()).toBe(1);
   });
 
   it("estimates the minutes from the user's review and first-answer paces, each answer counted up to 30 s", async () => {
@@ -227,13 +240,13 @@ describe("the 오늘 and 덱 pages", () => {
     // Control: with 19 reviews the review pace is unknown, 10 s: 3 at 10 s and 4 at 30 s.
     postgrest.seed("reviews", ...history(19));
     await renderBoth();
-    expect(todayLine()).toBe("7 장 · 약 3분");
+    expect(todayLine()).toBe("0 / 7장 · 약 3분");
     cleanup();
 
     // The twentieth review: 3 at 24 s and 4 at 30 s.
     postgrest.seed("reviews", ...history(20).slice(-1));
     await renderBoth();
-    expect(todayLine()).toBe("7 장 · 약 4분");
+    expect(todayLine()).toBe("0 / 7장 · 약 4분");
   });
 
   it("reads the day's new cards as the day stood when it started, so answering its reviews leaves them", async () => {
@@ -277,7 +290,7 @@ describe("the 오늘 and 덱 pages", () => {
     await renderBoth();
     // The four reviews due and the day's new cards; the line goes on with the minutes, which the
     // paces set.
-    const before = Number(/^(\d+) 장/.exec(todayLine() ?? "")?.[1]) - 4;
+    const before = cardsLeft() - 4;
     // The figure is the user's own, short of the ten new cards the deck holds.
     expect(before).toBeGreaterThan(0);
     expect(before).toBeLessThan(10);
@@ -298,7 +311,7 @@ describe("the 오늘 and 덱 pages", () => {
     await renderBoth();
 
     // The reviews are done; the new cards stand as the day started.
-    expect(todayLine()).toMatch(new RegExp(`^${String(before)} 장 · `));
+    expect(cardsLeft()).toBe(before);
   });
 
   it("says a card is unreadable when an earlier answer to a card answered today names it by no string", async () => {
@@ -310,7 +323,7 @@ describe("the 오늘 and 덱 pages", () => {
     // Control: an earlier answer naming the card by its id is read.
     postgrest.seed("reviews", reviewRow("before", "fr", start - 2 * day, 6_000));
     await render(Today, {});
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+    expect(cardsLeft()).toBe(1);
     expect(screen.queryByText(unreadable)).not.toBeInTheDocument();
     cleanup();
 
@@ -366,14 +379,14 @@ describe("the 오늘 and 덱 pages", () => {
     // Three reviews at the unknown pace, 10 s each.
     await renderBoth();
     expect(rowNames()).toEqual(["French, 카드 3장, 오늘 3"]);
-    expect(todayLine()).toBe("3 장 · 약 1분");
+    expect(todayLine()).toBe("0 / 3장 · 약 1분");
     cleanup();
 
     // The other user's next request reads theirs, and nothing of the first user's: 3 at 25 s.
     setRequestCookies(await signedInCookies(otherUser));
     await renderBoth();
     expect(rowNames()).toEqual(["Other, 카드 3장, 오늘 3"]);
-    expect(todayLine()).toBe("3 장 · 약 2분");
+    expect(todayLine()).toBe("0 / 3장 · 약 2분");
   });
 
   it("carries no account content: neither the email nor 로그아웃", async () => {
@@ -541,10 +554,11 @@ describe("the 오늘 and 덱 pages", () => {
     const study = screen.getByRole("link", { name: "학습하기" });
     expect(study).toHaveClass("bg-ink");
     expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
-    expect(screen.queryByRole("img", { name: /^하루 목표/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
   });
 
-  it("shows the goal ring, the streak and where the user stands, from the shared definitions", async () => {
+  it("shows the cards done over the day's cards as a count and a bar, the minutes, the streak and where the user stands, from the shared definitions", async () => {
     postgrest.seed("decks", deckRow("d-fr", "French"));
     postgrest.seed(
       "cards",
@@ -561,7 +575,16 @@ describe("the 오늘 and 덱 pages", () => {
     );
     await render(Today, {});
 
-    expect(screen.getByRole("img", { name: "하루 목표 6장 중 2장" })).toBeInTheDocument();
+    const bar = screen.getByRole("progressbar", { name: "6장 중 2장" });
+    expect(bar).toHaveAttribute("aria-valuenow", "2");
+    expect(bar).toHaveAttribute("aria-valuemax", "6");
+    // The large count, which the bar reads, and the minutes left once a card is done: four new
+    // cards at 10 s.
+    expect(todayLine()).toBe("2 / 6장 · 약 1분 남음");
+    expect(document.getElementById("today-count")).toHaveAttribute("aria-hidden", "true");
+    // No goal ring and no minutes control.
+    expect(screen.queryByRole("img", { name: /^하루 목표/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
     // The today card's chip and the last seven days' line.
     expect(screen.getAllByText("1일 연속")).toHaveLength(2);
     expect(screen.getByText("좋은 출발이에요")).toBeInTheDocument();
@@ -573,7 +596,9 @@ describe("the 오늘 and 덱 pages", () => {
     );
     await render(Today, {});
 
-    expect(screen.getByRole("img", { name: "하루 목표 4장 중 0장" })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "4장 중 0장" })).toBeInTheDocument();
+    // Before any card is done the minutes are the day's, not those left.
+    expect(todayLine()).toBe("0 / 4장 · 약 1분");
     expect(screen.getAllByText("2일 연속")).toHaveLength(2);
     expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
   });
@@ -595,8 +620,7 @@ describe("the 오늘 and 덱 pages", () => {
     });
     await render(Today, {});
 
-    expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "하루 목표 2장 중 1장" })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "2장 중 1장" })).toBeInTheDocument();
     cleanup();
 
     await render(Study, { searchParams: Promise.resolve({ decks: uuidOf("d-fr") }) });
@@ -852,199 +876,8 @@ describe("the 오늘 and 덱 pages", () => {
       seedDay(30, (index) => index === 0);
       await render(Today, {});
 
-      expect(screen.getByRole("heading", { name: "오늘 할 카드 1장" })).toBeInTheDocument();
+      expect(cardsLeft()).toBe(1);
       expect(screen.queryByText(/더 했어요$/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe("the daily study minutes", () => {
-    /** One deck holding [count] cards never answered. */
-    const seedNew = (count: number) => {
-      postgrest.seed("decks", deckRow("d-fr", "French"));
-      postgrest.seed(
-        "cards",
-        ...Array.from({ length: count }, (_, index) =>
-          cardRow(`new-${String(index)}`, "d-fr", `new ${String(index)}`),
-        ),
-      );
-    };
-    const control = (minutes: number) =>
-      screen.getByRole("button", { name: `하루 공부 시간 ${String(minutes)}분, 바꾸기` });
-
-    it("show on the today card as a button reading 하루 20분, read as the time and a change", async () => {
-      seedNew(3);
-      await render(Today, {});
-
-      expect(control(20)).toHaveTextContent("하루 20분");
-      expect(control(20)).toHaveAttribute("aria-haspopup", "dialog");
-    });
-
-    /** The dialog the control opened, its tiles, and its number as a button. */
-    const openDialog = async (user: ReturnType<typeof userEvent.setup>, minutes = 20) => {
-      await user.click(control(minutes));
-      const dialog = within(screen.getByRole("dialog", { name: "하루 공부 시간" }));
-      return {
-        dialog,
-        tiles: dialog.getByRole("status"),
-        number: (value: number) =>
-          dialog.getByRole("button", { name: `하루 ${String(value)}분, 눌러서 직접 입력` }),
-        input: () => dialog.getByRole("textbox", { name: "하루 공부 시간(분)" }),
-      };
-    };
-
-    it("open a dialog of the minutes as one number between − and +, whose tiles follow the number as it is typed, and saving stores them and reads the page again with today's new count", async () => {
-      seedNew(150);
-      await render(Today, {});
-      // 20 minutes at the unknown pace of 10 s: 120 new cards.
-      expect(todayLine()).toBe("120 장 · 약 20분");
-      const user = userEvent.setup();
-
-      const { dialog, tiles, number, input } = await openDialog(user);
-      expect(number(20)).toHaveFocus();
-      expect(number(20)).toHaveTextContent("20분");
-      expect(tiles).toHaveAttribute("aria-live", "polite");
-      // The region holds both tiles, so each tile's title and value is matched as part of its text.
-      expect(tiles).toHaveTextContent("하루 새 카드약 120장");
-      // 120 today, the other 30 the day after.
-      expect(tiles).toHaveTextContent("새 카드 모두 시작1일 뒤");
-      // No presets and no custom mode.
-      expect(dialog.queryByRole("button", { name: "10분" })).not.toBeInTheDocument();
-      expect(dialog.queryByRole("button", { name: "직접 정하기" })).not.toBeInTheDocument();
-
-      await user.click(number(20));
-      expect(input()).toHaveFocus();
-      expect(input()).toHaveAttribute("inputmode", "numeric");
-      await user.clear(input());
-      await user.type(input(), "10");
-      // The tiles follow the number before it is committed: 60 today, 60 the next day and 30 after.
-      expect(tiles).toHaveTextContent("약 60장");
-      expect(tiles).toHaveTextContent("2일 뒤");
-
-      await user.clear(input());
-      await user.type(input(), "200");
-      expect(dialog.getByText("5분에서 180분 사이로 적어 주세요")).toBeInTheDocument();
-      expect(input()).toHaveAttribute("aria-invalid", "true");
-      expect(dialog.getByRole("button", { name: "저장" })).toBeDisabled();
-      // Enter keeps a number out of the bounds in the field until it is fixed.
-      await user.keyboard("{Enter}");
-      expect(input()).toHaveFocus();
-      // Control: the tiles keep the minutes chosen while the number is out of the bounds.
-      expect(tiles).toHaveTextContent("약 120장");
-
-      // An empty field keeps the minutes before.
-      await user.clear(input());
-      await user.keyboard("{Enter}");
-      expect(number(20)).toHaveFocus();
-      expect(dialog.queryByText("5분에서 180분 사이로 적어 주세요")).not.toBeInTheDocument();
-      // Nothing is stored until 저장.
-      expect(postgrest.studySettings.has(testUser.id)).toBe(false);
-
-      await user.click(number(20));
-      await user.clear(input());
-      await user.type(input(), "5{Enter}");
-      expect(number(5)).toHaveFocus();
-      expect(tiles).toHaveTextContent("약 30장");
-      // Five is the floor.
-      expect(dialog.getByRole("button", { name: "5분 줄이기" })).toBeDisabled();
-
-      await user.click(dialog.getByRole("button", { name: "저장" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
-      expect(postgrest.studySettings.get(testUser.id)?.daily_minutes).toBe(5);
-      expect(testRouter.refresh).toHaveBeenCalledOnce();
-      expect(control(20)).toHaveFocus();
-
-      // The page read again counts today with the minutes saved.
-      cleanup();
-      await render(Today, {});
-      expect(todayLine()).toBe("30 장 · 약 5분");
-      expect(control(5)).toHaveTextContent("하루 5분");
-    });
-
-    it("commit a typed number when the field is left, as Enter does", async () => {
-      seedNew(150);
-      await render(Today, {});
-      const user = userEvent.setup();
-      const { dialog, tiles, number, input } = await openDialog(user);
-
-      await user.click(number(20));
-      await user.clear(input());
-      await user.type(input(), "37");
-      await user.tab();
-      expect(number(37)).toBeInTheDocument();
-      expect(dialog.queryByRole("textbox")).not.toBeInTheDocument();
-      // 37 minutes at 10 s: 222 a day, more than the 150 left.
-      expect(tiles).toHaveTextContent("약 150장");
-      expect(tiles).toHaveTextContent("오늘");
-    });
-
-    it("move the minutes by 5 within 5 to 180, and hand the focus to the other step when one disables under it", async () => {
-      seedNew(150);
-      await render(Today, {});
-      const user = userEvent.setup();
-      const { dialog, number, input } = await openDialog(user);
-      const less = dialog.getByRole("button", { name: "5분 줄이기" });
-      const more = dialog.getByRole("button", { name: "5분 늘리기" });
-
-      await user.click(more);
-      expect(number(25)).toBeInTheDocument();
-      await user.click(less);
-      await user.click(less);
-      expect(number(15)).toBeInTheDocument();
-
-      await user.click(number(15));
-      await user.clear(input());
-      await user.type(input(), "175{Enter}");
-      more.focus();
-      await user.keyboard("{Enter}");
-      expect(number(180)).toBeInTheDocument();
-      expect(more).toBeDisabled();
-      expect(less).toHaveFocus();
-      // Control: a step that does not reach a bound keeps the focus.
-      await user.keyboard("{Enter}");
-      expect(number(175)).toBeInTheDocument();
-      expect(less).toHaveFocus();
-      await user.keyboard("{Enter}");
-      expect(number(170)).toBeInTheDocument();
-      expect(less).toHaveFocus();
-
-      // A step pressed without the focus, as a pointer does in some browsers, leaves the focus where it is.
-      await user.click(number(170));
-      await user.clear(input());
-      await user.type(input(), "10{Enter}");
-      expect(number(10)).toHaveFocus();
-      fireEvent.click(less);
-      expect(less).toBeDisabled();
-      expect(number(5)).toHaveFocus();
-    });
-
-    it("give the control and every button of their dialog the shared hover and pressed state", async () => {
-      seedNew(3);
-      await render(Today, {});
-      expect(control(20)).toHaveClass("pressable");
-
-      const { dialog } = await openDialog(userEvent.setup());
-      for (const button of dialog.getAllByRole("button")) {
-        expect(button).toHaveClass("pressable");
-      }
-    });
-
-    it("close their dialog on Escape and on the close button, storing nothing", async () => {
-      seedNew(3);
-      await render(Today, {});
-      const user = userEvent.setup();
-
-      await user.click(control(20));
-      await user.click(screen.getByRole("button", { name: "5분 늘리기" }));
-      await user.keyboard("{Escape}");
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(control(20)).toHaveFocus();
-
-      await user.click(control(20));
-      await user.click(screen.getByRole("button", { name: "닫기" }));
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(postgrest.studySettings.has(testUser.id)).toBe(false);
     });
   });
 });

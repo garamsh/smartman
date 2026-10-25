@@ -209,7 +209,7 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
       PhotoOrigin.album when _origin == PhotoOrigin.camera => l10n.photoAlbum,
       PhotoOrigin.album => l10n.pickAnother,
     };
-    return switch (_stage) {
+    final screen = switch (_stage) {
       _Extracting(:final photo) => ExtractingView(
         photo: photo,
         onCancel: _cancel,
@@ -240,9 +240,9 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onTarget: (deck) => _chooseTarget(list, deck),
         saving: _saving,
         onChanged: () => setState(() {}),
-        onCancel: () => Navigator.of(context).pop(),
+        onCancel: () => _leave(list),
         // A retake replaces a single photo; with several, photos are added.
-        onRetake: list.photoCount == 1 ? _retake : null,
+        onRetake: list.photoCount == 1 ? () => _retakeList(list) : null,
         retakeLabel: retakeLabel,
         onAddPhotos: _photos.length < maxPhotosPerImport
             ? () => _addPhotos(list)
@@ -250,6 +250,51 @@ class _PhotoImportScreenState extends ConsumerState<_PhotoImportScreen> {
         onSave: () => _save(list),
       ),
     };
+    return PopScope(
+      canPop: switch (_stage) {
+        _Listing(:final list) => list.cardCount == 0,
+        _Reading(list: _?) => false,
+        _ => true,
+      },
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        switch (_stage) {
+          case _Listing(:final list):
+            unawaited(_leave(list));
+          case _Reading():
+            _cancel();
+          case _:
+        }
+      },
+      child: screen,
+    );
+  }
+
+  /// Closes the screen, once the user confirms discarding the cards [list]
+  /// would save.
+  Future<void> _leave(ImportList list) async {
+    if (await _discardConfirmed(list) && mounted) Navigator.of(context).pop();
+  }
+
+  /// Takes another photo in place of [list]'s, once the user confirms
+  /// discarding its cards.
+  Future<void> _retakeList(ImportList list) async {
+    if (await _discardConfirmed(list) && mounted) await _retake();
+  }
+
+  /// Whether the cards [list] would save may go: at once when it would save
+  /// none, else as the user answers, since reading the photos again counts
+  /// against today's limit again.
+  Future<bool> _discardConfirmed(ImportList list) async {
+    final count = list.cardCount;
+    if (count == 0) return true;
+    final l10n = AppLocalizations.of(context);
+    return showAppConfirm(
+      context,
+      title: l10n.discardImportTitle,
+      consequence: l10n.discardImportBody(count),
+      confirmLabel: l10n.discardImport,
+    );
   }
 
   /// Shows [stage], and starts what it waits for.

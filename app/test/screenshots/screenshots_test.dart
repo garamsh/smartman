@@ -296,29 +296,6 @@ void main() {
       await shot(tester, '16a0-daily-minutes-first');
       await tap(tester, find.text(ko.dailyMinutesSkip));
       await shot(tester, '16a-today');
-      // The today card's control opens the sheet; + moves the number and the
-      // tiles follow.
-      await tap(tester, find.text(ko.dailyMinutesControl(20)));
-      await waitForPicker(tester, more: ko.dailyMinutesMore);
-      await tap(tester, find.byTooltip(ko.dailyMinutesMore));
-      await shot(tester, '16g-daily-minutes-sheet');
-      // The number typed in place, out of range, above the keypad's space:
-      // the test renderer draws no system keyboard, so its inset stands in.
-      await tap(
-        tester,
-        find.bySemanticsLabel(ko.dailyMinutesNumberSemantics(25)),
-      );
-      await tester.enterText(find.byType(TextField), '200');
-      tester.view.viewInsets = const FakeViewPadding(bottom: 690);
-      addTearDown(tester.view.resetViewInsets);
-      await tester.pumpAndSettle();
-      await shot(tester, '16h-daily-minutes-keypad');
-      tester.view.resetViewInsets();
-      await tester.enterText(find.byType(TextField), '');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
       await tap(tester, find.text(ko.tabDecks));
       await tap(tester, find.text('영단어 기본'));
 
@@ -369,9 +346,16 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '14-whole-card-sheet');
       await dismissSheet(tester);
+      // The today card once some of the day's cards are done.
+      await tap(tester, find.byTooltip(ko.close));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.tabToday));
+      await shot(tester, '16a1-today-started');
+      await tap(tester, find.text(ko.tabDecks));
+      await tap(tester, find.text('영단어 기본'));
       // Reopened the same day: the day's last card from the earlier session,
       // and for a moment the notice that the session goes on with the day.
-      await tap(tester, find.byTooltip(ko.close));
       await tap(tester, find.text(ko.studyDeck));
       await shot(tester, '13d-study-resumed');
       await tester.pump(const Duration(seconds: 3));
@@ -417,6 +401,29 @@ void main() {
 
       await tap(tester, find.byTooltip(ko.account));
       await shot(tester, '18-account');
+      // Its 하루 공부 시간 row opens the minutes picker as a screen; + moves
+      // the number and the tiles follow.
+      await tap(tester, find.text(ko.dailyMinutesTitle));
+      await waitForPicker(tester, more: ko.dailyMinutesMore);
+      await tap(tester, find.byTooltip(ko.dailyMinutesMore));
+      await shot(tester, '18c-daily-minutes-screen');
+      // The number typed in place, out of range, above the keypad's space:
+      // the test renderer draws no system keyboard, so its inset stands in.
+      await tap(
+        tester,
+        find.bySemanticsLabel(ko.dailyMinutesNumberSemantics(25)),
+      );
+      await tester.enterText(find.byType(TextField), '200');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 690);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await shot(tester, '18d-daily-minutes-keypad');
+      tester.view.resetViewInsets();
+      await tester.enterText(find.byType(TextField), '');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text(ko.termsOfService),
         100,
@@ -883,6 +890,12 @@ void main() {
       await tester.ensureVisible(find.text(ko.cardKindCloze));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
+      final pick = find.text(ko.clozePickLetters).last;
+      await tester.ensureVisible(pick);
+      await tap(tester, pick);
+      await tap(tester, find.text('p'));
+      await tap(tester, find.text('s'));
+      await shot(tester, '05m-card-editor-cloze-letters');
       await unmount(tester);
     });
 
@@ -1197,7 +1210,9 @@ void main() {
       await shot(tester, '21-photo-deck-sheet');
       await dismissSheet(tester);
 
-      await shoot(find.text(ko.retake));
+      await tap(tester, find.text(ko.retake));
+      await shot(tester, '22d-photo-discard');
+      await shoot(find.text(ko.discardImport));
       client.answerCards(const [
         CandidateCard(
           front: '양성모음',
@@ -1224,7 +1239,8 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-notes');
 
-      await shoot(find.text(ko.retake));
+      await tap(tester, find.text(ko.retake));
+      await shoot(find.text(ko.discardImport));
       client.fail(const ModelFailed());
       await tester.pumpAndSettle();
       await shot(tester, '24-photo-failure');

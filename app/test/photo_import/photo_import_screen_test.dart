@@ -180,9 +180,27 @@ class _Import {
     await _pumpPast(_shown('open'));
   }
 
-  /// Taps the retake, named [label], which takes the next photo at once, as
-  /// [shoot] does.
-  Future<void> retake([String label = 'Retake']) => _pumpPast(_shown(label));
+  /// Taps the retake, named [label], confirms discarding the list's cards
+  /// where it asks, and takes the next photo at once, as [shoot] does.
+  Future<void> retake([String label = 'Retake']) async {
+    await _pumpPast(_shown(label));
+    if (_shown('Discard').evaluate().isNotEmpty) {
+      await _pumpPast(_shown('Discard'));
+    }
+  }
+
+  /// Presses the system back, as Android's back button does.
+  Future<void> back() async {
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+  }
+
+  /// Edits the front of the row reading [front] to [to] in its edit sheet.
+  Future<void> editFront(String front, String to) async {
+    await tap(_shown(front));
+    await tester.enterText(find.byType(TextField).first, to);
+    await tap(_shown('Done'));
+  }
 
   Future<void> _pumpPast(Finder finder) async {
     await tester.tap(finder);
@@ -303,13 +321,40 @@ void main() {
         final import = await _Import.open(tester);
         await import.pickSeveral(3);
 
-        expect(find.bySemanticsLabel('Reading photo 1 of 3'), findsOneWidget);
+        expect(find.bySemanticsLabel('Read 0 of 3 photos'), findsOneWidget);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 1\nReading')), findsOne);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 3\nWaiting')), findsOne);
         await import.answerCall(0, {'chat': 'cat'});
         expect(find.bySemanticsLabel(RegExp(r'^Photo 1\n1 card')), findsOne);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 3\nReading')), findsOne);
-        expect(find.bySemanticsLabel('Reading photo 2 of 3'), findsOneWidget);
+        expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'with a failure among photos still reading, the heading and the bar count the same photos read',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+        double? bar() => tester
+            .widget<LinearProgressIndicator>(
+              find.byType(LinearProgressIndicator),
+            )
+            .value;
+
+        import.calls(0).answer.completeError(const ModelFailed());
+        await import.frames();
+        expect(find.bySemanticsLabel('Read 0 of 3 photos'), findsOneWidget);
+        expect(bar(), 0);
+
+        await import.answerCall(1, {'chien': 'dog'});
+        expect(find.bySemanticsLabel('Read 1 of 3 photos'), findsOneWidget);
+        expect(bar(), closeTo(1 / 3, 1e-9));
+
+        await import.answerCall(2, {'oiseau': 'bird'});
+        expect(find.bySemanticsLabel("Couldn't read 1 photo"), findsOneWidget);
+        expect(bar(), closeTo(2 / 3, 1e-9));
         await import.close();
       },
     );
@@ -388,7 +433,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.bySemanticsLabel('Reading photo 1 of 2'), findsOneWidget);
+        expect(find.bySemanticsLabel('Read 0 of 2 photos'), findsOneWidget);
         await import.answerCall(0, {'chat': 'cat'});
         await import.answerCall(1, {'chien': 'dog'});
         expect(import.client.calls, hasLength(2));
@@ -464,6 +509,17 @@ void main() {
         await import.close();
       },
     );
+
+    testWidgets("the list's title is drawn as a pushed screen's title", (
+      tester,
+    ) async {
+      final import = await _Import.open(tester);
+      await import.extract({'chat': 'cat'});
+      final title = tester.widget<Text>(_shown('Found 1 word'));
+      expect(title.style?.fontSize, AppType.title.fontSize);
+      expect(title.style?.height, AppType.title.height);
+      await import.close();
+    });
 
     testWidgets(
       'one photo keeps its list as before: no photo groups, and the retake in place of adding photos only',
@@ -1232,6 +1288,134 @@ void main() {
       },
     );
 
+    group('leaving a list that holds cards', () {
+      const prompt = 'Discard the cards found?';
+      const consequence =
+          'The 2 cards found will be lost. Reading the photos again uses '
+          "today's photo limit again.";
+
+      /// A list of three words, one left out and one edited, so a kept list
+      /// shows both.
+      Future<_Import> edited(WidgetTester tester) async {
+        final import = await _Import.open(tester);
+        await import.extract({
+          'chat': 'cat',
+          'chien': 'dog',
+          'cheval': 'horse',
+        });
+        await import.tap(import.check('cheval'));
+        await import.editFront('chien', 'chiot');
+        expect(import.included('cheval'), isFalse);
+        expect(_shown('chiot'), findsOneWidget);
+        return import;
+      }
+
+      Future<void> expectKept(_Import import) async {
+        expect(_shown(prompt), findsNothing);
+        expect(import.hasPopped, isFalse);
+        expect(import.included('cheval'), isFalse, reason: 'its check kept');
+        expect(_shown('chiot'), findsOneWidget, reason: 'its edit kept');
+      }
+
+      for (final (way, leave) in [
+        ('the system back', (_Import import) => import.back()),
+        ('"Cancel"', (_Import import) => import.tap(_shown('Cancel'))),
+      ]) {
+        testWidgets(
+          '$way asks first, its cancel keeps every check and edit, and discarding closes the screen with nothing written',
+          (tester) async {
+            final import = await edited(tester);
+
+            await leave(import);
+            expect(_shown(prompt), findsOneWidget);
+            expect(_shown(consequence), findsOneWidget);
+            await import.tap(_shown('Cancel').last);
+            await expectKept(import);
+            expect(import.client.calls, hasLength(1));
+
+            await leave(import);
+            await import.tap(_shown('Discard'));
+            expect(import.hasPopped, isTrue);
+            expect(import.popped, isNull);
+            expect(await import.cards(import.french), isEmpty);
+            await import.close();
+          },
+        );
+      }
+
+      testWidgets(
+        'the retake asks first, and its cancel keeps the list and takes no photo',
+        (tester) async {
+          final import = await edited(tester);
+
+          await import.tap(_shown('Retake'));
+          expect(_shown(prompt), findsOneWidget);
+          await import.tap(_shown('Cancel').last);
+          await expectKept(import);
+          expect(import.photos.cameraCalls, 1);
+
+          await import.retake();
+          expect(import.photos.cameraCalls, 2);
+          expect(import.client.calls, hasLength(2));
+          await import.close();
+        },
+      );
+
+      testWidgets(
+        'with every row left out, "Cancel" and the system back close at once',
+        (tester) async {
+          final import = await _Import.open(tester);
+          await import.extract({'chat': 'cat'});
+          await import.tap(import.check('chat'));
+          await import.tap(_shown('Cancel'));
+          expect(_shown(prompt), findsNothing);
+          expect(import.hasPopped, isTrue);
+          await import.close();
+
+          final other = await _Import.open(tester);
+          await other.extract({'chat': 'cat'});
+          await other.tap(other.check('chat'));
+          await other.back();
+          expect(other.hasPopped, isTrue);
+          await other.close();
+        },
+      );
+
+      testWidgets(
+        'a back while photos are added goes back to the list as it was, and a back while the first photos are read or one is extracted closes at once',
+        (tester) async {
+          final import = await edited(tester);
+          import.photos.libraryPhotos = [Future.value(testPhoto)];
+          await import.tap(_shown('Add more photos'));
+          await tester.tap(_shown('Choose from album'));
+          await import.frames();
+          expect(find.bySemanticsLabel('Read 0 of 1 photo'), findsOneWidget);
+
+          await tester.binding.handlePopRoute();
+          await import.frames();
+          expect(import.calls(1).cancelled, isTrue);
+          await expectKept(import);
+          await import.close();
+
+          final first = await _Import.open(tester);
+          await first.pickSeveral(2);
+          await tester.binding.handlePopRoute();
+          await first.frames();
+          expect(first.hasPopped, isTrue);
+          await first.close();
+
+          final one = await _Import.open(tester);
+          await one.shoot();
+          expect(_shown('Finding cards'), findsOneWidget);
+          await tester.binding.handlePopRoute();
+          await one.frames();
+          expect(one.hasPopped, isTrue);
+          expect(one.client.calls.single.cancelled, isTrue);
+          await one.close();
+        },
+      );
+    });
+
     testWidgets(
       'cancel closes the list, writes nothing and pops with nothing',
       (tester) async {
@@ -1239,6 +1423,7 @@ void main() {
         await import.extract({'a': '1'});
 
         await import.tap(_shown('Cancel'));
+        await import.tap(_shown('Discard'));
 
         expect(import.hasPopped, isTrue);
         expect(import.popped, isNull);

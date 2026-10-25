@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -17,6 +18,8 @@ vi.mock("next/headers", () => import("@/testing/next-headers"));
 describe("the account page", () => {
   beforeEach(async () => {
     setRequestCookies(await signedInCookies());
+    // The rows its 공부 section reads.
+    server.use(...new FakePostgrest().handlers);
   });
 
   it("reads the session on the server and shows who is signed in, with sign-out", async () => {
