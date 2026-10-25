@@ -670,7 +670,12 @@ void main() {
         await meetsGuidelines();
         await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
+        // Leaving with the typed card asks first.
         await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        expect(find.text('Discard this card?'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Discard'));
         await tester.pumpAndSettle();
 
         // Every answer shown by the switch.

@@ -86,6 +86,32 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 
   bool get _isNew => widget.card == null;
 
+  /// Whether anything was typed or chosen since the editor opened or last
+  /// saved; leaving then asks first (issue #309). Switching the kind alone
+  /// is no change.
+  bool _edited = false;
+
+  /// Marks the card changed and redraws.
+  void _change([VoidCallback? change]) => setState(() {
+    change?.call();
+    _edited = true;
+  });
+
+  /// Asks before leaving with changes, and leaves once the user discards
+  /// them.
+  Future<void> _confirmLeave(bool didPop) async {
+    if (didPop) return;
+    final l10n = AppLocalizations.of(context);
+    final discard = await showAppConfirm(
+      context,
+      title: l10n.discardCardTitle,
+      consequence: l10n.discardCardBody,
+      confirmLabel: l10n.discardCard,
+      cancelLabel: l10n.keepWriting,
+    );
+    if (discard && mounted) Navigator.of(context).pop();
+  }
+
   @override
   void dispose() {
     _front.dispose();
@@ -188,6 +214,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             _table.dispose();
             _table = TableDraft();
             _showRequired = false;
+            _edited = false;
           });
           _frontFocus.requestFocus();
         case (DuplicateFront(:final existing), _):
@@ -206,7 +233,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       case _DuplicateChoice.saveAnyway:
         await _save(after, allowDuplicate: true);
       case _DuplicateChoice.openExisting:
-        await Navigator.of(context).pushReplacement(
+        // Over the editor, so closing it returns to the card being typed.
+        await Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => CardEditorScreen(deck: widget.deck, card: existing),
           ),
@@ -239,154 +267,158 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final card = widget.card;
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: l10n.close,
-          icon: const Icon(LucideIcons.x),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: Text(_isNew ? l10n.newCard : l10n.editCard),
-        actions: [
-          if (card != null)
-            IconButton(
-              tooltip: l10n.deleteCard,
-              icon: const Icon(LucideIcons.trash2),
-              onPressed: () => _delete(card),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpace.gutter),
-            child: Text(
-              widget.deck.name,
-              style: AppType.secondary.copyWith(
-                color: AppColors.of(context).muted,
+    return PopScope(
+      canPop: !_edited,
+      onPopInvokedWithResult: (didPop, _) => _confirmLeave(didPop),
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: l10n.close,
+            icon: const Icon(LucideIcons.x),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          title: Text(_isNew ? l10n.newCard : l10n.editCard),
+          actions: [
+            if (card != null)
+              IconButton(
+                tooltip: l10n.deleteCard,
+                icon: const Icon(LucideIcons.trash2),
+                onPressed: () => _delete(card),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpace.gutter),
+              child: Text(
+                widget.deck.name,
+                style: AppType.secondary.copyWith(
+                  color: AppColors.of(context).muted,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      // The actions sit in the body under the form, not in the bottom bar, so
-      // they stay above the keyboard, which shrinks the body (issue #307).
-      body: Column(
-        children: [
-          Expanded(
-            // A column, not a lazy list, so every field of a long word is built and
-            // its error shows wherever it scrolls.
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpace.gutter),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_isNew) ...[
-                    Semantics(
-                      label: l10n.cardKindLabel,
-                      child: SegmentedButton<CardKind>(
-                        showSelectedIcon: false,
-                        segments: [
-                          ButtonSegment(
-                            value: CardKind.basic,
-                            label: Text(l10n.cardKindBasic),
-                          ),
-                          ButtonSegment(
-                            value: CardKind.word,
-                            label: Text(l10n.cardKindWord),
-                          ),
-                          ButtonSegment(
-                            value: CardKind.cloze,
-                            label: Text(l10n.cardKindCloze),
-                          ),
-                          ButtonSegment(
-                            value: CardKind.table,
-                            label: Text(l10n.cardKindTable),
-                          ),
-                        ],
-                        selected: {_kind},
-                        onSelectionChanged: (kinds) =>
-                            _chooseKind(kinds.single),
+          ],
+        ),
+        // The actions sit in the body under the form, not in the bottom bar, so
+        // they stay above the keyboard, which shrinks the body (issue #307).
+        body: Column(
+          children: [
+            Expanded(
+              // A column, not a lazy list, so every field of a long word is built and
+              // its error shows wherever it scrolls.
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpace.gutter),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_isNew) ...[
+                      Semantics(
+                        label: l10n.cardKindLabel,
+                        child: SegmentedButton<CardKind>(
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment(
+                              value: CardKind.basic,
+                              label: Text(l10n.cardKindBasic),
+                            ),
+                            ButtonSegment(
+                              value: CardKind.word,
+                              label: Text(l10n.cardKindWord),
+                            ),
+                            ButtonSegment(
+                              value: CardKind.cloze,
+                              label: Text(l10n.cardKindCloze),
+                            ),
+                            ButtonSegment(
+                              value: CardKind.table,
+                              label: Text(l10n.cardKindTable),
+                            ),
+                          ],
+                          selected: {_kind},
+                          onSelectionChanged: (kinds) =>
+                              _chooseKind(kinds.single),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpace.s24),
+                    ],
+                    CardPreview(front: _frontBlocks, back: _backBlocks),
                     const SizedBox(height: AppSpace.s24),
-                  ],
-                  CardPreview(front: _frontBlocks, back: _backBlocks),
-                  const SizedBox(height: AppSpace.s24),
-                  AppTextField(
-                    label: l10n.cardFront,
-                    controller: _front,
-                    hint: _kind == CardKind.table ? l10n.tableNameHint : null,
-                    focusNode: _frontFocus,
-                    autofocus: _isNew,
-                    minLines: 2,
-                    maxLines: null,
-                    errorText: _requiredError(l10n, _front),
-                    onChanged: (text) => setState(() {
-                      _cloze.update(text);
-                      _clozeEdited = true;
-                    }),
-                  ),
-                  if (card?.front.any((block) => block is SensesContent) ??
-                      false) ...[
-                    const SizedBox(height: AppSpace.s8),
-                    Text(
-                      l10n.sensesEditNote,
-                      style: AppType.secondary.copyWith(
-                        color: AppColors.of(context).muted,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpace.s16),
-                  switch (_kind) {
-                    CardKind.basic => AppTextField(
-                      label: l10n.cardBack,
-                      controller: _back,
+                    AppTextField(
+                      label: l10n.cardFront,
+                      controller: _front,
+                      hint: _kind == CardKind.table ? l10n.tableNameHint : null,
+                      focusNode: _frontFocus,
+                      autofocus: _isNew,
                       minLines: 2,
                       maxLines: null,
-                      errorText: _requiredError(l10n, _back),
-                      onChanged: (_) => setState(() {}),
+                      errorText: _requiredError(l10n, _front),
+                      onChanged: (text) => _change(() {
+                        _cloze.update(text);
+                        _clozeEdited = true;
+                      }),
                     ),
-                    CardKind.word => SenseFields(
-                      senses: _senses,
-                      showErrors: _showRequired,
-                      onChanged: () => setState(() {}),
-                    ),
-                    CardKind.cloze => ClozeWords(
-                      line: _front.text,
-                      draft: _cloze,
-                      showError: _showRequired,
-                      onChanged: () => setState(() => _clozeEdited = true),
-                    ),
-                    CardKind.table => TableFields(
-                      draft: _table,
-                      showErrors: _showRequired,
-                      onChanged: () => setState(() {}),
-                    ),
-                  },
-                ],
+                    if (card?.front.any((block) => block is SensesContent) ??
+                        false) ...[
+                      const SizedBox(height: AppSpace.s8),
+                      Text(
+                        l10n.sensesEditNote,
+                        style: AppType.secondary.copyWith(
+                          color: AppColors.of(context).muted,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpace.s16),
+                    switch (_kind) {
+                      CardKind.basic => AppTextField(
+                        label: l10n.cardBack,
+                        controller: _back,
+                        minLines: 2,
+                        maxLines: null,
+                        errorText: _requiredError(l10n, _back),
+                        onChanged: (_) => _change(),
+                      ),
+                      CardKind.word => SenseFields(
+                        senses: _senses,
+                        showErrors: _showRequired,
+                        onChanged: _change,
+                      ),
+                      CardKind.cloze => ClozeWords(
+                        line: _front.text,
+                        draft: _cloze,
+                        showError: _showRequired,
+                        onChanged: () => _change(() => _clozeEdited = true),
+                      ),
+                      CardKind.table => TableFields(
+                        draft: _table,
+                        showErrors: _showRequired,
+                        onChanged: _change,
+                      ),
+                    },
+                  ],
+                ),
               ),
             ),
-          ),
-          if (_isNew)
-            BottomActions(
-              secondary: AppButton(
-                label: l10n.save,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.cta,
-                onPressed: () => _save(_AfterSave.close),
+            if (_isNew)
+              BottomActions(
+                secondary: AppButton(
+                  label: l10n.save,
+                  variant: AppButtonVariant.secondary,
+                  size: AppButtonSize.cta,
+                  onPressed: () => _save(_AfterSave.close),
+                ),
+                primary: AppButton(
+                  label: l10n.saveAndNext,
+                  size: AppButtonSize.cta,
+                  onPressed: () => _save(_AfterSave.next),
+                ),
+              )
+            else
+              BottomActions(
+                secondary: AppButton(
+                  label: l10n.save,
+                  size: AppButtonSize.cta,
+                  onPressed: () => _save(_AfterSave.close),
+                ),
               ),
-              primary: AppButton(
-                label: l10n.saveAndNext,
-                size: AppButtonSize.cta,
-                onPressed: () => _save(_AfterSave.next),
-              ),
-            )
-          else
-            BottomActions(
-              secondary: AppButton(
-                label: l10n.save,
-                size: AppButtonSize.cta,
-                onPressed: () => _save(_AfterSave.close),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
