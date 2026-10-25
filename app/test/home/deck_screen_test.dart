@@ -506,6 +506,49 @@ void main() {
   });
 
   testWidgets(
+    'a rename stored while the screen is open, as a sync lands one, shows in the title, the rename sheet, the delete question and the editor',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text('French'), findsOneWidget, reason: 'the opening name');
+
+      await tester.runAsync(
+        () => screens.repository.renameDeck(screens.deck.id, 'Français'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Français'), findsOneWidget);
+      expect(find.text('French'), findsNothing);
+
+      await screens.tap(find.byTooltip('Deck actions'));
+      await screens.tap(find.text('Rename'));
+      expect(
+        tester
+            .widget<EditableText>(
+              find.descendant(
+                of: find.widgetWithText(AppTextField, 'Deck name'),
+                matching: find.byType(EditableText),
+              ),
+            )
+            .controller
+            .text,
+        'Français',
+      );
+      await tester.tapAt(const Offset(20, 100));
+      await tester.pumpAndSettle();
+
+      await screens.tap(find.byTooltip('Deck actions'));
+      await screens.tap(find.text('Delete deck'));
+      expect(find.text('Delete "Français"?'), findsOneWidget);
+      await screens.tap(find.text('Cancel'));
+
+      await screens.tap(find.text('Add card'));
+      expect(find.text('Français'), findsOneWidget, reason: "the editor's");
+      expect(find.text('French'), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
     'the rename sheet opens focused on the current name, refuses an empty one, and saves on Enter',
     (tester) async {
       final screens = await DeckScreens.open(tester);
