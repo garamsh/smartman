@@ -185,24 +185,23 @@ final class ImportJob extends ChangeNotifier {
 
   /// Stops reading the batch and leaves it out, keeping [list] as it was.
   void dropBatch() {
-    for (final photo in batch) {
-      final cancel = photo._cancel;
-      if (cancel != null && !cancel.isCompleted) cancel.complete();
-    }
+    _stopReading(batch);
     photos.removeRange(_listed, photos.length);
     leftToday = null;
     _changed();
   }
 
-  /// Replaces every photo and the list with [picked], from [from].
+  /// Replaces every photo and the list with [picked], from [from]. Listeners
+  /// hear the job only once it holds [picked], never empty in between.
   Future<DailyLimitReached?> replace(
     List<PickedPhoto> picked,
     PhotoOrigin from,
-  ) async {
-    dropBatch();
+  ) {
+    _stopReading(photos);
     photos.clear();
     _listed = 0;
     list = null;
+    leftToday = null;
     origin = from;
     return add(picked);
   }
@@ -224,11 +223,16 @@ final class ImportJob extends ChangeNotifier {
   /// Stops every read, starts no other, and forgets the job on the device.
   Future<void> end() async {
     _ended = true;
-    for (final photo in photos) {
+    _stopReading(photos);
+    await _store.clear();
+  }
+
+  /// Cancels the reads in progress of [these].
+  void _stopReading(Iterable<JobPhoto> these) {
+    for (final photo in these) {
       final cancel = photo._cancel;
       if (cancel != null && !cancel.isCompleted) cancel.complete();
     }
-    await _store.clear();
   }
 
   void _changed() {
