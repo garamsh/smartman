@@ -274,6 +274,28 @@ export async function readDeck(id: string): Promise<AdminRead<AdminDeck | null>>
   };
 }
 
+/**
+ * The search's pages 0 to [last], as one page: the users of each in order and the matches in
+ * all, read as "더 보기" would have read them. Past the matches' last page it reads no further.
+ */
+export async function searchUsersThrough(
+  query: string,
+  last: number,
+): Promise<AdminRead<UserPage>> {
+  const first = await searchUsers(query, 0);
+  if ("failure" in first) return first;
+  const pages = Math.min(last, Math.ceil(first.data.total / userPageSize) - 1);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(pages, 0) }, (_, index) => searchUsers(query, index + 1)),
+  );
+  const users = [...first.data.users];
+  for (const page of rest) {
+    if ("failure" in page) return page;
+    users.push(...page.data.users);
+  }
+  return { data: { users, total: first.data.total } };
+}
+
 /** How many users a page of the search holds. */
 const userPageSize = 20;
 
