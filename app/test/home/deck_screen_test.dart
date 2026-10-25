@@ -405,7 +405,15 @@ void main() {
       await tester.pumpAndSettle();
 
       final semantics = tester.ensureSemantics();
-      final node = tester.getSemantics(find.byType(CardBackRow).first);
+      // The row's toggle, the node beside its pencil.
+      final node = tester.getSemantics(
+        find
+            .descendant(
+              of: find.byType(CardBackRow).first,
+              matching: find.byType(InkWell),
+            )
+            .first,
+      );
       final edit = CustomSemanticsAction.getIdentifier(
         const CustomSemanticsAction(label: 'Edit card'),
       );
@@ -417,6 +425,31 @@ void main() {
           .performAction(node.id, SemanticsAction.customAction, edit);
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
+      semantics.dispose();
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    "each card row's pencil, a button a screen reader hears as Edit card, opens that card, while a tap on the row still shows its back",
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      final pencils = find.byTooltip('Edit card');
+      expect(pencils, findsNWidgets(3), reason: 'one on each row');
+      expect(
+        tester.getSemantics(pencils.at(1)),
+        isSemantics(tooltip: 'Edit card', isButton: true, hasTapAction: true),
+      );
+
+      // Control: a tap on the row shows its back and opens nothing.
+      await screens.tap(find.text('Chien'));
+      expect(_answers(tester), ['dog']);
+      expect(find.byType(TextField), findsNothing);
+
+      await screens.tap(pencils.at(1));
+      expect(find.widgetWithText(TextField, 'Chien'), findsOneWidget);
       semantics.dispose();
       await screens.close();
     },
