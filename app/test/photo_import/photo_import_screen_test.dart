@@ -214,6 +214,15 @@ class _Import {
     }
   }
 
+  /// Lets every write [store] holds land, the newest first each time, so
+  /// writes under way at once would land oldest last.
+  Future<void> releaseWritesNewestFirst() async {
+    while (store.heldWrites.isNotEmpty) {
+      store.heldWrites.removeLast().release.complete();
+      await tester.pump();
+    }
+  }
+
   /// Opens the job again by the bar over the tab bar.
   Future<void> reopen() async {
     popped = _notPopped;
@@ -340,6 +349,11 @@ class _CountingDecks extends UnreadableDecks {
   }
 }
 
+/// What a photo's row says when the device could not keep it, as a pattern.
+final _notKept = RegExp.escape(
+  "Couldn't keep this photo on the device. Check the free space and choose it again.",
+);
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -433,6 +447,100 @@ void main() {
         expect(_shown('Found 2 words'), findsOneWidget);
         expect(next.client.calls, isEmpty);
         await next.close();
+      },
+    );
+
+    testWidgets(
+      'the state kept is the latest whatever order the writes finish in, so a resume sends no photo read before',
+      (tester) async {
+        final first = await _Import.open(
+          tester,
+          before: (import) => import.store.holdWrites = true,
+        );
+        await first.pickSeveral(3);
+        await first.answerCall(0, {'chat': 'cat'});
+        await first.answerCall(1, {'chien': 'dog'});
+        await first.answerCall(2, {'oiseau': 'bird'});
+        expect(first.store.heldWrites, isNotEmpty, reason: 'writes held');
+        await first.releaseWritesNewestFirst();
+        expect(first.store.heldWrites, isEmpty);
+        await first.close();
+
+        first.store.holdWrites = false;
+        final next = await _Import.open(tester, restoring: first.store);
+        expect(next.bar, 'Review 3 cards');
+        await next.reopen();
+        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(next.client.calls, isEmpty, reason: 'nothing resent');
+        await next.close();
+      },
+    );
+
+    testWidgets(
+      'a job discarded while its state is being written leaves nothing kept',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) => import.store.holdWrites = true,
+        );
+        await import.pickSeveral(2);
+        await import.answerCall(0, {'chat': 'cat'});
+        expect(import.store.heldWrites, isNotEmpty, reason: 'a write held');
+
+        await import.tap(_shown('Cancel'));
+        await import.tap(_shown('Discard'));
+        await import.releaseWritesNewestFirst();
+        await tester.pumpAndSettle();
+        expect(import.hasPopped, isTrue);
+        expect(import.imports.job, isNull);
+        expect(import.store.state, isNull);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a photo the device cannot keep fails on its row, offering only to remove it, and the others go on',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) => import.store.refusePutsFrom = 1,
+        );
+        await import.pickSeveral(2);
+
+        expect(import.client.calls, hasLength(1), reason: 'the first kept');
+        expect(
+          find.bySemanticsLabel(RegExp('^Photo 2\\n$_notKept')),
+          findsOneWidget,
+        );
+        expect(_shown('Try again'), findsNothing);
+        expect(_shown('Remove'), findsOneWidget);
+        await import.answerCall(0, {'chat': 'cat'});
+        await import.tap(_shown('Remove'));
+        expect(_shown('Found 1 word'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a photo whose kept file is gone fails on its row, offering only to remove it',
+      (tester) async {
+        final import = await _Import.open(
+          tester,
+          before: (import) => import.store.goneFrom = 1,
+        );
+        await import.pickSeveral(2);
+
+        expect(import.client.calls, hasLength(1), reason: 'the first read');
+        expect(
+          find.bySemanticsLabel(RegExp('^Photo 2\\n$_notKept')),
+          findsOneWidget,
+        );
+        expect(_shown('Try again'), findsNothing);
+        expect(_shown('Remove'), findsOneWidget);
+        await import.answerCall(0, {'chat': 'cat'});
+        await import.tap(_shown('Remove'));
+        expect(_shown('Found 1 word'), findsOneWidget);
+        await import.close();
       },
     );
 

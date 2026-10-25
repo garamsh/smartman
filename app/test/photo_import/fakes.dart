@@ -141,22 +141,47 @@ final class FakeExtractionClient implements ExtractionClient {
 }
 
 /// A photo import job's store in memory, for a test that reads what a job
-/// kept, or restores it as a closed app's next open does.
+/// kept, or restores it as a closed app's next open does. It fails as the
+/// device's files do when asked, and can hold each write until the test
+/// releases it.
 final class MemoryImportJobStore implements ImportJobStore {
   final photos = <String, Uint8List>{};
   String? state;
   var _next = 0;
 
+  /// From which photo, counted from 0 in the order kept, [putPhoto] fails, as
+  /// on a full disk; none fails while null.
+  int? refusePutsFrom;
+
+  /// From which photo, counted from 0 in the order kept, [photo] fails, as
+  /// when the kept files are gone; none fails while null.
+  int? goneFrom;
+
+  /// Whether [writeState] waits in [heldWrites] until a test releases it, so
+  /// the test decides the order the writes finish in.
+  bool holdWrites = false;
+
+  /// The writes waiting, oldest first; each lands once its release completes.
+  final heldWrites = <({String state, Completer<void> release})>[];
+
   @override
   Future<String> putPhoto(Uint8List jpeg) async {
+    if (refusePutsFrom case final from? when _next >= from) {
+      throw const PhotoNotKept('disk full');
+    }
     final key = 'photo${_next++}';
     photos[key] = jpeg;
     return key;
   }
 
   @override
-  Future<Uint8List> photo(String key) async =>
-      photos[key] ?? (throw StateError('No photo kept under $key.'));
+  Future<Uint8List> photo(String key) async {
+    if (goneFrom case final from?
+        when int.parse(key.substring('photo'.length)) >= from) {
+      throw const PhotoNotKept('gone');
+    }
+    return photos[key] ?? (throw PhotoNotKept('No photo kept under $key.'));
+  }
 
   @override
   ImageProvider image(String key, {int? width}) => ResizeImage.resizeIfNeeded(
@@ -169,7 +194,14 @@ final class MemoryImportJobStore implements ImportJobStore {
   Future<String?> readState() async => state;
 
   @override
-  Future<void> writeState(String state) async => this.state = state;
+  Future<void> writeState(String state) async {
+    if (holdWrites) {
+      final release = Completer<void>();
+      heldWrites.add((state: state, release: release));
+      await release.future;
+    }
+    this.state = state;
+  }
 
   @override
   Future<void> clear() async {
