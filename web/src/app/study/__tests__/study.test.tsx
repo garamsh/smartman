@@ -616,6 +616,45 @@ describe("the study page", () => {
       expect(stack()[2]).toBe(label(third ?? "", "안다"));
     });
 
+    it("closes the whole card on a click outside it, not inside, with the focus back on the card", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      await answerThree();
+      const user = userEvent.setup();
+      const face = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
+      await user.click(face);
+      const detail = screen.getByRole("dialog", { name: "카드" });
+
+      // Control: a click inside the card keeps it open.
+      await user.click(within(detail).getByRole("heading", { name: "카드" }));
+      expect(screen.getByRole("dialog", { name: "카드" })).toBeInTheDocument();
+      await user.click(detail.parentElement ?? detail);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(face).toHaveFocus();
+    });
+
+    it("bounds 이번 학습 to the screen with a list that scrolls on its own, to the newest answer as each is added", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const user = userEvent.setup();
+      await user.keyboard("{ArrowRight}");
+      const aside = screen.getByRole("complementary", { name: "이번 학습" });
+      const list = within(aside).getByRole("list");
+      expect(aside.className.split(" ")).toContain("max-h-[calc(100dvh-3rem)]");
+      expect(list.className.split(" ")).toEqual(
+        expect.arrayContaining(["min-h-0", "overflow-y-auto"]),
+      );
+      // jsdom lays nothing out, so the list is given the height its answers would take.
+      Object.defineProperty(list, "scrollHeight", { configurable: true, value: 900 });
+      expect(list.scrollTop).toBe(0);
+
+      await user.keyboard("{ArrowLeft}");
+
+      expect(within(list).getAllByRole("button")).toHaveLength(2);
+      expect(list.scrollTop).toBe(900);
+    });
+
     it("opens the previous card whole on a click, and closes it on 닫기 or Esc with the focus back on the card", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
@@ -1071,6 +1110,20 @@ describe("the study page", () => {
       expect(done).toHaveFocus();
       await user.keyboard("{Escape}");
       expect(face).toHaveFocus();
+    });
+
+    it("closes the shortcut list on a click outside it, not inside, with the focus back on 단축키", async () => {
+      const user = userEvent.setup();
+      await user.keyboard("?");
+      const help = screen.getByRole("dialog", { name: "단축키" });
+
+      // Control: a click inside the list keeps it open.
+      await user.click(within(help).getByText("마지막 응답 바꾸기"));
+      expect(screen.getByRole("dialog", { name: "단축키" })).toBeInTheDocument();
+      await user.click(help.parentElement ?? help);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "단축키" })).toHaveFocus();
     });
 
     it("lists every shortcut on ?, and closes the list on Esc without ending the session", async () => {
