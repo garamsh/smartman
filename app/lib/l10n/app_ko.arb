@@ -41,7 +41,7 @@
   "blank": "빈칸",
   "@blank": {"description": "How a screen reader reads an empty blank of a table or cloze card."},
   "wholeCard": "카드",
-  "@wholeCard": {"description": "Title of the sheet that shows a table or cloze card whole, its blanks filled."},
+  "@wholeCard": {"description": "Title of the sheet that shows a card whole: its front and back under labels of the same rank, or a table or cloze card with its blanks filled."},
   "sensesEditNote": "앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.",
   "@sensesEditNote": {"description": "In the card editor under the front of a card whose front holds senses, such as a reversed vocabulary card: editing that front saves it as text."},
   "cardKindBasic": "기본",
@@ -60,6 +60,16 @@
   "@clozeBlankRequired": {"description": "Error under the cloze form's words when a cloze is saved with no blank."},
   "clozeBlankMarker": "___는 빈칸 표시라 줄에 쓸 수 없어요",
   "@clozeBlankMarker": {"description": "Error under the cloze form's words when the line holds underscores that would read as a blank of its own."},
+  "clozeBlankLine": "빈칸 {number}: {answer}",
+  "@clozeBlankLine": {"description": "A blank of the cloze form, numbered in the order of the line, with its answer.", "placeholders": {"number": {"type": "int"}, "answer": {"type": "String"}}},
+  "clozePickLetters": "글자 고르기",
+  "@clozePickLetters": {"description": "Button beside a blank of the cloze form: narrows the blank to letters of its word."},
+  "clozeLettersTitle": "빈칸으로 할 글자를 골라요",
+  "@clozeLettersTitle": {"description": "Title of the sheet that narrows a cloze blank to letters of its word."},
+  "clozeLettersBody": "처음 글자와 끝 글자를 차례로 눌러요",
+  "@clozeLettersBody": {"description": "Body of the letters sheet: tap the first letter, then the last."},
+  "clozeLettersDone": "이 글자로",
+  "@clozeLettersDone": {"description": "The letters sheet's button: make the chosen letters the blank."},
   "cardKindTable": "표",
   "@cardKindTable": {"description": "The table kind's segment in the card editor's kind switch."},
   "tableNameHint": "표의 이름",
@@ -239,7 +249,7 @@
     "description": "The completion card's time on screen today, in whole minutes rounded up.",
     "placeholders": {"minutes": {"type": "int"}}
   },
-  "completionStreak": "{days}일",
+  "completionStreak": "{days}일 연속",
   "@completionStreak": {
     "description": "The completion card's streak, after a flame icon: study days in a row.",
     "placeholders": {"days": {"type": "int"}}
@@ -370,10 +380,10 @@
   "@extractingTitle": {"description": "Title while the photo is sent for extraction."},
   "extractingNote": "사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요",
   "@extractingNote": {"description": "Privacy note shown while cards are extracted."},
-  "readingTitle": "사진 {current}/{total} 읽는 중",
+  "readingTitle": "사진 {total}장 중 {read}장 읽음",
   "@readingTitle": {
-    "description": "Heading while several photos are read, announced to screen readers: the photo being read now and how many there are.",
-    "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}
+    "description": "Heading while several photos are read, announced to screen readers: how many photos are read, as the bar under it shows, of how many.",
+    "placeholders": {"read": {"type": "int"}, "total": {"type": "int"}}
   },
   "readingFailed": "사진 {count}장을 읽지 못했어요",
   "@readingFailed": {
@@ -907,5 +917,13 @@
   "dailyMinutesAfterDays": "{days}일 뒤",
   "@dailyMinutesAfterDays": {"description": "The second tile's value: in how many study days every unstarted card has been started.", "placeholders": {"days": {"type": "int"}}},
   "dailyMinutesAfterToday": "오늘",
-  "@dailyMinutesAfterToday": {"description": "The second tile's value when today starts every unstarted card."}
+  "@dailyMinutesAfterToday": {"description": "The second tile's value when today starts every unstarted card."},
+  "discardCardTitle": "작성 중인 카드를 버릴까요?",
+  "@discardCardTitle": {"description": "Title of the sheet asked before leaving the card editor with changes."},
+  "discardCardBody": "입력한 내용은 저장되지 않아요.",
+  "@discardCardBody": {"description": "Consequence on the sheet asked before leaving the card editor with changes."},
+  "discardCard": "버리기",
+  "@discardCard": {"description": "The sheet's destructive button: leave the card editor without saving."},
+  "keepWriting": "계속 쓰기",
+  "@keepWriting": {"description": "The sheet's cancel: stay in the card editor with what was typed."}
 }

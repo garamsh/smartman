@@ -31,4 +31,5 @@ export {
   readReportedDecks,
   readUser,
   searchUsers,
+  searchUsersThrough,
 } from "./read-admin";

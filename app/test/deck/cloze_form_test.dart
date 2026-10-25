@@ -38,6 +38,12 @@ void main() {
     await screens.tap(_word(word, index));
   }
 
+  /// Taps [finder] once it is scrolled into view.
+  Future<void> tap(DeckScreens screens, Finder finder) async {
+    await screens.tester.ensureVisible(finder);
+    await screens.tap(finder);
+  }
+
   Future<void> save(DeckScreens screens) async {
     await screens.tester.ensureVisible(find.text('Save'));
     await screens.tap(find.text('Save'));
@@ -47,17 +53,19 @@ void main() {
       tester.widget<FilterChip>(_word(word)).selected;
 
   testWidgets(
-    'a cloze saves its line with each run of adjacent chosen words as one blank, its back filled, and reopens unchanged when saved as it was',
+    'each chosen word is a blank of its own, its punctuation left outside, the back filled, and the card reopens unchanged when saved as it was',
     (tester) async {
       final screens = await openCloze(tester);
-      await typeLine(tester, 'The cat sat on the mat');
+      await typeLine(tester, 'The cat sat on the mat.');
       expect(find.text('Tap the words to make blanks'), findsOneWidget);
       await toggle(screens, 'cat');
       await toggle(screens, 'on');
       await toggle(screens, 'the');
-      await toggle(screens, 'mat');
-      await toggle(screens, 'mat');
-      expect(chosen(tester, 'mat'), isFalse, reason: 'a second tap leaves out');
+      await toggle(screens, 'mat.');
+      await toggle(screens, 'sat');
+      await toggle(screens, 'sat');
+      expect(chosen(tester, 'sat'), isFalse, reason: 'a second tap leaves out');
+      expect(find.text('Blank 4: mat'), findsOneWidget);
 
       final handle = tester.ensureSemantics();
       expect(find.bySemanticsLabel('cat, blank'), findsOneWidget);
@@ -65,10 +73,16 @@ void main() {
       handle.dispose();
 
       await save(screens);
-      const cloze = ClozeContent('The ___ sat ___ mat', ['cat', 'on the']);
+      // Adjacent words stay apart, and the full stop stays outside.
+      const cloze = ClozeContent('The ___ sat ___ ___ ___.', [
+        'cat',
+        'on',
+        'the',
+        'mat',
+      ]);
       final card = await _stored(screens);
       expect(card.front, [cloze]);
-      expect(card.back, [const TextContent('The cat sat on the mat')]);
+      expect(card.back, [const TextContent('The cat sat on the mat.')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       expect(find.text('Basic'), findsNothing, reason: 'no switch on edit');
@@ -82,23 +96,23 @@ void main() {
   );
 
   testWidgets(
-    'typing elsewhere in the line keeps the chosen words, and a chosen word that is changed is left out',
+    'typing elsewhere in the line keeps the blanks, and a blank the edit changes is left out',
     (tester) async {
       final screens = await openCloze(tester);
       await typeLine(tester, 'a cat and a dog');
       await toggle(screens, 'a', 1);
       await toggle(screens, 'cat');
       await toggle(screens, 'dog');
-      // The first "a" becomes "one", "cat" becomes "cats", and "big" comes in.
+      // The first "a" becomes "one", "cat" becomes "cot", and "big" comes in.
       await typeLine(tester, 'one cat and a dog');
-      await typeLine(tester, 'one cats and a dog');
-      await typeLine(tester, 'one cats and a big dog');
+      await typeLine(tester, 'one cot and a dog');
+      await typeLine(tester, 'one cot and a big dog');
       expect(chosen(tester, 'a'), isTrue);
       expect(chosen(tester, 'dog'), isTrue);
-      expect(chosen(tester, 'cats'), isFalse, reason: 'a changed word goes');
+      expect(chosen(tester, 'cot'), isFalse, reason: 'a changed blank goes');
       await save(screens);
       expect((await _stored(screens)).front, [
-        const ClozeContent('one cats and ___ big ___', ['a', 'dog']),
+        const ClozeContent('one cot and ___ big ___', ['a', 'dog']),
       ]);
       await screens.close();
     },
@@ -129,7 +143,7 @@ void main() {
   );
 
   testWidgets(
-    'a stored blank inside a word is kept while the line is left as it was, and the word it falls in is shown chosen',
+    'a stored blank inside a word is kept through a save and an edit elsewhere, and the word it falls in is shown chosen',
     (tester) async {
       final screens = await DeckScreens.open(tester);
       const cloze = ClozeContent('It is un___able', ['believ']);
@@ -150,8 +164,80 @@ void main() {
       await toggle(screens, 'It');
       await save(screens);
       expect((await _stored(screens)).front, [
-        const ClozeContent('___ is ___', ['It', 'unbelievable']),
-      ], reason: 'edited, the blanks are whole words');
+        const ClozeContent('___ is un___able', ['It', 'believ']),
+      ], reason: 'another blank added, the stored one keeps its letters');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'an imported list cloze keeps its four blanks through a fix elsewhere in the line, and a word chosen again leaves its comma outside',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const cloze = ClozeContent('3인칭 재귀칭: ___, ___, ___, ___', [
+        '자기',
+        '자신',
+        '저',
+        '저희',
+      ]);
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [cloze],
+          back: [const TextContent('3인칭 재귀칭: 자기, 자신, 저, 저희')],
+        ),
+      );
+      final card = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await typeLine(tester, '3인칭 재귀칭 : 자기, 자신, 저, 저희');
+      await save(screens);
+      expect((await _stored(screens)).front, [
+        const ClozeContent('3인칭 재귀칭 : ___, ___, ___, ___', [
+          '자기',
+          '자신',
+          '저',
+          '저희',
+        ]),
+      ]);
+
+      final edited = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: edited));
+      await toggle(screens, '자기,');
+      expect(chosen(tester, '자기,'), isFalse);
+      await toggle(screens, '자기,');
+      await save(screens);
+      expect((await _stored(screens)).front, [
+        const ClozeContent('3인칭 재귀칭 : ___, ___, ___, ___', [
+          '자기',
+          '자신',
+          '저',
+          '저희',
+        ]),
+      ], reason: 'chosen again, the blank is the word without its comma');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'Pick letters narrows a blank to the letters tapped first and last, so a particle stays outside it',
+    (tester) async {
+      final screens = await openCloze(tester);
+      await typeLine(tester, '서울은 한국의 수도예요');
+      await toggle(screens, '서울은');
+      expect(find.text('Blank 1: 서울은'), findsOneWidget);
+
+      await tap(screens, find.text('Pick letters'));
+      expect(find.text('Choose the letters to blank'), findsOneWidget);
+      await screens.tap(find.text('서'));
+      await screens.tap(find.text('울'));
+      await screens.tap(find.text('Use these letters'));
+      expect(find.text('Blank 1: 서울'), findsOneWidget);
+      expect(chosen(tester, '서울은'), isTrue);
+
+      await save(screens);
+      expect((await _stored(screens)).front, [
+        const ClozeContent('___은 한국의 수도예요', ['서울']),
+      ]);
       await screens.close();
     },
   );
@@ -254,6 +340,11 @@ void main() {
         );
         await meetsGuidelines();
         await toggle(screens, 'cat');
+        await meetsGuidelines();
+        // The letters sheet, a run chosen.
+        await tap(screens, find.text('Pick letters'));
+        await screens.tap(find.text('c'));
+        await screens.tap(find.text('a'));
         await meetsGuidelines();
         handle.dispose();
         await screens.close();

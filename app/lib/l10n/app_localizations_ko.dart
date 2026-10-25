@@ -105,6 +105,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
 
   @override
+  String clozeBlankLine(int number, String answer) {
+    return '빈칸 $number: $answer';
+  }
+
+  @override
+  String get clozePickLetters => '글자 고르기';
+
+  @override
+  String get clozeLettersTitle => '빈칸으로 할 글자를 골라요';
+
+  @override
+  String get clozeLettersBody => '처음 글자와 끝 글자를 차례로 눌러요';
+
+  @override
+  String get clozeLettersDone => '이 글자로';
+
+  @override
   String get cardKindTable => '표';
 
   @override
@@ -407,7 +424,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days일';
+    return '$days일 연속';
   }
 
   @override
@@ -589,8 +606,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
-  String readingTitle(int current, int total) {
-    return '사진 $current/$total 읽는 중';
+  String readingTitle(int read, int total) {
+    return '사진 $total장 중 $read장 읽음';
   }
 
   @override
@@ -1492,4 +1509,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => '오늘';
+
+  @override
+  String get discardCardTitle => '작성 중인 카드를 버릴까요?';
+
+  @override
+  String get discardCardBody => '입력한 내용은 저장되지 않아요.';
+
+  @override
+  String get discardCard => '버리기';
+
+  @override
+  String get keepWriting => '계속 쓰기';
 }

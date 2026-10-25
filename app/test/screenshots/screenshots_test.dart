@@ -257,7 +257,9 @@ void main() {
       // Above a tall sheet, where the barrier's centre is not.
       await tester.tapAt(const Offset(20, 100));
       await tester.pumpAndSettle();
+      // Leaving the typed card asks first.
       await tap(tester, find.byTooltip(ko.close));
+      await tap(tester, find.text(ko.discardCard));
       await shot(tester, '07-card-list');
       await tap(tester, find.text('ubiquitous'));
       await shot(tester, '07b-card-answer-shown');
@@ -838,6 +840,9 @@ void main() {
         );
         await tester.pumpAndSettle();
         await shot(tester, '05k-card-editor-keyboard');
+        tester.view.resetViewInsets();
+        await tap(tester, find.byTooltip(ko.close));
+        await shot(tester, '05l-card-editor-discard');
         await unmount(tester);
       },
     );
@@ -891,6 +896,12 @@ void main() {
       await tester.ensureVisible(find.text(ko.cardKindCloze));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
+      final pick = find.text(ko.clozePickLetters).last;
+      await tester.ensureVisible(pick);
+      await tap(tester, pick);
+      await tap(tester, find.text('p'));
+      await tap(tester, find.text('s'));
+      await shot(tester, '05m-card-editor-cloze-letters');
       await unmount(tester);
     });
 

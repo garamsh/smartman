@@ -200,7 +200,7 @@ abstract class AppLocalizations {
   /// **'빈칸'**
   String get blank;
 
-  /// Title of the sheet that shows a table or cloze card whole, its blanks filled.
+  /// Title of the sheet that shows a card whole: its front and back under labels of the same rank, or a table or cloze card with its blanks filled.
   ///
   /// In ko, this message translates to:
   /// **'카드'**
@@ -259,6 +259,36 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'___는 빈칸 표시라 줄에 쓸 수 없어요'**
   String get clozeBlankMarker;
+
+  /// A blank of the cloze form, numbered in the order of the line, with its answer.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 {number}: {answer}'**
+  String clozeBlankLine(int number, String answer);
+
+  /// Button beside a blank of the cloze form: narrows the blank to letters of its word.
+  ///
+  /// In ko, this message translates to:
+  /// **'글자 고르기'**
+  String get clozePickLetters;
+
+  /// Title of the sheet that narrows a cloze blank to letters of its word.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸으로 할 글자를 골라요'**
+  String get clozeLettersTitle;
+
+  /// Body of the letters sheet: tap the first letter, then the last.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음 글자와 끝 글자를 차례로 눌러요'**
+  String get clozeLettersBody;
+
+  /// The letters sheet's button: make the chosen letters the blank.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 글자로'**
+  String get clozeLettersDone;
 
   /// The table kind's segment in the card editor's kind switch.
   ///
@@ -742,7 +772,7 @@ abstract class AppLocalizations {
   /// The completion card's streak, after a flame icon: study days in a row.
   ///
   /// In ko, this message translates to:
-  /// **'{days}일'**
+  /// **'{days}일 연속'**
   String completionStreak(int days);
 
   /// What a screen reader reads for the completion card's line of counts.
@@ -1081,11 +1111,11 @@ abstract class AppLocalizations {
   /// **'사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요'**
   String get extractingNote;
 
-  /// Heading while several photos are read, announced to screen readers: the photo being read now and how many there are.
+  /// Heading while several photos are read, announced to screen readers: how many photos are read, as the bar under it shows, of how many.
   ///
   /// In ko, this message translates to:
-  /// **'사진 {current}/{total} 읽는 중'**
-  String readingTitle(int current, int total);
+  /// **'사진 {total}장 중 {read}장 읽음'**
+  String readingTitle(int read, int total);
 
   /// Heading once every photo that could be read is read and some failed; each failed photo offers retry or remove.
   ///
@@ -2550,6 +2580,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘'**
   String get dailyMinutesAfterToday;
+
+  /// Title of the sheet asked before leaving the card editor with changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'작성 중인 카드를 버릴까요?'**
+  String get discardCardTitle;
+
+  /// Consequence on the sheet asked before leaving the card editor with changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'입력한 내용은 저장되지 않아요.'**
+  String get discardCardBody;
+
+  /// The sheet's destructive button: leave the card editor without saving.
+  ///
+  /// In ko, this message translates to:
+  /// **'버리기'**
+  String get discardCard;
+
+  /// The sheet's cancel: stay in the card editor with what was typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속 쓰기'**
+  String get keepWriting;
 }
 
 class _AppLocalizationsDelegate
