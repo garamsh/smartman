@@ -824,6 +824,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t read this photo. Choose another one.';
 
   @override
+  String get photoNotKept =>
+      'Couldn\'t keep this photo on the device. Check the free space and choose it again.';
+
+  @override
   String get deckDeleted => 'This deck was deleted. Choose another deck.';
 
   @override

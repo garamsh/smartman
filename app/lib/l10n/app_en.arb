@@ -207,6 +207,7 @@
   "signInRequired": "You need to sign in. Sign in again from the account screen.",
   "serviceFailed": "Can't make cards from photos right now. Please try again in a moment.",
   "photoUnreadable": "Couldn't read this photo. Choose another one.",
+  "photoNotKept": "Couldn't keep this photo on the device. Check the free space and choose it again.",
   "deckDeleted": "This deck was deleted. Choose another deck.",
   "browse": "Public decks",
   "publish": "Publish",

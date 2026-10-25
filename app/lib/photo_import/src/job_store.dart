@@ -3,13 +3,17 @@ import 'dart:typed_data';
 
 import 'package:flutter/painting.dart';
 
+import 'failure.dart';
+
 /// Where a photo import job keeps its prepared photos and its state on the
 /// device, so a job outlives its screen and a closed app can resume it.
 abstract interface class ImportJobStore {
-  /// Keeps [jpeg] and resolves to the key it is read back by.
+  /// Keeps [jpeg] and resolves to the key it is read back by. Throws
+  /// [PhotoNotKept] when it cannot be written.
   Future<String> putPhoto(Uint8List jpeg);
 
-  /// The photo kept under [key].
+  /// The photo kept under [key]. Throws [PhotoNotKept] when it cannot be
+  /// read, as when its file is gone.
   Future<Uint8List> photo(String key);
 
   /// The photo kept under [key], for drawing at most [width] logical pixels
@@ -40,17 +44,27 @@ final class FileImportJobStore implements ImportJobStore {
 
   @override
   Future<String> putPhoto(Uint8List jpeg) async {
-    await directory.create(recursive: true);
-    late String key;
-    do {
-      key = '${DateTime.now().microsecondsSinceEpoch}-${_next++}.jpg';
-    } while (await _file(key).exists());
-    await _file(key).writeAsBytes(jpeg, flush: true);
-    return key;
+    try {
+      await directory.create(recursive: true);
+      late String key;
+      do {
+        key = '${DateTime.now().microsecondsSinceEpoch}-${_next++}.jpg';
+      } while (await _file(key).exists());
+      await _file(key).writeAsBytes(jpeg, flush: true);
+      return key;
+    } on FileSystemException catch (cause) {
+      throw PhotoNotKept(cause);
+    }
   }
 
   @override
-  Future<Uint8List> photo(String key) => _file(key).readAsBytes();
+  Future<Uint8List> photo(String key) async {
+    try {
+      return await _file(key).readAsBytes();
+    } on FileSystemException catch (cause) {
+      throw PhotoNotKept(cause);
+    }
+  }
 
   @override
   ImageProvider image(String key, {int? width}) =>

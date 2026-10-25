@@ -491,6 +491,8 @@
   "@serviceFailed": {"description": "Photo import failure: the server answered unexpectedly."},
   "photoUnreadable": "이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.",
   "@photoUnreadable": {"description": "Photo import failure: the file is not an image the app reads."},
+  "photoNotKept": "이 사진을 기기에 보관하지 못했어요. 저장 공간을 확인하고 다시 골라 주세요.",
+  "@photoNotKept": {"description": "Photo import failure: the photo could not be written to the device or read back from it."},
   "deckDeleted": "이 덱은 삭제됐어요. 다른 덱을 골라 주세요.",
   "@deckDeleted": {"description": "Shown when cards are saved into a deck that was deleted meanwhile, such as on another device."},
   "browse": "공개 덱",

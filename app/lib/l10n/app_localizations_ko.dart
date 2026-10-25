@@ -747,6 +747,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get photoUnreadable => '이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.';
 
   @override
+  String get photoNotKept => '이 사진을 기기에 보관하지 못했어요. 저장 공간을 확인하고 다시 골라 주세요.';
+
+  @override
   String get deckDeleted => '이 덱은 삭제됐어요. 다른 덱을 골라 주세요.';
 
   @override

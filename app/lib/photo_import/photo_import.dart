@@ -23,6 +23,7 @@ export 'src/failure.dart'
         PhotoAccessDenied,
         PhotoImportFailure,
         PhotoRefused,
+        PhotoNotKept,
         PhotoUnreadable,
         ServiceFailed,
         SignInRequired;

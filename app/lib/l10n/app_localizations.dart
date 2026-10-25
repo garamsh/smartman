@@ -1345,6 +1345,12 @@ abstract class AppLocalizations {
   /// **'이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.'**
   String get photoUnreadable;
 
+  /// Photo import failure: the photo could not be written to the device or read back from it.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사진을 기기에 보관하지 못했어요. 저장 공간을 확인하고 다시 골라 주세요.'**
+  String get photoNotKept;
+
   /// Shown when cards are saved into a deck that was deleted meanwhile, such as on another device.
   ///
   /// In ko, this message translates to:
