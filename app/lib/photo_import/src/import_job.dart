@@ -224,6 +224,8 @@ final class ImportJob extends ChangeNotifier {
   Future<void> end() async {
     _ended = true;
     _stopReading(photos);
+    // A write under way would otherwise land after the clear.
+    await _writing;
     await _store.clear();
   }
 
@@ -238,7 +240,7 @@ final class ImportJob extends ChangeNotifier {
   void _changed() {
     if (_ended) return;
     notifyListeners();
-    unawaited(_keep());
+    _keep();
     if (paused) return;
     _prepareNext();
     for (final photo in batch) {
@@ -364,9 +366,32 @@ final class ImportJob extends ChangeNotifier {
     }
   }
 
-  /// Writes the job to the store: its target and origin, and each kept
-  /// photo with its cards once read. A photo not yet prepared is not kept.
-  Future<void> _keep() async {
+  /// The write of the job's state under way; null while none is.
+  Future<void>? _writing;
+
+  /// Whether the job changed while [_writing] was under way.
+  var _keepAgain = false;
+
+  /// Writes the job to the store one write at a time: a change during a
+  /// write is written once it ends, from the job as it is then, so the last
+  /// state written is the latest.
+  void _keep() {
+    if (_writing != null) {
+      _keepAgain = true;
+      return;
+    }
+    _writing = () async {
+      do {
+        _keepAgain = false;
+        await _writeState();
+      } while (_keepAgain && !_ended);
+      _writing = null;
+    }();
+  }
+
+  /// Writes the job's target and origin, and each kept photo with its cards
+  /// once read. A photo not yet prepared is not kept.
+  Future<void> _writeState() async {
     final state = jsonEncode({
       'version': 1,
       'target': target?.value,

@@ -79,8 +79,8 @@ final class PhotoImports extends ChangeNotifier {
 
   /// Ends [job], forgetting it and its photos on the device.
   Future<void> end(ImportJob job) async {
-    if (identical(_job, job)) _set(null);
     await job.end();
+    if (identical(_job, job)) _set(null);
   }
 
   void _set(ImportJob? job) {
