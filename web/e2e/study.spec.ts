@@ -315,7 +315,9 @@ test("a signed-in user studies two cards, and the server holds their reviews and
     route.request().method() === "POST" ? route.abort() : route.continue(),
   );
   await page.keyboard.press("z");
-  await expect(page.getByRole("alert")).toContainText("응답을 저장하지 못했어요");
+  // Next's route announcer is an alert too, so the write failure is told apart by its text.
+  const writeFailure = page.getByRole("alert").filter({ hasText: "응답을 저장하지 못했어요" });
+  await expect(writeFailure).toBeVisible();
   await page.keyboard.press("Escape");
   const leave = page.getByRole("dialog", { name: "저장하지 못한 응답이 있어요", exact: true });
   await expect(leave).toContainText("지금 나가면 저장하지 못한 응답 1개가 사라져요.");
@@ -326,9 +328,11 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(page).toHaveURL(studyPath);
   await page.unroute(refuse);
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(writeFailure).toHaveCount(0);
+  // Z changes the card back to 안다, so the day stays done for 오늘 below.
+  await page.keyboard.press("z");
 
-  // Esc leaves for the deck list.
+  // Esc sends that write, then leaves for 오늘.
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(`${baseURL}/`);
 
