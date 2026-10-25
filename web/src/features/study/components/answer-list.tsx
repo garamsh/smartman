@@ -1,9 +1,14 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
 import type { PreviousAnswer } from "../session";
 import { answerLabel, GradeChip } from "./graded-card";
 
 /**
  * Beside the cards on a wide screen: this session's answers, oldest first, with the count of
- * each, every one a button that changes it to the other answer.
+ * each, every one a button that changes it to the other answer. It is no taller than the screen,
+ * its list scrolling on its own, and scrolls to the newest answer as each is added.
  */
 export function AnswerList({
   answers,
@@ -13,10 +18,15 @@ export function AnswerList({
   onToggle: (position: number) => void;
 }) {
   const know = answers.filter(({ answer }) => answer === "know").length;
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const shown = list.current;
+    if (shown) shown.scrollTop = shown.scrollHeight;
+  }, [answers.length]);
   return (
     <aside
       aria-label="이번 학습"
-      className="hidden w-full max-w-85 shrink-0 flex-col gap-2 self-start rounded-card bg-surface p-4 lg:flex"
+      className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] w-full max-w-85 shrink-0 flex-col gap-2 self-start rounded-card bg-surface p-4 lg:flex"
     >
       <div className="mb-1 flex items-baseline justify-between">
         <h2 className="text-label">이번 학습</h2>
@@ -27,7 +37,7 @@ export function AnswerList({
       <p id="toggle-hint" className="sr-only">
         누르면 응답이 바뀌어요.
       </p>
-      <ol className="flex flex-col gap-1">
+      <ol ref={list} className="-m-1 flex min-h-0 flex-col gap-1 overflow-y-auto p-1">
         {answers.map((answer) => (
           <li key={answer.position}>
             <button

@@ -108,6 +108,23 @@ class AppLocalizationsEn extends AppLocalizations {
       '___ marks a blank, so the line can\'t contain it';
 
   @override
+  String clozeBlankLine(int number, String answer) {
+    return 'Blank $number: $answer';
+  }
+
+  @override
+  String get clozePickLetters => 'Pick letters';
+
+  @override
+  String get clozeLettersTitle => 'Choose the letters to blank';
+
+  @override
+  String get clozeLettersBody => 'Tap the first letter, then the last';
+
+  @override
+  String get clozeLettersDone => 'Use these letters';
+
+  @override
   String get cardKindTable => 'Table';
 
   @override
