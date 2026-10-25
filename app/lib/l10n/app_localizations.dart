@@ -200,7 +200,7 @@ abstract class AppLocalizations {
   /// **'빈칸'**
   String get blank;
 
-  /// Title of the sheet that shows a table or cloze card whole, its blanks filled.
+  /// Title of the sheet that shows a card whole: its front and back under labels of the same rank, or a table or cloze card with its blanks filled.
   ///
   /// In ko, this message translates to:
   /// **'카드'**
@@ -772,7 +772,7 @@ abstract class AppLocalizations {
   /// The completion card's streak, after a flame icon: study days in a row.
   ///
   /// In ko, this message translates to:
-  /// **'{days}일'**
+  /// **'{days}일 연속'**
   String completionStreak(int days);
 
   /// What a screen reader reads for the completion card's line of counts.

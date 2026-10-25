@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/app_section_label.dart';
 import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
 import 'package:smartman/design/theme.dart';
@@ -775,7 +776,7 @@ void main() {
   }
 
   testWidgets(
-    'a previous card shrinks long sides as far as their floors, then cuts them, and a tap shows the whole card in a sheet with no action',
+    'a previous card shrinks long sides as far as their floors, then cuts them, and a tap shows the whole card in a sheet titled as the card, its front and back under labels of one rank, with no action',
     (tester) async {
       final long = _sentence * 12;
       final study = await _open(
@@ -814,6 +815,26 @@ void main() {
       await tester.tap(_previous('long front $long'));
       await tester.pumpAndSettle();
       final sheet = find.byType(BottomSheet);
+      // Titled as the card; 앞면 and 뒷면 each a label of the same rank.
+      expect(
+        tester.getSemantics(
+          find.descendant(of: sheet, matching: find.text('Card')),
+        ),
+        isSemantics(isHeader: true),
+      );
+      for (final side in ['Front', 'Back']) {
+        expect(
+          find.descendant(
+            of: find.descendant(
+              of: sheet,
+              matching: find.byType(AppSectionLabel),
+            ),
+            matching: find.text(side),
+          ),
+          findsOneWidget,
+          reason: side,
+        );
+      }
       expect(
         find.descendant(of: sheet, matching: find.text('long front $long')),
         findsOneWidget,
@@ -1292,7 +1313,7 @@ void main() {
   );
 
   testWidgets(
-    'once no card is left the completion card takes the current card\'s place, below the stack, with today\'s answers, time and streak',
+    'once no card is left the completion card takes the current card\'s place, below the stack, with today\'s answers, time and streak as a run, and with no new card left past today\'s, stopping as its one primary',
     (tester) async {
       final study = await _open(tester, ['a', 'b']);
 
@@ -1307,6 +1328,14 @@ void main() {
         find.bySemanticsLabel("Know 2, don't know 1, 2 min, 1-day streak"),
         findsOneWidget,
       );
+      // The streak reads as a run, as on 오늘 and 기록, not as a duration.
+      expect(
+        find.descendant(
+          of: find.byType(CompletionCard),
+          matching: find.text('1-day streak', findRichText: true),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('2/2'), findsOneWidget);
       // The previous card stays above the completion card.
       expect(
@@ -1316,7 +1345,12 @@ void main() {
       // No new card is left past today's, so nothing to go on with.
       expect(find.text('No more cards to study'), findsOneWidget);
       expect(find.widgetWithText(AppButton, 'Study'), findsNothing);
-      expect(find.text('Stop'), findsOneWidget);
+      // Stopping is the one thing left, so it is the card's primary.
+      final stop = tester.widget<AppButton>(
+        find.widgetWithText(AppButton, 'Stop'),
+      );
+      expect(stop.variant, AppButtonVariant.primary);
+      expect(stop.size, AppButtonSize.cta);
 
       // Changing the last answer to "Don't know" studies the card again.
       final semantics = tester.ensureSemantics();
@@ -1368,7 +1402,22 @@ void main() {
       // the count goes on at 3 of the same 6, not 0 of 3, and a notice says
       // the session goes on with the day.
       expect(find.text('3/6'), findsOneWidget);
-      expect(_text('Picking up · 3 left · about 1 min'), findsOneWidget);
+      final notice = _text('Picking up · 3 left · about 1 min');
+      expect(notice, findsOneWidget);
+      // In the top bar's row, in the progress bar's place, clear of the card
+      // above the current one and its chip; the count stays beside it.
+      final close = tester.getRect(find.byTooltip('Close'));
+      expect(
+        (tester.getRect(notice).center.dy - close.center.dy).abs(),
+        lessThan(1),
+      );
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      final above = find.byType(EarlierCardView);
+      expect(above, findsOneWidget);
+      expect(
+        tester.getRect(notice).bottom,
+        lessThanOrEqualTo(tester.getRect(above).top),
+      );
       expect(study.current, 'e front');
       await study.know();
       expect(find.text('4/6'), findsOneWidget);
@@ -1521,6 +1570,20 @@ void main() {
       await study.know();
       await study.know();
       expect(find.text('Done for today'), findsOneWidget);
+      // Control: with new cards left, going on is the primary and stopping
+      // quiet.
+      expect(
+        tester
+            .widget<AppButton>(find.widgetWithText(AppButton, 'Study'))
+            .variant,
+        AppButtonVariant.primary,
+      );
+      expect(
+        tester
+            .widget<AppButton>(find.widgetWithText(AppButton, 'Stop'))
+            .variant,
+        AppButtonVariant.text,
+      );
       final screen = tester.state(find.byType(StudyScreen));
       final route = ModalRoute.of(tester.element(find.byType(StudyScreen)));
 
