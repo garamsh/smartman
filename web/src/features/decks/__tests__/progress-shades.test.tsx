@@ -24,6 +24,7 @@ describe("a deck row's progress bar", () => {
       />,
     );
 
+    // A row's name carries its counts after the deck's name, so its start is matched.
     const row = screen.getByRole("link", { name: /^French/ });
     const share = (width: string) =>
       Array.from(row.querySelectorAll<HTMLElement>("span[style]")).find(
