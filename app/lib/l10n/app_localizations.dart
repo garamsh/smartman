@@ -200,7 +200,7 @@ abstract class AppLocalizations {
   /// **'빈칸'**
   String get blank;
 
-  /// Title of the sheet that shows a table or cloze card whole, its blanks filled.
+  /// Title of the sheet that shows a card whole: its front and back under labels of the same rank, or a table or cloze card with its blanks filled.
   ///
   /// In ko, this message translates to:
   /// **'카드'**
@@ -772,7 +772,7 @@ abstract class AppLocalizations {
   /// The completion card's streak, after a flame icon: study days in a row.
   ///
   /// In ko, this message translates to:
-  /// **'{days}일'**
+  /// **'{days}일 연속'**
   String completionStreak(int days);
 
   /// What a screen reader reads for the completion card's line of counts.
@@ -2152,7 +2152,7 @@ abstract class AppLocalizations {
   /// What a screen reader reads for the mastered bars, before each week's count.
   ///
   /// In ko, this message translates to:
-  /// **'주별 익힌 카드, 8주 전부터 이번 주까지: {counts}'**
+  /// **'주별 익힌 카드, 7주 전부터 이번 주까지: {counts}'**
   String masteredSemantics(String counts);
 
   /// Heading of the study-day heatmap.
@@ -2166,6 +2166,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{current}일 연속 · 최고 {best}일'**
   String studyDaysStreak(int current, int best);
+
+  /// Under the mastered cards' bars, at the first: how many weeks before this one it ends.
+  ///
+  /// In ko, this message translates to:
+  /// **'{weeks}주 전'**
+  String masteredWeeksAgo(int weeks);
+
+  /// Under the mastered cards' bars, at the last: this week.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 주'**
+  String get masteredThisWeek;
+
+  /// The study days' shade key, before its palest shade.
+  ///
+  /// In ko, this message translates to:
+  /// **'적게'**
+  String get studyDaysFewer;
+
+  /// The study days' shade key, after its darkest shade.
+  ///
+  /// In ko, this message translates to:
+  /// **'많이'**
+  String get studyDaysMore;
 
   /// What a screen reader reads for the heatmap, before each studied day and its cards.
   ///
@@ -2568,6 +2592,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘'**
   String get dailyMinutesAfterToday;
+
+  /// Title of the sheet asked before leaving the card editor with changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'작성 중인 카드를 버릴까요?'**
+  String get discardCardTitle;
+
+  /// Consequence on the sheet asked before leaving the card editor with changes.
+  ///
+  /// In ko, this message translates to:
+  /// **'입력한 내용은 저장되지 않아요.'**
+  String get discardCardBody;
+
+  /// The sheet's destructive button: leave the card editor without saving.
+  ///
+  /// In ko, this message translates to:
+  /// **'버리기'**
+  String get discardCard;
+
+  /// The sheet's cancel: stay in the card editor with what was typed.
+  ///
+  /// In ko, this message translates to:
+  /// **'계속 쓰기'**
+  String get keepWriting;
 }
 
 class _AppLocalizationsDelegate

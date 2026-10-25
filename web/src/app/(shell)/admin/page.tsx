@@ -7,7 +7,7 @@ import { AdminSkeleton } from "./_components/admin-skeleton";
 export default function Page() {
   return (
     <>
-      <h1 className="text-display">관리</h1>
+      <h1 className="text-display">개요</h1>
       <Suspense fallback={<AdminSkeleton />}>
         <OverviewContent />
       </Suspense>

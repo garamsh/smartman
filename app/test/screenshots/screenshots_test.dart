@@ -257,7 +257,9 @@ void main() {
       // Above a tall sheet, where the barrier's centre is not.
       await tester.tapAt(const Offset(20, 100));
       await tester.pumpAndSettle();
+      // Leaving the typed card asks first.
       await tap(tester, find.byTooltip(ko.close));
+      await tap(tester, find.text(ko.discardCard));
       await shot(tester, '07-card-list');
       await tap(tester, find.text('ubiquitous'));
       await shot(tester, '07b-card-answer-shown');
@@ -395,8 +397,9 @@ void main() {
       await shot(tester, '16-deck-list');
       await showRecord(tester);
       await shot(tester, '16c-record');
-      // Today's cards done: the done card and the next seven days.
-      await tap(tester, find.text(ko.tabToday));
+      // Today's cards done: the done card and the next seven days. The tab
+      // bar's 오늘, the last, since the study days name today too.
+      await tap(tester, find.text(ko.tabToday).last);
       await shot(tester, '16b-today-done');
 
       await tap(tester, find.byTooltip(ko.account));
@@ -837,6 +840,9 @@ void main() {
         );
         await tester.pumpAndSettle();
         await shot(tester, '05k-card-editor-keyboard');
+        tester.view.resetViewInsets();
+        await tap(tester, find.byTooltip(ko.close));
+        await shot(tester, '05l-card-editor-discard');
         await unmount(tester);
       },
     );

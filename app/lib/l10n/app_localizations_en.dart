@@ -437,7 +437,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days d';
+    return '$days-day streak';
   }
 
   @override
@@ -1343,7 +1343,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return 'Mastered cards by week, from 8 weeks ago to this week: $counts';
+    return 'Mastered cards by week, from 7 weeks ago to this week: $counts';
   }
 
   @override
@@ -1353,6 +1353,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current-day streak · best $best';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks weeks ago';
+  }
+
+  @override
+  String get masteredThisWeek => 'This week';
+
+  @override
+  String get studyDaysFewer => 'Fewer';
+
+  @override
+  String get studyDaysMore => 'More';
 
   @override
   String studyDaysSemantics(int count, String days) {
@@ -1646,4 +1660,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => 'Today';
+
+  @override
+  String get discardCardTitle => 'Discard this card?';
+
+  @override
+  String get discardCardBody => 'What you typed won\'t be saved.';
+
+  @override
+  String get discardCard => 'Discard';
+
+  @override
+  String get keepWriting => 'Keep writing';
 }

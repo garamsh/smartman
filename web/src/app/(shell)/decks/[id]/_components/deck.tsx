@@ -94,14 +94,14 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
           <div
             role="img"
             aria-label={`익힘 ${String(progress.mastered)}장, 학습 중 ${String(progress.learning)}장, 새 카드 ${String(progress.fresh)}장`}
-            className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+            className="flex h-2.5 overflow-hidden rounded-full"
           >
             <span
               className="bg-on-hero"
               style={{ width: `${String(share(progress.mastered))}%` }}
             />
             <span
-              className="bg-on-hero/60"
+              className="bg-on-hero/45"
               style={{ width: `${String(share(progress.learning))}%` }}
             />
             <span className="flex-1 bg-on-hero/20" />

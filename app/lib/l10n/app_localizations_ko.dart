@@ -424,7 +424,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days일';
+    return '$days일 연속';
   }
 
   @override
@@ -1246,7 +1246,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return '주별 익힌 카드, 8주 전부터 이번 주까지: $counts';
+    return '주별 익힌 카드, 7주 전부터 이번 주까지: $counts';
   }
 
   @override
@@ -1256,6 +1256,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current일 연속 · 최고 $best일';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks주 전';
+  }
+
+  @override
+  String get masteredThisWeek => '이번 주';
+
+  @override
+  String get studyDaysFewer => '적게';
+
+  @override
+  String get studyDaysMore => '많이';
 
   @override
   String studyDaysSemantics(int count, String days) {
@@ -1505,4 +1519,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => '오늘';
+
+  @override
+  String get discardCardTitle => '작성 중인 카드를 버릴까요?';
+
+  @override
+  String get discardCardBody => '입력한 내용은 저장되지 않아요.';
+
+  @override
+  String get discardCard => '버리기';
+
+  @override
+  String get keepWriting => '계속 쓰기';
 }
