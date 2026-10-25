@@ -60,7 +60,7 @@ Future<void> openStudy(BuildContext context, DeckSelection decks) async {
 ///
 /// On a device's first session, a coach teaches the swipes on the cards, and
 /// "안내 다시 보기" shows it again. A session that goes on with a day that has
-/// cards done says so for a moment under the progress bar.
+/// cards done says so for a moment in the progress bar's place.
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.decks});
 
