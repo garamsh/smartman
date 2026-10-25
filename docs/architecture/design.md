@@ -34,6 +34,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
    - Photo import of several photos: one screen states "사진 n장 중 k장 읽음" as a heading a screen reader hears as it changes, over a bar of the same k photos read, and each photo's row with its thumbnail and its state in words beside an icon, so colour never carries it alone; a failure shows on its row with its actions, and the other photos go on ([ADR 0089](adr/0089-import-up-to-ten-photos-into-one-list-read-two-at-a-time-and-state-today-s-limit-before-reading.md)).
+   - Photo import: a photo's thumbnail opens it full screen, a button named "사진 i 크게 보기"; the viewer's swipes across, swipe down and pinch have its close, the system back and the thumbnails' order as alternatives.
    - Photo import list of several photos: each photo's group is headed by its thumbnail, "사진 i" and its row count, read as a heading and a button whose state is expanded or collapsed, at least a tap target high; a tap collapses or expands it.
    - Account: a theme choice applies at once and is stored after.
    - Daily study minutes: "저장" stores them on the device, sync pushes them after, and the counts behind the sheet are read again as it closes; the preview moves with each choice before anything is stored.

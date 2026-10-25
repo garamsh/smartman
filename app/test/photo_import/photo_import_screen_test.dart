@@ -9,6 +9,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
+import 'package:smartman/photo_import/src/photo_viewer.dart' show PhotoViewer;
 
 import '../home/home_data.dart';
 
@@ -553,6 +554,90 @@ void main() {
         expect(_shown('oiseau'), findsOneWidget);
         expect(import.included('chien'), isFalse);
         expect(_shown('Retake'), findsNothing);
+        await import.close();
+      },
+    );
+  });
+
+  group('photo viewer', () {
+    testWidgets(
+      "a reading row's thumbnail opens its photo full screen, a swipe turns to the next, and the close returns to the reading, which went on underneath",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(3);
+
+        await import.tap(find.bySemanticsLabel('View photo 1'));
+        expect(find.bySemanticsLabel('Photo 1 of 3'), findsOneWidget);
+        await import.answerCall(0, {'chat': 'cat'});
+        expect(import.client.calls, hasLength(3), reason: 'reading goes on');
+
+        await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Photo 2 of 3'), findsOneWidget);
+
+        await import.tap(find.byTooltip('Close'));
+        expect(find.byType(PhotoViewer), findsNothing);
+        expect(find.bySemanticsLabel(RegExp(r'^Photo 1\n1 card')), findsOne);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      "a photo group's thumbnail opens its photo, and the system back or a swipe down closes the viewer and keeps the list",
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(2);
+        await import.answerCall(0, {'chat': 'cat'});
+        await import.answerCall(1, {'chien': 'dog'});
+        await tester.pumpAndSettle();
+
+        await import.tap(find.bySemanticsLabel('View photo 2'));
+        expect(find.bySemanticsLabel('Photo 2 of 2'), findsOneWidget);
+        await import.back();
+        expect(find.byType(PhotoViewer), findsNothing);
+        expect(import.hasPopped, isFalse);
+        expect(_shown('Photo 2'), findsOneWidget);
+
+        await import.tap(find.bySemanticsLabel('View photo 1'));
+        await tester.fling(find.byType(PageView), const Offset(0, 400), 1500);
+        await tester.pumpAndSettle();
+        expect(find.byType(PhotoViewer), findsNothing);
+        expect(_shown('chat'), findsOneWidget);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      'a pinch zooms the photo, and a drag then pans it rather than turning the page',
+      (tester) async {
+        final import = await _Import.open(tester);
+        await import.pickSeveral(2);
+        await import.tap(find.bySemanticsLabel('View photo 1'));
+
+        final centre = tester.getCenter(find.byType(PageView));
+        final one = await tester.startGesture(centre - const Offset(20, 0));
+        final two = await tester.startGesture(
+          centre + const Offset(20, 0),
+          pointer: 2,
+        );
+        for (var step = 1; step <= 10; step++) {
+          await one.moveTo(centre - Offset(20.0 + step * 10, 0));
+          await two.moveTo(centre + Offset(20.0 + step * 10, 0));
+          await tester.pump();
+        }
+        await one.up();
+        await two.up();
+        await tester.pumpAndSettle();
+        final scale = tester
+            .widget<InteractiveViewer>(find.byType(InteractiveViewer).first)
+            .transformationController!
+            .value
+            .getMaxScaleOnAxis();
+        expect(scale, greaterThan(1.5));
+
+        await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Photo 1 of 2'), findsOneWidget);
         await import.close();
       },
     );
@@ -1789,6 +1874,31 @@ void main() {
 
   group('accessibility', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets(
+        'the photo viewer and the thumbnails that open it meet the guidelines in ${mode.name}',
+        (tester) async {
+          final import = await _Import.open(tester, themeMode: mode);
+          Future<void> check() async {
+            await expectLater(
+              tester,
+              meetsGuideline(labeledTapTargetGuideline),
+            );
+            await expectLater(
+              tester,
+              meetsGuideline(androidTapTargetGuideline),
+            );
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+          }
+
+          await import.pickSeveral(2);
+          await check();
+          await import.tap(find.bySemanticsLabel('View photo 2'));
+          expect(find.bySemanticsLabel('Photo 2 of 2'), findsOneWidget);
+          await check();
+          await import.close();
+        },
+      );
+
       testWidgets(
         'several photos being read, one failed, and their grouped list meet the guidelines in ${mode.name}',
         (tester) async {
