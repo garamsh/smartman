@@ -2110,7 +2110,7 @@ abstract class AppLocalizations {
   /// What a screen reader reads for the mastered bars, before each week's count.
   ///
   /// In ko, this message translates to:
-  /// **'주별 익힌 카드, 8주 전부터 이번 주까지: {counts}'**
+  /// **'주별 익힌 카드, 7주 전부터 이번 주까지: {counts}'**
   String masteredSemantics(String counts);
 
   /// Heading of the study-day heatmap.

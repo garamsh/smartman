@@ -338,7 +338,7 @@ void main() {
       );
       expect(figure.style?.fontSize, AppType.figure.fontSize);
       expect(
-        find.descendant(of: card, matching: find.text('8 weeks ago')),
+        find.descendant(of: card, matching: find.text('7 weeks ago')),
         findsOneWidget,
       );
       expect(
@@ -347,16 +347,48 @@ void main() {
       );
       // The week names sit under the bars, the first at the left.
       expect(
-        tester.getRect(find.text('8 weeks ago')).left,
+        tester.getRect(find.text('7 weeks ago')).left,
         lessThan(tester.getRect(find.text('This week')).left),
       );
 
       expect(
         _label(tester, 'Mastered cards by week'),
-        'Mastered cards by week, from 8 weeks ago to this week: '
+        'Mastered cards by week, from 7 weeks ago to this week: '
         '0 cards, 2 cards, 2 cards, 2 cards, 2 cards, 2 cards, 3 cards, 3 cards',
       );
       expect(find.text('+1 in 4 weeks'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the first mastered week is named seven weeks ago, the week a card mastered seven weeks before today falls in and one mastered a day later does not',
+    (tester) async {
+      // Today's study day is 15 October; seven weeks before it, 27 August.
+      for (final (day, first) in [(27, 1), (28, 0)]) {
+        // A fresh scope, so the second deck's figures are not the first's.
+        await tester.pumpWidget(const SizedBox());
+        await _pump(
+          tester,
+          await _seed({
+            'chat': [('good', DateTime.utc(2026, 8, day, 9))],
+          }),
+        );
+        expect(
+          _label(tester, 'Mastered cards by week'),
+          startsWith(
+            'Mastered cards by week, from 7 weeks ago to this week: '
+            '$first card${first == 1 ? '' : 's'}, 1 card,',
+          ),
+          reason: 'mastered on $day August',
+        );
+        expect(
+          find.descendant(
+            of: _card('Mastered cards'),
+            matching: find.text('7 weeks ago'),
+          ),
+          findsOneWidget,
+        );
+      }
     },
   );
 

@@ -757,7 +757,7 @@
   "@masteredTitle": {"description": "Heading of the mastered cards per week."},
   "masteredGain": "4주 +{count}장",
   "@masteredGain": {"description": "Beside the mastered heading: how many more cards are mastered than four weeks ago.", "placeholders": {"count": {"type": "int"}}},
-  "masteredSemantics": "주별 익힌 카드, 8주 전부터 이번 주까지: {counts}",
+  "masteredSemantics": "주별 익힌 카드, 7주 전부터 이번 주까지: {counts}",
   "@masteredSemantics": {"description": "What a screen reader reads for the mastered bars, before each week's count.", "placeholders": {"counts": {"type": "String"}}},
   "studyDaysTitle": "학습한 날",
   "@studyDaysTitle": {"description": "Heading of the study-day heatmap."},

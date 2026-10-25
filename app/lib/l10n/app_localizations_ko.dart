@@ -1219,7 +1219,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return '주별 익힌 카드, 8주 전부터 이번 주까지: $counts';
+    return '주별 익힌 카드, 7주 전부터 이번 주까지: $counts';
   }
 
   @override

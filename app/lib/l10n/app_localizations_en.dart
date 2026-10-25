@@ -1310,7 +1310,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return 'Mastered cards by week, from 8 weeks ago to this week: $counts';
+    return 'Mastered cards by week, from 7 weeks ago to this week: $counts';
   }
 
   @override

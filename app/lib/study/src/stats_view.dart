@@ -771,7 +771,7 @@ class _MasteredCard extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(l10n.masteredWeeksAgo(weeks.length), style: quiet),
+              Text(l10n.masteredWeeksAgo(weeks.length - 1), style: quiet),
               Text(l10n.masteredThisWeek, style: quiet),
             ],
           ),

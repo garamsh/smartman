@@ -394,7 +394,7 @@ function MasteredCard({ weeks }: { weeks: number[] }) {
       <p className="text-figure text-ink">{weeks[weeks.length - 1] ?? 0}장</p>
       <div
         role="img"
-        aria-label={`주별 익힌 카드, 8주 전부터 이번 주까지: ${weeks.map((count) => `${String(count)}장`).join(", ")}`}
+        aria-label={`주별 익힌 카드, 7주 전부터 이번 주까지: ${weeks.map((count) => `${String(count)}장`).join(", ")}`}
         className="flex h-21 items-end gap-2"
       >
         {weeks.map((count, index) => (
@@ -408,7 +408,7 @@ function MasteredCard({ weeks }: { weeks: number[] }) {
       </div>
       {/* The chart's label names every week; these name its two ends. */}
       <div aria-hidden className="flex justify-between text-caption text-muted">
-        <span>{weeks.length}주 전</span>
+        <span>{weeks.length - 1}주 전</span>
         <span>이번 주</span>
       </div>
     </Card>

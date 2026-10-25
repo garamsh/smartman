@@ -134,9 +134,29 @@ describe("the record page", () => {
     // The figure is the label's last week.
     const now = /(\d+)장$/.exec(label("주별 익힌 카드") ?? "")?.[1];
     expect(card.getByText(`${String(now)}장`)).toHaveClass("text-figure");
-    expect(card.getByText("8주 전")).toBeInTheDocument();
+    expect(card.getByText("7주 전")).toBeInTheDocument();
     expect(card.getByText("이번 주")).toBeInTheDocument();
   });
+
+  it.each([
+    [49, "1장"],
+    [48, "0장"],
+  ])(
+    "names the first mastered week 7주 전, the week a card mastered %i days before today falls in only at seven weeks",
+    async (ago, first) => {
+      // A card answered "안다" long before, then again [ago] days back, which masters it.
+      postgrest.seed("decks", deckRow("deck", "French"));
+      postgrest.seed("cards", cardRow("a", "deck", "chat", 400 * day));
+      postgrest.seed("reviews", answer("a1", "a", 300 * day), answer("a2", "a", ago * day));
+      await render(RecordContent, {});
+
+      expect(label("주별 익힌 카드")).toMatch(
+        new RegExp(`^주별 익힌 카드, 7주 전부터 이번 주까지: ${first}, 1장,`),
+      );
+      const card = within(screen.getByRole("region", { name: "익힌 카드" }));
+      expect(card.getByText("7주 전")).toBeInTheDocument();
+    },
+  );
 
   it("rings today's study day and places the grid in time with its first day, 오늘 and a key to its shades", async () => {
     seedHistory();

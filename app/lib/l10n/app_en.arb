@@ -334,7 +334,7 @@
   "recallEmpty": "No card reviewed yet.",
   "masteredTitle": "Mastered cards",
   "masteredGain": "+{count} in 4 weeks",
-  "masteredSemantics": "Mastered cards by week, from 8 weeks ago to this week: {counts}",
+  "masteredSemantics": "Mastered cards by week, from 7 weeks ago to this week: {counts}",
   "studyDaysTitle": "Study days",
   "studyDaysStreak": "{current}-day streak \u00b7 best {best}",
   "masteredWeeksAgo": "{weeks} weeks ago",
