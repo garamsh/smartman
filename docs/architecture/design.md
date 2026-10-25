@@ -33,7 +33,7 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 4. **Never wait.** Act at once and sync in the background. Show progress only for work the user asked for and must wait on, such as photo extraction.
    - Study: the next card is on screen before the answer's write finishes.
    - Photo import: extraction shows the photo, a progress bar and skeleton rows, and can be cancelled.
-   - Photo import of several photos: one screen states "사진 k/n 읽는 중" as a heading a screen reader hears as it changes, a bar of the photos read, and each photo's row with its thumbnail and its state in words beside an icon, so colour never carries it alone; a failure shows on its row with its actions, and the other photos go on ([ADR 0089](adr/0089-import-up-to-ten-photos-into-one-list-read-two-at-a-time-and-state-today-s-limit-before-reading.md)).
+   - Photo import of several photos: one screen states "사진 n장 중 k장 읽음" as a heading a screen reader hears as it changes, over a bar of the same k photos read, and each photo's row with its thumbnail and its state in words beside an icon, so colour never carries it alone; a failure shows on its row with its actions, and the other photos go on ([ADR 0089](adr/0089-import-up-to-ten-photos-into-one-list-read-two-at-a-time-and-state-today-s-limit-before-reading.md)).
    - Photo import list of several photos: each photo's group is headed by its thumbnail, "사진 i" and its row count, read as a heading and a button whose state is expanded or collapsed, at least a tap target high; a tap collapses or expands it.
    - Account: a theme choice applies at once and is stored after.
    - Daily study minutes: "저장" stores them on the device, sync pushes them after, and the counts behind the sheet are read again as it closes; the preview moves with each choice before anything is stored.
@@ -115,7 +115,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   | Role | Size / line / weight | Use |
   |---|---|---|
   | display | 28 / 36 / 800, −0.8 | Material's display styles; no screen draws it since the lockup heads the 오늘 tab |
-  | title | 22 / 30 / 800, −0.4 | a pushed screen's title, the deck name on its screen, the first-run heading, the completion and done cards' headings |
+  | title | 22 / 30 / 800, −0.4 | a pushed screen's title, the photo import list's title, the deck name on its screen, the first-run heading, the completion and done cards' headings |
   | deckTitle | 26 / 34 / 800, −0.6 | the 덱 and 기록 tabs' titles |
   | figure | 36 / 44 / 800, −0.8 | the navy cards' count |
   | headline | 18 / 26 / 700 | a sheet's title, a deck tile's letter |
