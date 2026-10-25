@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -186,6 +187,7 @@ void main() {
           storage,
           // The first-run home shows every way to start.
           FakeExtractionClient(),
+          MemoryImportJobStore(),
           FakeSharingServer(),
           FakeReachability(),
           '1.0.0',
@@ -1123,11 +1125,15 @@ void main() {
                   child: TextButton(
                     onPressed: () => importFromPhoto(
                       context,
+                      imports: PhotoImports(
+                        client: client,
+                        photos: photos,
+                        preferences: preferences,
+                        store: MemoryImportJobStore(),
+                        decks: repository,
+                      ),
                       deck: deck.id,
                       origin: PhotoOrigin.camera,
-                      client: client,
-                      photos: photos,
-                      preferences: preferences,
                     ),
                     child: const Text('open'),
                   ),
@@ -1293,11 +1299,15 @@ void main() {
                   child: TextButton(
                     onPressed: () => importFromPhoto(
                       context,
+                      imports: PhotoImports(
+                        client: client,
+                        photos: photos,
+                        preferences: preferences,
+                        store: MemoryImportJobStore(),
+                        decks: repository,
+                      ),
                       deck: deck.id,
                       origin: PhotoOrigin.album,
-                      client: client,
-                      photos: photos,
-                      preferences: preferences,
                     ),
                     child: const Text('open'),
                   ),
@@ -1339,6 +1349,100 @@ void main() {
 
       await unmount(tester);
       semantics.dispose();
+    });
+
+    testWidgets('the photo import bar in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.withData({
+            'themeMode': mode,
+            studyCoachShownKey: true,
+            dailyMinutesAskedKey: true,
+          });
+      final storage = (await tester.runAsync(
+        () => SharedPreferencesWithCache.create(
+          cacheOptions: const SharedPreferencesWithCacheOptions(
+            allowList: {
+              ...themeStorageKeys,
+              ...photoImportStorageKeys,
+              ...studyStorageKeys,
+              ...deckStorageKeys,
+            },
+          ),
+        ),
+      ))!;
+      // As a closed app left it: the first of three photos read.
+      final store = MemoryImportJobStore()
+        ..photos.addAll({
+          for (final key in ['p0', 'p1', 'p2']) key: testPhoto.bytes,
+        })
+        ..state = jsonEncode({
+          'version': 1,
+          'target': null,
+          'origin': 'album',
+          'photos': [
+            for (final key in ['p0', 'p1', 'p2'])
+              {
+                'key': key,
+                'width': testPhoto.width,
+                'height': testPhoto.height,
+                if (key == 'p0') 'cards': <Object?>[],
+              },
+          ],
+        });
+      final client = FakeExtractionClient();
+      await tester.pumpWidget(
+        composeApp(
+          NativeDatabase.memory(),
+          scheduler,
+          FakeAccountService(
+            const SignedIn(userId: _ada, email: 'ada@example.com'),
+          ),
+          FakeSyncServer(_ada),
+          storage,
+          client,
+          store,
+          FakeSharingServer(),
+          FakeReachability(),
+          '1.0.0',
+        ),
+      );
+      await tester.pumpAndSettle();
+      await shot(tester, '27-photo-resume');
+
+      // A deck, so the bar shows above the tab bar.
+      await dismissSheet(tester);
+      await tap(tester, find.text(ko.makeDeck));
+      await tap(tester, find.text(ko.createManually));
+      await tester.enterText(find.byType(EditableText), '영단어 기본');
+      await tap(tester, find.text(ko.create));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await shot(tester, '27a-photo-bar-paused');
+
+      await tap(tester, find.text(ko.importBarPaused(2)));
+      await tap(tester, find.text(ko.resumeImport));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await shot(tester, '27b-photo-bar-reading');
+
+      client.calls[0].answer.complete([
+        word(front: 'face', meaning: '직면하다', partOfSpeech: '[동]'),
+        word(front: 'include', meaning: '포함하다', partOfSpeech: '[동]'),
+      ]);
+      client.calls[1].answer.complete([
+        word(front: 'strategy', meaning: '전략, 계획', partOfSpeech: '[명]'),
+      ]);
+      await tester.pumpAndSettle();
+      await shot(tester, '27c-photo-bar-ready');
+
+      // Disposing sync cancels the run the deck's write scheduled.
+      ProviderScope.containerOf(
+        tester.element(find.byType(AccountGate, skipOffstage: false)),
+      ).read(syncControllerProvider).dispose();
+      await unmount(tester);
     });
 
     testWidgets('sharing in $mode', skip: !_capture, (tester) async {

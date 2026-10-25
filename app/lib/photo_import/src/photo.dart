@@ -20,6 +20,9 @@ const _qualities = [85, 70, 55, 40];
 final class JpegPhoto {
   const JpegPhoto._(this.bytes, this.width, this.height);
 
+  /// A photo prepared earlier and kept on the device, read back.
+  const JpegPhoto.stored(this.bytes, this.width, this.height);
+
   final Uint8List bytes;
   final int width;
   final int height;
