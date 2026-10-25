@@ -7,7 +7,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 ### Surface and location
 
 - The shell lives in `app/lib/home/`; its surface is `app/lib/home/home.dart`, which exports `HomeScreen`, with internals under `app/lib/home/src/` ([ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md), [`structure.md`](structure.md)):
-  - `home_screen.dart` — `HomeScreen`: the three tabs and their bar, or the first-run home before the first deck;
+  - `home_screen.dart` — `HomeScreen`: the three tabs and their bar, or the first-run home before the first deck, with the photo import bar and the offer to resume a photo import;
   - `first_run.dart` — `FirstRun`, the layout of how to start that the first-run home and the cardless 오늘 tab share;
   - `today_tab.dart` — the 오늘 tab: the today, done and backlog cards, the last seven study days and today's decks;
   - `decks_tab.dart` — the 덱 tab: the deck rows, their progress and today chips, the search, and the buttons under the rows;
@@ -26,13 +26,15 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
   - `study`'s `TodayOverviewReader`, for the 오늘 tab's count, goal, streak, next review and last seven study days; `TodayCounter`, for each deck's count; `ProgressCounter`, for each deck's progress; `StatsView`, the 기록 tab's content, given the tab's title; `openStudy`, through which every study button opens a `StudyScreen`; and `DailyMinutesButton`, `FirstDailyMinutes` and `DailyMinutesRow`, the daily study minutes' control, first-run step and account row ([`study.md`](study.md), [ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md));
   - `account`'s `AccountAvatar` on the account button, and `AccountScreen`, given `sync`'s `SyncStatusView` as the status it shows and `study`'s `DailyMinutesRow` as its study setting ([`account.md`](account.md), [`sync.md`](sync.md));
   - `sharing`'s `sharingServiceProvider`, for the browse screen ([`sharing.md`](sharing.md));
-  - `photo_import`'s `photoImportProvider`, for the photo options ([`ai-extraction.md`](ai-extraction.md)).
+  - `photo_import`'s `photoImportProvider`, for the photo options, and `photoImportsProvider`, `PhotoImportBar`, `openPhotoImport` and `offerPhotoImportResume`, for the import under way ([`ai-extraction.md`](ai-extraction.md)).
 - The deck screen composes `deck`'s `deckProvider`, `cardsProvider`, `DeckTile`, `CardBackRow`, `CardEditorScreen`, `showNameSheet` and `DeckRepository`; `study`'s `TodayCounter`, `ProgressCounter` and `openStudy`; `sharing`'s `sharingServiceProvider` and `onlineProvider`, for publishing; and `photo_import`'s `photoImportProvider`.
 - A `DeckRow` takes what it shows of today and of its progress as widgets, which the 덱 tab builds from `TodayCounter` and `ProgressCounter`: the deck's places for what `study` draws ([`structure.md`](structure.md)).
 
 ### Tabs
 
 - The signed-in app is three tabs, 오늘, 덱 and 기록, in a bar at the foot on the surface over a hairline: Lucide's sun, layers and column chart over each name, the selected tab in ink and bold, the others muted, each read as a selectable button ([ADR 0036](adr/0036-organise-the-app-in-today-decks-and-record-tabs-and-define-the-daily-goal-forecast-and-card-progress.md)). The tabs keep their state while another is shown. Back on 덱 or 기록 returns to 오늘; on 오늘 it is left to the platform.
+- While a photo import is under way, `photo_import`'s bar sits above the tab bar, or at the foot of the first-run home: "사진 읽는 중 k/n", "카드 n장 확인하기" or "읽던 사진 k장 이어서 읽기". A tap opens the import, and an import that saves opens the deck it saved into ([ADR 0094](adr/0094-read-a-photo-import-of-up-to-fifty-photos-three-at-a-time-as-an-app-level-job-kept-on-the-device-and-offered-again-after-a-restart.md)).
+- On opening, when a closed app left a photo import with photos unread, the home screen offers to resume it, "읽던 사진 k장을 이어서 읽을까요?", once the import is read back.
 - Before the first deck, the first-run home shows in place of the tabs, under the lockup and the account button: the mascot in a white circle, "첫 덱을 만들어 볼까요?", one line on how to start, then "덱 만들기", the one primary, which opens the new-deck sheet, and the text "공개 덱 둘러보기" with sharing ([ADR 0067](adr/0067-start-a-deck-or-a-card-from-one-sheet-that-holds-the-photo-source-and-name-public-decks-once.md)).
 
 ### The today tab
@@ -55,7 +57,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - A 48 px "덱 검색" keeps the decks whose name holds it, ignoring case.
 - Each deck is a `DeckRow` ([`deck.md`](deck.md)), with a brand-tint "오늘 n" chip when a session over it would study n > 0 cards now, a progress bar, the mastered cards in ink and the learning ones quieter, and "n장 중 m장 익힘". A count that cannot be read shows an icon whose tooltip says why.
 - Under the rows, two rows on an outline, each with an icon, its title, a line and a chevron, read as one: "새 덱 만들기" with "새 덱을 시작할 방법을 골라요", then, with sharing, "공개 덱 둘러보기" with its line, which opens the browse screen ([ADR 0050](adr/0050-make-a-deck-from-a-button-under-the-deck-list-and-remove-the-deck-selection-mode.md)).
-- "새 덱 만들기" opens the new-deck sheet: "새 덱 만들기" and a row each for "직접 만들기", which asks for the name in the sheet "새 덱" and opens the deck it made ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), and, when photo import exists, "사진 찍기" and "앨범에서 고르기", which start photo import from that source at once, the album with up to 10 photos ([`ai-extraction.md`](ai-extraction.md)), each with a line under it. It offers no public decks: the row under the deck rows is their one way in ([ADR 0067](adr/0067-start-a-deck-or-a-card-from-one-sheet-that-holds-the-photo-source-and-name-public-decks-once.md)). A photo import that saved opens the deck it saved into.
+- "새 덱 만들기" opens the new-deck sheet: "새 덱 만들기" and a row each for "직접 만들기", which asks for the name in the sheet "새 덱" and opens the deck it made ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), and, when photo import exists, "사진 찍기" and "앨범에서 고르기", which start photo import from that source at once, the album with up to 50 photos ([`ai-extraction.md`](ai-extraction.md)), each with a line under it. It offers no public decks: the row under the deck rows is their one way in ([ADR 0067](adr/0067-start-a-deck-or-a-card-from-one-sheet-that-holds-the-photo-source-and-name-public-decks-once.md)). A photo import that saved opens the deck it saved into.
 - A tap opens a deck's screen, and a long-press does the same. There is no selection mode: 오늘's "모두 학습" studies every deck with cards today.
 
 ### The record tab
@@ -88,11 +90,13 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - The sharing tests drive the 덱 tab and the deck screen through `app/test/sharing/sharing_app.dart` the same way ([`sharing.md`](sharing.md)).
 - `app/test/home/hero_test.dart` checks the shades the navy cards and the charts derive from the tokens: the quiet text at 4.5:1, and the flame, the today card's bar and a quiet bar at 3:1, in both themes.
 - `app/test/widget_test.dart` checks every tab, the new-deck sheet and the deck screen with every answer shown by the switch, with one shown by a tap and with the search open against the tap target and contrast guidelines in both themes.
+- `app/test/widget_test.dart` also composes the app over a photo import a closed app left, offered on opening and, once resumed, shown reading in the bar.
 - `app/test/widget_test.dart` also opens the account screen the account button composes, and its "하루 공부 시간" row opening the picker as a screen whose "저장" the row then shows.
 - `app/test/architecture_test.dart` fails on an import of `home/` from anywhere but `main.dart`, on a file in `home/` that declares a provider or imports the database, and on a domain file that names a screen another domain exports ([`structure.md`](structure.md)).
 
 ## Rationale
 
+- [ADR 0094](adr/0094-read-a-photo-import-of-up-to-fifty-photos-three-at-a-time-as-an-app-level-job-kept-on-the-device-and-offered-again-after-a-restart.md) records why a photo import outlives its screen, why its bar sits above the tab bar, and why the home screen offers to resume one a closed app left.
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why screens that span domains live in a shell above them, why a domain hosts no other domain's screen through a provider, and why the shell holds no reads of its own.
 - [ADR 0009](adr/0009-multi-deck-session-and-random-queue-order.md) records the session over several decks and the today card; [ADR 0050](adr/0050-make-a-deck-from-a-button-under-the-deck-list-and-remove-the-deck-selection-mode.md) why the 덱 tab makes a deck from a button under its rows and has no selection mode.
 - [ADR 0046](adr/0046-state-where-the-user-stands-today-on-the-today-card-in-place-of-the-goal-s-numbers.md) records the today card's status line in place of the goal's numbers, its wording and rule; issue #139 records the owner's direction.
