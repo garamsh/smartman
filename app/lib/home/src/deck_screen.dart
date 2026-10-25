@@ -537,14 +537,21 @@ class _DeckTodayCard extends StatelessWidget {
                         spacing: AppSpace.s8,
                         children: [
                           Text(
-                            l10n.masteredOf(progress.mastered, progress.total),
+                            l10n.deckProgress(
+                              progress.mastered,
+                              progress.learning,
+                              progress.total,
+                            ),
                             style: quiet,
                           ),
-                          ProgressBar(
-                            progress: progress,
-                            height: AppSpace.s8,
-                            ink: colors.onHero,
-                            track: heroTrack(colors),
+                          // The line above reads the counts the bar draws.
+                          ExcludeSemantics(
+                            child: ProgressBar(
+                              progress: progress,
+                              height: AppSpace.s8,
+                              ink: colors.onHero,
+                              track: heroTrack(colors),
+                            ),
                           ),
                         ],
                       ),

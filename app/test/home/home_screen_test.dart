@@ -7,12 +7,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:smartman/database/database.dart';
+import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
+import 'package:smartman/home/src/progress_bar.dart';
 import 'package:smartman/home/src/today_tab.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -259,6 +260,41 @@ void main() {
         expect(find.text('Last 7 days'), findsOneWidget);
         // Control: back on 오늘 is left to the platform, which leaves the app.
         expect(await tester.binding.handlePopRoute(), isFalse);
+        await list.close();
+      },
+    );
+  });
+
+  group('덱', () {
+    testWidgets(
+      "a deck row's line counts the mastered, learning and all cards its bar draws, and a deck with no card shows its card count and no bar",
+      (tester) async {
+        // Alpha: one mastered, one learning after a day's interval, two new.
+        final list = await _open(
+          tester,
+          fresh: {'Alpha': 2},
+          due: {'Alpha': 1},
+          mastered: {'Alpha': 1},
+          decks: ['Alpha', 'Beta'],
+        );
+        await list.decks();
+        Finder inRow(String deck, Finder finder) => find.descendant(
+          of: find.ancestor(
+            of: find.text(deck),
+            matching: find.byType(DeckRow),
+          ),
+          matching: finder,
+        );
+
+        expect(
+          inRow('Alpha', find.text('1 mastered · 1 learning · 4 in all')),
+          findsOneWidget,
+        );
+        expect(inRow('Alpha', find.byType(ProgressBar)), findsOneWidget);
+
+        expect(inRow('Beta', find.text('0 cards')), findsOneWidget);
+        expect(inRow('Beta', find.byType(ProgressBar)), findsNothing);
+        expect(inRow('Beta', find.textContaining('in all')), findsNothing);
         await list.close();
       },
     );

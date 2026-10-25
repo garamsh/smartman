@@ -1825,11 +1825,11 @@ abstract class AppLocalizations {
   /// **'찾는 덱이 없어요. 다른 단어로 검색해 보세요.'**
   String get noDeckMatches;
 
-  /// Under a deck row's progress bar: how many of its cards are mastered (interval of 21 days or more).
+  /// Under a deck row's progress bar and on the deck page's navy card: the cards mastered (interval of 21 days or more), the cards learning (reviewed, below it), and all of them, as the bar draws them.
   ///
   /// In ko, this message translates to:
-  /// **'{cards}장 중 {mastered}장 익힘'**
-  String deckMastered(int cards, int mastered);
+  /// **'익힘 {mastered} · 학습 중 {learning} · 전체 {total}'**
+  String deckProgress(int mastered, int learning, int total);
 
   /// Under 공개 덱 둘러보기 on the decks tab.
   ///
@@ -1872,12 +1872,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'장 · 약 {minutes}분'**
   String todayCountMinutes(int minutes);
-
-  /// On the deck page's navy card: mastered cards of all.
-  ///
-  /// In ko, this message translates to:
-  /// **'{mastered} / {total} 익힘'**
-  String masteredOf(int mastered, int total);
 
   /// The deck page's button that studies the deck.
   ///

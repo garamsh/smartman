@@ -1020,8 +1020,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noDeckMatches => '찾는 덱이 없어요. 다른 단어로 검색해 보세요.';
 
   @override
-  String deckMastered(int cards, int mastered) {
-    return '$cards장 중 $mastered장 익힘';
+  String deckProgress(int mastered, int learning, int total) {
+    return '익힘 $mastered · 학습 중 $learning · 전체 $total';
   }
 
   @override
@@ -1051,11 +1051,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String todayCountMinutes(int minutes) {
     return '장 · 약 $minutes분';
-  }
-
-  @override
-  String masteredOf(int mastered, int total) {
-    return '$mastered / $total 익힘';
   }
 
   @override

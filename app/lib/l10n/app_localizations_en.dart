@@ -1118,8 +1118,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noDeckMatches => 'No deck matches. Try other words.';
 
   @override
-  String deckMastered(int cards, int mastered) {
-    return '$mastered of $cards mastered';
+  String deckProgress(int mastered, int learning, int total) {
+    return '$mastered mastered · $learning learning · $total in all';
   }
 
   @override
@@ -1161,11 +1161,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todayCountMinutes(int minutes) {
     return 'cards · about $minutes min';
-  }
-
-  @override
-  String masteredOf(int mastered, int total) {
-    return '$mastered / $total mastered';
   }
 
   @override
