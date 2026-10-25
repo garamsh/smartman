@@ -689,6 +689,8 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Deck actions'));
         await tester.pumpAndSettle();
+        // The menu, its "Delete deck" in the destructive text colour.
+        await meetsGuidelines();
         await tester.tap(find.text('Delete deck'));
         await tester.pumpAndSettle();
         expect(find.text('Delete "French"?'), findsOneWidget);
