@@ -279,28 +279,74 @@ void main() {
   );
 
   testWidgets(
-    'a table card as photo import writes it, its back the name and the filled table, is stored as it was when saved unchanged',
+    'a stored table card saved unchanged keeps its back as stored: the table alone, as the editor wrote it before #311, and the name and the table, as photo import writes it',
     (tester) async {
       final screens = await DeckScreens.open(tester);
-      const front = [TextContent('Capitals'), _capitals];
-      final back = [TextContent(plainText(front))];
-      // The setup is photo import's shape: the name line, then the table.
-      expect(back.single.text, startsWith('Capitals\n'));
+      const importedFront = [TextContent('Capitals'), _capitals];
+      const oldEditorFront = [TextContent('Old capitals'), _capitals];
+      // The control, photo import's back: the name line, then the table.
+      final imported = (
+        front: importedFront,
+        back: [TextContent(plainText(importedFront))],
+      );
+      // The editor's back before #311: the filled table, without the name.
+      final oldEditor = (
+        front: oldEditorFront,
+        back: [TextContent(_capitals.filled)],
+      );
+      expect(imported.back.single.text, startsWith('Capitals\n'));
+      expect(oldEditor.back.single.text, isNot(contains('Old capitals')));
       await tester.runAsync(
         () => screens.repository.addCards(AddToDeck(screens.deck.id), [
           IncomingCard(
-            front: front,
-            back: back,
+            front: imported.front,
+            back: imported.back,
             onDuplicate: DuplicateChoice.mergeBack,
           ),
         ]),
       );
-      final card = await _stored(screens);
+      final added = await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: oldEditor.front,
+          back: oldEditor.back,
+        ),
+      );
+      expect(added, isA<CardSaved>());
+
+      for (final (:front, :back) in [imported, oldEditor]) {
+        Future<Card> stored() async => (await screens.cards()).singleWhere(
+          (card) => card.front.first == front.first,
+        );
+        final card = await stored();
+        expect(card.back, back, reason: 'the setup stores the back asked');
+        await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+        await save(screens);
+        final saved = await stored();
+        expect(saved.front, front);
+        expect(
+          saved.back,
+          back,
+          reason: '${plainText([front.first])} saved unchanged',
+        );
+      }
+
+      // Once its name is edited, the old editor's card takes the new back.
+      final card = (await screens.cards()).singleWhere(
+        (card) => card.front.first == oldEditor.front.first,
+      );
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await enter(
+        tester,
+        find.widgetWithText(AppTextField, 'Front'),
+        'New capitals',
+      );
       await save(screens);
-      final saved = await _stored(screens);
-      expect(saved.front, front);
-      expect(saved.back, back);
+      final renamed = (await screens.cards()).singleWhere(
+        (saved) => saved.id == card.id,
+      );
+      expect(renamed.front, [const TextContent('New capitals'), _capitals]);
+      expect(renamed.back, [TextContent('New capitals\n${_capitals.filled}')]);
       await screens.close();
     },
   );

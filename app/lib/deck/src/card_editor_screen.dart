@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -137,6 +138,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// The card's own front and back while its cloze is left as it was.
   bool get _keepsCloze => widget.card != null && !_clozeEdited;
 
+  /// The card's own back while its name and table are saved as they were,
+  /// whatever shape that back has, such as a copy's or the table alone.
+  bool get _keepsTable =>
+      widget.card != null && listEquals(_frontBlocks, widget.card!.front);
+
   /// The front as saved: the text typed, or the card's own blocks while their
   /// text is left as it was.
   List<Content> get _frontBlocks => switch (_kind) {
@@ -158,6 +164,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     CardKind.cloze when _keepsCloze => widget.card!.back,
     // The line with its blanks filled, as photo import writes a cloze's back.
     CardKind.cloze => [TextContent(_cloze.content?.filled ?? _front.text)],
+    CardKind.table when _keepsTable => widget.card!.back,
     // The name, then the table with every cell shown: the front's text, as
     // photo import writes a table card's back.
     CardKind.table => [TextContent(plainText(_frontBlocks))],
