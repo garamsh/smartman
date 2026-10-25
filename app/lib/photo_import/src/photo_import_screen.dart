@@ -279,9 +279,7 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
     if (list == null) return const Scaffold();
     return ImportListView(
       list: list,
-      photos: [
-        for (final photo in job.photos) ?job.imageOf(photo),
-      ],
+      photos: [for (final photo in job.photos) ?job.imageOf(photo)],
       decks: decks.value ?? const [],
       target: target,
       onTarget: (deck) => unawaited(job.chooseTarget(deck)),

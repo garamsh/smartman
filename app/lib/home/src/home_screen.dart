@@ -67,10 +67,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final imports = ref.watch(photoImportsProvider);
     final importBar = imports == null
         ? null
-        : PhotoImportBar(
-            imports: imports,
-            onOpen: () => _openImport(imports),
-          );
+        : PhotoImportBar(imports: imports, onOpen: () => _openImport(imports));
     return switch ((ref.watch(decksProvider), ref.watch(cardCountsProvider))) {
       (AsyncData(value: final decks), AsyncData(value: final counts)) =>
         decks.isEmpty

@@ -164,10 +164,7 @@ class PhotoImportBar extends StatelessWidget {
           l10n.importBarReading(job.read, total),
           total == 0 ? 0.0 : job.read / total,
         ),
-        ImportJob(:final list?) => (
-          l10n.importBarReady(list.cardCount),
-          null,
-        ),
+        ImportJob(:final list?) => (l10n.importBarReady(list.cardCount), null),
         _ => ('', null),
       };
       return SafeArea(
@@ -248,4 +245,3 @@ class PhotoImportBar extends StatelessWidget {
     },
   );
 }
-
