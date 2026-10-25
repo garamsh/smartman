@@ -108,6 +108,23 @@ class AppLocalizationsEn extends AppLocalizations {
       '___ marks a blank, so the line can\'t contain it';
 
   @override
+  String clozeBlankLine(int number, String answer) {
+    return 'Blank $number: $answer';
+  }
+
+  @override
+  String get clozePickLetters => 'Pick letters';
+
+  @override
+  String get clozeLettersTitle => 'Choose the letters to blank';
+
+  @override
+  String get clozeLettersBody => 'Tap the first letter, then the last';
+
+  @override
+  String get clozeLettersDone => 'Use these letters';
+
+  @override
   String get cardKindTable => 'Table';
 
   @override
@@ -420,7 +437,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days d';
+    return '$days-day streak';
   }
 
   @override
@@ -620,8 +637,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
-  String readingTitle(int current, int total) {
-    return 'Reading photo $current of $total';
+  String readingTitle(int read, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Read $read of $total photos',
+      one: 'Read $read of 1 photo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1613,4 +1636,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => 'Today';
+
+  @override
+  String get discardCardTitle => 'Discard this card?';
+
+  @override
+  String get discardCardBody => 'What you typed won\'t be saved.';
+
+  @override
+  String get discardCard => 'Discard';
+
+  @override
+  String get keepWriting => 'Keep writing';
 }
