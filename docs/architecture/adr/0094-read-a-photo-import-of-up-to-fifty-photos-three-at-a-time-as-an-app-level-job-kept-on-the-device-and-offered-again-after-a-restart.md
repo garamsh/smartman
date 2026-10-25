@@ -33,7 +33,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - "읽던 사진 k장 이어서 읽기" while a job a closed app left waits to resume.
 
   It is one button and a live region, and a tap opens the import screen.
-- **Kept on the device.** Each prepared photo is written to a file under the app's support directory, `photo_import/`, and the job keeps no photo in memory: a read loads its photo from the file, and a thumbnail decodes it at most 192 px wide (`thumbnailDecodeWidth`). After every change, the job's state is written beside the photos, replacing the previous state whole: its deck, its photos' source, and each kept photo's file and size with its cards once read. Saving or ending the job deletes the directory.
+- **Kept on the device.** Each prepared photo is written to a file under the app's support directory, `photo_import/`, and the job keeps no photo in memory: a read loads its photo from the file, and a thumbnail decodes it at most 192 px wide (`thumbnailDecodeWidth`). After every change, the job's state is written beside the photos, replacing the previous state whole: its deck, its photos' source, and each kept photo's file and size with its cards once read. The writes run one at a time: a change during a write is written once it ends, from the job as it is then, so the last state written is the latest, and ending the job waits for the write under way. Saving or ending the job deletes the directory.
+- **A photo the device cannot keep.** A photo that cannot be written to its file, as on a full disk, or read back from it, as when the file is gone, fails on its row as `PhotoNotKept`, saying so, with "빼기"; a single photo offers its retake. Sending it again cannot help, so it offers no retry.
 - **Resume.** On the next open, the app reads the kept job back:
   - with photos unread, the job waits, and the home screen offers "읽던 사진 k장을 이어서 읽을까요?" with "이어서 읽기" and "버리기"; a dismissal decides nothing, and the bar offers it again;
   - "이어서 읽기" reads only the photos with no cards kept; a photo with its cards kept is never sent again;
@@ -53,6 +54,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - The cards read so far survive a closed app. A photo whose read was under way when the app closed has no cards kept, so it is read again on resume. If the function had already counted it, it counts again.
 - The import screen no longer asks on the system back, since leaving it loses nothing.
 - The state on the device carries a version, and a state the app cannot read is ignored as if none were kept.
+- A photo left out or replaced keeps its file until the job saves or ends, which deletes them all; the files are bounded by the job's life.
 - The bar is a second way into the import, beside the screen that started it. It is built from `photo_import`'s widget in `home/`, which reads `photoImportsProvider`.
 
 ## Signs the decision was wrong
