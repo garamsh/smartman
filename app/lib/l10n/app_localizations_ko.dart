@@ -424,7 +424,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days일';
+    return '$days일 연속';
   }
 
   @override

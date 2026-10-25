@@ -462,20 +462,22 @@ class _GradeChip extends StatelessWidget {
   }
 }
 
-/// Opens [card]'s whole front and back in a sheet, or a whole card's front
-/// with its blanks filled.
+/// Opens [card] whole in a sheet titled as the card: its front and back,
+/// each under a label of the same rank, or a whole card's front with its
+/// blanks filled.
 void _showWholeCard(BuildContext context, Card card) {
   final l10n = AppLocalizations.of(context);
   final isWhole = isWholeCard(card.front);
   showAppSheet<void>(
     context,
     builder: (context) => AppSheet(
-      title: isWhole ? l10n.wholeCard : l10n.cardFront,
+      title: l10n.wholeCard,
       content: isWhole
           ? WholeCardView(card.front, revealed: true, style: AppType.body)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                AppSectionLabel(l10n.cardFront),
                 ContentView(card.front, style: AppType.body),
                 const Divider(height: AppSpace.s32),
                 AppSectionLabel(l10n.cardBack),

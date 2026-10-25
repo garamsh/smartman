@@ -437,7 +437,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days d';
+    return '$days-day streak';
   }
 
   @override

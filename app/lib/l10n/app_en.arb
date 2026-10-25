@@ -111,7 +111,7 @@
   "studyComplete": "Done for today",
   "nothingToStudyToday": "No cards to study today",
   "completionMinutes": "{minutes} min",
-  "completionStreak": "{days} d",
+  "completionStreak": "{days}-day streak",
   "completionSemantics": "Know {know}, don't know {dontKnow}, {minutes} min, {days}-day streak",
   "studyOn": "Study",
   "noCardsLeft": "No more cards to study",
