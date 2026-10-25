@@ -1,6 +1,6 @@
 # ADR 0089: Import up to ten photos into one list, read two at a time, and state today's limit before reading
 
-> Status: accepted
+> Status: accepted; its 10-photo cap, its 2-at-a-time constant and its batch bound to the import screen superseded by ADR-0094
 > Date: 2026-10-20
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

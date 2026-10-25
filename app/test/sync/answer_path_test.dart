@@ -16,6 +16,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
+import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import 'fake_sync_server.dart';
 
@@ -59,6 +60,7 @@ void main() {
         server,
         themeStorage,
         null,
+        MemoryImportJobStore(),
         null,
         FakeReachability(),
         '1.0.0',
@@ -131,6 +133,7 @@ void main() {
           server,
           storage,
           null,
+          MemoryImportJobStore(),
           null,
           FakeReachability(),
           '1.0.0',
