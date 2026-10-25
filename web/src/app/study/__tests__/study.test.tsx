@@ -1239,7 +1239,10 @@ describe("the study page", () => {
       const user = userEvent.setup();
 
       expect(caption()).toBeInTheDocument();
-      expect(window.localStorage.getItem("studyCoachShown")).toBe("true");
+      // The flag is written by an effect after the render that shows the coach, so it is waited on.
+      await waitFor(() => {
+        expect(window.localStorage.getItem("studyCoachShown")).toBe("true");
+      });
       expect(announced()).toBe("사용 방법, 3단계 중 1단계. 알면 안다(→)를 눌러요");
       expect(caption()).toHaveTextContent("알면 안다(→)를 눌러요");
       expect(answerButton("모른다")).not.toBeInTheDocument();
