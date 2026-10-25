@@ -177,7 +177,6 @@ final class Completion {
     required this.dontKnowCount,
     required this.timeSpent,
     required this.streak,
-    required this.dailyMinutes,
   });
 
   /// Answers standing as each choice; a re-shown card counts each time.
@@ -189,9 +188,6 @@ final class Completion {
 
   /// Study days in a row with an answer, across every deck ([streak]).
   final int streak;
-
-  /// The daily study minutes the next day takes, as the session read them.
-  final int dailyMinutes;
 }
 
 /// An answer given in this session and the [review] that records it.
@@ -288,9 +284,6 @@ class StudySession extends ChangeNotifier {
   /// The study day the session opened in, which today's list reads.
   late StudyDay _day;
 
-  /// The daily study minutes as the session opened.
-  var _dailyMinutes = defaultDailyMinutes;
-
   /// The time of every stored answer given since [_openedDay], in any deck,
   /// for the streak.
   var _storedTimes = const <DateTime>[];
@@ -384,7 +377,6 @@ class StudySession extends ChangeNotifier {
         daysBefore: _daysBefore,
         offsetAt: _offsetAt,
       ),
-      dailyMinutes: _dailyMinutes,
     );
   }
 
@@ -513,7 +505,7 @@ class StudySession extends ChangeNotifier {
       final (read, states) = await readCards(decks, cards, _repository);
       final now = _clock();
       final start = studyDayStart(now, _offsetAt);
-      final (:day, :pace, due: _, started: _, :dailyMinutes) =
+      final (:day, :pace, due: _, started: _, dailyMinutes: _) =
           await readStudyDay(_repository, now, _offsetAt);
       final byId = {for (final card in read) card.id: card};
       final storedSince = await _repository.answersSince(start);
@@ -530,7 +522,6 @@ class StudySession extends ChangeNotifier {
       }
       _openedDay = start;
       _day = day;
-      _dailyMinutes = dailyMinutes;
       _storedTimes = [for (final stored in storedSince) stored.at];
       _daysBefore = await studyDaysBefore(
         start,

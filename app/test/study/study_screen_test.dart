@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
@@ -30,7 +31,6 @@ import 'package:smartman/study/src/today_overview.dart';
 
 import '../deck/whole_cards.dart';
 import 'fixtures.dart';
-import 'minutes_sheet.dart';
 import 'study_storage.dart';
 
 /// Schedules every review one day out, at once.
@@ -1328,39 +1328,27 @@ void main() {
   );
 
   testWidgets(
-    "the completion card's quiet line shows tomorrow's daily minutes, read as a change, and opens the sheet, then shows those saved",
+    'the completion card offers no change of the daily minutes, which settings holds',
     (tester) async {
-      final semantics = tester.ensureSemantics();
       final study = await _open(tester, ['a']);
       await study.know();
       expect(find.text('Done for today'), findsOneWidget);
-      // The session's deck stores 5 minutes.
-      expect(find.text('5 min again tomorrow · Change'), findsOneWidget);
-      final line = find.bySemanticsLabel('5 min again tomorrow, change');
-      expect(line, findsOneWidget);
 
-      await tester.tap(line);
-      await tester.pumpAndSettle();
-      await waitForPicker(tester);
-      await tester.tap(find.bySemanticsLabel('5 minutes a day, tap to type'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '30');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.bySemanticsLabel('30 min again tomorrow, change'),
-        findsOneWidget,
-      );
-      expect(
-        await tester.runAsync<int?>(
-          () => StudyRepository(study.db, newId: () => 'unused').dailyMinutes(),
-        ),
-        30,
-      );
-      semantics.dispose();
+      // The minutes' line was the card's one button labelled by hand; its
+      // other buttons take their labels from their text.
+      final labelled = find
+          .descendant(
+            of: find.byType(CompletionCard),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics && widget.properties.button == true,
+            ),
+          )
+          .evaluate()
+          .map((element) => (element.widget as Semantics).properties.label)
+          .nonNulls;
+      expect(labelled, isEmpty);
+      expect(find.textContaining('tomorrow'), findsNothing);
     },
   );
 

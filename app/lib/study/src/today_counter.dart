@@ -66,8 +66,8 @@ final class TodayUnavailable extends TodayCount {
 /// What [decks] hold for today, read through [ref]: their cards and the
 /// stored states of those reviewed, the study day, its [DayPlan] from today's
 /// list, the count of the cards left at the user's pace, and, across every
-/// deck, the reviews [due] as the day stood when it started, the cards
-/// [started] in it and the [dailyMinutes] ([readStudyDay]).
+/// deck, the reviews [due] as the day stood when it started and the cards
+/// [started] in it ([readStudyDay]).
 ///
 /// A failed read throws the [DeckFailure] or `StudyFailure` that reports it.
 Future<
@@ -79,7 +79,6 @@ Future<
     TodayCounted count,
     int due,
     int started,
-    int dailyMinutes,
   })
 >
 readToday(DeckSelection decks, WidgetRef ref) async {
@@ -89,7 +88,7 @@ readToday(DeckSelection decks, WidgetRef ref) async {
     ref.read(deckRepositoryProvider),
     repository,
   );
-  final (:day, :pace, :due, :started, :dailyMinutes) = await readStudyDay(
+  final (:day, :pace, :due, :started, dailyMinutes: _) = await readStudyDay(
     repository,
     ref.read(studyClockProvider)(),
     ref.read(studyZoneProvider),
@@ -115,7 +114,6 @@ readToday(DeckSelection decks, WidgetRef ref) async {
     count: count,
     due: due,
     started: started,
-    dailyMinutes: dailyMinutes,
   );
 }
 
