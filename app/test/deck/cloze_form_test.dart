@@ -229,7 +229,15 @@ void main() {
       expect(find.text('Blank 1: 서울은'), findsOneWidget);
 
       await tap(screens, find.text('Pick letters'));
-      expect(find.text('Choose the letters to blank'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'Choose the letters to blank',
+        ),
+        findsOneWidget,
+      );
       await screens.tap(find.text('서'));
       await screens.tap(find.text('울'));
       await screens.tap(find.text('Use these letters'));

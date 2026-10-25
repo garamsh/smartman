@@ -94,7 +94,12 @@ void main() {
 
       await screens.tap(find.text('Study'));
       expect(
-        find.text('How many minutes a day will you study?'),
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'How many minutes a day will you study?',
+        ),
         findsOneWidget,
       );
       expect(find.byType(StudyScreen), findsNothing);
