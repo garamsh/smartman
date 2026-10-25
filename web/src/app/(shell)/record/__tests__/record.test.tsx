@@ -150,6 +150,7 @@ describe("the record page", () => {
       postgrest.seed("reviews", answer("a1", "a", 300 * day), answer("a2", "a", ago * day));
       await render(RecordContent, {});
 
+      // A prefix: the label goes on with the other six weeks' counts, which this case leaves aside.
       expect(label("주별 익힌 카드")).toMatch(
         new RegExp(`^주별 익힌 카드, 7주 전부터 이번 주까지: ${first}, 1장,`),
       );
