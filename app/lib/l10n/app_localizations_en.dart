@@ -85,41 +85,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardKindCloze => 'Cloze';
 
   @override
-  String get clozeWordsHint => 'Tap the words to make blanks';
+  String get clozeInsertBlank => 'Insert blank';
 
   @override
-  String clozeWord(String word) {
-    return '$word';
+  String clozeRemoveBlank(String answer) {
+    return 'Undo blank, $answer';
   }
 
   @override
-  String clozeWordBlank(String word) {
-    return '$word, blank';
-  }
+  String get clozeEmptyBlank => 'Blank';
 
   @override
-  String get clozeBlankRequired => 'Choose at least one word as a blank';
+  String get clozeBlankRequired => 'Insert at least one blank';
 
   @override
   String get clozeBlankMarker =>
       '___ marks a blank, so the line can\'t contain it';
-
-  @override
-  String clozeBlankLine(int number, String answer) {
-    return 'Blank $number: $answer';
-  }
-
-  @override
-  String get clozePickLetters => 'Pick letters';
-
-  @override
-  String get clozeLettersTitle => 'Choose the letters to blank';
-
-  @override
-  String get clozeLettersBody => 'Tap the first letter, then the last';
-
-  @override
-  String get clozeLettersDone => 'Use these letters';
 
   @override
   String get cardKindTable => 'Table';

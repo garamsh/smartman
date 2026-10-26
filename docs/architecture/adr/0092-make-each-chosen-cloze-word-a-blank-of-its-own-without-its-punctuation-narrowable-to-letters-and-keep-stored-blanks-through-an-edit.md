@@ -1,6 +1,6 @@
 # ADR 0092: Make each chosen cloze word a blank of its own, without its punctuation, narrowable to letters, and keep stored blanks through an edit
 
-> Status: accepted
+> Status: accepted; its word chips, the blank list and "글자 고르기" superseded by ADR-0101
 > Date: 2026-10-21
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

@@ -83,40 +83,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cardKindCloze => '빈칸';
 
   @override
-  String get clozeWordsHint => '빈칸으로 할 낱말을 눌러요';
+  String get clozeInsertBlank => '빈칸 넣기';
 
   @override
-  String clozeWord(String word) {
-    return '$word';
+  String clozeRemoveBlank(String answer) {
+    return '빈칸 풀기, $answer';
   }
 
   @override
-  String clozeWordBlank(String word) {
-    return '$word, 빈칸';
-  }
+  String get clozeEmptyBlank => '빈칸';
 
   @override
-  String get clozeBlankRequired => '빈칸으로 할 낱말을 하나 이상 골라 주세요';
+  String get clozeBlankRequired => '빈칸을 하나 이상 넣어 주세요';
 
   @override
   String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
-
-  @override
-  String clozeBlankLine(int number, String answer) {
-    return '빈칸 $number: $answer';
-  }
-
-  @override
-  String get clozePickLetters => '글자 고르기';
-
-  @override
-  String get clozeLettersTitle => '빈칸으로 할 글자를 골라요';
-
-  @override
-  String get clozeLettersBody => '처음 글자와 끝 글자를 차례로 눌러요';
-
-  @override
-  String get clozeLettersDone => '이 글자로';
 
   @override
   String get cardKindTable => '표';
