@@ -202,7 +202,7 @@ void main() {
       final client = FakeExtractionClient();
       await pumpApp(tester, extraction: client, jobStore: store);
 
-      expect(find.text('Resume reading 1 photo?'), findsOneWidget);
+      expect(_shown('Resume reading 1 photo?'), findsOneWidget);
       expect(client.calls, isEmpty, reason: 'nothing read until asked');
       await tester.tap(find.text('Resume'));
       await tester.pumpAndSettle();
