@@ -12,7 +12,7 @@ import 'label_presets.dart';
 /// `조동`.
 const _labelWidth = 72.0;
 
-/// One sense of a basic card's back as the form edits it: its labels as
+/// One sense of a 뜻 목록 block as the editor edits it: its labels as
 /// typed, its meaning, and its examples, one per line (ADR 0100).
 class SenseDraft {
   SenseDraft([CardSense? sense])
@@ -46,10 +46,6 @@ class SenseDraft {
   /// Whether the meaning is empty, which saving refuses.
   bool get isBlank => meaning.text.trim().isEmpty;
 
-  /// Whether the sense has no label and no example, so a back of it alone
-  /// is plain text.
-  bool get isPlain => labels.isEmpty && examples.text.trim().isEmpty;
-
   /// The sense as saved: its labels, its meaning trimmed, and each non-empty
   /// line of its examples, trimmed.
   CardSense get sense => CardSense(
@@ -73,8 +69,8 @@ class SenseDraft {
       labels.map((label) => label.shown).join(' ');
 }
 
-/// A basic card's back: one meaning, or its senses, each with a label typed
-/// beside its meaning, and under them "뜻 추가". With more than one sense,
+/// A 뜻 목록 block's fields: one meaning, or its senses, each with a label
+/// typed beside its meaning, and under them "뜻 추가". With more than one sense,
 /// each moves up or down, or is deleted, by its buttons, which a screen
 /// reader reaches by name. With [showErrors], an empty meaning says so under
 /// it.
@@ -84,7 +80,7 @@ class SenseFields extends StatelessWidget {
     required this.senses,
     required this.showErrors,
     required this.onChanged,
-    this.meaningLabel,
+    required this.meaningLabel,
   });
 
   final List<SenseDraft> senses;
@@ -93,9 +89,9 @@ class SenseFields extends StatelessWidget {
   /// Called after every change to [senses], which this widget makes in place.
   final VoidCallback onChanged;
 
-  /// The label of the one meaning's field while there is one sense; "뒷면"
-  /// when null.
-  final String? meaningLabel;
+  /// The label of the one meaning's field while there is one sense: the
+  /// side's name.
+  final String meaningLabel;
 
   void _move(int from, int to) {
     senses.insert(to, senses.removeAt(from));
@@ -147,8 +143,8 @@ class SenseFields extends StatelessWidget {
 }
 
 /// One sense: its label field beside its meaning, and its examples when it
-/// has any. [number] is null while it is the back's one meaning, which reads
-/// as the back and has no buttons.
+/// has any. [number] is null while it is the block's one meaning, which
+/// reads as its side and has no buttons.
 class _SenseRow extends StatelessWidget {
   const _SenseRow({
     super.key,
@@ -159,7 +155,7 @@ class _SenseRow extends StatelessWidget {
     required this.onDown,
     required this.onDelete,
     required this.onChanged,
-    this.meaningLabel,
+    required this.meaningLabel,
   });
 
   final SenseDraft sense;
@@ -169,7 +165,7 @@ class _SenseRow extends StatelessWidget {
   final VoidCallback? onDown;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
-  final String? meaningLabel;
+  final String meaningLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +225,7 @@ class _SenseRow extends StatelessWidget {
             Expanded(
               child: AppTextField(
                 label: number == null
-                    ? meaningLabel ?? l10n.cardBack
+                    ? meaningLabel
                     : l10n.senseHeading(number),
                 controller: sense.meaning,
                 minLines: number == null ? 2 : 1,

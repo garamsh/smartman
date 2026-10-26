@@ -9,11 +9,11 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
 import 'audio_block.dart';
-import 'cloze_form.dart';
+import 'cloze_block.dart';
 import 'content.dart';
 import 'image_block.dart';
-import 'table_form.dart';
-import 'word_form.dart';
+import 'senses_block.dart';
+import 'table_block.dart';
 
 /// A side of a card, which a block list adds to.
 enum CardSide { front, back }
@@ -103,6 +103,9 @@ final class TextBlockDraft extends BlockDraft {
 
   final TextEditingController text;
 
+  /// The field's focus, which a new card's first block takes.
+  final focus = FocusNode();
+
   @override
   BlockType get type => BlockType.text;
 
@@ -113,7 +116,10 @@ final class TextBlockDraft extends BlockDraft {
   bool get isComplete => text.text.trim().isNotEmpty;
 
   @override
-  void dispose() => text.dispose();
+  void dispose() {
+    text.dispose();
+    focus.dispose();
+  }
 }
 
 /// A 뜻 목록 block: its senses, one empty meaning when new.
@@ -481,6 +487,7 @@ class _Block extends StatelessWidget {
         switch (block) {
           final TextBlockDraft draft => AppTextField(
             controller: draft.text,
+            focusNode: draft.focus,
             hint: l10n.blockTextDescription,
             minLines: 2,
             maxLines: null,

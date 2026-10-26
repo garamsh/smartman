@@ -358,14 +358,9 @@ void main() {
         await tapAndSettle(tester, find.text('Add card'));
         // With photo import, Add card asks how.
         await tapAndSettle(tester, find.text('Create by hand'));
-        await tester.enterText(
-          find.widgetWithText(AppTextField, 'Front'),
-          'Chat',
-        );
-        await tester.enterText(
-          find.widgetWithText(AppTextField, 'Back'),
-          'cat',
-        );
+        // A new card's two Text blocks, the front's and the back's.
+        await tester.enterText(find.byType(TextField).at(0), 'Chat');
+        await tester.enterText(find.byType(TextField).at(1), 'cat');
         await tapAndSettle(tester, find.text('Save'));
         // Back from the deck it opened, then to the deck list.
         await tester.pageBack();

@@ -16,7 +16,6 @@ export 'src/add_cards.dart'
         mergeBack;
 export 'src/audio_block.dart' show playAudio;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
-export 'src/card_kind.dart' show deckStorageKeys, deckStorageProvider;
 export 'src/card_key.dart' show CardKey;
 export 'src/card_list.dart'
     show CardBackRow, CardSplitRow, describeContent, spokenContent;
@@ -54,6 +53,7 @@ export 'src/failure.dart'
 export 'src/failure_message.dart'
     show describeFailure, describeProviderError, reportingFailure;
 export 'src/name_sheet.dart' show showNameSheet;
+export 'src/label_presets.dart' show deckStorageKeys, deckStorageProvider;
 export 'src/label_presets_screen.dart' show PartOfSpeechPresetsRow;
 export 'src/model.dart'
     show

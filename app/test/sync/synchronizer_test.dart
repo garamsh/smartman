@@ -678,7 +678,7 @@ void main() {
       await b.sync(_ada);
 
       final onB = (await b.deck.listCards(deck.id)).single;
-      expect((onB.template, onB.templateVersion), ('cloze', 1));
+      expect((onB.template, onB.templateVersion), ('free', 1));
     });
   });
 }

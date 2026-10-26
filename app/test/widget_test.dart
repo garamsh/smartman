@@ -126,6 +126,18 @@ void main() {
   Future<void> enterText(WidgetTester tester, String label, String text) =>
       tester.enterText(find.widgetWithText(AppTextField, label), text);
 
+  /// A new card's front field, its first Text block.
+  final front = find.byType(TextField).at(0);
+
+  /// A new card's back field, its back's Text block after the front's.
+  final back = find.byType(TextField).at(1);
+
+  Future<void> enterFront(WidgetTester tester, String text) =>
+      tester.enterText(front, text);
+
+  Future<void> enterBack(WidgetTester tester, String text) =>
+      tester.enterText(back, text);
+
   /// Shows the tab named [label].
   Future<void> showTab(WidgetTester tester, String label) async {
     await tester.tap(find.text(label));
@@ -156,8 +168,8 @@ void main() {
   Future<void> addCard(WidgetTester tester, String front, String back) async {
     await tester.tap(find.text('Add card'));
     await tester.pumpAndSettle();
-    await enterText(tester, 'Front', front);
-    await enterText(tester, 'Back', back);
+    await enterFront(tester, front);
+    await enterBack(tester, back);
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
   }
@@ -394,12 +406,18 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    EditableText field(WidgetTester tester, String label) => tester.widget(
-      find.descendant(
-        of: find.widgetWithText(AppTextField, label),
-        matching: find.byType(EditableText),
-      ),
-    );
+    /// Adds a Meanings block to the back, whose one meaning has a label
+    /// field.
+    Future<void> addMeanings(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Add to back'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add to back'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Meanings').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.widgetWithText(TextField, 'Label'));
+      await tester.pumpAndSettle();
+    }
 
     /// The action key the platform was last asked to show.
     String? actionKey(WidgetTester tester) {
@@ -415,19 +433,32 @@ void main() {
       'closes on a tap outside a field, while a tap on another field or a button does what it did',
       (tester) async {
         await openEditor(tester);
-        await tester.tap(find.widgetWithText(AppTextField, 'Front'));
+        await tester.tap(front);
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
 
-        await tester.tap(find.widgetWithText(AppTextField, 'Back'));
+        await tester.tap(back);
         await tester.pumpAndSettle();
-        expect(field(tester, 'Back').focusNode.hasFocus, isTrue);
+        expect(
+          tester
+              .widget<EditableText>(
+                find.descendant(of: back, matching: find.byType(EditableText)),
+              )
+              .focusNode
+              .hasFocus,
+          isTrue,
+        );
         expect(tester.testTextInput.isVisible, isTrue);
 
-        await tester.tap(find.text('Add meaning'));
+        await tester.tap(find.text('Add to back'));
         await tester.pumpAndSettle();
-        expect(find.widgetWithText(AppTextField, 'Meaning 2'), findsOneWidget);
+        expect(find.text('Meanings'), findsOneWidget, reason: 'its sheet');
+        await tester.tap(find.text('Meanings'));
+        await tester.pumpAndSettle();
 
+        await tester.tap(back);
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
         // The deck's name over the form handles no tap.
         await tester.tap(find.text('French'));
         await tester.pumpAndSettle();
@@ -441,6 +472,7 @@ void main() {
       'closes on a drag that scrolls the form, and stays up for a drag across the label strip',
       (tester) async {
         await openEditor(tester);
+        await addMeanings(tester);
         await tester.tap(find.widgetWithText(TextField, 'Label'));
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
@@ -453,7 +485,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
 
-        await tester.drag(find.text('French'), const Offset(0, -200));
+        // From the Meanings block's heading, which handles no drag.
+        await tester.drag(find.text('Meanings'), const Offset(0, 200));
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isFalse);
         await unmountApp(tester);
@@ -464,10 +497,11 @@ void main() {
       "keeps a multi-line field's newline key, and a single-line field's action closes it",
       (tester) async {
         await openEditor(tester);
-        await tester.tap(find.widgetWithText(AppTextField, 'Front'));
+        await tester.tap(front);
         await tester.pumpAndSettle();
         expect(actionKey(tester), 'TextInputAction.newline');
 
+        await addMeanings(tester);
         await tester.tap(find.widgetWithText(TextField, 'Label'));
         await tester.pumpAndSettle();
         expect(actionKey(tester), 'TextInputAction.done');
@@ -552,8 +586,8 @@ void main() {
       // tab shows the day.
       await tester.tap(find.text('Add card'));
       await tester.pumpAndSettle();
-      await enterText(tester, 'Front', 'Chat');
-      await enterText(tester, 'Back', 'cat');
+      await enterFront(tester, 'Chat');
+      await enterBack(tester, 'cat');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       await tester.pageBack();
@@ -836,10 +870,10 @@ void main() {
 
         await tester.tap(find.text('Add card'));
         await tester.pumpAndSettle();
-        await enterText(tester, 'Front', 'Chien');
+        await enterFront(tester, 'Chien');
         await meetsGuidelines();
-        await enterText(tester, 'Front', 'chat');
-        await enterText(tester, 'Back', 'chat (talk)');
+        await enterFront(tester, 'chat');
+        await enterBack(tester, 'chat (talk)');
         await tester.tap(find.text('Save'));
         await tester.pumpAndSettle();
         expect(shownText('This deck already has this card'), findsOneWidget);

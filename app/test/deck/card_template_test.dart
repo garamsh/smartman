@@ -5,7 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/card_kind.dart';
+import 'package:smartman/deck/src/card_template.dart';
 
 /// A card's stored template, its version, and its sides as stored.
 typedef _Stored = ({
@@ -74,68 +74,66 @@ void main() {
         .singleWhere((card) => card.id.value == id);
   }
 
-  test('a card added records the template of the kind it was written in, at '
-      'v1, and the one its front derives when none is named', () async {
-    final flip = saved(
-      await repository.addCard(
-        deck.id,
-        front: [const TextContent('chat')],
-        back: [const TextContent('cat')],
-        kind: CardKind.basic,
-      ),
-    );
-    final cloze = saved(
-      await repository.addCard(
-        deck.id,
-        front: [
-          const ClozeContent('___ is in France', ['Paris']),
+  test(
+    'every card added or edited records the free template at v1, whatever '
+    'its blocks, an edit of a card of an earlier template included',
+    () async {
+      final text = saved(
+        await repository.addCard(
+          deck.id,
+          front: [const TextContent('chat')],
+          back: [const TextContent('cat')],
+        ),
+      );
+      final cloze = saved(
+        await repository.addCard(
+          deck.id,
+          front: [
+            const ClozeContent('___ is in France', ['Paris']),
+          ],
+          back: const [],
+        ),
+      );
+      final table = saved(
+        await repository.addCard(
+          deck.id,
+          front: [
+            const TextContent('Capitals'),
+            const TableContent(
+              columns: ['Capital'],
+              rows: [
+                ['Paris'],
+              ],
+              blanks: [(row: 0, column: 0)],
+            ),
+          ],
+          back: const [],
+        ),
+      );
+      expect(
+        [
+          for (final card in [text, cloze, table])
+            (
+              (await stored(card.id.value)).template,
+              (await stored(card.id.value)).templateVersion,
+            ),
         ],
-        back: [const TextContent('Paris is in France')],
-        kind: CardKind.cloze,
-      ),
-    );
-    final derived = saved(
-      await repository.addCard(
-        deck.id,
-        front: [
-          const TextContent('Capitals'),
-          const TableContent(
-            columns: ['Capital'],
-            rows: [
-              ['Paris'],
-            ],
-            blanks: [(row: 0, column: 0)],
-          ),
-        ],
-        back: [const TextContent('Capitals\nCapital\nParis')],
-      ),
-    );
+        [('free', 1), ('free', 1), ('free', 1)],
+      );
+      expect((text.template, text.templateVersion), ('free', 1));
 
-    expect(
-      [
-        for (final card in [flip, cloze, derived])
-          (
-            (await stored(card.id.value)).template,
-            (await stored(card.id.value)).templateVersion,
-          ),
-      ],
-      [('flip', 1), ('cloze', 1), ('table', 1)],
-    );
-    expect((flip.template, flip.templateVersion), ('flip', 1));
-
-    // The kind the editor names is recorded even where the front would
-    // derive another, as a template that only seeds the editor may.
-    final named = saved(
-      await repository.addCard(
-        deck.id,
-        front: [const TextContent('Capitals')],
-        back: [const TextContent('Paris')],
-        kind: CardKind.table,
-      ),
-    );
-    expect(derivedKind(named.front), CardKind.basic);
-    expect((await stored(named.id.value)).template, 'table');
-  });
+      // A card an earlier build wrote as 앞뒤.
+      await (db.update(db.cards)..where((row) => row.id.equals(text.id.value)))
+          .write(const CardsCompanion(template: Value('flip')));
+      final flip = (await repository.listCards(deck.id))
+          .singleWhere((card) => card.id == text.id);
+      expect(flip.template, 'flip', reason: 'the setup: an earlier template');
+      saved(
+        await repository.editCard(flip, front: flip.front, back: flip.back),
+      );
+      expect((await stored(text.id.value)).template, 'free');
+    },
+  );
 
   test('every block written carries v1 and an id, and keeps its id through an '
       'edit of its content', () async {
@@ -147,7 +145,6 @@ void main() {
           const SensesContent([CardSense(meaning: 'cat')]),
           const TextContent('extras'),
         ],
-        kind: CardKind.basic,
       ),
     );
     final before = await stored(card.id.value);
@@ -169,7 +166,6 @@ void main() {
           const SensesContent([CardSense(meaning: 'she-cat')]),
           const TextContent('extras'),
         ],
-        kind: CardKind.basic,
       ),
     );
     final after = await stored(card.id.value);
@@ -186,8 +182,8 @@ void main() {
     );
   });
 
-  test('a card from before templates is read by derivation and gets its '
-      'template, and ids on its blocks, on its next write', () async {
+  test('a card from before templates is editable and gets the free template, '
+      'and ids on its blocks, on its next write', () async {
     final card = await legacy(
       'old',
       '[{"type":"cloze","payload":{"text":"___ is in France",'
@@ -195,7 +191,7 @@ void main() {
       '[{"type":"text","payload":{"text":"Paris is in France"}}]',
     );
     expect((card.template, card.templateVersion), (null, null));
-    expect(kindOf(card), CardKind.cloze, reason: 'derived from its front');
+    expect(canEdit(card), isTrue);
     expect(
       (await stored('old')).template,
       isNull,
@@ -204,7 +200,7 @@ void main() {
 
     saved(await repository.editCard(card, front: card.front, back: card.back));
     final after = await stored('old');
-    expect((after.template, after.templateVersion), ('cloze', 1));
+    expect((after.template, after.templateVersion), ('free', 1));
     expect((after.front.single! as Map)['v'], 1);
     expect((after.front.single! as Map)['id'], isA<String>());
   });
@@ -233,9 +229,9 @@ void main() {
             ),
           );
       final card = (await repository.listCards(deck.id)).single;
-      expect(kindOf(card), isNull, reason: 'read-only in the editor');
+      expect(canEdit(card), isFalse, reason: 'read-only in the editor');
       expect(
-        kindOf(
+        canEdit(
           Card(
             id: card.id,
             deckId: card.deckId,
@@ -249,9 +245,30 @@ void main() {
             templateVersion: 2,
           ),
         ),
-        isNull,
+        isFalse,
         reason: 'a known template at a later version is read-only too',
       );
+      // Control: every template a build of this app wrote, at v1, and none.
+      for (final template in ['flip', 'cloze', 'table', 'free', null]) {
+        expect(
+          canEdit(
+            Card(
+              id: card.id,
+              deckId: card.deckId,
+              front: card.front,
+              back: card.back,
+              cardKey: card.cardKey,
+              source: card.source,
+              createdAt: card.createdAt,
+              updatedAt: card.updatedAt,
+              template: template,
+              templateVersion: template == null ? null : 1,
+            ),
+          ),
+          isTrue,
+          reason: '$template',
+        );
+      }
 
       // Photo import merges a back into it: the only write the app makes to
       // such a card.
@@ -273,23 +290,54 @@ void main() {
     },
   );
 
-  test('a photo-imported card is stored with v1 on every block and the '
-      'template its front derives', () async {
+  test('a merged back makes a card of an earlier template free, as any write '
+      'of it does', () async {
+    final card = saved(
+      await repository.addCard(
+        deck.id,
+        front: [const TextContent('chat')],
+        back: [const TextContent('cat')],
+      ),
+    );
+    await (db.update(db.cards)..where((row) => row.id.equals(card.id.value)))
+        .write(const CardsCompanion(template: Value('flip')));
     await repository.addCards(AddToDeck(deck.id), [
       const IncomingCard(
-        front: [
-          ClozeContent('___ is in France', ['Paris']),
-        ],
-        back: [TextContent('Paris is in France')],
+        front: [TextContent('chat')],
+        back: [TextContent('a cat')],
         onDuplicate: DuplicateChoice.mergeBack,
       ),
     ]);
-    final row = await db.select(db.cards).getSingle();
-    expect((row.template, row.templateVersion), ('cloze', 1));
-    for (final side in [row.front, row.back]) {
-      expect(side, contains('"v":1'));
-      for (final block in jsonDecode(side) as List) {
-        expect(block['v'], 1, reason: side);
+    final after = await stored(card.id.value);
+    expect(after.back, hasLength(2), reason: 'the setup: the back merged');
+    expect((after.template, after.templateVersion), ('free', 1));
+  });
+
+  test('a photo-imported card and a copied one are stored with v1 on every '
+      'block and the free template', () async {
+    for (final source in [
+      const FromPhoto(),
+      FromCopy(deck.id, owner: 'owner'),
+    ]) {
+      await repository.addCards(AddToDeck(deck.id), source: source, [
+        const IncomingCard(
+          front: [
+            ClozeContent('___ is in France', ['Paris']),
+          ],
+          back: [TextContent('Paris is in France')],
+          onDuplicate: DuplicateChoice.addNew,
+        ),
+      ]);
+    }
+    final rows = await db.select(db.cards).get();
+    expect([for (final row in rows) row.source], ['import', 'copy']);
+    for (final row in rows) {
+      expect((row.template, row.templateVersion), ('free', 1));
+      for (final side in [row.front, row.back]) {
+        expect(side, contains('"v":1'));
+        for (final block in jsonDecode(side) as List) {
+          expect(block['v'], 1, reason: side);
+        }
       }
     }
   });

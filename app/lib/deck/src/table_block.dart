@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'cloze_form.dart';
+import 'cloze_block.dart';
 import 'content.dart';
 
-/// A body cell as the table form edits it: its field's controller, which
+/// A body cell as a 표 block edits it: its field's controller, which
 /// draws each span as a block in the text, and the spans, kept through an
 /// edit as a cloze line's blanks are (ADR 0110).
 class TableCellDraft {
@@ -56,7 +56,7 @@ class TableCellDraft {
   void dispose() => controller.dispose();
 }
 
-/// A table as the table form edits it: its column headers, its rows of
+/// A table as a 표 block edits it: its column headers, its rows of
 /// cells, each as many as there are columns and starting with the row's
 /// header, its whole-cell blanks, in the order they were chosen, and each
 /// cell's spans.
@@ -238,7 +238,7 @@ typedef _Cell = ({int row, int column});
 /// What "지우기" removes: the selected cell's row or its column.
 enum _Remove { row, column }
 
-/// The table form: a toolbar over the table, "행 추가", "열 추가", "빈칸" and
+/// A 표 block's fields: a toolbar over the table, "행 추가", "열 추가", "빈칸" and
 /// "지우기", which act on the selected cell, and the table in a grid that
 /// scrolls sideways, each header and cell edited in place, a whole blank
 /// tinted `brandTint` and a span a block on it in its cell's text. A tap on a

@@ -360,7 +360,6 @@ void main() {
         ],
       );
       await screens.push((deck) => CardEditorScreen(deck: deck));
-      await screens.tap(find.text('Free'));
       await fillText(tester);
       await tester.ensureVisible(find.text('Add to front'));
       await screens.tap(find.text('Add to front'));
@@ -548,7 +547,6 @@ void main() {
         ],
       );
       await screens.push((deck) => CardEditorScreen(deck: deck));
-      await screens.tap(find.text('Free'));
       for (final (index, text) in ['front', 'back'].indexed) {
         await tester.enterText(find.byType(TextField).at(index), text);
       }
@@ -577,7 +575,6 @@ void main() {
           ],
         );
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await screens.tap(find.text('Free'));
         await fillText(tester);
         await tester.ensureVisible(find.text('Add to front'));
         await screens.tap(find.text('Add to front'));
@@ -603,7 +600,6 @@ void main() {
           ],
         );
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await screens.tap(find.text('Free'));
         await fillText(tester);
         await tester.ensureVisible(find.text('Add to front'));
         await screens.tap(find.text('Add to front'));

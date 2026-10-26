@@ -6,7 +6,7 @@ import '../../database/database.dart';
 import '../../media/media.dart';
 import 'add_cards.dart';
 import 'card_key.dart';
-import 'card_kind.dart';
+import 'card_template.dart';
 import 'content.dart';
 import 'failure.dart';
 import 'model.dart';
@@ -246,14 +246,13 @@ class DeckRepository {
     return (await query.get()).map(_toCard).toList();
   });
 
-  /// Adds a manual card, recording [kind]'s template, or the one its front
-  /// derives when [kind] is null. A card in the same deck with an equal key
-  /// blocks the save unless [allowDuplicate] is set.
+  /// Adds a manual card, of the template every card is written in. A card in
+  /// the same deck with an equal key blocks the save unless [allowDuplicate]
+  /// is set.
   Future<SaveCardResult> addCard(
     DeckId deckId, {
     required List<Content> front,
     required List<Content> back,
-    CardKind? kind,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -273,7 +272,7 @@ class DeckRepository {
           back: encodeContent(_withIds(back, const [])),
           cardKey: key.value,
           source: CardSource.manual.name,
-          template: (kind ?? derivedKind(front)).template,
+          template: freeTemplate,
           templateVersion: cardTemplateVersion,
           createdAt: now,
           updatedAt: now,
@@ -285,15 +284,14 @@ class DeckRepository {
     );
   }
 
-  /// Replaces [card]'s front and back, recording [kind]'s template, or the
-  /// card's own when [kind] is null. Another card in the same deck with an
-  /// equal key blocks the save unless [allowDuplicate] is set. Content that
-  /// cannot be read back is not stored: the save fails as [UnreadableCard].
+  /// Replaces [card]'s front and back, recording the template every card is
+  /// written in. Another card in the same deck with an equal key blocks the
+  /// save unless [allowDuplicate] is set. Content that cannot be read back is
+  /// not stored: the save fails as [UnreadableCard].
   Future<SaveCardResult> editCard(
     Card card, {
     required List<Content> front,
     required List<Content> back,
-    CardKind? kind,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -309,7 +307,6 @@ class DeckRepository {
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).getSingle();
         final now = _clock();
-        final (template, templateVersion) = _templateFor(card, kind);
         await (_db.update(
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).write(
@@ -317,8 +314,8 @@ class DeckRepository {
             front: Value(encodeContent(_withIds(front, card.front))),
             back: Value(encodeContent(_withIds(back, card.back))),
             cardKey: Value(key.value),
-            template: Value(template),
-            templateVersion: Value(templateVersion),
+            template: const Value(freeTemplate),
+            templateVersion: const Value(cardTemplateVersion),
             updatedAt: Value(now),
             dirty: const Value(true),
           ),
@@ -430,7 +427,7 @@ class DeckRepository {
                       front: encodeContent(_withIds(front, const [])),
                       back: encodeContent(_withIds(back, const [])),
                       cardKey: key.value,
-                      template: derivedKind(front).template,
+                      template: freeTemplate,
                       templateVersion: cardTemplateVersion,
                       source: switch (source) {
                         FromPhoto() => CardSource.import.name,
@@ -454,8 +451,8 @@ class DeckRepository {
                 )..where((row) => row.id.equals(existing.id.value))).write(
                   CardsCompanion(
                     back: Value(encodeContent(_withIds(back, existing.back))),
-                    template: Value(_templateFor(existing, null).$1),
-                    templateVersion: Value(_templateFor(existing, null).$2),
+                    template: Value(_mergedTemplate(existing).$1),
+                    templateVersion: Value(_mergedTemplate(existing).$2),
                     updatedAt: Value(_clock()),
                     dirty: const Value(true),
                   ),
@@ -534,16 +531,12 @@ class DeckRepository {
     ];
   }
 
-  /// The template and version a write of [card] records: [kind]'s when the
-  /// editor names one; otherwise the card's own, kept as it is, a template
-  /// this build does not know included; or, when it records none yet, the
-  /// one its front derives, filled in on this write (ADR 0106).
-  static (String, int?) _templateFor(Card card, CardKind? kind) =>
-      switch ((kind, card.template)) {
-        (final kind?, _) => (kind.template, cardTemplateVersion),
-        (null, final template?) => (template, card.templateVersion),
-        (null, null) => (derivedKind(card.front).template, cardTemplateVersion),
-      };
+  /// The template and version a merged back records on [card]: the one every
+  /// card is written in, or the card's own when this build cannot edit it,
+  /// so a later build's template is kept (ADR 0106, ADR 0114).
+  static (String?, int?) _mergedTemplate(Card card) => canEdit(card)
+      ? (freeTemplate, cardTemplateVersion)
+      : (card.template, card.templateVersion);
 
   /// One lookup on the `(deck_id, card_key)` index.
   Future<Card?> _findByKey(DeckId deckId, CardKey key, {CardId? except}) async {
