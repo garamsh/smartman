@@ -407,6 +407,83 @@ void main() {
             contains(photo(third)),
           );
         });
+
+        test('an edit releases what the stored card held, not what the given copy holds', () async {
+          final deck = await repository.createDeck('French');
+          final image = await media.addImage(preparedImage(1));
+          final stale = _saved(
+            await repository.addCard(
+              deck.id,
+              front: _text('no photo yet'),
+              back: _text('back'),
+            ),
+          );
+          // Another writer, as sync would, gives the stored card a photo.
+          await repository.editCard(
+            stale,
+            front: [const TextContent('a photo'), photo(image)],
+            back: stale.back,
+          );
+          expect(
+            (await repository.listCards(deck.id)).single.front,
+            contains(photo(image)),
+          );
+
+          await repository.editCard(
+            stale,
+            front: _text('no photo'),
+            back: stale.back,
+          );
+
+          expect(await releasedIds(), [image.value]);
+        });
+
+        test(
+          'shared by two cards is kept until the last of them lets it go',
+          () async {
+            final french = await repository.createDeck('French');
+            final spanish = await repository.createDeck('Spanish');
+            final shared = await media.addImage(preparedImage(1));
+            final first = await cardWith(french, shared, 'one');
+            final copy = await cardWith(french, shared, 'copy');
+            final other = await cardWith(spanish, shared, 'other');
+
+            await repository.editCard(
+              first,
+              front: _text('no photo'),
+              back: first.back,
+            );
+            await repository.deleteCard(copy.id);
+            await repository.deleteDeck(french.id);
+            expect(
+              await releasedIds(),
+              isEmpty,
+              reason: 'the Spanish card holds it',
+            );
+
+            await repository.deleteCard(other.id);
+            expect(await releasedIds(), [shared.value]);
+          },
+        );
+
+        test("equal to a deck's image is kept until both let it go", () async {
+          final french = await repository.createDeck('French');
+          final spanish = await repository.createDeck('Spanish');
+          final first = await media.addImage(preparedImage(1));
+          final second = await media.addImage(preparedImage(2));
+          await repository.setImage(french.id, first);
+          final frenchCard = await cardWith(french, first, 'one');
+          await repository.setImage(spanish.id, second);
+          final spanishCard = await cardWith(spanish, second, 'two');
+
+          await repository.deleteCard(frenchCard.id);
+          await repository.setImage(spanish.id, null);
+          expect(await releasedIds(), isEmpty, reason: 'each is still held');
+
+          await repository.setImage(french.id, null);
+          await repository.deleteCard(spanishCard.id);
+          expect(await releasedIds(), [first.value, second.value]);
+        });
       });
     });
 
