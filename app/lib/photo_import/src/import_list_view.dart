@@ -10,7 +10,7 @@ import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'card_edit_sheet.dart';
 import 'import_list.dart';
-import 'photo.dart';
+import 'photo_viewer.dart';
 
 /// The cards made from the photo, as one list in sections by topic: each row
 /// included or left out by its check or a swipe left, and edited in a sheet
@@ -36,7 +36,7 @@ class ImportListView extends StatefulWidget {
   final ImportList list;
 
   /// The photos the rows come from, in the list's order.
-  final List<JpegPhoto> photos;
+  final List<ImageProvider> photos;
   final List<Deck> decks;
 
   /// The deck the cards go into; null for a new deck.
@@ -176,7 +176,7 @@ class _ImportListViewState extends State<ImportListView> {
                   _list.allVocabulary
                       ? l10n.importTitleWords(rows)
                       : l10n.importTitleCards(rows),
-                  style: AppType.display.copyWith(color: colors.ink),
+                  style: AppType.title.copyWith(color: colors.ink),
                 ),
               ),
               _DeckLine(
@@ -190,9 +190,7 @@ class _ImportListViewState extends State<ImportListView> {
                   const SizedBox(height: AppSpace.s28),
                   _PhotoHeader(
                     number: photo + 1,
-                    photo: photo < widget.photos.length
-                        ? widget.photos[photo]
-                        : null,
+                    photos: widget.photos,
                     rows: _list
                         .sectionsOf(photo)
                         .fold(
@@ -730,14 +728,16 @@ class _Check extends StatelessWidget {
 class _PhotoHeader extends StatelessWidget {
   const _PhotoHeader({
     required this.number,
-    required this.photo,
+    required this.photos,
     required this.rows,
     required this.expanded,
     required this.onToggle,
   });
 
   final int number;
-  final JpegPhoto? photo;
+
+  /// Every photo of the import in pick order; this group's is [number]'s.
+  final List<ImageProvider> photos;
   final int rows;
   final bool expanded;
   final VoidCallback onToggle;
@@ -746,8 +746,7 @@ class _PhotoHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final photo = this.photo;
-    return Semantics(
+    final header = Semantics(
       header: true,
       button: true,
       expanded: expanded,
@@ -762,16 +761,6 @@ class _PhotoHeader extends StatelessWidget {
           child: Row(
             spacing: AppSpace.s12,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.button / 2),
-                child: SizedBox(
-                  width: 40,
-                  height: 52,
-                  child: photo == null
-                      ? ColoredBox(color: colors.hairline)
-                      : Image.memory(photo.bytes, fit: BoxFit.cover),
-                ),
-              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,6 +785,18 @@ class _PhotoHeader extends StatelessWidget {
           ),
         ),
       ),
+    );
+    return Row(
+      spacing: AppSpace.s8,
+      children: [
+        PhotoThumbnail(
+          photos: photos,
+          index: number - 1,
+          width: 48,
+          height: 56,
+        ),
+        Expanded(child: header),
+      ],
     );
   }
 }

@@ -40,15 +40,21 @@ final class AccountSuspendedFailure extends PhotoImportFailure {
   String toString() => 'AccountSuspendedFailure';
 }
 
-/// The user has made today's extractions (`429`): [dailyLimit] photos a day
-/// on the user's plan.
-final class DailyLimitReached extends PhotoImportFailure {
-  const DailyLimitReached({required this.dailyLimit});
+/// The period a plan's photo limit counts over: a calendar month or a day in
+/// Asia/Seoul (ADR 0097).
+enum LimitPeriod { month, day }
 
-  final int dailyLimit;
+/// The user has made the period's extractions (`429`): [limit] photos a
+/// [period] on the user's plan.
+final class PhotoLimitReached extends PhotoImportFailure {
+  const PhotoLimitReached({required this.limit, required this.period});
+
+  final int limit;
+
+  final LimitPeriod period;
 
   @override
-  String toString() => 'DailyLimitReached($dailyLimit)';
+  String toString() => 'PhotoLimitReached($limit a ${period.name})';
 }
 
 /// The model failed or answered invalidly twice (`502`).
@@ -86,6 +92,17 @@ final class PhotoUnreadable extends PhotoImportFailure {
 
   @override
   String toString() => 'PhotoUnreadable: $cause';
+}
+
+/// A photo of a job could not be written to the device, as on a full disk,
+/// or read back from it, as when its file is gone.
+final class PhotoNotKept extends PhotoImportFailure {
+  const PhotoNotKept(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'PhotoNotKept: $cause';
 }
 
 /// The user, or a restriction, has not let the app use the camera or the

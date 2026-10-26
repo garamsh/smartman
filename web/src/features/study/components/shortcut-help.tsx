@@ -13,7 +13,7 @@ export const shortcuts = [
   { keys: ["?"], action: "단축키 보기" },
 ] as const;
 
-/** The list of keyboard shortcuts, over the screen until it is closed. */
+/** The list of keyboard shortcuts, over the screen until "닫기", Esc or a click outside it closes it. */
 export function ShortcutHelp({ onClose }: { onClose: () => void }) {
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -21,7 +21,12 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-shadow/40 px-4">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-shadow/40 px-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"

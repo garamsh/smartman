@@ -3,7 +3,10 @@
 @Timeout.none
 library;
 
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/account.dart';
@@ -14,6 +17,7 @@ import 'package:smartman/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../media/fakes.dart';
 import 'bounded_auth.dart';
 import 'device.dart';
 
@@ -110,6 +114,86 @@ void main() {
     expect(await b.deckNames(), ['French']);
     final cards = await b.deck.listCards(deck.id);
     expect(cards.map((card) => plainText(card.front)), ['chat']);
+  }, skip: skip);
+
+  test("a deck's appearance set on A reaches B, and a deck without one stays without", () async {
+    final french = await a.deck.createDeck('French');
+    final spanish = await a.deck.createDeck('Spanish');
+    await a.deck.setAppearance(french.id, DeckIcon.book, DeckColor.violet);
+
+    await a.sync(account);
+    await b.sync(account);
+
+    final onB = await b.deck.getDeck(french.id);
+    expect((onB.icon, onB.color), (DeckIcon.book, DeckColor.violet));
+    final plain = await b.deck.getDeck(spanish.id);
+    expect((plain.icon, plain.color), (null, null));
+  }, skip: skip);
+
+  test("a deck's image set on A reaches B as its media id, and so does its removal", () async {
+    final deck = await a.deck.createDeck('French');
+    final image = await a.media.addImage(preparedImage(1));
+    await a.deck.setImage(deck.id, image);
+
+    await a.sync(account);
+    await b.sync(account);
+    expect((await b.deck.getDeck(deck.id)).image, image);
+
+    // A later edit, so it wins over the row both devices hold.
+    a.now = a.now.add(const Duration(minutes: 1));
+    await a.deck.setImage(deck.id, null);
+    await a.sync(account);
+    await b.sync(account);
+    expect((await b.deck.getDeck(deck.id)).image, isNull);
+  }, skip: skip);
+
+  test("a card's template reaches B, and a newer build's template and blocks come through unchanged", () async {
+    final deck = await a.deck.createDeck('French');
+    await a.deck.addCard(
+      deck.id,
+      front: [
+        const ClozeContent('___ is in France', ['Paris']),
+      ],
+      back: _text('Paris is in France'),
+    );
+    // A card as a newer build writes it: a template and block versions
+    // this build does not know.
+    final front = [
+      {
+        'type': 'image',
+        'v': 3,
+        'id': 'img',
+        'payload': {'media': 'm1'},
+        'boxes': [1, 2],
+      },
+    ];
+    await a.db
+        .into(a.db.cards)
+        .insert(
+          CardsCompanion.insert(
+            id: const Uuid().v4(),
+            deckId: deck.id.value,
+            front: jsonEncode(front),
+            back: '[{"type":"text","v":1,"payload":{"text":"cat"}}]',
+            cardKey: 'image',
+            source: 'manual',
+            template: const Value('image_occlusion'),
+            templateVersion: const Value(2),
+            createdAt: a.now,
+            updatedAt: a.now,
+          ),
+        );
+
+    await a.sync(account);
+    await b.sync(account);
+
+    final onB = {
+      for (final row in await b.db.select(b.db.cards).get())
+        row.template: (row.templateVersion, jsonDecode(row.front)),
+    };
+    expect(onB['cloze']?.$1, 1);
+    expect(onB['image_occlusion']?.$1, 2);
+    expect(onB['image_occlusion']?.$2, front, reason: 'kept as written');
   }, skip: skip);
 
   test('an edit conflict keeps the later edit on both devices', () async {

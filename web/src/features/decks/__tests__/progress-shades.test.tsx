@@ -1,0 +1,99 @@
+import { render, screen, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import { uuidOf } from "@/testing/library";
+
+import { DeckList } from "../components/deck-list";
+import { parseDeckId } from "../library";
+
+describe("a deck row's progress bar", () => {
+  it("draws mastered in ink and learning in ink at 45%, with no gap between the shares, as the phone does", () => {
+    const id = parseDeckId(uuidOf("d-fr"));
+    if (!id) throw new Error("the fixed id is a uuid");
+    render(
+      <DeckList
+        rows={[
+          {
+            deck: { id, name: "French", public: false },
+            cards: 4,
+            today: 0,
+            mastered: 1,
+            learning: 2,
+          },
+        ]}
+      />,
+    );
+
+    // A row's name carries its counts after the deck's name, so its start is matched.
+    const row = screen.getByRole("link", { name: /^French/ });
+    const share = (width: string) =>
+      Array.from(row.querySelectorAll<HTMLElement>("span[style]")).find(
+        (span) => span.style.width === width,
+      );
+    const mastered = share("25%");
+    const learning = share("50%");
+    expect(mastered?.className.split(" ")).toEqual(["bg-ink"]);
+    expect(learning?.className.split(" ")).toEqual(["bg-ink/45"]);
+    // The two shares sit side by side in one track, with nothing between them.
+    expect(learning?.parentElement).toBe(mastered?.parentElement);
+    expect(learning?.parentElement?.className.split(" ")).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/^gap-/)]),
+    );
+  });
+});
+
+describe("a deck row's line", () => {
+  const french = parseDeckId(uuidOf("d-fr"));
+  const empty = parseDeckId(uuidOf("d-empty"));
+  if (!french || !empty) throw new Error("the fixed ids are uuids");
+  const rows = [
+    {
+      deck: { id: french, name: "French", public: false },
+      cards: 4,
+      today: 2,
+      mastered: 1,
+      learning: 2,
+    },
+    {
+      deck: { id: empty, name: "Empty", public: false },
+      cards: 0,
+      today: 0,
+      mastered: 0,
+      learning: 0,
+    },
+  ];
+  /** Whether [later] comes after [earlier] in the document. */
+  const follows = (earlier: Node, later: Node) =>
+    (earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it("states the mastered of all cards under the name and over the bar, and the row's name ends with the bar's three counts", () => {
+    render(<DeckList rows={rows} />);
+
+    const row = screen.getByRole("link", { name: /^French/ });
+    expect(row).toHaveAccessibleName(
+      "French, 카드 4장, 오늘 2, 4장 중 1장 익힘, 익힘 1장, 학습 중 2장, 새 카드 1장",
+    );
+    const line = within(row).getByText("4장 중 1장 익힘");
+    const bar = row.querySelector("span[style]")?.parentElement;
+    if (!bar) throw new Error("the deck with cards draws its bar");
+    // Under the name, and over the bar.
+    expect(follows(within(row).getByText("French"), line)).toBe(true);
+    expect(follows(line, bar)).toBe(true);
+    // No line of the learning count: the row's name carries it.
+    expect(within(row).queryByText(/학습 중/)).not.toBeInTheDocument();
+  });
+
+  it("shows a deck with no card as 0장, with no bar and no counts in its name", () => {
+    render(<DeckList rows={rows} />);
+
+    const row = screen.getByRole("link", { name: /^Empty/ });
+    expect(row).toHaveAccessibleName("Empty, 카드 0장");
+    expect(within(row).getByText("0장")).toBeInTheDocument();
+    // The bar is its hairline track; an empty share draws no width, so the track is looked for.
+    expect(row.querySelector(".bg-hairline")).toBeNull();
+    expect(within(row).queryByText(/익힘/)).not.toBeInTheDocument();
+    // Control: the deck with cards draws its bar, so the query finds one where there is one.
+    const french = screen.getByRole("link", { name: /^French/ });
+    expect(french.querySelector(".bg-hairline")).not.toBeNull();
+  });
+});

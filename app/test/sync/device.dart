@@ -1,19 +1,38 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 import 'package:uuid/uuid.dart';
 
-/// One device: its own in-memory database, the repositories that write it,
-/// and the synchronizer that syncs it through [server].
+import '../media/fakes.dart';
+
+/// One device: its own in-memory database and media directory, the
+/// repositories that write them, and the synchronizer that syncs it through
+/// [server], its media through [mediaServer].
 class Device {
-  Device(this.name, SyncServer server, this.scheduler, {int pageSize = 500})
-    : db = AppDatabase(NativeDatabase.memory()) {
+  Device(
+    this.name,
+    SyncServer server,
+    this.scheduler, {
+    int pageSize = 500,
+    MediaServer? mediaServer,
+  }) : db = AppDatabase(NativeDatabase.memory()),
+       mediaDirectory = newMediaDirectory() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
-    deck = DeckRepository(db, clock: () => now, newId: _newId);
+    media = MediaStore(
+      db,
+      mediaServer ?? FakeMediaServer(),
+      directory: mediaDirectory,
+      clock: () => now,
+      newId: _newId,
+    );
+    deck = DeckRepository(db, clock: () => now, newId: _newId, media: media);
     study = StudyRepository(db, newId: _newId);
     store = SyncStore(db, scheduler, clock: () => now);
     synchronizer = Synchronizer(store, server, pageSize: pageSize);
@@ -22,6 +41,8 @@ class Device {
   final String name;
   final AppDatabase db;
   final Scheduler scheduler;
+  final Directory mediaDirectory;
+  late final MediaStore media;
   late final DeckRepository deck;
   late final StudyRepository study;
   late final SyncStore store;
@@ -97,5 +118,8 @@ class Device {
           );
   }
 
-  Future<void> close() => db.close();
+  Future<void> close() async {
+    await db.close();
+    await deleteMediaDirectory(mediaDirectory);
+  }
 }

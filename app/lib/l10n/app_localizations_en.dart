@@ -22,6 +22,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get renameDeck => 'Rename deck';
 
   @override
+  String get deckAppearance => 'Customize deck';
+
+  @override
+  String get deckAppearanceIcon => 'Icon';
+
+  @override
+  String get deckAppearanceColor => 'Color';
+
+  @override
+  String get deckAppearanceImage => 'Photo';
+
+  @override
+  String get deckImageFromAlbum => 'Choose from album';
+
+  @override
+  String get deckImageFromCamera => 'Take a photo';
+
+  @override
+  String get deckImageRemove => 'Remove photo';
+
+  @override
+  String get deckImageUnreadable => 'Couldn\'t load the photo. Try again.';
+
+  @override
+  String deckIconName(String icon) {
+    String _temp0 = intl.Intl.selectLogic(icon, {
+      'layers': 'Cards',
+      'book': 'Book',
+      'languages': 'Languages',
+      'pencil': 'Pencil',
+      'flask': 'Flask',
+      'calculator': 'Calculator',
+      'globe': 'Globe',
+      'music': 'Music',
+      'palette': 'Palette',
+      'brain': 'Brain',
+      'code': 'Code',
+      'landmark': 'Landmark',
+      'briefcase': 'Briefcase',
+      'star': 'Star',
+      'other': 'Icon',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String deckColorName(String color) {
+    String _temp0 = intl.Intl.selectLogic(color, {
+      'blue': 'Blue',
+      'sky': 'Sky',
+      'violet': 'Violet',
+      'sand': 'Sand',
+      'amber': 'Amber',
+      'slate': 'Slate',
+      'other': 'Color',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get deleteDeck => 'Delete deck';
 
   @override
@@ -79,29 +139,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Editing the front saves labels such as [명] as plain text.';
 
   @override
-  String get cardKindBasic => 'Basic';
-
-  @override
-  String get cardKindWord => 'Word';
+  String get cardKindFlip => 'Front & back';
 
   @override
   String get cardKindCloze => 'Cloze';
 
   @override
-  String get clozeWordsHint => 'Tap the words to make blanks';
+  String get clozeInsertBlank => 'Insert blank';
 
   @override
-  String clozeWord(String word) {
-    return '$word';
+  String get clozeUndoBlank => 'Undo blank';
+
+  @override
+  String clozeRemoveBlank(String answer) {
+    return 'Undo blank, $answer';
   }
 
   @override
-  String clozeWordBlank(String word) {
-    return '$word, blank';
-  }
+  String get clozeEmptyBlank => 'Blank';
 
   @override
-  String get clozeBlankRequired => 'Choose at least one word as a blank';
+  String get clozeBlankRequired => 'Insert at least one blank';
 
   @override
   String get clozeBlankMarker =>
@@ -111,22 +169,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardKindTable => 'Table';
 
   @override
+  String get cardKindFree => 'Free';
+
+  @override
+  String get addToFront => 'Add to front';
+
+  @override
+  String get addToBack => 'Add to back';
+
+  @override
+  String get blockText => 'Text';
+
+  @override
+  String get blockTextDescription => 'A word, a sentence or a note';
+
+  @override
+  String get blockSenses => 'Meanings';
+
+  @override
+  String get blockSensesDescription => 'Labels and one or more meanings';
+
+  @override
+  String get blockTable => 'Table';
+
+  @override
+  String get blockTableDescription => 'Cells can be made blanks';
+
+  @override
+  String get blockCloze => 'Cloze sentence';
+
+  @override
+  String get blockClozeDescription => 'Hide words in a sentence';
+
+  @override
+  String blockMenu(String side, int number) {
+    return '$side block $number menu';
+  }
+
+  @override
+  String get deleteBlock => 'Delete';
+
+  @override
+  String get sideBlockRequired => 'Add at least one block';
+
+  @override
   String get tableNameHint => 'The table\'s name';
 
   @override
-  String get tableModeLabel => 'Table editing';
+  String get tableNameLabel => 'Front · table name';
 
   @override
-  String get tableModeCells => 'Type cells';
+  String get tableToolbar => 'Table tools';
 
   @override
-  String get tableModeBlanks => 'Choose blanks';
+  String get tableBlankToggle => 'Blank';
 
   @override
-  String get tableCellsHint => 'Type the headings and cells';
+  String get tableRemove => 'Remove';
 
   @override
-  String get tableBlanksHint => 'Tap the cells to make blanks';
+  String tableRemoveRowTitle(int row) {
+    return 'Remove row $row?';
+  }
+
+  @override
+  String tableRemoveColumnTitle(int column) {
+    return 'Remove column $column?';
+  }
+
+  @override
+  String get tableRemoveBody => 'What is written in it goes too.';
 
   @override
   String tableHeaderCell(int column) {
@@ -137,15 +249,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String tableCell(int row, int column) {
     return 'Row $row, column $column';
   }
-
-  @override
-  String get tableEmptyCell => 'Empty';
-
-  @override
-  String get tableMakeBlank => 'Make blank';
-
-  @override
-  String get tableClearBlank => 'Remove blank';
 
   @override
   String get addRow => 'Add row';
@@ -170,15 +273,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tableBlankEmpty => 'Fill in each cell chosen as a blank';
 
   @override
+  String get cardNeedsUpdate =>
+      'This card was made in a newer version of the app, so this version can\'t edit it. Update the app.';
+
+  @override
   String get cardKindLabel => 'Card kind';
+
+  @override
+  String cardDeck(String deck) {
+    return 'Deck $deck';
+  }
+
+  @override
+  String get senseLabelHint => 'Label';
+
+  @override
+  String senseLabelField(int number) {
+    return 'Meaning $number label';
+  }
+
+  @override
+  String get labelPresetsTitle => 'Labels';
+
+  @override
+  String get labelPresetsBody =>
+      'They appear above the keyboard in this order as you write a card.';
+
+  @override
+  String get manageLabelPresets => 'Manage';
+
+  @override
+  String get addLabelPreset => 'Add label';
+
+  @override
+  String moveLabelPreset(String label) {
+    return 'Move $label';
+  }
+
+  @override
+  String get moveUp => 'Move up';
+
+  @override
+  String get moveDown => 'Move down';
+
+  @override
+  String editLabelPreset(String label, String name) {
+    return 'Edit $label $name';
+  }
+
+  @override
+  String removeLabelPreset(String label) {
+    return 'Remove $label';
+  }
+
+  @override
+  String get labelPresetLabel => 'Label';
+
+  @override
+  String get labelPresetName => 'Name (optional)';
+
+  @override
+  String get labelPresetDone => 'Done';
+
+  @override
+  String get labelPresetRequired => 'Write a label';
 
   @override
   String senseHeading(int number) {
     return 'Meaning $number';
   }
-
-  @override
-  String get senseMeaning => 'Meaning';
 
   @override
   String get senseExamples => 'Examples';
@@ -193,6 +356,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addSense => 'Add meaning';
 
   @override
+  String get wordExtra => 'More on the back';
+
+  @override
   String moveSenseUp(int number) {
     return 'Move meaning $number up';
   }
@@ -205,31 +371,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String deleteSense(int number) {
     return 'Delete meaning $number';
-  }
-
-  @override
-  String get addLabel => 'Add label';
-
-  @override
-  String removeLabel(String label) {
-    return 'Remove label [$label]';
-  }
-
-  @override
-  String get labelSheetBody => 'Pick a part of speech or type another label.';
-
-  @override
-  String get otherLabel => 'Other label';
-
-  @override
-  String get otherLabelHint => 'e.g. object';
-
-  @override
-  String get addOtherLabel => 'Add this label';
-
-  @override
-  String partOfSpeechChoice(String short, String name) {
-    return '[$short] $name';
   }
 
   @override
@@ -420,7 +561,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days d';
+    return '$days-day streak';
   }
 
   @override
@@ -540,7 +681,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unsyncedChangesBody =>
-      'Signing out removes them from this device, and your other devices won\'t have them.';
+      'Changes that aren\'t synced are removed from this device when you sign out, and your other devices won\'t have them either.';
 
   @override
   String get signOutAnyway => 'Sign out anyway';
@@ -620,8 +761,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your photo is used only to make cards and isn\'t kept on the server';
 
   @override
-  String readingTitle(int current, int total) {
-    return 'Reading photo $current of $total';
+  String readingTitle(int read, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: 'Read $read of $total photos',
+      one: 'Read $read of 1 photo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -638,6 +785,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String photosLeftToday(int count) {
     return 'You can read $count more today, so only the first $count will be read.';
+  }
+
+  @override
+  String photosLeftThisMonth(int count) {
+    return 'You can read $count more this month, so only the first $count will be read.';
   }
 
   @override
@@ -673,6 +825,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discardImport => 'Discard';
+
+  @override
+  String get navigateBack => 'Back';
+
+  @override
+  String get photoImportBusy =>
+      'Photos are still being read. You can start a new import once they\'re done.';
+
+  @override
+  String importBarReading(int read, int total) {
+    return 'Reading photos $read/$total';
+  }
+
+  @override
+  String importBarReady(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Review $count cards',
+      one: 'Review 1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importBarPaused(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Resume reading $count photos',
+      one: 'Resume reading 1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String resumeImportTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Resume reading $count photos?',
+      one: 'Resume reading 1 photo?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resumeImportBody => 'Photos already read aren\'t sent again.';
+
+  @override
+  String get resumeImport => 'Resume';
+
+  @override
+  String photoView(int number) {
+    return 'View photo $number';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return 'Photo $current of $total';
+  }
 
   @override
   String get duplicateSkip => 'Skip';
@@ -724,6 +937,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String monthlyLimitReachedOf(int limit) {
+    return 'You\'ve used this month\'s $limit photos. Try again on the 1st of next month.';
+  }
+
+  @override
   String get modelFailed =>
       'Couldn\'t read the cards. Please try again in a moment.';
 
@@ -738,6 +956,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get photoUnreadable =>
       'Couldn\'t read this photo. Choose another one.';
+
+  @override
+  String get photoNotKept =>
+      'Couldn\'t keep this photo on the device. Check the free space and choose it again.';
 
   @override
   String get deckDeleted => 'This deck was deleted. Choose another deck.';
@@ -1014,6 +1236,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String deckRowCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get browsePublicDecksBody => 'Copy decks other people made into yours';
 
   @override
@@ -1052,11 +1285,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todayCountMinutes(int minutes) {
     return 'cards · about $minutes min';
-  }
-
-  @override
-  String masteredOf(int mastered, int total) {
-    return '$mastered / $total mastered';
   }
 
   @override
@@ -1310,7 +1538,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return 'Mastered cards by week, from 8 weeks ago to this week: $counts';
+    return 'Mastered cards by week, from 7 weeks ago to this week: $counts';
   }
 
   @override
@@ -1320,6 +1548,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current-day streak · best $best';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks weeks ago';
+  }
+
+  @override
+  String get masteredThisWeek => 'This week';
+
+  @override
+  String get studyDaysFewer => 'Fewer';
+
+  @override
+  String get studyDaysMore => 'More';
 
   @override
   String studyDaysSemantics(int count, String days) {
@@ -1613,4 +1855,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => 'Today';
+
+  @override
+  String get discardCardTitle => 'Discard this card?';
+
+  @override
+  String get discardCardBody => 'What you typed won\'t be saved.';
+
+  @override
+  String get discardCard => 'Discard';
+
+  @override
+  String get keepWriting => 'Keep writing';
 }

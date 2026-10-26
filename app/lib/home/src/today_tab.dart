@@ -9,6 +9,7 @@ import '../../account/account.dart';
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/mascot.dart';
+import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -16,7 +17,6 @@ import '../../study/study.dart';
 import '../../sync/sync.dart';
 import 'deck_screen.dart';
 import 'first_run.dart';
-import 'hero.dart';
 
 /// The 오늘 tab over [decks]: the today card, the last seven study days, and
 /// the decks that hold cards for today; in a backlog, the backlog card and the
@@ -104,13 +104,12 @@ class TodayTab extends StatelessWidget {
                         Text(
                           message,
                           style: AppType.secondary.copyWith(
-                            color: AppColors.of(context).onHero,
+                            color: AppColors.of(context).muted,
                           ),
                         ),
                         AppButton(
                           label: l10n.studyAll,
                           icon: LucideIcons.play,
-                          variant: AppButtonVariant.onHero,
                           onPressed: () => _study(context, all),
                         ),
                       ],
@@ -212,7 +211,9 @@ class AccountButton extends StatelessWidget {
         MaterialPageRoute<void>(
           builder: (_) => const AccountScreen(
             syncStatus: SyncStatusView(),
-            studySetting: DailyMinutesRow(),
+            studySetting: Column(
+              children: [DailyMinutesRow(), PartOfSpeechPresetsRow()],
+            ),
           ),
         ),
       ),
@@ -220,7 +221,7 @@ class AccountButton extends StatelessWidget {
   );
 }
 
-/// A navy card holding [children], one under another.
+/// A white card holding [children], one under another, its accents in ink.
 class _HeroCard extends StatelessWidget {
   const _HeroCard({required this.children});
 
@@ -231,7 +232,7 @@ class _HeroCard extends StatelessWidget {
     final colors = AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.hero,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
         boxShadow: AppShadow.card(colors),
       ),
@@ -247,7 +248,7 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-/// Today's cards over every deck on the navy card: "오늘 할 카드" with the
+/// Today's cards over every deck on the white card: "오늘 할 카드" with the
 /// streak, the cards done over the day's cards with their minutes, a bar of
 /// them, where the user stands today ([TodayStatus]), and 모두 학습.
 class _TodayCard extends StatelessWidget {
@@ -260,7 +261,7 @@ class _TodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final quiet = AppType.secondary.copyWith(color: heroQuiet(colors));
+    final quiet = AppType.secondary.copyWith(color: colors.muted);
     final TodayOverview(:count, :goal, :streak) = overview;
     return _HeroCard(
       children: [
@@ -288,13 +289,11 @@ class _TodayCard extends StatelessWidget {
                     TextSpan(text: '${goal.done}', style: AppType.figure),
                     TextSpan(
                       text: l10n.todayOfGoal(goal.goal),
-                      style: AppType.headline.copyWith(
-                        color: heroQuiet(colors),
-                      ),
+                      style: AppType.headline.copyWith(color: colors.muted),
                     ),
                   ],
                 ),
-                style: TextStyle(color: colors.onHero),
+                style: TextStyle(color: colors.ink),
               ),
             ),
             Text(
@@ -313,8 +312,8 @@ class _TodayCard extends StatelessWidget {
             semanticsLabel: l10n.todayProgress(goal.goal, goal.done),
             minHeight: AppSpace.s8,
             borderRadius: BorderRadius.circular(AppSpace.s8),
-            color: colors.onHero,
-            backgroundColor: heroTrack(colors),
+            color: colors.ink,
+            backgroundColor: colors.hairline,
           ),
         ),
         Wrap(
@@ -339,7 +338,6 @@ class _TodayCard extends StatelessWidget {
         AppButton(
           label: l10n.studyAll,
           icon: LucideIcons.play,
-          variant: AppButtonVariant.onHero,
           onPressed: onStudy,
         ),
       ],
@@ -347,7 +345,7 @@ class _TodayCard extends StatelessWidget {
   }
 }
 
-/// In a backlog of reviews, on the navy card: the mascot cheering, that the
+/// In a backlog of reviews, on the white card: the mascot cheering, that the
 /// user can pick up again, how many reviews are overdue and that new cards
 /// pause, and the button that studies them, with their minutes.
 class _BacklogCard extends StatelessWidget {
@@ -372,7 +370,7 @@ class _BacklogCard extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Mascot(size: AppSize.mascotGuide, fill: colors.surface),
+                    Mascot(size: AppSize.mascotGuide, fill: colors.brandTint),
                     Positioned(
                       right: -AppSpace.s4,
                       bottom: -AppSpace.s4,
@@ -401,14 +399,11 @@ class _BacklogCard extends StatelessWidget {
                 children: [
                   Semantics(
                     header: true,
-                    child: Text(
-                      l10n.backlogTitle,
-                      style: AppType.headline.copyWith(color: colors.onHero),
-                    ),
+                    child: Text(l10n.backlogTitle, style: AppType.headline),
                   ),
                   Text(
                     l10n.backlogBody(count.total),
-                    style: AppType.secondary.copyWith(color: heroQuiet(colors)),
+                    style: AppType.secondary.copyWith(color: colors.muted),
                   ),
                 ],
               ),
@@ -423,7 +418,6 @@ class _BacklogCard extends StatelessWidget {
         AppButton(
           label: l10n.backlogStudy(count.total, count.minutes),
           icon: LucideIcons.play,
-          variant: AppButtonVariant.onHero,
           onPressed: onStudy,
         ),
       ],
@@ -431,7 +425,7 @@ class _BacklogCard extends StatelessWidget {
   }
 }
 
-/// "n일 연속" after a flame, on the navy card or on the surface.
+/// "n일 연속" after a flame, on the white card or on the done card.
 class _StreakChip extends StatelessWidget {
   const _StreakChip({required this.days, required this.onHero});
 
@@ -441,11 +435,7 @@ class _StreakChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Pill(
     onHero: onHero,
-    icon: Icon(
-      LucideIcons.flame,
-      size: AppSpace.s16,
-      color: AppColors.of(context).streak,
-    ),
+    icon: StreakFlame(days: days, size: AppSpace.s16),
     label: AppLocalizations.of(context).streakDays(days),
   );
 }
@@ -463,18 +453,14 @@ class _ExtraPill extends StatelessWidget {
     final colors = AppColors.of(context);
     return _Pill(
       onHero: onHero,
-      icon: Icon(
-        LucideIcons.plus,
-        size: AppSpace.s16,
-        color: onHero ? colors.onHero : colors.ink,
-      ),
+      icon: Icon(LucideIcons.plus, size: AppSpace.s16, color: colors.ink),
       label: AppLocalizations.of(context).todayExtra(count),
     );
   }
 }
 
-/// A small rounded label after an icon: on the navy card an outline in its
-/// faint white, on the done card the surface.
+/// A small rounded label after an icon: on the white card an outline, on the
+/// done card the surface.
 class _Pill extends StatelessWidget {
   const _Pill({required this.onHero, required this.icon, required this.label});
 
@@ -487,10 +473,10 @@ class _Pill extends StatelessWidget {
     final colors = AppColors.of(context);
     return DecoratedBox(
       decoration: ShapeDecoration(
-        // On the navy the pill is an outline, so its flame sits on the navy.
+        // On the white card the pill is an outline, so it shows on the white.
         color: onHero ? null : colors.surface,
         shape: StadiumBorder(
-          side: onHero ? BorderSide(color: heroTrack(colors)) : BorderSide.none,
+          side: onHero ? BorderSide(color: colors.outline) : BorderSide.none,
         ),
       ),
       child: Padding(
@@ -510,7 +496,7 @@ class _Pill extends StatelessWidget {
                 label,
                 style: AppType.caption.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: onHero ? colors.onHero : colors.ink,
+                  color: colors.ink,
                 ),
               ),
             ),

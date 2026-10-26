@@ -20,5 +20,5 @@ export { readToday } from "./read-today";
 export { countDay, dayPlanOf } from "./today-list";
 export { recordDays } from "./stats";
 export { type MinutesPlan, sessionMinutes } from "./study-time";
-export { studyDecks, studyHref } from "./study-address";
+export { studyDecks, studyHref, studyReturn } from "./study-address";
 export { parseTimeZone, timeZoneCookie, timeZoneScript } from "./time-zone";

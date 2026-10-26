@@ -7,6 +7,7 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
+import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/providers.dart';
 import 'package:smartman/study/src/rust/api/engine.dart';
@@ -198,7 +199,11 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       deck.wait(const Duration(seconds: 3));
-      await tester.tap(find.text('Know'));
+      await tester.timedDrag(
+        find.byType(CurrentCard),
+        const Offset(200, 0),
+        const Duration(seconds: 1),
+      );
       await tester.pumpAndSettle();
       await tester.runAsync(() => Future<void>.delayed(Duration.zero));
 

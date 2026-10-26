@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'app_button.dart';
 import 'theme.dart';
+import 'word_break.dart';
 
 /// Opens the sheet [builder] makes over the current screen, with the
 /// platform's sheet motion, or none under reduce motion. Resolves to what the
@@ -79,11 +80,16 @@ class AppSheet extends StatelessWidget {
                     children: [
                       Semantics(
                         header: true,
-                        child: Text(title, style: AppType.headline),
+                        child: Text(
+                          keepWords(title),
+                          semanticsLabel: title,
+                          style: AppType.headline,
+                        ),
                       ),
                       if (body != null)
                         Text(
-                          body,
+                          keepWords(body),
+                          semanticsLabel: body,
                           style: AppType.secondary.copyWith(
                             color: colors.muted,
                           ),
@@ -113,14 +119,15 @@ class AppSheet extends StatelessWidget {
 }
 
 /// Asks before an action that cannot be undone: a sheet titled [title] that
-/// states its [consequence] in one sentence, with a cancel and, last at the
-/// bottom, a red [confirmLabel] button. Resolves to whether the user
-/// confirmed.
+/// states its [consequence] in one sentence, with a cancel, named
+/// [cancelLabel] or "취소", and, last at the bottom, a red [confirmLabel]
+/// button. Resolves to whether the user confirmed.
 Future<bool> showAppConfirm(
   BuildContext context, {
   required String title,
   required String consequence,
   required String confirmLabel,
+  String? cancelLabel,
 }) async =>
     await showAppSheet<bool>(
       context,
@@ -129,7 +136,7 @@ Future<bool> showAppConfirm(
         body: consequence,
         actions: [
           AppButton(
-            label: AppLocalizations.of(context).cancel,
+            label: cancelLabel ?? AppLocalizations.of(context).cancel,
             variant: AppButtonVariant.secondary,
             size: AppButtonSize.cta,
             onPressed: () => Navigator.of(context).pop(false),

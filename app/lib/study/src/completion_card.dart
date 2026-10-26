@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
 import '../../design/mascot.dart';
+import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'session.dart';
 import 'study_style.dart';
 
 /// The completion card in the current card's place once no card is left
-/// today: the mascot, the heading, today's answers, time and streak, the
-/// choice to go on with the new cards past today's, through [onStudyOn], or
-/// to stop, with none left a line saying so in place of going on; between
-/// the two, a quiet line of tomorrow's daily study minutes that opens the
-/// sheet changing them.
+/// today: the mascot, the heading, today's answers, time and streak, then
+/// the choice to go on with the new cards past today's, through [onStudyOn],
+/// or to stop. With none left, a line says so and stopping is the card's one
+/// primary action.
 class CompletionCard extends StatelessWidget {
   const CompletionCard({
     super.key,
@@ -115,10 +114,9 @@ class CompletionCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         spacing: AppSpace.s4,
                         children: [
-                          Icon(
-                            LucideIcons.flame,
+                          StreakFlame(
+                            days: completion.streak,
                             size: AppSize.smallIcon,
-                            color: colors.streak,
                           ),
                           Text.rich(
                             count(
@@ -147,7 +145,13 @@ class CompletionCard extends StatelessWidget {
                 ),
               AppButton(
                 label: l10n.stopStudying,
-                variant: AppButtonVariant.text,
+                // The one thing left to do once no card is.
+                variant: onStudyOn == null
+                    ? AppButtonVariant.primary
+                    : AppButtonVariant.text,
+                size: onStudyOn == null
+                    ? AppButtonSize.cta
+                    : AppButtonSize.regular,
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],

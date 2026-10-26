@@ -60,7 +60,7 @@ List<Today> todaysList({
   dayEnd: dayEnd,
 );
 
-/// The app's two answer buttons.
+/// The two answers a card is given, by a swipe or a screen reader's action.
 enum Answer {
   /// "Know": rated `Good`.
   know,
