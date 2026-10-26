@@ -195,7 +195,7 @@ const SHAPE_REPLIES: Record<string, unknown> = {
     items: [{
       line_id: "s2-l1",
       sentence: "동예는 책화로 갚았다",
-      blanks: [{ start: 4, end: 6 }],
+      blanks: ["책화"],
       composed: false,
     }],
   },

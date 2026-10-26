@@ -95,6 +95,11 @@
       "date": "2026-10-26",
       "spentUsd": 5.151632,
       "note": "two-stage eval (#414); includes configuration A's $0.191271, which the run recorded as 0 because run.ts priced BYOK replies by usage.cost alone before #419 (PM, 2026-10-27)"
+    },
+    {
+      "date": "2026-10-26",
+      "spentUsd": 0.662605,
+      "note": "two-stage eval (#414)"
     }
   ]
 }

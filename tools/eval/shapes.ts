@@ -166,15 +166,8 @@ export const shapeSchemas = {
           properties: {
             line_id: field,
             sentence: field,
-            blanks: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: spanFields,
-                required: ["start", "end"],
-                additionalProperties: false,
-              },
-            },
+            // Each blank is the text it hides, which `parseCloze` finds in the sentence.
+            blanks: { type: "array", items: field },
             composed: { type: "boolean" },
           },
           required: ["line_id", "sentence", "blanks", "composed"],
@@ -200,7 +193,7 @@ export const shapeSchemas = {
  * The [shape] made from [section], or null when [value] is not that shape's reply of the schema's
  * shape, or breaks what the section allows: a cell outside the table or empty, given twice; a
  * span outside its line or over another; a line of another section, or one left without its
- * sentence; no question for a cell that holds lines; a sentence not composed that is not its
+ * sentence; a cloze blank its sentence does not hold after the blank before it; no question for a cell that holds lines; a sentence not composed that is not its
  * line word for word; or a vocabulary card that `parseCards` refuses, or a note.
  */
 export function parseShape(
@@ -338,16 +331,8 @@ function parseCloze(value: unknown, section: Section): ShapeOutput | null {
         typeof item.composed !== "boolean" ||
         (!item.composed && normalize(sentence) !== normalize(line.text))
       ) return null;
-      const length = [...sentence].length;
-      const blanks = list(
-        item.blanks,
-        MAX_CLOZE_BLANKS,
-        (blank) =>
-          isRecord(blank) && hasOnlyKeys(blank, ["start", "end"])
-            ? parseSpan(blank, length)
-            : null,
-      );
-      return blanks === null || blanks.length === 0 || overlap(blanks)
+      const blanks = blanksIn(sentence, item.blanks);
+      return blanks === null || blanks.length === 0
         ? null
         : { line_id: line.id, sentence, blanks, composed: item.composed };
     },
@@ -357,6 +342,27 @@ function parseCloze(value: unknown, section: Section): ShapeOutput | null {
   return new Set(ids).size === ids.length && ids.length === lines.size
     ? { kind: "cloze", items }
     : null;
+}
+
+/**
+ * The spans of [sentence] that [value]'s blank texts hide, each found after the one before it, or
+ * null when [value] is not a list of at most `MAX_CLOZE_BLANKS` texts the sentence holds in order.
+ */
+function blanksIn(sentence: string, value: unknown): Span[] | null {
+  const chars = [...sentence];
+  let from = 0;
+  return list(value, MAX_CLOZE_BLANKS, (blank): Span | null => {
+    const hidden = text(blank);
+    if (hidden === null) return null;
+    const want = [...hidden];
+    for (let start = from; start + want.length <= chars.length; start += 1) {
+      if (want.every((char, i) => chars[start + i] === char)) {
+        from = start + want.length;
+        return { start, end: from };
+      }
+    }
+    return null;
+  });
 }
 
 function parseVocabulary(value: unknown): ShapeOutput | null {
