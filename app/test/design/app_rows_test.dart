@@ -5,6 +5,7 @@ import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_section_label.dart';
 
+import '../contrast.dart';
 import '../word_breaks.dart';
 import 'harness.dart';
 
@@ -40,6 +41,7 @@ void main() {
           isSemantics(isHeader: true, label: 'My decks 2'),
         );
         await meetsGuidelines(tester);
+        expectScreenTextReadable(tester);
       },
     );
 
@@ -94,6 +96,7 @@ void main() {
         expect(textColor('Sign out'), isNot(colors.dontKnowText));
         expect(iconColor(Icons.logout), isNot(colors.dontKnowText));
         await meetsGuidelines(tester);
+        expectScreenTextReadable(tester);
       },
     );
 
@@ -144,6 +147,7 @@ void main() {
         ),
       );
       await meetsGuidelines(tester);
+      expectScreenTextReadable(tester);
     });
   }
 

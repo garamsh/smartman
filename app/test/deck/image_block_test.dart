@@ -15,6 +15,7 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/media/media.dart';
 import 'package:uuid/uuid.dart';
 
+import '../contrast.dart';
 import '../home/deck_screens.dart';
 import '../media/fakes.dart';
 import '../settle_until.dart';
@@ -644,6 +645,7 @@ void main() {
           await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           await expectLater(tester, meetsGuideline(textContrastGuideline));
+          expectScreenTextReadable(tester);
           handle.dispose();
         },
       );

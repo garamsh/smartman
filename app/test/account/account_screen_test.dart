@@ -12,6 +12,7 @@ import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 
+import '../contrast.dart';
 import 'fake_account_data.dart';
 import 'fake_account_service.dart';
 import '../word_breaks.dart';
@@ -203,6 +204,7 @@ void main() {
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(textContrastGuideline));
+          expectScreenTextReadable(tester);
         }
 
         await pumpScreen(
@@ -398,12 +400,14 @@ void main() {
         (tester) async {
           await pumpScreen(tester, signedIn(), themeMode: mode);
           await expectLater(tester, meetsGuideline(textContrastGuideline));
+          expectScreenTextReadable(tester);
 
           await tapAndSettle(tester, 'Delete account');
           expect(shownText('Delete your account?'), findsOneWidget);
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(textContrastGuideline));
+          expectScreenTextReadable(tester);
         },
       );
     }

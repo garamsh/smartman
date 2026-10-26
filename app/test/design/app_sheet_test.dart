@@ -4,6 +4,7 @@ import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_sheet.dart';
 import 'package:smartman/design/theme.dart';
 
+import '../contrast.dart';
 import 'harness.dart';
 import '../word_breaks.dart';
 
@@ -114,6 +115,7 @@ void main() {
           colors.surface,
         );
         await meetsGuidelines(tester);
+        expectScreenTextReadable(tester);
 
         await tester.tap(find.text('Create'));
         await tester.pumpAndSettle();
@@ -225,6 +227,7 @@ void main() {
             lessThan(tester.getRect(find.text('Delete')).top),
           );
           await meetsGuidelines(tester);
+          expectScreenTextReadable(tester);
         },
       );
     }

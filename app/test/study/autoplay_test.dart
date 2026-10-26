@@ -6,6 +6,7 @@ import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/study.dart';
 
+import '../contrast.dart';
 import 'study_storage.dart';
 
 void main() {
@@ -68,6 +69,7 @@ void main() {
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         handle.dispose();
       },
     );

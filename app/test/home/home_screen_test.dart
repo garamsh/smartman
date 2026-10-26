@@ -20,7 +20,7 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 
-import 'contrast.dart';
+import '../contrast.dart';
 import 'home_data.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
@@ -840,6 +840,7 @@ void main() {
             if (state == 'today') expect(bars, findsOneWidget);
             expectTextReadable(tester, card, colors.surface);
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
             await list.close();
           }
         },
@@ -1048,6 +1049,7 @@ void main() {
               meetsGuideline(androidTapTargetGuideline),
             );
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
           }
 
           final list = await _open(tester, fresh: {'Alpha': 3}, theme: theme);

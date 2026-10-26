@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 
+import '../contrast.dart';
 import 'harness.dart';
 
 /// The fill the button labelled [label] is drawn with.
@@ -75,6 +76,7 @@ void main() {
           colors.dontKnowText,
         );
         await meetsGuidelines(tester);
+        expectScreenTextReadable(tester);
       },
     );
   }
@@ -124,6 +126,7 @@ void main() {
           AppSize.tapTarget,
         );
         await meetsGuidelines(tester);
+        expectScreenTextReadable(tester);
       },
     );
   }

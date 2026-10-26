@@ -32,6 +32,7 @@ import 'package:smartman/study/src/study_screen.dart';
 import 'package:smartman/study/src/study_style.dart';
 import 'package:smartman/study/src/today_overview.dart';
 
+import '../contrast.dart';
 import '../deck/whole_cards.dart';
 import '../media/fakes.dart';
 import 'fixtures.dart';
@@ -1409,6 +1410,7 @@ void main() {
       expect(actions('앞면: b front. 뒷면: b back. 응답: 안다'), '모른다로 바꾸기');
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(textContrastGuideline));
+      expectScreenTextReadable(tester);
       semantics.dispose();
     },
   );
@@ -1814,12 +1816,15 @@ void main() {
         // The empty previous card's place.
         expect(shownText(_placeholder), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         await study.know();
         await study.dontKnow();
         await tester.tap(_currentCard);
         await tester.pumpAndSettle();
 
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+
+        expectScreenTextReadable(tester);
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
 
@@ -1827,6 +1832,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(BottomSheet), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         await tester.tapAt(const Offset(20, 20));
@@ -1837,6 +1843,7 @@ void main() {
         await study.know();
         expect(find.text('Done for today'), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       },
@@ -1921,6 +1928,7 @@ void main() {
         expect(caption.label, startsWith('How to use, step 1 of 3'));
         semantics.dispose();
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
 
         // The current card moves right over "Know" and back.
         final know = await sweep(
@@ -2137,6 +2145,8 @@ void main() {
       );
       expect(find.byType(PreviousPlaceholder), findsNothing);
       await expectLater(tester, meetsGuideline(textContrastGuideline));
+      // The label's quiet ink on the Know tint is under 4.5:1 (issue #434).
+      expectScreenTextReadable(tester, failing: {'Last card last time'});
 
       // The notice, a status a screen reader announces as it shows.
       const notice = 'Picking up · 1 left · about 1 min';
@@ -2400,8 +2410,10 @@ void main() {
           for (final front in [cloze, table, spans]) {
             final study = await openWhole(tester, front, themeMode: mode);
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
             await study.know();
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
             await study.close();
           }
         },

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/design/theme.dart';
 
-import 'contrast.dart';
+import '../contrast.dart';
 
 void main() {
   for (final (name, colors) in [
