@@ -477,8 +477,8 @@ class _CardListHeader extends StatelessWidget {
   }
 }
 
-/// The deck's navy card: today's count and its minutes, how many cards are
-/// mastered, the progress bar, and the button that studies the deck.
+/// The deck's navy card: today's count and its minutes, "n장 중 m장 익힘" over
+/// the progress bar, and the button that studies the deck.
 class _DeckTodayCard extends StatelessWidget {
   const _DeckTodayCard({required this.deck, required this.onStudy});
 
@@ -537,7 +537,10 @@ class _DeckTodayCard extends StatelessWidget {
                         spacing: AppSpace.s8,
                         children: [
                           Text(
-                            l10n.masteredOf(progress.mastered, progress.total),
+                            l10n.deckMastered(
+                              progress.total,
+                              progress.mastered,
+                            ),
                             style: quiet,
                           ),
                           ProgressBar(

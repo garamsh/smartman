@@ -146,8 +146,9 @@ class TodayChip extends StatelessWidget {
   }
 }
 
-/// A deck row's progress bar and "n장 중 m장 익힘"; the card count alone while
-/// the progress is read.
+/// A deck row's "n장 중 m장 익힘" over its progress bar, whose label carries
+/// the mastered, learning and new counts; "n장" alone while the progress is
+/// read, and for a deck with no card, which has nothing to draw.
 class _DeckProgress extends StatelessWidget {
   const _DeckProgress({required this.progress, required this.cardCount});
 
@@ -159,16 +160,18 @@ class _DeckProgress extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final quiet = AppType.caption.copyWith(color: AppColors.of(context).muted);
     final progress = this.progress;
-    if (progress == null) return Text(l10n.cardCount(cardCount), style: quiet);
+    if (progress == null || progress.total == 0) {
+      return Text(l10n.deckRowCards(cardCount), style: quiet);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: AppSpace.s4,
       children: [
-        ExcludeSemantics(child: ProgressBar(progress: progress)),
         Text(
           l10n.deckMastered(progress.total, progress.mastered),
           style: quiet,
         ),
+        ProgressBar(progress: progress),
       ],
     );
   }

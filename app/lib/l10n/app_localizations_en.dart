@@ -1123,6 +1123,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String deckRowCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get browsePublicDecksBody => 'Copy decks other people made into yours';
 
   @override
@@ -1161,11 +1172,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todayCountMinutes(int minutes) {
     return 'cards · about $minutes min';
-  }
-
-  @override
-  String masteredOf(int mastered, int total) {
-    return '$mastered / $total mastered';
   }
 
   @override

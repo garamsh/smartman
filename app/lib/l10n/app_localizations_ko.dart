@@ -1025,6 +1025,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String deckRowCards(int count) {
+    return '$count장';
+  }
+
+  @override
   String get browsePublicDecksBody => '다른 사람이 만든 덱을 내 덱으로 가져와요';
 
   @override
@@ -1051,11 +1056,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String todayCountMinutes(int minutes) {
     return '장 · 약 $minutes분';
-  }
-
-  @override
-  String masteredOf(int mastered, int total) {
-    return '$mastered / $total 익힘';
   }
 
   @override

@@ -7,12 +7,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:smartman/database/database.dart';
+import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
+import 'package:smartman/home/src/progress_bar.dart';
 import 'package:smartman/home/src/today_tab.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -259,6 +260,47 @@ void main() {
         expect(find.text('Last 7 days'), findsOneWidget);
         // Control: back on 오늘 is left to the platform, which leaves the app.
         expect(await tester.binding.handlePopRoute(), isFalse);
+        await list.close();
+      },
+    );
+  });
+
+  group('덱', () {
+    testWidgets(
+      "a deck row shows its mastered of all cards under its name over a bar whose screen reader label breaks them down, with no learning line, and a deck with no card shows 0 cards and no bar",
+      (tester) async {
+        // Alpha: one mastered, one learning after a day's interval, two new.
+        final list = await _open(
+          tester,
+          fresh: {'Alpha': 2},
+          due: {'Alpha': 1},
+          mastered: {'Alpha': 1},
+          decks: ['Alpha', 'Beta'],
+        );
+        await list.decks();
+        Finder row(String deck) =>
+            find.ancestor(of: find.text(deck), matching: find.byType(DeckRow));
+        Finder inRow(String deck, Finder finder) =>
+            find.descendant(of: row(deck), matching: finder);
+
+        final line = inRow('Alpha', find.text('1 of 4 mastered'));
+        final bar = inRow('Alpha', find.byType(ProgressBar));
+        expect(line, findsOneWidget);
+        expect(bar, findsOneWidget);
+        expect(
+          tester.getTopLeft(line).dy,
+          lessThan(tester.getTopLeft(bar).dy),
+          reason: 'the line is under the name and over the bar',
+        );
+        expect(inRow('Alpha', find.textContaining('learning')), findsNothing);
+        expect(
+          tester.getSemantics(row('Alpha')).getSemanticsData().label,
+          contains('1 mastered, 1 learning, 2 new'),
+        );
+
+        expect(inRow('Beta', find.text('0 cards')), findsOneWidget);
+        expect(inRow('Beta', find.byType(ProgressBar)), findsNothing);
+        expect(inRow('Beta', find.textContaining('mastered')), findsNothing);
         await list.close();
       },
     );
