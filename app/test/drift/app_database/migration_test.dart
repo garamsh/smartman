@@ -14,6 +14,7 @@ import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
 import 'generated/schema_v8.dart' as v8;
 import 'generated/schema_v9.dart' as v9;
+import 'generated/schema_v10.dart' as v10;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -759,6 +760,39 @@ void main() {
         expect(await db.select(db.studySettings).get(), isEmpty);
         final deck = await db.select(db.decks).getSingle();
         expect((deck.id, deck.name, deck.dirty), ('deck', 'French', 1));
+      },
+    );
+  });
+
+  test('the upgrade from 9 to 10 gives every deck neither appearance key, and keeps it as it was', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 9,
+      newVersion: 10,
+      createOld: v9.DatabaseAtV9.new,
+      createNew: v10.DatabaseAtV10.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v9.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            description: 'Verbs',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final deck = await db.select(db.decks).getSingle();
+        expect(
+          (deck.id, deck.name, deck.description, deck.dirty),
+          ('deck', 'French', 'Verbs', 0),
+        );
+        expect((deck.icon, deck.color), (null, null));
       },
     );
   });

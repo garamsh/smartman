@@ -231,8 +231,13 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await shot(tester, '03-new-deck-sheet');
       await enter(ko.deckName, '영단어 기본');
-      // Creating the deck opens it, empty, adding a card its one primary.
+      // Creating the deck offers 덱 꾸미기, then opens it, empty, adding a
+      // card its one primary.
       await tap(tester, find.text(ko.create));
+      await tap(tester, find.bySemanticsLabel(ko.deckIconName('languages')));
+      await tap(tester, find.bySemanticsLabel(ko.deckColorName('sky')));
+      await shot(tester, '03c-deck-appearance');
+      await tap(tester, find.text(ko.save));
       await shot(tester, '04-card-list-empty');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -243,6 +248,9 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await enter(ko.deckName, '일본어 N3 한자');
       await tap(tester, find.text(ko.create));
+      // Dismissing 덱 꾸미기 keeps this deck's default tile.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 

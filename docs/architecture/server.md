@@ -41,6 +41,7 @@ The Supabase schema the app syncs to, and the extraction count, the plans and th
 - Every row carries `user_id`, referencing `auth.users` with `on delete cascade`, so deleting an account deletes its rows. It defaults to the caller's `auth.uid()`.
 - A card's `front` and `back` are `jsonb` arrays of blocks, in the encoding the app stores ([`deck.md`](deck.md)); a value that is not an array is refused.
 - `cards.source` and `reviews.rating` take the local tables' values: `manual`, `import` or `copy`, and `again` or `good`. Migration `20261015180000_public_decks.sql` widened the source check to a copied card's value in one statement, changing no row ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
+- `decks.icon` and `decks.color` are a deck's appearance keys, nullable, each bounded to 40 characters and checked against no list, so a newer app's keys sync; a client draws the default for a key it does not know. `authenticated` inserts and updates them as the deck's other columns. Migration `20261026120000_deck_appearance.sql` added them and their grants, changing no row ([ADR 0103](adr/0103-give-each-deck-an-icon-and-a-colour-stored-as-two-unchecked-keys-and-drawn-on-its-tile-in-place-of-the-initial.md)).
 - `cards.origin_deck_id` is a copied card's source deck, with no foreign key, since that deck is another user's.
 - `reviews.fuzz_factor` is the review's fuzz factor ([ADR 0012](adr/0012-fuzz-review-intervals.md)), null for a review scheduled without fuzz, and checked to `[0, 1)`. Migration `20261015120000_review_fuzz_factor.sql` added it.
 

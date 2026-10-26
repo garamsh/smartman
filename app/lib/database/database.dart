@@ -38,6 +38,14 @@ class Decks extends Table {
   DateTimeColumn get publishedAt =>
       dateTime().nullable().map(const StoredTime())();
   TextColumn get description => text().nullable()();
+
+  /// The key of the icon the owner chose for the deck's tile; null, or a key
+  /// this build does not know, draws the default.
+  TextColumn get icon => text().nullable()();
+
+  /// The key of the colour the owner chose for the deck's tile; null, or a
+  /// key this build does not know, draws the colour the deck's id selects.
+  TextColumn get color => text().nullable()();
   DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
   DateTimeColumn get deletedAt =>
@@ -169,7 +177,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -323,6 +331,10 @@ class AppDatabase extends _$AppDatabase {
       // The daily study minutes (ADR 0085): a new table, so no row changes.
       from8To9: (m, schema) async {
         await m.createTable(schema.studySettings);
+      },
+      from9To10: (m, schema) async {
+        await m.addColumn(schema.decks, schema.decks.icon);
+        await m.addColumn(schema.decks, schema.decks.color);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

@@ -145,8 +145,10 @@ void main() {
     await tester.tap(find.text('Create by hand'));
     await tester.pumpAndSettle();
     await enterText(tester, 'Deck name', name);
-    // Creating the deck opens it.
+    // Creating the deck offers 덱 꾸미기, then opens it.
     await tester.tap(find.text('Create'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(find.text(name), findsOneWidget);
   }
@@ -684,6 +686,11 @@ void main() {
         await meetsGuidelines();
         await enterText(tester, 'Deck name', 'French');
         await tester.tap(find.text('Create'));
+        await tester.pumpAndSettle();
+        // 덱 꾸미기, which creating a deck offers.
+        expect(_shown('Customize deck'), findsOneWidget);
+        await meetsGuidelines();
+        await tester.tap(find.text('Save'));
         await tester.pumpAndSettle();
         // The new deck, empty, then the 오늘 tab showing how to start, and the
         // 기록 and 덱 tabs.

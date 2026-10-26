@@ -122,6 +122,36 @@ abstract class AppLocalizations {
   /// **'덱 이름 바꾸기'**
   String get renameDeck;
 
+  /// The deck menu's item, and the title of the sheet in which the user chooses the icon and colour of a deck's tile.
+  ///
+  /// In ko, this message translates to:
+  /// **'덱 꾸미기'**
+  String get deckAppearance;
+
+  /// In the 덱 꾸미기 sheet: the heading over the icons a deck's tile can hold.
+  ///
+  /// In ko, this message translates to:
+  /// **'아이콘'**
+  String get deckAppearanceIcon;
+
+  /// In the 덱 꾸미기 sheet: the heading over the colours a deck's tile can take.
+  ///
+  /// In ko, this message translates to:
+  /// **'색'**
+  String get deckAppearanceColor;
+
+  /// What a screen reader calls an icon in the 덱 꾸미기 sheet, by the icon's stored key.
+  ///
+  /// In ko, this message translates to:
+  /// **'{icon, select, layers{카드 묶음} book{책} languages{언어} pencil{연필} flask{실험} calculator{계산기} globe{지구본} music{음악} palette{팔레트} brain{두뇌} code{코드} landmark{건축물} briefcase{서류 가방} star{별} other{아이콘}}'**
+  String deckIconName(String icon);
+
+  /// What a screen reader calls a colour in the 덱 꾸미기 sheet, by the colour's stored key.
+  ///
+  /// In ko, this message translates to:
+  /// **'{color, select, blue{파랑} sky{하늘} violet{보라} sand{모래} amber{노랑} slate{회색} other{색}}'**
+  String deckColorName(String color);
+
   /// Menu item for deleting a deck.
   ///
   /// In ko, this message translates to:

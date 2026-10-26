@@ -37,7 +37,7 @@ class DeckScreen extends ConsumerStatefulWidget {
   ConsumerState<DeckScreen> createState() => _DeckScreenState();
 }
 
-enum _DeckAction { rename, publish, unpublish, delete }
+enum _DeckAction { rename, appearance, publish, unpublish, delete }
 
 /// The ways the add sheet offers to add a card.
 enum _Add { byHand, camera, album }
@@ -117,6 +117,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               icon: const Icon(LucideIcons.ellipsisVertical),
               onSelected: (action) => switch (action) {
                 _DeckAction.rename => _rename(),
+                _DeckAction.appearance => _customize(current),
                 _DeckAction.publish => sharing?.publish(context, current),
                 _DeckAction.unpublish => sharing?.unpublish(context, current),
                 _DeckAction.delete => _delete(),
@@ -125,6 +126,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 PopupMenuItem(
                   value: _DeckAction.rename,
                   child: Text(l10n.rename),
+                ),
+                PopupMenuItem(
+                  value: _DeckAction.appearance,
+                  child: Text(l10n.deckAppearance),
                 ),
                 if (sharing != null)
                   PopupMenuItem(
@@ -399,6 +404,17 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     if (name == null || !mounted) return;
     await reportingFailure(context, () async {
       await repository.renameDeck(widget.deck.id, name);
+    });
+  }
+
+  /// Opens 덱 꾸미기 on [deck] as stored now, and stores the pair chosen.
+  Future<void> _customize(Deck deck) async {
+    final repository = ref.read(deckRepositoryProvider);
+    final chosen = await showDeckAppearanceSheet(context, deck: deck);
+    if (chosen == null || !mounted) return;
+    final (icon, color) = chosen;
+    await reportingFailure(context, () async {
+      await repository.setAppearance(deck.id, icon, color);
     });
   }
 

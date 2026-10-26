@@ -22,6 +22,51 @@ class AppLocalizationsKo extends AppLocalizations {
   String get renameDeck => '덱 이름 바꾸기';
 
   @override
+  String get deckAppearance => '덱 꾸미기';
+
+  @override
+  String get deckAppearanceIcon => '아이콘';
+
+  @override
+  String get deckAppearanceColor => '색';
+
+  @override
+  String deckIconName(String icon) {
+    String _temp0 = intl.Intl.selectLogic(icon, {
+      'layers': '카드 묶음',
+      'book': '책',
+      'languages': '언어',
+      'pencil': '연필',
+      'flask': '실험',
+      'calculator': '계산기',
+      'globe': '지구본',
+      'music': '음악',
+      'palette': '팔레트',
+      'brain': '두뇌',
+      'code': '코드',
+      'landmark': '건축물',
+      'briefcase': '서류 가방',
+      'star': '별',
+      'other': '아이콘',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String deckColorName(String color) {
+    String _temp0 = intl.Intl.selectLogic(color, {
+      'blue': '파랑',
+      'sky': '하늘',
+      'violet': '보라',
+      'sand': '모래',
+      'amber': '노랑',
+      'slate': '회색',
+      'other': '색',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get deleteDeck => '덱 삭제';
 
   @override

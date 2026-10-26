@@ -1,6 +1,7 @@
 /// The deck domain: decks, the cards inside them, and the duplicate rule.
 library;
 
+export 'src/appearance_sheet.dart' show showDeckAppearanceSheet;
 export 'src/add_cards.dart'
     show
         CardsAdded,
@@ -54,6 +55,8 @@ export 'src/model.dart'
         CardId,
         CardSource,
         Deck,
+        DeckColor,
+        DeckIcon,
         DeckId,
         DeckSelection,
         DeckVisibility,

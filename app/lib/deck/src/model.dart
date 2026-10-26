@@ -37,6 +37,65 @@ final class PublicDeck extends DeckVisibility {
   final DateTime publishedAt;
 }
 
+/// The icons a deck's tile can hold, each stored under its [key].
+enum DeckIcon {
+  layers('layers'),
+  book('book'),
+  languages('languages'),
+  pencil('pencil'),
+  flask('flask'),
+  calculator('calculator'),
+  globe('globe'),
+  music('music'),
+  palette('palette'),
+  brain('brain'),
+  code('code'),
+  landmark('landmark'),
+  briefcase('briefcase'),
+  star('star');
+
+  const DeckIcon(this.key);
+
+  /// What the deck stores for the icon.
+  final String key;
+
+  /// The icon a deck shows while it holds none this build knows.
+  static const fallback = DeckIcon.layers;
+
+  /// The icon stored as [key]; null for none, or for a key this build does
+  /// not know, such as one a newer app wrote.
+  static DeckIcon? fromKey(String? key) {
+    for (final icon in values) {
+      if (icon.key == key) return icon;
+    }
+    return null;
+  }
+}
+
+/// The colours a deck's tile can take, each stored under its [key].
+enum DeckColor {
+  blue('blue'),
+  sky('sky'),
+  violet('violet'),
+  sand('sand'),
+  amber('amber'),
+  slate('slate');
+
+  const DeckColor(this.key);
+
+  /// What the deck stores for the colour.
+  final String key;
+
+  /// The colour stored as [key]; null for none, or for a key this build
+  /// does not know, such as one a newer app wrote.
+  static DeckColor? fromKey(String? key) {
+    for (final color in values) {
+      if (color.key == key) return color;
+    }
+    return null;
+  }
+}
+
 /// A named collection of cards.
 final class Deck {
   const Deck({
@@ -46,6 +105,8 @@ final class Deck {
     required this.updatedAt,
     this.visibility = const PrivateDeck(),
     this.description,
+    this.icon,
+    this.color,
   });
 
   final DeckId id;
@@ -56,6 +117,14 @@ final class Deck {
 
   /// What the owner wrote about the deck when publishing it, if anything.
   final String? description;
+
+  /// The icon the owner chose for the deck's tile; null while none this
+  /// build knows is chosen.
+  final DeckIcon? icon;
+
+  /// The colour the owner chose for the deck's tile; null while none this
+  /// build knows is chosen.
+  final DeckColor? color;
 }
 
 /// Where a card came from: the editor writes [manual], photo import

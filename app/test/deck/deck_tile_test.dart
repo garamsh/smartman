@@ -1,0 +1,96 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:smartman/deck/deck.dart';
+import 'package:smartman/deck/src/deck_row.dart';
+import 'package:smartman/design/theme.dart';
+
+const _id = DeckId('00000000-0000-4000-8000-000000000001');
+
+Deck _deck({DeckIcon? icon, DeckColor? color}) => Deck(
+  id: _id,
+  name: 'French',
+  createdAt: DateTime.utc(2026, 10, 26),
+  updatedAt: DateTime.utc(2026, 10, 26),
+  icon: icon,
+  color: color,
+);
+
+Future<void> _pump(WidgetTester tester, Widget tile) => tester.pumpWidget(
+  MaterialApp(
+    theme: lightTheme,
+    home: Scaffold(body: Center(child: tile)),
+  ),
+);
+
+/// The fill of the one tile on screen.
+Color? _fill(WidgetTester tester) {
+  final box = tester.widget<Container>(
+    find.descendant(
+      of: find.byType(DeckTile),
+      matching: find.byType(Container),
+    ),
+  );
+  return (box.decoration! as BoxDecoration).color;
+}
+
+void main() {
+  testWidgets(
+    'a deck nobody customised shows the default icon on the colour its id selects, and no initial',
+    (tester) async {
+      await _pump(tester, DeckTile(deck: _deck()));
+
+      expect(find.byIcon(LucideIcons.layers), findsOneWidget);
+      expect(find.text('F'), findsNothing);
+      // The id's index over the palette, as deckTintIndex computes it.
+      final selected = DeckColor.values[deckTintIndex(_id, 6)];
+      expect(defaultDeckColor(_id), selected);
+      expect(_fill(tester), deckTileColor(AppColors.light, selected));
+    },
+  );
+
+  testWidgets('a customised deck shows its icon on its colour', (tester) async {
+    await _pump(
+      tester,
+      DeckTile(
+        deck: _deck(icon: DeckIcon.book, color: DeckColor.amber),
+      ),
+    );
+
+    expect(find.byIcon(LucideIcons.bookOpen), findsOneWidget);
+    expect(find.byIcon(LucideIcons.layers), findsNothing);
+    expect(_fill(tester), deckTileColor(AppColors.light, DeckColor.amber));
+  });
+
+  testWidgets("a preview's icon and colour are drawn in place of the deck's", (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      DeckTile(
+        deck: _deck(icon: DeckIcon.book, color: DeckColor.amber),
+        icon: DeckIcon.star,
+        color: DeckColor.blue,
+      ),
+    );
+
+    expect(find.byIcon(LucideIcons.star), findsOneWidget);
+    expect(find.byIcon(LucideIcons.bookOpen), findsNothing);
+    expect(_fill(tester), deckTileColor(AppColors.light, DeckColor.blue));
+  });
+
+  test('a stored key reads as its icon or colour, and a key this build does not know as none', () {
+    expect(DeckIcon.fromKey('book'), DeckIcon.book);
+    expect(DeckColor.fromKey('violet'), DeckColor.violet);
+    expect(DeckIcon.fromKey('rocket'), isNull);
+    expect(DeckColor.fromKey('teal'), isNull);
+    expect(DeckIcon.fromKey(null), isNull);
+    // Every key is distinct, so each reads back as the value that wrote it.
+    for (final icon in DeckIcon.values) {
+      expect(DeckIcon.fromKey(icon.key), icon);
+    }
+    for (final color in DeckColor.values) {
+      expect(DeckColor.fromKey(color.key), color);
+    }
+  });
+}

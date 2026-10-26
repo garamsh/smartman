@@ -22,6 +22,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get renameDeck => 'Rename deck';
 
   @override
+  String get deckAppearance => 'Customize deck';
+
+  @override
+  String get deckAppearanceIcon => 'Icon';
+
+  @override
+  String get deckAppearanceColor => 'Color';
+
+  @override
+  String deckIconName(String icon) {
+    String _temp0 = intl.Intl.selectLogic(icon, {
+      'layers': 'Cards',
+      'book': 'Book',
+      'languages': 'Languages',
+      'pencil': 'Pencil',
+      'flask': 'Flask',
+      'calculator': 'Calculator',
+      'globe': 'Globe',
+      'music': 'Music',
+      'palette': 'Palette',
+      'brain': 'Brain',
+      'code': 'Code',
+      'landmark': 'Landmark',
+      'briefcase': 'Briefcase',
+      'star': 'Star',
+      'other': 'Icon',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String deckColorName(String color) {
+    String _temp0 = intl.Intl.selectLogic(color, {
+      'blue': 'Blue',
+      'sky': 'Sky',
+      'violet': 'Violet',
+      'sand': 'Sand',
+      'amber': 'Amber',
+      'slate': 'Slate',
+      'other': 'Color',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get deleteDeck => 'Delete deck';
 
   @override

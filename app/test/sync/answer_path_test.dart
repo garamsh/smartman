@@ -77,8 +77,9 @@ void main() {
       find.widgetWithText(AppTextField, 'Deck name'),
       'French',
     );
-    // Creating the deck opens it.
+    // Creating the deck offers 덱 꾸미기, then opens it.
     await tapAndSettle(tester, 'Create');
+    await tapAndSettle(tester, 'Save');
     for (final (front, back) in [('Chat', 'cat'), ('Chien', 'dog')]) {
       await tapAndSettle(tester, 'Add card');
       await tester.enterText(find.widgetWithText(AppTextField, 'Front'), front);

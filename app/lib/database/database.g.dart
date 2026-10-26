@@ -59,6 +59,24 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   late final GeneratedColumnWithTypeConverter<DateTime, DateTime> createdAt =
       GeneratedColumn<DateTime>(
@@ -106,6 +124,8 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     visibility,
     publishedAt,
     description,
+    icon,
+    color,
     createdAt,
     updatedAt,
     deletedAt,
@@ -151,6 +171,18 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         ),
       );
     }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
     if (data.containsKey('dirty')) {
       context.handle(
         _dirtyMeta,
@@ -187,6 +219,14 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
       description: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}description'],
+      ),
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
       ),
       createdAt: $DecksTable.$convertercreatedAt.fromSql(
         attachedDatabase.typeMapping.read(
@@ -241,6 +281,14 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   /// was made private again.
   final DateTime? publishedAt;
   final String? description;
+
+  /// The key of the icon the owner chose for the deck's tile; null, or a key
+  /// this build does not know, draws the default.
+  final String? icon;
+
+  /// The key of the colour the owner chose for the deck's tile; null, or a
+  /// key this build does not know, draws the colour the deck's id selects.
+  final String? color;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -251,6 +299,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     required this.visibility,
     this.publishedAt,
     this.description,
+    this.icon,
+    this.color,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -269,6 +319,12 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     }
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
+    }
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
     }
     {
       map['created_at'] = Variable<DateTime>(
@@ -300,6 +356,10 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -320,6 +380,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       visibility: serializer.fromJson<String>(json['visibility']),
       publishedAt: serializer.fromJson<DateTime?>(json['publishedAt']),
       description: serializer.fromJson<String?>(json['description']),
+      icon: serializer.fromJson<String?>(json['icon']),
+      color: serializer.fromJson<String?>(json['color']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -335,6 +397,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       'visibility': serializer.toJson<String>(visibility),
       'publishedAt': serializer.toJson<DateTime?>(publishedAt),
       'description': serializer.toJson<String?>(description),
+      'icon': serializer.toJson<String?>(icon),
+      'color': serializer.toJson<String?>(color),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -348,6 +412,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     String? visibility,
     Value<DateTime?> publishedAt = const Value.absent(),
     Value<String?> description = const Value.absent(),
+    Value<String?> icon = const Value.absent(),
+    Value<String?> color = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -358,6 +424,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     visibility: visibility ?? this.visibility,
     publishedAt: publishedAt.present ? publishedAt.value : this.publishedAt,
     description: description.present ? description.value : this.description,
+    icon: icon.present ? icon.value : this.icon,
+    color: color.present ? color.value : this.color,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -376,6 +444,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      color: data.color.present ? data.color.value : this.color,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -391,6 +461,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           ..write('visibility: $visibility, ')
           ..write('publishedAt: $publishedAt, ')
           ..write('description: $description, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -406,6 +478,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     visibility,
     publishedAt,
     description,
+    icon,
+    color,
     createdAt,
     updatedAt,
     deletedAt,
@@ -420,6 +494,8 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           other.visibility == this.visibility &&
           other.publishedAt == this.publishedAt &&
           other.description == this.description &&
+          other.icon == this.icon &&
+          other.color == this.color &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -432,6 +508,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   final Value<String> visibility;
   final Value<DateTime?> publishedAt;
   final Value<String?> description;
+  final Value<String?> icon;
+  final Value<String?> color;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -443,6 +521,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     this.visibility = const Value.absent(),
     this.publishedAt = const Value.absent(),
     this.description = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -455,6 +535,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     this.visibility = const Value.absent(),
     this.publishedAt = const Value.absent(),
     this.description = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -470,6 +552,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     Expression<String>? visibility,
     Expression<DateTime>? publishedAt,
     Expression<String>? description,
+    Expression<String>? icon,
+    Expression<String>? color,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -482,6 +566,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       if (visibility != null) 'visibility': visibility,
       if (publishedAt != null) 'published_at': publishedAt,
       if (description != null) 'description': description,
+      if (icon != null) 'icon': icon,
+      if (color != null) 'color': color,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -496,6 +582,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     Value<String>? visibility,
     Value<DateTime?>? publishedAt,
     Value<String?>? description,
+    Value<String?>? icon,
+    Value<String?>? color,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -508,6 +596,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       visibility: visibility ?? this.visibility,
       publishedAt: publishedAt ?? this.publishedAt,
       description: description ?? this.description,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -535,6 +625,12 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(
@@ -568,6 +664,8 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
           ..write('visibility: $visibility, ')
           ..write('publishedAt: $publishedAt, ')
           ..write('description: $description, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -3057,6 +3155,8 @@ typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
   Value<String> visibility,
   Value<DateTime?> publishedAt,
   Value<String?> description,
+  Value<String?> icon,
+  Value<String?> color,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> deletedAt,
@@ -3069,6 +3169,8 @@ typedef $$DecksTableUpdateCompanionBuilder = DecksCompanion Function({
   Value<String> visibility,
   Value<DateTime?> publishedAt,
   Value<String?> description,
+  Value<String?> icon,
+  Value<String?> color,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> deletedAt,
@@ -3131,6 +3233,16 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3217,6 +3329,16 @@ class $$DecksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3268,6 +3390,12 @@ class $$DecksTableAnnotationComposer
     column: $table.description,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
 
   GeneratedColumnWithTypeConverter<DateTime, DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3340,6 +3468,8 @@ class $$DecksTableTableManager
                 Value<String> visibility = const Value.absent(),
                 Value<DateTime?> publishedAt = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<String?> color = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3351,6 +3481,8 @@ class $$DecksTableTableManager
                 visibility: visibility,
                 publishedAt: publishedAt,
                 description: description,
+                icon: icon,
+                color: color,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -3364,6 +3496,8 @@ class $$DecksTableTableManager
                 Value<String> visibility = const Value.absent(),
                 Value<DateTime?> publishedAt = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<String?> color = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3375,6 +3509,8 @@ class $$DecksTableTableManager
                 visibility: visibility,
                 publishedAt: publishedAt,
                 description: description,
+                icon: icon,
+                color: color,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

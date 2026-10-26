@@ -165,6 +165,8 @@ void main() {
       'French',
     );
     await tapAndSettle(tester, find.text('Create'));
+    // Creating the deck offers 덱 꾸미기 before it opens.
+    await tapAndSettle(tester, find.text('Save'));
     await tester.pageBack();
     await tester.pumpAndSettle();
   }
@@ -335,8 +337,9 @@ void main() {
           find.widgetWithText(AppTextField, 'Deck name'),
           'French',
         );
-        // Creating the deck opens it.
+        // Creating the deck offers 덱 꾸미기, then opens it.
         await tapAndSettle(tester, find.text('Create'));
+        await tapAndSettle(tester, find.text('Save'));
         await tapAndSettle(tester, find.text('Add card'));
         // With photo import, Add card asks how.
         await tapAndSettle(tester, find.text('Create by hand'));
