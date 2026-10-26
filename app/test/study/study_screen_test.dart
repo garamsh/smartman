@@ -220,12 +220,12 @@ class _Study {
 
 final _currentCard = find.byType(CurrentCard);
 
-/// The current card's semantics, without the answer buttons'.
+/// The current card's semantics, without the guide's row's.
 final _cardNode = find
     .descendant(of: _currentCard, matching: find.byType(Semantics))
     .first;
 
-/// The current card's face, without the answer buttons under it.
+/// The current card's face, without the guide's row under it.
 final _face = find
     .descendant(of: _currentCard, matching: find.byType(GestureDetector))
     .first;
@@ -396,13 +396,13 @@ List<String> _built(WidgetTester tester) => [
 ];
 
 /// The height each card takes on a 390 by 844 screen with no insets: half
-/// the space between the top bar and the answer buttons, less the gaps.
+/// the space between the top bar and the guide's row, less the gaps.
 final _cardHeight =
     (_phone.height -
         StudyStyle.topBarHeight -
         StudyStyle.topGap -
         StudyStyle.cardGap -
-        StudyStyle.answerRow -
+        StudyStyle.guideRow -
         StudyStyle.currentBottomGap) /
     2;
 
@@ -424,7 +424,7 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   testWidgets(
-    'the screen shows the top bar, the current card in the lower of the two card places and the answer buttons under it with the guide\'s replay between them, and nothing else',
+    'the screen shows the top bar, the current card in the lower of the two card places and the guide\'s replay alone, centred under it, with no answer button',
     (tester) async {
       final study = await _open(tester, ['a', 'b']);
 
@@ -443,22 +443,15 @@ void main() {
           0.01,
         ),
       );
-      // Every text on screen: the card's front alone, the count, the answer
-      // buttons with the coach's replay between them, and the empty previous
-      // card's place's line. No back, deck name or next card.
+      // Every text on screen: the card's front alone, the count, the coach's
+      // replay and the empty previous card's place's line. No answer button,
+      // back, deck name or next card.
       expect(
         {
           for (final element in find.byType(Text).evaluate())
             (element.widget as Text).data?.replaceAll(_wordJoiner, ''),
         },
-        {
-          'a front',
-          '0/2',
-          "Don't know",
-          'Show the guide again',
-          'Know',
-          _placeholder,
-        },
+        {'a front', '0/2', 'Show the guide again', _placeholder},
       );
       // No half, divider or eye on the card.
       expect(
@@ -469,48 +462,18 @@ void main() {
         find.descendant(of: _face, matching: find.byType(Icon)),
         findsNothing,
       );
-      // The buttons sit under the card, "Don't know" left, the replay in the
-      // middle and "Know" right.
-      final buttons = find.byType(TextButton);
-      expect(buttons, findsNWidgets(3));
-      expect(
-        tester.getRect(find.text("Don't know")).top,
-        greaterThan(card.bottom),
+      // The replay is the one button under the card, centred, at a tap
+      // target's size.
+      expect(find.byType(TextButton), findsOneWidget);
+      final replay = tester.getRect(
+        find.widgetWithText(TextButton, 'Show the guide again'),
       );
-      expect(
-        tester.getCenter(find.text("Don't know")).dx,
-        lessThan(tester.getCenter(find.text('Show the guide again')).dx),
-      );
-      expect(
-        tester.getCenter(find.text('Show the guide again')).dx,
-        lessThan(tester.getCenter(find.text('Know')).dx),
-      );
-      for (final button in buttons.evaluate()) {
-        expect(
-          tester.getSize(find.byWidget(button.widget)).height,
-          greaterThanOrEqualTo(AppSize.tapTarget),
-        );
-      }
+      expect(replay.top, greaterThan(card.bottom));
+      expect(replay.center.dx, closeTo(card.center.dx, 0.01));
+      expect(replay.height, greaterThanOrEqualTo(AppSize.tapTarget));
       expect(study.current, 'a front');
     },
   );
-
-  testWidgets('the answer buttons answer the current card', (tester) async {
-    final study = await _open(tester, ['a', 'b', 'c']);
-
-    await tester.tap(find.widgetWithText(TextButton, 'Know'));
-    await tester.pumpAndSettle();
-    expect(study.current, 'b front');
-    expect(_label(tester, _previous('a front')), endsWith('Response: Know'));
-
-    await tester.tap(find.widgetWithText(TextButton, "Don't know"));
-    await tester.pumpAndSettle();
-    expect(study.current, 'c front');
-    expect(
-      _label(tester, _previous('b front')),
-      endsWith("Response: Don't know"),
-    );
-  });
 
   testWidgets(
     'a day\'s first session holds the previous card\'s place with a dashed outline, an up arrow and one line, read as one block, until its first answer',
@@ -788,7 +751,7 @@ void main() {
       );
       await study.know();
 
-      // The two sides; the grade's chip is the third paragraph.
+      // The two sides, and nothing else: no grade's chip.
       final paragraphs = tester
           .renderObjectList<RenderParagraph>(
             find.descendant(of: _previousCard, matching: find.byType(RichText)),
@@ -1058,68 +1021,77 @@ void main() {
     );
   });
 
-  testWidgets(
-    'each previous card shows its grade by its colour and by a chip naming it, and its label names it',
-    (tester) async {
-      final study = await _open(tester, ['a', 'b', 'c']);
+  for (final (mode, colors) in [
+    (ThemeMode.light, AppColors.light),
+    (ThemeMode.dark, AppColors.dark),
+  ]) {
+    testWidgets(
+      'in ${mode.name} each previous card shows its grade by its fill and line alone, Know green and Don\'t know red, with no chip, and its label names it',
+      (tester) async {
+        final study = await _open(tester, ['a', 'b', 'c'], themeMode: mode);
 
-      for (final (name, answer, fill, line, chip) in [
-        (
-          'a',
-          'Know',
-          AppColors.light.knowCard,
-          AppColors.light.knowLine,
-          AppColors.light.know,
-        ),
-        (
-          'b',
-          "Don't know",
-          AppColors.light.dontKnowCard,
-          AppColors.light.dontKnowLine,
-          AppColors.light.dontKnowText,
-        ),
-      ]) {
-        await (answer == 'Know' ? study.know() : study.dontKnow());
-        final card = _previous('$name front');
-        expect(
-          _label(tester, card),
-          'Front: $name front. Back: $name back. Response: $answer',
-        );
-        final face =
-            tester
-                    .widget<DecoratedBox>(
-                      find
-                          .descendant(
-                            of: card,
-                            matching: find.byType(DecoratedBox),
-                          )
-                          .first,
-                    )
-                    .decoration
-                as BoxDecoration;
-        expect(face.color, fill, reason: name);
-        expect((face.border! as Border).top.color, line, reason: name);
-        final label = find.descendant(of: card, matching: find.text(answer));
-        expect(label, findsOneWidget, reason: name);
-        expect(
-          (tester
-                      .widget<Container>(
+        for (final (name, answer, fill, line) in [
+          ('a', 'Know', colors.knowCard, colors.knowLine),
+          ('b', "Don't know", colors.dontKnowCard, colors.dontKnowLine),
+        ]) {
+          await (answer == 'Know' ? study.know() : study.dontKnow());
+          final card = _previous('$name front');
+          expect(
+            _label(tester, card),
+            'Front: $name front. Back: $name back. Response: $answer',
+          );
+          final face =
+              tester
+                      .widget<DecoratedBox>(
                         find
-                            .ancestor(
-                              of: label,
-                              matching: find.byType(Container),
+                            .descendant(
+                              of: card,
+                              matching: find.byType(DecoratedBox),
                             )
                             .first,
                       )
-                      .decoration!
-                  as ShapeDecoration)
-              .color,
-          chip,
-          reason: name,
+                      .decoration
+                  as BoxDecoration;
+          expect(face.color, fill, reason: name);
+          expect((face.border! as Border).top.color, line, reason: name);
+          // Nothing on the card but its sides: no word or icon of the grade.
+          expect(
+            find.descendant(of: card, matching: find.text(answer)),
+            findsNothing,
+            reason: name,
+          );
+          expect(
+            find.descendant(of: card, matching: find.byType(Icon)),
+            findsNothing,
+            reason: name,
+          );
+        }
+      },
+    );
+  }
+
+  for (final textScale in [1.0, 2.0]) {
+    testWidgets(
+      'at text scale $textScale the previous and the current card keep one size over the guide\'s row, with no overflow',
+      (tester) async {
+        final study = await _open(tester, ['a', 'b'], textScale: textScale);
+        await study.know();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getSize(_previousCard).height,
+          closeTo(_cardHeight, 0.01),
         );
-      }
-    },
-  );
+        expect(tester.getSize(_face).height, closeTo(_cardHeight, 0.01));
+        final replay = tester.getRect(
+          find.widgetWithText(TextButton, 'Show the guide again'),
+        );
+        expect(replay.top, greaterThan(tester.getRect(_face).bottom));
+        expect(replay.bottom, lessThanOrEqualTo(_phone.height));
+      },
+    );
+  }
+
   testWidgets(
     'with reduce motion the card does not fly off and the next one cross-fades in',
     (tester) async {
@@ -1186,7 +1158,11 @@ void main() {
           endsWith("Response: Don't know. Changed"),
         );
 
-        await tester.tap(find.widgetWithText(TextButton, 'Know'));
+        await tester.timedDrag(
+          _face,
+          const Offset(200, 0),
+          const Duration(seconds: 1),
+        );
         await tester.pump();
         // Past the answered card's flight, into the next cards' entrance.
         await tester.pump(
@@ -1767,13 +1743,21 @@ void main() {
     final centre = _phone.width / 2;
 
     testWidgets(
-      "on a device's first session it moves the cards through three steps under a caption in the answer buttons' place, stored as shown once it shows",
+      "on a device's first session it moves the cards through three steps under a caption in the guide's row's place, stored as shown once it shows",
       (tester) async {
         final study = await _open(tester, ['a', 'b', 'c'], coachShown: false);
         // Stored as shown as soon as it shows, before any step is taken.
         expect(study.storage.getBool(studyCoachShownKey), isTrue);
         expect(_text('Swipe right if you know it'), findsOneWidget);
-        expect(find.widgetWithText(TextButton, 'Know'), findsNothing);
+        // The caption takes the guide's row's place under the card.
+        expect(
+          find.widgetWithText(TextButton, 'Show the guide again'),
+          findsNothing,
+        );
+        expect(
+          tester.getRect(find.byType(StudyCoach)).top,
+          greaterThan(tester.getRect(_face).bottom),
+        );
         expect(find.widgetWithText(AppButton, 'Skip'), findsOneWidget);
         final semantics = tester.ensureSemantics();
         final caption = tester.getSemantics(find.byType(StudyCoach));
@@ -1834,7 +1818,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(StudyCoach), findsNothing);
         expect(find.text('deadline'), findsNothing);
-        expect(find.widgetWithText(TextButton, 'Know'), findsOneWidget);
+        expect(
+          find.widgetWithText(TextButton, 'Show the guide again'),
+          findsOneWidget,
+        );
         expect(find.byType(PreviousPlaceholder), findsOneWidget);
         expect(study.current, 'a front');
       },
@@ -1849,11 +1836,17 @@ void main() {
         await tester.tap(find.widgetWithText(AppButton, 'Skip'));
         await tester.pumpAndSettle();
         expect(find.byType(StudyCoach), findsNothing);
-        expect(find.widgetWithText(TextButton, 'Know'), findsOneWidget);
+        expect(
+          find.widgetWithText(TextButton, 'Show the guide again'),
+          findsOneWidget,
+        );
 
         await study.reopen();
         expect(find.byType(StudyCoach), findsNothing);
-        expect(find.widgetWithText(TextButton, 'Know'), findsOneWidget);
+        expect(
+          find.widgetWithText(TextButton, 'Show the guide again'),
+          findsOneWidget,
+        );
       },
     );
 

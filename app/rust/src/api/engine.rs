@@ -13,7 +13,7 @@
 
 use smartman_engine as engine;
 
-/// The app's two answer buttons.
+/// The two answers a card is given, by a swipe or a screen reader's action.
 pub enum Answer {
     /// "Know": rated `Good`.
     Know,

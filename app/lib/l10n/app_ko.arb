@@ -237,7 +237,7 @@
   "studyCoachRedecide": "응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요",
   "@studyCoachRedecide": {"description": "Third step of the study screen's coach: an answered card comes up above, and a swipe changes its answer."},
   "studyCoachReplay": "안내 다시 보기",
-  "@studyCoachReplay": {"description": "Small text button between the answer buttons that shows the study screen's coach again."},
+  "@studyCoachReplay": {"description": "Small text button alone, centred under the study screen's cards, that shows its coach again."},
   "studyCoachSampleFront": "deadline",
   "@studyCoachSampleFront": {"description": "Front of the sample answered card the study screen's coach shows in its third step: an English word."},
   "studyCoachSampleBack": "마감 기한",

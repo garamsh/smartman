@@ -492,14 +492,15 @@ final class AppColors extends ThemeExtension<AppColors> {
   final Color knowCard;
   final Color knowLine;
 
-  /// "Know" as text on [tintGreen], the answer button's fill.
+  /// "Know" as text on [tintGreen], the tint behind a card dragged toward it.
   final Color onKnowTint;
 
   /// A previous card answered "Don't know": its fill and its line.
   final Color dontKnowCard;
   final Color dontKnowLine;
 
-  /// "Don't know" as text on [tintRed], the answer button's fill.
+  /// "Don't know" as text on [tintRed], the tint behind a card dragged toward
+  /// it.
   final Color onDontKnowTint;
 
   /// The completion card's streak flame.
