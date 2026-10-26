@@ -1,7 +1,7 @@
 import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
- * A deck's page while it is read: the breadcrumb, the header, the navy card with its button,
+ * A deck's page while it is read: the breadcrumb, the header, the white card with its button,
  * the search, the row above the cards and four cards, in their sizes.
  */
 export function DeckSkeleton() {
@@ -15,16 +15,16 @@ export function DeckSkeleton() {
           <SkeletonLine text="text-secondary" width="w-20" />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-6 rounded-card bg-hero px-6 py-6 shadow-card lg:px-7">
+      <div className="flex flex-wrap items-center gap-6 rounded-card bg-surface px-6 py-6 shadow-card lg:px-7">
         <div className="flex flex-[0_1_220px] flex-col gap-1.5">
-          <SkeletonLine text="text-secondary" width="w-24" tone="bg-on-hero/20" />
-          <SkeletonLine text="text-figure" width="w-32" tone="bg-on-hero/20" />
+          <SkeletonLine text="text-secondary" width="w-24" />
+          <SkeletonLine text="text-figure" width="w-32" />
         </div>
         <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-2">
-          <SkeletonLine text="text-secondary" width="w-20" tone="bg-on-hero/20" />
-          <span className="h-2.5 rounded-full bg-on-hero/20" />
+          <SkeletonLine text="text-secondary" width="w-20" />
+          <span className="h-2.5 rounded-full bg-hairline" />
         </div>
-        <span className="min-h-cta flex-[1_1_100%] rounded-button bg-on-hero/20 sm:flex-[0_1_240px]" />
+        <span className="min-h-cta flex-[1_1_100%] rounded-button bg-hairline sm:flex-[0_1_240px]" />
       </div>
       <div className="flex flex-col gap-3">
         <span className="h-search rounded-field border border-outline bg-surface" />
