@@ -15,7 +15,10 @@ export function modelId(value: string): ModelId | null {
   return /^[\w.-]+\/[\w.:-]+$/.test(value) ? value as ModelId : null;
 }
 
-/** What OpenRouter reported for one call; `costUsd` is null when it reported no cost. */
+/**
+ * What OpenRouter reported for one call; `costUsd` is null when it reported no cost, and
+ * otherwise the call's whole price: OpenRouter's `cost` plus the provider's `upstream_inference_cost`.
+ */
 export type Usage = {
   readonly promptTokens: number;
   readonly completionTokens: number;
@@ -138,14 +141,22 @@ function readReply(body: unknown): string | null {
 
 function readUsage(body: unknown): Usage | null {
   if (!isRecord(body) || !isRecord(body.usage)) return null;
-  const { prompt_tokens, completion_tokens, cost } = body.usage;
+  const { prompt_tokens, completion_tokens, cost, cost_details } = body.usage;
   if (
     typeof prompt_tokens !== "number" || typeof completion_tokens !== "number"
   ) return null;
+  // A call billed through the owner's own provider key (BYOK) reports the provider's price here,
+  // and only OpenRouter's own fee in `cost`.
+  const upstream = isRecord(cost_details)
+    ? cost_details.upstream_inference_cost
+    : undefined;
+  const parts = [cost, upstream].filter((part) => typeof part === "number");
   return {
     promptTokens: prompt_tokens,
     completionTokens: completion_tokens,
-    costUsd: typeof cost === "number" ? cost : null,
+    costUsd: parts.length === 0
+      ? null
+      : parts.reduce((total, part) => total + part, 0),
   };
 }
 

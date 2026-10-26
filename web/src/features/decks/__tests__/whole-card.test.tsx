@@ -140,3 +140,24 @@ describe("a table on a whole card", () => {
     }
   });
 });
+
+// A cloze card with a sound beside its sentence (ADR 0112).
+describe("a sound on a whole card", () => {
+  it("is named 음성 with its length, with no control inside the card, which a button holds", () => {
+    const { container } = render(
+      <WholeCard
+        blocks={[
+          { kind: "cloze", text: "___ says meow", answers: ["cat"] },
+          { kind: "audio", media: "m1", durationMs: 1250 },
+        ]}
+        revealed={false}
+      />,
+    );
+
+    expect(container.querySelector("[data-audio=m1]")?.textContent).toBe("음성 0:02");
+    expect(container.querySelector("button")).toBeNull();
+    expect(container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe(
+      "빈칸 says meow. 음성",
+    );
+  });
+});

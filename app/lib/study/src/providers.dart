@@ -47,7 +47,8 @@ final studyRandomProvider = Provider<Random Function(DateTime start)>(
 );
 
 /// The device storage that keeps whether the study screen's coach and the
-/// first-run daily minutes step have shown. The composition site overrides it
+/// first-run daily minutes step have shown, and whether a card's front sound
+/// plays on its own. The composition site overrides it
 /// with the storage it opens, opened to cache [studyStorageKeys].
 final studyStorageProvider = Provider<SharedPreferencesWithCache>(
   (ref) => throw UnimplementedError(
@@ -56,7 +57,11 @@ final studyStorageProvider = Provider<SharedPreferencesWithCache>(
 );
 
 /// The keys [studyStorageProvider] must be opened to cache.
-const studyStorageKeys = {studyCoachShownKey, dailyMinutesAskedKey};
+const studyStorageKeys = {
+  studyCoachShownKey,
+  dailyMinutesAskedKey,
+  autoplayAudioKey,
+};
 
 /// Set once the study screen's coach has shown on this device.
 const studyCoachShownKey = 'studyCoachShown';
@@ -64,3 +69,7 @@ const studyCoachShownKey = 'studyCoachShown';
 /// Set once the first-run step that asks for the daily study minutes has
 /// shown on this device.
 const dailyMinutesAskedKey = 'dailyMinutesAsked';
+
+/// Whether a study card's front sound plays once as the card appears; on
+/// while unset, and kept on this device alone (ADR 0112).
+const autoplayAudioKey = 'autoplayAudio';

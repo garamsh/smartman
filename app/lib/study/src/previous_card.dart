@@ -27,7 +27,8 @@ Answer _other(Answer answer) => switch (answer) {
 /// Dragged left or right, it shows the answer the drag would give behind it,
 /// and released past [StudyStyle.commitDistance], or flung, toward the other
 /// answer it changes to that answer. A tap opens the whole card in a sheet. A
-/// screen reader changes it by its action instead of a drag.
+/// screen reader changes it by its action instead of a drag, and plays its
+/// sound by "소리 듣기" when it holds one (ADR 0112).
 class PreviousCardView extends StatefulWidget {
   const PreviousCardView({
     super.key,
@@ -113,6 +114,9 @@ class _PreviousCardViewState extends State<PreviousCardView>
       customSemanticsActions: {
         CustomSemanticsAction(label: _changeTo(l10n, other)): () =>
             widget.onRedecide(other),
+        if (_soundOf(card.card) case final sound?)
+          CustomSemanticsAction(label: l10n.playAudio): () =>
+              playAudio(context, sound),
       },
       button: true,
       onTapHint: l10n.showWholeCard,
@@ -155,6 +159,11 @@ class _PreviousCardViewState extends State<PreviousCardView>
     );
   }
 }
+
+/// The sound a screen reader plays from a card shown with its back: the
+/// back's first, which the answer just showed, or else the front's.
+AudioContent? _soundOf(Card card) =>
+    audioOf(card.back).firstOrNull ?? audioOf(card.front).firstOrNull;
 
 /// The day's last answer from an earlier session, in the previous card's
 /// place: graded as a previous card is, with "지난번 마지막 카드", and opened

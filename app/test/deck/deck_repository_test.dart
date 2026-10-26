@@ -347,6 +347,41 @@ void main() {
         expect((await repository.getDeck(spanish.id)).image, spanishImage);
       });
 
+      test("a card's sound is kept through an edit that keeps it, released by one that drops it, and with its card (ADR 0112)", () async {
+        final deck = await repository.createDeck('French');
+        final first = await media.addAudio(preparedAudio(1000));
+        final second = await media.addAudio(preparedAudio(2000));
+        AudioContent sound(MediaId id) =>
+            AudioContent(media: id, duration: const Duration(seconds: 1));
+        final saved = await repository.addCard(
+          deck.id,
+          front: [const TextContent('listen'), sound(first)],
+          back: const [TextContent('cat')],
+        );
+        final card = (saved as CardSaved).card;
+        final other = await repository.addCard(
+          deck.id,
+          front: const [TextContent('dog')],
+          back: [sound(second)],
+        );
+
+        final kept = await repository.editCard(
+          card,
+          front: [const TextContent('hear it'), sound(first)],
+          back: card.back,
+        );
+        expect(await releasedIds(), isEmpty, reason: 'kept');
+        await repository.editCard(
+          (kept as CardSaved).card,
+          front: const [TextContent('no sound')],
+          back: card.back,
+        );
+        expect(await releasedIds(), [first.value]);
+
+        await repository.deleteCard((other as CardSaved).card.id);
+        expect(await releasedIds(), [first.value, second.value]);
+      });
+
       group("a card's photo (ADR 0109)", () {
         ImageContent photo(MediaId media) => ImageContent(
           media: media,
@@ -595,7 +630,7 @@ void main() {
               deckId: deck.id.value,
               front:
                   '[{"type":"text","payload":{"text":"chat"}},'
-                  '{"type":"audio","payload":{"path":"chat.m4a"}}]',
+                  '{"type":"video","payload":{"path":"chat.mp4"}}]',
               back: '[{"type":"text","payload":{"text":"cat"}}]',
               cardKey: 'chat',
               source: 'manual',

@@ -1,4 +1,6 @@
 export {
+  audioLength,
+  audioOf,
   type Content,
   describeContent,
   isWholeCard,

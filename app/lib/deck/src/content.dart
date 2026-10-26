@@ -4,7 +4,7 @@ import 'dart:ui' show Rect, Size;
 import '../../media/media.dart';
 
 /// A typed block of card content: text, a cloze, a table, a vocabulary
-/// entry's senses or an image. A block's kind is its stored `type`, and its
+/// entry's senses, an image or a sound. A block's kind is its stored `type`, and its
 /// version its `v` (ADR 0106). A new kind adds a subclass and a discriminator value, and
 /// stored rows keep their encoding.
 ///
@@ -333,6 +333,31 @@ final class ImageContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
+/// A recording or an audio file the `media` domain stores, named by its
+/// [media] id, never a URL, with how long it plays, so its length shows
+/// before the file is read (ADR 0112). [rest] holds the payload's fields
+/// this build does not know, written back as they were read.
+final class AudioContent extends Content {
+  const AudioContent({
+    required this.media,
+    required this.duration,
+    this.rest = const {},
+    super.id,
+  });
+
+  final MediaId media;
+  final Duration duration;
+  final Map<String, Object?> rest;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AudioContent &&
+      jsonEncode(_payload(other)) == jsonEncode(_payload(this));
+
+  @override
+  int get hashCode => jsonEncode(_payload(this)).hashCode;
+}
+
 /// A stored block this build cannot read: a type it does not know, or a
 /// known type at a version above the one it writes. It is kept intact,
 /// [stored] written back as it was read, so saving the card again does not
@@ -355,7 +380,10 @@ final class UnsupportedContent extends Content {
 bool _hasBlank(Content block) => switch (block) {
   ClozeContent() || TableContent() => true,
   ImageContent(:final boxes) => boxes.isNotEmpty,
-  TextContent() || SensesContent() || UnsupportedContent() => false,
+  TextContent() ||
+  SensesContent() ||
+  AudioContent() ||
+  UnsupportedContent() => false,
 };
 
 /// The face a card with [front] and [back] is studied on, or null when it is
@@ -371,11 +399,16 @@ List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
     ? [...front, ...back]
     : null;
 
-/// The media ids of the images in [blocks], in order.
+/// The media ids of the images and sounds in [blocks], in order.
 Set<MediaId> mediaOf(List<Content> blocks) => {
   for (final block in blocks)
-    if (block case ImageContent(:final media)) media,
+    if (block case ImageContent(:final media) || AudioContent(:final media))
+      media,
 };
+
+/// The sounds in [blocks], in order (ADR 0112).
+List<AudioContent> audioOf(List<Content> blocks) =>
+    blocks.whereType<AudioContent>().toList();
 
 /// Whether a card whose front is [front] is drawn whole, that front across
 /// the card with its blanks, rather than split: [oneFaceOf] for that front.
@@ -386,6 +419,7 @@ const _clozeType = 'cloze';
 const _tableType = 'table';
 const _sensesType = 'senses';
 const _imageType = 'image';
+const _audioType = 'audio';
 const _partOfSpeechKind = 'part_of_speech';
 const _otherKind = 'other';
 
@@ -415,6 +449,7 @@ String _type(Content block) => switch (block) {
   TableContent() => _tableType,
   SensesContent() => _sensesType,
   ImageContent() => _imageType,
+  AudioContent() => _audioType,
   UnsupportedContent(:final type) => type,
 };
 
@@ -428,6 +463,7 @@ const Map<String, List<Object? Function(Object? payload)>> blockUpcasters = {
   _tableType: [_tableWithSpans],
   _sensesType: [],
   _imageType: [],
+  _audioType: [],
 };
 
 /// A v1 table's payload as v2's: its blanks stay whole cells, and it holds
@@ -486,6 +522,12 @@ Content withBlockId(Content block, String id) => switch (block) {
     rest: block.rest,
     id: id,
   ),
+  AudioContent(:final media, :final duration, :final rest) => AudioContent(
+    media: media,
+    duration: duration,
+    rest: rest,
+    id: id,
+  ),
   UnsupportedContent() => block,
 };
 
@@ -526,6 +568,11 @@ Object? _payload(Content block) => switch (block) {
           'answer': ?box.answer,
         },
     ],
+  },
+  AudioContent(:final media, :final duration) => {
+    ...block.rest,
+    'media': media.value,
+    'duration_ms': duration.inMilliseconds,
   },
   UnsupportedContent(:final payload) => payload,
 };
@@ -592,6 +639,7 @@ Content _decodeBlock(Object? block, String source) {
       senses,
     ),
     (_imageType, final Map<String, Object?> fields) => _decodeImage(fields),
+    (_audioType, final Map<String, Object?> fields) => _decodeAudio(fields),
     _ => null,
   };
   if (decoded == null) {
@@ -785,6 +833,23 @@ ImageBox? _decodeBox(Map<String, Object?> box) {
   return null;
 }
 
+/// A sound of a non-empty media id and a positive whole `duration_ms`; null
+/// otherwise. Fields it does not know are kept.
+AudioContent? _decodeAudio(Map<String, Object?> fields) {
+  if (fields
+      case {'media': final String media, 'duration_ms': final int durationMs}
+      when media.isNotEmpty && durationMs > 0) {
+    return AudioContent(
+      media: MediaId(media),
+      duration: Duration(milliseconds: durationMs),
+      rest: {...fields}
+        ..remove('media')
+        ..remove('duration_ms'),
+    );
+  }
+  return null;
+}
+
 /// One or more senses, each [decodeSense]'s; null otherwise.
 SensesContent? _decodeSenses(List<Object?> senses) {
   final decoded = [for (final sense in senses) decodeSense(sense)];
@@ -836,8 +901,8 @@ SenseLabel? _decodeLabel(Object? label) => switch (label) {
 
 /// The text of [blocks], joined by newlines: a text block's text, a cloze's
 /// and a table's filled form, and an image's media id followed by its boxes'
-/// answers, so two photos never share a card key. The card key and a merged
-/// back read it.
+/// answers, so two photos never share a card key, and a sound's media id,
+/// so two sounds never do either. The card key and a merged back read it.
 String plainText(List<Content> blocks) => [
   for (final block in blocks)
     switch (block) {
@@ -848,6 +913,7 @@ String plainText(List<Content> blocks) => [
         media.value,
         for (final box in boxes) ?box.answer,
       ].join('\n'),
+      AudioContent(:final media) => media.value,
       UnsupportedContent() => null,
     },
 ].nonNulls.join('\n');

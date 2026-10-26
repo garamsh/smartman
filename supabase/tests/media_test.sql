@@ -6,8 +6,8 @@ select plan(38);
 
 select results_eq(
   $$select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'media'$$,
-  $$values (false, 10485760::bigint, array['image/jpeg'])$$,
-  'the media bucket is private, holds JPEG files alone, and at most 10 MiB each');
+  $$values (false, 10485760::bigint, array['image/jpeg', 'audio/mp4', 'audio/mpeg'])$$,
+  'the media bucket is private, holds JPEG, MPEG-4 audio and MP3 files alone, and at most 10 MiB each');
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.com'),

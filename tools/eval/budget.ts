@@ -52,7 +52,8 @@ export const TYPICAL_REASONING_TOKENS = 1000;
 // the reply at the function's output cap.
 export const WORST_PROMPT_TOKENS = 6000;
 
-function cost(
+/** What a call of [promptTokens] and [completionTokens] costs at [pricing], uncached. */
+export function cost(
   pricing: Pricing,
   promptTokens: number,
   completionTokens: number,
@@ -91,7 +92,8 @@ export function estimateUsd(
 }
 
 /**
- * The cost of a call as OpenRouter reported it, or priced from its tokens when it reported no
+ * The cost of a call as OpenRouter reported it, the provider's upstream cost of a BYOK call
+ * included (`costUsd` carries both), or priced from its tokens when it reported no
  * cost. A call that reported no usage, which a failed call does, costs nothing: OpenRouter did not
  * bill the failed calls of the 2026-10-18 run.
  */

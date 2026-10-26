@@ -2,3 +2,5 @@
 "NSCameraUsageDescription" = "단어장이나 책 한 페이지를 찍어 카드로 만들 때 카메라를 사용해요.";
 /* Shown if the photo library is asked for; the picker itself needs no permission. */
 "NSPhotoLibraryUsageDescription" = "앨범에서 고른 사진으로 카드를 만들 때 사진 보관함을 사용해요.";
+/* Shown the first time a sound block records from the microphone (ADR 0112). */
+"NSMicrophoneUsageDescription" = "카드에 넣을 소리를 녹음할 때 마이크를 사용해요.";

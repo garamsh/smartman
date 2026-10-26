@@ -13,12 +13,17 @@ export type Selector = {
   readonly primary: string;
 };
 
-/** USD per token for prompt and completion, and per image and per request. */
+/**
+ * USD per token for prompt and completion, and per image and per request; and per prompt token
+ * read from or written to the prompt cache, the prompt's price where the list names none.
+ */
 export type Pricing = {
   readonly prompt: number;
   readonly completion: number;
   readonly image: number;
   readonly request: number;
+  readonly cacheRead: number;
+  readonly cacheWrite: number;
 };
 
 export type Model = {
@@ -70,16 +75,26 @@ function parsePricing(value: unknown): Pricing | null {
     const number = typeof raw === "string" ? Number(raw) : NaN;
     return Number.isFinite(number) && number >= 0 ? number : null;
   };
-  const [prompt, completion, image, request] = [
+  const [prompt, completion, image, request, cacheRead, cacheWrite] = [
     "prompt",
     "completion",
     "image",
     "request",
+    "input_cache_read",
+    "input_cache_write",
   ].map(price);
   if (
-    prompt === null || completion === null || image === null || request === null
+    prompt === null || completion === null || image === null ||
+    request === null || cacheRead === null || cacheWrite === null
   ) return null;
-  return { prompt, completion, image, request };
+  return {
+    prompt,
+    completion,
+    image,
+    request,
+    cacheRead: value.input_cache_read === undefined ? prompt : cacheRead,
+    cacheWrite: value.input_cache_write === undefined ? prompt : cacheWrite,
+  };
 }
 
 /** The newest model, by the date OpenRouter added it, whose whole ID matches the pattern. */

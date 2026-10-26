@@ -250,6 +250,8 @@ Future<_Study> _open(
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
   bool coachShown = true,
+  bool? autoplay,
+  AudioPlayback? playback,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -302,7 +304,11 @@ Future<_Study> _open(
     }
     return deck;
   }))!;
-  final storage = await openStudyStorage(tester, coachShown: coachShown);
+  final storage = await openStudyStorage(
+    tester,
+    coachShown: coachShown,
+    autoplay: autoplay,
+  );
   final navigator = GlobalKey<NavigatorState>();
   final study = _Study(tester, db, navigator, DeckSelection(deck.id), storage);
   await tester.pumpWidget(
@@ -315,6 +321,7 @@ Future<_Study> _open(
         studyZoneProvider.overrideWithValue((_) => Duration.zero),
         studyRandomProvider.overrideWithValue((_) => FirstDraw()),
         studyStorageProvider.overrideWithValue(storage),
+        if (playback != null) audioPlaybackProvider.overrideWithValue(playback),
         // No photo is stored, so a card's photo is drawn as its fallback.
         mediaStoreProvider.overrideWithValue(
           MediaStore(
@@ -1022,7 +1029,7 @@ void main() {
       ['a'],
       sides: {
         'a': (
-          const [TextContent('a front'), UnsupportedContent('audio', null)],
+          const [TextContent('a front'), UnsupportedContent('video', null)],
           const [TextContent('a back')],
         ),
       },
@@ -1031,7 +1038,7 @@ void main() {
     expect(
       find.descendant(
         of: _currentCard,
-        matching: find.text('[Content this version cannot show: audio]'),
+        matching: find.text('[Content this version cannot show: video]'),
       ),
       findsOneWidget,
     );
@@ -2400,6 +2407,198 @@ void main() {
         },
       );
     }
+  });
+
+  group("a card's sound (ADR 0112)", () {
+    const frontSound = AudioContent(
+      media: MediaId('front sound'),
+      duration: Duration(seconds: 2),
+    );
+    const backSound = AudioContent(
+      media: MediaId('back sound'),
+      duration: Duration(seconds: 3),
+    );
+    // A sound on the front of one card, on the back of another, and a card
+    // with none.
+    const sides = {
+      'heard': ([TextContent('listen'), frontSound], [TextContent('cat')]),
+      'said': ([TextContent('dog')], [backSound]),
+      'silent': ([TextContent('bird')], [TextContent('새')]),
+    };
+    const names = ['heard', 'said', 'silent'];
+
+    /// The current card's name among [sides].
+    String current(WidgetTester tester) {
+      final front = tester.widget<CurrentCard>(_currentCard).card.front;
+      return sides.entries
+          .firstWhere((side) => side.value.$1.first == front.first)
+          .key;
+    }
+
+    /// Answers every card "Know"; returns the cards in the order shown.
+    Future<List<String>> studyAll(_Study study) async {
+      final shown = <String>[];
+      for (var at = 0; at < names.length; at++) {
+        shown.add(current(study.tester));
+        await study.know();
+      }
+      return shown;
+    }
+
+    testWidgets(
+      'the front sound plays once as its card appears, and no other card plays one, while the setting is left as it starts',
+      (tester) async {
+        final played = FakeAudioPlayback();
+        final study = await _open(
+          tester,
+          names,
+          sides: sides,
+          playback: played,
+        );
+        final heardFirst = current(tester) == 'heard';
+        expect(played.plays, heardFirst ? [frontSound.media] : isEmpty);
+
+        final shown = await studyAll(study);
+
+        expect(shown, containsAll(names), reason: 'setup: each card shown');
+        expect(played.plays, [
+          frontSound.media,
+        ], reason: 'once, for the front holding a sound');
+      },
+    );
+
+    testWidgets(
+      'with the setting off nothing plays on its own, and the control and the screen reader play the sound',
+      (tester) async {
+        final played = FakeAudioPlayback();
+        final semantics = tester.ensureSemantics();
+        final study = await _open(
+          tester,
+          names,
+          sides: sides,
+          playback: played,
+          autoplay: false,
+        );
+        while (current(tester) != 'heard') {
+          await study.know();
+        }
+        expect(played.plays, isEmpty);
+
+        await _act(tester, _cardNode, 'Play sound');
+        expect(played.plays, [frontSound.media]);
+        await tester.tap(
+          find.descendant(
+            of: _currentCard,
+            matching: find.byTooltip('Play sound'),
+          ),
+        );
+        await tester.pump();
+        expect(played.plays, [frontSound.media, frontSound.media]);
+        semantics.dispose();
+      },
+    );
+
+    testWidgets(
+      "the current card offers Play sound only for a front holding a sound, and the previous card plays its back's",
+      (tester) async {
+        final played = FakeAudioPlayback();
+        final semantics = tester.ensureSemantics();
+        final study = await _open(
+          tester,
+          names,
+          sides: sides,
+          playback: played,
+          autoplay: false,
+        );
+        List<String> actions(Finder finder) => [
+          for (final id
+              in tester
+                      .getSemantics(finder)
+                      .getSemanticsData()
+                      .customSemanticsActionIds ??
+                  <int>[])
+            ?CustomSemanticsAction.getAction(id)!.label,
+        ];
+        while (current(tester) != 'said') {
+          expect(
+            actions(_cardNode).contains('Play sound'),
+            current(tester) == 'heard',
+            reason: current(tester),
+          );
+          await study.know();
+        }
+        // Control: a front with no sound offers the answers alone.
+        expect(actions(_cardNode), isNot(contains('Play sound')));
+        await study.know();
+
+        final previous = _previous('dog');
+        expect(actions(previous), contains('Play sound'));
+        await _act(tester, previous, 'Play sound');
+        expect(played.plays, [backSound.media]);
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('closing the screen stops a sound still playing', (
+      tester,
+    ) async {
+      final played = FakeAudioPlayback();
+      final study = await _open(tester, names, sides: sides, playback: played);
+      while (current(tester) != 'heard') {
+        await study.know();
+      }
+      await tester.pump();
+      expect(played.playing, isTrue, reason: 'setup: the front sound plays');
+
+      await study.close();
+
+      expect(played.playing, isFalse);
+    });
+
+    testWidgets(
+      'answering onto a card with no sound stops the sound of the card that left',
+      (tester) async {
+        final played = FakeAudioPlayback();
+        final study = await _open(
+          tester,
+          ['heard', 'silent'],
+          sides: sides,
+          playback: played,
+        );
+        while (current(tester) != 'heard') {
+          await study.know();
+        }
+        await tester.pump();
+        expect(played.playing, isTrue, reason: 'setup: the front sound plays');
+
+        await study.know();
+
+        expect(played.plays, [frontSound.media], reason: 'nothing else played');
+        expect(played.playing, isFalse);
+      },
+    );
+
+    testWidgets('the app pausing stops a sound still playing', (tester) async {
+      final played = FakeAudioPlayback();
+      final study = await _open(tester, names, sides: sides, playback: played);
+      while (current(tester) != 'heard') {
+        await study.know();
+      }
+      await tester.pump();
+      expect(played.playing, isTrue, reason: 'setup: the front sound plays');
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+
+      expect(played.playing, isFalse);
+      // Control: coming back plays nothing by itself.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(played.playing, isFalse);
+      await study.close();
+    });
   });
 }
 

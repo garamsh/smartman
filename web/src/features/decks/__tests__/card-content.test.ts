@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  audioLength,
+  audioOf,
   blockVersion,
   describeContent,
   isWholeCard,
@@ -188,6 +190,7 @@ describe("a block's version and id", () => {
       payload: { senses: [{ labels: [], meaning: "기차", examples: [] }] },
     },
     { type: "image", payload: { media: "m1", width: 4, height: 3, boxes: [] } },
+    { type: "audio", payload: { media: "m2", duration_ms: 1250 } },
   ];
 
   it("reads each known type at v1 with or without the field, and with an id", () => {
@@ -206,8 +209,8 @@ describe("a block's version and id", () => {
         { kind: "unsupported", type: block.type },
       ]);
     }
-    expect(parseContent([{ type: "audio", v: 1, payload: { media: "m1" } }])).toEqual([
-      { kind: "unsupported", type: "audio" },
+    expect(parseContent([{ type: "video", v: 1, payload: { media: "m1" } }])).toEqual([
+      { kind: "unsupported", type: "video" },
     ]);
   });
 
@@ -234,6 +237,7 @@ describe("a block's version and id", () => {
       table: [],
       senses: [],
       image: [],
+      audio: [],
     };
     expect(blockVersion("text", steps)).toBe(3);
     expect(upcastPayload("text", 1, { text: " cat " }, steps)).toEqual({ body: "cat" });
@@ -241,7 +245,7 @@ describe("a block's version and id", () => {
     expect(upcastPayload("text", 3, { body: "cat" }, steps)).toEqual({ body: "cat" });
     // Today a table is read at v2, after one step, and every other type at v1, with none.
     expect(blockVersion("table")).toBe(2);
-    for (const type of ["text", "cloze", "senses", "image"] as const) {
+    for (const type of ["text", "cloze", "senses", "image", "audio"] as const) {
       expect(blockVersion(type), type).toBe(1);
     }
   });
@@ -314,6 +318,49 @@ describe("an image block", () => {
     expect(isWholeCard(boxed)).toBe(true);
     // Control: the same photo without a box is split.
     expect(isWholeCard(bare)).toBe(false);
+  });
+});
+
+// The cases of the app's audio tests in `content_test.dart` (ADR 0112).
+describe("an audio block", () => {
+  const audio = (payload: Record<string, unknown>) => ({ type: "audio", payload });
+
+  it("reads its media id and length in milliseconds, past fields it does not know", () => {
+    expect(parseContent([audio({ media: "m1", duration_ms: 2400, waveform: [1, 2] })])).toEqual([
+      { kind: "audio", media: "m1", durationMs: 2400 },
+    ]);
+  });
+
+  it("is refused when it breaks its shape, where a whole one is read", () => {
+    for (const broken of [
+      audio({ duration_ms: 1000 }),
+      audio({ media: "", duration_ms: 1000 }),
+      audio({ media: "m1" }),
+      audio({ media: "m1", duration_ms: 0 }),
+      audio({ media: "m1", duration_ms: -5 }),
+      audio({ media: "m1", duration_ms: 1.5 }),
+      audio({ media: "m1", duration_ms: "1000" }),
+      audio({ url: "https://example.com/cat.m4a", duration_ms: 1000 }),
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    // Control: a whole one.
+    expect(parseContent([audio({ media: "m1", duration_ms: 1 })])).not.toBeNull();
+  });
+
+  it("reads as 음성, makes no whole card, and is found among a side's blocks with its length rounded up", () => {
+    const side =
+      parseContent([
+        { type: "text", payload: { text: "cat" } },
+        audio({ media: "m1", duration_ms: 1250 }),
+      ]) ?? [];
+
+    expect(describeContent(side)).toBe("cat 음성");
+    expect(spokenContent(side, false)).toBe("cat. 음성");
+    expect(isWholeCard(side)).toBe(false);
+    expect(audioOf(side)).toEqual([{ kind: "audio", media: "m1", durationMs: 1250 }]);
+    expect(audioLength(1250)).toBe("0:02");
+    expect(audioLength(60000)).toBe("1:00");
   });
 });
 

@@ -6,12 +6,17 @@ import { render } from "@/testing/render";
 import PrivacyPage from "../(legal)/privacy/page";
 import TermsPage from "../(legal)/terms/page";
 
-/** The headings issue #86 requires of each document, in the order they appear. */
+/**
+ * The headings issue #86 requires of each document, in the order they appear, and the date each
+ * takes effect, which a change to that document moves (issue #373 moved the terms').
+ */
 const documents = [
   {
     name: "the privacy policy",
     page: PrivacyPage,
     title: "개인정보 처리방침",
+    effectiveDate: "2026년 10월 16일",
+    effectiveSentence: "이 개인정보 처리방침은 2026년 10월 16일부터 시행해요.",
     headings: [
       "수집하는 개인정보 항목과 수집 방법",
       "개인정보의 이용 목적",
@@ -30,6 +35,8 @@ const documents = [
     name: "the terms of service",
     page: TermsPage,
     title: "이용약관",
+    effectiveDate: "2026년 11월 3일",
+    effectiveSentence: "이 약관은 2026년 11월 3일부터 시행해요.",
     headings: [
       "서비스",
       "계정과 로그인",
@@ -46,12 +53,13 @@ const documents = [
   },
 ] as const;
 
-describe.each(documents)("$name", ({ page, title, headings }) => {
+describe.each(documents)("$name", ({ page, title, effectiveDate, effectiveSentence, headings }) => {
   it("is titled, states its effective date, and names the contact", async () => {
     await render(page, {});
 
     expect(screen.getByRole("heading", { level: 1, name: title })).toBeInTheDocument();
-    expect(screen.getByText("시행일 2026년 10월 16일")).toBeInTheDocument();
+    expect(screen.getByText(`시행일 ${effectiveDate}`)).toBeInTheDocument();
+    expect(screen.getByText(effectiveSentence)).toBeInTheDocument();
     for (const link of screen.getAllByRole("link", { name: "sauce@garam.sh" })) {
       expect(link).toHaveAttribute("href", "mailto:sauce@garam.sh");
     }
@@ -73,5 +81,18 @@ describe.each(documents)("$name", ({ page, title, headings }) => {
         `#${heading.id}`,
       );
     }
+  });
+});
+
+describe("the terms of service", () => {
+  it("states that each plan limits photos by the month or the day, and 맥스's fair-use cap of 1,000 a day", async () => {
+    await render(TermsPage, {});
+
+    const ai = within(screen.getByRole("region", { name: "AI로 만든 카드" }));
+    expect(
+      ai.getByText(
+        "사진으로 카드를 만드는 것은 요금제마다 쓸 수 있는 사진 수가 정해져 있고, 요금제에 따라 한 달 또는 하루 단위로 세요(한국 시간 기준). 맥스 요금제는 사진 수에 제한이 없지만, 공정 이용을 위해 하루 1,000장까지 쓸 수 있어요.",
+      ),
+    ).toBeInTheDocument();
   });
 });

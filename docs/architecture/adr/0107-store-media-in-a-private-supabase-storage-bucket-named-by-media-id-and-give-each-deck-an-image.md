@@ -1,6 +1,6 @@
 # ADR 0107: Store media in a private Supabase Storage bucket, named by media id, and give each deck an image
 
-> Status: accepted; its centred-square crop refined by ADR-0109 for a card's photo
+> Status: accepted; its centred-square crop refined by ADR-0109 for a card's photo, and its MIME types by ADR-0112
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
