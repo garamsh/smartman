@@ -1,6 +1,6 @@
 # ADR 0049: Study in one flow that goes on past today's cards as recorded study, with the current card showing its front alone
 
-> Status: accepted; its counting of answers past today's cards in the daily goal superseded by ADR-0087
+> Status: accepted; its counting of answers past today's cards in the daily goal superseded by ADR-0087; on the phone, the answer buttons among its ways to answer superseded by ADR-0099
 > Date: 2026-10-18
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

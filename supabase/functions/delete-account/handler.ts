@@ -1,7 +1,7 @@
 /** The delete-account request pipeline and the mapping from each outcome to an HTTP status. */
 
 import { authenticate, SupabaseError, type UserId } from "../_shared/auth.ts";
-import { deleteUser } from "./admin.ts";
+import { deleteMedia, deleteUser } from "./admin.ts";
 import type { Config } from "./config.ts";
 
 /** How a request ended; a refusal's body carries the same code. */
@@ -82,6 +82,8 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
   try {
     userId = await authenticate(request.headers.get("Authorization"), supabase);
     if (userId === null) return { outcome: "unauthenticated", userId };
+    // The objects first: once the user is gone, a failed retry could not be authenticated.
+    await deleteMedia(userId, supabase);
     await deleteUser(userId, supabase);
   } catch (error) {
     if (error instanceof SupabaseError) {

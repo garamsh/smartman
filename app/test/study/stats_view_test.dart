@@ -11,8 +11,11 @@ import 'package:smartman/l10n/app_localizations_en.dart';
 import 'package:smartman/study/src/failure.dart';
 import 'package:smartman/study/src/rust/api/engine.dart'
     show EngineError, Quantity;
+import 'package:smartman/study/src/stats.dart' show StatsPeriod;
 import 'package:smartman/study/src/stats_style.dart';
 import 'package:smartman/study/study.dart';
+
+import '../word_breaks.dart';
 
 /// 09:00 UTC on Thursday 15 October, five hours into the study day.
 final _now = DateTime.utc(2026, 10, 15, 9);
@@ -168,6 +171,11 @@ String _label(WidgetTester tester, String prefix) {
   return node.label;
 }
 
+/// The card headed [title], the surface nearest its heading.
+Finder _card(String title) => find
+    .ancestor(of: find.text(title), matching: find.byType(DecoratedBox))
+    .first;
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -245,8 +253,16 @@ void main() {
 
       await tester.tap(find.text('7 days'));
       await tester.pumpAndSettle();
-      expect(find.text('No reviews in this period.'), findsOneWidget);
+      expect(shownText('No reviews in this period.'), findsOneWidget);
       expect(find.text('100%'), findsNothing);
+      // The period stays in the card, so another can be chosen.
+      expect(
+        find.descendant(
+          of: _card('Correct in reviews'),
+          matching: find.byType(SegmentedButton<StatsPeriod>),
+        ),
+        findsOneWidget,
+      );
     },
   );
 
@@ -266,13 +282,80 @@ void main() {
   );
 
   testWidgets(
-    'the mastered weeks read each week\'s count, with the gain over four weeks beside the heading',
+    'the period selector sits in the retention card beside its heading, not beside the tab\'s title, and governs the retention alone',
     (tester) async {
       await _pump(tester, await _seed(_history, recall: _recall));
 
+      final selector = find.byType(SegmentedButton<StatsPeriod>);
+      expect(selector, findsOneWidget);
+      expect(
+        find.descendant(of: _card('Correct in reviews'), matching: selector),
+        findsOneWidget,
+      );
+      // Beside the heading: in its row, which puts the selector at the
+      // card's right where both fit and under the heading where they do not.
+      final row = find
+          .ancestor(of: selector, matching: find.byType(Wrap))
+          .first;
+      expect(
+        find.descendant(of: row, matching: find.text('Correct in reviews')),
+        findsOneWidget,
+      );
+      expect(
+        tester.getRect(selector).right,
+        tester.getRect(_card('Correct in reviews')).right - AppSpace.s16,
+      );
+      // Control: the tab's title stands alone above the cards.
+      expect(
+        tester.getRect(find.text('Record')).bottom,
+        lessThan(tester.getRect(_card('Correct in reviews')).top),
+      );
+
+      // Another period changes the retention, and no other card.
+      final mastered = find.descendant(
+        of: _card('Mastered cards'),
+        matching: find.byType(Text),
+      );
+      final before = [
+        for (final text in tester.widgetList<Text>(mastered)) text.data,
+      ];
+      await tester.tap(find.text('7 days'));
+      await tester.pumpAndSettle();
+      expect(find.text('50%'), findsOneWidget);
+      expect([
+        for (final text in tester.widgetList<Text>(mastered)) text.data,
+      ], before);
+    },
+  );
+
+  testWidgets(
+    'the mastered weeks show the cards mastered now as the figure and name the first and the last week under the bars, reading each week\'s count, with the gain over four weeks beside the heading',
+    (tester) async {
+      await _pump(tester, await _seed(_history, recall: _recall));
+
+      final card = _card('Mastered cards');
+      // This week's three, as the figure.
+      final figure = tester.widget<Text>(
+        find.descendant(of: card, matching: find.text('3 cards')),
+      );
+      expect(figure.style?.fontSize, AppType.figure.fontSize);
+      expect(
+        find.descendant(of: card, matching: find.text('7 weeks ago')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('This week')),
+        findsOneWidget,
+      );
+      // The week names sit under the bars, the first at the left.
+      expect(
+        tester.getRect(find.text('7 weeks ago')).left,
+        lessThan(tester.getRect(find.text('This week')).left),
+      );
+
       expect(
         _label(tester, 'Mastered cards by week'),
-        'Mastered cards by week, from 8 weeks ago to this week: '
+        'Mastered cards by week, from 7 weeks ago to this week: '
         '0 cards, 2 cards, 2 cards, 2 cards, 2 cards, 2 cards, 3 cards, 3 cards',
       );
       expect(find.text('+1 in 4 weeks'), findsOneWidget);
@@ -280,11 +363,84 @@ void main() {
   );
 
   testWidgets(
-    'the study days read each studied day with its cards, with the current and the best streak',
+    'the first mastered week is named seven weeks ago, the week a card mastered seven weeks before today falls in and one mastered a day later does not',
+    (tester) async {
+      // Today's study day is 15 October; seven weeks before it, 27 August.
+      for (final (day, first) in [(27, 1), (28, 0)]) {
+        // A fresh scope, so the second deck's figures are not the first's.
+        await tester.pumpWidget(const SizedBox());
+        await _pump(
+          tester,
+          await _seed({
+            'chat': [('good', DateTime.utc(2026, 8, day, 9))],
+          }),
+        );
+        expect(
+          _label(tester, 'Mastered cards by week'),
+          startsWith(
+            'Mastered cards by week, from 7 weeks ago to this week: '
+            '$first card${first == 1 ? '' : 's'}, 1 card,',
+          ),
+          reason: 'mastered on $day August',
+        );
+        expect(
+          find.descendant(
+            of: _card('Mastered cards'),
+            matching: find.text('7 weeks ago'),
+          ),
+          findsOneWidget,
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'the study days read each studied day with its cards, with the current and the best streak, today\'s cell ringed, and the first day\'s date, the shades\' key and today under the grid',
     (tester) async {
       await _pump(tester, await _seed(_history, recall: _recall));
 
       expect(find.text('3-day streak · best 3'), findsOneWidget);
+      final card = _card('Study days');
+      // The grid's first day, 84 study days back to 24 July, and today.
+      expect(
+        find.descendant(of: card, matching: find.text('Jul 24')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Today')),
+        findsOneWidget,
+      );
+      // The shades' key, palest to darkest between its two words.
+      expect(
+        find.descendant(of: card, matching: find.text('Fewer')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('More')),
+        findsOneWidget,
+      );
+      // One cell ringed: the last, today's.
+      final ringed = find.descendant(
+        of: card,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is DecoratedBox &&
+              widget.decoration is BoxDecoration &&
+              (widget.decoration as BoxDecoration).border != null,
+        ),
+      );
+      expect(ringed, findsOneWidget);
+      final cells = find.descendant(
+        of: card,
+        matching: find.byType(AspectRatio),
+      );
+      expect(cells, findsNWidgets(84));
+      expect(
+        tester.getRect(ringed),
+        tester.getRect(
+          find.descendant(of: cells.last, matching: find.byType(DecoratedBox)),
+        ),
+      );
       expect(
         _label(tester, 'Studied on'),
         'Studied on 7 days in the last 12 weeks: Sep 1 2, Sep 10 1, Oct 1 1, '
@@ -298,10 +454,10 @@ void main() {
     (tester) async {
       await _pump(tester, await _seed({'a': []}));
 
-      expect(find.text('No reviews in this period.'), findsOneWidget);
-      expect(find.text('No card reviewed yet.'), findsOneWidget);
+      expect(shownText('No reviews in this period.'), findsOneWidget);
+      expect(shownText('No card reviewed yet.'), findsOneWidget);
       expect(find.textContaining('in 4 weeks'), findsNothing);
-      expect(find.text('No card mastered yet.'), findsOneWidget);
+      expect(shownText('No card mastered yet.'), findsOneWidget);
       expect(
         find.bySemanticsLabel('No study days in the last 12 weeks'),
         findsOneWidget,

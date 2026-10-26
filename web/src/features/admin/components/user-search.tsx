@@ -11,24 +11,37 @@ import type { UserMatch, UserPage } from "../read-admin";
 /** How long the search waits after the last keystroke before it asks the server. */
 export const searchDelayMs = 250;
 
+/** The users page's address for [query] with its pages through [page] shown. */
+export function userSearchHref(query: string, page: number): string {
+  const params = new URLSearchParams();
+  if (query.trim() !== "") params.set("q", query.trim());
+  if (query.trim() !== "" && page > 0) params.set("page", String(page));
+  const search = params.toString();
+  return search === "" ? "/admin/users" : `/admin/users?${search}`;
+}
+
 /**
  * The users whose email holds what the admin types, updated in place [searchDelayMs] after the
  * last keystroke: the earlier results stay until the next arrive, an answer to an older query is
- * dropped, and "더 보기" adds the next page.
+ * dropped, and "더 보기" adds the next page. Each search and each page shown replaces the
+ * address, so going back to it from a user's page shows the same results.
  */
 export function UserSearch({
   initialQuery,
   initialPage,
+  initialPageIndex = 0,
   timeZone,
 }: {
   initialQuery: string;
   initialPage: UserPage | null;
+  /** The last page [initialPage] holds. */
+  initialPageIndex?: number;
   timeZone: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [users, setUsers] = useState<UserMatch[]>(initialPage?.users ?? []);
   const [total, setTotal] = useState<number | null>(initialPage?.total ?? null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(initialPageIndex);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const latest = useRef(0);
@@ -50,6 +63,8 @@ export function UserSearch({
         setUsers(answer.users);
         setTotal(query.trim() === "" ? null : answer.total);
         setPage(0);
+        // Next.js keeps its router in step with the address replaced, and reads nothing again.
+        window.history.replaceState(null, "", userSearchHref(query, 0));
       });
     }, searchDelayMs);
     return () => {
@@ -67,7 +82,8 @@ export function UserSearch({
         return;
       }
       setUsers((shown) => [...shown, ...answer.users]);
-      setPage((current) => current + 1);
+      setPage(page + 1);
+      window.history.replaceState(null, "", userSearchHref(searched.current, page + 1));
     });
   };
 

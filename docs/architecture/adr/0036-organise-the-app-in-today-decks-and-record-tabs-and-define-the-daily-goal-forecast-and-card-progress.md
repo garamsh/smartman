@@ -1,6 +1,6 @@
 # ADR 0036: Organise the app in 오늘, 덱 and 기록 tabs, and define the daily goal, the seven-day forecast and a card's progress
 
-> Status: accepted; the today card's goal line superseded by ADR-0046; the 덱 tab's "선택", top-bar "새 덱" and long-press selection superseded by ADR-0050; its new-deck sheet's "공개 덱에서 가져오기" and "사진으로 만들기" and the first-run home's buttons superseded by ADR-0067; its forecast on the 오늘 tab superseded by ADR-0088; its goal ring on the today card superseded by ADR-0091
+> Status: accepted; the today card's goal line superseded by ADR-0046; the 덱 tab's "선택", top-bar "새 덱" and long-press selection superseded by ADR-0050; its new-deck sheet's "공개 덱에서 가져오기" and "사진으로 만들기" and the first-run home's buttons superseded by ADR-0067; its forecast on the 오늘 tab superseded by ADR-0088; its goal ring on the today card superseded by ADR-0091; its deck rows' "m장 중 n장 익힘" under the bar and the deck page's "n / m 익힘" superseded by ADR-0096; its navy today card, deck page card and their shades superseded by ADR-0098
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

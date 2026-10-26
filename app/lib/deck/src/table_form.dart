@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart' show CustomSemanticsAction;
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../design/app_button.dart';
-import '../../design/app_text_field.dart';
+import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'content.dart';
@@ -120,14 +117,19 @@ List<TextEditingController> _cells(int count) => [
   for (var i = 0; i < count; i++) TextEditingController(),
 ];
 
-/// The table form's two ways of working, so that a tap does one thing in
-/// each: typing the cells, or choosing the blanks.
-enum _Mode { cells, blanks }
+/// A cell of the grid: a row of the table, or -1 for the header row, and a
+/// column.
+typedef _Cell = ({int row, int column});
 
-/// The table form: a switch between typing the cells and choosing the
-/// blanks, the table in a grid that scrolls sideways, buttons that add and
-/// remove its rows and columns, and, with [showErrors], what keeps it from
-/// being saved.
+/// What "지우기" removes: the selected cell's row or its column.
+enum _Remove { row, column }
+
+/// The table form: a toolbar over the table, "행 추가", "열 추가", "빈칸" and
+/// "지우기", which act on the selected cell, and the table in a grid that
+/// scrolls sideways, each header and cell edited in place, a blank tinted
+/// `brandTint`. A tap on a cell selects it and edits it; the keyboard's next
+/// moves to the next cell. With [showErrors], what keeps it from being saved
+/// shows under it (ADR 0102).
 class TableFields extends StatefulWidget {
   const TableFields({
     super.key,
@@ -147,7 +149,9 @@ class TableFields extends StatefulWidget {
 }
 
 class _TableFieldsState extends State<TableFields> {
-  _Mode _mode = _Mode.cells;
+  /// The cell the toolbar acts on: the last one tapped or moved to, kept
+  /// while a toolbar button is pressed.
+  _Cell? _selected;
 
   /// A cell's width, so that a column lines up from row to row.
   static const _cellWidth = 136.0;
@@ -155,8 +159,51 @@ class _TableFieldsState extends State<TableFields> {
   TableDraft get _draft => widget.draft;
 
   void _change(VoidCallback change) {
-    change();
+    setState(change);
     widget.onChanged();
+  }
+
+  /// Whether the selected cell is a body cell, the only kind a blank can be.
+  TableBlank? get _selectedBody => switch (_selected) {
+    (:final row, :final column) when row >= 0 => (row: row, column: column),
+    _ => null,
+  };
+
+  /// Removes the selected cell's row or column, asking first when it holds
+  /// text the card would lose.
+  Future<void> _remove(_Remove what) async {
+    final cell = _selected;
+    if (cell == null) return;
+    final l10n = AppLocalizations.of(context);
+    final texts = switch (what) {
+      _Remove.row => [for (final c in _draft.rows[cell.row]) c.text],
+      _Remove.column => [
+        _draft.columns[cell.column].text,
+        for (final row in _draft.rows) row[cell.column].text,
+      ],
+    };
+    if (texts.any((text) => text.trim().isNotEmpty) &&
+        !await showAppConfirm(
+          context,
+          title: switch (what) {
+            _Remove.row => l10n.tableRemoveRowTitle(cell.row + 1),
+            _Remove.column => l10n.tableRemoveColumnTitle(cell.column + 1),
+          },
+          consequence: l10n.tableRemoveBody,
+          confirmLabel: l10n.tableRemove,
+        )) {
+      return;
+    }
+    if (!mounted) return;
+    _change(() {
+      switch (what) {
+        case _Remove.row:
+          _draft.removeRow(cell.row);
+        case _Remove.column:
+          _draft.removeColumn(cell.column);
+      }
+      _selected = null;
+    });
   }
 
   @override
@@ -164,58 +211,112 @@ class _TableFieldsState extends State<TableFields> {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final problem = widget.showErrors ? _draft.problem : null;
+    final selected = _selected;
+    final body = _selectedBody;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: AppSpace.s12,
       children: [
         Semantics(
-          label: l10n.tableModeLabel,
-          child: SegmentedButton<_Mode>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: _Mode.cells,
-                label: Text(l10n.tableModeCells),
-              ),
-              ButtonSegment(
-                value: _Mode.blanks,
-                label: Text(l10n.tableModeBlanks),
-              ),
-            ],
-            selected: {_mode},
-            onSelectionChanged: (modes) => setState(() => _mode = modes.single),
-          ),
-        ),
-        Text(switch (_mode) {
-          _Mode.cells => l10n.tableCellsHint,
-          _Mode.blanks => l10n.tableBlanksHint,
-        }, style: AppType.secondary.copyWith(color: colors.muted)),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: switch (_mode) {
-            _Mode.cells => _cellsGrid(l10n),
-            _Mode.blanks => _blanksGrid(l10n, problem),
-          },
-        ),
-        if (_mode == _Mode.cells)
-          Wrap(
-            spacing: AppSpace.s8,
-            runSpacing: AppSpace.s8,
+          label: l10n.tableToolbar,
+          container: true,
+          child: Wrap(
+            spacing: AppSpace.s4,
+            runSpacing: AppSpace.s4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              AppButton(
-                label: l10n.addRow,
-                icon: LucideIcons.plus,
-                variant: AppButtonVariant.secondary,
+              ActionChip(
+                label: Text(l10n.addRow),
+                labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
+                materialTapTargetSize: MaterialTapTargetSize.padded,
                 onPressed: () => _change(_draft.addRow),
               ),
-              AppButton(
-                label: l10n.addColumn,
-                icon: LucideIcons.plus,
-                variant: AppButtonVariant.secondary,
+              ActionChip(
+                label: Text(l10n.addColumn),
+                labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
+                materialTapTargetSize: MaterialTapTargetSize.padded,
                 onPressed: () => _change(_draft.addColumn),
+              ),
+              FilterChip(
+                label: Text(l10n.tableBlankToggle),
+                showCheckmark: false,
+                materialTapTargetSize: MaterialTapTargetSize.padded,
+                selected: body != null && _draft.blanks.contains(body),
+                selectedColor: colors.brandTint,
+                labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
+                onSelected: body == null
+                    ? null
+                    : (_) => _change(() => _draft.toggle(body)),
+              ),
+              PopupMenuButton<_Remove>(
+                tooltip: l10n.tableRemove,
+                enabled: selected != null,
+                onSelected: _remove,
+                itemBuilder: (_) => [
+                  if (selected != null && selected.row >= 0)
+                    PopupMenuItem(
+                      value: _Remove.row,
+                      enabled: _draft.rows.length > 1,
+                      child: Text(l10n.deleteRow(selected.row + 1)),
+                    ),
+                  if (selected != null)
+                    PopupMenuItem(
+                      value: _Remove.column,
+                      enabled: _draft.columns.length > 1,
+                      child: Text(l10n.deleteColumn(selected.column + 1)),
+                    ),
+                ],
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: AppSize.tapTarget,
+                    minWidth: AppSize.tapTarget,
+                  ),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpace.s12,
+                      ),
+                      child: Text(
+                        l10n.tableRemove,
+                        style: AppType.bodyStrong.copyWith(
+                          color: selected == null ? colors.muted : colors.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Table(
+            defaultColumnWidth: const FixedColumnWidth(_cellWidth),
+            defaultVerticalAlignment: TableCellVerticalAlignment.top,
+            children: [
+              TableRow(
+                children: [
+                  for (final (column, header) in _draft.columns.indexed)
+                    _field(header, (row: -1, column: column), l10n),
+                ],
+              ),
+              for (final (row, cells) in _draft.rows.indexed)
+                TableRow(
+                  children: [
+                    for (final (column, cell) in cells.indexed)
+                      _field(
+                        cell,
+                        (row: row, column: column),
+                        l10n,
+                        problem: problem,
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
         if (problem != null)
           Text(switch (problem) {
             TableProblem.noBlank => l10n.tableBlankRequired,
@@ -225,208 +326,67 @@ class _TableFieldsState extends State<TableFields> {
     );
   }
 
-  Widget _padded(Widget child) =>
-      Padding(padding: const EdgeInsets.all(AppSpace.s4), child: child);
-
-  /// The headers and cells as fields, each column with a delete button over
-  /// it and each row with one after it.
-  Widget _cellsGrid(AppLocalizations l10n) {
-    final columns = _draft.columns.length;
-    final rows = _draft.rows.length;
-    Widget field(
-      TextEditingController cell,
-      String label, {
-      bool bold = false,
-    }) => _padded(
-      Semantics(
-        label: label,
-        child: AppTextField(
-          controller: cell,
-          maxLines: null,
-          style: bold
-              ? AppType.body.copyWith(fontWeight: FontWeight.w700)
-              : null,
-          onChanged: (_) => widget.onChanged(),
-        ),
-      ),
-    );
-    return Table(
-      defaultColumnWidth: const FixedColumnWidth(_cellWidth),
-      columnWidths: {columns: const IntrinsicColumnWidth()},
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children: [
-        TableRow(
-          children: [
-            for (var column = 0; column < columns; column++)
-              Center(
-                child: IconButton(
-                  tooltip: l10n.deleteColumn(column + 1),
-                  icon: const Icon(LucideIcons.trash2),
-                  onPressed: columns > 1
-                      ? () => _change(() => _draft.removeColumn(column))
-                      : null,
-                ),
-              ),
-            const SizedBox.shrink(),
-          ],
-        ),
-        TableRow(
-          children: [
-            for (final (column, header) in _draft.columns.indexed)
-              field(header, l10n.tableHeaderCell(column + 1), bold: true),
-            const SizedBox.shrink(),
-          ],
-        ),
-        for (final (row, cells) in _draft.rows.indexed)
-          TableRow(
-            children: [
-              for (final (column, cell) in cells.indexed)
-                field(
-                  cell,
-                  l10n.tableCell(row + 1, column + 1),
-                  bold: column == 0,
-                ),
-              IconButton(
-                tooltip: l10n.deleteRow(row + 1),
-                icon: const Icon(LucideIcons.trash2),
-                onPressed: rows > 1
-                    ? () => _change(() => _draft.removeRow(row))
-                    : null,
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  /// The headers as text and each cell as a toggle, chosen as a blank or
-  /// not, read with its place and its state and given the screen-reader
-  /// action that changes it.
-  Widget _blanksGrid(AppLocalizations l10n, TableProblem? problem) {
+  /// A header or a cell, edited in place: a header and each row's first cell
+  /// bold, a blank tinted, the selected cell outlined in ink, and a blank
+  /// with no text outlined in red once the save is refused.
+  Widget _field(
+    TextEditingController controller,
+    _Cell cell,
+    AppLocalizations l10n, {
+    TableProblem? problem,
+  }) {
     final colors = AppColors.of(context);
-    return Table(
-      defaultColumnWidth: const FixedColumnWidth(_cellWidth),
-      defaultVerticalAlignment: TableCellVerticalAlignment.intrinsicHeight,
-      children: [
-        TableRow(
-          children: [
-            for (final header in _draft.columns)
-              _padded(
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: AppSize.field),
-                  child: Center(
-                    child: Text(
-                      header.text.trim(),
-                      textAlign: TextAlign.center,
-                      style: AppType.body.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        for (final (row, cells) in _draft.rows.indexed)
-          TableRow(
-            children: [
-              for (final column in cells.indexed.map((entry) => entry.$1))
-                _padded(
-                  _BlankCell(
-                    text: _draft.textAt((row: row, column: column)),
-                    place: l10n.tableCell(row + 1, column + 1),
-                    chosen: _draft.blanks.contains((row: row, column: column)),
-                    bold: column == 0,
-                    error:
-                        problem == TableProblem.emptyBlank &&
-                        _draft.blanks.contains((row: row, column: column)) &&
-                        _draft.textAt((row: row, column: column)).isEmpty,
-                    onToggle: () => _change(
-                      () => _draft.toggle((row: row, column: column)),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-      ],
+    final body = cell.row >= 0 ? (row: cell.row, column: cell.column) : null;
+    final blank = body != null && _draft.blanks.contains(body);
+    final error =
+        problem == TableProblem.emptyBlank &&
+        blank &&
+        _draft.textAt(body).isEmpty;
+    final selected = _selected == cell;
+    OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
+      borderRadius: BorderRadius.zero,
+      borderSide: BorderSide(color: color, width: width),
     );
-  }
-}
-
-/// A cell of the blanks grid: its text on a tile, filled when [chosen], a
-/// tap choosing it or leaving it out. A screen reader reads its text, its
-/// place and whether it is a blank, and offers "빈칸으로" or "빈칸 해제".
-class _BlankCell extends StatelessWidget {
-  const _BlankCell({
-    required this.text,
-    required this.place,
-    required this.chosen,
-    required this.bold,
-    required this.error,
-    required this.onToggle,
-  });
-
-  final String text;
-  final String place;
-  final bool chosen;
-  final bool bold;
-
-  /// Whether the cell is a blank with no text, which keeps the table from
-  /// being saved.
-  final bool error;
-
-  final VoidCallback onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
     return Semantics(
       label: [
-        if (text.isEmpty) l10n.tableEmptyCell else text,
-        place,
-        if (chosen) l10n.blank,
+        if (cell.row < 0)
+          l10n.tableHeaderCell(cell.column + 1)
+        else
+          l10n.tableCell(cell.row + 1, cell.column + 1),
+        if (blank) l10n.blank,
       ].join(', '),
-      button: true,
-      selected: chosen,
-      excludeSemantics: true,
-      onTap: onToggle,
-      customSemanticsActions: {
-        CustomSemanticsAction(
-          label: chosen ? l10n.tableClearBlank : l10n.tableMakeBlank,
-        ): onToggle,
-      },
-      child: Material(
-        color: chosen ? colors.brandTint : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.field),
-          side: BorderSide(
-            color: error
-                ? colors.dontKnowText
-                : chosen
-                ? colors.ink
-                : colors.outline,
+      child: Focus(
+        // Not a stop of its own: it hears the field inside gain focus.
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (focused) {
+          if (focused) setState(() => _selected = cell);
+        },
+        child: TextField(
+          controller: controller,
+          maxLines: null,
+          textInputAction: TextInputAction.next,
+          style: AppType.body.copyWith(
+            color: colors.ink,
+            fontWeight: cell.row < 0 || cell.column == 0
+                ? FontWeight.w700
+                : null,
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onToggle,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSize.field),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpace.s12),
-              child: Center(
-                child: Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: AppType.body.copyWith(
-                    color: colors.ink,
-                    fontWeight: bold ? FontWeight.w700 : null,
-                  ),
-                ),
-              ),
-            ),
+          onChanged: (_) => widget.onChanged(),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: blank
+                ? colors.brandTint
+                : cell.row < 0
+                ? colors.ground
+                : colors.surface,
+            contentPadding: const EdgeInsets.all(AppSpace.s12),
+            enabledBorder: error
+                ? border(colors.dontKnowText, 2)
+                : selected
+                ? border(colors.ink, 2)
+                : border(colors.outline, 1),
+            focusedBorder: border(error ? colors.dontKnowText : colors.ink, 2),
           ),
         ),
       ),

@@ -91,6 +91,9 @@ final class SupabaseSyncServer implements SyncServer {
           'visibility': row.visibility,
           'published_at': _timeOrNull(row.publishedAt),
           'description': row.description,
+          'icon': row.icon,
+          'color': row.color,
+          'image_media_id': row.imageMediaId,
           'created_at': _time(row.createdAt),
           'updated_at': _time(row.updatedAt),
           'deleted_at': _timeOrNull(row.deletedAt),
@@ -111,6 +114,8 @@ final class SupabaseSyncServer implements SyncServer {
           'card_key': row.cardKey,
           'source': row.source,
           'origin_deck_id': row.originDeckId,
+          'template': row.template,
+          'template_version': row.templateVersion,
           'created_at': _time(row.createdAt),
           'updated_at': _time(row.updatedAt),
           'deleted_at': _timeOrNull(row.deletedAt),
@@ -258,6 +263,9 @@ DeckRow _decodeDeck(_Fields row) => DeckRow(
   visibility: row.string('visibility'),
   publishedAt: row.timeOrNull('published_at'),
   description: row.stringOrNull('description'),
+  icon: row.stringOrNull('icon'),
+  color: row.stringOrNull('color'),
+  imageMediaId: row.stringOrNull('image_media_id'),
   createdAt: row.time('created_at'),
   updatedAt: row.time('updated_at'),
   deletedAt: row.timeOrNull('deleted_at'),
@@ -272,6 +280,8 @@ CardRow _decodeCard(_Fields row) => CardRow(
   cardKey: row.string('card_key'),
   source: row.string('source'),
   originDeckId: row.stringOrNull('origin_deck_id'),
+  template: row.stringOrNull('template'),
+  templateVersion: row.integerOrNull('template_version'),
   createdAt: row.time('created_at'),
   updatedAt: row.time('updated_at'),
   deletedAt: row.timeOrNull('deleted_at'),
@@ -314,6 +324,8 @@ extension type _Fields(Map<String, dynamic> row) {
   String? stringOrNull(String key) => _read<String?>(key);
 
   int integer(String key) => _read<int>(key);
+
+  int? integerOrNull(String key) => _read<int?>(key);
 
   double number(String key) => _read<num>(key).toDouble();
 

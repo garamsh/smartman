@@ -2,7 +2,7 @@
 
 import { Flame } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { type MouseEvent, useEffect, useRef } from "react";
 
 import { Mascot } from "@/design/brand";
 
@@ -11,16 +11,22 @@ import type { Completion } from "../session";
 /**
  * The completion card in the current card's place once no card is left today: the mascot, the
  * heading, today's answers, time and streak, and the choice to go on with the new cards past
- * today's, through [onStudyOn], or to stop; with none left, a line saying so in place of going
- * on. It takes the focus to its first choice when it appears, so a keyboard reaches it at once.
+ * today's, through [onStudyOn], or to stop, through [onStop] before the link is followed; with
+ * none left, a line saying so in place of going on. It takes the focus to its first choice when it appears, so a keyboard reaches it at once.
  */
 export function CompletionCard({
   completion,
   onStudyOn,
+  back,
+  onStop,
 }: {
   completion: Completion;
   /** Goes on with the new cards past today's; null when none is left. */
   onStudyOn: (() => void) | null;
+  /** Where "그만하기" leaves for: where the session was opened from. */
+  back: string;
+  /** Runs on "그만하기" before its link is followed, and may hold it back. */
+  onStop: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const studyOn = useRef<HTMLButtonElement>(null);
   const stop = useRef<HTMLAnchorElement>(null);
@@ -66,7 +72,8 @@ export function CompletionCard({
         )}
         <Link
           ref={stop}
-          href="/"
+          href={back}
+          onClick={onStop}
           className="pressable flex min-h-tap-target items-center justify-center rounded-button px-6 text-label text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
           그만하기

@@ -5,6 +5,7 @@ import '../../design/app_button.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -180,7 +181,11 @@ class _PublishSheetState extends State<_PublishSheet> {
             onChanged: _saving
                 ? null
                 : (agreed) => setState(() => _agreed = agreed ?? false),
-            title: Text(l10n.publishAgreement, style: AppType.body),
+            title: Text(
+              keepWords(l10n.publishAgreement),
+              semanticsLabel: l10n.publishAgreement,
+              style: AppType.body,
+            ),
           ),
           if (error != null)
             Semantics(

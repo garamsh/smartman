@@ -47,7 +47,7 @@ async function read<C extends CardEntry>(
     selectAll((from, to, counted) => {
       const query = supabase
         .from("decks")
-        .select("id, name, visibility", counted ? { count: "exact" } : {})
+        .select("id, name, visibility, icon, color", counted ? { count: "exact" } : {})
         .eq("user_id", userId)
         .is("deleted_at", null);
       return (decks ? query.in("id", decks) : query)
@@ -99,7 +99,16 @@ function parseDeck(row: unknown): Deck | null {
   const visibility = field(row, "visibility");
   if (typeof id !== "string" || typeof name !== "string") return null;
   if (visibility !== "private" && visibility !== "public") return null;
-  return { id: id as DeckId, name, public: visibility === "public" };
+  // A key the tile does not know draws the default, so neither key makes a row unreadable.
+  const icon = field(row, "icon");
+  const color = field(row, "color");
+  return {
+    id: id as DeckId,
+    name,
+    public: visibility === "public",
+    ...(typeof icon === "string" && { icon }),
+    ...(typeof color === "string" && { color }),
+  };
 }
 
 function parseCardEntry(row: unknown): CardEntry | null {

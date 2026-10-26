@@ -65,7 +65,7 @@ class DeckScreens {
   /// an interval of [dueDays] days, those in [later] tomorrow, and the rest
   /// are new. [unreadable] makes the deck's cards unreadable to the count, and
   /// [stalled] holds the count unread; [photoImport] enables the photo
-  /// buttons.
+  /// buttons. The app's text is in [locale].
   static Future<DeckScreens> open(
     WidgetTester tester, {
     Map<String, String> cards = const {},
@@ -77,6 +77,7 @@ class DeckScreens {
     bool photoImport = false,
     ThemeMode themeMode = ThemeMode.light,
     bool minutesAsked = true,
+    Locale locale = const Locale('en'),
   }) async {
     // A phone's screen, so every card of a short deck is on it under the
     // pinned row.
@@ -148,7 +149,7 @@ class DeckScreens {
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
-          locale: const Locale('en'),
+          locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(),

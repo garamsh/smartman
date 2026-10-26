@@ -14,6 +14,7 @@ import 'package:smartman/l10n/app_localizations.dart';
 
 import 'fake_account_data.dart';
 import 'fake_account_service.dart';
+import '../word_breaks.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
@@ -155,7 +156,7 @@ void main() {
     await tapAndSettle(tester, 'Sign out');
 
     expect([data.pushes, data.clears], [1, 1]);
-    expect(find.text("Some changes aren't synced"), findsNothing);
+    expect(shownText("Some changes aren't synced"), findsNothing);
     expect(find.text('ada@example.com'), findsNothing);
   });
 
@@ -170,7 +171,7 @@ void main() {
 
       await tapAndOpen(tester, '로그아웃');
 
-      expect(find.text('동기화되지 않은 변경이 있어요'), findsOneWidget);
+      expect(shownText('동기화되지 않은 변경이 있어요'), findsOneWidget);
       await tapAndSettle(tester, '취소');
       expect(service.state, isA<SignedIn>());
       expect(data.clears, 0);
@@ -219,7 +220,7 @@ void main() {
         await meetsGuidelines();
 
         await tapAndOpen(tester, 'Sign out');
-        expect(find.text("Some changes aren't synced"), findsOneWidget);
+        expect(shownText("Some changes aren't synced"), findsOneWidget);
         await meetsGuidelines();
       },
     );
@@ -292,9 +293,9 @@ void main() {
 
         await tapAndSettle(tester, '계정 삭제');
 
-        expect(find.text('계정을 삭제할까요?'), findsOneWidget);
+        expect(shownText('계정을 삭제할까요?'), findsOneWidget);
         expect(
-          find.text(
+          shownText(
             '서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.',
           ),
           findsOneWidget,
@@ -399,7 +400,7 @@ void main() {
           await expectLater(tester, meetsGuideline(textContrastGuideline));
 
           await tapAndSettle(tester, 'Delete account');
-          expect(find.text('Delete your account?'), findsOneWidget);
+          expect(shownText('Delete your account?'), findsOneWidget);
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(textContrastGuideline));

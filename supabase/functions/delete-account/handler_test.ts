@@ -26,8 +26,42 @@ type Fake = {
   admin: number | "offline";
   /** Auth's answer to the user lookup when it is not the user's. */
   lookup: number | null;
+  /** Storage's answer to a listing or a delete, or "offline" for a request that never arrives. */
+  storage: number | "offline";
+  /** The names of the objects in the media bucket. */
+  objects: Set<string>;
   calls: { url: string; method: string; headers: Headers }[];
 };
+
+/** Storage's listing and deletion over [fake.objects], as its HTTP API answers them. */
+async function fakeStorage(
+  fake: Fake,
+  url: string,
+  method: string,
+  body: BodyInit | null | undefined,
+): Promise<Response> {
+  if (fake.storage === "offline") throw new TypeError("error sending request");
+  if (fake.storage !== 200) return Response.json({}, { status: fake.storage });
+  const request = JSON.parse(await new Response(body).text());
+  if (
+    method === "POST" && url === `${SUPABASE_URL}/storage/v1/object/list/media`
+  ) {
+    const names = [...fake.objects]
+      .filter((name) => name.startsWith(`${request.prefix}/`))
+      .slice(request.offset, request.offset + request.limit)
+      .map((name) => ({ name: name.slice(request.prefix.length + 1) }));
+    return Response.json(names);
+  }
+  if (
+    method === "DELETE" && url === `${SUPABASE_URL}/storage/v1/object/media`
+  ) {
+    const gone: string[] = request.prefixes.filter((name: string) =>
+      fake.objects.delete(name)
+    );
+    return Response.json(gone.map((name) => ({ name })));
+  }
+  throw new Error(`unexpected storage request ${method} ${url}`);
+}
 
 function fakeFetch(fake: Fake): typeof fetch {
   return (input, init) => {
@@ -52,6 +86,9 @@ function fakeFetch(fake: Fake): typeof fetch {
       }
       return Promise.resolve(Response.json({}, { status: fake.admin }));
     }
+    if (url.startsWith(`${SUPABASE_URL}/storage/v1/`)) {
+      return fakeStorage(fake, url, method, init?.body);
+    }
     throw new Error(`unexpected request to ${url}`);
   };
 }
@@ -72,12 +109,16 @@ async function run(
     body?: string;
     admin?: number | "offline";
     lookup?: number;
+    storage?: number | "offline";
+    objects?: string[];
     env?: Record<string, string | undefined>;
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
     admin: options.admin ?? 200,
     lookup: options.lookup ?? null,
+    storage: options.storage ?? 200,
+    objects: new Set(options.objects ?? []),
     calls: [],
   };
   const env = { ...ENV, ...options.env };
@@ -117,7 +158,9 @@ async function run(
     logs,
     console: printed,
     deleted: fake.calls
-      .filter((call) => call.method === "DELETE")
+      .filter((call) =>
+        call.method === "DELETE" && call.url.includes("/auth/v1/admin/users/")
+      )
       .map((call) => call.url.slice(call.url.lastIndexOf("/") + 1)),
     fake,
   };
@@ -136,7 +179,9 @@ Deno.test("a signed-in user is deleted through the admin API with the service-ro
   assert.equal(r.status, 204);
   assert.equal(r.text, "");
   assert.deepEqual(r.deleted, [ADA]);
-  const call = r.fake.calls.find((c) => c.method === "DELETE")!;
+  const call = r.fake.calls.find((c) =>
+    c.method === "DELETE" && c.url.includes("/auth/v1/")
+  )!;
   assert.equal(call.url, `${SUPABASE_URL}/auth/v1/admin/users/${ADA}`);
   assert.equal(call.headers.get("apikey"), SERVICE_ROLE_KEY);
   assert.equal(call.headers.get("Authorization"), `Bearer ${SERVICE_ROLE_KEY}`);
@@ -189,6 +234,48 @@ Deno.test("a deletion the admin API refuses or never receives answers 502", asyn
     assert.deepEqual(JSON.parse(r.text), { error: "delete_failed" });
     assert.deepEqual(r.logs, [{ user_id: ADA, outcome: "delete_failed" }]);
   }
+});
+
+Deno.test("the user's media objects are deleted page by page before the user, and no one else's", async () => {
+  const own = Array.from(
+    { length: 1001 },
+    (_, i) => `${ADA}/e0000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+  );
+  const other = `${GRACE}/e0000000-0000-4000-8000-000000000001`;
+  const r = await run({ objects: [...own, other] });
+  assert.equal(r.status, 204);
+  assert.deepEqual([...r.fake.objects], [other], "only Grace's object is left");
+  assert.deepEqual(r.deleted, [ADA]);
+  const storageDeletes = r.fake.calls
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.method === "DELETE" && c.url.includes("/storage/v1/"));
+  assert.equal(storageDeletes.length, 2, "1001 objects take two pages of 1000");
+  for (const { c } of storageDeletes) {
+    assert.equal(c.headers.get("Authorization"), `Bearer ${SERVICE_ROLE_KEY}`);
+  }
+  const userDelete = r.fake.calls.findIndex((c) =>
+    c.url.includes("/auth/v1/admin/users/")
+  );
+  assert.ok(
+    storageDeletes.every(({ i }) => i < userDelete),
+    "the objects go before the user",
+  );
+});
+
+Deno.test("a media deletion Storage refuses or never receives answers 502 and deletes no user", async () => {
+  for (const storage of [500, 403, "offline"] as const) {
+    const r = await run({ storage, objects: [`${ADA}/e`] });
+    assert.equal(r.status, 502, `storage ${storage}`);
+    assert.deepEqual(JSON.parse(r.text), { error: "delete_failed" });
+    assert.deepEqual(r.deleted, [], `storage ${storage} deletes no user`);
+  }
+  const control = await run({ objects: [`${ADA}/e`] });
+  assert.equal(
+    control.status,
+    204,
+    "control: Storage answering deletes the user",
+  );
+  assert.deepEqual(control.deleted, [ADA]);
 });
 
 Deno.test("a user lookup that fails answers 502 without deleting", async () => {
