@@ -4,11 +4,13 @@
  *
  *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
- *     tools/eval/two_stage_run.ts [--dry-run]
+ *     tools/eval/two_stage_run.ts [--dry-run] [--preflight]
  *
  * It resolves `two_stage.json` against OpenRouter's model list, prints each configuration's
- * planned calls and estimate, and refuses to start a run the remaining budget in `spend.json`
- * cannot cover. `--dry-run` stops after the plan and calls no model.
+ * planned calls and estimate, with the prompt cache and without it, and refuses to start a run
+ * the remaining budget in `spend.json` cannot cover without it. `--dry-run` stops after the plan
+ * and calls no model. `--preflight` runs only the preflight: one stage-1 call and one call of
+ * every shape, on one page.
  */
 
 import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v9.ts";
@@ -22,7 +24,13 @@ import {
   TYPICAL_PROMPT_TOKENS,
   TYPICAL_REASONING_TOKENS,
 } from "./budget.ts";
-import { type Model, MODELS_URL, newest, parseModels } from "./models.ts";
+import {
+  type Model,
+  MODELS_URL,
+  newest,
+  parseModels,
+  type Pricing,
+} from "./models.ts";
 import {
   denoIo,
   type Io,
@@ -32,8 +40,13 @@ import {
   sizeOf,
   slug,
 } from "./run.ts";
-import { isRecord, parseTruthSections } from "./sections.ts";
-import { shapesFor } from "./shapes.ts";
+import {
+  isRecord,
+  linesOf,
+  parseTruthSections,
+  type Section,
+} from "./sections.ts";
+import { SHAPES, shapesFor } from "./shapes.ts";
 import {
   type Configuration,
   OutOfBudget,
@@ -41,8 +54,11 @@ import {
   type PageTruth,
   plannedLines,
   plannedSections,
+  preflight,
+  preflightSection,
   runSingle,
   runTwoStage,
+  SECTIONS_FORMAT,
   type TwoStageDeps,
   TYPICAL_LINE_TOKENS,
   TYPICAL_SHAPE_TOKENS_PER_LINE,
@@ -174,24 +190,48 @@ export async function loadTruths(
   return truths;
 }
 
-/** The calls a configuration is planned to make over the samples, by step, and their estimate. */
+/**
+ * The calls a configuration is planned to make over the samples, by step, and their estimate with
+ * the prompt cache and without it.
+ */
 export type Plan = {
   readonly label: string;
   readonly single: number;
   readonly sections: number;
   readonly shapes: number;
   readonly judge: number;
-  readonly usd: number;
+  readonly cachedUsd: number;
+  readonly uncachedUsd: number;
 };
+
+/** A stage-1 call on a page of [lines], its prefix aside: it transcribes each line. */
+function sectionsUsd(pricing: Pricing, lines: number): number {
+  return cost(
+    pricing,
+    0,
+    TYPICAL_REASONING_TOKENS + lines * TYPICAL_LINE_TOKENS,
+  );
+}
+
+/** A stage-2 call on a section of [lines], its prefix aside: it is sent and writes each line. */
+function shapeUsd(pricing: Pricing, lines: number): number {
+  return cost(
+    pricing,
+    lines * TYPICAL_LINE_TOKENS,
+    TYPICAL_REASONING_TOKENS + lines * TYPICAL_SHAPE_TOKENS_PER_LINE,
+  );
+}
 
 /**
  * The dry estimate of [configuration] over [truths]. A single call is priced as `run.ts` prices
- * it. Stage 1 writes the system prompt and the photo, `TYPICAL_PROMPT_TOKENS`, to the cache and
- * transcribes `TYPICAL_LINE_TOKENS` a line. Each stage-2 call reads that prefix from the cache
- * when its model wrote it, the first call of a page on another model writing it, and is sent its
- * section's lines and writes `TYPICAL_SHAPE_TOKENS_PER_LINE` a line. Every call adds
- * `TYPICAL_REASONING_TOKENS`. The judge reads a notes page's lines and a sentence for each cloze
- * line and question, and writes `TYPICAL_VERDICT_TOKENS` a sentence.
+ * it. Every two-stage call sends the system prompt and the photo, `TYPICAL_PROMPT_TOKENS`, ahead
+ * of a cache breakpoint. Without the cache, each writes that prefix. With it, a call reads the
+ * prefix where an earlier call of the page sent the same model and the same reply schema, since
+ * the schema sits ahead of the messages, and writes it otherwise. Stage 1 transcribes
+ * `TYPICAL_LINE_TOKENS` a line; each stage-2 call is sent its section's lines and writes
+ * `TYPICAL_SHAPE_TOKENS_PER_LINE` a line. Every call adds `TYPICAL_REASONING_TOKENS`. The judge
+ * reads a notes page's lines and a sentence for each cloze line and question, and writes
+ * `TYPICAL_VERDICT_TOKENS` a sentence.
  */
 export function plan(
   configuration: Configuration,
@@ -199,55 +239,63 @@ export function plan(
   judge: Model,
 ): Plan {
   if (configuration.kind === "single") {
+    const usd = estimateUsd(
+      [{ label: configuration.label, primary: configuration.model }],
+      truths.map((truth) => sizeOf(truth.sample)),
+    );
     return {
       label: configuration.label,
       single: truths.length,
       sections: 0,
       shapes: 0,
       judge: 0,
-      usd: estimateUsd(
-        [{ label: configuration.label, primary: configuration.model }],
-        truths.map((truth) => sizeOf(truth.sample)),
-      ),
+      cachedUsd: usd,
+      uncachedUsd: usd,
     };
   }
-  const first = configuration.sections.pricing;
-  const second = configuration.shapes.pricing;
-  const shared = configuration.sections.id === configuration.shapes.id;
-  let usd = 0;
+  let cachedUsd = 0;
+  let uncachedUsd = 0;
   let shapes = 0;
   let judgeCalls = 0;
   for (const truth of truths) {
+    const written = new Set<string>();
+    const call = (model: Model, format: string, usd: number) => {
+      const key = `${model.id} ${format}`;
+      const prefix = written.has(key)
+        ? model.pricing.cacheRead
+        : model.pricing.cacheWrite;
+      written.add(key);
+      cachedUsd += usd + prefix * TYPICAL_PROMPT_TOKENS;
+      uncachedUsd += usd + model.pricing.cacheWrite * TYPICAL_PROMPT_TOKENS;
+    };
     const lines = plannedLines(truth);
-    usd +=
-      cost(first, 0, TYPICAL_REASONING_TOKENS + lines * TYPICAL_LINE_TOKENS) +
-      first.cacheWrite * TYPICAL_PROMPT_TOKENS;
+    call(
+      configuration.sections,
+      SECTIONS_FORMAT.name,
+      sectionsUsd(configuration.sections.pricing, lines),
+    );
     let composed = 0;
-    let call = 0;
     for (const section of plannedSections(truth)) {
       for (const shape of shapesFor(section.content_type)) {
-        const prefix = shared || call > 0
-          ? second.cacheRead
-          : second.cacheWrite;
-        usd += cost(
-          second,
-          section.lines * TYPICAL_LINE_TOKENS,
-          TYPICAL_REASONING_TOKENS +
-            section.lines * TYPICAL_SHAPE_TOKENS_PER_LINE,
-        ) + prefix * TYPICAL_PROMPT_TOKENS;
+        call(
+          configuration.shapes,
+          shape,
+          shapeUsd(configuration.shapes.pricing, section.lines),
+        );
         if (shape === "cloze") composed += section.lines;
         if (shape === "qa") composed += section.cells;
-        call += 1;
+        shapes += 1;
       }
     }
-    shapes += call;
     if (truth.sample.kind === "notes" && composed > 0) {
       judgeCalls += 1;
-      usd += cost(
+      const usd = cost(
         judge.pricing,
         (lines + composed) * TYPICAL_LINE_TOKENS,
         TYPICAL_REASONING_TOKENS + composed * TYPICAL_VERDICT_TOKENS,
       );
+      cachedUsd += usd;
+      uncachedUsd += usd;
     }
   }
   return {
@@ -256,8 +304,28 @@ export function plan(
     sections: truths.length,
     shapes,
     judge: judgeCalls,
-    usd,
+    cachedUsd,
+    uncachedUsd,
   };
+}
+
+/**
+ * The estimate of the preflight: stage 1 on [truth], and every shape of [section], each call
+ * writing its prefix, since no two of them send the same schema.
+ */
+export function preflightUsd(
+  configuration: Extract<Configuration, { kind: "two_stage" }>,
+  truth: PageTruth,
+  section: Section,
+): number {
+  const prefix = (model: Model) =>
+    model.pricing.cacheWrite * TYPICAL_PROMPT_TOKENS;
+  return sectionsUsd(configuration.sections.pricing, plannedLines(truth)) +
+    prefix(configuration.sections) +
+    SHAPES.length * (
+        shapeUsd(configuration.shapes.pricing, linesOf(section).length) +
+        prefix(configuration.shapes)
+      );
 }
 
 /** One configuration's pages, and the composed sentences with the judge's verdicts. */
@@ -364,6 +432,13 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.print(`${configuration.label}: ${describe(configuration)}`);
   }
   io.print(`judge: ${model(judge)}`);
+  const left = remaining(ledger);
+  if (args.includes("--preflight")) {
+    return await runPreflight(configurations, truths, judge, ledger, {
+      io,
+      dryRun,
+    });
+  }
   const plans = configurations.map((configuration) =>
     plan(configuration, truths, judge)
   );
@@ -372,12 +447,12 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
       `${one.label}: ${
         one.single + one.sections + one.shapes + one.judge
       } calls (${one.single} single, ${one.sections} stage 1, ${one.shapes} stage 2, ${one.judge} judge), estimated ${
-        usd(one.usd)
-      }`,
+        usd(one.cachedUsd)
+      } with the cache, ${usd(one.uncachedUsd)} without`,
     );
   }
-  const estimate = plans.reduce((total, one) => total + one.usd, 0);
-  const left = remaining(ledger);
+  const cached = plans.reduce((total, one) => total + one.cachedUsd, 0);
+  const estimate = plans.reduce((total, one) => total + one.uncachedUsd, 0);
   const structured = truths.filter((truth) => truth.sections !== null).length;
   io.print(
     `${truths.length} samples (${structured} with sections) x ${configurations.length} configurations: ${
@@ -386,27 +461,22 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
           total + one.single + one.sections + one.shapes + one.judge,
         0,
       )
-    } calls, estimated ${usd(estimate)}, ${usd(left)} of the ${
-      usd(ledger.budgetUsd)
-    } budget remaining`,
+    } calls, estimated ${usd(cached)} with the cache, ${
+      usd(estimate)
+    } without, ${usd(left)} of the ${usd(ledger.budgetUsd)} budget remaining`,
   );
   if (dryRun) return 0;
+  // The budget is held to the estimate without the cache, which the run cannot rule out.
   if (estimate > left) {
     io.print("refused: the estimate exceeds the remaining budget");
     return 1;
   }
-  const apiKey = io.env("OPENROUTER_API_KEY")?.trim();
-  if (apiKey === undefined || apiKey === "") {
-    io.print(
-      "OPENROUTER_API_KEY is not set; pass --env-file=supabase/functions/.env",
-    );
-    return 1;
-  }
-  const replies = `${PATHS.replies}/${
-    io.startedAt().replace(/\.\d+/, "").replaceAll(":", "-")
-  }-two-stage`;
+  const apiKey = readApiKey(io);
+  if (apiKey === null) return 1;
+  const replies = repliesFolder(io, "two-stage");
   io.print(`keeping every reply in ${replies}/`);
   const wallet = new Wallet(left);
+  const loose = new Set<string>();
   const { runs, stopped } = await runAll(configurations, truths, {
     apiKey,
     fetch: io.fetch,
@@ -414,10 +484,12 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     wallet,
     judge,
     singlePrompt: SYSTEM_PROMPT,
+    loose,
     print: io.print,
     keep: (path, run) =>
       io.writeText(`${replies}/${path}`, JSON.stringify(run, null, 2) + "\n"),
   });
+  printLoose(loose, io);
   const updated: Ledger = {
     ...ledger,
     runs: [...ledger.runs, {
@@ -438,7 +510,10 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     if (!stopped) {
       await io.writeText(
         TWO_STAGE_PATHS.report,
-        report(runs, truths.length, wallet.spent, updated, io.today(), replies),
+        report(runs, truths.length, wallet.spent, updated, io.today(), {
+          replies,
+          loose: [...loose],
+        }),
       );
       io.print(`wrote ${TWO_STAGE_PATHS.report}`);
     }
@@ -452,6 +527,136 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     return 1;
   }
   return 0;
+}
+
+function readApiKey(io: Io): string | null {
+  const apiKey = io.env("OPENROUTER_API_KEY")?.trim();
+  if (apiKey !== undefined && apiKey !== "") return apiKey;
+  io.print(
+    "OPENROUTER_API_KEY is not set; pass --env-file=supabase/functions/.env",
+  );
+  return null;
+}
+
+/** The folder of `tools/eval/replies/` a run keeps its replies in, named for its start. */
+function repliesFolder(io: Io, suffix: string): string {
+  return `${PATHS.replies}/${
+    io.startedAt().replace(/\.\d+/, "").replaceAll(":", "-")
+  }-${suffix}`;
+}
+
+function printLoose(loose: ReadonlySet<string>, io: Io): void {
+  io.print(
+    loose.size === 0
+      ? "every schema was sent with strict structured outputs"
+      : `asked as plain JSON after the provider refused the schema as too large a grammar: ${
+        [...loose].join(", ")
+      }`,
+  );
+}
+
+/**
+ * The preflight: on the sample with a table and the fewest lines, one real stage-1 call and one
+ * call of every shape, by the first two-stage configuration, then its spend in the ledger. It
+ * refuses to start when the ledger cannot cover its estimate, and returns 0 only when every step's
+ * reply was valid.
+ */
+async function runPreflight(
+  configurations: readonly Configuration[],
+  truths: readonly PageTruth[],
+  judge: Model,
+  ledger: Ledger,
+  { io, dryRun }: { readonly io: Io; readonly dryRun: boolean },
+): Promise<number> {
+  const configuration = configurations.find((one) => one.kind === "two_stage");
+  if (configuration === undefined || configuration.kind !== "two_stage") {
+    io.print("refused: two_stage.json holds no two-stage configuration");
+    return 1;
+  }
+  let page: { readonly truth: PageTruth; readonly section: Section } | null =
+    null;
+  for (const truth of truths) {
+    const section = preflightSection(truth);
+    if (
+      section !== null &&
+      (page === null || plannedLines(truth) < plannedLines(page.truth))
+    ) page = { truth, section };
+  }
+  if (page === null) {
+    io.print("refused: no sample's truth records a table");
+    return 1;
+  }
+  const estimate = preflightUsd(configuration, page.truth, page.section);
+  const left = remaining(ledger);
+  io.print(
+    `preflight: ${configuration.label} on ${page.truth.sample.name}, 1 stage-1 call and ${SHAPES.length} stage-2 calls (${
+      SHAPES.join(", ")
+    }) on its section ${page.section.title}, estimated ${usd(estimate)}, ${
+      usd(left)
+    } of the ${usd(ledger.budgetUsd)} budget remaining`,
+  );
+  if (dryRun) return 0;
+  if (estimate > left) {
+    io.print("refused: the estimate exceeds the remaining budget");
+    return 1;
+  }
+  const apiKey = readApiKey(io);
+  if (apiKey === null) return 1;
+  const wallet = new Wallet(left);
+  const loose = new Set<string>();
+  let outcome: Awaited<ReturnType<typeof preflight>> | null = null;
+  try {
+    outcome = await preflight(configuration, page.truth, page.section, {
+      apiKey,
+      fetch: io.fetch,
+      now: io.now,
+      wallet,
+      judge,
+      singlePrompt: SYSTEM_PROMPT,
+      loose,
+    });
+  } catch (error) {
+    if (!(error instanceof OutOfBudget)) throw error;
+    io.print(
+      "stopped: the next call could have exceeded the remaining budget",
+    );
+  }
+  if (outcome !== null) {
+    const replies = repliesFolder(io, "two-stage-preflight");
+    await io.writeText(
+      `${replies}/${page.truth.sample.name}.json`,
+      JSON.stringify(outcome.calls, null, 2) + "\n",
+    );
+    io.print(`kept every reply in ${replies}/`);
+    for (const row of outcome.rows) {
+      io.print(
+        `${row.asked} on ${row.model}: ${
+          row.strict ? "strict" : "plain JSON"
+        }, ${row.status === null ? "no answer" : `HTTP ${row.status}`}, ${
+          row.valid ? "valid" : "not valid"
+        }, ${row.promptTokens ?? "—"} prompt tokens, ${
+          row.cachedTokens ?? "—"
+        } read from the cache, ${usd(row.usd)}`,
+      );
+    }
+    printLoose(loose, io);
+  }
+  const updated: Ledger = {
+    ...ledger,
+    runs: [...ledger.runs, {
+      date: io.today(),
+      spentUsd: Math.round(wallet.spent * 1e6) / 1e6,
+      note: "two-stage eval preflight (#414)",
+    }],
+  };
+  await io.writeText(PATHS.ledger, JSON.stringify(updated, null, 2) + "\n");
+  io.print(
+    `the preflight spent ${usd(wallet.spent)}; ${usd(spent(updated))} of ${
+      usd(updated.budgetUsd)
+    } spent in total`,
+  );
+  const valid = outcome?.rows.filter((row) => row.valid).length ?? 0;
+  return valid === 1 + SHAPES.length ? 0 : 1;
 }
 
 /**
@@ -473,7 +678,11 @@ export function report(
   runUsd: number,
   ledger: Ledger,
   date: string,
-  replies: string,
+  { replies, loose }: {
+    readonly replies: string;
+    /** The formats asked as plain JSON, by `looseKey`. */
+    readonly loose: readonly string[];
+  },
 ): string {
   const rows = runs.map((run) =>
     summarizePages(run.configuration.label, run.pages)
@@ -501,6 +710,11 @@ export function report(
     "- Mark-to-blank: recall is the share of the writer's pen underlines, circles and highlights a cloze or span-table blank on the same line asks; precision the share of those blanks on a marked line that ask a mark. Spans: the same against every blank the truth names in table cells, for the span table alone.",
     "- Shape fidelity is the share of stage-2 calls whose reply is the requested shape, valid against its section. Fabrication is the share of composed questions and sentences the judge found the page does not support.",
     "- Cost per photo is the single call, or stage 1 with each section's default shape, as OpenRouter reported it. Latency to stage 1 is its call; total latency is stage 1 and the slowest default shape, as if the sections ran at once.",
+    loose.length === 0
+      ? "- Every two-stage call sent its own reply schema with strict structured outputs."
+      : `- Every two-stage call sent its own reply schema with strict structured outputs, but for these, asked as plain JSON and read by their parser, once more on a reply it refused, after the provider refused the schema as too large a grammar: ${
+        loose.join(", ")
+      }.`,
     ...runs.filter((run) => run.halted).map((run) =>
       `- ${run.configuration.label} stopped after ${MODEL_ERRORS_TO_STOP} model errors in a row: its row covers ${run.pages.length} of ${sampleCount} images.`
     ),

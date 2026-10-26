@@ -101,111 +101,84 @@ export function spanText(text: string, span: Span): string {
   return [...text].slice(span.start, span.end).join("");
 }
 
-const field = {
-  type: "string",
-  minLength: 1,
-  maxLength: MAX_FIELD_CHARS,
-} as const;
+// The schema states no length or count: strict structured outputs do not support those
+// constraints, and the parsers below enforce them.
+const field = { type: "string" } as const;
 const span = {
   start: { type: "integer" },
   end: { type: "integer" },
 } as const;
-const line = {
-  type: "object",
-  properties: {
-    id: field,
-    text: field,
-    marks: {
-      type: "array",
-      maxItems: MAX_LINE_SPANS,
-      items: {
-        type: "object",
-        properties: {
-          ...span,
-          kind: { type: "string", enum: [...MARK_KINDS] },
-          ink: { type: "string", enum: [...INKS] },
-        },
-        required: ["start", "end", "kind", "ink"],
-        additionalProperties: false,
-      },
-    },
-    key_terms: {
-      type: "array",
-      maxItems: MAX_LINE_SPANS,
-      items: {
-        type: "object",
-        properties: {
-          ...span,
-          source: { type: "string", enum: [...KEY_TERM_SOURCES] },
-        },
-        required: ["start", "end", "source"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["id", "text", "marks", "key_terms"],
-  additionalProperties: false,
-} as const;
 
-/** Stage 1's reply: `{kind: "sections", sections}`, as strict structured outputs state it. */
+/** The row and column stage 1 gives a line outside a table. */
+export const NO_CELL = -1;
+
+/**
+ * Stage 1's reply, `{kind: "sections", sections}`, as strict structured outputs state it. A table
+ * is flat: its columns and row headers as text, and each line names its cell by row and column,
+ * which keeps the schema shallow and states a line once.
+ */
 export const sectionsSchema = {
   type: "object",
   properties: {
     kind: { type: "string", enum: ["sections"] },
     sections: {
       type: "array",
-      maxItems: MAX_SECTIONS,
       items: {
         type: "object",
         properties: {
           title: field,
           language: field,
           content_type: { type: "string", enum: [...CONTENT_TYPES] },
-          lines: { type: "array", maxItems: MAX_SECTION_LINES, items: line },
-          table: {
-            anyOf: [{
+          columns: { type: "array", items: field },
+          rows: { type: "array", items: field },
+          lines: {
+            type: "array",
+            items: {
               type: "object",
               properties: {
-                columns: {
+                id: field,
+                text: field,
+                row: { type: "integer" },
+                column: { type: "integer" },
+                marks: {
                   type: "array",
-                  maxItems: MAX_TABLE_COLUMNS,
-                  items: field,
-                },
-                rows: {
-                  type: "array",
-                  maxItems: MAX_TABLE_ROWS,
                   items: {
                     type: "object",
                     properties: {
-                      header: field,
-                      cells: {
-                        type: "array",
-                        maxItems: MAX_TABLE_COLUMNS,
-                        items: {
-                          type: "object",
-                          properties: {
-                            lines: {
-                              type: "array",
-                              maxItems: MAX_CELL_LINES,
-                              items: line,
-                            },
-                          },
-                          required: ["lines"],
-                          additionalProperties: false,
-                        },
-                      },
+                      ...span,
+                      kind: { type: "string", enum: [...MARK_KINDS] },
+                      ink: { type: "string", enum: [...INKS] },
                     },
-                    required: ["header", "cells"],
+                    required: ["start", "end", "kind", "ink"],
+                    additionalProperties: false,
+                  },
+                },
+                key_terms: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      ...span,
+                      source: { type: "string", enum: [...KEY_TERM_SOURCES] },
+                    },
+                    required: ["start", "end", "source"],
                     additionalProperties: false,
                   },
                 },
               },
-              required: ["columns", "rows"],
+              required: ["id", "text", "row", "column", "marks", "key_terms"],
               additionalProperties: false,
-            }, { type: "null" }],
+            },
           },
         },
-        required: ["title", "language", "content_type", "lines", "table"],
+        required: [
+          "title",
+          "language",
+          "content_type",
+          "columns",
+          "rows",
+          "lines",
+        ],
         additionalProperties: false,
       },
     },
@@ -214,18 +187,110 @@ export const sectionsSchema = {
   additionalProperties: false,
 } as const;
 
+const FLAT_KEYS = [
+  "title",
+  "language",
+  "content_type",
+  "columns",
+  "rows",
+  "lines",
+] as const;
+
 /**
  * Stage 1's sections, or null when [value] is not `{kind: "sections", sections}` of the schema's
  * shape once each text is trimmed, or breaks a rule the schema cannot state: a table section
- * without its table or with lines, another section with a table or no line, a row not as wide as
- * the columns, a line id given twice on the page, or a span outside its line.
+ * without columns or rows, another section with either or with no line, a table line outside its
+ * table, a list line given a cell, a line id given twice on the page, or a span outside its line.
  */
 export function parseSections(value: unknown): Section[] | null {
   if (!isRecord(value) || !hasOnlyKeys(value, ["kind", "sections"])) {
     return null;
   }
   if (value.kind !== "sections") return null;
-  return parseStructure(value.sections, parseLine);
+  const tree = list(value.sections, MAX_SECTIONS, treeOf);
+  return tree === null ? null : parseSectionTree(tree);
+}
+
+/** A flat section in the nested shape, or null when a line's cell is not one of its own. */
+function treeOf(value: unknown): Record<string, unknown> | null {
+  if (
+    !isRecord(value) || !hasOnlyKeys(value, FLAT_KEYS) ||
+    !Array.isArray(value.columns) || !Array.isArray(value.rows)
+  ) return null;
+  const { columns, rows, lines, ...rest } = value;
+  const placed = list(
+    lines,
+    MAX_TABLE_ROWS * MAX_TABLE_COLUMNS * MAX_CELL_LINES,
+    (line) => {
+      if (!isRecord(line)) return null;
+      const { row, column, ...printed } = line;
+      return typeof row === "number" && typeof column === "number"
+        ? { row, column, line: printed }
+        : null;
+    },
+  );
+  if (placed === null) return null;
+  if (columns.length === 0 && rows.length === 0) {
+    return placed.every((one) => one.row === NO_CELL && one.column === NO_CELL)
+      ? { ...rest, lines: placed.map((one) => one.line), table: null }
+      : null;
+  }
+  const inside = placed.every((one) =>
+    Number.isInteger(one.row) && Number.isInteger(one.column) &&
+    one.row >= 0 && one.row < rows.length &&
+    one.column >= 0 && one.column < columns.length
+  );
+  return inside
+    ? {
+      ...rest,
+      lines: [],
+      table: {
+        columns,
+        rows: rows.map((header, r) => ({
+          header,
+          cells: columns.map((_, c) => ({
+            lines: placed.filter((one) => one.row === r && one.column === c)
+              .map((one) => one.line),
+          })),
+        })),
+      },
+    }
+    : null;
+}
+
+/** [section] in the flat shape stage 1 writes, the shape stage 2 is given it in. */
+export function flatOf(section: Section): Record<string, unknown> {
+  const flat = (line: Line, row: number, column: number) => ({
+    id: line.id,
+    text: line.text,
+    row,
+    column,
+    marks: line.marks,
+    key_terms: line.key_terms,
+  });
+  const { table } = section;
+  return {
+    title: section.title,
+    language: section.language,
+    content_type: section.content_type,
+    columns: table?.columns ?? [],
+    rows: table?.rows.map((row) => row.header) ?? [],
+    lines: table === null
+      ? section.lines.map((line) => flat(line, NO_CELL, NO_CELL))
+      : table.rows.flatMap((row, r) =>
+        row.cells.flatMap((cell, c) =>
+          cell.lines.map((line) => flat(line, r, c))
+        )
+      ),
+  };
+}
+
+/**
+ * Sections in the nested shape, a table's rows of cells of lines, or null when they break a rule
+ * `parseSections` names or a row is not as wide as the columns.
+ */
+export function parseSectionTree(value: unknown): Section[] | null {
+  return parseStructure(value, parseLine);
 }
 
 /** A ground truth's `sections`, or null when they are not of the stage-1 shape with blanks. */

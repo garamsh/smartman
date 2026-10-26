@@ -1,7 +1,11 @@
 // The two-stage metrics: stage-1 structure, mark-to-blank, in-cell spans, the per-configuration
 // summary, and the decision rule.
 import assert from "node:assert/strict";
-import { parseSections, parseTruthSections, type Section } from "./sections.ts";
+import {
+  parseSectionTree,
+  parseTruthSections,
+  type Section,
+} from "./sections.ts";
 import {
   decide,
   type PageResult,
@@ -75,7 +79,7 @@ const line = (id: string, text: string) => ({
 });
 
 function returned(sections: unknown[]): Section[] {
-  const parsed = parseSections({ kind: "sections", sections });
+  const parsed = parseSectionTree(sections);
   if (parsed === null) throw new Error("the fixture is not stage 1's shape");
   return parsed;
 }

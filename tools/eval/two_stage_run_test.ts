@@ -115,26 +115,35 @@ const VOCABULARY_TRUTH = {
   }],
 };
 
-/** Stage 1's reply for the structure page: its sections as the truth records them. */
+/** Stage 1's reply for the structure page: its sections as the truth records them, flat. */
 const STAGE1 = {
   kind: "sections",
   sections: SECTIONS.map((section) => {
-    const toLine = (line: ReturnType<typeof truthLine>) => ({
+    const toLine = (
+      line: ReturnType<typeof truthLine>,
+      row: number,
+      column: number,
+    ) => ({
       id: line.id,
       text: line.text,
+      row,
+      column,
       marks: line.marks,
       key_terms: line.blanks.map((blank) => ({ ...blank, source: "mark" })),
     });
     return {
-      ...section,
-      lines: section.lines.map(toLine),
-      table: section.table === null ? null : {
-        ...section.table,
-        rows: section.table.rows.map((row) => ({
-          ...row,
-          cells: row.cells.map((cell) => ({ lines: cell.lines.map(toLine) })),
-        })),
-      },
+      title: section.title,
+      language: section.language,
+      content_type: section.content_type,
+      columns: section.table?.columns ?? [],
+      rows: section.table?.rows.map((row) => row.header) ?? [],
+      lines: section.table === null
+        ? section.lines.map((line) => toLine(line, -1, -1))
+        : section.table.rows.flatMap((row, r) =>
+          row.cells.flatMap((cell, c) =>
+            cell.lines.map((line) => toLine(line, r, c))
+          )
+        ),
     };
   }),
 };
@@ -197,6 +206,7 @@ type Request = {
   model: string;
   system: string;
   content: { type: string; text?: string; cache_control?: unknown }[];
+  /** The structured output's name, or "json" for a call that sent none. */
   schema: string;
 };
 
@@ -206,7 +216,30 @@ type World = {
   printed: string[];
   /** Stage 1 answers with an HTTP error when set. */
   failStage1?: boolean;
+  /** The structured outputs refused as too large a grammar, as Anthropic refused them. */
+  tooLarge?: string[];
+  /** How many plain JSON calls answer with text that is not JSON before they answer properly. */
+  badPlainReplies?: number;
 };
+
+/** OpenRouter's 400 carrying Anthropic's refusal of a grammar, as on 2026-10-26. */
+const GRAMMAR_REFUSAL = JSON.stringify({
+  error: {
+    code: 400,
+    message: "Provider returned error",
+    metadata: {
+      raw: JSON.stringify({
+        type: "error",
+        error: {
+          type: "invalid_request_error",
+          message:
+            "The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of strict tools.",
+        },
+      }),
+      provider_name: "Anthropic",
+    },
+  },
+});
 
 function world(budgetUsd = 10): World {
   return {
@@ -221,14 +254,21 @@ function world(budgetUsd = 10): World {
   };
 }
 
-const reply = (content: unknown, cost = 0.001) =>
+const replyText = (text: string, cost = 0.001) =>
   new Response(
     JSON.stringify({
-      choices: [{ message: { content: JSON.stringify(content) } }],
-      usage: { prompt_tokens: 100, completion_tokens: 10, cost },
+      choices: [{ message: { content: text } }],
+      usage: {
+        prompt_tokens: 100,
+        completion_tokens: 10,
+        cost,
+        prompt_tokens_details: { cached_tokens: 40 },
+      },
     }),
     { status: 200 },
   );
+const reply = (content: unknown, cost = 0.001) =>
+  replyText(JSON.stringify(content), cost);
 
 function io(w: World): Io {
   let clock = 0;
@@ -243,11 +283,13 @@ function io(w: World): Io {
       const content = typeof user.content === "string"
         ? [{ type: "text", text: user.content }]
         : user.content;
+      const format: string | undefined = body.response_format?.json_schema
+        .name;
       w.requests.push({
         model: body.model,
         system: system.content,
         content,
-        schema: body.response_format.json_schema.name,
+        schema: format ?? "json",
       });
       clock += 1000;
       const request = content.at(-1).text ?? "";
@@ -255,7 +297,19 @@ function io(w: World): Io {
         content.find((part: { type: string }) => part.type === "image_url")
           ?.image_url.url ?? "";
       const words = image.endsWith(btoa("words"));
-      if (body.response_format.json_schema.name === "verdicts") {
+      if (format !== undefined && w.tooLarge?.includes(format)) {
+        return Promise.resolve(new Response(GRAMMAR_REFUSAL, { status: 400 }));
+      }
+      if (format === undefined && (w.badPlainReplies ?? 0) > 0) {
+        w.badPlainReplies = (w.badPlainReplies ?? 0) - 1;
+        return Promise.resolve(replyText("Here are the blanks you asked for."));
+      }
+      // A plain JSON reply comes in a code fence, as a model may write it.
+      const answer = (value: unknown) =>
+        format === undefined
+          ? replyText("```json\n" + JSON.stringify(value) + "\n```")
+          : reply(value);
+      if (format === "verdicts") {
         const count = request.split("\n").filter((line: string) =>
           /^\d+\. /.test(line)
         ).length;
@@ -266,7 +320,7 @@ function io(w: World): Io {
           })),
         }, 0.01));
       }
-      if (body.response_format.json_schema.name === "cards") {
+      if (format === "cards") {
         return Promise.resolve(
           reply({ cards: words ? [VOCABULARY_CARD] : NOTE_CARDS }),
         );
@@ -275,28 +329,31 @@ function io(w: World): Io {
         if (w.failStage1) {
           return Promise.resolve(new Response("{}", { status: 500 }));
         }
-        return Promise.resolve(reply({
-          reply: words
+        return Promise.resolve(answer(
+          words
             ? {
               kind: "sections",
               sections: [{
                 title: "Words",
                 language: "en",
                 content_type: "vocabulary_list",
+                columns: [],
+                rows: [],
                 lines: [{
                   id: "w1",
                   text: "apple 사과",
+                  row: -1,
+                  column: -1,
                   marks: [],
                   key_terms: [],
                 }],
-                table: null,
               }],
             }
             : STAGE1,
-        }));
+        ));
       }
       const shape = /^Return the shape (\w+)/.exec(request)?.[1] ?? "";
-      return Promise.resolve(reply({ reply: SHAPE_REPLIES[shape] }));
+      return Promise.resolve(answer(SHAPE_REPLIES[shape]));
     },
     now: () => clock,
     env: (name) => name === "OPENROUTER_API_KEY" ? "key" : undefined,
@@ -338,29 +395,26 @@ Deno.test("a dry run prints each configuration's planned calls by step and its e
   );
   // A: one call a page. B and C: stage 1 a page; the table's four shapes, the list's cloze and
   // the vocabulary list's one shape; and the judge on the one notes page.
+  // A single call has no cache to read, so its two estimates agree.
   assert.match(
     lines,
-    /A: 2 calls \(2 single, 0 stage 1, 0 stage 2, 0 judge\), estimated \$0\.\d{4}/,
+    /A: 2 calls \(2 single, 0 stage 1, 0 stage 2, 0 judge\), estimated (\$0\.\d{4}) with the cache, \1 without/,
   );
   assert.match(
     lines,
-    /B: 9 calls \(0 single, 2 stage 1, 6 stage 2, 1 judge\), estimated \$0\.\d{4}/,
+    /B: 9 calls \(0 single, 2 stage 1, 6 stage 2, 1 judge\), estimated \$0\.\d{4} with the cache, \$0\.\d{4} without/,
   );
   assert.match(lines, /C: 9 calls \(0 single, 2 stage 1, 6 stage 2, 1 judge\)/);
   assert.match(
     lines,
-    /2 samples \(1 with sections\) x 3 configurations: 20 calls, estimated \$\d\.\d{4}, \$10\.0000 of the \$10\.0000 budget remaining/,
+    /2 samples \(1 with sections\) x 3 configurations: 20 calls, estimated \$\d\.\d{4} with the cache, \$\d\.\d{4} without, \$10\.0000 of the \$10\.0000 budget remaining/,
   );
-  const estimate = (label: string) =>
-    Number(new RegExp(`${label}: .*estimated \\$(\\S+)`).exec(lines)?.[1]);
-  // C's stage 1 runs on the dearer model, and its stage 2 cannot read stage 1's cache.
-  assert.ok(
-    estimate("C") > estimate("B"),
-    `${estimate("C")} > ${estimate("B")}`,
-  );
+  const [cached, uncached] = /B: .*estimated \$(\S+) with the cache, \$(\S+)/
+    .exec(lines)?.slice(1).map(Number) ?? [];
+  assert.ok(cached < uncached, `${cached} < ${uncached}`);
 });
 
-Deno.test("the estimate prices stage 2's photo as a cache read where stage 1 wrote it on the same model, and as a write on another", async () => {
+Deno.test("with the cache, a call reads the photo only where an earlier call of its page sent the same model and schema; without it, every call writes it", async () => {
   const truths = await loadTruths(io(world()));
   const pricing = {
     prompt: 0.000001,
@@ -371,23 +425,19 @@ Deno.test("the estimate prices stage 2's photo as a cache read where stage 1 wro
     cacheWrite: 0.00000125,
   };
   const haiku = { id: "vendor/haiku" as ModelId, created: 1, pricing };
-  // The same prices under another id: only the cache it cannot share differs.
-  const twin = { ...haiku, id: "vendor/twin" as ModelId };
-  const shared = plan(
+  const b = plan(
     { label: "B", kind: "two_stage", sections: haiku, shapes: haiku },
     truths,
     haiku,
   );
-  const apart = plan(
-    { label: "D", kind: "two_stage", sections: twin, shapes: haiku },
-    truths,
-    haiku,
-  );
-  // Each page's first stage-2 call writes the photo's 2,500 tokens instead of reading them.
+  // Stage 1 and stage 2 share the model but never a schema. Of the 8 calls only the structure
+  // page's second cloze, the list's after the table's, finds its schema sent before.
   assert.equal(
-    Math.round((apart.usd - shared.usd) * 1e9),
-    Math.round(2 * 2500 * (pricing.cacheWrite - pricing.cacheRead) * 1e9),
+    Math.round((b.uncachedUsd - b.cachedUsd) * 1e9),
+    Math.round(2500 * (pricing.cacheWrite - pricing.cacheRead) * 1e9),
   );
+  const a = plan({ label: "A", kind: "single", model: haiku }, truths, haiku);
+  assert.equal(a.cachedUsd, a.uncachedUsd);
 });
 
 Deno.test("a run whose estimate exceeds the remaining budget is refused before any model call", async () => {
@@ -399,7 +449,22 @@ Deno.test("a run whose estimate exceeds the remaining budget is refused before a
   );
 });
 
-Deno.test("a run asks stage 1 then each section's shapes, defaults first, on the photo behind one cached prefix, then the judge on text alone", async () => {
+Deno.test("a run is held to the estimate without the cache, which it cannot rule out", async () => {
+  const dry = world();
+  await main(["--dry-run"], io(dry));
+  const [cached, uncached] =
+    /configurations: .*estimated \$(\S+) with the cache, \$(\S+) without/
+      .exec(dry.printed.join("\n"))?.slice(1).map(Number) ?? [];
+  assert.ok(cached < uncached, `${cached} < ${uncached}`);
+  const w = world((cached + uncached) / 2);
+  assert.equal(await main([], io(w)), 1);
+  assert.equal(w.requests.length, 0);
+  assert.ok(
+    w.printed.includes("refused: the estimate exceeds the remaining budget"),
+  );
+});
+
+Deno.test("a run asks stage 1 then each section's shapes, defaults first, each in its own schema on the photo behind a cache breakpoint, then the judge on text alone", async () => {
   const w = world();
   assert.equal(await main([], io(w)), 0);
   const b = w.requests.slice(2, 2 + 8);
@@ -416,9 +481,23 @@ Deno.test("a run asks stage 1 then each section's shapes, defaults first, on the
     "Return the shape qa for this section. The cards' fronts are in the language ko. Their answers are in the language ko.",
     "Return the shape cloze for this section. The cards' fronts are in the language ko. Their answers are in the language ko.",
   ]);
+  assert.deepEqual(b.map((request) => request.schema), [
+    "sections",
+    "vocabulary",
+    "sections",
+    "table_cells",
+    "cloze",
+    "table_spans",
+    "qa",
+    "cloze",
+  ]);
+  // Stage 2 is given the section in the flat shape stage 1 wrote it in.
+  assert.deepEqual(
+    JSON.parse(b[3].content.at(-1)?.text?.split("\n")[1] ?? ""),
+    STAGE1.sections[0],
+  );
   for (const request of b) {
     assert.equal(request.system, TWO_STAGE_PROMPT);
-    assert.equal(request.schema, "two_stage");
     assert.equal(request.content[0].type, "image_url");
     assert.deepEqual(request.content[1].cache_control, { type: "ephemeral" });
   }
@@ -506,6 +585,123 @@ Deno.test("a configuration whose stage 1 fails two pages in a row runs no furthe
   );
   // A's three calls, then two stage-1 calls each for B and C, and no stage 2.
   assert.equal(w.requests.length, 3 + 2 + 2);
+});
+
+Deno.test("a schema the provider refuses as too large a grammar is asked as plain JSON from then on, once more on a reply that is not JSON, and the run names it", async () => {
+  const w = world();
+  w.tooLarge = ["table_spans"];
+  w.badPlainReplies = 1;
+  assert.equal(await main([], io(w)), 0);
+  const asked = (shape: string) =>
+    w.requests.filter((request) =>
+      request.content.at(-1)?.text?.startsWith(`Return the shape ${shape} `)
+    );
+  // B: refused strict, then a reply that is not JSON, then a fenced valid one. C, on the same
+  // model, goes to plain JSON at once.
+  assert.deepEqual(asked("table_spans").map((request) => request.schema), [
+    "table_spans",
+    "json",
+    "json",
+    "json",
+  ]);
+  const plain = asked("table_spans")[1].content.at(-1)?.text ?? "";
+  assert.match(plain, /matching this JSON schema: \{"type":"object"/);
+  // Control: every other shape kept its strict schema.
+  for (const shape of ["table_cells", "qa", "cloze", "vocabulary"]) {
+    assert.ok(
+      asked(shape).every((request) => request.schema === shape),
+      shape,
+    );
+  }
+  const kept = JSON.parse(
+    w.files.get(
+      `${PATHS.replies}/2026-10-27T01-02-03Z-two-stage/b/02-structure.json`,
+    ) ?? "",
+  );
+  assert.deepEqual(
+    kept.calls.filter((call: { shape?: string }) =>
+      call.shape === "table_spans"
+    )
+      .map((call: { strict: boolean; status: number }) =>
+        `${call.strict} ${call.status}`
+      ),
+    ["true 400", "false 200", "false 200"],
+  );
+  // The span table's reply was read in the end: B's shapes are as valid as without the refusal.
+  const report = w.files.get(TWO_STAGE_PATHS.report) ?? "";
+  assert.match(
+    report,
+    /\| B \| 83\.3 \| 100\.0 \| 100\.0 \| 50\.0 \| 100\.0 \| 100\.0 \| 50\.0 \| 2 \|/,
+  );
+  assert.match(
+    report,
+    /asked as plain JSON .* too large a grammar: table_spans on vendor\/haiku\./,
+  );
+  assert.ok(
+    w.printed.includes(
+      "asked as plain JSON after the provider refused the schema as too large a grammar: table_spans on vendor/haiku",
+    ),
+  );
+});
+
+Deno.test("the preflight asks stage 1 and every shape once on the smallest page with a table, prints each call, and records its spend", async () => {
+  const w = world();
+  // The fake's cloze names a list line, which the table refuses: the preflight fails on it.
+  assert.equal(await main(["--preflight"], io(w)), 1);
+  assert.deepEqual(w.requests.map((request) => request.schema), [
+    "sections",
+    "table_cells",
+    "table_spans",
+    "qa",
+    "cloze",
+    "vocabulary",
+  ]);
+  assert.ok(w.requests.every((request) => request.model === "vendor/haiku"));
+  const lines = w.printed.join("\n");
+  assert.match(
+    lines,
+    /preflight: B on 02-structure, 1 stage-1 call and 5 stage-2 calls \(table_cells, table_spans, qa, cloze, vocabulary\) on its section 여러 나라의 비교, estimated \$0\.\d{4}, \$10\.0000 of the \$10\.0000 budget remaining/,
+  );
+  assert.doesNotMatch(lines, /stage 2, 1 judge/, "no plan of the full run");
+  for (const asked of ["sections", "table_cells", "table_spans", "qa"]) {
+    assert.ok(
+      w.printed.includes(
+        `${asked} on vendor/haiku: strict, HTTP 200, valid, 100 prompt tokens, 40 read from the cache, $0.0010`,
+      ),
+      asked,
+    );
+  }
+  assert.ok(
+    w.printed.includes(
+      "cloze on vendor/haiku: strict, HTTP 200, not valid, 100 prompt tokens, 40 read from the cache, $0.0010",
+    ),
+  );
+  const ledger = JSON.parse(w.files.get(PATHS.ledger) ?? "");
+  assert.deepEqual(ledger.runs, [{
+    date: "2026-10-27",
+    spentUsd: 0.006,
+    note: "two-stage eval preflight (#414)",
+  }]);
+  assert.ok(
+    w.files.has(
+      `${PATHS.replies}/2026-10-27T01-02-03Z-two-stage-preflight/02-structure.json`,
+    ),
+  );
+});
+
+Deno.test("the preflight refuses to start when the ledger cannot cover its estimate, and with --dry-run prints its estimate alone", async () => {
+  const poor = world(0.000001);
+  assert.equal(await main(["--preflight"], io(poor)), 1);
+  assert.equal(poor.requests.length, 0);
+  assert.ok(
+    poor.printed.includes("refused: the estimate exceeds the remaining budget"),
+  );
+  // Control: the same preflight within budget, dry, gets past the refusal and calls nothing.
+  const dry = world();
+  assert.equal(await main(["--preflight", "--dry-run"], io(dry)), 0);
+  assert.equal(dry.requests.length, 0);
+  assert.ok(dry.printed.some((line) => line.startsWith("preflight: B on ")));
+  assert.ok(!dry.printed.some((line) => line.startsWith("refused")));
 });
 
 Deno.test("two_stage.json takes single and two-stage configurations and a judge, and refuses any other entry", () => {

@@ -1,9 +1,10 @@
 /**
  * The two-stage photo import prototype (#414): stage 1 reads a photo's sections, stage 2 makes
  * each section's card shapes from its JSON and the same photo, and a text-only judge reads the
- * sentences stage 2 composed. Every stage-1 and stage-2 call shares one system prompt, one reply
- * schema and the photo ahead of a cache breakpoint, so the calls after the first on a model read
- * the photo from the prompt cache.
+ * sentences stage 2 composed. Every stage-1 and stage-2 call shares one system prompt and the photo
+ * ahead of a cache breakpoint, and sends the reply schema of its own step: stage 1's sections, or
+ * its one shape, each kept small for the provider's grammar limit. A schema the provider still
+ * refuses as too large is sent as plain JSON instead, checked by its parser.
  */
 
 import type { Card } from "../../supabase/functions/extract-cards/cards.ts";
@@ -23,13 +24,16 @@ import { entryOf, score, scoreNotes } from "./metrics.ts";
 import type { Model } from "./models.ts";
 import { type Call, recording, type Sample } from "./run.ts";
 import {
+  flatOf,
   hasOnlyKeys,
   isRecord,
+  type Line,
   linesOf,
   list,
   parseSections,
   type Section,
   sectionsSchema,
+  TABLE_CONTENT,
   type TruthLine,
 } from "./sections.ts";
 import {
@@ -53,11 +57,11 @@ import {
 
 /** The instructions of every stage-1 and stage-2 call; the user turn says which to do. */
 export const TWO_STAGE_PROMPT =
-  `You read a photo of a study page and turn it into flashcards in two stages. Every request carries the same photo; its text says which stage to do. Answer with JSON only, matching the given schema: {"reply": ...} holding the one reply the request asks for.
+  `You read a photo of a study page and turn it into flashcards in two stages. Every request carries the same photo; its text says which stage to do. Answer with JSON only, matching the given schema: the one reply the request asks for.
 
 Stage 1, when the request says "Return the page's sections": transcribe the page into sections, in reading order, as {"kind": "sections", "sections": [...]}.
 - A section is a part of the page under one heading, or one block of it: its title as printed, or a short name for a block without one; its language as a BCP 47 tag such as "ko" or "en"; and its content_type: vocabulary_list (words with their meanings), comparison_table (a table comparing several items over the same aspects), table (any other table), rule_list (rules, definitions or facts listed), process (ordered steps), worked_examples (examples worked through), or prose.
-- A comparison_table or table section holds its table and no lines. Its columns are the headers of the columns that hold cells, left to right, leaving out the column that names the rows; its rows each give their header, the text of that first column, and their cells, one per column, each holding the cell's lines. Every other section holds its lines, and its table is null.
+- A comparison_table or table section gives its columns, the headers of the columns that hold cells, left to right, leaving out the column that names the rows, and its rows, the text of that first column, top to bottom. Each of its lines names the cell it is in by row and column, each counted from 0, the lines of one cell in the cell's order. Every other section gives no columns and no rows, and its lines row -1 and column -1.
 - A line is one printed line or bullet point, its text character for character as the page shows it, without the bullet; a bullet point wrapped onto a second row is still one line. Give each line an id unique on the page, such as "s1-l3" or "s1-r2-c1-l1".
 - marks: each mark on the line, underline, circle, highlight or star, its ink "pen" where a writer added it by hand and "print" where the page printed it, and the span it covers as start and end, offsets into the line's text counted in characters from 0, end exclusive. A star, or a mark on the whole line, covers the whole line.
 - key_terms: the spans of the line a learner should recall, source "mark" for each span a pen underline, circle or highlight covers, every one of which is a key term, and source "model" for each you chose yourself.
@@ -76,20 +80,22 @@ Stage 2, when the request says "Return the shape <shape> for this section": the 
 export const JUDGE_PROMPT =
   `You check flashcard sentences against the text of the study page they were made from. For each numbered sentence, answer supported true when everything it states, every fact, name, number and relation, is stated or directly implied by the page's lines, and false when it states anything the page does not, or misattributes a fact to another item. A question is supported when what it presupposes is on the page. Answer with JSON only, matching the given schema, one verdict for every sentence, in order.`;
 
-/** Every two-stage call's reply: `{reply}`, one of stage 1's sections or a stage-2 shape. */
-export const replySchema = {
-  type: "object",
-  properties: {
-    reply: {
-      anyOf: [
-        sectionsSchema,
-        ...SHAPES.map((shape) => shapeSchemas[shape]),
-      ],
-    },
-  },
-  required: ["reply"],
-  additionalProperties: false,
-} as const;
+/** A reply schema as a call sends it, named. */
+export type Format = { readonly name: string; readonly schema: unknown };
+
+/** Stage 1's reply format. */
+export const SECTIONS_FORMAT: Format = {
+  name: "sections",
+  schema: sectionsSchema,
+};
+
+/** Stage 2's reply format for [shape], named for it. */
+export function shapeFormat(shape: Shape): Format {
+  return { name: shape, schema: shapeSchemas[shape] };
+}
+
+/** How the provider words its refusal of a schema whose compiled grammar is over its limit. */
+export const GRAMMAR_TOO_LARGE = /grammar is too large/i;
 
 export const judgeSchema = {
   type: "object",
@@ -149,15 +155,29 @@ export type TwoStageDeps = {
   readonly judge: Model;
   /** The instructions of today's single call. */
   readonly singlePrompt: string;
+  /**
+   * The formats, by `looseKey`, the provider refused as too large a grammar: from then on in the
+   * run they are asked as plain JSON.
+   */
+  readonly loose: Set<string>;
 };
 
-/** One call as kept: what it asked for, its model, and its HTTP status and body or its error. */
+/** The key of [format] on [model] in `TwoStageDeps.loose`, as the run reports it. */
+export function looseKey(model: Model, format: Format): string {
+  return `${format.name} on ${model.id}`;
+}
+
+/**
+ * One call as kept: what it asked for, its model, whether its reply was held to its schema by
+ * strict structured outputs, and its HTTP status and body or its error.
+ */
 export type KeptCall =
   & {
     readonly step: "single" | "sections" | "shape" | "judge";
     readonly section?: string;
     readonly shape?: Shape;
     readonly model: string;
+    readonly strict: boolean;
   }
   & Call;
 
@@ -174,41 +194,50 @@ export type PageRun = {
   readonly modelError: boolean;
 };
 
-/** A call's reply text, null when the call failed, with what the call cost and took. */
+/**
+ * A call's reply text, null when the call failed, with what the call cost and took, whether it
+ * was strict, and whether the provider refused its schema as too large a grammar.
+ */
 type Answer = {
   readonly attempt: Attempt;
   readonly reply: string | null;
   readonly kept: Call;
   readonly usd: number;
+  readonly strict: boolean;
+  readonly grammarTooLarge: boolean;
 };
 
 /**
  * Sends one chat completion, after checking that its worst case fits the wallet: the system
  * prompt, then a user turn of the photo, a cache breakpoint, and [request], or the text alone.
+ * A strict call sends [format] as its structured output; any other states it after [request].
  */
 async function send(
   model: Model,
   system: string,
   request: string,
   image: Image | null,
-  schema: { readonly name: string; readonly schema: unknown },
+  format: Format,
+  strict: boolean,
   deps: TwoStageDeps,
 ): Promise<Answer> {
+  const asked = strict ? request : `${request}\n${looseInstruction(format)}`;
   const worst = worstCallUsd(model.pricing) +
-    model.pricing.prompt * [...system, ...request].length;
+    model.pricing.prompt * [...system, ...asked].length;
   if (!deps.wallet.fits(worst)) throw new OutOfBudget();
-  const content = image === null ? [{ type: "text", text: request }] : [
+  const content = image === null ? [{ type: "text", text: asked }] : [
     {
       type: "image_url",
       image_url: { url: `data:${image.type};base64,${image.base64}` },
     },
-    // The breakpoint caches the system prompt and the photo, the prefix every call shares.
+    // The breakpoint caches the system prompt and the photo. A provider that renders the reply
+    // schema ahead of the messages keys the entry by schema too.
     {
       type: "text",
       text: "This is the page.",
       cache_control: { type: "ephemeral" },
     },
-    { type: "text", text: request },
+    { type: "text", text: asked },
   ];
   const started = deps.now();
   let response: Response;
@@ -225,14 +254,18 @@ async function send(
           { role: "system", content: system },
           { role: "user", content },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: schema.name,
-            strict: true,
-            schema: schema.schema,
-          },
-        },
+        ...(strict
+          ? {
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: format.name,
+                strict: true,
+                schema: format.schema,
+              },
+            },
+          }
+          : {}),
         provider: { require_parameters: true },
         max_tokens: MAX_OUTPUT_TOKENS,
       }),
@@ -247,6 +280,8 @@ async function send(
       reply: null,
       kept: { error: String(error) },
       usd: 0,
+      strict,
+      grammarTooLarge: false,
     };
   }
   const raw = await response.text();
@@ -264,6 +299,82 @@ async function send(
     reply: response.ok ? readReply(body) ?? "" : null,
     kept: { status: response.status, body },
     usd,
+    strict,
+    grammarTooLarge: strict && response.status === 400 &&
+      GRAMMAR_TOO_LARGE.test(raw),
+  };
+}
+
+/** What a call not held to [format] is told after its request. */
+function looseInstruction(format: Format): string {
+  return `Answer with one JSON value and nothing else, matching this JSON schema: ${
+    JSON.stringify(format.schema)
+  }`;
+}
+
+/** One step's calls and its reply, read by its parser, or null when none was valid. */
+type Asked<T> = {
+  readonly value: T | null;
+  readonly answers: readonly Answer[];
+};
+
+/**
+ * Asks [request] in [format], and reads the reply with [parse]. A format the provider refuses as
+ * too large a grammar is asked again as plain JSON, as is every later call in it on [model] in
+ * the run; a plain JSON reply [parse] refuses is asked once more.
+ */
+async function ask<T>(
+  model: Model,
+  request: string,
+  image: Image,
+  format: Format,
+  parse: (value: unknown) => T | null,
+  deps: TwoStageDeps,
+): Promise<Asked<T>> {
+  const answers: Answer[] = [];
+  const key = looseKey(model, format);
+  if (!deps.loose.has(key)) {
+    const answer = await send(
+      model,
+      TWO_STAGE_PROMPT,
+      request,
+      image,
+      format,
+      true,
+      deps,
+    );
+    answers.push(answer);
+    if (!answer.grammarTooLarge) {
+      return { value: parse(jsonOf(answer.reply)), answers };
+    }
+    deps.loose.add(key);
+  }
+  for (let tries = 0; tries < 2; tries += 1) {
+    const answer = await send(
+      model,
+      TWO_STAGE_PROMPT,
+      request,
+      image,
+      format,
+      false,
+      deps,
+    );
+    answers.push(answer);
+    const value = parse(jsonOf(answer.reply));
+    if (value !== null || answer.reply === null) return { value, answers };
+  }
+  return { value: null, answers };
+}
+
+/** What [answers] cost and took in all, and whether the last of them failed. */
+function totalOf(answers: readonly Answer[]) {
+  return {
+    usd: answers.reduce((total, answer) => total + answer.usd, 0),
+    latencyMs: answers.reduce(
+      (total, answer) => total + answer.attempt.latencyMs,
+      0,
+    ),
+    failed: answers.at(-1)?.reply === null,
   };
 }
 
@@ -289,14 +400,12 @@ function readUsage(body: unknown): Usage | null {
   };
 }
 
-/** The `reply` of a two-stage call's text, or undefined when it is not `{reply}` JSON. */
-function replyOf(text: string | null): unknown {
+/** The JSON of a reply's text, inside a code fence or not, or undefined when it is not JSON. */
+function jsonOf(text: string | null): unknown {
   if (text === null) return undefined;
+  const fenced = /^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$/.exec(text);
   try {
-    const value: unknown = JSON.parse(text);
-    return isRecord(value) && hasOnlyKeys(value, ["reply"])
-      ? value.reply
-      : undefined;
+    return JSON.parse(fenced?.[1] ?? text);
   } catch {
     return undefined;
   }
@@ -326,7 +435,7 @@ export function shapeRequest(
   languages: LanguageHints,
 ): string {
   return `Return the shape ${shape} for this section.${hints(languages)}\n${
-    JSON.stringify(section)
+    JSON.stringify(flatOf(section))
   }`;
 }
 
@@ -425,6 +534,7 @@ export async function runSingle(
     calls: [{
       step: "single",
       model: attempt.model,
+      strict: true,
       ...(calls[0] ?? { error: "no answer was recorded" }),
     }],
     cards,
@@ -433,14 +543,27 @@ export async function runSingle(
   };
 }
 
-/** One stage-2 call's outcome: the shape asked for, its checked reply or null, and its call. */
+/** One stage-2 step's outcome: the shape asked for, its checked reply or null, and its calls. */
 type ShapeRun = {
   readonly section: Section;
   readonly shape: Shape;
   readonly isDefault: boolean;
   readonly output: ShapeOutput | null;
-  readonly answer: Answer;
+  readonly answers: readonly Answer[];
 };
+
+/** [answers] as kept, each with what it asked for. */
+function keptOf(
+  answers: readonly Answer[],
+  asked: Pick<KeptCall, "step" | "section" | "shape">,
+): KeptCall[] {
+  return answers.map((answer) => ({
+    ...asked,
+    model: answer.attempt.model,
+    strict: answer.strict,
+    ...answer.kept,
+  }));
+}
 
 /**
  * Stage 1 and stage 2 on one page, then the judge over the sentences stage 2 composed. Stage 2
@@ -453,17 +576,17 @@ export async function runTwoStage(
   deps: TwoStageDeps,
 ): Promise<PageRun> {
   const { sample } = truth;
-  const kept: KeptCall[] = [];
-  const first = await send(
+  const stage1 = await ask(
     configuration.sections,
-    TWO_STAGE_PROMPT,
     sectionsRequest(sample.languages),
     sample.image,
-    { name: "two_stage", schema: replySchema },
+    SECTIONS_FORMAT,
+    parseSections,
     deps,
   );
-  kept.push({ step: "sections", model: first.attempt.model, ...first.kept });
-  const sections = parseSections(replyOf(first.reply));
+  const kept = keptOf(stage1.answers, { step: "sections" });
+  const first = totalOf(stage1.answers);
+  const sections = stage1.value;
   const asked = (sections ?? []).flatMap((section) =>
     shapesFor(section.content_type).map((shape, i) => ({
       section,
@@ -473,28 +596,18 @@ export async function runTwoStage(
   ).sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
   const runs: ShapeRun[] = [];
   for (const { section, shape, isDefault } of asked) {
-    const answer = await send(
+    const { value, answers } = await ask(
       configuration.shapes,
-      TWO_STAGE_PROMPT,
       shapeRequest(shape, section, sample.languages),
       sample.image,
-      { name: "two_stage", schema: replySchema },
+      shapeFormat(shape),
+      (reply) => parseShape(shape, reply, section),
       deps,
     );
-    kept.push({
-      step: "shape",
-      section: section.title,
-      shape,
-      model: answer.attempt.model,
-      ...answer.kept,
-    });
-    runs.push({
-      section,
-      shape,
-      isDefault,
-      output: parseShape(shape, replyOf(answer.reply), section),
-      answer,
-    });
+    kept.push(
+      ...keptOf(answers, { step: "shape", section: section.title, shape }),
+    );
+    runs.push({ section, shape, isDefault, output: value, answers });
   }
   const valid = runs.flatMap((run) =>
     run.output === null ? [] : [{ ...run, output: run.output }]
@@ -512,9 +625,10 @@ export async function runTwoStage(
       judgeRequest(sample.notes.lines, composed),
       null,
       { name: "verdicts", schema: judgeSchema },
+      true,
       deps,
     );
-    kept.push({ step: "judge", model: verdict.attempt.model, ...verdict.kept });
+    kept.push(...keptOf([verdict], { step: "judge" }));
     judgeUsd = verdict.usd;
     verdicts = parseVerdicts(verdict.reply, composed.length);
     if (verdicts !== null) {
@@ -529,11 +643,11 @@ export async function runTwoStage(
       lineBlanksOf(run.output, run.section)
     );
   const defaultMs = runs.filter((run) => run.isDefault).map((run) =>
-    run.answer.attempt.latencyMs
+    totalOf(run.answers).latencyMs
   );
   const pageTruth = truth.sections;
   const stageUsd = (pick: readonly ShapeRun[]) =>
-    pick.reduce((total, run) => total + run.answer.usd, 0);
+    pick.reduce((total, run) => total + totalOf(run.answers).usd, 0);
   return {
     result: {
       name: sample.name,
@@ -562,8 +676,8 @@ export async function runTwoStage(
         valid: run.output !== null,
       })),
       composed: judged,
-      stage1Ms: first.attempt.latencyMs,
-      totalMs: first.attempt.latencyMs + Math.max(0, ...defaultMs),
+      stage1Ms: first.latencyMs,
+      totalMs: first.latencyMs + Math.max(0, ...defaultMs),
       photoUsd: first.usd + stageUsd(runs.filter((run) => run.isDefault)),
       spentUsd: first.usd + stageUsd(runs) + judgeUsd,
     },
@@ -576,8 +690,119 @@ export async function runTwoStage(
       sentence,
       supported: verdicts?.[i] ?? null,
     })),
-    modelError: first.reply === null,
+    modelError: first.failed,
   };
+}
+
+/** One preflight call as printed: what it asked, how, and what came back. */
+export type PreflightCall = {
+  /** `sections`, or the shape asked. */
+  readonly asked: string;
+  readonly model: string;
+  readonly strict: boolean;
+  /** The HTTP status, or null when the request got no answer. */
+  readonly status: number | null;
+  /** Whether this call's reply was valid; a call followed by another of its step never is. */
+  readonly valid: boolean;
+  readonly promptTokens: number | null;
+  /** The prompt tokens OpenRouter reported read from the cache, or null when it reported none. */
+  readonly cachedTokens: number | null;
+  readonly usd: number;
+};
+
+/**
+ * The section the preflight asks every shape of: [truth]'s first table, each line's blanks given
+ * as its key terms, or null when the truth records no table.
+ */
+export function preflightSection(truth: PageTruth): Section | null {
+  const table = truth.sections?.find((section) =>
+    TABLE_CONTENT.includes(section.content_type)
+  )?.table;
+  if (table === undefined || table === null) return null;
+  const line = (truthLine: TruthLine): Line => ({
+    id: truthLine.id,
+    text: truthLine.text,
+    marks: truthLine.marks,
+    key_terms: truthLine.blanks.map((blank) => ({ ...blank, source: "model" })),
+  });
+  const section = truth.sections?.find((one) => one.table === table);
+  return section === undefined ? null : {
+    ...section,
+    lines: [],
+    table: {
+      columns: table.columns,
+      rows: table.rows.map((row) => ({
+        header: row.header,
+        cells: row.cells.map((cell) => ({ lines: cell.lines.map(line) })),
+      })),
+    },
+  };
+}
+
+/**
+ * The preflight on one page: a real stage-1 call, then one call of every shape on [section], so
+ * that each schema meets the provider once, before a run. It scores nothing.
+ */
+export async function preflight(
+  configuration: Extract<Configuration, { kind: "two_stage" }>,
+  truth: PageTruth,
+  section: Section,
+  deps: TwoStageDeps,
+): Promise<{ readonly calls: KeptCall[]; readonly rows: PreflightCall[] }> {
+  const { sample } = truth;
+  const calls: KeptCall[] = [];
+  const rows: PreflightCall[] = [];
+  const record = <T>(
+    asked: Asked<T>,
+    step: Pick<KeptCall, "step" | "shape">,
+  ) => {
+    calls.push(...keptOf(asked.answers, step));
+    rows.push(...asked.answers.map((answer, i) => ({
+      asked: step.shape ?? "sections",
+      model: answer.attempt.model,
+      strict: answer.strict,
+      status: "status" in answer.kept ? answer.kept.status : null,
+      valid: i === asked.answers.length - 1 && asked.value !== null,
+      promptTokens: answer.attempt.usage?.promptTokens ?? null,
+      cachedTokens: cachedTokensOf(answer.kept),
+      usd: answer.usd,
+    })));
+  };
+  record(
+    await ask(
+      configuration.sections,
+      sectionsRequest(sample.languages),
+      sample.image,
+      SECTIONS_FORMAT,
+      parseSections,
+      deps,
+    ),
+    { step: "sections" },
+  );
+  for (const shape of SHAPES) {
+    record(
+      await ask(
+        configuration.shapes,
+        shapeRequest(shape, section, sample.languages),
+        sample.image,
+        shapeFormat(shape),
+        (reply) => parseShape(shape, reply, section),
+        deps,
+      ),
+      { step: "shape", shape },
+    );
+  }
+  return { calls, rows };
+}
+
+/** `usage.prompt_tokens_details.cached_tokens` of a kept reply, or null when it has none. */
+function cachedTokensOf(kept: Call): number | null {
+  if (!("body" in kept) || !isRecord(kept.body)) return null;
+  const usage = kept.body.usage;
+  const details = isRecord(usage) ? usage.prompt_tokens_details : undefined;
+  return isRecord(details) && typeof details.cached_tokens === "number"
+    ? details.cached_tokens
+    : null;
 }
 
 /** Typical tokens the dry estimate prices a two-stage page at, beside `budget.ts`'s. */

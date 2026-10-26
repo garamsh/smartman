@@ -1,7 +1,7 @@
 // Stage 2's shapes: each reply checked against the section it was made from, and the cards,
 // blanks and composed sentences the eval reads from it.
 import assert from "node:assert/strict";
-import { parseSections, type Section } from "./sections.ts";
+import { parseSectionTree, type Section } from "./sections.ts";
 import {
   cardsOf,
   composedOf,
@@ -20,42 +20,39 @@ const line = (id: string, text: string) => ({
 
 /** A comparison table of two columns, one of its cells empty, and a list. */
 function sections(): Section[] {
-  const parsed = parseSections({
-    kind: "sections",
-    sections: [{
-      title: "여러 나라의 비교",
-      language: "ko",
-      content_type: "comparison_table",
-      lines: [],
-      table: {
-        columns: ["부여", "고구려"],
-        rows: [
-          {
-            header: "정치",
-            cells: [
-              {
-                lines: [
-                  line("a", "5부족 연맹체"),
-                  line("b", "여러 가들이 사출도 다스림"),
-                ],
-              },
-              { lines: [line("c", "5부 연맹체")] },
-            ],
-          },
-          {
-            header: "풍습",
-            cells: [{ lines: [line("d", "1책 12법")] }, { lines: [] }],
-          },
-        ],
-      },
-    }, {
-      title: "더 기억할 점",
-      language: "ko",
-      content_type: "rule_list",
-      lines: [line("e", "동예는 책화로 갚았다")],
-      table: null,
-    }],
-  });
+  const parsed = parseSectionTree([{
+    title: "여러 나라의 비교",
+    language: "ko",
+    content_type: "comparison_table",
+    lines: [],
+    table: {
+      columns: ["부여", "고구려"],
+      rows: [
+        {
+          header: "정치",
+          cells: [
+            {
+              lines: [
+                line("a", "5부족 연맹체"),
+                line("b", "여러 가들이 사출도 다스림"),
+              ],
+            },
+            { lines: [line("c", "5부 연맹체")] },
+          ],
+        },
+        {
+          header: "풍습",
+          cells: [{ lines: [line("d", "1책 12법")] }, { lines: [] }],
+        },
+      ],
+    },
+  }, {
+    title: "더 기억할 점",
+    language: "ko",
+    content_type: "rule_list",
+    lines: [line("e", "동예는 책화로 갚았다")],
+    table: null,
+  }]);
   if (parsed === null) throw new Error("the fixture is not stage 1's shape");
   return parsed;
 }

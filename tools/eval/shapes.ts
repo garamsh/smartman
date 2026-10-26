@@ -10,7 +10,6 @@ import {
   CLOZE_BLANK,
   composeTableAnswer,
   MAX_CLOZE_BLANKS,
-  MAX_FIELD_CHARS,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
   parseCards,
@@ -81,11 +80,9 @@ export type ShapeOutput =
   | { readonly kind: "cloze"; readonly items: readonly ClozeItem[] }
   | { readonly kind: "vocabulary"; readonly cards: readonly Card[] };
 
-const field = {
-  type: "string",
-  minLength: 1,
-  maxLength: MAX_FIELD_CHARS,
-} as const;
+// A shape's own schema states no length or count: strict structured outputs do not support those
+// constraints, and `parseShape` enforces them.
+const field = { type: "string" } as const;
 const cell = {
   row: { type: "integer" },
   column: { type: "integer" },
@@ -97,7 +94,11 @@ const spanFields = {
 const MAX_TABLE_CELLS = MAX_TABLE_ROWS * MAX_TABLE_COLUMNS;
 const MAX_TABLE_LINES = MAX_TABLE_CELLS * MAX_CELL_LINES;
 
-/** Each shape's reply as strict structured outputs state it, keyed by its `kind`. */
+/**
+ * Each shape's reply as strict structured outputs state it, keyed by its `kind`: a call sends its
+ * shape's schema alone. The vocabulary shape's cards are today's card schema, which the single
+ * call already sends.
+ */
 export const shapeSchemas = {
   table_cells: {
     type: "object",
@@ -105,7 +106,6 @@ export const shapeSchemas = {
       kind: { type: "string", enum: ["table_cells"] },
       blanks: {
         type: "array",
-        maxItems: MAX_TABLE_CELLS,
         items: {
           type: "object",
           properties: cell,
@@ -123,7 +123,6 @@ export const shapeSchemas = {
       kind: { type: "string", enum: ["table_spans"] },
       blanks: {
         type: "array",
-        maxItems: MAX_TABLE_LINES,
         items: {
           type: "object",
           properties: { line_id: field, ...spanFields },
@@ -141,7 +140,6 @@ export const shapeSchemas = {
       kind: { type: "string", enum: ["qa"] },
       cards: {
         type: "array",
-        maxItems: MAX_TABLE_CELLS,
         items: {
           type: "object",
           properties: {
@@ -163,7 +161,6 @@ export const shapeSchemas = {
       kind: { type: "string", enum: ["cloze"] },
       items: {
         type: "array",
-        maxItems: MAX_TABLE_LINES,
         items: {
           type: "object",
           properties: {
@@ -171,7 +168,6 @@ export const shapeSchemas = {
             sentence: field,
             blanks: {
               type: "array",
-              maxItems: MAX_CLOZE_BLANKS,
               items: {
                 type: "object",
                 properties: spanFields,
