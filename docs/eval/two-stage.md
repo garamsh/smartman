@@ -10,6 +10,17 @@ Results of `tools/eval/two_stage_run.ts` (#414): today's single call against sta
 - Cost per photo is the single call, or stage 1 with each section's default shape, as OpenRouter reported it. Latency to stage 1 is its call; total latency is stage 1 and the slowest default shape, as if the sections ran at once.
 - Every two-stage call sent its own reply schema with strict structured outputs.
 
+## Contents
+- Models
+- Cards
+- Structure and blanks
+- Shapes
+- Latency
+- Decision
+- Human check
+- Spend
+- PM note (2026-10-27)
+
 ## Models
 
 - A: prompt v9, Claude Haiku 5.5: `anthropic/claude-haiku-5.5` ($0.1000/M prompt, $0.5000/M completion, $0.0100/M cache read)
