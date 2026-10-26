@@ -278,35 +278,41 @@ abstract class AppLocalizations {
   /// **'앞면 · 표 이름'**
   String get tableNameLabel;
 
-  /// What a screen reader reads for the table form's switch between typing cells and choosing blanks.
+  /// What a screen reader reads for the table form's toolbar over the table.
   ///
   /// In ko, this message translates to:
-  /// **'표 편집 방식'**
-  String get tableModeLabel;
+  /// **'표 도구'**
+  String get tableToolbar;
 
-  /// The table form's segment for typing the headers and cells.
+  /// The table toolbar's toggle that makes the selected cell a blank or a plain cell again, shown on or off.
   ///
   /// In ko, this message translates to:
-  /// **'칸 입력'**
-  String get tableModeCells;
+  /// **'빈칸'**
+  String get tableBlankToggle;
 
-  /// The table form's segment for choosing which cells are blanks.
+  /// The table toolbar's button that removes the selected cell's row or column, and the final button of the question it may ask.
   ///
   /// In ko, this message translates to:
-  /// **'빈칸 고르기'**
-  String get tableModeBlanks;
+  /// **'지우기'**
+  String get tableRemove;
 
-  /// Above the table form's grid while cells are typed.
+  /// Question asked before removing a row of the table form that holds text.
   ///
   /// In ko, this message translates to:
-  /// **'머리글과 칸에 내용을 적어요'**
-  String get tableCellsHint;
+  /// **'{row}행을 지울까요?'**
+  String tableRemoveRowTitle(int row);
 
-  /// Above the table form's grid while blanks are chosen: tap a cell to make it a blank.
+  /// Question asked before removing a column of the table form that holds text.
   ///
   /// In ko, this message translates to:
-  /// **'빈칸으로 할 칸을 눌러요'**
-  String get tableBlanksHint;
+  /// **'{column}열을 지울까요?'**
+  String tableRemoveColumnTitle(int column);
+
+  /// The one sentence of the question asked before removing a row or column of the table form that holds text.
+  ///
+  /// In ko, this message translates to:
+  /// **'그 줄에 적은 내용도 함께 지워져요.'**
+  String get tableRemoveBody;
 
   /// What a screen reader reads for a column's header field in the table form.
   ///
@@ -319,24 +325,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{row}행 {column}열'**
   String tableCell(int row, int column);
-
-  /// What a screen reader reads for a cell of the table form that holds no text.
-  ///
-  /// In ko, this message translates to:
-  /// **'내용 없음'**
-  String get tableEmptyCell;
-
-  /// Screen-reader action on a table cell that is not a blank: make it one.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸으로'**
-  String get tableMakeBlank;
-
-  /// Screen-reader action on a table cell chosen as a blank: make it a plain cell again.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸 해제'**
-  String get tableClearBlank;
 
   /// Button under the table form's grid that adds a row.
   ///
