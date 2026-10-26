@@ -19,8 +19,11 @@ export function parseCardId(value: unknown): CardId | null {
   return typeof value === "string" && uuid.test(value) ? (value as CardId) : null;
 }
 
-/** A deck that is not deleted, and whether its owner published it. */
-export type Deck = { id: DeckId; name: string; public: boolean };
+/**
+ * A deck that is not deleted, whether its owner published it, and the keys of the icon and
+ * colour its owner chose for its tile, absent while none is stored (ADR 0103).
+ */
+export type Deck = { id: DeckId; name: string; public: boolean; icon?: string; color?: string };
 
 /**
  * A card that is not deleted, in a deck that is not, without its content: what the deck list

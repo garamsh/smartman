@@ -21,8 +21,10 @@ export type DeckRow = {
 
 /**
  * The decks under a search that keeps those whose name holds it, ignoring case; each a row that
- * opens the deck: its tile, its name, "공개" when it is published, today's chip, its progress
- * bar with "n장 중 m장 익힘", and a chevron.
+ * opens the deck: its tile, its name, "n장 중 m장 익힘" under it and its progress bar under that,
+ * or "0장" and no bar for a deck with no card, "공개" when it is published, today's chip, and a
+ * chevron (ADR 0096). The row's name ends with the bar's mastered, learning and new counts, the
+ * one place a screen reader hears the learning cards.
  */
 export function DeckList({ rows }: { rows: DeckRow[] }) {
   const [search, setSearch] = useState("");
@@ -59,25 +61,31 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
             <li key={deck.id}>
               <Link
                 href={`/decks/${encodeURIComponent(deck.id)}`}
-                aria-label={`${deck.name}, 카드 ${String(cards)}장${deck.public ? ", 공개" : ""}${today > 0 ? `, 오늘 ${String(today)}` : ""}, ${String(cards)}장 중 ${String(mastered)}장 익힘`}
+                aria-label={`${deck.name}, 카드 ${String(cards)}장${deck.public ? ", 공개" : ""}${today > 0 ? `, 오늘 ${String(today)}` : ""}${cards > 0 ? `, ${String(cards)}장 중 ${String(mastered)}장 익힘, 익힘 ${String(mastered)}장, 학습 중 ${String(learning)}장, 새 카드 ${String(cards - mastered - learning)}장` : ""}`}
                 className="pressable flex min-h-13 items-center gap-3 rounded-row bg-surface py-3 pr-3 pl-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 <DeckTile deck={deck} />
-                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-body-strong">{deck.name}</span>
-                  <span aria-hidden className="flex h-1.5 overflow-hidden rounded-full bg-hairline">
-                    <span
-                      className="bg-ink"
-                      style={{ width: `${String(share(mastered, cards))}%` }}
-                    />
-                    <span
-                      className="bg-ink/45"
-                      style={{ width: `${String(share(learning, cards))}%` }}
-                    />
-                  </span>
                   <span className="text-caption text-muted">
-                    {cards}장 중 {mastered}장 익힘
+                    {cards > 0 ? `${String(cards)}장 중 ${String(mastered)}장 익힘` : "0장"}
                   </span>
+                  {/* A deck with no card has no share to draw. */}
+                  {cards > 0 && (
+                    <span
+                      aria-hidden
+                      className="flex h-1.5 overflow-hidden rounded-full bg-hairline"
+                    >
+                      <span
+                        className="bg-ink"
+                        style={{ width: `${String(share(mastered, cards))}%` }}
+                      />
+                      <span
+                        className="bg-ink/45"
+                        style={{ width: `${String(share(learning, cards))}%` }}
+                      />
+                    </span>
+                  )}
                 </span>
                 {deck.public && <PublicChip />}
                 {today > 0 && (
@@ -95,9 +103,9 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
   );
 }
 
-/** [part] of [whole] in percent, 0 for an empty whole. */
+/** [part] of a non-empty [whole], in percent. */
 function share(part: number, whole: number): number {
-  return whole === 0 ? 0 : (part / whole) * 100;
+  return (part / whole) * 100;
 }
 
 /** The chip beside a deck its owner published, as the phone draws it. */
