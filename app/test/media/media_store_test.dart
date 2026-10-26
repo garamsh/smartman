@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
@@ -61,6 +62,53 @@ void main() {
       ('image/jpeg', image.bytes.length, image.sha256),
     );
     expect(await db.select(db.mediaUploads).get(), isEmpty);
+  });
+
+  test('an added sound is uploaded as audio of its own type, and another device keeps the file it plays from after the first read (ADR 0112)', () async {
+    final sound = preparedAudio(2500);
+    final id = await store.addAudio(sound);
+    expect(await store.drain(), isTrue);
+    final row = server.rows[id]!;
+    expect(
+      (row.kind.key, row.mimeType, row.byteSize, row.sha256),
+      ('audio', 'audio/mp4', sound.bytes.length, sound.sha256),
+    );
+
+    final otherDirectory = newMediaDirectory();
+    addTearDown(() => deleteMediaDirectory(otherDirectory));
+    final other = storeOver(server, otherDirectory);
+    final file = await other.fileOf(id);
+    expect(await file!.readAsBytes(), sound.bytes);
+    server.offline = true;
+    final offline = await other.fileOf(id);
+    expect(offline?.path, file.path, reason: 'played offline from the device');
+    expect(await offline!.readAsBytes(), sound.bytes);
+  });
+
+  test('a sound longer than 60 seconds or larger than 5 MiB is refused, where one at both limits is prepared', () {
+    final atLimit = prepareAudio(
+      Uint8List(maxAudioBytes),
+      mimeType: 'audio/mpeg',
+      duration: maxAudioDuration,
+    );
+    expect(atLimit.duration, maxAudioDuration);
+
+    expect(
+      () => prepareAudio(
+        Uint8List(maxAudioBytes + 1),
+        mimeType: 'audio/mpeg',
+        duration: const Duration(seconds: 1),
+      ),
+      throwsA(isA<MediaTooLarge>()),
+    );
+    expect(
+      () => prepareAudio(
+        Uint8List(10),
+        mimeType: 'audio/mp4',
+        duration: maxAudioDuration + const Duration(milliseconds: 1),
+      ),
+      throwsA(isA<MediaTooLarge>()),
+    );
   });
 
   test('a drain that cannot reach the server keeps the image queued, and a later one uploads it', () async {

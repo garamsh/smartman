@@ -17,6 +17,10 @@ import 'study_style.dart';
 /// screen reader has both as actions. "안내 다시 보기", alone in the row,
 /// calls [onGuide].
 ///
+/// A front holding a sound draws its play control, and a screen reader has
+/// "소리 듣기" among the card's actions; with [autoplay], the front's first
+/// sound plays once as the card appears (ADR 0112).
+///
 /// While the coach demonstrates an answer, [demo], the card moves toward it
 /// over the answer's tint under a finger, [demoProgress] through one
 /// [coachCycle], and [coach] takes the guide's row's place.
@@ -26,6 +30,7 @@ class CurrentCard extends StatefulWidget {
     required this.card,
     required this.onAnswer,
     required this.onGuide,
+    this.autoplay = false,
     this.onDragStart,
     this.demo,
     this.demoProgress = 0,
@@ -35,6 +40,9 @@ class CurrentCard extends StatefulWidget {
   final Card card;
   final void Function(Answer answer) onAnswer;
   final VoidCallback onGuide;
+
+  /// Whether the front's first sound plays as the card appears.
+  final bool autoplay;
 
   /// Called as a drag on the card begins.
   final VoidCallback? onDragStart;
@@ -52,6 +60,22 @@ class _CurrentCardState extends State<CurrentCard>
   /// The card's horizontal offset from its place.
   late final _drag = AnimationController.unbounded(vsync: this);
   var _committed = false;
+
+  /// The front's first sound, which the screen reader's action and
+  /// [CurrentCard.autoplay] play; null when it holds none.
+  AudioContent? get _sound => audioOf(widget.card.front).firstOrNull;
+
+  @override
+  void initState() {
+    super.initState();
+    // Once per card shown: each card gets a state of its own.
+    if (widget.autoplay && _sound != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_sound case final sound?) playAudio(context, sound);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -124,6 +148,9 @@ class _CurrentCardState extends State<CurrentCard>
                   _commit(Answer.know),
               CustomSemanticsAction(label: l10n.dontKnow): () =>
                   _commit(Answer.dontKnow),
+              if (_sound case final sound?)
+                CustomSemanticsAction(label: l10n.playAudio): () =>
+                    playAudio(context, sound),
             },
             excludeSemantics: true,
             child: GestureDetector(

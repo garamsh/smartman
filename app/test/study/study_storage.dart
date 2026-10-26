@@ -8,16 +8,19 @@ import 'package:smartman/study/study.dart';
 /// Opens the device storage of the study screen and the card editor in memory, holding its coach as
 /// shown unless [coachShown] is false, and the first-run daily minutes step
 /// as shown unless [minutesAsked] is false, so a test meets either only where
-/// it asks for a device's first time.
+/// it asks for a device's first time; [autoplay], when given, is stored as
+/// the autoplay setting.
 Future<SharedPreferencesWithCache> openStudyStorage(
   WidgetTester tester, {
   bool coachShown = true,
   bool minutesAsked = true,
+  bool? autoplay,
 }) async {
   SharedPreferencesAsyncPlatform.instance =
       InMemorySharedPreferencesAsync.withData({
         if (coachShown) studyCoachShownKey: true,
         if (minutesAsked) dailyMinutesAskedKey: true,
+        autoplayAudioKey: ?autoplay,
       });
   return (await tester.runAsync(
     () => SharedPreferencesWithCache.create(

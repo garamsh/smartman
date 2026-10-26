@@ -36,18 +36,31 @@ class MediaStore {
   final _reads = <MediaId, Future<Uint8List?>>{};
 
   /// Keeps [image] on the device and queues it for upload; returns its id.
-  Future<MediaId> addImage(PreparedImage image) async {
+  Future<MediaId> addImage(PreparedImage image) =>
+      _add(MediaKind.image, 'image/jpeg', image.bytes, image.sha256);
+
+  /// Keeps [audio] on the device and queues it for upload; returns its id
+  /// (ADR 0112).
+  Future<MediaId> addAudio(PreparedAudio audio) =>
+      _add(MediaKind.audio, audio.mimeType, audio.bytes, audio.sha256);
+
+  Future<MediaId> _add(
+    MediaKind kind,
+    String mimeType,
+    Uint8List bytes,
+    String sha256,
+  ) async {
     final id = MediaId(_newId());
-    await _write(id, image.bytes);
+    await _write(id, bytes);
     await _db
         .into(_db.mediaUploads)
         .insert(
           MediaUploadRow(
             id: id.value,
-            kind: MediaKind.image.key,
-            mimeType: 'image/jpeg',
-            byteSize: image.bytes.length,
-            sha256: image.sha256,
+            kind: kind.key,
+            mimeType: mimeType,
+            byteSize: bytes.length,
+            sha256: sha256,
             createdAt: _clock(),
           ),
         );
@@ -73,6 +86,12 @@ class MediaStore {
       _reads[id] ??= _read(id).whenComplete(() {
         _reads.remove(id);
       });
+
+  /// The file of [id] on the device, downloaded and kept first when only
+  /// the server holds it, so a player plays it offline from then on; null
+  /// as [read] gives it.
+  Future<File?> fileOf(MediaId id) async =>
+      await read(id) == null ? null : _file(id);
 
   Future<Uint8List?> _read(MediaId id) async {
     final file = _file(id);

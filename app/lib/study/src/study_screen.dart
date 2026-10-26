@@ -12,6 +12,8 @@ import '../../design/app_chip.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/media.dart';
+import 'autoplay.dart';
 import 'completion_card.dart';
 import 'current_card.dart';
 import 'failure.dart';
@@ -122,11 +124,24 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     super.didChangeDependencies();
     // Kept for writes that fail after this screen has closed.
     _messenger = ScaffoldMessenger.of(context);
+    _providers = ProviderScope.containerOf(context, listen: false);
     _l10n = AppLocalizations.of(context);
   }
 
+  /// Whether each card's front sound plays as it appears, read once as the
+  /// session opens.
+  late final _autoplay = autoplaysAudio(ref.read(studyStorageProvider));
+
+  /// The providers, kept to stop a sound still playing when the screen
+  /// closes.
+  late ProviderContainer _providers;
+
   @override
   void dispose() {
+    // A player no card started is not made to stop it.
+    if (_providers.exists(audioPlaybackProvider)) {
+      unawaited(_providers.read(audioPlaybackProvider).stop());
+    }
     _resumeTimer?.cancel();
     _demo.dispose();
     _lifecycle.dispose();
@@ -239,6 +254,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
           animation: _demo,
           builder: (context, _) => CurrentCard(
             card: current,
+            autoplay: _autoplay,
             onAnswer: _answer,
             onGuide: () => setState(_startCoach),
             onDragStart: () => _setCoach(null),

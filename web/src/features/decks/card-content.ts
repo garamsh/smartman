@@ -4,7 +4,8 @@
  * absent (ADR 0106). A text block; a cloze, its text writing each blank as `___` with what fills
  * each, in order; or a table, its column headers, its rows of cells, the cells to recall whole
  * (ADR 0068) and the runs of cells' text to recall (ADR 0110); or a vocabulary entry's senses (ADR 0075); or a photo by its media id, with its
- * intrinsic size and the boxes over it (ADR 0109). A block of another type, or of a known
+ * intrinsic size and the boxes over it (ADR 0109); or a sound by its media id, with how long it
+ * plays in milliseconds (ADR 0112). A block of another type, or of a known
  * type at a version above the one this build reads, is shown as a placeholder naming it, so a
  * card a later version wrote is shown, not lost; the web never writes a card, so it stays as
  * stored.
@@ -21,6 +22,7 @@ export type Content =
     }
   | { kind: "senses"; senses: Sense[] }
   | { kind: "image"; media: string; width: number; height: number; boxes: ImageBox[] }
+  | { kind: "audio"; media: string; durationMs: number }
   | { kind: "unsupported"; type: string };
 
 /**
@@ -94,7 +96,7 @@ export type CellRun = { text: string; blank: boolean };
 /** How a cloze's text writes each blank. */
 export const clozeBlank = "___";
 
-type KnownType = "text" | "cloze" | "table" | "senses" | "image";
+type KnownType = "text" | "cloze" | "table" | "senses" | "image" | "audio";
 
 /**
  * The steps that upgrade each known type's payload, one per version: the first turns a v1
@@ -115,6 +117,7 @@ export const blockUpcasters: Record<KnownType, ((payload: unknown) => unknown)[]
   table: [tableWithSpans],
   senses: [],
   image: [],
+  audio: [],
 };
 
 function isKnownType(type: string): type is KnownType {
@@ -292,6 +295,14 @@ function parseImage(payload: Record<string, unknown>): Content | null {
   };
 }
 
+/** A sound of a non-empty media id and a positive whole `duration_ms`; null otherwise (ADR 0112). */
+function parseAudio(payload: Record<string, unknown>): Content | null {
+  const { media, duration_ms: durationMs } = payload;
+  if (typeof media !== "string" || media === "") return null;
+  if (!Number.isInteger(durationMs) || (durationMs as number) <= 0) return null;
+  return { kind: "audio", media, durationMs: durationMs as number };
+}
+
 /**
  * The blocks of a stored card side, or null when [value] is not an array of blocks each with
  * a string `type`, a `v` that is a positive integer when present, an `id` that is text when
@@ -330,7 +341,9 @@ export function parseContent(value: unknown): Content[] | null {
             ? parseTable(payload)
             : type === "senses"
               ? parseSenses(payload)
-              : parseImage(payload);
+              : type === "image"
+                ? parseImage(payload)
+                : parseAudio(payload);
     if (!parsed) return null;
     blocks.push(parsed);
   }
@@ -407,6 +420,8 @@ export function describeContent(blocks: Content[]): string {
           return block.senses.map(senseLine).join("\n");
         case "image":
           return "사진";
+        case "audio":
+          return "음성";
         case "unsupported":
           return `[이 버전에서 표시할 수 없는 내용: ${block.type}]`;
       }
@@ -452,4 +467,18 @@ export function spokenContent(blocks: Content[], revealed: boolean): string {
       }
     })
     .join(". ");
+}
+
+/** A sound block, as [Content] holds one. */
+export type AudioBlock = Extract<Content, { kind: "audio" }>;
+
+/** The sounds among [blocks], in order (ADR 0112). */
+export function audioOf(blocks: Content[]): AudioBlock[] {
+  return blocks.filter((block): block is AudioBlock => block.kind === "audio");
+}
+
+/** How long a sound plays, as minutes and seconds rounded up to the second, `0:07`, as on the phone. */
+export function audioLength(durationMs: number): string {
+  const seconds = Math.ceil(durationMs / 1000);
+  return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, "0")}`;
 }

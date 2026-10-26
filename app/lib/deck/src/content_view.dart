@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'audio_block.dart';
 import 'card_text.dart';
 import 'content.dart';
 import 'image_block.dart';
@@ -15,9 +16,10 @@ import 'whole_card_view.dart';
 /// breaks only between words ([CardText]). With the fit's height too, the
 /// blocks run together as one paragraph, scaled down further, as far as the
 /// floor, until it fits that height, and cut with an ellipsis past the lines
-/// that fit there ([fittedToBox]); a side that holds a photo is laid out
-/// block by block instead, its photo inside the fit, and scaled down as a
-/// whole to fit that height (ADR 0109).
+/// that fit there ([fittedToBox]); a side that holds a photo or a sound is
+/// laid out block by block instead, its photo inside the fit and its sound
+/// as its play control, and scaled down as a whole to fit that height
+/// (ADR 0109, ADR 0112).
 class ContentView extends StatelessWidget {
   const ContentView(this.blocks, {super.key, this.style, this.fit});
 
@@ -30,9 +32,11 @@ class ContentView extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final fit = this.fit;
     final style = this.style;
-    final hasImage = blocks.any((block) => block is ImageContent);
+    final hasMedia = blocks.any(
+      (block) => block is ImageContent || block is AudioContent,
+    );
     if (fit case (:final minFontSize, :final width, :final height?)
-        when !hasImage) {
+        when !hasMedia) {
       final span = contentSpan(l10n, blocks);
       final paragraph = DefaultTextStyle.of(context).style.merge(style);
       final fitted = fittedToBox(
@@ -89,6 +93,7 @@ class ContentView extends StatelessWidget {
               width: fit?.width,
               maxHeight: fit?.height,
             ),
+            AudioContent() => Center(child: AudioBlockView(block)),
             UnsupportedContent(:final type) => _UnsupportedBlock(
               label: l10n.unsupportedContent(type),
             ),
@@ -109,6 +114,7 @@ class ContentView extends StatelessWidget {
     ClozeContent(:final filled) || TableContent(:final filled) => filled,
     SensesContent(:final lines) => lines,
     ImageContent() => l10n.blockImage,
+    AudioContent() => l10n.blockAudio,
     UnsupportedContent(:final type) => l10n.unsupportedContent(type),
   };
 }
@@ -117,8 +123,8 @@ String _same(String text) => text;
 
 /// [blocks] run together as one paragraph, a line apart: a text block as
 /// written, a cloze or a table filled, a senses block as [sensesSpan] draws
-/// it, a photo as "사진", and a block this version cannot show named by its
-/// type. [wrap] is
+/// it, a photo as "사진", a sound as "음성", and a block this version cannot
+/// show named by its type. [wrap] is
 /// applied to each piece of text, such as a list's line-breaking rule.
 InlineSpan contentSpan(
   AppLocalizations l10n,
@@ -134,6 +140,7 @@ InlineSpan contentSpan(
         TableContent(:final filled) => TextSpan(text: wrap(filled)),
         SensesContent() => sensesSpan(block, wrap: wrap),
         ImageContent() => TextSpan(text: wrap(l10n.blockImage)),
+        AudioContent() => TextSpan(text: wrap(l10n.blockAudio)),
         UnsupportedContent(:final type) => TextSpan(
           text: l10n.unsupportedContent(type),
           style: const TextStyle(fontStyle: FontStyle.italic),
