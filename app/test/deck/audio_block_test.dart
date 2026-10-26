@@ -14,6 +14,7 @@ import 'package:smartman/media/media.dart';
 
 import '../home/deck_screens.dart';
 import '../media/fakes.dart';
+import '../settle_until.dart';
 
 const _sound = AudioContent(
   media: MediaId('sound'),
@@ -128,30 +129,17 @@ void main() {
       await deleteMediaDirectory(directory);
     });
 
-    /// Lets the store's file and database writes finish.
-    Future<void> settle(WidgetTester tester) async {
-      for (var step = 0; step < 20; step++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 10)),
-        );
-        await tester.pump();
-      }
-      await tester.pumpAndSettle();
-    }
-
     /// Waits until the block holds the sound just recorded or picked, which
     /// "Remove sound" shows only then: the store's file and row are written
     /// outside the test's fake time.
     Future<void> stored(WidgetTester tester) async {
       final holding = find.text('Remove sound');
-      for (var step = 0; step < 500 && holding.evaluate().isEmpty; step++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 10)),
-        );
-        await tester.pump();
-      }
+      await settleUntil(
+        tester,
+        'the stored sound',
+        () => holding.evaluate().isNotEmpty,
+      );
       expect(holding, findsOneWidget, reason: 'the sound was stored');
-      await tester.pumpAndSettle();
     }
 
     Future<void> tapVisible(WidgetTester tester, Finder finder) async {
@@ -161,9 +149,15 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Saves the card and waits until the editor closes, which it does once
+    /// the card is stored and the sounds it does not hold are let go.
     Future<void> save(WidgetTester tester) async {
       await tapVisible(tester, find.text('Save'));
-      await settle(tester);
+      await settleUntil(
+        tester,
+        'the editor to close on the saved card',
+        () => find.byType(CardEditorScreen).evaluate().isEmpty,
+      );
     }
 
     Future<Set<String>> released(WidgetTester tester) async => {
@@ -283,7 +277,7 @@ void main() {
         await stored(tester);
         expect(find.text('0:09'), findsWidgets);
         await tapVisible(tester, find.text('Remove sound'));
-        await save(tester);
+        await tapVisible(tester, find.text('Save'));
         expect(find.text('Add a sound'), findsOneWidget);
         expect(await screens.cards(), isEmpty);
 
@@ -338,7 +332,11 @@ void main() {
       await stored(tester);
       await tapVisible(tester, find.byTooltip('Close'));
       await tapVisible(tester, find.text('Discard'));
-      await settle(tester);
+      await settleUntil(
+        tester,
+        'a released sound',
+        () async => (await released(tester)).isNotEmpty,
+      );
 
       expect(await released(tester), {'sound0'});
     });
