@@ -108,9 +108,9 @@ final class ImportJob extends ChangeNotifier {
   /// The cards of every photo read so far, once the first photos are read.
   ImportList? list;
 
-  /// How many photos today's limit left when it cut the last pick; null when
-  /// it cut nothing.
-  int? leftToday;
+  /// How many photos the period's limit left when it cut the last pick, and
+  /// the period; null when it cut nothing.
+  ({int count, LimitPeriod period})? limitLeft;
 
   /// Restored from the device with photos still to read, waiting for the
   /// user to resume or discard it.
@@ -142,20 +142,24 @@ final class ImportJob extends ChangeNotifier {
   };
 
   /// Adds [picked] to the batch and starts reading. With several photos, or
-  /// photos added to a list, today's limit is read first: with none left it
-  /// resolves to [DailyLimitReached] and adds nothing; with fewer left than
-  /// picked, only the first ones are added and [leftToday] says so. Where
-  /// the limit cannot be read, every photo is added.
-  Future<DailyLimitReached?> add(List<PickedPhoto> picked) async {
+  /// photos added to a list, the period's limit is read first: with none
+  /// left it resolves to [PhotoLimitReached] and adds nothing; with fewer
+  /// left than picked, only the first ones are added and [limitLeft] says
+  /// so. Where the limit cannot be read, every photo is added.
+  Future<PhotoLimitReached?> add(List<PickedPhoto> picked) async {
     var take = picked;
-    leftToday = null;
+    limitLeft = null;
     if (picked.length > 1 || list != null) {
-      if (await _client.allowance() case (:final dailyLimit, :final used)) {
-        final left = dailyLimit - used;
-        if (left <= 0) return DailyLimitReached(dailyLimit: dailyLimit);
+      if (await _client.allowance() case (
+        :final limit,
+        :final period,
+        :final used,
+      )) {
+        final left = limit - used;
+        if (left <= 0) return PhotoLimitReached(limit: limit, period: period);
         if (left < picked.length) {
           take = picked.take(left).toList();
-          leftToday = left;
+          limitLeft = (count: left, period: period);
         }
       }
     }
@@ -187,13 +191,13 @@ final class ImportJob extends ChangeNotifier {
   void dropBatch() {
     _stopReading(batch);
     photos.removeRange(_listed, photos.length);
-    leftToday = null;
+    limitLeft = null;
     _changed();
   }
 
   /// Replaces every photo and the list with [picked], from [from]. Listeners
   /// hear the job only once it holds [picked], never empty in between.
-  Future<DailyLimitReached?> replace(
+  Future<PhotoLimitReached?> replace(
     List<PickedPhoto> picked,
     PhotoOrigin from,
   ) {
@@ -201,7 +205,7 @@ final class ImportJob extends ChangeNotifier {
     photos.clear();
     _listed = 0;
     list = null;
-    leftToday = null;
+    limitLeft = null;
     origin = from;
     return add(picked);
   }
@@ -345,7 +349,7 @@ final class ImportJob extends ChangeNotifier {
       }
       list = made;
       _listed = photos.length;
-      leftToday = null;
+      limitLeft = null;
     } finally {
       _finishing = false;
     }

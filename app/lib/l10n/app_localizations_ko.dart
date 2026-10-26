@@ -624,6 +624,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String photosLeftThisMonth(int count) {
+    return '이번 달 $count장 더 만들 수 있어요. 처음 $count장만 읽어요.';
+  }
+
+  @override
   String photoNumber(int number) {
     return '사진 $number';
   }
@@ -735,6 +740,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String dailyLimitReachedOf(int limit) {
     return '오늘 사진으로 만들 수 있는 $limit장을 다 썼어요. 내일 다시 시도해 주세요.';
+  }
+
+  @override
+  String monthlyLimitReachedOf(int limit) {
+    return '이번 달 사진으로 만들 수 있는 $limit장을 다 썼어요. 다음 달 1일에 다시 시도해 주세요.';
   }
 
   @override

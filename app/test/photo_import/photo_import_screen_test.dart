@@ -722,8 +722,11 @@ void main() {
       (tester) async {
         final import = await _Import.open(
           tester,
-          before: (import) =>
-              import.client.todayAllowance = (dailyLimit: 30, used: 28),
+          before: (import) => import.client.todayAllowance = (
+            limit: 30,
+            period: LimitPeriod.day,
+            used: 28,
+          ),
         );
         await import.pickSeveral(3);
         expect(
@@ -740,8 +743,11 @@ void main() {
 
         final full = await _Import.open(
           tester,
-          before: (import) =>
-              import.client.todayAllowance = (dailyLimit: 30, used: 30),
+          before: (import) => import.client.todayAllowance = (
+            limit: 30,
+            period: LimitPeriod.day,
+            used: 30,
+          ),
         );
         await full.pickSeveral(3);
         await tester.pumpAndSettle();
@@ -751,6 +757,25 @@ void main() {
           findsOneWidget,
         );
         await full.close();
+
+        final monthly = await _Import.open(
+          tester,
+          before: (import) => import.client.todayAllowance = (
+            limit: 10,
+            period: LimitPeriod.month,
+            used: 8,
+          ),
+        );
+        await monthly.pickSeveral(3);
+        expect(
+          _shown(
+            'You can read 2 more this month, so only the first 2 will be read.',
+          ),
+          findsOneWidget,
+          reason: 'a plan counted by the month says so',
+        );
+        expect(monthly.client.calls, hasLength(2));
+        await monthly.close();
       },
     );
 
@@ -763,7 +788,9 @@ void main() {
         import
             .calls(0)
             .answer
-            .completeError(const DailyLimitReached(dailyLimit: 30));
+            .completeError(
+              const PhotoLimitReached(limit: 30, period: LimitPeriod.day),
+            );
         await import.frames();
         expect(
           find.textContaining("You've used today's 30 photos."),
@@ -2104,7 +2131,7 @@ void main() {
         true,
       ),
       (
-        const DailyLimitReached(dailyLimit: 30),
+        const PhotoLimitReached(limit: 30, period: LimitPeriod.day),
         "You've used today's 30 photos. Try again tomorrow.",
         false,
         false,
@@ -2116,8 +2143,14 @@ void main() {
         false,
       ),
       (
-        const DailyLimitReached(dailyLimit: 50),
+        const PhotoLimitReached(limit: 50, period: LimitPeriod.day),
         "You've used today's 50 photos. Try again tomorrow.",
+        false,
+        false,
+      ),
+      (
+        const PhotoLimitReached(limit: 10, period: LimitPeriod.month),
+        "You've used this month's 10 photos. Try again on the 1st of next month.",
         false,
         false,
       ),
@@ -2228,8 +2261,11 @@ void main() {
           final import = await _Import.open(
             tester,
             themeMode: mode,
-            before: (import) =>
-                import.client.todayAllowance = (dailyLimit: 30, used: 28),
+            before: (import) => import.client.todayAllowance = (
+              limit: 30,
+              period: LimitPeriod.day,
+              used: 28,
+            ),
           );
           Future<void> check() async {
             await expectLater(
