@@ -463,6 +463,43 @@ void main() {
   });
 
   testWidgets(
+    'search reads only the face a card with a blank in its front is studied on, so a former cloze card\'s stale back is not found',
+    (tester) async {
+      const cloze = ClozeContent('The capital of France is ___', ['Paris']);
+      final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+      // A 빈칸 card whose derived back was written before its front changed.
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [cloze],
+          back: [const TextContent('The capital of Italy is Rome')],
+        ),
+      );
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text('Cards 2'), findsOneWidget);
+
+      await screens.tap(find.byTooltip('Search cards'));
+      await screens.enter('Search', 'rome');
+      expect(find.text('Cards 0'), findsOneWidget);
+      expect(find.byType(CardBackRow), findsNothing);
+
+      // Controls: the cloze card's face is searched, its answer included,
+      // and a split card's back still is.
+      await screens.enter('Search', 'paris');
+      expect(find.text('Cards 1'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is CardBackRow && widget.front.first == cloze,
+        ),
+        findsOneWidget,
+      );
+      await screens.enter('Search', 'cat');
+      expect(_rowFronts(tester), ['Chat']);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
     'the switch is read as Show meanings with its state, and stays pinned while the list scrolls',
     (tester) async {
       final semantics = tester.ensureSemantics();

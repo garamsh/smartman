@@ -249,25 +249,22 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 
   /// The pinned "카드 n" row with its "뜻 보기" switch, then a row for each
-  /// card whose front or back holds the search, ignoring case, its back
-  /// shown as the switch and the card's own taps leave it.
+  /// card whose studied text holds the search, ignoring case, its back
+  /// shown as the switch and the card's own taps leave it. A card is
+  /// searched on the one face [oneFaceOf] gives it, and on its front and
+  /// back otherwise, so a back study never shows is not searched.
   List<Widget> _cardList(AppLocalizations l10n, List<Card> cards) {
     final query = (_query ?? '').trim().toLowerCase();
-    final rows =
-        [
-              for (final card in cards)
-                (
-                  card: card,
-                  front: describeContent(l10n, card.front),
-                  back: describeContent(l10n, card.back),
-                ),
-            ]
-            .where(
-              (row) =>
-                  row.front.toLowerCase().contains(query) ||
-                  row.back.toLowerCase().contains(query),
-            )
-            .toList();
+    final rows = [
+      for (final card in cards)
+        if (switch (oneFaceOf(card.front, card.back)) {
+          final face? => [face],
+          null => [card.front, card.back],
+        }.any(
+          (side) => describeContent(l10n, side).toLowerCase().contains(query),
+        ))
+          card,
+    ];
     const gutter = EdgeInsets.symmetric(horizontal: AppSpace.gutter);
     return [
       PinnedHeaderSliver(
@@ -298,18 +295,18 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               )
             : SliverList.list(
                 children: [
-                  for (final row in rows)
+                  for (final card in rows)
                     CardBackRow(
-                      key: ValueKey(row.card.id),
-                      front: row.card.front,
-                      back: row.card.back,
-                      shown: _showAll != _flipped.contains(row.card.id),
+                      key: ValueKey(card.id),
+                      front: card.front,
+                      back: card.back,
+                      shown: _showAll != _flipped.contains(card.id),
                       onToggle: () => setState(() {
-                        if (!_flipped.remove(row.card.id)) {
-                          _flipped.add(row.card.id);
+                        if (!_flipped.remove(card.id)) {
+                          _flipped.add(card.id);
                         }
                       }),
-                      onEdit: () => _open(row.card),
+                      onEdit: () => _open(card),
                     ),
                 ],
               ),
