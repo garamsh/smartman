@@ -23,7 +23,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - "공개하기" opens a sheet: the display name the first time (2 to 20 characters, trimmed), an optional description of at most 300 characters, and the required checkbox "부적절하거나 저작권을 침해하는 내용은 공개하지 않을게요", then "공개", disabled until it is checked.
 - A publish writes the server first, then the device: the profile when it is new, then the deck's row with `visibility = public`, `published_at` and the description, then the local row through `DeckRepository.setVisibility`, unsynced, for sync to push as usual. A refused publish leaves the deck private on the device and says why in the sheet.
 - "비공개로 전환" writes `visibility = private` the same way and keeps the description for the next publish.
-- A public deck shows a "공개" chip on its row on the home screen and beside its name on the deck screen.
+- A public deck shows a "공개" chip on its row on the home screen, and "· 공개" after "카드 n장" under its name on the deck screen ([`home.md`](home.md)).
 
 ### Browsing
 
