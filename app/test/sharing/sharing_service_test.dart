@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/sharing/sharing.dart';
 
+import '../media/fakes.dart';
 import 'fakes.dart';
 
 final _published = DateTime.utc(2026, 10, 15, 9);
@@ -287,6 +291,227 @@ void main() {
 
       expect(await db.select(db.decks).get(), isEmpty);
       expect(server.imports, isEmpty);
+    });
+  });
+
+  group("copying a deck's photos and sounds (ADR 0113)", () {
+    final source = publicDeck('public', name: 'Birds', cards: 2);
+    final owner = source.owner.value;
+    const photo = MediaId('00000000-0000-4000-8000-0000000000c1');
+    const sound = MediaId('00000000-0000-4000-8000-0000000000c2');
+    const box = ImageBox(
+      id: '1',
+      x: 0.1,
+      y: 0.2,
+      w: 0.3,
+      h: 0.4,
+      answer: 'beak',
+    );
+    final image = preparedImage(5);
+    final recording = mp4Bytes(7);
+    late Directory directory;
+    late FakeMediaServer media;
+    late MediaStore store;
+
+    setUp(() {
+      directory = newMediaDirectory();
+      media = FakeMediaServer()
+        ..shared[(owner, photo)] = image.bytes
+        ..shared[(owner, sound)] = recording;
+      var mediaIds = 0;
+      store = MediaStore(
+        db,
+        media,
+        directory: directory,
+        clock: () => _published,
+        newId: () =>
+            '00000000-0000-4000-8000-${'${mediaIds++}'.padLeft(12, '0')}',
+      );
+      var ids = 0;
+      decks = DeckRepository(
+        db,
+        clock: () => _published,
+        newId: () => 'id${ids++}',
+        media: store,
+      );
+      sharing = SharingService(
+        server: server,
+        decks: decks,
+        reachability: FakeReachability(),
+        clock: () => _published,
+      );
+      server.decks = [source];
+      server.cards = {
+        source.id: [
+          const PublicCard(
+            front: [
+              ImageContent(media: photo, width: 4, height: 4, boxes: [box]),
+            ],
+            back: [TextContent('a robin')],
+          ),
+          const PublicCard(
+            front: [AudioContent(media: sound, duration: Duration(seconds: 2))],
+            back: [
+              TextContent('its song'),
+              ImageContent(media: photo, width: 4, height: 4),
+            ],
+          ),
+        ],
+      };
+    });
+
+    tearDown(() => deleteMediaDirectory(directory));
+
+    /// The media ids the deck's cards name, front then back, card by card.
+    Future<List<MediaId>> mediaIn(DeckId deck) async => [
+      for (final card in await decks.listCards(deck))
+        for (final block in [...card.front, ...card.back])
+          if (block
+              case ImageContent(:final media) || AudioContent(:final media))
+            media,
+    ];
+
+    Future<Map<String, String>> queued() async => {
+      for (final row in await db.select(db.mediaUploads).get())
+        row.id: row.mimeType,
+    };
+
+    /// The ids of the files kept on the device.
+    Set<String> filesOnDevice() => {
+      if (directory.existsSync())
+        for (final file in directory.listSync()) file.uri.pathSegments.last,
+    };
+
+    test("a copy stores each of the owner's files under a new id, names it in "
+        'the blocks and queues it for upload', () async {
+      final copied = await sharing.copy(source, const CopyIntoNewDeck());
+
+      final [photoCard, soundCard] = await decks.listCards(copied.deck.id);
+      final ownPhoto = photoCard.front.single as ImageContent;
+      expect(ownPhoto.media, isNot(photo));
+      expect(
+        [for (final b in ownPhoto.boxes) (b.id, b.x, b.y, b.w, b.h, b.answer)],
+        [(box.id, box.x, box.y, box.w, box.h, box.answer)],
+        reason: 'only the id changes',
+      );
+      final ownSound = soundCard.front.single as AudioContent;
+      expect(ownSound.media, isNot(sound));
+      expect(ownSound.duration, const Duration(seconds: 2));
+      expect(await mediaIn(copied.deck.id), [
+        ownPhoto.media,
+        ownSound.media,
+        ownPhoto.media,
+      ], reason: 'one file of the owner, held twice, is copied once');
+      expect(await queued(), {
+        ownPhoto.media.value: 'image/jpeg',
+        ownSound.media.value: 'audio/mp4',
+      });
+      expect(await store.read(ownPhoto.media), image.bytes);
+      expect(await store.drain(), isTrue);
+      expect(media.files, {
+        ownPhoto.media: image.bytes,
+        ownSound.media: recording,
+      });
+    });
+
+    test(
+      'a file the owner removed, or the network fails past retry, leaves its '
+      'block naming no readable file, and the copy still succeeds',
+      () async {
+        media.shared.remove((owner, photo));
+        media.failingDownloads[sound] = MediaStore.fetchAttempts;
+
+        final copied = await sharing.copy(source, const CopyIntoNewDeck());
+
+        expect(copied.added, 2);
+        final ids = await mediaIn(copied.deck.id);
+        expect(ids.toSet().intersection({photo, sound}), isEmpty);
+        for (final id in ids) {
+          expect(await store.read(id), isNull, reason: '$id holds no file');
+        }
+        expect(await queued(), isEmpty);
+        // Control: a fetch that succeeds on its last try is copied.
+        media.shared[(owner, photo)] = image.bytes;
+        media.failingDownloads[sound] = MediaStore.fetchAttempts - 1;
+        final again = await sharing.copy(source, const CopyIntoNewDeck());
+        for (final id in await mediaIn(again.deck.id)) {
+          expect(await store.read(id), isNotNull, reason: '$id holds a file');
+        }
+      },
+    );
+
+    test(
+      'copying the same deck again makes a copy with files of its own, which '
+      "outlive the first copy's deletion",
+      () async {
+        final first = await sharing.copy(source, const CopyIntoNewDeck());
+        final second = await sharing.copy(source, const CopyIntoNewDeck());
+
+        final firstIds = (await mediaIn(first.deck.id)).toSet();
+        final secondIds = (await mediaIn(second.deck.id)).toSet();
+        expect(firstIds, hasLength(2));
+        expect(secondIds, hasLength(2));
+        expect(firstIds.intersection(secondIds), isEmpty);
+
+        await decks.deleteDeck(first.deck.id);
+        expect({
+          for (final row in await db.select(db.mediaDeletions).get())
+            MediaId(row.id),
+        }, firstIds);
+        await store.drain();
+        for (final id in secondIds) {
+          expect(await store.read(id), isNotNull);
+        }
+      },
+    );
+
+    test("a card skipped as a duplicate leaves none of its back's files queued "
+        'or on the device', () async {
+      server.cards = {
+        source.id: [
+          const PublicCard(
+            front: [TextContent('robin')],
+            back: [ImageContent(media: photo, width: 4, height: 4)],
+          ),
+        ],
+      };
+      final deck = await decks.createDeck('Mine');
+      await decks.addCard(
+        deck.id,
+        front: [const TextContent('robin')],
+        back: [const TextContent('a bird')],
+      );
+
+      final skipped = await sharing.copy(
+        source,
+        CopyIntoDeck(deck.id, DuplicateChoice.skip),
+      );
+
+      expect(skipped.added, 0);
+      expect(await queued(), isEmpty);
+      expect(filesOnDevice(), isEmpty);
+      // Control: the same card added as new stores its file.
+      await sharing.copy(source, CopyIntoDeck(deck.id, DuplicateChoice.addNew));
+      expect(await queued(), hasLength(1));
+      expect(filesOnDevice(), (await queued()).keys.toSet());
+    });
+
+    test('a copy whose write fails leaves none of the files it fetched on the '
+        'device', () async {
+      final deck = await decks.createDeck('Mine');
+      await decks.deleteDeck(deck.id);
+
+      await expectLater(
+        sharing.copy(source, CopyIntoDeck(deck.id, DuplicateChoice.skip)),
+        throwsA(isA<DeckDeleted>()),
+      );
+
+      expect(media.requests, 2, reason: 'both files were fetched');
+      expect(await queued(), isEmpty);
+      expect(filesOnDevice(), isEmpty);
+      // Control: the same copy into a new deck keeps both files.
+      await sharing.copy(source, const CopyIntoNewDeck());
+      expect(filesOnDevice(), hasLength(2));
     });
   });
 }

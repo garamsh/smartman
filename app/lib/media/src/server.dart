@@ -12,8 +12,10 @@ abstract interface class MediaServer {
   /// is its owner and its id.
   Future<void> upload(MediaUpload upload, Uint8List bytes);
 
-  /// The file of [id]; null when the server holds none.
-  Future<Uint8List?> download(MediaId id);
+  /// The file of [id] in [owner]'s folder, the signed-in user's without one;
+  /// null when the server holds none or does not let the user read it.
+  /// Another user's file is read to copy it (ADR 0113).
+  Future<Uint8List?> download(MediaId id, {String? owner});
 
   /// Deletes the file of [id], then its row; either already gone counts as
   /// deleted.
@@ -32,7 +34,8 @@ final class UnavailableMediaServer implements MediaServer {
       throw _refusal;
 
   @override
-  Future<Uint8List?> download(MediaId id) async => throw _refusal;
+  Future<Uint8List?> download(MediaId id, {String? owner}) async =>
+      throw _refusal;
 
   @override
   Future<void> delete(MediaId id) async => throw _refusal;

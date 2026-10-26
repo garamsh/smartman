@@ -30,10 +30,21 @@ class FakeMediaServer implements MediaServer {
     files.putIfAbsent(upload.id, () => bytes);
   }
 
+  /// Other users' files the account may read, by their owner and id.
+  final shared = <(String, MediaId), Uint8List>{};
+
+  /// How many more downloads of each id fail as an unreachable server's do
+  /// before one is answered.
+  final failingDownloads = <MediaId, int>{};
+
   @override
-  Future<Uint8List?> download(MediaId id) async {
+  Future<Uint8List?> download(MediaId id, {String? owner}) async {
     _reach();
-    return files[id];
+    if (failingDownloads[id] case final failures? when failures > 0) {
+      failingDownloads[id] = failures - 1;
+      throw const MediaTransferFailed('lost');
+    }
+    return owner == null ? files[id] : shared[(owner, id)];
   }
 
   @override
@@ -179,3 +190,16 @@ PreparedAudio preparedAudio(int milliseconds) => prepareAudio(
   mimeType: 'audio/mp4',
   duration: Duration(milliseconds: milliseconds),
 );
+
+/// The first bytes of an MPEG-4 file, its `ftyp` box, then [fill], standing
+/// for a recorded sound as it reaches the server.
+Uint8List mp4Bytes(int fill) => Uint8List.fromList([
+  0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4D, 0x34, 0x41, 0x20, //
+  ...List.filled(20, fill),
+]);
+
+/// The first bytes of an MP3 file with an ID3 tag, then [fill].
+Uint8List mp3Bytes(int fill) => Uint8List.fromList([
+  0x49, 0x44, 0x33, 4, 0, //
+  ...List.filled(20, fill),
+]);

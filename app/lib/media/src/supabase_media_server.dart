@@ -57,15 +57,17 @@ final class SupabaseMediaServer implements MediaServer {
       });
 
   @override
-  Future<Uint8List?> download(MediaId id) => _request(() async {
-    final owner = _owner();
-    try {
-      return await _client.storage.from(_bucket).download(_path(owner, id));
-    } on StorageException catch (error) {
-      if (_isNotFound(error)) return null;
-      rethrow;
-    }
-  });
+  Future<Uint8List?> download(MediaId id, {String? owner}) => _request(
+    () async {
+      final folder = owner ?? _owner();
+      try {
+        return await _client.storage.from(_bucket).download(_path(folder, id));
+      } on StorageException catch (error) {
+        if (_isNotFound(error)) return null;
+        rethrow;
+      }
+    },
+  );
 
   @override
   Future<void> delete(MediaId id) => _request(() async {
