@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import {
+  createPlanVersion,
   dismissReports,
   grantPlan,
   revokePlan,
-  setPlan,
   grantAdmin,
   hideDeck,
   removeDeck,
@@ -452,7 +452,7 @@ const listedEmails = () =>
     .map((item) => item.textContent.split("정지")[0]?.split("2026")[0]);
 
 describe("the users pages", () => {
-  it("finds users by email and opens one, read-only, with today's photos against the limit", async () => {
+  it("finds users by email and opens one, read-only, with the period's photos against the plan's limit", async () => {
     await render(UsersContent, { searchParams: Promise.resolve({ q: "OTHER" }) });
     expect(screen.getByRole("link", { name: /other@example.com/ })).toHaveAttribute(
       "href",
@@ -461,9 +461,7 @@ describe("the users pages", () => {
 
     await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
     expect(screen.getByRole("heading", { name: "other@example.com" })).toBeInTheDocument();
-    expect(screen.getByText("오늘 사진 추출 (UTC)").nextSibling).toHaveTextContent(
-      "4장 / 하루 30장",
-    );
+    expect(screen.getByText("이번 달 사진 추출").nextSibling).toHaveTextContent("4장 / 한 달 10장");
     expect(screen.getByText("마지막 학습").nextSibling).toHaveTextContent("2026-10-18 09:30");
     expect(
       within(screen.getByRole("region", { name: "공개 덱" })).getByRole("link", { name: "French" }),
@@ -757,16 +755,43 @@ function form(fields: Record<string, string>): FormData {
 }
 
 describe("the plans page", () => {
-  it("shows each plan's model and daily limit, with the measured cost beside a measured model", async () => {
-    admin.plans[1] = { id: "pro", model: "openai/gpt-6-luna", daily_limit: 100, updated_by: null };
+  it("shows the version each plan's new subscribers take with its measured cost, a form for a new version, and every version", async () => {
+    admin.planVersions.push({
+      id: 7,
+      plan: "pro",
+      quota: "daily",
+      amount: 100,
+      model: "openai/gpt-6-luna",
+      starts_at: "2026-10-26T00:00:01Z",
+      applies_to_all: false,
+      created_by: testUser.id,
+    });
     await render(PlansContent, {});
     const free = within(screen.getByRole("region", { name: "무료" }));
-    expect(free.getByRole("textbox", { name: "모델" })).toHaveValue("anthropic/claude-haiku-5.5");
-    expect(free.getByRole("spinbutton", { name: "하루 사진 한도" })).toHaveValue(30);
+    expect(
+      free.getByText("지금 가입하면 한 달 10장 · anthropic/claude-haiku-5.5"),
+    ).toBeInTheDocument();
     expect(free.getByText("측정 비용 사진 한 장에 $0.0018")).toBeInTheDocument();
+    expect(free.getByRole("combobox", { name: "한도" })).toHaveValue("monthly");
+    expect(free.getByRole("spinbutton", { name: "사진 장 수" })).toHaveValue(10);
+    expect(free.getByRole("textbox", { name: "모델" })).toHaveValue("anthropic/claude-haiku-5.5");
+    expect(
+      within(free.getByRole("list", { name: "무료 버전" }))
+        .getAllByRole("listitem")
+        .map((row) => row.textContent),
+    ).toEqual([
+      "한 달 10장 · anthropic/claude-haiku-5.5 · 지금 가입 시 적용2026-10-26 00:00부터 · 기존 사용자는 갱신일부터",
+      "하루 30장 · anthropic/claude-haiku-5.52026-10-19 00:00부터 · 기존 사용자는 갱신일부터",
+    ]);
     const pro = within(screen.getByRole("region", { name: "프로" }));
     expect(pro.getByText("이 모델은 측정한 비용이 없어요.")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "스페셜" })).toBeInTheDocument();
+    // The row carries its start and author after its terms, so a substring is right.
+    expect(pro.getByText(/learner@example.com/)).toBeInTheDocument();
+    const max = within(screen.getByRole("region", { name: "맥스" }));
+    expect(
+      max.getByText("지금 가입하면 무제한 (하루 1000장까지) · anthropic/claude-haiku-5.5"),
+    ).toBeInTheDocument();
+    expect(max.getByText(/기존 사용자도 적용/)).toBeInTheDocument();
     const measured = within(screen.getByRole("region", { name: "측정한 모델" }));
     expect(measured.getAllByRole("listitem").map((row) => row.textContent)).toEqual([
       "anthropic/claude-haiku-5.5$0.0018",
@@ -774,26 +799,67 @@ describe("the plans page", () => {
     ]);
   });
 
-  it("saves a plan's model and limit when OpenRouter lists the model with images and structured outputs, and records it", async () => {
+  it("creates a version from now when OpenRouter lists the model with images and structured outputs, records it, and says when the terms are the current ones", async () => {
     server.use(openRouterModels);
-    const save = () =>
-      setPlan(
+    const create = () =>
+      createPlanVersion(
         { message: null },
-        form({ plan: "pro", model: "openai/gpt-6-luna", daily_limit: "100" }),
+        form({ plan: "pro", quota: "daily", amount: "200", model: "openai/gpt-6-luna" }),
       );
-    expect(await save()).toEqual({ message: "저장했어요." });
-    expect(admin.plans[1]).toMatchObject({ model: "openai/gpt-6-luna", daily_limit: 100 });
+    expect(await create()).toEqual({ message: "새 버전을 만들었어요." });
+    expect(admin.planVersions.at(-1)).toMatchObject({
+      plan: "pro",
+      quota: "daily",
+      amount: 200,
+      model: "openai/gpt-6-luna",
+      applies_to_all: false,
+    });
     expect(admin.audit).toMatchObject([
-      { action: "set_plan", target_kind: "plan", target_id: "pro" },
+      { action: "create_plan_version", target_kind: "plan", target_id: "pro" },
     ]);
     expect(revalidated).toEqual(["/admin"]);
-    expect(await save()).toEqual({ message: "바뀐 것이 없어요." });
+    expect(await create()).toEqual({ message: "지금 버전과 같아요." });
   });
 
-  it("cannot save a model OpenRouter does not list, one without images or structured outputs, a malformed id or limit, or any while OpenRouter cannot be reached", async () => {
+  it("starts a version at 00:00 in Seoul on the day chosen, refuses a day already past, and applies one to existing users only in their favour", async () => {
     server.use(openRouterModels);
-    const attempt = (model: string, limit = "30") =>
-      setPlan({ message: null }, form({ plan: "free", model, daily_limit: limit }));
+    const day = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+    const create = (fields: Record<string, string>) =>
+      createPlanVersion(
+        { message: null },
+        form({ model: "anthropic/claude-haiku-5.5", ...fields }),
+      );
+    expect(await create({ plan: "free", quota: "monthly", amount: "20", starts_on: day })).toEqual({
+      message: "새 버전을 만들었어요.",
+    });
+    expect(admin.planVersions.at(-1)?.starts_at).toBe(
+      new Date(`${day}T00:00:00+09:00`).toISOString(),
+    );
+    expect(
+      await create({ plan: "free", quota: "monthly", amount: "30", starts_on: "2020-01-01" }),
+    ).toEqual({ message: "시작일은 내일 이후로 정하거나, 지금부터면 비워 두세요." });
+    const unfavoured = {
+      message:
+        "기존 사용자에게 바로 적용할 수 있는 건 같은 모델에서 사진을 줄이지 않는 변경뿐이에요.",
+    };
+    expect(
+      await create({ plan: "max", quota: "unlimited", amount: "500", applies_to_all: "on" }),
+    ).toEqual(unfavoured);
+    expect(
+      await create({ plan: "max", quota: "daily", amount: "2000", applies_to_all: "on" }),
+    ).toEqual(unfavoured);
+    expect(
+      await create({ plan: "max", quota: "unlimited", amount: "2000", applies_to_all: "on" }),
+    ).toEqual({ message: "새 버전을 만들었어요." });
+    expect(admin.planVersions.at(-1)).toMatchObject({ plan: "max", applies_to_all: true });
+    expect(admin.audit).toHaveLength(2);
+  });
+
+  it("cannot save a model OpenRouter does not list, one without images or structured outputs, a malformed id or amount, or any while OpenRouter cannot be reached", async () => {
+    server.use(openRouterModels);
+    const versions = admin.planVersions.length;
+    const attempt = (model: string, amount = "30") =>
+      createPlanVersion({ message: null }, form({ plan: "free", quota: "daily", model, amount }));
     expect(await attempt("vendor/unknown")).toEqual({
       message: "OpenRouter에 없는 모델이에요. 모델 ID를 확인해 주세요.",
     });
@@ -805,8 +871,8 @@ describe("the plans page", () => {
     expect(await attempt("not a model")).toEqual({
       message: "모델 ID는 vendor/model 꼴로 적어 주세요.",
     });
-    expect(await attempt("anthropic/claude-haiku-5.5", "1001")).toEqual({
-      message: "하루 한도는 0에서 1000 사이의 정수로 적어 주세요.",
+    expect(await attempt("anthropic/claude-haiku-5.5", "100001")).toEqual({
+      message: "사진 장 수는 0에서 100000 사이의 정수로 적어 주세요.",
     });
     server.use(
       http.get(
@@ -817,26 +883,28 @@ describe("the plans page", () => {
     expect(await attempt("openai/gpt-6-luna")).toEqual({
       message: "OpenRouter에 연결할 수 없어 모델을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
     });
-    expect(admin.plans[0]).toMatchObject({ model: "anthropic/claude-haiku-5.5", daily_limit: 30 });
-    expect(admin.calls.some((call) => call.startsWith("admin_set_plan"))).toBe(false);
+    expect(admin.planVersions).toHaveLength(versions);
+    expect(admin.calls.some((call) => call.startsWith("admin_create_plan_version"))).toBe(false);
   });
 
   it("refuses a user who is not an admin, and changes nothing", async () => {
     server.use(openRouterModels);
+    const versions = admin.planVersions.length;
     await signIn(otherUser);
     expect(
-      await setPlan(
+      await createPlanVersion(
         { message: null },
-        form({ plan: "free", model: "openai/gpt-6-luna", daily_limit: "5" }),
+        form({ plan: "free", quota: "daily", model: "openai/gpt-6-luna", amount: "5" }),
       ),
     ).toEqual({ message: "관리자만 할 수 있어요." });
-    expect(admin.plans[0]).toMatchObject({ model: "anthropic/claude-haiku-5.5", daily_limit: 30 });
+    expect(admin.planVersions).toHaveLength(versions);
     await render(PlansContent, {});
     expect(screen.getByRole("alert")).toHaveTextContent("관리자만 볼 수 있어요.");
   });
 
-  it("costs a photo without a call record at the Free plan's model, and leaves out one a never-measured model served", async () => {
-    admin.plans[0] = { id: "free", model: "openai/gpt-6-luna", daily_limit: 30, updated_by: null };
+  it("costs a photo without a call record at the model of Free's current version, and leaves out one a never-measured model served", async () => {
+    const free = admin.planVersions.find((entry) => entry.plan === "free" && entry.amount === 10);
+    if (free) free.model = "openai/gpt-6-luna";
     admin.breakdown = [
       { day: utcDay(), plan: null, model: null, prompt_version_id: null, photos: 4 },
       {
@@ -859,23 +927,20 @@ describe("the plans page", () => {
 });
 
 describe("a user's plan", () => {
-  it("shows Free with its limit, grants Special until a day's end in the admin's zone, and goes back to Free", async () => {
+  it("shows Free with its terms, grants Max until a day's end in the admin's zone, and goes back to Free", async () => {
     await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
     const plan = within(screen.getByRole("region", { name: "요금제" }));
-    expect(plan.getByText("무료 · anthropic/claude-haiku-5.5 · 하루 30장")).toBeInTheDocument();
+    expect(plan.getByText("무료 · anthropic/claude-haiku-5.5 · 한 달 10장")).toBeInTheDocument();
     expect(plan.queryByRole("button", { name: "무료로 되돌리기" })).not.toBeInTheDocument();
 
     const ends = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
     expect(
-      await grantPlan(
-        { message: null },
-        form({ user: otherUser.id, plan: "special", ends_on: ends }),
-      ),
-    ).toEqual({ message: "스페셜로 지정했어요." });
+      await grantPlan({ message: null }, form({ user: otherUser.id, plan: "max", ends_on: ends })),
+    ).toEqual({ message: "맥스로 지정했어요." });
     // The last day ends at the next study day's start, 04:00 in the admin's zone, UTC here.
     const next = new Date(Date.parse(`${ends}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
     expect(admin.userPlans.get(otherUser.id)).toEqual({
-      plan: "special",
+      plan: "max",
       endsAt: `${next}T04:00:00.000Z`,
       grantedBy: testUser.id,
     });
@@ -884,7 +949,7 @@ describe("a user's plan", () => {
     await render(UserContent, { params: Promise.resolve({ id: otherUser.id }) });
     const granted = within(screen.getAllByRole("region", { name: "요금제" }).at(-1) as HTMLElement);
     expect(
-      granted.getByText("스페셜 · anthropic/claude-haiku-5.5 · 하루 30장"),
+      granted.getByText("맥스 · anthropic/claude-haiku-5.5 · 무제한 (하루 1000장까지)"),
     ).toBeInTheDocument();
     // The grant's line carries its time and granter too, so a substring is right.
     expect(granted.getByText(new RegExp(`${ends}까지`))).toBeInTheDocument();
@@ -904,23 +969,26 @@ describe("a user's plan", () => {
         { message: null },
         form({ user: otherUser.id, plan: "pro", ends_on: "2030-01-01" }),
       ),
-    ).toEqual({ message: "끝나는 날은 스페셜에만 정할 수 있어요." });
+    ).toEqual({ message: "끝나는 날은 맥스에만 정할 수 있어요." });
     expect(
       await grantPlan(
         { message: null },
-        form({ user: otherUser.id, plan: "special", ends_on: "2020-01-01" }),
+        form({ user: otherUser.id, plan: "max", ends_on: "2020-01-01" }),
       ),
     ).toEqual({ message: "끝나는 날은 오늘 이후로 정해 주세요." });
+    expect(
+      await grantPlan(
+        { message: null },
+        form({ user: otherUser.id, plan: "special", ends_on: "" }),
+      ),
+    ).toEqual({ message: "하지 못했어요. 잠시 후 다시 시도해 주세요." });
     expect(
       await grantPlan({ message: null }, form({ user: otherUser.id, plan: "pro", ends_on: "" })),
     ).toEqual({ message: "프로로 지정했어요." });
 
     await signIn(otherUser);
     expect(
-      await grantPlan(
-        { message: null },
-        form({ user: otherUser.id, plan: "special", ends_on: "" }),
-      ),
+      await grantPlan({ message: null }, form({ user: otherUser.id, plan: "max", ends_on: "" })),
     ).toEqual({ message: "관리자만 할 수 있어요." });
     expect(await revokePlan(otherUser.id)).toEqual({
       changed: false,
@@ -931,15 +999,21 @@ describe("a user's plan", () => {
 
   it("names each plan change in the audit log", async () => {
     server.use(openRouterModels);
-    await setPlan(
+    await createPlanVersion(
       { message: null },
-      form({ plan: "pro", model: "openai/gpt-6-luna", daily_limit: "100" }),
+      form({
+        plan: "pro",
+        quota: "daily",
+        amount: "200",
+        model: "openai/gpt-6-luna",
+        applies_to_all: "",
+      }),
     );
     await grantPlan({ message: null }, form({ user: otherUser.id, plan: "pro", ends_on: "" }));
     await render(AuditContent, {});
     expect(screen.getAllByRole("listitem").map((entry) => entry.firstChild?.textContent)).toEqual([
       "요금제 지정 · other@example.com · 프로",
-      "요금제 설정 · 프로 · openai/gpt-6-luna · 하루 100장",
+      "요금제 새 버전 · 프로 · openai/gpt-6-luna · 하루 200장",
     ]);
     expect(screen.getByRole("link", { name: "프로" })).toHaveAttribute("href", "/admin/plans");
   });
