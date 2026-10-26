@@ -25,9 +25,9 @@ import {
   list,
   MAX_CELL_LINES,
   MAX_SECTION_LINES,
-  parseSpan,
   type Section,
   type Span,
+  spanOf,
   spanText,
   TABLE_CONTENT,
   text,
@@ -87,10 +87,6 @@ const cell = {
   row: { type: "integer" },
   column: { type: "integer" },
 } as const;
-const spanFields = {
-  start: { type: "integer" },
-  end: { type: "integer" },
-} as const;
 const MAX_TABLE_CELLS = MAX_TABLE_ROWS * MAX_TABLE_COLUMNS;
 const MAX_TABLE_LINES = MAX_TABLE_CELLS * MAX_CELL_LINES;
 
@@ -125,8 +121,9 @@ export const shapeSchemas = {
         type: "array",
         items: {
           type: "object",
-          properties: { line_id: field, ...spanFields },
-          required: ["line_id", "start", "end"],
+          // `text` is the run of the line it hides, which `parseTableSpans` finds in the line.
+          properties: { line_id: field, text: field },
+          required: ["line_id", "text"],
           additionalProperties: false,
         },
       },
@@ -192,8 +189,8 @@ export const shapeSchemas = {
 /**
  * The [shape] made from [section], or null when [value] is not that shape's reply of the schema's
  * shape, or breaks what the section allows: a cell outside the table or empty, given twice; a
- * span outside its line or over another; a line of another section, or one left without its
- * sentence; a cloze blank its sentence does not hold after the blank before it; no question for a cell that holds lines; a sentence not composed that is not its
+ * span outside its line or over another; a line of another section, a fact line left without its
+ * sentence, or an example or heading line given one; a cloze blank its sentence does not hold after the blank before it; no question for a cell that holds lines; a sentence not composed that is not its
  * line word for word; or a vocabulary card that `parseCards` refuses, or a note.
  */
 export function parseShape(
@@ -264,18 +261,16 @@ function parseTableSpans(value: unknown, section: Section): ShapeOutput | null {
   if (section.table === null) return null;
   const lines = new Map(linesOf(section).map((line) => [line.id, line]));
   const blanks = list(value, MAX_TABLE_LINES, (blank): LineSpan | null => {
-    if (!isRecord(blank) || !hasOnlyKeys(blank, ["line_id", "start", "end"])) {
+    if (!isRecord(blank) || !hasOnlyKeys(blank, ["line_id", "text"])) {
       return null;
     }
     const line = typeof blank.line_id === "string"
       ? lines.get(blank.line_id)
       : undefined;
-    const at = line === undefined
-      ? null
-      : parseSpan(blank, [...line.text].length);
+    const at = line === undefined ? null : blanksIn(line.text, [blank.text]);
     return line === undefined || at === null
       ? null
-      : { line_id: line.id, ...at };
+      : { line_id: line.id, ...at[0] };
   });
   if (blanks === null || blanks.length === 0) return null;
   for (const id of lines.keys()) {
@@ -339,7 +334,9 @@ function parseCloze(value: unknown, section: Section): ShapeOutput | null {
   );
   if (items === null) return null;
   const ids = items.map((item) => item.line_id);
-  return new Set(ids).size === ids.length && ids.length === lines.size
+  const facts = [...lines.values()].filter((line) => line.role === "fact");
+  return new Set(ids).size === ids.length && ids.length === facts.length &&
+      facts.every((line) => ids.includes(line.id))
     ? { kind: "cloze", items }
     : null;
 }
@@ -349,19 +346,12 @@ function parseCloze(value: unknown, section: Section): ShapeOutput | null {
  * null when [value] is not a list of at most `MAX_CLOZE_BLANKS` texts the sentence holds in order.
  */
 function blanksIn(sentence: string, value: unknown): Span[] | null {
-  const chars = [...sentence];
   let from = 0;
   return list(value, MAX_CLOZE_BLANKS, (blank): Span | null => {
     const hidden = text(blank);
-    if (hidden === null) return null;
-    const want = [...hidden];
-    for (let start = from; start + want.length <= chars.length; start += 1) {
-      if (want.every((char, i) => chars[start + i] === char)) {
-        from = start + want.length;
-        return { start, end: from };
-      }
-    }
-    return null;
+    const at = hidden === null ? null : spanOf(sentence, hidden, from);
+    if (at !== null) from = at.end;
+    return at;
   });
 }
 
@@ -442,16 +432,29 @@ export function cardsOf(
         answer: (cellLines(section, card) ?? []).map((line) => line.text)
           .join("\n"),
       }));
-    case "cloze":
+    case "cloze": {
+      // Each example line goes to the card of the fact line before it, under no heading between.
+      const examples = new Map<string, string[]>();
+      let fact: string | null = null;
+      for (const line of linesOf(section)) {
+        if (line.role === "fact") fact = line.id;
+        else if (line.role === "heading") fact = null;
+        else if (fact !== null) {
+          examples.set(fact, [...examples.get(fact) ?? [], line.text]);
+        }
+      }
       return output.items.map((item) => {
         const { front, answers } = clozeOf(item.sentence, item.blanks);
+        const printed = examples.get(item.line_id);
         return {
           type: "cloze",
           front,
           answer: answers.join("\n"),
           cloze: { answers },
+          ...(printed === undefined ? {} : { examples: printed }),
         };
       });
+    }
     case "vocabulary":
       return [...output.cards];
   }

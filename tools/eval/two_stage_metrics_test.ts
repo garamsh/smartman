@@ -74,6 +74,7 @@ function truth() {
 const line = (id: string, text: string) => ({
   id,
   text,
+  role: "fact",
   marks: [],
   key_terms: [],
 });

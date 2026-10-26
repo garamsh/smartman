@@ -11,6 +11,7 @@ const line = (
 ) => ({
   id,
   text,
+  role: "fact",
   row,
   column,
   marks: [],
@@ -34,8 +35,8 @@ function page() {
         rows: ["정치", "풍습"],
         lines: [
           line("s1-r1-c1-l1", "5부족 연맹체", 0, 0, {
-            marks: [{ start: 0, end: 7, kind: "underline", ink: "pen" }],
-            key_terms: [{ start: 0, end: 7, source: "mark" }],
+            marks: [{ text: "5부족 연맹체", kind: "underline", ink: "pen" }],
+            key_terms: [{ text: "연맹체", source: "mark" }],
           }),
           line("s1-r1-c2-l1", "5부 연맹체", 0, 1),
           line("s1-r1-c1-l2", "여러 가들이 사출도 다스림", 0, 0),
@@ -73,7 +74,7 @@ Deno.test("stage 1's flat table is read as rows of cells, each holding its lines
   ]);
   assert.deepEqual(
     table?.rows[0].cells[0].lines[0].key_terms,
-    [{ start: 0, end: 7, source: "mark" }],
+    [{ start: 4, end: 7, source: "mark" }],
   );
   assert.equal(sections[1].table, null);
   assert.equal(sections[1].lines[0].text, "동예는 책화로 갚았다", "trimmed");
@@ -95,7 +96,7 @@ Deno.test("a section stage 2 is given in the flat shape reads back as the same s
   );
 });
 
-Deno.test("stage 1's reply is refused when a section breaks its content type, a line its cell, a line id repeats, or a span leaves its line", () => {
+Deno.test("stage 1's reply is refused when a section breaks its content type, a line its cell or role, a line id repeats, or a mark's text is not in its line", () => {
   // Control: the unbroken page parses, so each refusal below is the one change it makes.
   assert.notEqual(parseSections(page()), null);
   const broken: [string, (value: ReturnType<typeof page>) => void][] = [
@@ -134,12 +135,16 @@ Deno.test("stage 1's reply is refused when a section breaks its content type, a 
     ["a line id given twice", (value) => {
       value.sections[1].lines[0].id = "s1-r1-c1-l1";
     }],
-    ["a mark past the line's end", (value) => {
-      (value.sections[0].lines[0].marks as { end: number }[])[0].end = 8;
+    ["a mark whose text the line does not hold", (value) => {
+      (value.sections[0].lines[0].marks as { text: string }[])[0].text =
+        "5부족 연맹체들";
     }],
     ["an empty key term", (value) => {
-      (value.sections[0].lines[0].key_terms as { start: number }[])[0].start =
-        7;
+      (value.sections[0].lines[0].key_terms as { text: string }[])[0].text =
+        " ";
+    }],
+    ["an unknown line role", (value) => {
+      value.sections[1].lines[0].role = "note";
     }],
     ["an unknown content type", (value) => {
       value.sections[1].content_type = "outline";
@@ -156,6 +161,25 @@ Deno.test("stage 1's reply is refused when a section breaks its content type, a 
     breakIt(value);
     assert.equal(parseSections(value), null, name);
   }
+});
+
+Deno.test("a star covers its whole line whatever text it gives, and any other mark only the text it gives", () => {
+  const value = page();
+  const marks = value.sections[1].lines[0].marks as Record<string, string>[];
+  marks.push({ text: "동예는 책화로", kind: "star", ink: "pen" });
+  marks.push({ text: "책화", kind: "circle", ink: "pen" });
+  const sections = parseSections(value);
+  assert.ok(sections !== null);
+  assert.deepEqual(sections[1].lines[0].marks, [
+    { start: 0, end: 11, kind: "star", ink: "pen" },
+    { start: 4, end: 6, kind: "circle", ink: "pen" },
+  ]);
+  marks[1].text = "책화로써";
+  assert.equal(
+    parseSections(value),
+    null,
+    "a circle's text must be in its line",
+  );
 });
 
 Deno.test("a ground truth's sections carry the spans to blank, and a truth line without one is refused", () => {
