@@ -333,15 +333,21 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
       _busy = true;
       _unreadable = false;
     });
+    // Read before the waits: a pick can end after the editor is left.
+    final store = ref.read(mediaStoreProvider);
     try {
       final picked = await ref
           .read(imagePickProvider)
           .pick(origin, shape: ImageShape.whole);
-      if (picked != null) {
-        final media = await ref.read(mediaStoreProvider).addImage(picked);
-        widget.onPicked(media);
-        if (mounted) _change(() => _draft.choose(media, picked));
+      if (picked == null) return;
+      final media = await store.addImage(picked);
+      // Stored once the fields are gone, it has no block to hold it.
+      if (!mounted) {
+        await store.release(media);
+        return;
       }
+      widget.onPicked(media);
+      _change(() => _draft.choose(media, picked));
     } on MediaUnreadable {
       if (mounted) setState(() => _unreadable = true);
     } finally {

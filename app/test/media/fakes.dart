@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -48,12 +49,17 @@ class FakeImagePick implements ImagePick {
   PreparedImage? next;
   final picks = <(ImageOrigin, ImageShape)>[];
 
+  /// While set, a pick returns once it completes, as a picker the user is
+  /// still in does.
+  Completer<void>? hold;
+
   @override
   Future<PreparedImage?> pick(
     ImageOrigin origin, {
     ImageShape shape = ImageShape.square,
   }) async {
     picks.add((origin, shape));
+    await hold?.future;
     return next;
   }
 }

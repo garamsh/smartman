@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -485,6 +486,43 @@ void main() {
         await settle(tester);
 
         expect(await released(tester), {'photo1'});
+      },
+    );
+
+    testWidgets(
+      'a photo whose pick ends after the editor is left is stored and released, with no error',
+      (tester) async {
+        final screens = await DeckScreens.open(
+          tester,
+          overrides: [
+            mediaStoreProvider.overrideWithValue(media),
+            imagePickProvider.overrideWithValue(pick),
+          ],
+        );
+        await screens.push((deck) => CardEditorScreen(deck: deck));
+        await screens.tap(find.text('Free'));
+        await fillText(tester);
+        await tester.ensureVisible(find.text('Add to front'));
+        await screens.tap(find.text('Add to front'));
+        await screens.tap(find.text('Photo').last);
+        final hold = pick.hold = Completer<void>();
+        await tapVisible(tester, find.text('Choose from album'));
+        await tapVisible(tester, find.byTooltip('Close'));
+        await tapVisible(tester, find.text('Discard'));
+        expect(find.byType(CardEditorScreen), findsNothing, reason: 'setup');
+
+        hold.complete();
+        await settle(tester);
+
+        expect(tester.takeException(), isNull);
+        expect(
+          (await tester.runAsync(
+            () => mediaDb.select(mediaDb.mediaUploads).get(),
+          ))!,
+          isEmpty,
+          reason: 'its upload is let go',
+        );
+        expect(await released(tester), {'photo0'});
       },
     );
 
