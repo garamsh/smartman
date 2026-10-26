@@ -47,6 +47,7 @@ void main() {
       account: account,
       synchronizer: device.synchronizer,
       store: device.store,
+      media: device.media,
       edits: device.db.tableUpdates(
         TableUpdateQuery.onAllTables([device.db.decks, device.db.cards]),
       ),

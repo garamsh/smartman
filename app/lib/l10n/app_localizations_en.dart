@@ -31,6 +31,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckAppearanceColor => 'Color';
 
   @override
+  String get deckAppearanceImage => 'Photo';
+
+  @override
+  String get deckImageFromAlbum => 'Choose from album';
+
+  @override
+  String get deckImageFromCamera => 'Take a photo';
+
+  @override
+  String get deckImageRemove => 'Remove photo';
+
+  @override
+  String get deckImageUnreadable => 'Couldn\'t load the photo. Try again.';
+
+  @override
   String deckIconName(String icon) {
     String _temp0 = intl.Intl.selectLogic(icon, {
       'layers': 'Cards',

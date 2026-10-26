@@ -140,6 +140,36 @@ abstract class AppLocalizations {
   /// **'색'**
   String get deckAppearanceColor;
 
+  /// In the 덱 꾸미기 sheet: the heading over the ways to put a photo on a deck's tile in place of its icon.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 넣기'**
+  String get deckAppearanceImage;
+
+  /// In the 덱 꾸미기 sheet: the button that picks the tile's photo from the photo library.
+  ///
+  /// In ko, this message translates to:
+  /// **'앨범에서 고르기'**
+  String get deckImageFromAlbum;
+
+  /// In the 덱 꾸미기 sheet: the button that takes the tile's photo with the camera.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 찍기'**
+  String get deckImageFromCamera;
+
+  /// In the 덱 꾸미기 sheet: the button that takes the photo off the tile, which then shows its icon again.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 빼기'**
+  String get deckImageRemove;
+
+  /// In the 덱 꾸미기 sheet: shown when the picked photo, the camera or the photo library could not be read.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진을 불러오지 못했어요. 다시 시도해 주세요.'**
+  String get deckImageUnreadable;
+
   /// What a screen reader calls an icon in the 덱 꾸미기 sheet, by the icon's stored key.
   ///
   /// In ko, this message translates to:

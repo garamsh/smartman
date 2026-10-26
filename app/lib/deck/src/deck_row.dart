@@ -5,6 +5,7 @@ import '../../design/app_chip.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/media.dart';
 import 'model.dart';
 
 /// A deck on a row: its tile, its name with "공개" when it is published and
@@ -83,47 +84,96 @@ class DeckRow extends StatelessWidget {
   }
 }
 
-/// The deck's icon on its colour, on a rounded tile; decorative, beside the
-/// name. A deck that holds no icon or colour this build knows shows
-/// [DeckIcon.fallback] on the colour its id selects ([deckTintIndex]).
+/// The deck's image, or else its icon on its colour, on a rounded tile;
+/// decorative, beside the name. A deck that holds no icon or colour this
+/// build knows shows [DeckIcon.fallback] on the colour its id selects
+/// ([deckTintIndex]); an image not yet on the device shows the icon until it
+/// is.
 ///
-/// [icon] and [color] are drawn in place of the deck's own, as the 덱 꾸미기
-/// sheet previews a choice; [size] is the tile's side.
+/// [icon], [color] and [image] are drawn in place of the deck's own, as the
+/// 덱 꾸미기 sheet previews a choice; [size] is the tile's side.
 class DeckTile extends StatelessWidget {
   const DeckTile({
     super.key,
     required this.deck,
     this.icon,
     this.color,
+    this.image,
     this.size = AppSize.deckTile,
   });
 
   final Deck deck;
   final DeckIcon? icon;
   final DeckColor? color;
+  final TileImage? image;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final shown = color ?? deck.color ?? defaultDeckColor(deck.id);
-    return ExcludeSemantics(
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: deckTileColor(colors, shown),
-          borderRadius: BorderRadius.circular(AppRadius.field),
-        ),
-        child: Icon(
-          deckIconData(icon ?? deck.icon ?? DeckIcon.fallback),
-          size: size / 2,
-          color: colors.ink,
-        ),
+    final radius = BorderRadius.circular(AppRadius.field);
+    final iconTile = Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: deckTileColor(colors, shown),
+        borderRadius: radius,
+      ),
+      child: Icon(
+        deckIconData(icon ?? deck.icon ?? DeckIcon.fallback),
+        size: size / 2,
+        color: colors.ink,
       ),
     );
+    final picture = switch (image ?? TileImage.of(deck)) {
+      StoredTileImage(:final id) => MediaImage(id, fallback: iconTile),
+      PickedTileImage(:final image) => Image.memory(
+        image.bytes,
+        fit: BoxFit.cover,
+      ),
+      NoTileImage() => null,
+    };
+    return ExcludeSemantics(
+      child: picture == null
+          ? iconTile
+          : ClipRRect(
+              borderRadius: radius,
+              child: SizedBox.square(dimension: size, child: picture),
+            ),
+    );
   }
+}
+
+/// What a [DeckTile] draws in place of its icon.
+sealed class TileImage {
+  const TileImage();
+
+  /// The image [deck] stores, or none.
+  static TileImage of(Deck deck) => switch (deck.image) {
+    final id? => StoredTileImage(id),
+    null => const NoTileImage(),
+  };
+}
+
+/// An image stored under [id].
+final class StoredTileImage extends TileImage {
+  const StoredTileImage(this.id);
+
+  final MediaId id;
+}
+
+/// An image picked and not yet stored.
+final class PickedTileImage extends TileImage {
+  const PickedTileImage(this.image);
+
+  final PreparedImage image;
+}
+
+/// No image: the tile draws its icon.
+final class NoTileImage extends TileImage {
+  const NoTileImage();
 }
 
 /// The colour a deck with none chosen takes, selected by its id.

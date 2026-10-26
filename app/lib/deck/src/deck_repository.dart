@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 
 import '../../database/database.dart';
+import '../../media/media.dart';
 import 'add_cards.dart';
 import 'card_key.dart';
 import 'card_kind.dart';
@@ -39,9 +40,14 @@ class DeckRepository {
     required this._clock,
     required this._newId,
     String Function()? newBlockId,
+    this._media,
   }) : _newBlockId = newBlockId ?? _newId;
 
   final AppDatabase _db;
+
+  /// Releases each image a deck lets go, by a new image or its deletion;
+  /// without it, as in a test that stores no image, none is released.
+  final MediaStore? _media;
   final DateTime Function() _clock;
   final String Function() _newId;
 
@@ -100,6 +106,26 @@ class DeckRepository {
         );
       });
 
+  /// Stores [image] as the deck's image, or none when it is null, and
+  /// releases the image it replaces.
+  Future<void> setImage(DeckId id, MediaId? image) => _guard(
+    () => _db.transaction(() async {
+      final previous = await _imageOf(id);
+      await (_db.update(
+        _db.decks,
+      )..where((deck) => deck.id.equals(id.value))).write(
+        DecksCompanion(
+          imageMediaId: Value(image?.value),
+          updatedAt: Value(_clock()),
+          dirty: const Value(true),
+        ),
+      );
+      if (previous != null && previous != image) {
+        await _media?.release(previous);
+      }
+    }),
+  );
+
   /// Publishes the deck as [visibility] says, with [description] when it is
   /// public; a private deck keeps the description it had, for the next
   /// publish. Refused with [DeckDeleted] once the deck is deleted.
@@ -140,10 +166,12 @@ class DeckRepository {
     );
   }
 
-  /// Deletes the deck and every card in it, as tombstones sync pushes.
+  /// Deletes the deck and every card in it, as tombstones sync pushes, and
+  /// releases its image.
   Future<void> deleteDeck(DeckId id) => _guard(
     () => _db.transaction(() async {
       final now = _clock();
+      if (await _imageOf(id) case final image?) await _media?.release(image);
       await (_db.update(
         _db.decks,
       )..where((deck) => deck.id.equals(id.value))).write(_deckTombstone(now));
@@ -452,6 +480,15 @@ class DeckRepository {
     return row == null ? null : _toCard(row);
   }
 
+  /// The image of deck [id]; null when it has none or is not stored.
+  Future<MediaId?> _imageOf(DeckId id) async {
+    final query = _db.selectOnly(_db.decks)
+      ..addColumns([_db.decks.imageMediaId])
+      ..where(_db.decks.id.equals(id.value));
+    final image = (await query.getSingleOrNull())?.read(_db.decks.imageMediaId);
+    return image == null ? null : MediaId(image);
+  }
+
   Deck _toDeck(DeckRow row) => Deck(
     id: DeckId(row.id),
     name: row.name,
@@ -465,6 +502,10 @@ class DeckRepository {
     description: row.description,
     icon: DeckIcon.fromKey(row.icon),
     color: DeckColor.fromKey(row.color),
+    image: switch (row.imageMediaId) {
+      final image? => MediaId(image),
+      null => null,
+    },
   );
 
   Card _toCard(CardRow row) {

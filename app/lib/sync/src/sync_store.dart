@@ -92,10 +92,23 @@ class SyncStore {
     await _db.delete(_db.decks).go();
     await _db.delete(_db.syncState).go();
     await _db.delete(_db.studySettings).go();
+    await _db.delete(_db.mediaUploads).go();
+    await _db.delete(_db.mediaDeletions).go();
   }
 
-  /// Whether any row is waiting to be pushed.
+  /// Whether any row is waiting to be pushed, or any media file waiting to
+  /// be uploaded or deleted.
   Future<bool> hasUnsynced() => _guard(() async {
+    for (final queue in <ResultSetImplementation<dynamic, dynamic>>[
+      _db.mediaUploads,
+      _db.mediaDeletions,
+    ]) {
+      final query = _db.customSelect(
+        'SELECT 1 FROM ${queue.entityName} LIMIT 1',
+        readsFrom: {queue},
+      );
+      if (await query.getSingleOrNull() != null) return true;
+    }
     for (final table in <ResultSetImplementation<dynamic, dynamic>>[
       _db.decks,
       _db.cards,

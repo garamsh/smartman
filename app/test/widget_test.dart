@@ -17,6 +17,7 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
@@ -27,6 +28,7 @@ import 'photo_import/fakes.dart';
 import 'sharing/fakes.dart';
 import 'study/minutes_sheet.dart';
 import 'sync/fake_sync_server.dart';
+import 'media/fakes.dart';
 
 /// A [Text] that reads [text] once its word joiners are left out: sheets and
 /// the first run keep their words whole with them.
@@ -102,6 +104,8 @@ void main() {
         jobStore ?? MemoryImportJobStore(),
         sharing,
         FakeReachability(),
+        const UnavailableMediaServer(),
+        unusedMediaDirectory,
         '1.0.0',
       ),
     );
