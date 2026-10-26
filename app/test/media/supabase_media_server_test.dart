@@ -155,6 +155,28 @@ void main() {
     );
   });
 
+  test("a download with an owner reads that owner's folder, where one without reads the user's own (ADR 0113)", () async {
+    const other = '00000000-0000-4000-8000-00000000000b';
+    final requests = <http.Request>[];
+    final client = await _client(
+      requests,
+      (request) => http.Response.bytes([7, 8], 200, request: request),
+    );
+    addTearDown(client.dispose);
+    final server = SupabaseMediaServer(client);
+
+    expect(await server.download(_id, owner: other), [7, 8]);
+    await server.download(_id);
+
+    expect(
+      [for (final request in requests) request.url.path],
+      [
+        '/storage/v1/object/media/$other/${_id.value}',
+        '/storage/v1/object/media/$_owner/${_id.value}',
+      ],
+    );
+  });
+
   test('a delete removes the file, then the row', () async {
     final requests = <http.Request>[];
     final client = await _client(
