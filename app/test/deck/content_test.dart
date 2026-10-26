@@ -10,7 +10,7 @@ void main() {
 
       final encoded = encodeContent(blocks);
 
-      expect(encoded, '[{"type":"text","payload":{"text":"bonjour"}}]');
+      expect(encoded, '[{"type":"text","v":1,"payload":{"text":"bonjour"}}]');
       expect(decodeContent(encoded), blocks);
     });
 
@@ -25,7 +25,13 @@ void main() {
       final unsupported = blocks.last;
       expect(unsupported, isA<UnsupportedContent>());
       expect((unsupported as UnsupportedContent).type, 'image');
-      expect(encodeContent(blocks), stored);
+      // The text block is written at this build's version; the image block
+      // as it was stored.
+      expect(
+        encodeContent(blocks),
+        '[{"type":"text","v":1,"payload":{"text":"cat"}},'
+        '{"type":"image","payload":{"path":"cat.png"}}]',
+      );
     });
 
     test(
@@ -47,10 +53,10 @@ void main() {
 
         expect(
           encoded,
-          '[{"type":"text","payload":{"text":"Capitals"}},'
-          '{"type":"cloze","payload":{"text":"___ is in France",'
+          '[{"type":"text","v":1,"payload":{"text":"Capitals"}},'
+          '{"type":"cloze","v":1,"payload":{"text":"___ is in France",'
           '"answers":["Paris"]}},'
-          '{"type":"table","payload":{"columns":["Capital","Country"],'
+          '{"type":"table","v":1,"payload":{"columns":["Capital","Country"],'
           '"rows":[["Paris","France"]],"blanks":[{"row":0,"column":0}]}}]',
         );
         expect(decodeContent(encoded), blocks);
@@ -149,7 +155,7 @@ void main() {
 
       expect(
         encoded,
-        '[{"type":"senses","payload":{"senses":['
+        '[{"type":"senses","v":1,"payload":{"senses":['
         '{"labels":[{"kind":"part_of_speech","category":"noun","text":"명"},'
         '{"kind":"other","category":null,"text":"사물"}],'
         '"meaning":"기차","examples":["기차를 타다"]},'
@@ -279,6 +285,172 @@ void main() {
         () => decodeContent('[{"type":"text","payload":{}}]'),
         throwsFormatException,
       );
+    });
+  });
+
+  group('block versions and ids (ADR 0106)', () {
+    // One block of each type this build knows, as it writes each at v1.
+    const blocks = <(String, Content, String)>[
+      ('text', TextContent('bonjour'), '{"text":"bonjour"}'),
+      (
+        'cloze',
+        ClozeContent('___ is in France', ['Paris']),
+        '{"text":"___ is in France","answers":["Paris"]}',
+      ),
+      (
+        'table',
+        TableContent(
+          columns: ['Capital', 'Country'],
+          rows: [
+            ['Paris', 'France'],
+          ],
+          blanks: [(row: 0, column: 0)],
+        ),
+        '{"columns":["Capital","Country"],"rows":[["Paris","France"]],'
+            '"blanks":[{"row":0,"column":0}]}',
+      ),
+      (
+        'senses',
+        SensesContent([CardSense(meaning: '기차')]),
+        '{"senses":[{"labels":[],"meaning":"기차","examples":[]}]}',
+      ),
+    ];
+
+    for (final (type, block, payload) in blocks) {
+      test('a $type block is read at v1 with and without the field, and '
+          'written with it', () {
+        final without = '[{"type":"$type","payload":$payload}]';
+        final withV = '[{"type":"$type","v":1,"payload":$payload}]';
+
+        expect(decodeContent(without), [block], reason: 'no v reads as v1');
+        expect(decodeContent(withV), [block]);
+        expect(encodeContent([block]), withV);
+      });
+
+      test('a $type block above the version this build writes is kept, '
+          'byte for byte, as unsupported', () {
+        final stored =
+            '[{"type":"$type","v":2,"id":"b1","payload":$payload,'
+            '"extra":true}]';
+
+        final decoded = decodeContent(stored);
+
+        expect(decoded.single, isA<UnsupportedContent>());
+        expect((decoded.single as UnsupportedContent).type, type);
+        expect(encodeContent(decoded), stored);
+      });
+    }
+
+    test('a block keeps its id through a read and a write', () {
+      const stored =
+          '[{"type":"text","v":1,"id":"0190a8c4-0000-7000-8000-000000000001",'
+          '"payload":{"text":"cat"}}]';
+
+      final decoded = decodeContent(stored);
+
+      expect(decoded.single.id, '0190a8c4-0000-7000-8000-000000000001');
+      expect(encodeContent(decoded), stored);
+      expect(
+        decoded.single,
+        const TextContent('cat'),
+        reason: 'ids are not compared',
+      );
+    });
+
+    test('a v that is not a positive integer, or an id that is not text, '
+        'is a format error, and a v of 1 is not', () {
+      for (final broken in [
+        '[{"type":"text","v":0,"payload":{"text":"cat"}}]',
+        '[{"type":"text","v":"1","payload":{"text":"cat"}}]',
+        '[{"type":"text","v":1,"id":7,"payload":{"text":"cat"}}]',
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+      expect(
+        decodeContent(
+          '[{"type":"text","v":1,"id":"a","payload":{"text":"x"}}]',
+        ),
+        [const TextContent('x')],
+        reason: 'control',
+      );
+    });
+
+    test('the upcaster chain upgrades an older payload one step per '
+        'version, to the version a type is written at', () {
+      // A text block whose v2 renamed text to body, and v3 trimmed it.
+      final steps = <String, List<Object? Function(Object?)>>{
+        'text': [
+          (payload) => {'body': (payload! as Map)['text']},
+          (payload) => {'body': ((payload! as Map)['body'] as String).trim()},
+        ],
+      };
+
+      expect(blockVersion('text', steps: steps), 3);
+      expect(upcastPayload('text', 1, {'text': ' cat '}, steps: steps), {
+        'body': 'cat',
+      });
+      expect(upcastPayload('text', 2, {'body': ' cat '}, steps: steps), {
+        'body': 'cat',
+      }, reason: 'a v2 payload takes the last step only');
+      expect(upcastPayload('text', 3, {'body': 'cat'}, steps: steps), {
+        'body': 'cat',
+      }, reason: 'the current version takes none');
+      // Today every type this build knows is written at v1, with no step.
+      for (final type in ['text', 'cloze', 'table', 'senses']) {
+        expect(blockVersion(type), 1, reason: type);
+      }
+    });
+  });
+
+  group('the face a card is studied on (ADR 0106)', () {
+    const text = TextContent('Paris');
+    const cloze = ClozeContent('___ is in France', ['Paris']);
+    const table = TableContent(
+      columns: ['Capital'],
+      rows: [
+        ['Paris'],
+      ],
+      blanks: [(row: 0, column: 0)],
+    );
+    const senses = SensesContent([CardSense(meaning: '파리')]);
+    const unknown = UnsupportedContent('image', {'media': 'm1'});
+
+    test('a card with no blank is studied front then back, whatever its '
+        'blocks', () {
+      for (final block in <Content>[text, senses, unknown]) {
+        expect(
+          oneFaceOf([block], [text]),
+          isNull,
+          reason: '$block on the front',
+        );
+        expect(
+          oneFaceOf([text], [block]),
+          isNull,
+          reason: '$block on the back',
+        );
+      }
+    });
+
+    test('a cloze or a table on the front makes the front the one face', () {
+      for (final block in <Content>[cloze, table]) {
+        expect(oneFaceOf([text, block], [text]), [text, block]);
+        expect(oneFaceOf([block], [block]), [block], reason: 'front first');
+      }
+    });
+
+    test('a cloze or a table on the back alone makes one face of the front '
+        'followed by the back (ADR 0108)', () {
+      for (final block in <Content>[cloze, table]) {
+        expect(oneFaceOf([text], [senses, block]), [text, senses, block]);
+        expect(oneFaceOf(const [], [senses, block]), [
+          senses,
+          block,
+        ], reason: 'an empty front adds nothing');
+      }
     });
   });
 }

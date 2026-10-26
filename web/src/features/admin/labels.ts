@@ -15,6 +15,7 @@ export const actionLabels: Record<string, string> = {
   grant_admin: "관리자 지정",
   revoke_admin: "관리자 해제",
   set_plan: "요금제 설정",
+  create_plan_version: "요금제 새 버전",
   grant_plan: "요금제 지정",
   revoke_plan: "무료로 되돌리기",
   suspend_user: "이용 정지",
@@ -26,12 +27,27 @@ export const actionLabels: Record<string, string> = {
   clear_test_prompt: "프롬프트 테스트 끝",
 };
 
-/** Each plan's name in the admin area. */
+/** Each plan's name in the admin area; Special, which Max replaced, names log entries before it. */
 export const planLabels: Record<string, string> = {
   free: "무료",
   pro: "프로",
+  max: "맥스",
   special: "스페셜",
 };
+
+/** A version's terms in words, as "한 달 10장", "하루 100장" or "무제한 (하루 1000장까지)". */
+export function termsLabel(quota: string, amount: number): string {
+  switch (quota) {
+    case "monthly":
+      return `한 달 ${String(amount)}장`;
+    case "daily":
+      return `하루 ${String(amount)}장`;
+    case "unlimited":
+      return `무제한 (하루 ${String(amount)}장까지)`;
+    default:
+      return `${quota} ${String(amount)}장`;
+  }
+}
 
 /** [labels]' word for [key], or [key] itself when it has none. */
 export function labelOf(labels: Record<string, string>, key: string): string {

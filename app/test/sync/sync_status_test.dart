@@ -48,6 +48,7 @@ void main() {
       account: account,
       synchronizer: device.synchronizer,
       store: device.store,
+      media: device.media,
       edits: const Stream.empty(),
       firstRetry: const Duration(hours: 1),
     );

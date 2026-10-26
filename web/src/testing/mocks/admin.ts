@@ -38,6 +38,38 @@ const text = (value: string) => [{ type: "text", payload: { text: value } }];
  * in [audit] as the server records it. [testUser] is the one admin until a test says otherwise;
  * [otherUser] is not one.
  */
+/** One plan version, as `private.plan_versions` holds it. */
+type FakePlanVersion = {
+  id: number;
+  plan: string;
+  quota: string;
+  amount: number;
+  model: string;
+  starts_at: string;
+  applies_to_all: boolean;
+  created_by: string | null;
+};
+
+/** A version of [plan] on Haiku 5.5 from [startsAt], for existing users at their renewal. */
+function version(
+  id: number,
+  plan: string,
+  quota: string,
+  amount: number,
+  startsAt: string,
+): FakePlanVersion {
+  return {
+    id,
+    plan,
+    quota,
+    amount,
+    model: "anthropic/claude-haiku-5.5",
+    starts_at: startsAt,
+    applies_to_all: false,
+    created_by: null,
+  };
+}
+
 export class FakeAdmin {
   readonly admins = new Map<string, { grantedAt: string; grantedBy: string | null }>([
     [testUser.id, { grantedAt: "2026-10-19T00:00:00Z", grantedBy: null }],
@@ -74,14 +106,19 @@ export class FakeAdmin {
   };
   /** The rows `admin_extraction_breakdown` answers: each UTC day's photos by plan, model and version. */
   breakdown: Row[] = [];
-  /** The plans' settings, seeded as the migration seeds them. */
-  readonly plans: { id: string; model: string; daily_limit: number; updated_by: string | null }[] =
-    ["free", "pro", "special"].map((id) => ({
-      id,
-      model: "anthropic/claude-haiku-5.5",
-      daily_limit: 30,
-      updated_by: null,
-    }));
+  /**
+   * The plan versions, oldest first: each plan's settings before versions, and the owner's terms
+   * after them, as the migration makes them of the seed. A plan's current version is its latest
+   * started; this substitute knows no renewal, which the database tests cover.
+   */
+  readonly planVersions: FakePlanVersion[] = [
+    version(1, "free", "daily", 30, "2026-10-19T00:00:00Z"),
+    version(2, "pro", "daily", 30, "2026-10-19T00:00:00Z"),
+    version(3, "max", "daily", 30, "2026-10-19T00:00:00Z"),
+    version(4, "free", "monthly", 10, "2026-10-26T00:00:00Z"),
+    { ...version(5, "pro", "daily", 100, "2026-10-26T00:00:00Z"), applies_to_all: true },
+    { ...version(6, "max", "unlimited", 1000, "2026-10-26T00:00:00Z"), applies_to_all: true },
+  ];
   /** The saved prompt versions, oldest first; the seed, prompt v8, is version 1. */
   readonly prompts: { id: number; text: string; note: string; by: string | null }[] = [
     { id: 1, text: "Prompt v8.\nKeep each fact.", note: "prompt v8", by: null },
@@ -148,6 +185,13 @@ export class FakeAdmin {
       target_id: target,
       detail,
     });
+  }
+
+  /** [plan]'s version a user subscribing at [at] takes: the latest started by then. */
+  private currentVersion(plan: string, at = Date.now()): FakePlanVersion | undefined {
+    return this.planVersions
+      .filter((entry) => entry.plan === plan && Date.parse(entry.starts_at) <= at)
+      .sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at) || b.id - a.id)[0];
   }
 
   /** What each function answers for [admin], given its arguments. */
@@ -367,29 +411,75 @@ export class FakeAdmin {
         this.record(admin, "clear_test_prompt", "prompt", String(test), {});
         return true;
       }
-      case "admin_plans":
-        return this.plans.map((plan) => ({
-          id: plan.id,
-          model: plan.model,
-          daily_limit: plan.daily_limit,
-          updated_at: "2026-10-19T00:00:00Z",
-          updated_by_email: this.users.find((user) => user.id === plan.updated_by)?.email ?? null,
-        }));
-      case "admin_set_plan": {
-        const plan = this.plans.find((candidate) => candidate.id === args.plan);
-        if (!plan || (plan.model === args.model && plan.daily_limit === args.daily_limit)) {
-          return false;
+      case "admin_plan_versions": {
+        const rank = (plan: string) => ["free", "pro", "max"].indexOf(plan);
+        return [...this.planVersions]
+          .sort(
+            (a, b) =>
+              rank(a.plan) - rank(b.plan) ||
+              Date.parse(b.starts_at) - Date.parse(a.starts_at) ||
+              b.id - a.id,
+          )
+          .map((entry) => ({
+            ...entry,
+            current: entry.id === this.currentVersion(entry.plan)?.id,
+            created_at: entry.starts_at,
+            created_by_email:
+              this.users.find((user) => user.id === entry.created_by)?.email ?? null,
+          }));
+      }
+      case "admin_create_plan_version": {
+        const starts =
+          typeof args.starts_at === "string" ? args.starts_at : new Date().toISOString();
+        if (Date.parse(starts) < Date.now() - 1000) return "past_start";
+        const plan = String(args.plan);
+        const previous = this.currentVersion(plan, Date.parse(starts));
+        if (
+          previous &&
+          previous.quota === args.quota &&
+          previous.amount === args.amount &&
+          previous.model === args.model
+        ) {
+          return "unchanged";
         }
-        this.record(admin, "set_plan", "plan", plan.id, {
-          model: args.model,
-          daily_limit: args.daily_limit,
-          model_before: plan.model,
-          daily_limit_before: plan.daily_limit,
+        const quotas = ["monthly", "daily", "unlimited"];
+        if (
+          args.applies_to_all === true &&
+          this.planVersions.some(
+            (entry) =>
+              entry.plan === plan &&
+              (entry.model !== args.model ||
+                quotas.indexOf(entry.quota) > quotas.indexOf(String(args.quota)) ||
+                entry.amount > Number(args.amount)),
+          )
+        ) {
+          return "not_in_favour";
+        }
+        const added: FakePlanVersion = {
+          ...version(
+            Math.max(...this.planVersions.map((entry) => entry.id)) + 1,
+            plan,
+            String(args.quota),
+            Number(args.amount),
+            starts,
+          ),
+          model: String(args.model),
+          applies_to_all: args.applies_to_all === true,
+          created_by: admin,
+        };
+        this.planVersions.push(added);
+        this.record(admin, "create_plan_version", "plan", plan, {
+          version_id: added.id,
+          quota: added.quota,
+          amount: added.amount,
+          model: added.model,
+          starts_at: added.starts_at,
+          applies_to_all: added.applies_to_all,
+          quota_before: previous?.quota ?? null,
+          amount_before: previous?.amount ?? null,
+          model_before: previous?.model ?? null,
         });
-        plan.model = String(args.model);
-        plan.daily_limit = Number(args.daily_limit);
-        plan.updated_by = admin;
-        return true;
+        return "created";
       }
       case "admin_user_plan": {
         const user = this.users.find((candidate) => candidate.id === args.user_id);
@@ -399,12 +489,15 @@ export class FakeAdmin {
           grant && (grant.endsAt === null || Date.parse(grant.endsAt) > Date.now())
             ? grant.plan
             : "free";
-        const settings = this.plans.find((plan) => plan.id === active);
+        const terms = this.currentVersion(active);
         return [
           {
-            plan: settings?.id ?? null,
-            model: settings?.model ?? null,
-            daily_limit: settings?.daily_limit ?? null,
+            plan: terms?.plan ?? null,
+            version_id: terms?.id ?? null,
+            quota: terms?.quota ?? null,
+            amount: terms?.amount ?? null,
+            model: terms?.model ?? null,
+            used: terms ? user.extractionsToday : null,
             granted_plan: grant?.plan ?? null,
             ends_at: grant?.endsAt ?? null,
             granted_at: grant ? "2026-10-19T03:00:00Z" : null,
@@ -417,7 +510,7 @@ export class FakeAdmin {
         if (!this.users.some((user) => user.id === id)) return "no_user";
         const endsAt = typeof args.ends_at === "string" ? args.ends_at : null;
         if (
-          (args.plan !== "pro" && args.plan !== "special") ||
+          (args.plan !== "pro" && args.plan !== "max") ||
           (args.plan === "pro" && endsAt !== null) ||
           (endsAt !== null && Date.parse(endsAt) <= Date.now())
         ) {

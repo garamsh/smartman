@@ -4,8 +4,8 @@ The structural rules of the app and the web app: what the unit is, what may refe
 
 ## Current decisions
 
-The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)), `photo_import` ([`ai-extraction.md`](ai-extraction.md)) and `sharing` ([`sharing.md`](sharing.md)).
-- `sync` depends on `account` and `study` through their surfaces, and `account` reaches `sync` through `accountDataProvider`, a seam that breaks a behavioural cycle. `study`, `photo_import` and `sharing` depend on `deck`, and `sharing` on `account`, through their surfaces ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)). `home/` composes the domains on screen ([`home.md`](home.md)). The composition site is `app/lib/main.dart`.
+The app is partitioned by domain ([ADR 0001](adr/0001-domain-structure.md)). Domains live as folders under `app/lib/`: `deck` ([`deck.md`](deck.md)), `study` ([`study.md`](study.md)), `account` ([`account.md`](account.md)), `sync` ([`sync.md`](sync.md)), `photo_import` ([`ai-extraction.md`](ai-extraction.md)), `sharing` ([`sharing.md`](sharing.md)) and `media` ([`media.md`](media.md)).
+- `sync` depends on `account` and `study` through their surfaces, and `account` reaches `sync` through `accountDataProvider`, a seam that breaks a behavioural cycle. `study`, `photo_import` and `sharing` depend on `deck`, and `sharing` on `account`, through their surfaces ([ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)). `deck` and `sync` depend on `media`, which depends on no domain ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)). `home/` composes the domains on screen ([`home.md`](home.md)). The composition site is `app/lib/main.dart`.
 
 ### Top-level folders
 
@@ -14,7 +14,7 @@ Each top-level folder has one responsibility, and the lists are closed: an entry
 - `app/lib/`:
   - `main.dart` — the composition site.
   - `home/` — the signed-in shell: the tabs, and every screen that shows more than one domain or leads from one domain into another.
-  - `account/`, `deck/`, `study/`, `sync/`, `sharing/`, `photo_import/` — the domains.
+  - `account/`, `deck/`, `study/`, `sync/`, `sharing/`, `photo_import/`, `media/` — the domains.
   - `design/` — the tokens, colours, `ThemeData`, the user's theme choice and the domain-free components.
   - `database/` — the drift database, its tables and its migration steps.
   - `l10n/` — the ARB files and the classes `gen-l10n` writes from them.

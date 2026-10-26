@@ -11,7 +11,7 @@ import { adminTimeZone } from "./read-admin";
 export type GrantPlanState = { message: string | null };
 
 /**
- * Puts the form's `user` on its `plan`, Pro or Special, Special until the end of the study day of
+ * Puts the form's `user` on its `plan`, Pro or Max, Max until the end of the study day of
  * `ends_on` in the admin's zone, or without an end when it is empty.
  */
 export async function grantPlan(
@@ -21,13 +21,13 @@ export async function grantPlan(
   const userId = parseUserId(form.get("user"));
   const plan = form.get("plan");
   const endsOn = form.get("ends_on");
-  if (userId === null || (plan !== "pro" && plan !== "special")) {
+  if (userId === null || (plan !== "pro" && plan !== "max")) {
     return { message: failureMessages.malformed };
   }
   let endsAt: string | null = null;
   if (typeof endsOn === "string" && endsOn !== "") {
     const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(endsOn);
-    if (plan !== "special" || !date) return { message: "끝나는 날은 스페셜에만 정할 수 있어요." };
+    if (plan !== "max" || !date) return { message: "끝나는 날은 맥스에만 정할 수 있어요." };
     const timeZone = await adminTimeZone();
     // Noon UTC falls on the same calendar date in every zone within 11 hours of UTC.
     const noon = Date.UTC(Number(date[1]), Number(date[2]) - 1, Number(date[3]), 12);
@@ -38,7 +38,7 @@ export async function grantPlan(
   switch (result.data) {
     case "granted":
       revalidatePath("/admin", "layout");
-      return { message: plan === "pro" ? "프로로 지정했어요." : "스페셜로 지정했어요." };
+      return { message: plan === "pro" ? "프로로 지정했어요." : "맥스로 지정했어요." };
     case "bad_plan":
       return { message: "끝나는 날은 오늘 이후로 정해 주세요." };
     case "no_user":

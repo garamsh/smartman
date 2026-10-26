@@ -7,20 +7,24 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:smartman/database/database.dart';
+import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
+import 'package:smartman/home/src/progress_bar.dart';
 import 'package:smartman/home/src/today_tab.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 
+import 'contrast.dart';
 import 'home_data.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
+import '../word_breaks.dart';
 
 /// The home screen over decks named "Alpha", "Beta" and "Gamma", opening on
 /// the 오늘 tab.
@@ -234,6 +238,20 @@ Future<_List> _open(
   return list;
 }
 
+/// The rounded card on the 오늘 tab that holds [inside].
+Finder _card(Finder inside) => find
+    .ancestor(
+      of: inside,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is DecoratedBox &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).borderRadius ==
+                BorderRadius.circular(AppRadius.card),
+      ),
+    )
+    .first;
+
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
@@ -259,6 +277,47 @@ void main() {
         expect(find.text('Last 7 days'), findsOneWidget);
         // Control: back on 오늘 is left to the platform, which leaves the app.
         expect(await tester.binding.handlePopRoute(), isFalse);
+        await list.close();
+      },
+    );
+  });
+
+  group('덱', () {
+    testWidgets(
+      "a deck row shows its mastered of all cards under its name over a bar whose screen reader label breaks them down, with no learning line, and a deck with no card shows 0 cards and no bar",
+      (tester) async {
+        // Alpha: one mastered, one learning after a day's interval, two new.
+        final list = await _open(
+          tester,
+          fresh: {'Alpha': 2},
+          due: {'Alpha': 1},
+          mastered: {'Alpha': 1},
+          decks: ['Alpha', 'Beta'],
+        );
+        await list.decks();
+        Finder row(String deck) =>
+            find.ancestor(of: find.text(deck), matching: find.byType(DeckRow));
+        Finder inRow(String deck, Finder finder) =>
+            find.descendant(of: row(deck), matching: finder);
+
+        final line = inRow('Alpha', find.text('1 of 4 mastered'));
+        final bar = inRow('Alpha', find.byType(ProgressBar));
+        expect(line, findsOneWidget);
+        expect(bar, findsOneWidget);
+        expect(
+          tester.getTopLeft(line).dy,
+          lessThan(tester.getTopLeft(bar).dy),
+          reason: 'the line is under the name and over the bar',
+        );
+        expect(inRow('Alpha', find.textContaining('learning')), findsNothing);
+        expect(
+          tester.getSemantics(row('Alpha')).getSemanticsData().label,
+          contains('1 mastered, 1 learning, 2 new'),
+        );
+
+        expect(inRow('Beta', find.text('0 cards')), findsOneWidget);
+        expect(inRow('Beta', find.byType(ProgressBar)), findsNothing);
+        expect(inRow('Beta', find.textContaining('mastered')), findsNothing);
         await list.close();
       },
     );
@@ -298,8 +357,8 @@ void main() {
       (tester) async {
         final list = await _open(tester, decks: ['Alpha']);
 
-        expect(find.text('Make your first card?'), findsOneWidget);
-        expect(find.text('Add cards to a deck to start'), findsOneWidget);
+        expect(shownText('Make your first card?'), findsOneWidget);
+        expect(shownText('Add cards to a deck to start'), findsOneWidget);
         expect(find.text("You've done today's cards"), findsNothing);
         AppButton button(String label) =>
             tester.widget<AppButton>(find.widgetWithText(AppButton, label));
@@ -321,7 +380,7 @@ void main() {
       (tester) async {
         final list = await _open(tester);
 
-        expect(find.text('Make your first card?'), findsOneWidget);
+        expect(shownText('Make your first card?'), findsOneWidget);
         await list.tap('Add cards in a deck');
         expect(find.text('My decks 3'), findsOneWidget);
         await list.close();
@@ -333,7 +392,7 @@ void main() {
     ) async {
       final list = await _open(tester, decks: ['Alpha'], fresh: {'Alpha': 1});
 
-      expect(find.text('Make your first card?'), findsNothing);
+      expect(shownText('Make your first card?'), findsNothing);
       expect(find.text('Study all'), findsOneWidget);
       await list.close();
     });
@@ -454,11 +513,27 @@ void main() {
         // so nothing is said to be left.
         expect(find.text('About 3 min'), findsOneWidget);
         // Nothing done yet, on a 1-day streak: the line waits.
-        expect(_shown("Waiting for today's first card"), findsOneWidget);
+        expect(shownText("Waiting for today's first card"), findsOneWidget);
         // The pace's answers were given the day before, which starts the
         // streak.
         // The today card's chip and the last seven days' line.
         expect(find.text('1-day streak'), findsNWidgets(2));
+        // The chip's flame burns at the streak's stage.
+        final chip = find.ancestor(
+          of: find.text('1-day streak').first,
+          matching: find.byType(Row),
+        );
+        expect(
+          tester
+              .widget<StreakFlame>(
+                find.descendant(
+                  of: chip.first,
+                  matching: find.byType(StreakFlame),
+                ),
+              )
+              .days,
+          1,
+        );
 
         await list.tap('Study all');
 
@@ -544,7 +619,7 @@ void main() {
         // Once a card is done the minutes are those left: two at 10 s.
         expect(find.text('About 1 min left'), findsOneWidget);
         // Two cards left: almost there.
-        expect(_shown('Almost there'), findsOneWidget);
+        expect(shownText('Almost there'), findsOneWidget);
         // Answered today: the streak counts today.
         // The today card's chip and the last seven days' line.
         expect(find.text('1-day streak'), findsNWidgets(2));
@@ -706,6 +781,70 @@ void main() {
         await list.close();
       },
     );
+
+    for (final (name, theme) in [('light', lightTheme), ('dark', darkTheme)]) {
+      testWidgets(
+        'in the $name theme the today, backlog and unreadable-count cards are white with an ink bar and an ink button, and meet the contrast guideline',
+        (tester) async {
+          for (final (state, open) in [
+            ('today', () => _open(tester, fresh: {'Alpha': 3}, theme: theme)),
+            (
+              'backlog',
+              () => _open(
+                tester,
+                due: {'Alpha': 4, 'Beta': 3},
+                dueDays: 30,
+                theme: theme,
+              ),
+            ),
+            (
+              'unreadable',
+              () => _open(
+                tester,
+                mastered: {'Alpha': 1},
+                unreadable: {'Beta'},
+                theme: theme,
+              ),
+            ),
+          ]) {
+            final list = await open();
+            final colors = AppColors.of(tester.element(find.byType(TodayTab)));
+            final button = find.descendant(
+              of: find.byType(TodayTab),
+              matching: find.byType(AppButton),
+            );
+            expect(button, findsOneWidget, reason: state);
+            final card = _card(button);
+            expect(
+              (tester.widget<DecoratedBox>(card).decoration as BoxDecoration)
+                  .color,
+              colors.surface,
+              reason: state,
+            );
+            expect(
+              tester.widget<AppButton>(button).variant,
+              AppButtonVariant.primary,
+              reason: state,
+            );
+            final bars = find.descendant(
+              of: card,
+              matching: find.byType(LinearProgressIndicator),
+            );
+            for (final bar in bars.evaluate()) {
+              expect(
+                (bar.widget as LinearProgressIndicator).color,
+                colors.ink,
+                reason: state,
+              );
+            }
+            if (state == 'today') expect(bars, findsOneWidget);
+            expectTextReadable(tester, card, colors.surface);
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+            await list.close();
+          }
+        },
+      );
+    }
 
     testWidgets('a count that cannot be read says why', (tester) async {
       final list = await _open(
@@ -877,7 +1016,7 @@ void main() {
         );
 
         expect(
-          find.text('How many minutes a day will you study?'),
+          shownText('How many minutes a day will you study?'),
           findsOneWidget,
         );
         await waitForPicker(tester);
@@ -931,7 +1070,7 @@ void main() {
     testWidgets('without a card the first-run step waits', (tester) async {
       final list = await _open(tester, decks: ['Alpha'], minutesAsked: false);
 
-      expect(find.text('Make your first card?'), findsOneWidget);
+      expect(shownText('Make your first card?'), findsOneWidget);
       expect(find.byType(BottomSheet), findsNothing);
       await list.close();
     });
@@ -949,7 +1088,7 @@ void main() {
 
         await tester.enterText(find.byType(EditableText), 'zebra');
         await tester.pumpAndSettle();
-        expect(find.text('No deck matches. Try other words.'), findsOneWidget);
+        expect(shownText('No deck matches. Try other words.'), findsOneWidget);
         await list.close();
       },
     );
@@ -962,20 +1101,32 @@ void main() {
 
         await list.newDeck();
         // The sheet's title over the entry that opened it.
-        expect(find.text('Create a deck'), findsNWidgets(2));
+        expect(shownText('Create a deck'), findsNWidgets(2));
         expect(find.text('Create by hand'), findsOneWidget);
         expect(find.text('Take photo'), findsNothing);
         expect(find.text('Choose from album'), findsNothing);
         await list.tap('Create by hand');
         // The name sheet is "New deck", as photo import's is.
-        expect(find.text('New deck'), findsOneWidget);
+        expect(shownText('New deck'), findsOneWidget);
         await tester.enterText(find.byType(EditableText).last, 'Delta');
         await list.tap('Create');
+        // 덱 꾸미기 comes next, and the pair chosen there reaches the tile.
+        expect(shownText('Customize deck'), findsOneWidget);
+        await tester.tap(find.bySemanticsLabel('Star'));
+        await tester.pumpAndSettle();
+        await list.tap('Save');
 
         // The new deck opens, as a photo import's deck does.
         expect(find.byType(DeckScreen), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(DeckTile),
+            matching: find.byIcon(LucideIcons.star),
+          ),
+          findsOneWidget,
+        );
         expect(find.text('Delta'), findsOneWidget);
-        expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+        expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
         await tester.pageBack();
         await tester.pumpAndSettle();
         expect(find.text('My decks 4'), findsOneWidget);
@@ -1101,9 +1252,9 @@ void main() {
         await tester.pageBack();
         await tester.pumpAndSettle();
 
-        await tester.ensureVisible(find.text('Create a deck'));
+        await tester.ensureVisible(shownText('Create a deck'));
         expect(
-          tester.getRect(find.text('Create a deck')).top,
+          tester.getRect(shownText('Create a deck')).top,
           greaterThan(tester.getRect(find.text('Gamma')).bottom),
         );
         // Control: without sharing there is no way to public decks beside it.
@@ -1113,8 +1264,3 @@ void main() {
     );
   });
 }
-
-/// The text on screen that reads [text] once its word joiners are left out.
-Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
-);

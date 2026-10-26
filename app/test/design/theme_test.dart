@@ -170,7 +170,7 @@ void main() {
     ('dark', AppColors.dark),
   ]) {
     test(
-      '$name text tokens meet WCAG AA, and grade chips and the streak 3:1',
+      '$name text tokens meet WCAG AA, and answer marks and the streak 3:1',
       () {
         // Text, at 4.5:1: the pairs the screens draw text in, including the
         // answer chips over a dragged card, which no semantics node reaches.
@@ -193,9 +193,18 @@ void main() {
           (colors.onDontKnowText, colors.dontKnowText),
           (colors.dontKnowText, colors.surface),
           (colors.dontKnowText, colors.ground),
-          for (final tint in colors.deckTints) (colors.ink, tint),
-          // A previous card's sides on its grade's fill, the grade chip's
-          // word on the chip, and the answer buttons' words on their tints.
+          // A deck tile's icon on each colour of the deck palette.
+          for (final fill in [
+            colors.deckBlue,
+            colors.deckSky,
+            colors.deckViolet,
+            colors.deckAmber,
+            colors.deckSlate,
+            colors.deckSand,
+          ])
+            (colors.ink, fill),
+          // A previous card's sides on its grade's fill, and the answers'
+          // words on the green and red tints behind a dragged card.
           for (final card in [colors.knowCard, colors.dontKnowCard]) ...[
             (colors.ink, card),
             (colors.ink2, card),
@@ -209,8 +218,9 @@ void main() {
             reason: '$text on $ground',
           );
         }
-        // Non-text, at 3:1: each grade's chip on its card's fill and on the
-        // ground, and the streak flame on the completion card.
+        // Non-text, at 3:1: an answer's mark in its colour on a grade's fill
+        // and on the ground, as the web's grade chip draws it, and the streak
+        // flame on the completion card.
         for (final (mark, ground) in [
           (colors.know, colors.knowCard),
           (colors.know, colors.ground),

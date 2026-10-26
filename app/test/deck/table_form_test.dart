@@ -1,25 +1,21 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/deck/src/card_kind.dart';
 import 'package:smartman/deck/src/table_form.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/theme.dart';
 
 import '../home/deck_screens.dart';
 import 'whole_cards.dart';
+import '../word_breaks.dart';
 
 /// The table form's [index]th field: the headers, then the cells row by row.
 Finder _cell(int index) => find
     .descendant(of: find.byType(TableFields), matching: find.byType(TextField))
     .at(index);
-
-/// The blanks grid's cell reading [text].
-Finder _blankCell(String text) => find.descendant(
-  of: find.byType(TableFields),
-  matching: find.widgetWithText(InkWell, text),
-);
 
 /// The stored card, front and back.
 Future<Card> _stored(DeckScreens screens) async =>
@@ -53,6 +49,7 @@ void main() {
   /// Taps [finder] once it is scrolled into view.
   Future<void> tap(DeckScreens screens, Finder finder) async {
     await screens.tester.ensureVisible(finder);
+    await screens.tester.pumpAndSettle();
     await screens.tap(finder);
   }
 
@@ -62,7 +59,11 @@ void main() {
   /// already there.
   Future<void> typeCapitals(DeckScreens screens) async {
     final tester = screens.tester;
-    await enter(tester, find.widgetWithText(AppTextField, 'Front'), 'Capitals');
+    await enter(
+      tester,
+      find.widgetWithText(AppTextField, 'Front · table name'),
+      'Capitals',
+    );
     final cells = [
       ..._capitals.columns,
       ..._capitals.rows.expand((row) => row),
@@ -72,19 +73,38 @@ void main() {
     }
   }
 
+  /// Taps the [index]th field, which selects it.
+  Future<void> select(DeckScreens screens, int index) =>
+      tap(screens, _cell(index));
+
+  /// The toolbar's "빈칸" chip.
+  FilterChip blankChip(WidgetTester tester) =>
+      tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Blank'));
+
+  /// Toggles the selected cell as a blank.
+  Future<void> toggleBlank(DeckScreens screens) =>
+      tap(screens, find.widgetWithText(FilterChip, 'Blank'));
+
+  /// Removes the selected cell's row or column through "지우기", read as
+  /// [item] in its menu.
+  Future<void> remove(DeckScreens screens, String item) async {
+    await tap(screens, find.byTooltip('Remove'));
+    await screens.tap(find.text(item));
+  }
+
   testWidgets(
-    'a table saves its name, a table block of its cells and chosen blanks and the table filled as its back, and reopens in its form, unchanged when saved as it was',
+    'a table saves its name, a table block of its cells and the blanks toggled on the selected cells, and the table filled as its back, and reopens in its form, unchanged when saved as it was',
     (tester) async {
       final screens = await openTable(tester);
       expect(find.text("The table's name"), findsOneWidget);
       await typeCapitals(screens);
-      await tap(screens, find.text('Choose blanks'));
-      expect(find.text('Tap the cells to make blanks'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget, reason: 'the name alone');
-      await tap(screens, _blankCell('Paris'));
-      await tap(screens, _blankCell('France'));
-      await tap(screens, _blankCell('France'));
-      await tap(screens, _blankCell('Tokyo'));
+      await select(screens, 3);
+      await toggleBlank(screens);
+      await select(screens, 4);
+      await toggleBlank(screens);
+      await toggleBlank(screens);
+      await select(screens, 5);
+      await toggleBlank(screens);
       expect(blanksUnder(find.byType(CardPreview)), {
         'Paris': true,
         'Tokyo': true,
@@ -93,10 +113,16 @@ void main() {
       await save(screens);
       final card = await _stored(screens);
       expect(card.front, [const TextContent('Capitals'), _capitals]);
-      expect(card.back, [TextContent(_capitals.filled)]);
+      // The name, then the filled table: the front's text, as photo import
+      // writes a table card's back.
+      expect(card.back, [TextContent('Capitals\n${_capitals.filled}')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(find.text('Basic'), findsNothing, reason: 'no switch on edit');
+      expect(
+        find.text('Front & back'),
+        findsNothing,
+        reason: 'no switch on edit',
+      );
       expect(tester.widget<TextField>(_cell(3)).controller!.text, 'Paris');
       await save(screens);
       final saved = await _stored(screens);
@@ -107,7 +133,52 @@ void main() {
   );
 
   testWidgets(
-    'rows and columns are added and deleted by their buttons, a blank moving with its cell, and a table keeps one row and one column',
+    'a tap edits a cell in place, the keyboard\'s next moves to the next cell keeping the edit, and a blank is drawn tinted',
+    (tester) async {
+      final screens = await openTable(tester);
+      await select(screens, 2);
+      expect(tester.widget<TextField>(_cell(2)).focusNode, isNull);
+      await tester.enterText(_cell(2), 'France');
+      expect(
+        tester.widget<TextField>(_cell(2)).textInputAction,
+        TextInputAction.next,
+        reason: 'the keyboard offers next',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      final focused = FocusManager.instance.primaryFocus;
+      expect(focused, isNot(isNull), reason: 'a cell has the focus after next');
+      expect(
+        find.descendant(
+          of: _cell(3),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is EditableText && widget.focusNode == focused,
+          ),
+        ),
+        findsOneWidget,
+        reason: 'the next cell',
+      );
+      await tester.enterText(_cell(3), 'Paris');
+      expect(tester.widget<TextField>(_cell(2)).controller!.text, 'France');
+      expect(tester.widget<TextField>(_cell(3)).controller!.text, 'Paris');
+
+      await toggleBlank(screens);
+      final colors = AppColors.of(tester.element(_cell(3)));
+      expect(
+        tester.widget<TextField>(_cell(3)).decoration!.fillColor,
+        colors.brandTint,
+      );
+      expect(
+        tester.widget<TextField>(_cell(2)).decoration!.fillColor,
+        isNot(colors.brandTint),
+        reason: 'control: a cell that is not a blank',
+      );
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'the toolbar adds rows and columns and removes the selected cell\'s row or column, a blank moving with its cell, a table keeping one of each, and asks first when text would go',
     (tester) async {
       final screens = await openTable(tester);
       await typeCapitals(screens);
@@ -119,13 +190,22 @@ void main() {
       await enter(tester, _cell(5), 'Europe');
       await enter(tester, _cell(9), 'Egypt');
       await enter(tester, _cell(10), 'Cairo');
-      await tap(screens, find.text('Choose blanks'));
-      await tap(screens, _blankCell('Tokyo'));
-      await tap(screens, _blankCell('Cairo'));
-      await tap(screens, find.text('Type cells'));
+      await select(screens, 7);
+      await toggleBlank(screens);
+      await select(screens, 10);
+      await toggleBlank(screens);
 
-      await tap(screens, find.byTooltip('Delete row 1'));
-      await tap(screens, find.byTooltip('Delete column 1'));
+      // Row 1 holds text: it asks first, and cancelling keeps it.
+      await select(screens, 3);
+      await remove(screens, 'Delete row 1');
+      expect(shownText('Remove row 1?'), findsOneWidget);
+      await screens.tap(find.text('Cancel'));
+      expect(tester.widget<TextField>(_cell(3)).controller!.text, 'France');
+      await remove(screens, 'Delete row 1');
+      await screens.tap(find.text('Remove').last);
+      await select(screens, 0);
+      await remove(screens, 'Delete column 1');
+      await screens.tap(find.text('Remove').last);
       await save(screens);
       expect(
         (await _stored(screens)).front.last,
@@ -139,21 +219,32 @@ void main() {
         ),
       );
 
+      // An empty row or column goes without asking; one of each stays.
       await screens.push((deck) => CardEditorScreen(deck: deck));
-      IconButton button(String tooltip) => tester.widget<IconButton>(
+      await screens.tap(find.text('Table'));
+      await select(screens, 5);
+      await remove(screens, 'Delete row 2');
+      expect(shownText('Remove row 2?'), findsNothing, reason: 'it was empty');
+      await select(screens, 3);
+      await remove(screens, 'Delete column 2');
+      // One heading and one cell are left.
+      await select(screens, 1);
+      await tap(screens, find.byTooltip('Remove'));
+      PopupMenuItem<Object?> item(String text) => tester.widget(
         find.ancestor(
-          of: find.byTooltip(tooltip),
-          matching: find.byType(IconButton),
+          of: find.text(text),
+          matching: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
         ),
       );
-      await tap(screens, find.byTooltip('Delete row 2'));
-      await tap(screens, find.byTooltip('Delete column 2'));
-      expect(button('Delete row 1').onPressed, isNull, reason: 'one row');
-      expect(button('Delete column 1').onPressed, isNull, reason: 'one column');
+      expect(item('Delete row 1').enabled, isFalse, reason: 'one row');
+      expect(item('Delete column 1').enabled, isFalse, reason: 'one column');
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
       await tap(screens, find.text('Add row'));
+      await tap(screens, find.byTooltip('Remove'));
       expect(
-        button('Delete row 1').onPressed,
-        isNotNull,
+        item('Delete row 1').enabled,
+        isTrue,
         reason: 'control: with two rows, either can go',
       );
       await screens.close();
@@ -170,9 +261,8 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
       expect(await screens.cards(), isEmpty);
 
-      await tap(screens, find.text('Choose blanks'));
-      await tap(screens, _blankCell('Paris'));
-      await tap(screens, find.text('Type cells'));
+      await select(screens, 3);
+      await toggleBlank(screens);
       await enter(tester, _cell(3), '  ');
       await save(screens);
       expect(find.text('Fill in each cell chosen as a blank'), findsOneWidget);
@@ -198,44 +288,54 @@ void main() {
   );
 
   testWidgets(
-    'a screen reader reads each cell with its place and whether it is a blank, and its action makes it a blank or a plain cell again',
+    'a screen reader reads each cell with its place and whether it is a blank, and the toolbar\'s Blank with its state, offered on a body cell alone',
     (tester) async {
       final screens = await openTable(tester);
+      expect(blankChip(tester).onSelected, isNull, reason: 'nothing selected');
       await typeCapitals(screens);
       final handle = tester.ensureSemantics();
       expect(find.bySemanticsLabel('Row 1, column 2'), findsOneWidget);
       expect(find.bySemanticsLabel('Column 1 heading'), findsOneWidget);
-      await tap(screens, find.text('Choose blanks'));
-
-      /// Performs the custom action named [label] on the cell read as [cell].
-      Future<void> act(String cell, String label) async {
-        final node = tester.getSemantics(find.bySemanticsLabel(cell));
-        final actions = node.getSemanticsData().customSemanticsActionIds!;
-        final id = actions.singleWhere(
-          (id) => CustomSemanticsAction.getAction(id)!.label == label,
-        );
-        node.owner!.performAction(node.id, SemanticsAction.customAction, id);
-        await tester.pump();
-      }
-
-      await act('Paris, Row 1, column 2', 'Make blank');
-      expect(find.bySemanticsLabel('Paris, Row 1, column 2, blank'), findsOne);
-      await act('Paris, Row 1, column 2, blank', 'Remove blank');
-      await act('Tokyo, Row 2, column 2', 'Make blank');
-      handle.dispose();
-
-      await save(screens);
       expect(
-        (await _stored(screens)).front.last,
-        const TableContent(
-          columns: ['Country', 'Capital'],
-          rows: [
-            ['France', 'Paris'],
-            ['Japan', 'Tokyo'],
-          ],
-          blanks: [(row: 1, column: 1)],
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == 'Table tools' &&
+              widget.container,
         ),
+        findsOneWidget,
       );
+
+      await select(screens, 0);
+      expect(blankChip(tester).onSelected, isNull, reason: 'a heading');
+      await select(screens, 3);
+      expect(blankChip(tester).selected, isFalse);
+      await toggleBlank(screens);
+      expect(blankChip(tester).selected, isTrue, reason: 'its state');
+      expect(find.bySemanticsLabel('Row 1, column 2, blank'), findsOneWidget);
+      handle.dispose();
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'the table names its front field as the name while it holds text, and has no mode switch: one segmented bar, the kind switch',
+    (tester) async {
+      final screens = await openTable(tester);
+      await typeCapitals(screens);
+      expect(
+        find.widgetWithText(AppTextField, 'Front · table name'),
+        findsOneWidget,
+        reason: 'named while it holds "Capitals"',
+      );
+      expect(find.byType(SegmentedButton<CardKind>), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNothing);
+      for (final mode in ['Type cells', 'Choose blanks', 'Table editing']) {
+        expect(find.text(mode), findsNothing, reason: mode);
+      }
+      for (final label in ['Front & back', 'Cloze', 'Table']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
       await screens.close();
     },
   );
@@ -257,7 +357,7 @@ void main() {
         tester
             .widget<TextField>(
               find.descendant(
-                of: find.widgetWithText(AppTextField, 'Front'),
+                of: find.widgetWithText(AppTextField, 'Front · table name'),
                 matching: find.byType(TextField),
               ),
             )
@@ -277,6 +377,79 @@ void main() {
   );
 
   testWidgets(
+    'a stored table card saved unchanged keeps its back as stored: the table alone, as the editor wrote it before #311, and the name and the table, as photo import writes it',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const importedFront = [TextContent('Capitals'), _capitals];
+      const oldEditorFront = [TextContent('Old capitals'), _capitals];
+      // The control, photo import's back: the name line, then the table.
+      final imported = (
+        front: importedFront,
+        back: [TextContent(plainText(importedFront))],
+      );
+      // The editor's back before #311: the filled table, without the name.
+      final oldEditor = (
+        front: oldEditorFront,
+        back: [TextContent(_capitals.filled)],
+      );
+      expect(imported.back.single.text, startsWith('Capitals\n'));
+      expect(oldEditor.back.single.text, isNot(contains('Old capitals')));
+      await tester.runAsync(
+        () => screens.repository.addCards(AddToDeck(screens.deck.id), [
+          IncomingCard(
+            front: imported.front,
+            back: imported.back,
+            onDuplicate: DuplicateChoice.mergeBack,
+          ),
+        ]),
+      );
+      final added = await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: oldEditor.front,
+          back: oldEditor.back,
+        ),
+      );
+      expect(added, isA<CardSaved>());
+
+      for (final (:front, :back) in [imported, oldEditor]) {
+        Future<Card> stored() async => (await screens.cards()).singleWhere(
+          (card) => card.front.first == front.first,
+        );
+        final card = await stored();
+        expect(card.back, back, reason: 'the setup stores the back asked');
+        await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+        await save(screens);
+        final saved = await stored();
+        expect(saved.front, front);
+        expect(
+          saved.back,
+          back,
+          reason: '${plainText([front.first])} saved unchanged',
+        );
+      }
+
+      // Once its name is edited, the old editor's card takes the new back.
+      final card = (await screens.cards()).singleWhere(
+        (card) => card.front.first == oldEditor.front.first,
+      );
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await enter(
+        tester,
+        find.widgetWithText(AppTextField, 'Front · table name'),
+        'New capitals',
+      );
+      await save(screens);
+      final renamed = (await screens.cards()).singleWhere(
+        (saved) => saved.id == card.id,
+      );
+      expect(renamed.front, [const TextContent('New capitals'), _capitals]);
+      expect(renamed.back, [TextContent('New capitals\n${_capitals.filled}')]);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
     'a table whose name and cells are already a card opens the duplicate sheet',
     (tester) async {
       final screens = await DeckScreens.open(tester);
@@ -289,8 +462,8 @@ void main() {
       );
       await openTable(tester, on: screens);
       await typeCapitals(screens);
-      await tap(screens, find.text('Choose blanks'));
-      await tap(screens, _blankCell('France'));
+      await select(screens, 2);
+      await toggleBlank(screens);
       await save(screens);
       expect(find.text('Add anyway'), findsOneWidget);
       expect((await screens.cards()).length, 1);
@@ -300,13 +473,16 @@ void main() {
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
-      'in the ${mode.name} theme the table form meets the tap target, label and contrast guidelines in both of its modes',
+      'in the ${mode.name} theme the table form meets the tap target, label and contrast guidelines, a blank selected and the save refused',
       (tester) async {
         final screens = await DeckScreens.open(tester, themeMode: mode);
         await openTable(tester, on: screens);
         await typeCapitals(screens);
         final handle = tester.ensureSemantics();
         Future<void> meetsGuidelines() async {
+          // From the top, so no control is cut by the screen's edge.
+          await tester.ensureVisible(find.byType(SegmentedButton<CardKind>));
+          await tester.pumpAndSettle();
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -314,9 +490,13 @@ void main() {
         }
 
         await meetsGuidelines();
-        await tap(screens, find.text('Choose blanks'));
-        await tap(screens, _blankCell('Paris'));
-        await enter(tester, find.widgetWithText(AppTextField, 'Front'), '');
+        await select(screens, 3);
+        await toggleBlank(screens);
+        await enter(
+          tester,
+          find.widgetWithText(AppTextField, 'Front · table name'),
+          '',
+        );
         await save(screens);
         expect(find.text('Enter some text'), findsOneWidget);
         await meetsGuidelines();

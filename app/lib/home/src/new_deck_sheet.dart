@@ -66,8 +66,9 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
   }
 }
 
-/// Asks for a name, creates an empty deck with it, and opens it, as a photo
-/// import opens the deck it saved into.
+/// Asks for a name, creates an empty deck with it, offers 덱 꾸미기 on it,
+/// whose dismissal keeps the default tile, and opens it, as a photo import
+/// opens the deck it saved into.
 Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
   final repository = ref.read(deckRepositoryProvider);
   final navigator = Navigator.of(context);
@@ -85,6 +86,14 @@ Future<void> createDeckByHand(BuildContext context, WidgetRef ref) async {
     () async => created = await repository.createDeck(name),
   );
   if (created case final deck?) {
+    if (!context.mounted) return;
+    final chosen = await showDeckAppearanceSheet(context, deck: deck);
+    if (chosen case (final icon, final color) when context.mounted) {
+      await reportingFailure(
+        context,
+        () => repository.setAppearance(deck.id, icon, color),
+      );
+    }
     await navigator.push(
       MaterialPageRoute<void>(builder: (_) => DeckScreen(deck: deck)),
     );

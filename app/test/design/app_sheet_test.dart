@@ -5,6 +5,7 @@ import 'package:smartman/design/app_sheet.dart';
 import 'package:smartman/design/theme.dart';
 
 import 'harness.dart';
+import '../word_breaks.dart';
 
 /// A button that opens [open] and keeps what it resolved to in [results].
 Widget _opener(
@@ -62,8 +63,8 @@ void main() {
               )
               .first,
         );
-        final title = tester.getRect(find.text('New deck'));
-        final body = tester.getRect(find.text('Name it after what you study.'));
+        final title = tester.getRect(shownText('New deck'));
+        final body = tester.getRect(shownText('Name it after what you study.'));
         final content = tester.getRect(find.byType(TextField));
         final later = tester.getRect(
           find.widgetWithText(OutlinedButton, 'Later'),
@@ -78,7 +79,7 @@ void main() {
         expect(create.width, sheet.width - AppSpace.gutter * 2);
         expect(create.height, AppSize.cta);
         expect(
-          tester.getSemantics(find.text('New deck')),
+          tester.getSemantics(shownText('New deck')),
           isSemantics(isHeader: true, label: 'New deck'),
         );
         final shape = tester
@@ -170,9 +171,9 @@ void main() {
         await tester.tap(find.text('open'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 16));
-        final early = tester.getRect(find.text('New deck')).top;
+        final early = tester.getRect(shownText('New deck')).top;
         await tester.pumpAndSettle();
-        final settled = tester.getRect(find.text('New deck')).top;
+        final settled = tester.getRect(shownText('New deck')).top;
 
         if (reduceMotion) {
           expect(early, settled);
@@ -205,7 +206,7 @@ void main() {
           await tester.tap(find.text('open'));
           await tester.pumpAndSettle();
 
-          expect(find.text('Its 3 cards will be deleted too.'), findsOneWidget);
+          expect(shownText('Its 3 cards will be deleted too.'), findsOneWidget);
           expect(
             tester
                 .widget<Material>(
@@ -227,6 +228,33 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'its cancel takes the label it is given, and resolves to false',
+      (tester) async {
+        final results = <Object?>[];
+        await pumpComponent(
+          tester,
+          _opener(
+            (context) => showAppConfirm(
+              context,
+              title: 'Discard this card?',
+              consequence: "What you typed won't be saved.",
+              confirmLabel: 'Discard',
+              cancelLabel: 'Keep writing',
+            ),
+            results,
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cancel'), findsNothing);
+
+        await tester.tap(find.text('Keep writing'));
+        await tester.pumpAndSettle();
+        expect(results, [false]);
+      },
+    );
 
     for (final (action, expected) in [
       ('Delete', true),
@@ -263,4 +291,45 @@ void main() {
       });
     }
   });
+
+  testWidgets(
+    'on a 390 wide phone a Korean title and body break only between words, read as written, and a word wider than the line still wraps',
+    (tester) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      const title = '동기화되지 않은 변경이 있어요 로그아웃할까요';
+      const body = '동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.';
+      // The control: one word, so it can break only inside itself.
+      const word = '동기화되지않은변경은로그아웃하면이기기에서지워지고다른기기에서도볼수없어요';
+      for (final (sheetTitle, sheetBody) in [(title, body), ('제목', word)]) {
+        // A fresh app, so the first sheet is not under the second.
+        await tester.pumpWidget(const SizedBox());
+        await pumpComponent(
+          tester,
+          _opener(
+            (context) => showAppSheet<void>(
+              context,
+              builder: (context) =>
+                  AppSheet(title: sheetTitle, body: sheetBody),
+            ),
+            [],
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        if (sheetBody == word) {
+          expectWrapsInsideWord(tester, word);
+          continue;
+        }
+        for (final text in [title, body]) {
+          expectBreaksBetweenWords(tester, text);
+          // A screen reader reads it as written, without the joiners.
+          expect(find.bySemanticsLabel(text), findsOneWidget);
+        }
+      }
+    },
+  );
 }
