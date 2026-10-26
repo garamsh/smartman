@@ -840,6 +840,7 @@ void main() {
             if (state == 'today') expect(bars, findsOneWidget);
             expectTextReadable(tester, card, colors.surface);
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
             await list.close();
           }
         },
@@ -1048,6 +1049,7 @@ void main() {
               meetsGuideline(androidTapTargetGuideline),
             );
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
           }
 
           final list = await _open(tester, fresh: {'Alpha': 3}, theme: theme);

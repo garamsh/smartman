@@ -120,6 +120,7 @@ void main() {
         );
         expectTextReadable(tester, card, colors.surface);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         await screens.close();
       },
     );
