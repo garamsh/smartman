@@ -9,13 +9,14 @@ import 'label_presets.dart';
 import 'model.dart';
 
 /// The form a card is written in: a front and a back of one meaning or of
-/// senses, a line with blanks, or a table with blanks (ADR 0100). Each is a
-/// template a card records, which only decides how the editor opens it
-/// (ADR 0106).
+/// senses, a line with blanks, a table with blanks (ADR 0100), or each side
+/// a list of blocks of any type (ADR 0108). Each is a template a card
+/// records, which only decides how the editor opens it (ADR 0106).
 enum CardKind {
   basic('flip'),
   cloze('cloze'),
-  table('table');
+  table('table'),
+  free('free');
 
   const CardKind(this.template);
 
