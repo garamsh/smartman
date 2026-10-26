@@ -84,7 +84,7 @@ Sign-in and the account page are the `account` feature's ([`web-account.md`](web
 - `make format`: Prettier, over the files git tracks or would track.
 - `make test`: the Vitest suite (`web/src/**/__tests__/`), then, where Docker and buildx answer, the image built and run, its health and non-root uid asserted, and the Playwright specs in `web/e2e/` run against it; `web/e2e/study.spec.ts` skips there. Then `supabase/test-web.sh` runs that spec against a throwaway local stack (§Tests).
 - `make build`: `next build`, then the image where Docker and buildx answer.
-- CI runs `web.sh` in its ubuntu job, on the Node.js that `.github/workflows/ci.yml` installs for the WebAssembly tests; `web.sh` fails there when it differs from `web/.nvmrc`. The ubuntu runner has Docker, so that job runs the image and the e2e specs, `supabase/test-web.sh`'s included; the macOS job runs only the iOS simulator build.
+- CI runs `web.sh` in its ubuntu jobs, on the Node.js that `.github/workflows/ci.yml` installs for the WebAssembly tests; `web.sh` fails there when it differs from `web/.nvmrc`. The ubuntu runner has Docker, so the `make test-web` job runs the image and the e2e specs, `supabase/test-web.sh`'s included; the macOS job runs only the iOS simulator build.
 - `next build` refuses a `"use client"` module whose value imports reach a `server-only` module, and neither `tsc` nor Vitest checks that, so a test walks the imports (stack-nextjs §13).
 
 ### Tests
