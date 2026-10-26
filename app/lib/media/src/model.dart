@@ -4,9 +4,10 @@ import 'dart:typed_data';
 /// by it, never by a URL, so where the bytes live can change (ADR 0107).
 extension type const MediaId(String value) {}
 
-/// What a stored file holds; `audio` is reserved for a later card kind.
+/// What a stored file holds.
 enum MediaKind {
-  image('image');
+  image('image'),
+  audio('audio');
 
   const MediaKind(this.key);
 
@@ -66,3 +67,33 @@ final class PreparedImage {
 
 /// The longest side, in pixels, of a stored image.
 const maxImageSide = 1024;
+
+/// A recording or an audio file made ready to store: AAC in an MPEG-4
+/// container, as both phones record it, or MP3, as a picked file may be
+/// (ADR 0112).
+final class PreparedAudio {
+  const PreparedAudio(
+    this.bytes,
+    this.sha256, {
+    required this.mimeType,
+    required this.duration,
+  });
+
+  final Uint8List bytes;
+
+  /// [bytes]' SHA-256 digest, in lowercase hex.
+  final String sha256;
+
+  /// `audio/mp4` or `audio/mpeg`, the types the bucket accepts.
+  final String mimeType;
+
+  /// How long it plays.
+  final Duration duration;
+}
+
+/// The longest a stored recording or audio file may play.
+const maxAudioDuration = Duration(seconds: 60);
+
+/// The most bytes a stored audio file may hold, below the bucket's 10 MiB
+/// ceiling.
+const maxAudioBytes = 5 * 1024 * 1024;

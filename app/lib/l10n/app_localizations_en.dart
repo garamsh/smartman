@@ -262,6 +262,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get imageBoxDelete => 'Delete blank';
 
   @override
+  String get blockAudio => 'Sound';
+
+  @override
+  String get blockAudioDescription => 'Record or add a sound file';
+
+  @override
+  String get playAudio => 'Play sound';
+
+  @override
+  String get audioRecord => 'Record';
+
+  @override
+  String get audioPick => 'Choose a file';
+
+  @override
+  String get audioRecordAgain => 'Record again';
+
+  @override
+  String get audioPickAnother => 'Choose another file';
+
+  @override
+  String get audioRemove => 'Remove sound';
+
+  @override
+  String get audioStopRecording => 'Stop recording';
+
+  @override
+  String audioRecording(String elapsed, String limit) {
+    return 'Recording $elapsed / $limit';
+  }
+
+  @override
+  String get audioUnreadable => 'Couldn\'t load the sound. Try again.';
+
+  @override
+  String audioTooLarge(int seconds) {
+    return 'A sound can be up to $seconds seconds and 5 MB';
+  }
+
+  @override
+  String get microphoneDenied =>
+      'Can\'t use the microphone. Allow microphone access in Settings.';
+
+  @override
+  String get audioRequired => 'Add a sound';
+
+  @override
+  String get audioUnplayable => 'Couldn\'t play the sound';
+
+  @override
+  String get autoplayAudio => 'Play front sound automatically';
+
+  @override
+  String get autoplayAudioDescription =>
+      'Plays the front\'s sound once when a card appears';
+
+  @override
   String blockMenu(String side, int number) {
     return '$side block $number menu';
   }

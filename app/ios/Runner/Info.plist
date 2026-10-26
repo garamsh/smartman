@@ -45,6 +45,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera takes a photo of a vocabulary page to make cards from it.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone records a sound you add to a card.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>A photo you choose from your library is used to make cards from it.</string>
 	<key>UIApplicationSceneManifest</key>

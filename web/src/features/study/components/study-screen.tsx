@@ -27,6 +27,7 @@ import { LeaveConfirm } from "./leave-confirm";
 import { PreviousPlaceholder } from "./previous-placeholder";
 import { answerTints, GradedCard, grades, tiltPerPixel } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
+import { SoundControls } from "./sound-controls";
 import {
   CoachCaption,
   CoachDemo,
@@ -583,7 +584,8 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
 
 /**
  * The card under study: its front alone, centred, or a whole card's front with its blanks
- * empty; its back shows once answered, above. A horizontal touch swipe ([useSwipe]) moves and
+ * empty, and the front's sounds' controls under it (ADR 0112); its back shows once answered,
+ * above. A horizontal touch swipe ([useSwipe]) moves and
  * tilts it over the answer it would give, and released past the phone's distance, or flung,
  * gives [onAnswer] that answer; a vertical one scrolls the page, and a mouse drags nothing.
  */
@@ -620,13 +622,16 @@ function CurrentCard({
           role="group"
           className="flex flex-1 items-center justify-center p-6 text-center"
         >
-          {card.whole ? (
-            <div className="w-full text-front">{card.whole.empty}</div>
-          ) : card.sides ? (
-            <div className="w-full text-front break-words">{card.sides.front}</div>
-          ) : (
-            <CardSide blocks={card.front} size="front" />
-          )}
+          <div className="flex w-full flex-col items-center gap-4">
+            {card.whole ? (
+              <div className="w-full text-front">{card.whole.empty}</div>
+            ) : card.sides ? (
+              <div className="w-full text-front break-words">{card.sides.front}</div>
+            ) : (
+              <CardSide blocks={card.front} size="front" />
+            )}
+            {card.sounds && <SoundControls sounds={card.sounds.front} />}
+          </div>
         </div>
       </div>
     </section>

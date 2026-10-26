@@ -1,11 +1,19 @@
-import { type Content, type ImageBox, cellRuns, clozeBlank, spokenContent } from "../card-content";
+import {
+  audioLength,
+  type Content,
+  type ImageBox,
+  cellRuns,
+  clozeBlank,
+  spokenContent,
+} from "../card-content";
 import { SensesText } from "./side-text";
 
 /**
  * A whole card's front, its blocks in order: a text block as its title, a cloze as its sentence,
  * a table as its table and a photo as its frame with its boxes, with each blank empty, or filled
  * in place when [revealed] (ADR 0068, ADR 0109), a table's span inside its cell's text
- * (ADR 0110). The web reads no photo from the bucket yet, so
+ * (ADR 0110), and a sound as "음성" and its length, which the study page's controls play
+ * (ADR 0112). The web reads no photo from the bucket yet, so
  * the frame is drawn on the ground at the photo's aspect ratio. An empty blank keeps its
  * answer's width, so filling it moves nothing. It reads as
  * `spokenContent` says, blanks as "빈칸" until revealed. It is spans throughout, so a button can
@@ -103,6 +111,17 @@ export function WholeCard({
                 {block.boxes.map((box) => (
                   <ImageBoxMark key={box.id} box={box} revealed={revealed} />
                 ))}
+              </span>
+            );
+          case "audio":
+            return (
+              <span
+                key={index}
+                aria-hidden
+                data-audio={block.media}
+                className="text-body text-muted"
+              >
+                음성 {audioLength(block.durationMs)}
               </span>
             );
           case "unsupported":

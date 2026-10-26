@@ -17,7 +17,17 @@ export type StudyCard = Card & {
   text: { front: string; back: string };
   whole?: WholeFaces;
   sides?: SideViews;
+  sounds?: SoundViews;
 };
+
+/**
+ * A card's sounds on each side, in order, each with its length and the signed address it plays
+ * from, or null where the bucket signed none (ADR 0112).
+ */
+export type SoundViews = { front: Sound[]; back: Sound[] };
+
+/** A sound a card holds: its media id, its length as `0:07`, and its signed address, if any. */
+export type Sound = { media: string; length: string; url: string | null };
 
 /**
  * A card with a senses block drawn as `decks` draws its sides, each label as its own span with

@@ -223,27 +223,29 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     ]) {
       block.dispose();
     }
-    // Photos chosen here that no saved card holds, the card left unsaved.
+    // Photos and sounds stored here that no saved card holds, the card left
+    // unsaved.
     for (final image in _picked) {
       unawaited(_media?.release(image));
     }
     super.dispose();
   }
 
-  /// The photos 사진 blocks stored since the card was last saved; those the
-  /// saved card does not hold are let go (ADR 0109).
+  /// The photos 사진 blocks and the sounds 음성 blocks stored since the card
+  /// was last saved; those the saved card does not hold are let go
+  /// (ADR 0109, ADR 0112).
   final _picked = <MediaId>{};
 
-  /// The store the photos went to, read on the first, so an editor that
+  /// The store the files went to, read on the first, so an editor that
   /// stores none needs none.
   MediaStore? _media;
 
-  void _imagePicked(MediaId image) {
+  void _mediaStored(MediaId image) {
     _media ??= ref.read(mediaStoreProvider);
     _picked.add(image);
   }
 
-  /// Lets go of the photos chosen since the last save that [saved] does not
+  /// Lets go of the files stored since the last save that [saved] does not
   /// hold.
   Future<void> _releaseUnsaved(Set<MediaId> saved) async {
     for (final image in _picked.difference(saved)) {
@@ -512,7 +514,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         ? _sideRequired(side)
         : null,
     onChanged: _change,
-    onImagePicked: _imagePicked,
+    onMediaStored: _mediaStored,
   );
 
   String? _requiredError(AppLocalizations l10n, TextEditingController side) =>

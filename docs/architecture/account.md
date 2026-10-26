@@ -17,7 +17,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
   - `AccountScreen`, which takes the sync status and the study setting it shows as constructor arguments, and `AccountAvatar`, the account's initial in a circle;
   - `appVersionProvider`, the version the account screen names, which the composition site overrides.
 - It is the only domain that imports `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)). `sync` and `sharing` also import `supabase_flutter`, for PostgREST with the client `connectAccount` returns ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
-- `home/`'s home screen shows `AccountAvatar` on its account button and opens `AccountScreen` with `sync`'s `SyncStatusView`, and `study`'s `DailyMinutesRow` over `deck`'s `PartOfSpeechPresetsRow` as its study setting ([`home.md`](home.md)).
+- `home/`'s home screen shows `AccountAvatar` on its account button and opens `AccountScreen` with `sync`'s `SyncStatusView`, and `study`'s `DailyMinutesRow`, `study`'s `AutoplayAudioRow` and `deck`'s `PartOfSpeechPresetsRow`, one under another, as its study setting ([`home.md`](home.md)).
 
 ### Gate
 
