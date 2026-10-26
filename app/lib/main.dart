@@ -18,6 +18,7 @@ import 'design/theme.dart';
 import 'design/theme_choice.dart';
 import 'home/home.dart';
 import 'l10n/app_localizations.dart';
+import 'media/media.dart';
 import 'photo_import/photo_import.dart';
 import 'sharing/sharing.dart';
 import 'study/study.dart';
@@ -62,6 +63,11 @@ Future<void> main() async {
         null => null,
       },
       DeviceReachability(),
+      switch (account.client) {
+        final client? => SupabaseMediaServer(client),
+        null => const UnavailableMediaServer(),
+      },
+      Directory('${support.path}/media'),
       package.version,
     ),
   );
@@ -74,8 +80,9 @@ Future<void> main() async {
 /// photos through [extraction], whose absence hides photo import, keeping a
 /// photo import's photos and cards in [jobStore] until it is saved, and sharing
 /// decks through [sharing] while [reachability] says the device is online;
-/// without [sharing] the app offers no sharing. The account screen names the
-/// app's [version]. Sync starts at once.
+/// without [sharing] the app offers no sharing. Decks' images are kept in
+/// [mediaDirectory] and stored through [mediaServer]. The account screen names
+/// the app's [version]. Sync starts at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
@@ -86,14 +93,24 @@ Widget composeApp(
   ImportJobStore jobStore,
   SharingServer? sharing,
   Reachability reachability,
+  MediaServer mediaServer,
+  Directory mediaDirectory,
   String version,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
+  final media = MediaStore(
+    database,
+    mediaServer,
+    directory: mediaDirectory,
+    clock: DateTime.now,
+    newId: uuid.v7,
+  );
   final deckRepository = DeckRepository(
     database,
     clock: DateTime.now,
     newId: uuid.v7,
+    media: media,
   );
   final studyRepository = StudyRepository(database, newId: uuid.v7);
   final syncStore = SyncStore(database, scheduler, clock: DateTime.now);
@@ -108,8 +125,11 @@ Widget composeApp(
         database.reviews,
         database.cardStates,
         database.studySettings,
+        database.mediaUploads,
+        database.mediaDeletions,
       ]),
     ),
+    media: media,
   )..start();
   final imports = extraction == null
       ? null
@@ -123,6 +143,7 @@ Widget composeApp(
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      mediaStoreProvider.overrideWithValue(media),
       sharingServiceProvider.overrideWithValue(
         sharing == null
             ? null

@@ -1,15 +1,23 @@
 import 'dart:convert';
 
 /// A typed block of card content: text, a cloze, a table or a vocabulary
-/// entry's senses. A new kind adds a subclass and a discriminator value, and
+/// entry's senses. A block's kind is its stored `type`, and its version its
+/// `v` (ADR 0106). A new kind adds a subclass and a discriminator value, and
 /// stored rows keep their encoding.
+///
+/// Two blocks are equal when their kind and content are; their [id]s are not
+/// compared.
 sealed class Content {
-  const Content();
+  const Content({this.id});
+
+  /// The block's own id, kept across edits so a later block or an edit can
+  /// name it; null until the block is first written (ADR 0106).
+  final String? id;
 }
 
 /// A block of plain text.
 final class TextContent extends Content {
-  const TextContent(this.text);
+  const TextContent(this.text, {super.id});
 
   final String text;
 
@@ -26,7 +34,7 @@ const clozeBlank = '___';
 /// A line or sentence with blanks: its [text] writes each blank as
 /// [clozeBlank], and [answers] fill them in order, one each (ADR 0068).
 final class ClozeContent extends Content {
-  const ClozeContent(this.text, this.answers);
+  const ClozeContent(this.text, this.answers, {super.id});
 
   final String text;
   final List<String> answers;
@@ -63,6 +71,7 @@ final class TableContent extends Content {
     required this.columns,
     required this.rows,
     required this.blanks,
+    super.id,
   });
 
   final List<String> columns;
@@ -170,7 +179,7 @@ final class CardSense {
 
 /// A vocabulary entry's senses, one or more, in the page's order (ADR 0075).
 final class SensesContent extends Content {
-  const SensesContent(this.senses);
+  const SensesContent(this.senses, {super.id});
 
   final List<CardSense> senses;
 
@@ -187,20 +196,42 @@ final class SensesContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
-/// A stored block whose type this version of the app does not know, kept
-/// intact so saving the card again does not lose it.
+/// A stored block this build cannot read: a type it does not know, or a
+/// known type at a version above the one it writes. It is kept intact,
+/// [stored] written back as it was read, so saving the card again does not
+/// lose it, and it is shown as needing an update.
 final class UnsupportedContent extends Content {
-  const UnsupportedContent(this.type, this.payload);
+  const UnsupportedContent(this.type, this.payload, {this.stored});
 
   final String type;
   final Object? payload;
+
+  /// The whole stored block as it was read, written back unchanged; null for
+  /// a block made in this build.
+  final Map<String, Object?>? stored;
 }
 
-/// Whether a card with [front] is drawn whole, its front across the card
-/// with its blanks, rather than split into front and back: whether [front]
-/// holds a cloze or a table.
-bool isWholeCard(List<Content> front) =>
-    front.any((block) => block is ClozeContent || block is TableContent);
+/// Whether [block] is one that holds blanks to recall: a cloze or a table,
+/// each stored with one or more; a cloze still being written before its
+/// first blank counts, so the editor's preview draws it as it will be.
+bool _hasBlank(Content block) => block is ClozeContent || block is TableContent;
+
+/// The face a card with [front] and [back] is studied on, or null when it is
+/// studied front then back (ADR 0106). A card with a blank anywhere is
+/// studied on one face, its answers filled in place: its front when the
+/// front holds a blank, and otherwise its front's blocks followed by its
+/// back's, so the front stays the prompt (ADR 0108). No stored field says
+/// which, so the content and the mode cannot disagree.
+List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
+    front.any(_hasBlank)
+    ? front
+    : back.any(_hasBlank)
+    ? [...front, ...back]
+    : null;
+
+/// Whether a card whose front is [front] is drawn whole, that front across
+/// the card with its blanks, rather than split: [oneFaceOf] for that front.
+bool isWholeCard(List<Content> front) => oneFaceOf(front, const []) != null;
 
 const _textType = 'text';
 const _clozeType = 'cloze';
@@ -237,6 +268,57 @@ String _type(Content block) => switch (block) {
   UnsupportedContent(:final type) => type,
 };
 
+/// The steps that upgrade each known type's payload, one per version: the
+/// first turns a v1 payload into a v2 one, and so on. The version a type is
+/// written at is one more than its steps; every type is at v1 today.
+const Map<String, List<Object? Function(Object? payload)>> blockUpcasters = {
+  _textType: [],
+  _clozeType: [],
+  _tableType: [],
+  _sensesType: [],
+};
+
+/// The version this build writes a block of [type] at.
+int blockVersion(
+  String type, {
+  Map<String, List<Object? Function(Object?)>> steps = blockUpcasters,
+}) => (steps[type]?.length ?? 0) + 1;
+
+/// [payload], stored at [version] of [type], upgraded step by step to the
+/// version this build writes; [version] must not be above it.
+Object? upcastPayload(
+  String type,
+  int version,
+  Object? payload, {
+  Map<String, List<Object? Function(Object?)>> steps = blockUpcasters,
+}) {
+  var upgraded = payload;
+  final typeSteps = steps[type] ?? const [];
+  for (var step = version - 1; step < typeSteps.length; step++) {
+    upgraded = typeSteps[step](upgraded);
+  }
+  return upgraded;
+}
+
+/// [block] given [id], its content unchanged; a block this build cannot read
+/// is returned as it is, since it is written back unchanged.
+Content withBlockId(Content block, String id) => switch (block) {
+  TextContent(:final text) => TextContent(text, id: id),
+  ClozeContent(:final text, :final answers) => ClozeContent(
+    text,
+    answers,
+    id: id,
+  ),
+  TableContent(:final columns, :final rows, :final blanks) => TableContent(
+    columns: columns,
+    rows: rows,
+    blanks: blanks,
+    id: id,
+  ),
+  SensesContent(:final senses) => SensesContent(senses, id: id),
+  UnsupportedContent() => block,
+};
+
 Object? _payload(Content block) => switch (block) {
   TextContent(:final text) => {'text': text},
   ClozeContent(:final text, :final answers) => {
@@ -256,15 +338,32 @@ Object? _payload(Content block) => switch (block) {
   UnsupportedContent(:final payload) => payload,
 };
 
-/// Encodes [blocks] as a JSON array of `{type, payload}` objects.
+/// Encodes [blocks] as a JSON array of `{type, v, id, payload}` objects,
+/// each at the version this build writes and `id` only when the block has
+/// one; a block this build cannot read is written as it was stored.
 String encodeContent(List<Content> blocks) => jsonEncode([
   for (final block in blocks)
-    {'type': _type(block), 'payload': _payload(block)},
+    switch (block) {
+      UnsupportedContent(:final stored?) => stored,
+      UnsupportedContent(:final type, :final payload) => {
+        'type': type,
+        'payload': payload,
+      },
+      _ => {
+        'type': _type(block),
+        'v': blockVersion(_type(block)),
+        'id': ?block.id,
+        'payload': _payload(block),
+      },
+    },
 ]);
 
-/// Decodes what [encodeContent] wrote. An unknown `type` becomes
-/// [UnsupportedContent]; input that is not that shape at all, or a known
-/// block whose payload breaks its shape, throws [FormatException].
+/// Decodes what [encodeContent] wrote, and the blocks of earlier builds: a
+/// block with no `v` is read as v1, and an older `v` is upgraded through
+/// [upcastPayload]. An unknown `type`, or a `v` above what this build
+/// writes, becomes [UnsupportedContent]; input that is not that shape at
+/// all, a `v` that is not a positive integer, an `id` that is not text, or a
+/// known block whose payload breaks its shape, throws [FormatException].
 List<Content> decodeContent(String encoded) {
   final decoded = jsonDecode(encoded);
   if (decoded is! List<Object?>) {
@@ -278,10 +377,21 @@ Content _decodeBlock(Object? block, String source) {
     throw FormatException('content block is not an object', source);
   }
   final type = block['type'];
-  final payload = block['payload'];
   if (type is! String) {
     throw FormatException('content block has no string type', source);
   }
+  final version = block['v'] ?? 1;
+  if (version is! int || version < 1) {
+    throw FormatException('a $type block has no positive version', source);
+  }
+  final id = block['id'];
+  if (id != null && id is! String) {
+    throw FormatException('a $type block has an id that is not text', source);
+  }
+  if (!blockUpcasters.containsKey(type) || version > blockVersion(type)) {
+    return UnsupportedContent(type, block['payload'], stored: block);
+  }
+  final payload = upcastPayload(type, version, block['payload']);
   final decoded = switch ((type, payload)) {
     (_textType, {'text': final String text}) => TextContent(text),
     (_clozeType, final Map<String, Object?> fields) => _decodeCloze(fields),
@@ -289,11 +399,12 @@ Content _decodeBlock(Object? block, String source) {
     (_sensesType, {'senses': final List<Object?> senses}) => _decodeSenses(
       senses,
     ),
-    (_textType || _clozeType || _tableType || _sensesType, _) => null,
-    _ => UnsupportedContent(type, payload),
+    _ => null,
   };
-  return decoded ??
-      (throw FormatException('a $type block breaks its shape', source));
+  if (decoded == null) {
+    throw FormatException('a $type block breaks its shape', source);
+  }
+  return id is String ? withBlockId(decoded, id) : decoded;
 }
 
 /// A cloze of text with one or more blanks, each with a non-empty answer;

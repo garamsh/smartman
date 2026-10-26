@@ -1711,6 +1711,726 @@ i1.GeneratedColumn<int> _column_39(String aliasedName) =>
       type: i1.DriftSqlType.int,
       $customConstraints: 'NOT NULL CHECK (daily_minutes BETWEEN 5 AND 180)',
     );
+
+final class Schema10 extends i0.VersionedSchema {
+  Schema10({required super.database}) : super(version: 10);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    decks,
+    cards,
+    reviews,
+    cardStates,
+    syncState,
+    studySettings,
+    decksUnsynced,
+    cardsDeckIdCardKey,
+    cardsDeckIdCreatedAt,
+    cardsUnsynced,
+    reviewsCardIdReviewedAt,
+    reviewsReviewedAt,
+    reviewsUnsynced,
+    cardStatesUnsynced,
+  ];
+  late final Shape19 decks = Shape19(
+    source: i0.VersionedTable(
+      entityName: 'decks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_26,
+        _column_31,
+        _column_28,
+        _column_40,
+        _column_41,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape13 cards = Shape13(
+    source: i0.VersionedTable(
+      entityName: 'cards',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_38,
+        _column_30,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 reviews = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'reviews',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_9,
+        _column_10,
+        _column_35,
+        _column_12,
+        _column_17,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape17 cardStates = Shape17(
+    source: i0.VersionedTable(
+      entityName: 'card_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(card_id)'],
+      columns: [
+        _column_9,
+        _column_13,
+        _column_14,
+        _column_36,
+        _column_37,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 syncState = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'sync_state',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape18 studySettings = Shape18(
+    source: i0.VersionedTable(
+      entityName: 'study_settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_20, _column_39, _column_33, _column_19],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index decksUnsynced = i1.Index(
+    'decks_unsynced',
+    'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
+  );
+  final i1.Index cardsDeckIdCardKey = i1.Index(
+    'cards_deck_id_card_key',
+    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key) WHERE deleted_at IS NULL',
+  );
+  final i1.Index cardsDeckIdCreatedAt = i1.Index(
+    'cards_deck_id_created_at',
+    'CREATE INDEX cards_deck_id_created_at ON cards (deck_id, created_at)',
+  );
+  final i1.Index cardsUnsynced = i1.Index(
+    'cards_unsynced',
+    'CREATE INDEX cards_unsynced ON cards (id) WHERE dirty',
+  );
+  final i1.Index reviewsCardIdReviewedAt = i1.Index(
+    'reviews_card_id_reviewed_at',
+    'CREATE INDEX reviews_card_id_reviewed_at ON reviews (card_id, reviewed_at)',
+  );
+  final i1.Index reviewsReviewedAt = i1.Index(
+    'reviews_reviewed_at',
+    'CREATE INDEX reviews_reviewed_at ON reviews (reviewed_at)',
+  );
+  final i1.Index reviewsUnsynced = i1.Index(
+    'reviews_unsynced',
+    'CREATE INDEX reviews_unsynced ON reviews (id) WHERE dirty',
+  );
+  final i1.Index cardStatesUnsynced = i1.Index(
+    'card_states_unsynced',
+    'CREATE INDEX card_states_unsynced ON card_states (card_id) WHERE dirty',
+  );
+}
+
+class Shape19 extends i0.VersionedTable {
+  Shape19({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get name =>
+      columnsByName['name']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get visibility =>
+      columnsByName['visibility']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get publishedAt =>
+      columnsByName['published_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get description =>
+      columnsByName['description']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get icon =>
+      columnsByName['icon']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get color =>
+      columnsByName['color']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<String> _column_40(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'icon',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<String> _column_41(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'color',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+
+final class Schema11 extends i0.VersionedSchema {
+  Schema11({required super.database}) : super(version: 11);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    decks,
+    cards,
+    reviews,
+    cardStates,
+    syncState,
+    studySettings,
+    decksUnsynced,
+    cardsDeckIdCardKey,
+    cardsDeckIdCreatedAt,
+    cardsUnsynced,
+    reviewsCardIdReviewedAt,
+    reviewsReviewedAt,
+    reviewsUnsynced,
+    cardStatesUnsynced,
+  ];
+  late final Shape19 decks = Shape19(
+    source: i0.VersionedTable(
+      entityName: 'decks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_26,
+        _column_31,
+        _column_28,
+        _column_40,
+        _column_41,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape20 cards = Shape20(
+    source: i0.VersionedTable(
+      entityName: 'cards',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_38,
+        _column_30,
+        _column_42,
+        _column_43,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 reviews = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'reviews',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_9,
+        _column_10,
+        _column_35,
+        _column_12,
+        _column_17,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape17 cardStates = Shape17(
+    source: i0.VersionedTable(
+      entityName: 'card_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(card_id)'],
+      columns: [
+        _column_9,
+        _column_13,
+        _column_14,
+        _column_36,
+        _column_37,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 syncState = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'sync_state',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape18 studySettings = Shape18(
+    source: i0.VersionedTable(
+      entityName: 'study_settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_20, _column_39, _column_33, _column_19],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index decksUnsynced = i1.Index(
+    'decks_unsynced',
+    'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
+  );
+  final i1.Index cardsDeckIdCardKey = i1.Index(
+    'cards_deck_id_card_key',
+    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key) WHERE deleted_at IS NULL',
+  );
+  final i1.Index cardsDeckIdCreatedAt = i1.Index(
+    'cards_deck_id_created_at',
+    'CREATE INDEX cards_deck_id_created_at ON cards (deck_id, created_at)',
+  );
+  final i1.Index cardsUnsynced = i1.Index(
+    'cards_unsynced',
+    'CREATE INDEX cards_unsynced ON cards (id) WHERE dirty',
+  );
+  final i1.Index reviewsCardIdReviewedAt = i1.Index(
+    'reviews_card_id_reviewed_at',
+    'CREATE INDEX reviews_card_id_reviewed_at ON reviews (card_id, reviewed_at)',
+  );
+  final i1.Index reviewsReviewedAt = i1.Index(
+    'reviews_reviewed_at',
+    'CREATE INDEX reviews_reviewed_at ON reviews (reviewed_at)',
+  );
+  final i1.Index reviewsUnsynced = i1.Index(
+    'reviews_unsynced',
+    'CREATE INDEX reviews_unsynced ON reviews (id) WHERE dirty',
+  );
+  final i1.Index cardStatesUnsynced = i1.Index(
+    'card_states_unsynced',
+    'CREATE INDEX card_states_unsynced ON card_states (card_id) WHERE dirty',
+  );
+}
+
+class Shape20 extends i0.VersionedTable {
+  Shape20({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deckId =>
+      columnsByName['deck_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get front =>
+      columnsByName['front']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get back =>
+      columnsByName['back']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get cardKey =>
+      columnsByName['card_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get source =>
+      columnsByName['source']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get originDeckId =>
+      columnsByName['origin_deck_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get template =>
+      columnsByName['template']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get templateVersion =>
+      columnsByName['template_version']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<String> _column_42(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'template',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_43(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'template_version',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
+
+final class Schema12 extends i0.VersionedSchema {
+  Schema12({required super.database}) : super(version: 12);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    decks,
+    cards,
+    reviews,
+    cardStates,
+    syncState,
+    studySettings,
+    mediaUploads,
+    mediaDeletions,
+    decksUnsynced,
+    cardsDeckIdCardKey,
+    cardsDeckIdCreatedAt,
+    cardsUnsynced,
+    reviewsCardIdReviewedAt,
+    reviewsReviewedAt,
+    reviewsUnsynced,
+    cardStatesUnsynced,
+  ];
+  late final Shape21 decks = Shape21(
+    source: i0.VersionedTable(
+      entityName: 'decks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_26,
+        _column_31,
+        _column_28,
+        _column_40,
+        _column_41,
+        _column_44,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape20 cards = Shape20(
+    source: i0.VersionedTable(
+      entityName: 'cards',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_38,
+        _column_30,
+        _column_42,
+        _column_43,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 reviews = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'reviews',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_9,
+        _column_10,
+        _column_35,
+        _column_12,
+        _column_17,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape17 cardStates = Shape17(
+    source: i0.VersionedTable(
+      entityName: 'card_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(card_id)'],
+      columns: [
+        _column_9,
+        _column_13,
+        _column_14,
+        _column_36,
+        _column_37,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 syncState = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'sync_state',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape18 studySettings = Shape18(
+    source: i0.VersionedTable(
+      entityName: 'study_settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_20, _column_39, _column_33, _column_19],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape22 mediaUploads = Shape22(
+    source: i0.VersionedTable(
+      entityName: 'media_uploads',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_45,
+        _column_46,
+        _column_47,
+        _column_48,
+        _column_32,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape23 mediaDeletions = Shape23(
+    source: i0.VersionedTable(
+      entityName: 'media_deletions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_0],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index decksUnsynced = i1.Index(
+    'decks_unsynced',
+    'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
+  );
+  final i1.Index cardsDeckIdCardKey = i1.Index(
+    'cards_deck_id_card_key',
+    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key) WHERE deleted_at IS NULL',
+  );
+  final i1.Index cardsDeckIdCreatedAt = i1.Index(
+    'cards_deck_id_created_at',
+    'CREATE INDEX cards_deck_id_created_at ON cards (deck_id, created_at)',
+  );
+  final i1.Index cardsUnsynced = i1.Index(
+    'cards_unsynced',
+    'CREATE INDEX cards_unsynced ON cards (id) WHERE dirty',
+  );
+  final i1.Index reviewsCardIdReviewedAt = i1.Index(
+    'reviews_card_id_reviewed_at',
+    'CREATE INDEX reviews_card_id_reviewed_at ON reviews (card_id, reviewed_at)',
+  );
+  final i1.Index reviewsReviewedAt = i1.Index(
+    'reviews_reviewed_at',
+    'CREATE INDEX reviews_reviewed_at ON reviews (reviewed_at)',
+  );
+  final i1.Index reviewsUnsynced = i1.Index(
+    'reviews_unsynced',
+    'CREATE INDEX reviews_unsynced ON reviews (id) WHERE dirty',
+  );
+  final i1.Index cardStatesUnsynced = i1.Index(
+    'card_states_unsynced',
+    'CREATE INDEX card_states_unsynced ON card_states (card_id) WHERE dirty',
+  );
+}
+
+class Shape21 extends i0.VersionedTable {
+  Shape21({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get name =>
+      columnsByName['name']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get visibility =>
+      columnsByName['visibility']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get publishedAt =>
+      columnsByName['published_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get description =>
+      columnsByName['description']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get icon =>
+      columnsByName['icon']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get color =>
+      columnsByName['color']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get imageMediaId =>
+      columnsByName['image_media_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<String> _column_44(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'image_media_id',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+
+class Shape22 extends i0.VersionedTable {
+  Shape22({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get kind =>
+      columnsByName['kind']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get mimeType =>
+      columnsByName['mime_type']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get byteSize =>
+      columnsByName['byte_size']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get sha256 =>
+      columnsByName['sha256']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<String> _column_45(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'kind',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL CHECK (kind IN (\'image\', \'audio\'))',
+    );
+i1.GeneratedColumn<String> _column_46(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'mime_type',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<int> _column_47(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'byte_size',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL',
+    );
+i1.GeneratedColumn<String> _column_48(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'sha256',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NOT NULL',
+    );
+
+class Shape23 extends i0.VersionedTable {
+  Shape23({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+}
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
@@ -1720,6 +2440,9 @@ i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema7 schema) from6To7,
   required Future<void> Function(i1.Migrator m, Schema8 schema) from7To8,
   required Future<void> Function(i1.Migrator m, Schema9 schema) from8To9,
+  required Future<void> Function(i1.Migrator m, Schema10 schema) from9To10,
+  required Future<void> Function(i1.Migrator m, Schema11 schema) from10To11,
+  required Future<void> Function(i1.Migrator m, Schema12 schema) from11To12,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -1763,6 +2486,21 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from8To9(migrator, schema);
         return 9;
+      case 9:
+        final schema = Schema10(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from9To10(migrator, schema);
+        return 10;
+      case 10:
+        final schema = Schema11(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from10To11(migrator, schema);
+        return 11;
+      case 11:
+        final schema = Schema12(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from11To12(migrator, schema);
+        return 12;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -1778,6 +2516,9 @@ i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema7 schema) from6To7,
   required Future<void> Function(i1.Migrator m, Schema8 schema) from7To8,
   required Future<void> Function(i1.Migrator m, Schema9 schema) from8To9,
+  required Future<void> Function(i1.Migrator m, Schema10 schema) from9To10,
+  required Future<void> Function(i1.Migrator m, Schema11 schema) from10To11,
+  required Future<void> Function(i1.Migrator m, Schema12 schema) from11To12,
 }) => i0.VersionedSchema.stepByStepHelper(
   step: migrationSteps(
     from1To2: from1To2,
@@ -1788,5 +2529,8 @@ i1.OnUpgrade stepByStep({
     from6To7: from6To7,
     from7To8: from7To8,
     from8To9: from8To9,
+    from9To10: from9To10,
+    from10To11: from10To11,
+    from11To12: from11To12,
   ),
 );

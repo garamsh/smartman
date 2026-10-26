@@ -111,9 +111,18 @@ const noticeMs = 3000;
  * takes the current card's place, and the new cards past today's go on from it. Every action
  * shows at once; its write runs behind it, and a write that fails is shown with a retry while
  * its answer stays. Each action has a keyboard shortcut, listed by "단축키", and a visible
- * control.
+ * control. Every way out, the close, Esc and "그만하기", leaves for [back], where the session was
+ * opened from.
  */
-export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: ReactNode }) {
+export function StudyScreen({
+  plan,
+  loading,
+  back = "/",
+}: {
+  plan: SessionPlan;
+  loading: ReactNode;
+  back?: string;
+}) {
   // The session places its cards through the engine's today's list, a synchronous call, so it
   // starts once the engine's module has loaded in the browser.
   const [engine, setEngine] = useState<"loading" | "ready" | "failed">(() =>
@@ -147,7 +156,7 @@ export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: Rea
             >
               다시 시도
             </button>
-            <Link href="/" className={quiet}>
+            <Link href={back} className={quiet}>
               그만하기
             </Link>
           </div>
@@ -156,11 +165,11 @@ export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: Rea
     );
   }
   if (engine === "loading") return loading;
-  return <Session plan={plan} />;
+  return <Session plan={plan} back={back} />;
 }
 
 /** The study screen over a session that has started, the engine loaded. */
-function Session({ plan }: { plan: SessionPlan }) {
+function Session({ plan, back }: { plan: SessionPlan; back: string }) {
   const [session] = useState(() => new StudySession(plan, Date.now, () => v7()));
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
@@ -372,9 +381,10 @@ function Session({ plan }: { plan: SessionPlan }) {
     ) : view.kind === "complete" ? (
       <CompletionCard
         completion={view.completion}
+        back={back}
         onStudyOn={view.more ? studyOn : null}
         onStop={(event) => {
-          exit(event, "/");
+          exit(event, back);
         }}
       />
     ) : null;
@@ -384,9 +394,9 @@ function Session({ plan }: { plan: SessionPlan }) {
       <header className="relative flex items-center gap-4">
         <Link
           ref={closeLink}
-          href="/"
+          href={back}
           onClick={(event) => {
-            exit(event, "/");
+            exit(event, back);
           }}
           aria-label="그만하기"
           aria-keyshortcuts="Escape"

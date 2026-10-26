@@ -5,6 +5,7 @@ import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'failure.dart';
 import 'failure_message.dart';
 import 'import_job.dart';
 import 'photo_viewer.dart';
@@ -45,8 +46,11 @@ class ReadingView extends StatelessWidget {
     final title = busy || failed == 0
         ? l10n.readingTitle(read, jobs.length)
         : l10n.readingFailed(failed);
-    final note = switch (job.leftToday) {
-      final left? => l10n.photosLeftToday(left),
+    final note = switch (job.limitLeft) {
+      (:final count, period: LimitPeriod.day) => l10n.photosLeftToday(count),
+      (:final count, period: LimitPeriod.month) => l10n.photosLeftThisMonth(
+        count,
+      ),
       null => null,
     };
     return Scaffold(

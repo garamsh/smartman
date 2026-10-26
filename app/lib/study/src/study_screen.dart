@@ -334,15 +334,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     final dimmed = _coach == _CoachStep.know || _coach == _CoachStep.dontKnow;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // The two cards share the height between the top bar and the answer
-        // buttons equally, the completion card's place included, so the
+        // The two cards share the height between the top bar and the guide's
+        // row equally, the completion card's place included, so the
         // previous card keeps its size when the completion card arrives.
         final card = max(
           0.0,
           (constraints.maxHeight -
                   StudyStyle.topGap -
                   StudyStyle.cardGap -
-                  StudyStyle.answerRow -
+                  StudyStyle.guideRow -
                   StudyStyle.currentBottomGap) /
               2,
         );
@@ -365,7 +365,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                 ),
               ),
               const SizedBox(height: StudyStyle.cardGap),
-              // The completion card may take the answer buttons' place too,
+              // The completion card may take the guide's row's place too,
               // so its actions stay in reach.
               Expanded(child: switcher(current, _emerge)),
             ],
@@ -382,7 +382,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
       ? StudyStyle.coachStill
       : _demo.value;
 
-  /// The coach's caption in the answer buttons' place while it shows.
+  /// The coach's caption in the guide's row's place while it shows.
   Widget? _coachCaption() {
     final step = _coach;
     if (step == null) return null;

@@ -8,6 +8,7 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/word_break.dart';
 
 import '../home/deck_screens.dart';
+import '../word_breaks.dart';
 
 /// The text of the preview's two halves, front then back, its word joiners
 /// left out.
@@ -120,7 +121,7 @@ void main() {
         await screens.enter('Back', '덧없는');
 
         await screens.tap(find.byTooltip('Close'));
-        expect(find.text('Discard this card?'), findsOneWidget);
+        expect(shownText('Discard this card?'), findsOneWidget);
         await screens.tap(find.text('Keep writing'));
         expect(find.byType(CardEditorScreen), findsOneWidget);
         expect(find.widgetWithText(TextField, 'ephemeral'), findsOneWidget);
@@ -128,7 +129,7 @@ void main() {
         // Android's back, as the platform sends it.
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
-        expect(find.text('Discard this card?'), findsOneWidget);
+        expect(shownText('Discard this card?'), findsOneWidget);
         await screens.tap(find.text('Discard'));
         expect(find.byType(CardEditorScreen), findsNothing);
         expect(await screens.cards(), isEmpty);
@@ -140,13 +141,13 @@ void main() {
       'without changes, Close leaves at once, a kind switch being no change, and Save and next card starts unchanged again',
       (tester) async {
         final screens = await openNew(tester);
-        await screens.tap(find.text('Word'));
+        await screens.tap(find.text('Table'));
         await screens.tap(find.byTooltip('Close'));
-        expect(find.text('Discard this card?'), findsNothing);
+        expect(shownText('Discard this card?'), findsNothing);
         expect(find.byType(CardEditorScreen), findsNothing);
 
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await screens.tap(find.text('Basic'));
+        await screens.tap(find.text('Front & back'));
         await screens.enter('Front', 'Chat');
         await screens.enter('Back', 'cat');
         await screens.tap(find.text('Save and next card'));
@@ -173,6 +174,38 @@ void main() {
       },
     );
   });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'at $scale times the text size a long deck name leaves the title readable and nothing in the top bar overflows, for a new card and an edited one',
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+        const name = '토익 실전 어휘 900 — 2026 개정판 Part 5 & 6 집중 대비 단어장';
+        final deck = Deck(
+          id: screens.deck.id,
+          name: name,
+          createdAt: screens.deck.createdAt,
+          updatedAt: screens.deck.updatedAt,
+        );
+        final card = (await screens.cards()).single;
+        for (final (title, editor) in [
+          ('Add card', CardEditorScreen(deck: deck)),
+          ('Edit card', CardEditorScreen(deck: deck, card: card)),
+        ]) {
+          await screens.push((_) => editor);
+          expect(tester.takeException(), isNull, reason: title);
+          expect(find.text(title), findsOneWidget);
+          // The title is drawn whole, inside the screen.
+          expect(tester.getRect(find.text(title)).right, lessThan(390));
+          expect(find.text(name), findsOneWidget, reason: 'the deck shows');
+          await screens.tap(find.byTooltip('Close'));
+        }
+        await screens.close();
+      },
+    );
+  }
 
   testWidgets('Save stores the card and closes the editor', (tester) async {
     final screens = await openNew(tester);
@@ -280,7 +313,7 @@ void main() {
     expect(find.text('Save and next card'), findsNothing);
 
     await screens.tap(find.byTooltip('Delete card'));
-    expect(find.text('Delete this card?'), findsOneWidget);
+    expect(shownText('Delete this card?'), findsOneWidget);
     // The confirmation keeps its cancel, and the delete comes last, below it.
     expect(
       tester.getRect(find.text('Cancel')).bottom,
@@ -299,9 +332,9 @@ void main() {
       await screens.enter('Front', '  CHAT ');
       await screens.enter('Back', 'chat (talk)');
       await screens.tap(find.text('Save'));
-      expect(find.text('This deck already has this card'), findsOneWidget);
+      expect(shownText('This deck already has this card'), findsOneWidget);
       expect(
-        find.text('Case and spacing are ignored when comparing.'),
+        shownText('Case and spacing are ignored when comparing.'),
         findsOneWidget,
       );
       // The existing card, in the same split preview as the editor's.
@@ -385,4 +418,84 @@ void main() {
       },
     );
   });
+
+  testWidgets(
+    'the editor records the template of the kind a card is written in: flip for Front & back, cloze for Cloze',
+    (tester) async {
+      final screens = await openNew(tester);
+      await screens.enter('Front', 'chat');
+      await screens.enter('Back', 'cat');
+      await screens.tap(find.text('Save and next card'));
+
+      await screens.tap(find.text('Cloze'));
+      await screens.enter('Front', 'The cat');
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.widgetWithText(AppTextField, 'Front'),
+              matching: find.byType(TextField),
+            ),
+          )
+          .controller!
+          .selection = const TextSelection(
+        baseOffset: 4,
+        extentOffset: 7,
+      );
+      await tester.pump();
+      await screens.tap(find.text('Insert blank'));
+      await screens.tap(find.text('Save'));
+
+      expect(
+        [
+          for (final card in await screens.cards())
+            (plainText(card.front), card.template, card.templateVersion),
+        ],
+        [('chat', 'flip', 1), ('The cat', 'cloze', 1)],
+      );
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a card whose template this build does not know opens read-only: it says the app needs an update, offers nothing to save, and still deletes',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: {'chat': 'cat'});
+      final stored = (await screens.cards()).single;
+      // The same card as a later build records it.
+      final later = Card(
+        id: stored.id,
+        deckId: stored.deckId,
+        front: stored.front,
+        back: stored.back,
+        cardKey: stored.cardKey,
+        source: stored.source,
+        createdAt: stored.createdAt,
+        updatedAt: stored.updatedAt,
+        template: 'image_occlusion',
+        templateVersion: 1,
+      );
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: later));
+      expect(
+        find.text(
+          "This card was made in a newer version of the app, so this version can't edit it. Update the app.",
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(CardPreview), findsOneWidget);
+      expect(find.byType(TextField), findsNothing, reason: 'nothing to edit');
+      expect(find.text('Save'), findsNothing);
+
+      await screens.tap(find.byTooltip('Delete card'));
+      await screens.tap(find.text('Delete'));
+      expect(await screens.cards(), isEmpty, reason: 'it still deletes');
+      await screens.close();
+
+      // Control: the card as stored, its template flip, opens in its form.
+      final again = await DeckScreens.open(tester, cards: {'chat': 'cat'});
+      final card = (await again.cards()).single;
+      await again.push((deck) => CardEditorScreen(deck: deck, card: card));
+      expect(find.text('Save'), findsOneWidget);
+      await again.close();
+    },
+  );
 }

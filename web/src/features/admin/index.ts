@@ -24,7 +24,7 @@ export {
   readExtractionBreakdown,
   readIsAdmin,
   readOverview,
-  readPlans,
+  readPlanVersions,
   readPromptVersion,
   readPromptVersions,
   readPublicDecks,

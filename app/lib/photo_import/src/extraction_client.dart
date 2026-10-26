@@ -69,9 +69,9 @@ final class CandidateCard {
   final List<Content>? wholeFront;
 }
 
-/// The photos the user's plan lets through a UTC day, and those counted
-/// against it today.
-typedef ExtractionAllowance = ({int dailyLimit, int used});
+/// The photos the user's plan lets through a [period], and those counted
+/// against it in the current one.
+typedef ExtractionAllowance = ({int limit, LimitPeriod period, int used});
 
 /// Sends a photo to `extract-cards` and returns the cards it found.
 abstract interface class ExtractionClient {
@@ -82,8 +82,9 @@ abstract interface class ExtractionClient {
     required Future<void> cancel,
   });
 
-  /// Today's allowance, or null when it cannot be read, offline among other
-  /// cases; each photo's own refusal then says when the limit is reached.
+  /// The current period's allowance, or null when it cannot be read, offline
+  /// among other cases; each photo's own refusal then says when the limit is
+  /// reached.
   Future<ExtractionAllowance?> allowance();
 }
 
@@ -156,9 +157,9 @@ List<CandidateCard> parseExtraction(int status, String body) =>
         throw const AccountSuspendedFailure(),
       413 || 415 => throw PhotoRefused(status),
       422 => throw const NoCardsFound(),
-      429 => switch (_dailyLimit(body)) {
-        final limit? => throw DailyLimitReached(dailyLimit: limit),
-        null => throw const ServiceFailed('HTTP 429 without a daily limit'),
+      429 => switch (_photoLimit(body)) {
+        final reached? => throw reached,
+        null => throw const ServiceFailed('HTTP 429 without a photo limit'),
       },
       502 => throw const ModelFailed(),
       _ => throw ServiceFailed('HTTP $status'),
@@ -176,11 +177,17 @@ String? _errorCode(String body) {
   }
 }
 
-/// The daily limit a `429` [body] states, or null when it states none.
-int? _dailyLimit(String body) {
+/// The photo limit and its period a `429` [body] states, or null when it
+/// states none.
+PhotoLimitReached? _photoLimit(String body) {
   try {
     return switch (jsonDecode(body)) {
-      {'daily_limit': final int limit} when limit >= 0 => limit,
+      {'photo_limit': final int limit, 'period': final String period}
+          when limit >= 0 =>
+        switch (_period(period)) {
+          final period? => PhotoLimitReached(limit: limit, period: period),
+          null => null,
+        },
       _ => null,
     };
   } on FormatException {
@@ -327,10 +334,27 @@ Uri extractCardsUrl(String restUrl) {
 }
 
 /// The allowance `extraction_allowance()`'s [rows] hold: one row of a
-/// `daily_limit` and a `used`, neither below 0; null for anything else.
+/// `photo_limit`, its `period` and a `used`, neither number below 0; null for
+/// anything else.
 ExtractionAllowance? parseAllowance(Object? rows) => switch (rows) {
-  [{'daily_limit': final int dailyLimit, 'used': final int used}]
-      when dailyLimit >= 0 && used >= 0 =>
-    (dailyLimit: dailyLimit, used: used),
+  [
+    {
+      'photo_limit': final int limit,
+      'period': final String period,
+      'used': final int used,
+    },
+  ]
+      when limit >= 0 && used >= 0 =>
+    switch (_period(period)) {
+      final period? => (limit: limit, period: period, used: used),
+      null => null,
+    },
+  _ => null,
+};
+
+/// The period the server names `month` or `day`; null for any other.
+LimitPeriod? _period(String name) => switch (name) {
+  'month' => LimitPeriod.month,
+  'day' => LimitPeriod.day,
   _ => null,
 };

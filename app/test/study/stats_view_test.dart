@@ -15,6 +15,8 @@ import 'package:smartman/study/src/stats.dart' show StatsPeriod;
 import 'package:smartman/study/src/stats_style.dart';
 import 'package:smartman/study/study.dart';
 
+import '../word_breaks.dart';
+
 /// 09:00 UTC on Thursday 15 October, five hours into the study day.
 final _now = DateTime.utc(2026, 10, 15, 9);
 
@@ -251,7 +253,7 @@ void main() {
 
       await tester.tap(find.text('7 days'));
       await tester.pumpAndSettle();
-      expect(find.text('No reviews in this period.'), findsOneWidget);
+      expect(shownText('No reviews in this period.'), findsOneWidget);
       expect(find.text('100%'), findsNothing);
       // The period stays in the card, so another can be chosen.
       expect(
@@ -452,10 +454,10 @@ void main() {
     (tester) async {
       await _pump(tester, await _seed({'a': []}));
 
-      expect(find.text('No reviews in this period.'), findsOneWidget);
-      expect(find.text('No card reviewed yet.'), findsOneWidget);
+      expect(shownText('No reviews in this period.'), findsOneWidget);
+      expect(shownText('No card reviewed yet.'), findsOneWidget);
       expect(find.textContaining('in 4 weeks'), findsNothing);
-      expect(find.text('No card mastered yet.'), findsOneWidget);
+      expect(shownText('No card mastered yet.'), findsOneWidget);
       expect(
         find.bySemanticsLabel('No study days in the last 12 weeks'),
         findsOneWidget,

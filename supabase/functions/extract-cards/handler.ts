@@ -5,7 +5,12 @@ import type { Config } from "./config.ts";
 import { type Attempt, extractCards } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
-import { beginExtraction, type Plan, userSuspended } from "./supabase.ts";
+import {
+  beginExtraction,
+  type Period,
+  type Plan,
+  userSuspended,
+} from "./supabase.ts";
 
 /** How a request ended; the error body carries the same code, for the app to show. */
 export type Outcome =
@@ -83,8 +88,8 @@ type Result = {
   readonly userId: UserId | null;
   readonly plan?: Plan;
   readonly promptVersion?: number;
-  /** The plan's daily limit, which a `rate_limited` answer states. */
-  readonly dailyLimit?: number;
+  /** The photo limit and its period, which a `rate_limited` answer states. */
+  readonly limit?: { readonly photos: number; readonly period: Period };
   readonly attempts: readonly Attempt[];
   readonly cards?: readonly Card[];
 };
@@ -105,7 +110,11 @@ export function createHandler(
     const body = result.outcome === "ok"
       ? { cards: result.cards }
       : result.outcome === "rate_limited"
-      ? { error: result.outcome, daily_limit: result.dailyLimit }
+      ? {
+        error: result.outcome,
+        photo_limit: result.limit?.photos,
+        period: result.limit?.period,
+      }
       : { error: result.outcome };
     return Response.json(body, { status: status(result.outcome) });
   };
@@ -144,7 +153,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
       outcome: "rate_limited",
       userId,
       plan: start.plan,
-      dailyLimit: start.dailyLimit,
+      limit: { photos: start.photoLimit, period: start.period },
       attempts: [],
     };
   }

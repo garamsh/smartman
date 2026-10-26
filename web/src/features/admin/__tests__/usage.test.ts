@@ -17,7 +17,7 @@ const rows: BreakdownRow[] = [
   row("2026-10-19", 2, "pro", sonnet, 2),
   row("2026-10-15", 5, "free", haiku, 1),
   row("2026-10-12", 4, null, null, null),
-  row("2026-10-12", 3, "special", "vendor/unmeasured", 1),
+  row("2026-10-12", 3, "max", "vendor/unmeasured", 1),
   row("2026-09-01", 99, "free", haiku, 1),
 ];
 
@@ -47,11 +47,11 @@ describe("the overview's usage", () => {
     expect(usage.plans.series.map((series) => series.label)).toEqual([
       "무료",
       "프로",
-      "스페셜",
+      "맥스",
       unrecorded,
     ]);
     expect(usage.plans.days.at(-1)?.values).toEqual({ free: 10 * 0.0018, pro: 2 * 0.0267 });
-    expect(usage.plans.totals.special).toEqual({ photos: 3, usd: 0, unpriced: 3 });
+    expect(usage.plans.totals.max).toEqual({ photos: 3, usd: 0, unpriced: 3 });
   });
 
   it("stacks by model and sums by prompt version, the newest version first", () => {

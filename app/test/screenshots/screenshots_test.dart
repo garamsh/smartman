@@ -21,6 +21,7 @@ import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
@@ -34,6 +35,8 @@ import '../sharing/sharing_service_test.dart' show publicCard, publicDeck;
 import '../sync/fake_sync_server.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
+import '../media/fakes.dart';
+import '../word_breaks.dart';
 
 /// Screenshots of every screen and sheet in both themes, for review. They are
 /// written, not compared, and only when asked for:
@@ -47,6 +50,19 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// A phone's screen: 390 × 844 logical pixels at twice the density.
 const _phone = Size(780, 1688);
+
+/// Swipes the current card [dx] to the side from inside it, the lower of the
+/// study screen's two cards, then lets the answer land.
+Future<void> _swipeCurrent(WidgetTester tester, double dx) async {
+  final screen = _phone / _density;
+  await tester.timedDragFrom(
+    Offset(screen.width / 2, screen.height * 0.72),
+    Offset(dx, 0),
+    const Duration(seconds: 1),
+  );
+  await tester.pumpAndSettle();
+}
+
 const _density = 2.0;
 
 /// Loads the bundled font, Lucide's icons and Material's, which tests
@@ -190,6 +206,8 @@ void main() {
           MemoryImportJobStore(),
           FakeSharingServer(),
           FakeReachability(),
+          const UnavailableMediaServer(),
+          unusedMediaDirectory,
           '1.0.0',
         ),
       );
@@ -218,8 +236,13 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await shot(tester, '03-new-deck-sheet');
       await enter(ko.deckName, '영단어 기본');
-      // Creating the deck opens it, empty, adding a card its one primary.
+      // Creating the deck offers 덱 꾸미기, then opens it, empty, adding a
+      // card its one primary.
       await tap(tester, find.text(ko.create));
+      await tap(tester, find.bySemanticsLabel(ko.deckIconName('languages')));
+      await tap(tester, find.bySemanticsLabel(ko.deckColorName('sky')));
+      await shot(tester, '03c-deck-appearance');
+      await tap(tester, find.text(ko.save));
       await shot(tester, '04-card-list-empty');
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -230,6 +253,9 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await enter(ko.deckName, '일본어 N3 한자');
       await tap(tester, find.text(ko.create));
+      // Dismissing 덱 꾸미기 keeps this deck's default tile.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 
@@ -324,8 +350,10 @@ void main() {
       await tap(tester, find.text(ko.coachSkip));
       // A day's first session: the empty previous card's place.
       await shot(tester, '12c-study-start');
+      // Answers by a swipe of the current card, right for 안다.
       Future<void> answer(String label) =>
-          tap(tester, find.widgetWithText(TextButton, label));
+          _swipeCurrent(tester, label == ko.know ? 200 : -200);
+
       for (final label in [ko.know, ko.dontKnow, ko.know, ko.know]) {
         await answer(label);
       }
@@ -720,7 +748,7 @@ void main() {
         '32b-whole-card-answered',
         '32c-whole-card-answered',
       ]) {
-        await tap(tester, find.widgetWithText(TextButton, ko.know));
+        await _swipeCurrent(tester, 200);
         await shot(tester, name);
       }
       // The answers' writes land before the database closes.
@@ -730,7 +758,7 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('the word form in $mode', skip: !_capture, (tester) async {
+    testWidgets('the basic form in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -774,26 +802,63 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await tap(tester, find.text(ko.cardKindWord));
+      // The [index]th sense's label field.
+      Finder label([int index = 0]) => find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is TextField && widget.textAlign == TextAlign.center,
+          )
+          .at(index);
+
       await tap(tester, find.text(ko.save));
-      await shot(tester, '05b-card-editor-word-errors');
+      await shot(tester, '05b-card-editor-basic-errors');
 
       await fill(ko.cardFront, 'present');
-      await tap(tester, find.text(ko.addLabel));
-      await shot(tester, '05c-card-editor-label-sheet');
-      await tap(tester, find.text(ko.partOfSpeechChoice('명', '명사')));
-      await fill(ko.senseMeaning, '선물');
-      await fill(ko.senseExamples, 'a birthday present');
+      // A phone keyboard 336 points high, given in physical pixels, under
+      // the presets a label field shows.
+      await reveal(label());
+      tester.widget<TextField>(label()).focusNode!.requestFocus();
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await tap(tester, find.widgetWithText(ChoiceChip, '명'));
+      await shot(tester, '05c-card-editor-label-presets');
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      await fill(ko.cardBack, '선물');
       await reveal(find.text(ko.addSense));
       await tap(tester, find.text(ko.addSense));
-      await reveal(find.text(ko.addLabel).at(1));
-      await tap(tester, find.text(ko.addLabel).at(1));
-      await tap(tester, find.text(ko.partOfSpeechChoice('동', '동사')));
-      await fill(ko.senseMeaning, '주다, 제시하다', 1);
-      await reveal(find.text(ko.cardKindWord));
-      await shot(tester, '05d-card-editor-word');
+      await reveal(label(1));
+      await tester.enterText(label(1), '동');
+      await fill(ko.senseHeading(2), '주다, 제시하다');
+      await reveal(find.text(ko.cardKindFlip));
+      await shot(tester, '05d-card-editor-senses');
       await reveal(find.text(ko.addSense));
-      await shot(tester, '05e-card-editor-word-senses');
+      await shot(tester, '05e-card-editor-senses-buttons');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: PartOfSpeechPresetsRow()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.labelPresetsTitle));
+      await shot(tester, '05o-label-presets');
+      await tap(tester, find.bySemanticsLabel(ko.editLabelPreset('명', '명사')));
+      await shot(tester, '05p-label-presets-edit');
       await unmount(tester);
     });
 
@@ -832,7 +897,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tap(tester, find.text(ko.cardKindBasic));
+        await tap(tester, find.text(ko.cardKindFlip));
         // A phone keyboard 336 points high, given in physical pixels.
         tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
         addTearDown(tester.view.resetViewInsets);
@@ -848,6 +913,111 @@ void main() {
         await unmount(tester);
       },
     );
+
+    testWidgets('a back of senses with extras in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      final card = (await tester.runAsync(() async {
+        final saved = await repository.addCard(
+          deck.id,
+          front: [const TextContent('present')],
+          back: [
+            const SensesContent([
+              CardSense(
+                labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+                meaning: '선물',
+              ),
+            ]),
+            const TextContent('유의어 gift'),
+          ],
+        );
+        return (saved as CardSaved).card;
+      }))!;
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardEditorScreen(deck: deck, card: card),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(ko.wordExtra));
+      await tester.pumpAndSettle();
+      await shot(tester, '05n-card-editor-senses-extras');
+      await unmount(tester);
+    });
+
+    testWidgets('the free template in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardEditorScreen(deck: deck),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.cardKindFree));
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), '이 근처에 약국이 있나요?');
+      await tester.enterText(fields.at(1), 'Is there a pharmacy near here?');
+      await tester.pumpAndSettle();
+      await shot(tester, '05r-card-editor-free');
+      await tester.ensureVisible(find.text(ko.addToBack));
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.addToBack));
+      await shot(tester, '05s-card-editor-add-sheet');
+      await tap(tester, find.text(ko.blockSenses).last);
+      await tester.ensureVisible(find.text(ko.addToBack));
+      await tester.pumpAndSettle();
+      await shot(tester, '05t-card-editor-free-senses');
+      await unmount(tester);
+    });
 
     testWidgets('the cloze form in $mode', skip: !_capture, (tester) async {
       phone(tester);
@@ -890,20 +1060,36 @@ void main() {
       await tester.ensureVisible(find.text(ko.save));
       await tap(tester, find.text(ko.save));
       await shot(tester, '05f-card-editor-cloze-error');
-      for (final word in ['a', 'present']) {
-        final chip = find.widgetWithText(FilterChip, word);
-        await tester.ensureVisible(chip);
-        await tap(tester, chip);
+      final line = find.widgetWithText(AppTextField, ko.cardFront);
+      final controller = tester
+          .widget<TextField>(
+            find.descendant(of: line, matching: find.byType(TextField)),
+          )
+          .controller!;
+      // "a" and "present", each selected and made a blank.
+      for (final (start, end) in [(12, 13), (14, 21)]) {
+        controller.selection = TextSelection(
+          baseOffset: start,
+          extentOffset: end,
+        );
+        await tester.pump();
+        await tap(tester, find.text(ko.clozeInsertBlank));
       }
       await tester.ensureVisible(find.text(ko.cardKindCloze));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
-      final pick = find.text(ko.clozePickLetters).last;
-      await tester.ensureVisible(pick);
-      await tap(tester, pick);
-      await tap(tester, find.text('p'));
-      await tap(tester, find.text('s'));
-      await shot(tester, '05m-card-editor-cloze-letters');
+      // The caret in "present": the one action turns it back into text.
+      controller.selection = const TextSelection.collapsed(offset: 17);
+      await tester.pumpAndSettle();
+      await shot(tester, '05q-card-editor-cloze-undo');
+      // An empty blank at the cursor, over a phone keyboard 336 points high.
+      controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
+      await tap(tester, find.text(ko.clozeInsertBlank));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await shot(tester, '05m-card-editor-cloze-insert');
       await unmount(tester);
     });
 
@@ -941,7 +1127,7 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.cardKindTable));
       await tester.enterText(
-        find.widgetWithText(AppTextField, ko.cardFront),
+        find.widgetWithText(AppTextField, ko.tableNameLabel),
         '불규칙 동사',
       );
       // The table's fields follow the front's: its headers, then its cells.
@@ -961,10 +1147,13 @@ void main() {
       await tester.ensureVisible(find.text(ko.addRow));
       await tester.pumpAndSettle();
       await shot(tester, '05h-card-editor-table');
-      await tester.ensureVisible(find.text(ko.tableModeBlanks));
-      await tap(tester, find.text(ko.tableModeBlanks));
-      await tap(tester, find.widgetWithText(InkWell, 'went'));
-      await tap(tester, find.widgetWithText(InkWell, 'saw'));
+      // "went" and "saw", each selected and made a blank by the toolbar.
+      for (final index in [3, 5]) {
+        await tester.ensureVisible(cell(index));
+        await tester.pumpAndSettle();
+        await tap(tester, cell(index));
+        await tap(tester, find.widgetWithText(FilterChip, ko.tableBlankToggle));
+      }
       await tester.ensureVisible(find.text(ko.cardKindTable));
       await tester.pumpAndSettle();
       await shot(tester, '05i-card-editor-table-blanks');
@@ -1144,17 +1333,6 @@ void main() {
         ),
       );
 
-      /// The text that reads [text] once its word joiners are left out.
-      Finder shown(String text) => find.byWidgetPredicate(
-        (widget) =>
-            widget is Text &&
-            (widget.data ?? widget.textSpan?.toPlainText())?.replaceAll(
-                  '\u2060',
-                  '',
-                ) ==
-                text,
-      );
-
       /// Taps [finder], which takes a photo with the camera, through to the
       /// extraction.
       Future<void> shoot(Finder finder) async {
@@ -1215,7 +1393,7 @@ void main() {
       await tap(tester, find.bySemanticsLabel(RegExp('^최빈출 단어 카드 모양')));
       await shot(tester, '22b-photo-list-menu');
       await tap(tester, find.widgetWithText(MenuItemButton, ko.importBoth));
-      await tap(tester, shown('face'));
+      await tap(tester, shownText('face'));
       await shot(tester, '22c-photo-edit');
       await tap(tester, find.text(ko.editDone));
       await tap(tester, find.text('영단어 기본'));
@@ -1280,7 +1458,7 @@ void main() {
         () => repository.createDeck('영단어 기본'),
       ))!;
       final client = FakeExtractionClient()
-        ..todayAllowance = (dailyLimit: 30, used: 27);
+        ..todayAllowance = (limit: 30, period: LimitPeriod.day, used: 27);
       final photos = FakePhotoSource()
         ..libraryPhotos = [for (var i = 0; i < 4; i++) Future.value(testPhoto)];
       final preferences = await openPreferences(tester);
@@ -1406,6 +1584,8 @@ void main() {
           store,
           FakeSharingServer(),
           FakeReachability(),
+          const UnavailableMediaServer(),
+          unusedMediaDirectory,
           '1.0.0',
         ),
       );
@@ -1418,6 +1598,10 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await tester.enterText(find.byType(EditableText), '영단어 기본');
       await tap(tester, find.text(ko.create));
+      // Dismissing 덱 꾸미기 keeps the default tile and opens the deck, which
+      // back leaves.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await shot(tester, '27a-photo-bar-paused');
@@ -1528,7 +1712,14 @@ void main() {
         find.widgetWithText(AppTextField, ko.displayName),
         '아다',
       );
-      await tap(tester, find.text(ko.publishAgreement));
+      await tap(
+        tester,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') == ko.publishAgreement,
+        ),
+      );
       await tap(tester, find.text(ko.publishConfirm));
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();

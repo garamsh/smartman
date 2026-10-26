@@ -95,7 +95,7 @@ select ok(
   'version 1 is kept as the seed wrote it, prompt v8 without v9''s rule');
 select results_eq(
   $$ select admin_id, admin_email, action, target_kind, target_id, detail
-     from private.admin_audit $$,
+     from private.admin_audit where target_kind = 'prompt' $$,
   $$ values (null::uuid, 'migration (owner delegated to PM, 2026-10-19)', 'activate_prompt',
        'prompt', '2', '{"previous": 1, "test_cleared": false}'::jsonb) $$,
   'one audit row records the activation as the admin area''s activation does');

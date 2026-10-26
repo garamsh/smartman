@@ -1,4 +1,4 @@
-/** The caller's plan, prompt and daily count, through `public.begin_extraction`. */
+/** The caller's plan, prompt and photo count, through `public.begin_extraction`. */
 
 import {
   type SupabaseDeps,
@@ -7,17 +7,20 @@ import {
 } from "../_shared/auth.ts";
 import { type ModelId, modelId } from "./openrouter.ts";
 
-/** A plan, as `private.plans` names it. */
-export type Plan = "free" | "pro" | "special";
+/** A plan, as `private.plan_versions` names it. */
+export type Plan = "free" | "pro" | "max";
+
+/** The period a plan's photo limit counts over: a calendar month or a day in Asia/Seoul. */
+export type Period = "month" | "day";
 
 /** A saved prompt version: its id in `private.prompt_versions` and the instructions it holds. */
 export type Prompt = { readonly versionId: number; readonly text: string };
 
 /**
  * What one photo of the user may do: be extracted by its plan's model with the prompt the user is
- * served, recorded against the plan's daily limit; be refused at that limit; or nothing, when the
- * plan's settings or the active prompt are missing, or the plan names no model the function would
- * call.
+ * served, recorded against the photo limit of the plan's version for its period; be refused at
+ * that limit; or nothing, when the plan has no version, the active prompt is missing, or the
+ * version names no model the function would call.
  */
 export type Start =
   | {
@@ -29,7 +32,8 @@ export type Start =
   | {
     readonly kind: "rate_limited";
     readonly plan: Plan;
-    readonly dailyLimit: number;
+    readonly photoLimit: number;
+    readonly period: Period;
   }
   | { readonly kind: "not_configured" };
 
@@ -62,7 +66,7 @@ export async function userSuspended(
 
 /**
  * Resolves the user's plan and prompt (ADR 0073: an admin is served the test version when one is
- * set) and, under the plan's daily limit, records the photo with what serves it.
+ * set) and, under the photo limit of the plan's version, records the photo with what serves it.
  */
 export async function beginExtraction(
   userId: UserId,
@@ -95,20 +99,22 @@ export async function beginExtraction(
   const {
     plan,
     model,
-    daily_limit: dailyLimit,
+    photo_limit: photoLimit,
+    period,
     allowed,
     prompt_version_id: versionId,
     prompt,
   } = row as Record<string, unknown>;
   if (
-    (plan !== "free" && plan !== "pro" && plan !== "special") ||
-    typeof allowed !== "boolean" || typeof dailyLimit !== "number" ||
+    (plan !== "free" && plan !== "pro" && plan !== "max") ||
+    (period !== "month" && period !== "day") ||
+    typeof allowed !== "boolean" || typeof photoLimit !== "number" ||
     typeof versionId !== "number" || !Number.isSafeInteger(versionId) ||
     typeof prompt !== "string"
   ) {
     throw new SupabaseError("begin_extraction answered a row it should not");
   }
-  if (!allowed) return { kind: "rate_limited", plan, dailyLimit };
+  if (!allowed) return { kind: "rate_limited", plan, photoLimit, period };
   const id = typeof model === "string" ? modelId(model) : null;
   return id === null ? { kind: "not_configured" } : {
     kind: "allowed",

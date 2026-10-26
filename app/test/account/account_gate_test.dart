@@ -22,6 +22,7 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
@@ -32,6 +33,7 @@ import '../sharing/fakes.dart';
 import '../sync/fake_sync_server.dart';
 import 'fake_account_service.dart';
 import 'fake_google_sign_in.dart';
+import '../media/fakes.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
@@ -119,6 +121,8 @@ void main() {
         MemoryImportJobStore(),
         null,
         FakeReachability(),
+        const UnavailableMediaServer(),
+        unusedMediaDirectory,
         '1.0.0',
       ),
     );
@@ -165,6 +169,8 @@ void main() {
       'French',
     );
     await tapAndSettle(tester, find.text('Create'));
+    // Creating the deck offers 덱 꾸미기 before it opens.
+    await tapAndSettle(tester, find.text('Save'));
     await tester.pageBack();
     await tester.pumpAndSettle();
   }
@@ -335,8 +341,9 @@ void main() {
           find.widgetWithText(AppTextField, 'Deck name'),
           'French',
         );
-        // Creating the deck opens it.
+        // Creating the deck offers 덱 꾸미기, then opens it.
         await tapAndSettle(tester, find.text('Create'));
+        await tapAndSettle(tester, find.text('Save'));
         await tapAndSettle(tester, find.text('Add card'));
         // With photo import, Add card asks how.
         await tapAndSettle(tester, find.text('Create by hand'));

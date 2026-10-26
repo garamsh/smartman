@@ -1,27 +1,37 @@
--- extraction_allowance: the caller's own plan's daily limit and today's photos, which agree with
--- what begin_extraction resolves and counts, on each plan and a Special that has ended; anon is
--- refused.
+-- extraction_allowance: the caller's own photo limit, its period and the photos counted in it,
+-- which agree with what begin_extraction resolves and counts, for each quota: a calendar month in
+-- Asia/Seoul, a day there, and unlimited with its fair-use cap a day; and on a Max that has ended.
+-- anon is refused.
 begin;
-select plan(9);
+select plan(13);
+
+-- Each plan on one version from before this month: Free 3 a month, Pro 2 a day, Max unlimited
+-- with a fair-use cap of 4 a day.
+delete from private.plan_versions;
+insert into private.plan_versions (plan, quota, amount, model, starts_at) values
+  ('free', 'monthly', 3, 'vendor/free-model', date_trunc('month', now(), 'Asia/Seoul') - interval '40 days'),
+  ('pro', 'daily', 2, 'vendor/pro-model', date_trunc('month', now(), 'Asia/Seoul') - interval '40 days'),
+  ('max', 'unlimited', 4, 'vendor/max-model', date_trunc('month', now(), 'Asia/Seoul') - interval '40 days');
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000b', 'free@example.com'),
   ('00000000-0000-4000-8000-00000000000c', 'pro@example.com'),
-  ('00000000-0000-4000-8000-00000000000d', 'special@example.com'),
+  ('00000000-0000-4000-8000-00000000000d', 'max@example.com'),
   ('00000000-0000-4000-8000-00000000000e', 'ended@example.com');
-insert into private.user_plans (user_id, plan, ends_at) values
-  ('00000000-0000-4000-8000-00000000000c', 'pro', null),
-  ('00000000-0000-4000-8000-00000000000d', 'special', now() + interval '1 day'),
-  ('00000000-0000-4000-8000-00000000000e', 'special', now() - interval '1 second');
-update private.plans set daily_limit = 2 where id = 'free';
-update private.plans set daily_limit = 3 where id = 'pro';
-update private.plans set daily_limit = 5 where id = 'special';
--- One photo yesterday for the Free user, which today does not count.
+insert into private.user_plans (user_id, plan, ends_at, version_id) values
+  ('00000000-0000-4000-8000-00000000000c', 'pro', null, (select id from private.plan_versions where plan = 'pro')),
+  ('00000000-0000-4000-8000-00000000000d', 'max', now() + interval '1 day', (select id from private.plan_versions where plan = 'max')),
+  ('00000000-0000-4000-8000-00000000000e', 'max', now() - interval '1 second', (select id from private.plan_versions where plan = 'max'));
+-- The Free user's photo just after this month began counts, and the one just before it does not;
+-- the Pro and Max users' photos just before today began in Seoul do not count.
 insert into public.extraction_usage (user_id, created_at) values
-  ('00000000-0000-4000-8000-00000000000b', date_trunc('day', now(), 'UTC') - interval '1 second');
+  ('00000000-0000-4000-8000-00000000000b', date_trunc('month', now(), 'Asia/Seoul')),
+  ('00000000-0000-4000-8000-00000000000b', date_trunc('month', now(), 'Asia/Seoul') - interval '1 second'),
+  ('00000000-0000-4000-8000-00000000000c', date_trunc('day', now(), 'Asia/Seoul') - interval '1 second'),
+  ('00000000-0000-4000-8000-00000000000d', date_trunc('day', now(), 'Asia/Seoul') - interval '1 second');
 
 -- What [who] reads, signed in.
-create function pg_temp.allowance(who text) returns table (daily_limit integer, used integer)
+create function pg_temp.allowance(who text) returns table (photo_limit integer, period text, used integer)
 language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',
@@ -33,43 +43,63 @@ begin
 end;
 $$;
 
--- The daily limit begin_extraction resolves for [who], recording one photo when allowed.
-create function pg_temp.begin(who text) returns table (daily_limit integer, allowed boolean)
+-- The limit and period begin_extraction resolves for [who], recording one photo when allowed.
+create function pg_temp.begin(who text) returns table (photo_limit integer, period text, allowed boolean)
 language plpgsql as $$
 begin
   perform set_config('role', 'service_role', true);
-  return query select b.daily_limit, b.allowed
+  return query select b.photo_limit, b.period, b.allowed
     from public.begin_extraction(('00000000-0000-4000-8000-00000000000' || who)::uuid) as b;
   perform set_config('role', 'none', true);
 end;
 $$;
 
-select results_eq($$select * from pg_temp.allowance('b')$$, $$values (2, 0)$$,
-  'a Free user reads Free''s limit and no photo today, yesterday''s left out');
+select results_eq($$select * from pg_temp.allowance('b')$$, $$values (3, 'month', 1)$$,
+  'a Free user reads its monthly limit and this month''s photo, last month''s left out');
 reset role;
-select results_eq($$select * from pg_temp.allowance('c')$$, $$values (3, 0)$$,
-  'a Pro user reads Pro''s limit');
+select results_eq($$select * from pg_temp.allowance('c')$$, $$values (2, 'day', 0)$$,
+  'a Pro user reads its daily limit, yesterday''s photo left out');
 reset role;
-select results_eq($$select * from pg_temp.allowance('d')$$, $$values (5, 0)$$,
-  'a Special user before its end reads Special''s limit');
+select results_eq($$select * from pg_temp.allowance('d')$$, $$values (4, 'day', 0)$$,
+  'a Max user before its end reads its fair-use cap a day, yesterday''s photo left out');
 reset role;
-select results_eq($$select * from pg_temp.allowance('e')$$, $$values (2, 0)$$,
-  'a Special that has ended reads Free''s limit');
+select results_eq($$select * from pg_temp.allowance('e')$$, $$values (3, 'month', 0)$$,
+  'a Max that has ended reads Free''s');
 reset role;
 
--- The two agree: begin_extraction's limit for each user is the one the allowance read, and each
--- photo it lets through is one more used.
+-- The two agree: begin_extraction's limit and period for each user are the ones the allowance
+-- read, and each photo it lets through is one more used.
 select results_eq(
-  $$select daily_limit from pg_temp.begin('b') union all select daily_limit from pg_temp.begin('c')
-    union all select daily_limit from pg_temp.begin('d') union all select daily_limit from pg_temp.begin('e')$$,
-  $$values (2), (3), (5), (2)$$,
-  'begin_extraction resolves the same limit for each');
+  $$select photo_limit, period from pg_temp.begin('b') union all select photo_limit, period from pg_temp.begin('c')
+    union all select photo_limit, period from pg_temp.begin('d') union all select photo_limit, period from pg_temp.begin('e')$$,
+  $$values (3, 'month'), (2, 'day'), (4, 'day'), (3, 'month')$$,
+  'begin_extraction resolves the same limit and period for each');
 reset role;
-select results_eq($$select * from pg_temp.allowance('b')$$, $$values (2, 1)$$,
-  'a photo begin_extraction let through is one more used');
+select results_eq(
+  $$select used from pg_temp.allowance('b') union all select used from pg_temp.allowance('c')
+    union all select used from pg_temp.allowance('d') union all select used from pg_temp.allowance('e')$$,
+  $$values (2), (1), (1), (1)$$,
+  'a photo begin_extraction let through is one more used for each');
 reset role;
+
+-- Each quota refuses the photo after its last, as the allowance says.
 select results_eq($$select allowed from pg_temp.begin('b') union all select allowed from pg_temp.begin('b')$$,
-  $$values (true), (false)$$, 'control: begin_extraction refuses once used reaches the limit');
+  $$values (true), (false)$$, 'monthly: the photo after the month''s 3 is refused');
+reset role;
+select results_eq($$select * from pg_temp.allowance('b')$$, $$values (3, 'month', 3)$$,
+  'with the allowance used up');
+reset role;
+select results_eq($$select allowed from pg_temp.begin('c') union all select allowed from pg_temp.begin('c')$$,
+  $$values (true), (false)$$, 'daily: the photo after the day''s 2 is refused');
+reset role;
+select results_eq(
+  $$select allowed from pg_temp.begin('d') union all select allowed from pg_temp.begin('d')
+    union all select allowed from pg_temp.begin('d') union all select allowed from pg_temp.begin('d')$$,
+  $$values (true), (true), (true), (false)$$, 'unlimited: the photo after the day''s fair-use 4 is refused');
+reset role;
+select results_eq(
+  $$select * from pg_temp.allowance('c') union all select * from pg_temp.allowance('d')$$,
+  $$values (2, 'day', 2), (4, 'day', 4)$$, 'with each allowance used up');
 reset role;
 
 select function_privs_are('public', 'extraction_allowance', '{}', 'authenticated', '{EXECUTE}',

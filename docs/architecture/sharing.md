@@ -23,7 +23,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - "공개하기" opens a sheet: the display name the first time (2 to 20 characters, trimmed), an optional description of at most 300 characters, and the required checkbox "부적절하거나 저작권을 침해하는 내용은 공개하지 않을게요", then "공개", disabled until it is checked.
 - A publish writes the server first, then the device: the profile when it is new, then the deck's row with `visibility = public`, `published_at` and the description, then the local row through `DeckRepository.setVisibility`, unsynced, for sync to push as usual. A refused publish leaves the deck private on the device and says why in the sheet.
 - "비공개로 전환" writes `visibility = private` the same way and keeps the description for the next publish.
-- A public deck shows a "공개" chip on its row on the home screen and beside its name on the deck screen.
+- A public deck shows a "공개" chip on its row on the home screen, and "· 공개" after "카드 n장" under its name on the deck screen ([`home.md`](home.md)).
 
 ### Browsing
 
@@ -37,7 +37,8 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - A tap opens the preview: the name, the owner's display name with the counts, the description, and the first 20 cards as split rows, with "카드 n장 중 처음 20장" when there are more.
 - "내 덱으로 가져오기" opens a sheet: "새 덱으로", the default, creates a deck named after the public one; "기존 덱에 추가" takes one of the user's decks and a duplicate option, "건너뛰기" by default, or "뒷면 합치기" or "새 카드로 추가".
 - A copy reads every live card of the deck, calls `record_deck_copy`, which counts the user's first copy of the deck and no later one, and refuses with `DeckNoLongerPublic` when the deck is no longer public. It then saves through `DeckRepository.addCards` with `FromCopy`, so each added card is an ordinary card with `source = copy` and `origin_deck_id`, and the duplicate rule of [`deck.md`](deck.md) applies. A copy into a new deck adds every card, duplicates included. Nothing links the copy to the source afterwards.
-- Copies hold the text of each side, as imports do.
+- Copies hold the text of each side, as imports do. A copy does not carry the public deck's image ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
+- Any signed-in user may read the image of a deck the server shows as public, from the private `media` bucket, and no other file of its owner's ([`server.md`](server.md) §Media storage). The browse screen and the preview draw no deck tile, so the app reads none there yet.
 
 ### Reporting and blocking
 
@@ -77,6 +78,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` reaches sharing through its surface rather than `deck` through a provider.
 - [ADR 0070](adr/0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md) records why moderation moved from the dashboard to the web admin area.
 - [ADR 0072](adr/0072-suspend-a-user-through-supabase-auth-s-ban-and-restrictive-write-policies-remove-a-public-deck-from-sharing-for-good-and-read-any-deck-in-the-admin-area.md) records why a deck removed from sharing stays private for good, and why it is not deleted.
+- [ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md) records why a public deck's image is readable by any signed-in user while the deck is public, and why a copy leaves it behind.
 - Issue #29 records the decisions made by the PM, and its amendments.
 
 ## Open questions
