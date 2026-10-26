@@ -71,7 +71,7 @@ jobs:
         # make lint-code's check-migration-order.sh reads main as the merge commit's first parent.
         with:
           fetch-depth: 2
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: '17'
@@ -101,14 +101,14 @@ jobs:
         if: matrix.id == 'lint'
         run: echo "version=$(sed -n '/^name = "flutter_rust_bridge"$/{n;s/^version = "\(.*\)"$/\1/p;}' app/rust/Cargo.lock)" >> "$GITHUB_OUTPUT"
       - if: matrix.id == 'lint'
-        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: flutter_rust_bridge_codegen@${{ steps.frb.outputs.version }}
           fallback: cargo-install
       # The wasm-bindgen CLI and its test runner, at the release engine-wasm/Cargo.lock pins.
       - id: wasm-bindgen
         run: echo "version=$(sed -n '/^name = "wasm-bindgen"$/{n;s/^version = "\(.*\)"$/\1/p;}' engine-wasm/Cargo.lock)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: wasm-bindgen@${{ steps.wasm-bindgen.outputs.version }}
       # make test-app runs engine-wasm/'s tests in node, through wasm-bindgen-test-runner. The npm

@@ -3,7 +3,8 @@
  * side's JSON array (`deck.md`), its kind the `type` and its version the `v`, read as 1 when
  * absent (ADR 0106). A text block; a cloze, its text writing each blank as `___` with what fills
  * each, in order; or a table, its column headers, its rows of cells and the cells to recall
- * (ADR 0068); or a vocabulary entry's senses (ADR 0075). A block of another type, or of a known
+ * (ADR 0068); or a vocabulary entry's senses (ADR 0075); or a photo by its media id, with its
+ * intrinsic size and the boxes over it (ADR 0109). A block of another type, or of a known
  * type at a version above the one this build reads, is shown as a placeholder naming it, so a
  * card a later version wrote is shown, not lost; the web never writes a card, so it stays as
  * stored.
@@ -13,7 +14,23 @@ export type Content =
   | { kind: "cloze"; text: string; answers: string[] }
   | { kind: "table"; columns: string[]; rows: string[][]; blanks: TableBlank[] }
   | { kind: "senses"; senses: Sense[] }
+  | { kind: "image"; media: string; width: number; height: number; boxes: ImageBox[] }
   | { kind: "unsupported"; type: string };
+
+/**
+ * A box over a photo, a blank to recall: its left, top, width and height as fractions, from 0
+ * to 1, of the stored image's own width and height, never of a screen, so it covers the same
+ * part of the photo at every size it is drawn at, and the answer shown in it once revealed, if
+ * any (ADR 0109).
+ */
+export type ImageBox = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  answer: string | null;
+};
 
 /** Each part of speech a sense's label may name, with the short form every card shows it as. */
 export const partsOfSpeech = {
@@ -62,7 +79,7 @@ export type TableBlank = { row: number; column: number };
 /** How a cloze's text writes each blank. */
 export const clozeBlank = "___";
 
-type KnownType = "text" | "cloze" | "table" | "senses";
+type KnownType = "text" | "cloze" | "table" | "senses" | "image";
 
 /**
  * The steps that upgrade each known type's payload, one per version: the first turns a v1
@@ -74,6 +91,7 @@ export const blockUpcasters: Record<KnownType, ((payload: unknown) => unknown)[]
   cloze: [],
   table: [],
   senses: [],
+  image: [],
 };
 
 function isKnownType(type: string): type is KnownType {
@@ -176,6 +194,52 @@ function parseSenses(payload: Record<string, unknown>): Content | null {
   return { kind: "senses", senses: parsed as Sense[] };
 }
 
+/** How far past 1 a box's far edge may fall, for a fraction's rounding, as on the phone. */
+const boxTolerance = 1e-9;
+
+function isFraction(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+/**
+ * A box of a non-empty id, an optional text answer, and a left and top at or above 0 and a
+ * width and height above 0 whose far edges fall inside the image; null otherwise.
+ */
+function parseBox(value: unknown): ImageBox | null {
+  if (!isRecord(value)) return null;
+  const { id, x, y, w, h } = value;
+  const answer = "answer" in value ? value.answer : null;
+  if (typeof id !== "string" || id === "") return null;
+  if (!isFraction(x) || !isFraction(y) || !isFraction(w) || !isFraction(h)) return null;
+  if (x < 0 || y < 0 || w <= 0 || h <= 0) return null;
+  if (x + w > 1 + boxTolerance || y + h > 1 + boxTolerance) return null;
+  if (answer !== null && typeof answer !== "string") return null;
+  return { id, x, y, w, h, answer };
+}
+
+/**
+ * A photo of a non-empty media id, a positive whole width and height, and boxes, their ids
+ * distinct; null otherwise (ADR 0109).
+ */
+function parseImage(payload: Record<string, unknown>): Content | null {
+  const { media, width, height, boxes } = payload;
+  if (typeof media !== "string" || media === "") return null;
+  if (!Number.isInteger(width) || !Number.isInteger(height)) return null;
+  if ((width as number) <= 0 || (height as number) <= 0) return null;
+  if (!Array.isArray(boxes)) return null;
+  const parsed = (boxes as unknown[]).map(parseBox);
+  if (parsed.some((box) => box === null)) return null;
+  const ids = new Set(parsed.map((box) => box?.id));
+  if (ids.size !== parsed.length) return null;
+  return {
+    kind: "image",
+    media,
+    width: width as number,
+    height: height as number,
+    boxes: parsed as ImageBox[],
+  };
+}
+
 /**
  * The blocks of a stored card side, or null when [value] is not an array of blocks each with
  * a string `type`, a `v` that is a positive integer when present, an `id` that is text when
@@ -212,16 +276,26 @@ export function parseContent(value: unknown): Content[] | null {
           ? parseCloze(payload)
           : type === "table"
             ? parseTable(payload)
-            : parseSenses(payload);
+            : type === "senses"
+              ? parseSenses(payload)
+              : parseImage(payload);
     if (!parsed) return null;
     blocks.push(parsed);
   }
   return blocks;
 }
 
-/** Whether a card with [front] is drawn whole rather than split: whether it holds a cloze or a table. */
+/**
+ * Whether a card with [front] is drawn whole rather than split: whether it holds a cloze, a
+ * table, or a photo with a box over it (ADR 0109).
+ */
 export function isWholeCard(front: Content[]): boolean {
-  return front.some((block) => block.kind === "cloze" || block.kind === "table");
+  return front.some(
+    (block) =>
+      block.kind === "cloze" ||
+      block.kind === "table" ||
+      (block.kind === "image" && block.boxes.length > 0),
+  );
 }
 
 /** Whether a table block's cell at [row] and [column] is one to recall. */
@@ -253,6 +327,8 @@ export function describeContent(blocks: Content[]): string {
           return [block.columns, ...block.rows].map((cells) => cells.join(" | ")).join("\n");
         case "senses":
           return block.senses.map(senseLine).join("\n");
+        case "image":
+          return "사진";
         case "unsupported":
           return `[이 버전에서 표시할 수 없는 내용: ${block.type}]`;
       }
@@ -281,6 +357,14 @@ export function spokenContent(blocks: Content[], revealed: boolean): string {
                 .join(", "),
             ),
           ].join(". ");
+        case "image":
+          // The photo, then each box as a blank, or its answer once revealed.
+          return [
+            "사진",
+            ...block.boxes.map((box) =>
+              box.answer !== null && box.answer.trim() !== "" ? blank(box.answer) : "빈칸",
+            ),
+          ].join(", ");
         default:
           return describeContent([block]);
       }

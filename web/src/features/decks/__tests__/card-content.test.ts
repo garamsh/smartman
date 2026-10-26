@@ -46,7 +46,7 @@ describe("a card side's blocks", () => {
     expect(parseContent([table(rows, cell)])).not.toBeNull();
   });
 
-  it("read as their filled text, or as a screen reader reads them, and only a cloze or a table makes a whole card", () => {
+  it("read as their filled text, or as a screen reader reads them, and a cloze or a table makes a whole card where text does not", () => {
     const blocks =
       parseContent([{ type: "text", payload: { text: "Capitals" } }, table(rows, cell)]) ?? [];
     const sentence = parseContent([cloze]) ?? [];
@@ -187,6 +187,7 @@ describe("a block's version and id", () => {
       type: "senses",
       payload: { senses: [{ labels: [], meaning: "기차", examples: [] }] },
     },
+    { type: "image", payload: { media: "m1", width: 4, height: 3, boxes: [] } },
   ];
 
   it("reads each known type at v1 with or without the field, and with an id", () => {
@@ -204,8 +205,8 @@ describe("a block's version and id", () => {
         { kind: "unsupported", type: block.type },
       ]);
     }
-    expect(parseContent([{ type: "image", v: 1, payload: { media: "m1" } }])).toEqual([
-      { kind: "unsupported", type: "image" },
+    expect(parseContent([{ type: "audio", v: 1, payload: { media: "m1" } }])).toEqual([
+      { kind: "unsupported", type: "audio" },
     ]);
   });
 
@@ -231,13 +232,84 @@ describe("a block's version and id", () => {
       cloze: [],
       table: [],
       senses: [],
+      image: [],
     };
     expect(blockVersion("text", steps)).toBe(3);
     expect(upcastPayload("text", 1, { text: " cat " }, steps)).toEqual({ body: "cat" });
     expect(upcastPayload("text", 2, { body: " cat " }, steps)).toEqual({ body: "cat" });
     expect(upcastPayload("text", 3, { body: "cat" }, steps)).toEqual({ body: "cat" });
-    for (const type of ["text", "cloze", "table", "senses"] as const) {
+    for (const type of ["text", "cloze", "table", "senses", "image"] as const) {
       expect(blockVersion(type), type).toBe(1);
     }
+  });
+});
+
+// The cases of the app's image tests in `content_test.dart` (ADR 0109).
+describe("an image block", () => {
+  const image = (payload: Record<string, unknown>) => ({ type: "image", payload });
+  const box = (fields: Record<string, unknown>) =>
+    image({ media: "m1", width: 4, height: 3, boxes: [fields] });
+  const whole = { id: "1", x: 0.1, y: 0.2, w: 0.3, h: 0.4 };
+
+  it("reads its photo, size and boxes in fractions of the image, past fields it does not know", () => {
+    expect(
+      parseContent([
+        image({
+          media: "m1",
+          width: 1200,
+          height: 800,
+          boxes: [
+            { ...whole, answer: "Paris", shape: "oval" },
+            { id: "2", x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+          ],
+          crop: { x: 0 },
+        }),
+      ]),
+    ).toEqual([
+      {
+        kind: "image",
+        media: "m1",
+        width: 1200,
+        height: 800,
+        boxes: [
+          { ...whole, answer: "Paris" },
+          { id: "2", x: 0.5, y: 0.5, w: 0.5, h: 0.5, answer: null },
+        ],
+      },
+    ]);
+  });
+
+  it("is refused when it breaks its shape, where a whole one is read", () => {
+    for (const broken of [
+      image({ width: 4, height: 3, boxes: [] }),
+      image({ media: "", width: 4, height: 3, boxes: [] }),
+      image({ media: "m1", width: 0, height: 3, boxes: [] }),
+      image({ media: "m1", width: 4.5, height: 3, boxes: [] }),
+      image({ media: "m1", width: 4, height: 3 }),
+      box({ x: 0, y: 0, w: 1, h: 1 }),
+      box({ ...whole, x: -0.1 }),
+      box({ ...whole, w: 0 }),
+      box({ ...whole, x: 0.6, w: 0.5 }),
+      box({ ...whole, y: 0.6, h: 0.5 }),
+      box({ ...whole, answer: 3 }),
+      image({ media: "m1", width: 4, height: 3, boxes: [whole, whole] }),
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    // Control: each whole.
+    expect(parseContent([box(whole)])).not.toBeNull();
+    expect(parseContent([image({ media: "m1", width: 4, height: 3, boxes: [] })])).not.toBeNull();
+  });
+
+  it("reads as a photo with each box a blank until revealed, and makes a whole card only with a box", () => {
+    const boxed = parseContent([box({ ...whole, answer: "Paris" })]) ?? [];
+    const bare = parseContent([image({ media: "m1", width: 4, height: 3, boxes: [] })]) ?? [];
+
+    expect(describeContent(boxed)).toBe("사진");
+    expect(spokenContent(boxed, false)).toBe("사진, 빈칸");
+    expect(spokenContent(boxed, true)).toBe("사진, Paris");
+    expect(isWholeCard(boxed)).toBe(true);
+    // Control: the same photo without a box is split.
+    expect(isWholeCard(bare)).toBe(false);
   });
 });
