@@ -24,6 +24,7 @@ import 'contrast.dart';
 import 'home_data.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
+import '../word_breaks.dart';
 
 /// The home screen over decks named "Alpha", "Beta" and "Gamma", opening on
 /// the 오늘 tab.
@@ -356,8 +357,8 @@ void main() {
       (tester) async {
         final list = await _open(tester, decks: ['Alpha']);
 
-        expect(_shown('Make your first card?'), findsOneWidget);
-        expect(_shown('Add cards to a deck to start'), findsOneWidget);
+        expect(shownText('Make your first card?'), findsOneWidget);
+        expect(shownText('Add cards to a deck to start'), findsOneWidget);
         expect(find.text("You've done today's cards"), findsNothing);
         AppButton button(String label) =>
             tester.widget<AppButton>(find.widgetWithText(AppButton, label));
@@ -379,7 +380,7 @@ void main() {
       (tester) async {
         final list = await _open(tester);
 
-        expect(_shown('Make your first card?'), findsOneWidget);
+        expect(shownText('Make your first card?'), findsOneWidget);
         await list.tap('Add cards in a deck');
         expect(find.text('My decks 3'), findsOneWidget);
         await list.close();
@@ -391,7 +392,7 @@ void main() {
     ) async {
       final list = await _open(tester, decks: ['Alpha'], fresh: {'Alpha': 1});
 
-      expect(_shown('Make your first card?'), findsNothing);
+      expect(shownText('Make your first card?'), findsNothing);
       expect(find.text('Study all'), findsOneWidget);
       await list.close();
     });
@@ -512,7 +513,7 @@ void main() {
         // so nothing is said to be left.
         expect(find.text('About 3 min'), findsOneWidget);
         // Nothing done yet, on a 1-day streak: the line waits.
-        expect(_shown("Waiting for today's first card"), findsOneWidget);
+        expect(shownText("Waiting for today's first card"), findsOneWidget);
         // The pace's answers were given the day before, which starts the
         // streak.
         // The today card's chip and the last seven days' line.
@@ -618,7 +619,7 @@ void main() {
         // Once a card is done the minutes are those left: two at 10 s.
         expect(find.text('About 1 min left'), findsOneWidget);
         // Two cards left: almost there.
-        expect(_shown('Almost there'), findsOneWidget);
+        expect(shownText('Almost there'), findsOneWidget);
         // Answered today: the streak counts today.
         // The today card's chip and the last seven days' line.
         expect(find.text('1-day streak'), findsNWidgets(2));
@@ -1015,7 +1016,7 @@ void main() {
         );
 
         expect(
-          _shown('How many minutes a day will you study?'),
+          shownText('How many minutes a day will you study?'),
           findsOneWidget,
         );
         await waitForPicker(tester);
@@ -1069,7 +1070,7 @@ void main() {
     testWidgets('without a card the first-run step waits', (tester) async {
       final list = await _open(tester, decks: ['Alpha'], minutesAsked: false);
 
-      expect(_shown('Make your first card?'), findsOneWidget);
+      expect(shownText('Make your first card?'), findsOneWidget);
       expect(find.byType(BottomSheet), findsNothing);
       await list.close();
     });
@@ -1087,7 +1088,7 @@ void main() {
 
         await tester.enterText(find.byType(EditableText), 'zebra');
         await tester.pumpAndSettle();
-        expect(find.text('No deck matches. Try other words.'), findsOneWidget);
+        expect(shownText('No deck matches. Try other words.'), findsOneWidget);
         await list.close();
       },
     );
@@ -1100,17 +1101,17 @@ void main() {
 
         await list.newDeck();
         // The sheet's title over the entry that opened it.
-        expect(_shown('Create a deck'), findsNWidgets(2));
+        expect(shownText('Create a deck'), findsNWidgets(2));
         expect(find.text('Create by hand'), findsOneWidget);
         expect(find.text('Take photo'), findsNothing);
         expect(find.text('Choose from album'), findsNothing);
         await list.tap('Create by hand');
         // The name sheet is "New deck", as photo import's is.
-        expect(_shown('New deck'), findsOneWidget);
+        expect(shownText('New deck'), findsOneWidget);
         await tester.enterText(find.byType(EditableText).last, 'Delta');
         await list.tap('Create');
         // 덱 꾸미기 comes next, and the pair chosen there reaches the tile.
-        expect(_shown('Customize deck'), findsOneWidget);
+        expect(shownText('Customize deck'), findsOneWidget);
         await tester.tap(find.bySemanticsLabel('Star'));
         await tester.pumpAndSettle();
         await list.tap('Save');
@@ -1125,7 +1126,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Delta'), findsOneWidget);
-        expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+        expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
         await tester.pageBack();
         await tester.pumpAndSettle();
         expect(find.text('My decks 4'), findsOneWidget);
@@ -1251,9 +1252,9 @@ void main() {
         await tester.pageBack();
         await tester.pumpAndSettle();
 
-        await tester.ensureVisible(_shown('Create a deck'));
+        await tester.ensureVisible(shownText('Create a deck'));
         expect(
-          tester.getRect(_shown('Create a deck')).top,
+          tester.getRect(shownText('Create a deck')).top,
           greaterThan(tester.getRect(find.text('Gamma')).bottom),
         );
         // Control: without sharing there is no way to public decks beside it.
@@ -1263,8 +1264,3 @@ void main() {
     );
   });
 }
-
-/// The text on screen that reads [text] once its word joiners are left out.
-Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
-);

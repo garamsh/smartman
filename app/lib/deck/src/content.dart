@@ -218,14 +218,15 @@ bool _hasBlank(Content block) => block is ClozeContent || block is TableContent;
 
 /// The face a card with [front] and [back] is studied on, or null when it is
 /// studied front then back (ADR 0106). A card with a blank anywhere is
-/// studied on one face, its answers filled in place: the side holding the
-/// blank, its front first. No stored field says which, so the content and
-/// the mode cannot disagree.
+/// studied on one face, its answers filled in place: its front when the
+/// front holds a blank, and otherwise its front's blocks followed by its
+/// back's, so the front stays the prompt (ADR 0108). No stored field says
+/// which, so the content and the mode cannot disagree.
 List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
     front.any(_hasBlank)
     ? front
     : back.any(_hasBlank)
-    ? back
+    ? [...front, ...back]
     : null;
 
 /// Whether a card whose front is [front] is drawn whole, that front across

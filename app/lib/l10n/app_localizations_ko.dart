@@ -166,6 +166,50 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cardKindTable => '표';
 
   @override
+  String get cardKindFree => '자유';
+
+  @override
+  String get addToFront => '앞면에 추가';
+
+  @override
+  String get addToBack => '뒷면에 추가';
+
+  @override
+  String get blockText => '글';
+
+  @override
+  String get blockTextDescription => '단어, 문장, 설명';
+
+  @override
+  String get blockSenses => '뜻 목록';
+
+  @override
+  String get blockSensesDescription => '품사 표시와 뜻 여러 개';
+
+  @override
+  String get blockTable => '표';
+
+  @override
+  String get blockTableDescription => '칸을 빈칸으로 바꿀 수 있어요';
+
+  @override
+  String get blockCloze => '빈칸 문장';
+
+  @override
+  String get blockClozeDescription => '문장 속 단어를 가리기';
+
+  @override
+  String blockMenu(String side, int number) {
+    return '$side $number번째 블록 메뉴';
+  }
+
+  @override
+  String get deleteBlock => '지우기';
+
+  @override
+  String get sideBlockRequired => '블록을 하나 이상 넣어 주세요';
+
+  @override
   String get tableNameHint => '표의 이름';
 
   @override

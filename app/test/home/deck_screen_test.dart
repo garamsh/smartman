@@ -14,6 +14,7 @@ import 'package:smartman/study/study.dart' show StudyScreen;
 
 import '../deck/whole_cards.dart';
 import '../study/minutes_sheet.dart';
+import '../word_breaks.dart';
 import 'contrast.dart';
 import 'deck_screens.dart';
 
@@ -52,7 +53,7 @@ void main() {
 
       screens = await DeckScreens.open(tester);
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+      expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
       expect(find.widgetWithText(AppButton, 'Study'), findsNothing);
       expect(button('Add card').variant, AppButtonVariant.primary);
       await screens.close();
@@ -72,7 +73,7 @@ void main() {
 
       screens = await DeckScreens.open(tester);
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+      expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
       expect(find.text("Today's cards"), findsNothing);
       expect(find.textContaining('mastered'), findsNothing);
       expect(find.byType(ProgressBar), findsNothing);
@@ -240,12 +241,7 @@ void main() {
 
       await screens.tap(find.text('Study'));
       expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Text &&
-              widget.data?.replaceAll('\u2060', '') ==
-                  'How many minutes a day will you study?',
-        ),
+        shownText('How many minutes a day will you study?'),
         findsOneWidget,
       );
       expect(find.byType(StudyScreen), findsNothing);
@@ -592,7 +588,7 @@ void main() {
 
       await screens.enter('Search', 'zebra');
       expect(_rowFronts(tester), isEmpty);
-      expect(find.text('No card matches. Try other words.'), findsOneWidget);
+      expect(shownText('No card matches. Try other words.'), findsOneWidget);
 
       await screens.enter('Search', 'CHAT');
       await screens.tap(find.byTooltip('Close search'));
@@ -789,14 +785,7 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Text &&
-              widget.data?.replaceAll('\u2060', '') == 'Delete "Français"?',
-        ),
-        findsOneWidget,
-      );
+      expect(shownText('Delete "Français"?'), findsOneWidget);
       await screens.tap(find.text('Cancel'));
 
       await screens.tap(find.text('Add card'));
@@ -848,15 +837,7 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Text &&
-              widget.data?.replaceAll('\u2060', '') ==
-                  'Its 3 cards will be deleted too.',
-        ),
-        findsOneWidget,
-      );
+      expect(shownText('Its 3 cards will be deleted too.'), findsOneWidget);
       await screens.tap(find.text('Delete'));
 
       expect(find.byType(DeckScreen), findsNothing);
@@ -867,4 +848,25 @@ void main() {
       await screens.close();
     },
   );
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      "on a 390 wide phone at text scale $scale the empty deck's Korean line breaks only between words and is read as written",
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final screens = await DeckScreens.open(
+          tester,
+          locale: const Locale('ko'),
+        );
+        await screens.push((deck) => DeckScreen(deck: deck));
+
+        const line = '아직 카드가 없어요. 카드를 추가해 시작해 보세요.';
+        expectBreaksBetweenWords(tester, line);
+        // A screen reader reads it as written, without the joiners.
+        expect(find.bySemanticsLabel(line), findsOneWidget);
+        await screens.close();
+      },
+    );
+  }
 }
