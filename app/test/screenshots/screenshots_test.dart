@@ -1085,10 +1085,13 @@ void main() {
       await tester.ensureVisible(find.text(ko.addRow));
       await tester.pumpAndSettle();
       await shot(tester, '05h-card-editor-table');
-      await tester.ensureVisible(find.text(ko.tableModeBlanks));
-      await tap(tester, find.text(ko.tableModeBlanks));
-      await tap(tester, find.widgetWithText(InkWell, 'went'));
-      await tap(tester, find.widgetWithText(InkWell, 'saw'));
+      // "went" and "saw", each selected and made a blank by the toolbar.
+      for (final index in [3, 5]) {
+        await tester.ensureVisible(cell(index));
+        await tester.pumpAndSettle();
+        await tap(tester, cell(index));
+        await tap(tester, find.widgetWithText(FilterChip, ko.tableBlankToggle));
+      }
       await tester.ensureVisible(find.text(ko.cardKindTable));
       await tester.pumpAndSettle();
       await shot(tester, '05i-card-editor-table-blanks');

@@ -112,19 +112,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tableNameLabel => '앞면 · 표 이름';
 
   @override
-  String get tableModeLabel => '표 편집 방식';
+  String get tableToolbar => '표 도구';
 
   @override
-  String get tableModeCells => '칸 입력';
+  String get tableBlankToggle => '빈칸';
 
   @override
-  String get tableModeBlanks => '빈칸 고르기';
+  String get tableRemove => '지우기';
 
   @override
-  String get tableCellsHint => '머리글과 칸에 내용을 적어요';
+  String tableRemoveRowTitle(int row) {
+    return '$row행을 지울까요?';
+  }
 
   @override
-  String get tableBlanksHint => '빈칸으로 할 칸을 눌러요';
+  String tableRemoveColumnTitle(int column) {
+    return '$column열을 지울까요?';
+  }
+
+  @override
+  String get tableRemoveBody => '그 줄에 적은 내용도 함께 지워져요.';
 
   @override
   String tableHeaderCell(int column) {
@@ -135,15 +142,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String tableCell(int row, int column) {
     return '$row행 $column열';
   }
-
-  @override
-  String get tableEmptyCell => '내용 없음';
-
-  @override
-  String get tableMakeBlank => '빈칸으로';
-
-  @override
-  String get tableClearBlank => '빈칸 해제';
 
   @override
   String get addRow => '행 추가';

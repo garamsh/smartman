@@ -115,19 +115,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tableNameLabel => 'Front · table name';
 
   @override
-  String get tableModeLabel => 'Table editing';
+  String get tableToolbar => 'Table tools';
 
   @override
-  String get tableModeCells => 'Type cells';
+  String get tableBlankToggle => 'Blank';
 
   @override
-  String get tableModeBlanks => 'Choose blanks';
+  String get tableRemove => 'Remove';
 
   @override
-  String get tableCellsHint => 'Type the headings and cells';
+  String tableRemoveRowTitle(int row) {
+    return 'Remove row $row?';
+  }
 
   @override
-  String get tableBlanksHint => 'Tap the cells to make blanks';
+  String tableRemoveColumnTitle(int column) {
+    return 'Remove column $column?';
+  }
+
+  @override
+  String get tableRemoveBody => 'What is written in it goes too.';
 
   @override
   String tableHeaderCell(int column) {
@@ -138,15 +145,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String tableCell(int row, int column) {
     return 'Row $row, column $column';
   }
-
-  @override
-  String get tableEmptyCell => 'Empty';
-
-  @override
-  String get tableMakeBlank => 'Make blank';
-
-  @override
-  String get tableClearBlank => 'Remove blank';
 
   @override
   String get addRow => 'Add row';
