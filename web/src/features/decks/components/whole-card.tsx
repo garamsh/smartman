@@ -1,10 +1,4 @@
-import {
-  type Content,
-  type ImageBox,
-  clozeBlank,
-  isBlank,
-  spokenContent,
-} from "../card-content";
+import { type Content, type ImageBox, clozeBlank, isBlank, spokenContent } from "../card-content";
 import { SensesText } from "./side-text";
 
 /**

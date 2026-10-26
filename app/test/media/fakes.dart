@@ -61,8 +61,7 @@ class FakeImagePick implements ImagePick {
 /// A whole JPEG [width] by [height], prepared as a card's photo is.
 PreparedImage preparedWholeImage(int width, int height) {
   final bytes = img.encodeJpg(
-    img.Image(width: width, height: height)
-      ..clear(img.ColorRgb8(0, 120, 200)),
+    img.Image(width: width, height: height)..clear(img.ColorRgb8(0, 120, 200)),
   );
   return PreparedImage(
     bytes,
