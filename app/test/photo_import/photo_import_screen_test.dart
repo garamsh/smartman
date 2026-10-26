@@ -325,6 +325,11 @@ class _Import {
       deck.name,
   ];
 
+  /// The stored deck named [name].
+  Future<Deck> deck(String name) async =>
+      (await tester.runAsync(() => repository.watchDecks().first))!
+          .singleWhere((deck) => deck.name == name);
+
   Future<void> close() async {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
@@ -1593,6 +1598,8 @@ void main() {
           ('chien', 'dog', CardSource.import),
         ]);
         expect((import.popped! as Deck).id, import.spanish.id);
+        // An existing deck keeps its look: no 덱 꾸미기 on the way.
+        expect(_shown('Customize deck'), findsNothing);
         await import.close();
       },
     );
@@ -1609,13 +1616,43 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Page 12');
       await import.tap(_shown('Create'));
 
+      // 덱 꾸미기 follows the naming, as for a deck made by hand, and the
+      // pair it saves is stored on the new deck.
+      expect(_shown('Customize deck'), findsOneWidget);
+      expect(import.hasPopped, isFalse);
+      await import.tap(find.bySemanticsLabel('Star'));
+      await import.tap(_shown('Save'));
+
       expect(await import.deckNames(), ['French', 'Page 12', 'Spanish']);
+      expect((await import.deck('Page 12')).icon, DeckIcon.star);
       expect(await import.cards(import.popped! as Deck), [
         ('chien', 'dog', CardSource.import),
         ('chat', 'cat', CardSource.import),
       ]);
       await import.close();
     });
+
+    testWidgets(
+      'dismissing 덱 꾸미기 after a new deck is named keeps its default look, and the cards are saved',
+      (tester) async {
+        final import = await _Import.open(tester, deck: (_) => null);
+        await import.extract({'chien': 'dog'});
+        await import.tap(_shown('Add 1 card'));
+        await tester.enterText(find.byType(TextField), 'Page 13');
+        await import.tap(_shown('Create'));
+        expect(_shown('Customize deck'), findsOneWidget);
+
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+
+        expect(_shown('Customize deck'), findsNothing);
+        final deck = await import.deck('Page 13');
+        expect((deck.icon, deck.color), (null, null));
+        expect((import.popped! as Deck).id, deck.id);
+        expect(await import.cards(deck), [('chien', 'dog', CardSource.import)]);
+        await import.close();
+      },
+    );
 
     testWidgets(
       "a section's form is remembered for its deck and topic, and not for another deck or topic",

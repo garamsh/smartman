@@ -476,10 +476,29 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
       }
       _watch(null);
       await widget.imports.end(job);
+      // A new deck is offered 덱 꾸미기 once it exists, as one made by hand
+      // is; dismissing the sheet keeps the default tile.
+      if (target is AddToNewDeck && mounted) {
+        await _offerAppearance(result.deck);
+      }
       navigator.pop(result.deck);
     } on DeckFailure catch (failure) {
       _showDeckFailure(failure);
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Offers the 덱 꾸미기 sheet on [deck], and stores the pair it saves.
+  Future<void> _offerAppearance(Deck deck) async {
+    final chosen = await showDeckAppearanceSheet(context, deck: deck);
+    if (chosen case (final icon, final color) when mounted) {
+      try {
+        await ref
+            .read(deckRepositoryProvider)
+            .setAppearance(deck.id, icon, color);
+      } on DeckFailure catch (failure) {
+        _showDeckFailure(failure);
+      }
     }
   }
 
