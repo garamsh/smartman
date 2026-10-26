@@ -11,7 +11,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/image_block.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_section_label.dart';
 import 'package:smartman/design/streak_flame.dart';
@@ -1022,7 +1021,7 @@ void main() {
       ['a'],
       sides: {
         'a': (
-          const [TextContent('a front'), UnsupportedContent('image', null)],
+          const [TextContent('a front'), UnsupportedContent('audio', null)],
           const [TextContent('a back')],
         ),
       },
@@ -1031,7 +1030,7 @@ void main() {
     expect(
       find.descendant(
         of: _currentCard,
-        matching: find.text('[Content this version cannot show: image]'),
+        matching: find.text('[Content this version cannot show: audio]'),
       ),
       findsOneWidget,
     );
@@ -2237,7 +2236,7 @@ void main() {
           first == 'front photo' ? 'back photo' : 'front photo',
         ]) {
           expect(
-            under(_currentCard, find.byType(ImagePhoto)),
+            under(_currentCard, find.byType(MediaImage)),
             findsOneWidget,
             reason: '$name: one face, the photo on it',
           );
