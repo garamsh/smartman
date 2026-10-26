@@ -2,14 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../design/theme.dart';
 
-/// Quiet text on the navy cards: their white, a step back.
-Color heroQuiet(AppColors colors) => colors.onHero.withValues(alpha: 0.8);
-
-/// A track on the navy cards, under a bar or a ring: their white, faint.
-Color heroTrack(AppColors colors) => colors.onHero.withValues(alpha: 0.16);
-
-/// A count on a navy card: the number large, then [unit] beside it, read as
-/// [semantics].
+/// A count on a white hero card: the number large in ink, then [unit] beside
+/// it, read as [semantics].
 class HeroCount extends StatelessWidget {
   const HeroCount({
     super.key,
@@ -36,11 +30,11 @@ class HeroCount extends StatelessWidget {
             const TextSpan(text: ' '),
             TextSpan(
               text: unit,
-              style: AppType.headline.copyWith(color: heroQuiet(colors)),
+              style: AppType.headline.copyWith(color: colors.muted),
             ),
           ],
         ),
-        style: TextStyle(color: colors.onHero),
+        style: TextStyle(color: colors.ink),
       ),
     );
   }

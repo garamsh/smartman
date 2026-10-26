@@ -18,7 +18,7 @@ import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
 import '../../study/study.dart';
 
-/// A deck's page: its tile, name and card count, the navy card that studies
+/// A deck's page: its tile, name and card count, the white card that studies
 /// it, and its cards under a pinned row whose "뜻 보기" switch shows or hides
 /// every back, each back also toggled by a tap, searchable from the top
 /// bar; adds a card, opens one for editing, and the deck for renaming or
@@ -477,7 +477,7 @@ class _CardListHeader extends StatelessWidget {
   }
 }
 
-/// The deck's navy card: today's count and its minutes, "n장 중 m장 익힘" over
+/// The deck's white card: today's count and its minutes, "n장 중 m장 익힘" over
 /// the progress bar, and the button that studies the deck.
 class _DeckTodayCard extends StatelessWidget {
   const _DeckTodayCard({required this.deck, required this.onStudy});
@@ -489,14 +489,15 @@ class _DeckTodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final quiet = AppType.secondary.copyWith(color: heroQuiet(colors));
+    final quiet = AppType.secondary.copyWith(color: colors.muted);
     return Semantics(
       container: true,
       label: l10n.todayThisDeck,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colors.hero,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppRadius.card),
+          boxShadow: AppShadow.card(colors),
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpace.s20),
@@ -543,19 +544,13 @@ class _DeckTodayCard extends StatelessWidget {
                             ),
                             style: quiet,
                           ),
-                          ProgressBar(
-                            progress: progress,
-                            height: AppSpace.s8,
-                            ink: colors.onHero,
-                            track: heroTrack(colors),
-                          ),
+                          ProgressBar(progress: progress, height: AppSpace.s8),
                         ],
                       ),
               ),
               AppButton(
                 label: l10n.studyDeck,
                 icon: LucideIcons.play,
-                variant: AppButtonVariant.onHero,
                 onPressed: onStudy,
               ),
             ],

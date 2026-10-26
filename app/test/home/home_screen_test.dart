@@ -19,6 +19,7 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 
+import 'contrast.dart';
 import 'home_data.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
@@ -234,6 +235,20 @@ Future<_List> _open(
   await tester.pumpAndSettle();
   return list;
 }
+
+/// The rounded card on the 오늘 tab that holds [inside].
+Finder _card(Finder inside) => find
+    .ancestor(
+      of: inside,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is DecoratedBox &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).borderRadius ==
+                BorderRadius.circular(AppRadius.card),
+      ),
+    )
+    .first;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -748,6 +763,70 @@ void main() {
         await list.close();
       },
     );
+
+    for (final (name, theme) in [('light', lightTheme), ('dark', darkTheme)]) {
+      testWidgets(
+        'in the $name theme the today, backlog and unreadable-count cards are white with an ink bar and an ink button, and meet the contrast guideline',
+        (tester) async {
+          for (final (state, open) in [
+            ('today', () => _open(tester, fresh: {'Alpha': 3}, theme: theme)),
+            (
+              'backlog',
+              () => _open(
+                tester,
+                due: {'Alpha': 4, 'Beta': 3},
+                dueDays: 30,
+                theme: theme,
+              ),
+            ),
+            (
+              'unreadable',
+              () => _open(
+                tester,
+                mastered: {'Alpha': 1},
+                unreadable: {'Beta'},
+                theme: theme,
+              ),
+            ),
+          ]) {
+            final list = await open();
+            final colors = AppColors.of(tester.element(find.byType(TodayTab)));
+            final button = find.descendant(
+              of: find.byType(TodayTab),
+              matching: find.byType(AppButton),
+            );
+            expect(button, findsOneWidget, reason: state);
+            final card = _card(button);
+            expect(
+              (tester.widget<DecoratedBox>(card).decoration as BoxDecoration)
+                  .color,
+              colors.surface,
+              reason: state,
+            );
+            expect(
+              tester.widget<AppButton>(button).variant,
+              AppButtonVariant.primary,
+              reason: state,
+            );
+            final bars = find.descendant(
+              of: card,
+              matching: find.byType(LinearProgressIndicator),
+            );
+            for (final bar in bars.evaluate()) {
+              expect(
+                (bar.widget as LinearProgressIndicator).color,
+                colors.ink,
+                reason: state,
+              );
+            }
+            if (state == 'today') expect(bars, findsOneWidget);
+            expectTextReadable(tester, card, colors.surface);
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+            await list.close();
+          }
+        },
+      );
+    }
 
     testWidgets('a count that cannot be read says why', (tester) async {
       final list = await _open(

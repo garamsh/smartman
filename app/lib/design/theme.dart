@@ -453,7 +453,7 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// A quiet brand fill: a chip, an avatar's circle, a mascot's circle.
   final Color brandTint;
 
-  /// The today card's fill.
+  /// The study coach's fill and the study screen's notice.
   final Color hero;
 
   /// Text and the button fill on [hero].
