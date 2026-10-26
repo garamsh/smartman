@@ -99,7 +99,7 @@ Up to 30 composed sentences, spread evenly over the run, for the PM to mark by h
 
 ## PM note (2026-10-27, round 2)
 
-This run is configuration B only, after #440 gave each line a role (`fact`, `example` or `heading`) and asked for marks and key terms as text. Earlier rows come from this file at #417's merge (`013c01c030e8adebb53f725c573819f4daee3675`) and at #433's merge (`c2eb2ca`).
+This run is configuration B only, after #440 gave each line a role (`fact`, `example` or `heading`) and asked for marks and key terms as text. Earlier rows come from this file at #417's merge (`013c01c030e8adebb53f725c573819f4daee3675`) and at #433's merge (`c2eb2cafa9fa9fd62d50f124336549fb01b46b8c`).
 
 | | Coverage | Unsupported | Shape fidelity | Stage 1 p50 | Total p50 | Cost/photo |
 |---|---|---|---|---|---|---|
