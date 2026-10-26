@@ -17,6 +17,7 @@ import 'package:smartman/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../media/fakes.dart';
 import 'bounded_auth.dart';
 import 'device.dart';
 
@@ -127,6 +128,21 @@ void main() {
     expect((onB.icon, onB.color), (DeckIcon.book, DeckColor.violet));
     final plain = await b.deck.getDeck(spanish.id);
     expect((plain.icon, plain.color), (null, null));
+  }, skip: skip);
+
+  test("a deck's image set on A reaches B as its media id, and so does its removal", () async {
+    final deck = await a.deck.createDeck('French');
+    final image = await a.media.addImage(preparedImage(1));
+    await a.deck.setImage(deck.id, image);
+
+    await a.sync(account);
+    await b.sync(account);
+    expect((await b.deck.getDeck(deck.id)).image, image);
+
+    await a.deck.setImage(deck.id, null);
+    await a.sync(account);
+    await b.sync(account);
+    expect((await b.deck.getDeck(deck.id)).image, isNull);
   }, skip: skip);
 
   test("a card's template reaches B, and a newer build's template and blocks come through unchanged", () async {

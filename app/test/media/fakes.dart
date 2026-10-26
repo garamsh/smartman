@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+import 'package:image/image.dart' as img;
 import 'package:smartman/media/media.dart';
 
 /// The media server in memory: one account's rows and files, by id. Shared
@@ -56,6 +58,12 @@ final unusedMediaDirectory = Directory(
   '${Directory.systemTemp.path}/smartman_media_unused',
 );
 
-/// A prepared image of [bytes], with a digest of the right shape.
-PreparedImage preparedImage(List<int> bytes) =>
-    PreparedImage(Uint8List.fromList(bytes), 'a' * 64);
+/// A 4 px JPEG, prepared, of one red, 40 times [shade] modulo 256, so the
+/// images of nearby shades differ.
+PreparedImage preparedImage(int shade) {
+  final bytes = img.encodeJpg(
+    img.Image(width: 4, height: 4)
+      ..clear(img.ColorRgb8(shade * 40 % 256, 0, 0)),
+  );
+  return PreparedImage(bytes, sha256.convert(bytes).toString());
+}

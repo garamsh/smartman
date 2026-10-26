@@ -70,7 +70,9 @@ class MediaStore {
   /// is then kept on the device. Null when neither holds it or the server
   /// cannot be reached; a later read tries again.
   Future<Uint8List?> read(MediaId id) =>
-      _reads[id] ??= _read(id).whenComplete(() => _reads.remove(id));
+      _reads[id] ??= _read(id).whenComplete(() {
+        _reads.remove(id);
+      });
 
   Future<Uint8List?> _read(MediaId id) async {
     final file = _file(id);

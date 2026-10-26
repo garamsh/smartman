@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -74,12 +75,22 @@ final class SupabaseMediaServer implements MediaServer {
 
   static String _path(String owner, MediaId id) => '$owner/${id.value}';
 
-  /// Storage answers an existing name with 409, in its body's status code.
-  static bool _isDuplicate(StorageException error) =>
-      error.statusCode == '409' || error.error == 'Duplicate';
+  static bool _isDuplicate(StorageException error) => _status(error) == '409';
 
-  static bool _isNotFound(StorageException error) =>
-      error.statusCode == '404' || error.error == 'not_found';
+  static bool _isNotFound(StorageException error) => _status(error) == '404';
+
+  /// The status Storage names in its answer's body, which it sends with an
+  /// HTTP 400; a download leaves that body unparsed, as the message.
+  static String? _status(StorageException error) {
+    try {
+      if (jsonDecode(error.message) case {'statusCode': final Object code}) {
+        return '$code';
+      }
+    } on FormatException {
+      // A message that is not JSON names no status of its own.
+    }
+    return error.statusCode;
+  }
 
   Future<T> _request<T>(Future<T> Function() request) async {
     try {
