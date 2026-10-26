@@ -689,6 +689,36 @@ Deno.test("the preflight asks stage 1 and every shape once on the smallest page 
   );
 });
 
+Deno.test("a call billed through the owner's provider key costs OpenRouter's fee plus the provider's upstream cost", async () => {
+  const w = world();
+  const fake = io(w);
+  // Each reply as OpenRouter bills it under BYOK: a fee of 0, the provider's price upstream.
+  const byok: Io = {
+    ...fake,
+    fetch: async (input, init) => {
+      const response = await fake.fetch(input, init);
+      if (String(input) !== OPENROUTER_URL) return response;
+      const body = await response.json();
+      body.usage = {
+        ...body.usage,
+        cost: 0,
+        cost_details: { upstream_inference_cost: body.usage.cost },
+      };
+      return new Response(JSON.stringify(body), { status: response.status });
+    },
+  };
+  await main(["--preflight"], byok);
+  // Setup: every model call was answered under BYOK.
+  assert.equal(w.requests.length, 6);
+  assert.ok(
+    w.printed.includes(
+      "sections on vendor/haiku: strict, HTTP 200, valid, 100 prompt tokens, 40 read from the cache, $0.0010",
+    ),
+  );
+  const ledger = JSON.parse(w.files.get(PATHS.ledger) ?? "");
+  assert.equal(ledger.runs[0].spentUsd, 0.006);
+});
+
 Deno.test("the preflight refuses to start when the ledger cannot cover its estimate, and with --dry-run prints its estimate alone", async () => {
   const poor = world(0.000001);
   assert.equal(await main(["--preflight"], io(poor)), 1);
