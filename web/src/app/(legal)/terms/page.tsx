@@ -94,7 +94,11 @@ const sections: readonly LegalSection[] = [
           AI가 만든 카드는 틀리거나 빠진 내용이 있을 수 있어요. 추가하기 전에 확인하고 고치는 것은
           이용자의 몫이에요.
         </li>
-        <li>사진으로 카드를 만드는 것은 하루 이용 횟수가 정해져 있어요.</li>
+        <li>
+          사진으로 카드를 만드는 것은 요금제마다 쓸 수 있는 사진 수가 정해져 있고, 요금제에 따라 한
+          달 또는 하루 단위로 세요(한국 시간 기준). 맥스 요금제는 사진 수에 제한이 없지만, 공정
+          이용을 위해 하루 1,000장까지 쓸 수 있어요.
+        </li>
       </ul>
     ),
   },
@@ -171,7 +175,7 @@ const sections: readonly LegalSection[] = [
     heading: "시행일",
     body: (
       <>
-        <p>이 약관은 2026년 10월 16일부터 시행해요.</p>
+        <p>이 약관은 2026년 11월 3일부터 시행해요.</p>
         <p>약관이 바뀌면 시행하기 전에 이 페이지에서 바뀐 내용과 시행일을 알려 드려요.</p>
       </>
     ),
@@ -183,7 +187,7 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="이용약관"
-      effectiveDate="2026년 10월 16일"
+      effectiveDate="2026년 11월 3일"
       intro={
         <p>
           이 약관은 smartman 운영자(이하 &ldquo;운영자&rdquo;)가 제공하는 smartman 서비스를 이용하는
