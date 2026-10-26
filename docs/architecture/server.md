@@ -277,7 +277,7 @@ The Supabase schema the app syncs to, and the extraction count, the plans and th
 - `private.migrate_card_template_free()` changes them, and the migration calls it once.
   - A second run changes nothing, since `free` is not a template it reads.
   - A tombstone is left alone, so its revision, which the purge reads, does not move; so is a template or a version no build of the app wrote.
-  - No backup is kept. The content is unchanged, and a card's template before is what its front's blocks derive, as ADR 0083 derived a kind, but for a card whose blocks were added to it under ADR 0108.
+  - No backup is kept. Only the template changes, which seeds nothing once the editor has one mode, and the content is untouched.
 - **How it reaches devices.** The update draws a new `revision` through the trigger, so every device pulls the card, and the card keeps its sides, its card key and its `updated_at`. Each device's schema step 13 makes the same change in its own rows, its `dirty` flags kept ([`sync.md`](sync.md)):
   - a device holding the card synced takes the server's copy on the tie;
   - a device with an edit not yet pushed wins the tie as an unsynced row, or holds a later `updated_at`, so its edit is pushed over the migration's.

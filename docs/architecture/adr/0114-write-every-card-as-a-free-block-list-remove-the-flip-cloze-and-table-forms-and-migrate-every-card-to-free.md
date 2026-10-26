@@ -50,7 +50,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A template an earlier build wrote (`flip`, `cloze`, `table` or `free` at version 1), or no template, opens in the editor (`canEdit`).
   - Any other template, or a later version, opens read-only and is never rewritten, a merged back included, as ADR 0106 has it.
 - **The data.** Every live card of `flip`, `cloze` or `table` at version 1, or of no template, becomes `free` at version 1. Its content, card key and `updated_at` are not changed:
-  - on the server, by migration `20261027140000_card_template_free.sql`. It keeps no backup: the content is unchanged, and a card's template before is what its front's blocks derive, as ADR 0083 derived a kind, but for a card whose blocks were added to it under ADR 0108;
+  - on the server, by migration `20261027140000_card_template_free.sql`. It keeps no backup: only the template changes, which seeds nothing once the editor has one mode, and the content is untouched;
   - on each device, by schema step 13, which also keeps each card's `dirty` flag.
   - A tombstone, and a template or a version no build of this app wrote, is left alone.
 - **Sync.** The server's update draws each card a new revision and keeps its `updated_at`, so every device pulls it.
