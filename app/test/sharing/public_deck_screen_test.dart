@@ -7,12 +7,7 @@ import 'package:smartman/sharing/sharing.dart';
 import 'fakes.dart';
 import 'sharing_app.dart';
 import 'sharing_service_test.dart' show publicCard, publicDeck;
-
-/// A [Text] that reads [text] once its word joiners are left out: sheets and
-/// the first run keep their words whole with them.
-Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
-);
+import '../word_breaks.dart';
 
 final _spanish = publicDeck(
   'spanish',
@@ -245,7 +240,7 @@ void main() {
       final app = await _openSpanish(tester, server: server);
 
       await app.deckMenu('Block this user');
-      expect(_shown('Block Dee?'), findsOneWidget);
+      expect(shownText('Block Dee?'), findsOneWidget);
       await app.tapText('Block');
 
       expect(find.text('Blocked Dee.'), findsOneWidget);

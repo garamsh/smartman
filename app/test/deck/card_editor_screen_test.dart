@@ -8,12 +8,7 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/word_break.dart';
 
 import '../home/deck_screens.dart';
-
-/// A [Text] that reads [text] once its word joiners are left out: sheets and
-/// the first run keep their words whole with them.
-Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
-);
+import '../word_breaks.dart';
 
 /// The text of the preview's two halves, front then back, its word joiners
 /// left out.
@@ -126,7 +121,7 @@ void main() {
         await screens.enter('Back', '덧없는');
 
         await screens.tap(find.byTooltip('Close'));
-        expect(_shown('Discard this card?'), findsOneWidget);
+        expect(shownText('Discard this card?'), findsOneWidget);
         await screens.tap(find.text('Keep writing'));
         expect(find.byType(CardEditorScreen), findsOneWidget);
         expect(find.widgetWithText(TextField, 'ephemeral'), findsOneWidget);
@@ -134,7 +129,7 @@ void main() {
         // Android's back, as the platform sends it.
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
-        expect(_shown('Discard this card?'), findsOneWidget);
+        expect(shownText('Discard this card?'), findsOneWidget);
         await screens.tap(find.text('Discard'));
         expect(find.byType(CardEditorScreen), findsNothing);
         expect(await screens.cards(), isEmpty);
@@ -148,7 +143,7 @@ void main() {
         final screens = await openNew(tester);
         await screens.tap(find.text('Table'));
         await screens.tap(find.byTooltip('Close'));
-        expect(_shown('Discard this card?'), findsNothing);
+        expect(shownText('Discard this card?'), findsNothing);
         expect(find.byType(CardEditorScreen), findsNothing);
 
         await screens.push((deck) => CardEditorScreen(deck: deck));
@@ -318,7 +313,7 @@ void main() {
     expect(find.text('Save and next card'), findsNothing);
 
     await screens.tap(find.byTooltip('Delete card'));
-    expect(_shown('Delete this card?'), findsOneWidget);
+    expect(shownText('Delete this card?'), findsOneWidget);
     // The confirmation keeps its cancel, and the delete comes last, below it.
     expect(
       tester.getRect(find.text('Cancel')).bottom,
@@ -337,9 +332,9 @@ void main() {
       await screens.enter('Front', '  CHAT ');
       await screens.enter('Back', 'chat (talk)');
       await screens.tap(find.text('Save'));
-      expect(_shown('This deck already has this card'), findsOneWidget);
+      expect(shownText('This deck already has this card'), findsOneWidget);
       expect(
-        _shown('Case and spacing are ignored when comparing.'),
+        shownText('Case and spacing are ignored when comparing.'),
         findsOneWidget,
       );
       // The existing card, in the same split preview as the editor's.
