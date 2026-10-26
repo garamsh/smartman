@@ -24,6 +24,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - **Keep the forms, and make 자유 the default.** The owner asked for the forms to go.
   - **Leave the stored templates as they are, and open every template in the block editor.** The rows would keep naming a form that no longer exists. The owner asked for the data to be migrated.
   - **Rewrite the content to a canonical 자유 shape,** for example a cloze card's derived back dropped. ADR 0106 keeps content and its encoding, and the issue's constraints forbid it. A card's blocks already are a 자유 card's blocks.
+  - **Keep each migrated card's template in a backup table, with a revert,** as the senses and plan-versions migrations keep what they change. Those changed content or terms that nothing else records. A template only decides how the editor opens a card, and its value before is derivable from the blocks. A backup table would also need rows in `supabase/preview-seed.sql`, outside this change.
   - **Bump each migrated card's `updated_at`,** so the server's copy wins every merge. A device's edit not yet pushed would then lose to the migration.
   - **Make a new card's back a 뜻 목록, so a label can be typed at once.** A plain back would then be stored as senses. ADR 0100 refused that, because the web, photo import and a merged back read text there.
 
@@ -39,7 +40,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A template an earlier build wrote (`flip`, `cloze`, `table` or `free` at version 1), or no template, opens in the editor (`canEdit`).
   - Any other template, or a later version, opens read-only and is never rewritten, a merged back included, as ADR 0106 has it.
 - **The data.** Every live card of `flip`, `cloze` or `table` at version 1, or of no template, becomes `free` at version 1. Its content, card key and `updated_at` are not changed:
-  - on the server, by migration `20261027140000_card_template_free.sql`. It keeps each card's template in `private.card_template_free_backup`, and `private.revert_card_template_free()` restores it;
+  - on the server, by migration `20261027140000_card_template_free.sql`. It keeps no backup: the content is unchanged, and a card's template before is what its front's blocks derive, as ADR 0083 derived a kind, but for a card whose blocks were added to it under ADR 0108;
   - on each device, by schema step 13, which also keeps each card's `dirty` flag.
   - A tombstone, and a template or a version no build of this app wrote, is left alone.
 - **Sync.** The server's update draws each card a new revision and keeps its `updated_at`, so every device pulls it.

@@ -1,11 +1,10 @@
 -- The migration of every card to 자유 (#438, ADR 0114): each live card of `flip`, `cloze` or
--- `table` at version 1, or of no template, becomes `free` at version 1, with its template kept in
--- the backup; a card already `free`, one of a template or a version no app knows, and a deleted card
--- are left alone; no front, back, card key, edit time, review or card state changes, while each
--- changed card's revision does; a second run changes nothing; and the revert restores every template
--- not edited since.
+-- `table` at version 1, or of no template, becomes `free` at version 1; a card already `free`, one of
+-- a template or a version no app knows, and a deleted card are left alone; no front, back, card key,
+-- edit time, review or card state changes, while each changed card's revision does; and a second run
+-- changes nothing.
 begin;
-select plan(11);
+select plan(8);
 
 insert into auth.users (id, email) values ('00000000-0000-4000-8000-00000000000a', 'a@example.com');
 insert into public.decks (id, user_id, name, created_at, updated_at)
@@ -73,30 +72,12 @@ select results_eq(
   $$ select id, front, back, card_key, source, created_at, updated_at, deleted_at, deck_id, user_id
      from cards_before order by id $$,
   'no content, card key or edit time changes, so a device edit not yet pushed still wins the merge');
-select results_eq(
-  $$ select card_id, template, template_version, updated_at
-     from private.card_template_free_backup order by card_id $$,
-  $$ select id, template, template_version, updated_at from cards_before
-     where id in (select pg_temp.cards('c01', 'c02', 'c03', 'c04')) order by id $$,
-  'each changed card''s template and edit time are kept in the backup, and only theirs');
 select results_eq($$ select * from public.reviews $$, $$ select * from reviews_before $$,
   'no review changes');
 select results_eq($$ select * from public.card_states $$, $$ select * from states_before $$,
   'no card state changes');
 
 select is(private.migrate_card_template_free(), 0, 'a second run changes nothing');
-
--- A device edits c02 after the migration and pushes it; the revert leaves that edit alone.
-update public.cards set back = '[{"type":"text","v":1,"payload":{"text":"고침"}}]',
-  updated_at = now() where id = 'c0000000-0000-4000-8000-000000000c02';
-select is(private.revert_card_template_free(), 3,
-  'the revert restores every template not edited since');
-select results_eq(
-  $$ select id, template, template_version from public.cards order by id $$,
-  $$ select id, case when id = 'c0000000-0000-4000-8000-000000000c02' then 'free' else template end,
-       case when id = 'c0000000-0000-4000-8000-000000000c02' then 1::smallint else template_version end
-     from cards_before order by id $$,
-  'the revert restores each template as it was, and a card edited since stays free');
 
 select * from finish();
 rollback;
