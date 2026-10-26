@@ -46,7 +46,7 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 - `SupabaseMediaServer` acts as the signed-in user, whose id is the folder of each file, `{owner}/{media id}` ([`server.md`](server.md) §Media storage):
   - an upload inserts the `media` row, keeping the user's own row already there under the id, the table's key being `(user_id, id)`, then uploads the file without overwriting; a file Storage already holds counts as uploaded, so a retry after a lost answer succeeds;
   - a suspended user's upload is refused, and stays queued like any refusal;
-  - a download of a file Storage does not hold returns null; one of another user's files is read where the server lets any signed-in user read it, a public deck's image and the photos and sounds of its live cards, which a copy of the cards names ([ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md), [ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md));
+  - a download reads the signed-in user's own folder, and one of a file Storage does not hold returns null;
   - a delete removes the file, then the user's row under the id.
 - Each request is bounded by 20 seconds. A timeout, a refusal, an unreachable server or no signed-in user is `MediaTransferFailed`, which the store keeps queued.
 
@@ -71,4 +71,5 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 
 ## Open questions
 
+- Whether a copied card's photo or sound can be read from its owner. The server lets any signed-in user read a public deck's image and the photos and sounds of its live cards ([ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md), [ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md)), but `SupabaseMediaServer.download` reads only the signed-in user's folder, so a copier's app does not yet. [#428](https://github.com/garamsh/smartman/issues/428) owns the fix, which copies the files into the copier's own media when the deck is copied.
 - Whether files a deck deleted on another device left behind on this one should be swept. None is large yet.

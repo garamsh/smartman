@@ -158,7 +158,7 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
     - the photo's own drag and tap are hidden from a screen reader, which uses the boxes' buttons and "빈칸 추가".
     - A box's id is one more than the highest number among the block's box ids. There is no crop or rotation.
   - **음성** ([ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md)): "녹음하기" and "파일에서 고르기" until a sound is in it, each stored through `media` at once:
-    - the first "녹음하기" on a device asks for the microphone, and a refusal says "마이크를 쓸 수 없어요. 설정에서 마이크 접근을 허용해 주세요." in a live region; while recording, "녹음 중 m:ss / 1:00" and "녹음 끝내기", the recording stopping itself at 60 seconds;
+    - the first "녹음하기" on a device asks for the microphone, and a refusal says "마이크를 쓸 수 없어요. 설정에서 마이크 접근을 허용해 주세요." in a live region; while recording, "녹음 중 m:ss / 1:00" and "녹음 끝내기", the recording stopping itself at 60 seconds; the device has one recorder, so while one block records "녹음하기" and "다시 녹음" are off in every other sound block until it has stopped (`recordingBlockProvider`);
     - a picked `.m4a` or `.mp3` longer than 60 seconds or larger than 5 MiB says "60초, 5MB까지 넣을 수 있어요", and one that cannot be read "소리를 불러오지 못했어요. 다시 시도해 주세요.";
     - with a sound, its play control and length, "다시 녹음", "다른 파일 고르기" and "소리 빼기".
 - The editor is a scrolling column, so every field is built.

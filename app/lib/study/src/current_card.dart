@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
@@ -9,6 +10,7 @@ import 'study_coach.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
+import 'stop_sound.dart';
 import 'study_style.dart';
 
 /// The card under study, filling the height it is given less the guide's
@@ -77,8 +79,22 @@ class _CurrentCardState extends State<CurrentCard>
     }
   }
 
+  /// The providers, kept to stop the sound when the card goes; null for a
+  /// card with no sound, which needs none.
+  ProviderContainer? _providers;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_sound != null) {
+      _providers = ProviderScope.containerOf(context, listen: false);
+    }
+  }
+
   @override
   void dispose() {
+    // The sound goes with the card that showed it.
+    if (_providers case final providers?) stopSound(providers);
     _drag.dispose();
     super.dispose();
   }

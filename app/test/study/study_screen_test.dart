@@ -2544,11 +2544,60 @@ void main() {
     ) async {
       final played = FakeAudioPlayback();
       final study = await _open(tester, names, sides: sides, playback: played);
-      expect(played.stops, 0);
+      while (current(tester) != 'heard') {
+        await study.know();
+      }
+      await tester.pump();
+      expect(played.playing, isTrue, reason: 'setup: the front sound plays');
 
       await study.close();
 
-      expect(played.stops, 1);
+      expect(played.playing, isFalse);
+    });
+
+    testWidgets(
+      'answering onto a card with no sound stops the sound of the card that left',
+      (tester) async {
+        final played = FakeAudioPlayback();
+        final study = await _open(
+          tester,
+          ['heard', 'silent'],
+          sides: sides,
+          playback: played,
+        );
+        while (current(tester) != 'heard') {
+          await study.know();
+        }
+        await tester.pump();
+        expect(played.playing, isTrue, reason: 'setup: the front sound plays');
+
+        await study.know();
+
+        expect(played.plays, [frontSound.media], reason: 'nothing else played');
+        expect(played.playing, isFalse);
+      },
+    );
+
+    testWidgets('the app pausing stops a sound still playing', (tester) async {
+      final played = FakeAudioPlayback();
+      final study = await _open(tester, names, sides: sides, playback: played);
+      while (current(tester) != 'heard') {
+        await study.know();
+      }
+      await tester.pump();
+      expect(played.playing, isTrue, reason: 'setup: the front sound plays');
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+
+      expect(played.playing, isFalse);
+      // Control: coming back plays nothing by itself.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(played.playing, isFalse);
+      await study.close();
     });
   });
 }

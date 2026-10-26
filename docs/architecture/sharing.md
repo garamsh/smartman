@@ -38,7 +38,7 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 - "내 덱으로 가져오기" opens a sheet: "새 덱으로", the default, creates a deck named after the public one; "기존 덱에 추가" takes one of the user's decks and a duplicate option, "건너뛰기" by default, or "뒷면 합치기" or "새 카드로 추가".
 - A copy reads every live card of the deck, calls `record_deck_copy`, which counts the user's first copy of the deck and no later one, and refuses with `DeckNoLongerPublic` when the deck is no longer public. It then saves through `DeckRepository.addCards` with `FromCopy`, so each added card is an ordinary card with `source = copy` and `origin_deck_id`, and the duplicate rule of [`deck.md`](deck.md) applies. A copy into a new deck adds every card, duplicates included. Nothing links the copy to the source afterwards.
 - Copies hold each side's blocks, as imports do, a photo's image block and a sound's audio block with the owner's media id among them. A copy does not carry the public deck's image ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
-- Any signed-in user may read, from the private `media` bucket, the image of a deck the server shows as public, and each photo and sound a live card of such a deck holds, on its front or back, and no other file of its owner's ([ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md)). So a copier reads a copied card's photo from the owner's folder while the owner's card stays in a public deck that is not hidden or deleted, and sees the frame and its boxes after ([ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md)). The browse screen and the preview draw no deck tile, so the app reads none there yet.
+- Any signed-in user may read, from the private `media` bucket, the image of a deck the server shows as public, and each photo and sound a live card of such a deck holds, on its front or back, and no other file of its owner's ([ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md)). The browse screen and the preview draw no deck tile, so the app reads none there yet.
 
 ### Reporting and blocking
 
@@ -84,5 +84,6 @@ The `sharing` domain: publishing a deck, and browsing, previewing, copying, repo
 
 ## Open questions
 
+- Whether a copier's app can read a copied card's photo or sound. The server lets any signed-in user read it from the owner's folder while the owner's card stays in a public deck that is not hidden or deleted, but the app's download reads only the signed-in user's own folder, so it does not yet. [#428](https://github.com/garamsh/smartman/issues/428) owns the fix, which copies the files into the copier's own media when the deck is copied.
 - Whether the browse screen should page beyond its first 100 decks. No listing holds that many yet.
 - Whether a user should be able to see and undo their blocks. No screen lists them today.

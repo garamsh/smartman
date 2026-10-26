@@ -117,14 +117,22 @@ class FakeAudioPlayback implements AudioPlayback {
   /// How many times playback was stopped.
   int stops = 0;
 
+  /// Whether a sound plays now: started by a play that could play it, and
+  /// not stopped since.
+  bool playing = false;
+
   @override
   Future<bool> play(MediaId id) async {
     plays.add(id);
+    playing = playable;
     return playable;
   }
 
   @override
-  Future<void> stop() async => stops++;
+  Future<void> stop() async {
+    stops++;
+    playing = false;
+  }
 }
 
 /// A recorder that hands out [next] when stopped, or throws [failure] when

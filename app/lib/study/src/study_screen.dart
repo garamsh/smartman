@@ -12,7 +12,6 @@ import '../../design/app_chip.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
-import '../../media/media.dart';
 import 'autoplay.dart';
 import 'completion_card.dart';
 import 'current_card.dart';
@@ -23,6 +22,7 @@ import 'previous_card.dart';
 import 'previous_placeholder.dart';
 import 'rust/api/engine.dart';
 import 'session.dart';
+import 'stop_sound.dart';
 import 'study_style.dart';
 
 /// The study coach's steps: answering "Know", answering "Don't know", and
@@ -113,9 +113,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     )..addListener(_onSession);
     // An answer counts only the time the app is resumed.
     _lifecycle = AppLifecycleListener(
-      onStateChange: (state) => state == AppLifecycleState.resumed
-          ? _session.resume()
-          : _session.pause(),
+      onStateChange: (state) {
+        if (state == AppLifecycleState.resumed) {
+          _session.resume();
+        } else {
+          // A sound does not play on in the background.
+          stopSound(_providers);
+          _session.pause();
+        }
+      },
     );
   }
 
@@ -138,10 +144,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
 
   @override
   void dispose() {
-    // A player no card started is not made to stop it.
-    if (_providers.exists(audioPlaybackProvider)) {
-      unawaited(_providers.read(audioPlaybackProvider).stop());
-    }
+    stopSound(_providers);
     _resumeTimer?.cancel();
     _demo.dispose();
     _lifecycle.dispose();

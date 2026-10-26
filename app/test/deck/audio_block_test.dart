@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/media/media.dart';
@@ -295,6 +296,36 @@ void main() {
           reason: 'the second file picked',
         );
         expect(await released(tester), {'sound0'}, reason: 'removed unsaved');
+      },
+    );
+
+    testWidgets(
+      'while one sound block records, Record is off in every other block, and on again once it has stopped',
+      (tester) async {
+        await openWithSoundBlock(tester);
+        await tapVisible(tester, find.text('Add to front'));
+        await tapVisible(tester, find.text('Sound').last);
+        final record = find.widgetWithText(AppButton, 'Record');
+        bool enabled(int at) =>
+            tester.widget<AppButton>(record.at(at)).onPressed != null;
+        expect(record, findsNWidgets(2), reason: 'setup: two sound blocks');
+        expect([enabled(0), enabled(1)], [true, true], reason: 'control');
+
+        await tapVisible(tester, record.first);
+        expect(recording.starts, 1);
+        expect(find.text('Stop recording'), findsOneWidget);
+        expect(record, findsOneWidget, reason: 'the other block');
+        expect(enabled(0), isFalse);
+        await tester.tap(record, warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(recording.starts, 1, reason: 'the other block did not record');
+
+        await tapVisible(tester, find.text('Stop recording'));
+        await stored(tester);
+        expect(recording.stops, 1);
+        expect(enabled(0), isTrue);
+        await tapVisible(tester, record.first);
+        expect(recording.starts, 2, reason: 'free again once stopped');
       },
     );
 

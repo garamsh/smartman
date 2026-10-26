@@ -84,6 +84,30 @@ class AudioDraft {
 /// Why a sound block's fields show a line under them.
 enum _Problem { unreadable, tooLarge, microphone }
 
+/// The sound block that holds the recorder, null while none does. The
+/// device has one recorder, so "녹음" is off in every other block until the
+/// holder has stopped (ADR 0112).
+final recordingBlockProvider = NotifierProvider<RecordingBlock, Object?>(
+  RecordingBlock.new,
+);
+
+class RecordingBlock extends Notifier<Object?> {
+  @override
+  Object? build() => null;
+
+  /// Whether [block] now holds the recorder: it did, or no block did.
+  bool claim(Object block) {
+    if (state != null && state != block) return false;
+    state = block;
+    return true;
+  }
+
+  /// Lets go of the recorder, if [block] holds it.
+  void release(Object block) {
+    if (state == block) state = null;
+  }
+}
+
 /// A sound block's fields: "녹음하기" and "파일에서 고르기" until a sound is
 /// in it; while recording, the time so far against the limit and
 /// "녹음 끝내기", which the limit presses itself; then the sound's play
@@ -118,15 +142,20 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
   int? _recorded;
   Timer? _tick;
   late final AudioRecording _recording = ref.read(audioRecordingProvider);
+  late final RecordingBlock _recorder = ref.read(
+    recordingBlockProvider.notifier,
+  );
 
   @override
   void dispose() {
     _tick?.cancel();
     if (_recorded != null) unawaited(_recording.cancel());
+    _recorder.release(this);
     super.dispose();
   }
 
   Future<void> _record() async {
+    if (!_recorder.claim(this)) return;
     setState(() {
       _busy = true;
       _problem = null;
@@ -149,6 +178,8 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
     } on MediaUnreadable {
       if (mounted) setState(() => _problem = _Problem.unreadable);
     } finally {
+      // A recording under way keeps the recorder.
+      if (_recorded == null) _recorder.release(this);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -197,6 +228,7 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
     } on MediaUnreadable {
       if (mounted) setState(() => _problem = _Problem.unreadable);
     } finally {
+      _recorder.release(this);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -213,6 +245,11 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
     final error = AppType.caption.copyWith(color: colors.dontKnowText);
     final audio = widget.draft.audio;
     final recorded = _recorded;
+    // Another block holds the one recorder.
+    final recorderTaken = switch (ref.watch(recordingBlockProvider)) {
+      final holder? => holder != this,
+      null => false,
+    };
     final problem = switch (_problem) {
       _Problem.unreadable => l10n.audioUnreadable,
       _Problem.tooLarge => l10n.audioTooLarge(maxAudioDuration.inSeconds),
@@ -249,7 +286,7 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
                   label: l10n.audioRecordAgain,
                   icon: LucideIcons.mic,
                   variant: AppButtonVariant.secondary,
-                  onPressed: _busy ? null : _record,
+                  onPressed: _busy || recorderTaken ? null : _record,
                 ),
               ),
               Expanded(
@@ -277,7 +314,7 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
                   label: l10n.audioRecord,
                   icon: LucideIcons.mic,
                   variant: AppButtonVariant.secondary,
-                  onPressed: _busy ? null : _record,
+                  onPressed: _busy || recorderTaken ? null : _record,
                 ),
               ),
               Expanded(

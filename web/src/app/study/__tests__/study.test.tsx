@@ -1486,10 +1486,18 @@ describe("the study page", () => {
     let signed: string[][];
     /** The address each play started from. */
     let played: string[];
+    /** The address each pause was asked of. */
+    let paused: string[];
 
     beforeEach(() => {
       signed = [];
       played = [];
+      paused = [];
+      vi.spyOn(window.HTMLMediaElement.prototype, "pause").mockImplementation(function (
+        this: HTMLMediaElement,
+      ) {
+        paused.push(this.src);
+      });
       vi.spyOn(window.HTMLMediaElement.prototype, "play").mockImplementation(function (
         this: HTMLMediaElement,
       ) {
@@ -1561,6 +1569,22 @@ describe("the study page", () => {
 
       expect(played).toEqual([]);
       expect(within(current).getByText("소리를 재생하지 못했어요")).toBeInTheDocument();
+    });
+
+    it("pauses a sound still playing when its card leaves", async () => {
+      signEach();
+      await open("d1");
+      const user = userEvent.setup();
+      const current = screen.getByRole("region", { name: "현재 카드" });
+      await user.click(within(current).getByRole("button", { name: "소리 듣기" }));
+      expect(played).toEqual([`${signPath}/${testUser.id}/m1?token=t`]);
+      expect(paused, "setup: still on the card").toEqual([]);
+
+      await user.keyboard("{ArrowRight}");
+      // The answered card stacks up, so the answer has been taken.
+      await within(cards()).findByRole("button", { name: "카드 전체 보기" });
+
+      expect(paused).toEqual([`${signPath}/${testUser.id}/m1?token=t`]);
     });
   });
 
