@@ -39,7 +39,11 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **Validation.** Every listed block must be complete, as its form requires.
   - A 자유 card needs a block on its front.
   - It needs one on its back unless it holds a blank, which means it is studied on one face.
-- **Drawing.** The editor's preview and study draw by `oneFaceOf`, never by the template. A card with a blank is shown on that face, and any other card front then back. Each side's blocks are drawn in order and fitted to their half.
+- **Drawing.** The editor's preview and study draw by `oneFaceOf`, never by the template. A card with a blank is shown on one face, and any other card front then back. Each side's blocks are drawn in order and fitted to their half.
+- **The one face of a card whose back alone holds a blank** is its front's blocks followed by its back's. The front stays the prompt, and the back's blanks are filled in place once answered. An empty front adds nothing, so such a card shows its back alone.
+  - This refines ADR 0106's "the side that holds the blank" for this case only.
+  - A front that holds a blank is still the one face, as ADR 0068's cloze and table cards rely on. A card with no blank is still studied front then back.
+  - No form could make such a card before this decision. With 자유 and the add control, a 글 question on the front and a 빈칸 문장 on the back take two taps, and showing the back alone would hide the question (review of #407).
 
 ## Consequences
 
@@ -52,4 +56,4 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - Users add blocks to 앞뒤 cards more often than they pick 자유. That would mean the forms should be block lists too.
 - A form absorbs a block the user added, such as a 글 after a back's senses read as "덧붙인 내용". That would ask for a stored mark on added blocks.
-- Cards with a blank only on their back confuse users because study hides their front. That would ask to revisit ADR 0106's one-face rule.
+- Learners of cards with a blank only on their back expect the front and the back as two faces, not one. That would ask for a front-then-back drawing with the back's blanks filled when the back shows.
