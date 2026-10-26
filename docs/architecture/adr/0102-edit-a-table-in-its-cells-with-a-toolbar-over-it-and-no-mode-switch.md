@@ -1,6 +1,6 @@
 # ADR 0102: Edit a table in its cells, with a toolbar over it and no mode switch
 
-> Status: accepted
+> Status: accepted; its "빈칸" toggle refined by [ADR 0110](0110-blank-a-span-of-a-table-cell-s-text-stored-at-table-block-v2-beside-whole-cell-blanks.md)
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
