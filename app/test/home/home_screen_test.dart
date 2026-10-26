@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
 import 'package:smartman/home/src/home_screen.dart';
@@ -516,6 +517,22 @@ void main() {
         // streak.
         // The today card's chip and the last seven days' line.
         expect(find.text('1-day streak'), findsNWidgets(2));
+        // The chip's flame burns at the streak's stage.
+        final chip = find.ancestor(
+          of: find.text('1-day streak').first,
+          matching: find.byType(Row),
+        );
+        expect(
+          tester
+              .widget<StreakFlame>(
+                find.descendant(
+                  of: chip.first,
+                  matching: find.byType(StreakFlame),
+                ),
+              )
+              .days,
+          1,
+        );
 
         await list.tap('Study all');
 
