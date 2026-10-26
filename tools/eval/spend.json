@@ -85,6 +85,16 @@
       "date": "2026-10-26",
       "spentUsd": 0.1923,
       "note": "two-stage eval (#414); BYOK: OpenRouter reported cost 0, spend is the summed upstream_inference_cost of the run's 86 successful calls (PM, 2026-10-27)"
+    },
+    {
+      "date": "2026-10-26",
+      "spentUsd": 0.008426,
+      "note": "two-stage eval preflight (#414)"
+    },
+    {
+      "date": "2026-10-26",
+      "spentUsd": 5.151632,
+      "note": "two-stage eval (#414); includes configuration A's $0.191271, which the run recorded as 0 because run.ts priced BYOK replies by usage.cost alone before #419 (PM, 2026-10-27)"
     }
   ]
 }
