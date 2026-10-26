@@ -200,7 +200,7 @@ export async function Today() {
             </p>
           </section>
           {week}
-          <EnterLink href={href} label="학습하기" primary />
+          <EnterLink href={href} label="학습하기" onGround />
           <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
         </div>
       </>
@@ -215,11 +215,11 @@ export async function Today() {
         <div className="grid gap-4 lg:grid-cols-2">
           <section
             aria-labelledby="today-title"
-            className="flex flex-col gap-4 rounded-card bg-hero p-6 text-on-hero shadow-card lg:col-span-2 lg:p-7"
+            className="flex flex-col gap-4 rounded-card bg-surface p-6 text-ink shadow-card lg:col-span-2 lg:p-7"
           >
             <div className="flex items-center gap-4">
               <span className="relative shrink-0">
-                <Mascot className="size-16 bg-surface" />
+                <Mascot className="size-16 bg-brand-tint" />
                 <span
                   aria-hidden
                   className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-tint-amber text-ink"
@@ -231,14 +231,14 @@ export async function Today() {
                 <h2 id="today-title" className="text-headline">
                   다시 시작하면 돼요
                 </h2>
-                <p className="text-secondary break-keep">
+                <p className="text-secondary break-keep text-muted">
                   밀린 복습 {total}장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.
                 </p>
               </div>
             </div>
             {streak > 0 && (
               <p className="flex flex-wrap items-center gap-2 text-secondary">
-                {streakChip("border border-on-hero/40")}
+                {streakChip("border border-outline")}
               </p>
             )}
             {/* A row, so the link keeps its row sizes inside the card's column. */}
@@ -259,21 +259,21 @@ export async function Today() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="today-title"
-          className="flex flex-col gap-4 rounded-card bg-hero p-6 text-on-hero shadow-card lg:col-span-2 lg:p-7"
+          className="flex flex-col gap-4 rounded-card bg-surface p-6 text-ink shadow-card lg:col-span-2 lg:p-7"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 text-secondary">
-            <h2 id="today-title" className="text-label font-normal">
+            <h2 id="today-title" className="text-label font-normal text-muted">
               오늘 할 카드
             </h2>
-            {streakChip("border border-on-hero/40")}
+            {streakChip("border border-outline")}
           </div>
           <div className="flex flex-wrap items-end justify-between gap-x-3">
             {/* The bar under it reads the same figures. */}
             <p id="today-count" aria-hidden>
               <span className="text-figure">{goal.done}</span>
-              <span className="text-headline text-on-hero/80"> / {goal.goal}장</span>
+              <span className="text-headline text-muted"> / {goal.goal}장</span>
             </p>
-            <p id="today-time" className="text-secondary">
+            <p id="today-time" className="text-secondary text-muted">
               약 {minutes}분{goal.done > 0 && " 남음"}
             </p>
           </div>
@@ -283,16 +283,16 @@ export async function Today() {
             aria-valuemin={0}
             aria-valuemax={goal.goal}
             aria-valuenow={goal.done}
-            className="h-progress overflow-hidden rounded-full bg-on-hero/20"
+            className="h-progress overflow-hidden rounded-full bg-hairline"
           >
             <div
-              className="h-full rounded-full bg-on-hero"
+              className="h-full rounded-full bg-ink"
               style={{ width: `${String(goal.goal === 0 ? 0 : (goal.done / goal.goal) * 100)}%` }}
             />
           </div>
           <p className="flex flex-wrap items-center gap-2 text-secondary">
-            <span className="break-keep">{statusLine(todayStatus(goal, streak))}</span>
-            {extraPill("border border-on-hero/40")}
+            <span className="break-keep text-muted">{statusLine(todayStatus(goal, streak))}</span>
+            {extraPill("border border-outline")}
           </p>
           {/* A row, so the link keeps its row sizes inside the card's column. */}
           <div className="flex flex-wrap">

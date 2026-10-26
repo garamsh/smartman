@@ -4,37 +4,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { contrast, layered, themes } from "@/testing/contrast";
+
 const globalsCss = readFileSync(path.join(import.meta.dirname, "../globals.css"), "utf8");
-
-/** The `--color-*` tokens of a CSS block, by name. */
-function colours(block: string): Map<string, string> {
-  return new Map(
-    [...block.matchAll(/--color-([\w-]+):\s*(#[0-9a-f]{6});/g)].map(([, name, hex]) => [
-      String(name),
-      String(hex),
-    ]),
-  );
-}
-
-const themes = {
-  light: colours(/@theme \{([^}]*)\}/.exec(globalsCss)?.[1] ?? ""),
-  dark: colours(/:root\[data-theme="dark"\] \{([^}]*--color[^}]*)\}/.exec(globalsCss)?.[1] ?? ""),
-};
-
-/** WCAG 2.2's relative luminance of #rrggbb. */
-function luminance(hex: string): number {
-  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((at) => {
-    const channel = parseInt(hex.slice(at, at + 2), 16) / 255;
-    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-/** WCAG 2.2's contrast ratio between two colours. */
-function contrast(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
-}
 
 /**
  * The text and its ground on the login, account and empty home pages and the shell's menus and
@@ -53,8 +25,9 @@ const pairs: [string, string, string][] = [
   ["the side menu's other pages on the surface", "ink-2", "surface"],
   ["the side menu's current page on its tint", "ink", "brand-tint"],
   ["the tab bar's other pages on the surface", "muted", "surface"],
-  ["the today card's text on the navy", "on-hero", "hero"],
-  ["the today card's button on white", "brand", "on-hero"],
+  ["the today, backlog and deck page cards' figures and pills on the surface", "ink", "surface"],
+  ["the today, backlog and deck page cards' quiet text on the surface", "muted", "surface"],
+  ["the today, backlog and deck page cards' buttons on the navy fill", "on-primary", "ink"],
   ["the done card's heading on its tint", "ink", "brand-tint"],
   ["the done card's next review on its tint", "ink-2", "brand-tint"],
   ["the done card's pills on the surface", "ink", "surface"],
@@ -105,8 +78,8 @@ const studyMarks: [string, string, string][] = [
   ["the 안다 chip on the ground", "know", "ground"],
   ["the 모른다 chip on its card", "dont-know-text", "dont-know-card"],
   ["the 모른다 chip on the ground", "dont-know-text", "ground"],
-  ["the streak's flame on the completion card", "streak", "surface"],
-  ["the streak's flame on the 오늘 page's navy cards", "streak", "hero"],
+  ["the streak's flame on the completion card and the 오늘 page's cards", "streak", "surface"],
+  ["the today card's bar on its hairline track", "ink", "hairline"],
   ["the catch-up's amber bars on the surface", "streak", "surface"],
   ["the goal reached check on the done card's pill", "know", "surface"],
   ["the backlog card's check on its amber disc", "ink", "tint-amber"],
@@ -129,19 +102,6 @@ describe("the study screen's grades, answer buttons and streak", () => {
   );
 });
 
-/** [ground] with [layer] laid over it at [share], as a translucent layer composites in sRGB. */
-function layered(ground: string, layer: string, share: number): string {
-  return `#${[1, 3, 5]
-    .map((at) => {
-      const under = parseInt(ground.slice(at, at + 2), 16);
-      const over = parseInt(layer.slice(at, at + 2), 16);
-      return Math.round(under * (1 - share) + over * share)
-        .toString(16)
-        .padStart(2, "0");
-    })
-    .join("")}`;
-}
-
 /** The share of a control's text colour that `.pressable` lays over its fill on hover and press. */
 const stateShare =
   Number(/--state-layer: color-mix\(in srgb, currentColor (\d+)%/.exec(globalsCss)?.[1]) / 100;
@@ -155,7 +115,6 @@ const statePairs: [string, string, string, string][] = [
   ["an admin navy button's label", "surface", "ink", "surface"],
   ["an outlined button's label on the surface", "ink", "surface", "ink"],
   ["an outlined admin button's label on the ground", "ink", "ground", "ink"],
-  ["모두 학습 on white", "brand", "on-hero", "brand"],
   ["the side menu's other pages", "ink-2", "surface", "ink-2"],
   ["the menus' current page on its tint", "ink", "brand-tint", "ink"],
   ["the tab bar's other pages", "muted", "surface", "muted"],
