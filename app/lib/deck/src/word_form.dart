@@ -84,6 +84,7 @@ class SenseFields extends StatelessWidget {
     required this.senses,
     required this.showErrors,
     required this.onChanged,
+    this.meaningLabel,
   });
 
   final List<SenseDraft> senses;
@@ -91,6 +92,10 @@ class SenseFields extends StatelessWidget {
 
   /// Called after every change to [senses], which this widget makes in place.
   final VoidCallback onChanged;
+
+  /// The label of the one meaning's field while there is one sense; "뒷면"
+  /// when null.
+  final String? meaningLabel;
 
   void _move(int from, int to) {
     senses.insert(to, senses.removeAt(from));
@@ -112,6 +117,7 @@ class SenseFields extends StatelessWidget {
             key: ObjectKey(sense),
             sense: sense,
             number: single ? null : index + 1,
+            meaningLabel: meaningLabel,
             showError: showErrors && sense.isBlank,
             onUp: index == 0 ? null : () => _move(index, index - 1),
             onDown: index == senses.length - 1
@@ -153,6 +159,7 @@ class _SenseRow extends StatelessWidget {
     required this.onDown,
     required this.onDelete,
     required this.onChanged,
+    this.meaningLabel,
   });
 
   final SenseDraft sense;
@@ -162,6 +169,7 @@ class _SenseRow extends StatelessWidget {
   final VoidCallback? onDown;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
+  final String? meaningLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +229,7 @@ class _SenseRow extends StatelessWidget {
             Expanded(
               child: AppTextField(
                 label: number == null
-                    ? l10n.cardBack
+                    ? meaningLabel ?? l10n.cardBack
                     : l10n.senseHeading(number),
                 controller: sense.meaning,
                 minLines: number == null ? 2 : 1,

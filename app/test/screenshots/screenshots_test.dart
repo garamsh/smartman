@@ -969,6 +969,55 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('the free template in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('영단어 기본'),
+      ))!;
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardEditorScreen(deck: deck),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.cardKindFree));
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), '이 근처에 약국이 있나요?');
+      await tester.enterText(fields.at(1), 'Is there a pharmacy near here?');
+      await tester.pumpAndSettle();
+      await shot(tester, '05r-card-editor-free');
+      await tester.ensureVisible(find.text(ko.addToBack));
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.addToBack));
+      await shot(tester, '05s-card-editor-add-sheet');
+      await tap(tester, find.text(ko.blockSenses).last);
+      await tester.ensureVisible(find.text(ko.addToBack));
+      await tester.pumpAndSettle();
+      await shot(tester, '05t-card-editor-free-senses');
+      await unmount(tester);
+    });
+
     testWidgets('the cloze form in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());

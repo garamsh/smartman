@@ -435,12 +435,21 @@ void main() {
       }
     });
 
-    test('a cloze or a table anywhere makes one face, the side that holds '
-        'it, the front first', () {
+    test('a cloze or a table on the front makes the front the one face', () {
       for (final block in <Content>[cloze, table]) {
         expect(oneFaceOf([text, block], [text]), [text, block]);
-        expect(oneFaceOf([text], [senses, block]), [senses, block]);
         expect(oneFaceOf([block], [block]), [block], reason: 'front first');
+      }
+    });
+
+    test('a cloze or a table on the back alone makes one face of the front '
+        'followed by the back (ADR 0108)', () {
+      for (final block in <Content>[cloze, table]) {
+        expect(oneFaceOf([text], [senses, block]), [text, senses, block]);
+        expect(oneFaceOf(const [], [senses, block]), [
+          senses,
+          block,
+        ], reason: 'an empty front adds nothing');
       }
     });
   });

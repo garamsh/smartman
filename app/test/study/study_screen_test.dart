@@ -1024,6 +1024,127 @@ void main() {
     );
   });
 
+  testWidgets(
+    'a card of mixed blocks is drawn in order: the current card stacks its front\'s blocks, and once answered each side runs in its half',
+    (tester) async {
+      final study = await _open(
+        tester,
+        ['mixed'],
+        sides: {
+          'mixed': (
+            const [
+              TextContent('apple'),
+              SensesContent([CardSense(meaning: 'fruit')]),
+            ],
+            const [
+              TextContent('사과'),
+              SensesContent([CardSense(meaning: '능금')]),
+            ],
+          ),
+        },
+      );
+      Finder under(Finder card, String text) => find.descendant(
+        of: card,
+        matching: find.textContaining(text, findRichText: true),
+      );
+      final apple = tester.getRect(under(_currentCard, 'apple').first);
+      final fruit = tester.getRect(under(_currentCard, 'fruit').first);
+      expect(fruit.top, greaterThanOrEqualTo(apple.bottom));
+
+      await study.know();
+      for (final text in ['apple', 'fruit', '사과', '능금']) {
+        expect(under(_previousCard, text), findsWidgets, reason: text);
+      }
+      final front = tester.getRect(under(_previousCard, 'fruit').first);
+      final back = tester.getRect(under(_previousCard, '능금').first);
+      expect(
+        back.left,
+        greaterThan(front.left),
+        reason: 'the back on the right',
+      );
+    },
+  );
+
+  testWidgets(
+    'a card whose back alone holds a blank is studied on one face, its front as the prompt above its back\'s table',
+    (tester) async {
+      await _open(
+        tester,
+        ['back'],
+        sides: {
+          'back': (
+            const [TextContent('Capitals')],
+            const [
+              TextContent('Capitals of Europe'),
+              TableContent(
+                columns: ['Capital', 'Country'],
+                rows: [
+                  ['Paris', 'France'],
+                ],
+                blanks: [(row: 0, column: 0)],
+              ),
+            ],
+          ),
+        },
+      );
+      expect(
+        find.descendant(of: _currentCard, matching: find.byType(Table)),
+        findsOneWidget,
+      );
+      final back = find.descendant(
+        of: _currentCard,
+        matching: find.text('Capitals of Europe'),
+      );
+      expect(back, findsOneWidget);
+      final prompt = find.descendant(
+        of: _currentCard,
+        matching: find.text('Capitals'),
+      );
+      expect(prompt, findsOneWidget, reason: 'the front stays the prompt');
+      expect(
+        tester.getRect(prompt).bottom,
+        lessThanOrEqualTo(tester.getRect(back).top),
+        reason: 'the front first',
+      );
+    },
+  );
+
+  testWidgets(
+    'a card with an empty front and a blank on its back is studied on its back alone',
+    (tester) async {
+      await _open(
+        tester,
+        ['empty'],
+        sides: {
+          'empty': (
+            const <Content>[],
+            const [
+              TextContent('Capitals of Europe'),
+              TableContent(
+                columns: ['Capital', 'Country'],
+                rows: [
+                  ['Paris', 'France'],
+                ],
+                blanks: [(row: 0, column: 0)],
+              ),
+            ],
+          ),
+        },
+      );
+      expect(
+        find.descendant(of: _currentCard, matching: find.byType(Table)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: _currentCard,
+          matching: find.text('Capitals of Europe'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   for (final (mode, colors) in [
     (ThemeMode.light, AppColors.light),
     (ThemeMode.dark, AppColors.dark),

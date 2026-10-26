@@ -326,6 +326,90 @@ abstract class AppLocalizations {
   /// **'표'**
   String get cardKindTable;
 
+  /// The card editor's kind switch: a card whose sides are each a list of blocks of any type (ADR 0108).
+  ///
+  /// In ko, this message translates to:
+  /// **'자유'**
+  String get cardKindFree;
+
+  /// The card editor's button under the front's blocks, and the title of the sheet of block types it opens.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면에 추가'**
+  String get addToFront;
+
+  /// The card editor's button under the back's blocks, and the title of the sheet of block types it opens.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒷면에 추가'**
+  String get addToBack;
+
+  /// A text block's type, in the add sheet and over the block in the card editor.
+  ///
+  /// In ko, this message translates to:
+  /// **'글'**
+  String get blockText;
+
+  /// The line under 글 in the add sheet, and the hint of a text block's field.
+  ///
+  /// In ko, this message translates to:
+  /// **'단어, 문장, 설명'**
+  String get blockTextDescription;
+
+  /// A senses block's type, in the add sheet and over the block in the card editor.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻 목록'**
+  String get blockSenses;
+
+  /// The line under 뜻 목록 in the add sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'품사 표시와 뜻 여러 개'**
+  String get blockSensesDescription;
+
+  /// A table block's type, in the add sheet and over the block in the card editor.
+  ///
+  /// In ko, this message translates to:
+  /// **'표'**
+  String get blockTable;
+
+  /// The line under 표 in the add sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'칸을 빈칸으로 바꿀 수 있어요'**
+  String get blockTableDescription;
+
+  /// A cloze block's type, in the add sheet and over the block in the card editor.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 문장'**
+  String get blockCloze;
+
+  /// The line under 빈칸 문장 in the add sheet, and the hint of a cloze block's line.
+  ///
+  /// In ko, this message translates to:
+  /// **'문장 속 단어를 가리기'**
+  String get blockClozeDescription;
+
+  /// Screen-reader name of a block's menu in the card editor, which moves it up or down or deletes it.
+  ///
+  /// In ko, this message translates to:
+  /// **'{side} {number}번째 블록 메뉴'**
+  String blockMenu(String side, int number);
+
+  /// Item of a block's menu in the card editor that removes the block.
+  ///
+  /// In ko, this message translates to:
+  /// **'지우기'**
+  String get deleteBlock;
+
+  /// Error under a side of a 자유 card on save while that side holds no block and the card must show it.
+  ///
+  /// In ko, this message translates to:
+  /// **'블록을 하나 이상 넣어 주세요'**
+  String get sideBlockRequired;
+
   /// Hint in the front field of the table form, where the table's name is written.
   ///
   /// In ko, this message translates to:
@@ -482,13 +566,13 @@ abstract class AppLocalizations {
   /// **'{label} 순서 옮기기'**
   String moveLabelPreset(String label);
 
-  /// Item of a preset's handle menu that moves it up one place.
+  /// Item of a preset's handle menu, or of a block's menu in the card editor, that moves it up one place.
   ///
   /// In ko, this message translates to:
   /// **'위로'**
   String get moveUp;
 
-  /// Item of a preset's handle menu that moves it down one place.
+  /// Item of a preset's handle menu, or of a block's menu in the card editor, that moves it down one place.
   ///
   /// In ko, this message translates to:
   /// **'아래로'**

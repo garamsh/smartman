@@ -169,6 +169,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardKindTable => 'Table';
 
   @override
+  String get cardKindFree => 'Free';
+
+  @override
+  String get addToFront => 'Add to front';
+
+  @override
+  String get addToBack => 'Add to back';
+
+  @override
+  String get blockText => 'Text';
+
+  @override
+  String get blockTextDescription => 'A word, a sentence or a note';
+
+  @override
+  String get blockSenses => 'Meanings';
+
+  @override
+  String get blockSensesDescription => 'Labels and one or more meanings';
+
+  @override
+  String get blockTable => 'Table';
+
+  @override
+  String get blockTableDescription => 'Cells can be made blanks';
+
+  @override
+  String get blockCloze => 'Cloze sentence';
+
+  @override
+  String get blockClozeDescription => 'Hide words in a sentence';
+
+  @override
+  String blockMenu(String side, int number) {
+    return '$side block $number menu';
+  }
+
+  @override
+  String get deleteBlock => 'Delete';
+
+  @override
+  String get sideBlockRequired => 'Add at least one block';
+
+  @override
   String get tableNameHint => 'The table\'s name';
 
   @override
