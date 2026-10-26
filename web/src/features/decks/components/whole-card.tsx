@@ -1,10 +1,11 @@
-import { type Content, type ImageBox, clozeBlank, isBlank, spokenContent } from "../card-content";
+import { type Content, type ImageBox, cellRuns, clozeBlank, spokenContent } from "../card-content";
 import { SensesText } from "./side-text";
 
 /**
  * A whole card's front, its blocks in order: a text block as its title, a cloze as its sentence,
  * a table as its table and a photo as its frame with its boxes, with each blank empty, or filled
- * in place when [revealed] (ADR 0068, ADR 0109). The web reads no photo from the bucket yet, so
+ * in place when [revealed] (ADR 0068, ADR 0109), a table's span inside its cell's text
+ * (ADR 0110). The web reads no photo from the bucket yet, so
  * the frame is drawn on the ground at the photo's aspect ratio. An empty blank keeps its
  * answer's width, so filling it moves nothing. It reads as
  * `spokenContent` says, blanks as "빈칸" until revealed. It is spans throughout, so a button can
@@ -64,15 +65,17 @@ export function WholeCard({
                   </span>
                 ))}
                 {block.rows.flatMap((cells, row) =>
-                  cells.map((cell, column) => (
+                  cells.map((_, column) => (
                     <span
                       key={`${String(row)}-${String(column)}`}
                       className={`border-r border-b border-outline px-2 py-1 ${column === 0 ? "font-bold" : ""}`}
                     >
-                      {isBlank(block.blanks, row, column) ? (
-                        <Blank answer={cell} revealed={revealed} />
-                      ) : (
-                        cell
+                      {cellRuns(block, row, column).map((run, at) =>
+                        run.blank ? (
+                          <Blank key={at} answer={run.text} revealed={revealed} />
+                        ) : (
+                          <span key={at}>{run.text}</span>
+                        ),
                       )}
                     </span>
                   )),

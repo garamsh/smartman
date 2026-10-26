@@ -2,8 +2,8 @@
  * One block of a card side, as the phone stores it: a `{type, v, id, payload}` object in the
  * side's JSON array (`deck.md`), its kind the `type` and its version the `v`, read as 1 when
  * absent (ADR 0106). A text block; a cloze, its text writing each blank as `___` with what fills
- * each, in order; or a table, its column headers, its rows of cells and the cells to recall
- * (ADR 0068); or a vocabulary entry's senses (ADR 0075); or a photo by its media id, with its
+ * each, in order; or a table, its column headers, its rows of cells, the cells to recall whole
+ * (ADR 0068) and the runs of cells' text to recall (ADR 0110); or a vocabulary entry's senses (ADR 0075); or a photo by its media id, with its
  * intrinsic size and the boxes over it (ADR 0109). A block of another type, or of a known
  * type at a version above the one this build reads, is shown as a placeholder naming it, so a
  * card a later version wrote is shown, not lost; the web never writes a card, so it stays as
@@ -12,7 +12,13 @@
 export type Content =
   | { kind: "text"; text: string }
   | { kind: "cloze"; text: string; answers: string[] }
-  | { kind: "table"; columns: string[]; rows: string[][]; blanks: TableBlank[] }
+  | {
+      kind: "table";
+      columns: string[];
+      rows: string[][];
+      blanks: TableBlank[];
+      spans: CellSpan[];
+    }
   | { kind: "senses"; senses: Sense[] }
   | { kind: "image"; media: string; width: number; height: number; boxes: ImageBox[] }
   | { kind: "unsupported"; type: string };
@@ -73,8 +79,17 @@ export function senseLine(sense: Sense): string {
   return [...sense.labels.map((label) => `[${labelShown(label)}]`), sense.meaning].join(" ");
 }
 
-/** A cell of a table block's rows to recall: its row and column, each counted from 0. */
+/** A cell of a table block's rows to recall whole: its row and column, each counted from 0. */
 export type TableBlank = { row: number; column: number };
+
+/**
+ * A run of a table cell's text to recall: the cell's row and column, each counted from 0, and
+ * the run's start and end in the cell's UTF-16 code units, as the phone's `CellSpan` (ADR 0110).
+ */
+export type CellSpan = { row: number; column: number; start: number; end: number };
+
+/** A part of a table cell's text, and whether it is a blank. */
+export type CellRun = { text: string; blank: boolean };
 
 /** How a cloze's text writes each blank. */
 export const clozeBlank = "___";
@@ -84,12 +99,20 @@ type KnownType = "text" | "cloze" | "table" | "senses" | "image";
 /**
  * The steps that upgrade each known type's payload, one per version: the first turns a v1
  * payload into a v2 one, and so on, as the app's `blockUpcasters` does. The version a type is
- * read at is one more than its steps; every type is at v1 today.
+ * read at is one more than its steps: a table at v2, every other type at v1.
  */
+/**
+ * A v1 table's payload as v2's: its blanks stay whole cells, and it holds no span (ADR 0110).
+ * A payload that is not an object is left to fail parsing.
+ */
+function tableWithSpans(payload: unknown): unknown {
+  return isRecord(payload) ? { ...payload, spans: [] } : payload;
+}
+
 export const blockUpcasters: Record<KnownType, ((payload: unknown) => unknown)[]> = {
   text: [],
   cloze: [],
-  table: [],
+  table: [tableWithSpans],
   senses: [],
   image: [],
 };
@@ -137,15 +160,18 @@ function parseCloze(payload: Record<string, unknown>): Content | null {
 
 /**
  * A table of one or more columns and rows, each row as many cells as there are columns, and one
- * or more distinct blanks inside it, each on a cell that holds text; null otherwise.
+ * or more blanks inside it, whole cells and spans together: each whole cell distinct and holding
+ * text, and each span a run of a cell's text holding more than whitespace, overlapping no other
+ * span and in no whole cell (ADR 0110); null otherwise.
  */
 function parseTable(payload: Record<string, unknown>): Content | null {
-  const { columns, rows, blanks } = payload;
+  const { columns, rows, blanks, spans } = payload;
   if (!isStrings(columns) || columns.length === 0) return null;
   if (!Array.isArray(rows) || rows.length === 0) return null;
   if (!rows.every((row) => isStrings(row) && row.length === columns.length)) return null;
   const cells = rows as string[][];
-  if (!Array.isArray(blanks) || blanks.length === 0) return null;
+  if (!Array.isArray(blanks) || !Array.isArray(spans)) return null;
+  if (blanks.length === 0 && spans.length === 0) return null;
   const parsed: TableBlank[] = [];
   for (const blank of blanks as unknown[]) {
     if (!isRecord(blank)) return null;
@@ -154,10 +180,36 @@ function parseTable(payload: Record<string, unknown>): Content | null {
     const at = { row: row as number, column: column as number };
     // A cell outside the table reads as "", an empty cell, so this refuses both.
     if ((cells[at.row]?.[at.column] ?? "").trim() === "") return null;
-    if (parsed.some((seen) => seen.row === at.row && seen.column === at.column)) return null;
+    if (isBlank(parsed, at.row, at.column)) return null;
     parsed.push(at);
   }
-  return { kind: "table", columns, rows: cells, blanks: parsed };
+  const runs: CellSpan[] = [];
+  for (const span of spans as unknown[]) {
+    if (!isRecord(span)) return null;
+    const { row, column, start, end } = span;
+    if (![row, column, start, end].every(Number.isInteger)) return null;
+    const at = {
+      row: row as number,
+      column: column as number,
+      start: start as number,
+      end: end as number,
+    };
+    // A row or column outside the table, negative ones included, reads as undefined.
+    const cell = cells[at.row]?.[at.column];
+    if (cell === undefined || isBlank(parsed, at.row, at.column)) return null;
+    if (at.start < 0 || at.start >= at.end || at.end > cell.length) return null;
+    if (cell.slice(at.start, at.end).trim() === "") return null;
+    const overlaps = runs.some(
+      (seen) =>
+        seen.row === at.row &&
+        seen.column === at.column &&
+        seen.start < at.end &&
+        at.start < seen.end,
+    );
+    if (overlaps) return null;
+    runs.push(at);
+  }
+  return { kind: "table", columns, rows: cells, blanks: parsed, spans: runs };
 }
 
 function isPartOfSpeech(value: unknown): value is PartOfSpeech {
@@ -298,9 +350,35 @@ export function isWholeCard(front: Content[]): boolean {
   );
 }
 
-/** Whether a table block's cell at [row] and [column] is one to recall. */
-export function isBlank(blanks: TableBlank[], row: number, column: number): boolean {
+/** Whether a table block's cell at [row] and [column] is one to recall whole. */
+function isBlank(blanks: TableBlank[], row: number, column: number): boolean {
   return blanks.some((blank) => blank.row === row && blank.column === column);
+}
+
+/**
+ * A table block's cell at [row] and [column] as runs of its text, in order, as the phone's
+ * `cellRuns`: one blank run when it is a whole blank, its text split around its spans when it
+ * holds any, and otherwise one plain run.
+ */
+export function cellRuns(
+  table: Extract<Content, { kind: "table" }>,
+  row: number,
+  column: number,
+): CellRun[] {
+  const text = table.rows[row]?.[column] ?? "";
+  if (isBlank(table.blanks, row, column)) return [{ text, blank: true }];
+  const inCell = table.spans
+    .filter((span) => span.row === row && span.column === column)
+    .sort((a, b) => a.start - b.start);
+  const runs: CellRun[] = [];
+  let at = 0;
+  for (const span of inCell) {
+    if (at < span.start) runs.push({ text: text.slice(at, span.start), blank: false });
+    runs.push({ text: text.slice(span.start, span.end), blank: true });
+    at = span.end;
+  }
+  if (at < text.length || runs.length === 0) runs.push({ text: text.slice(at), blank: false });
+  return runs;
 }
 
 /** A cloze's text with each blank as [fill] gives it, in order. */
@@ -338,8 +416,8 @@ export function describeContent(blocks: Content[]): string {
 
 /**
  * A card side as a screen reader reads it, as on the phone: each blank as its answer only when
- * [revealed], else as "빈칸", a table row by row, its cells joined by commas, and the blocks as
- * sentences.
+ * [revealed], else as "빈칸", a table row by row, its cells joined by commas, a span in its
+ * cell's text, and the blocks as sentences.
  */
 export function spokenContent(blocks: Content[], revealed: boolean): string {
   const blank = (answer: string) => (revealed ? answer : "빈칸");
@@ -353,7 +431,11 @@ export function spokenContent(blocks: Content[], revealed: boolean): string {
             block.columns.join(", "),
             ...block.rows.map((cells, row) =>
               cells
-                .map((cell, column) => (isBlank(block.blanks, row, column) ? blank(cell) : cell))
+                .map((_, column) =>
+                  cellRuns(block, row, column)
+                    .map((run) => (run.blank ? blank(run.text) : run.text))
+                    .join(""),
+                )
                 .join(", "),
             ),
           ].join(". ");

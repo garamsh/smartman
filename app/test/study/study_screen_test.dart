@@ -2192,6 +2192,17 @@ void main() {
         blanks: [(row: 0, column: 0), (row: 1, column: 0)],
       ),
     ];
+    const spans = [
+      TextContent('초기 국가'),
+      TableContent(
+        columns: ['', '정치'],
+        rows: [
+          ['부여', '5부족 연맹체, 왕 아래 마가'],
+        ],
+        blanks: [],
+        spans: [(row: 0, column: 1, start: 0, end: 7)],
+      ),
+    ];
 
     Future<_Study> openWhole(
       WidgetTester tester,
@@ -2338,11 +2349,48 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a table card with a span blank draws it empty inside its cell\'s text, read as "blank", and once answered fills it in place, the rest of the cell the cue (ADR 0110)',
+      (tester) async {
+        final study = await openWhole(tester, spans);
+        // The cell's one line of text, the blank inside it.
+        Finder cellUnder(Finder card) => find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is RichText &&
+                RegExp(r'^\s*5부족 연맹체\s*, 왕 아래 마가$').hasMatch(
+                  widget.text.toPlainText().replaceAll(_wordJoiner, ''),
+                ),
+          ),
+        );
+        expect(blanksUnder(_currentCard), {'5부족 연맹체': false});
+        expect(
+          cellUnder(_currentCard),
+          findsOneWidget,
+          reason: 'empty inside the cell, the rest of it the cue',
+        );
+        expect(
+          _label(tester, _cardNode),
+          'Front: 초기 국가. , 정치. 부여, blank, 왕 아래 마가',
+        );
+
+        await study.know();
+
+        expect(blanksUnder(_previousCard), {'5부족 연맹체': true});
+        expect(
+          cellUnder(_previousCard),
+          findsOneWidget,
+          reason: 'filled in place, inside its cell',
+        );
+      },
+    );
+
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'in the ${mode.name} theme a cloze and a table card meet the contrast guideline before and after the answer',
+        'in the ${mode.name} theme a cloze and a table card, whole cells and spans, meet the contrast guideline before and after the answer',
         (tester) async {
-          for (final front in [cloze, table]) {
+          for (final front in [cloze, table, spans]) {
             final study = await openWhole(tester, front, themeMode: mode);
             await expectLater(tester, meetsGuideline(textContrastGuideline));
             await study.know();
