@@ -10,16 +10,12 @@ import 'package:smartman/design/theme.dart';
 
 import '../home/deck_screens.dart';
 import 'whole_cards.dart';
+import '../word_breaks.dart';
 
 /// The table form's [index]th field: the headers, then the cells row by row.
 Finder _cell(int index) => find
     .descendant(of: find.byType(TableFields), matching: find.byType(TextField))
     .at(index);
-
-/// A sheet's text reading [text], its word joiners left out.
-Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
-);
 
 /// The stored card, front and back.
 Future<Card> _stored(DeckScreens screens) async =>
@@ -202,7 +198,7 @@ void main() {
       // Row 1 holds text: it asks first, and cancelling keeps it.
       await select(screens, 3);
       await remove(screens, 'Delete row 1');
-      expect(_shown('Remove row 1?'), findsOneWidget);
+      expect(shownText('Remove row 1?'), findsOneWidget);
       await screens.tap(find.text('Cancel'));
       expect(tester.widget<TextField>(_cell(3)).controller!.text, 'France');
       await remove(screens, 'Delete row 1');
@@ -228,7 +224,7 @@ void main() {
       await screens.tap(find.text('Table'));
       await select(screens, 5);
       await remove(screens, 'Delete row 2');
-      expect(_shown('Remove row 2?'), findsNothing, reason: 'it was empty');
+      expect(shownText('Remove row 2?'), findsNothing, reason: 'it was empty');
       await select(screens, 3);
       await remove(screens, 'Delete column 2');
       // One heading and one cell are left.

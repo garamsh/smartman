@@ -36,6 +36,7 @@ import '../deck/whole_cards.dart';
 import '../media/fakes.dart';
 import 'fixtures.dart';
 import 'study_storage.dart';
+import '../word_breaks.dart';
 
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
@@ -504,12 +505,12 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester.getRect(_text(_placeholder)).bottom,
+        tester.getRect(shownText(_placeholder)).bottom,
         lessThan(tester.getRect(_currentCard).top),
       );
       expect(find.bySemanticsLabel(_placeholder), findsOneWidget);
       // No card, label or notice of an earlier session.
-      expect(_text(_earlier), findsNothing);
+      expect(shownText(_earlier), findsNothing);
       expect(find.textContaining('Picking up'), findsNothing);
 
       await study.know();
@@ -536,7 +537,7 @@ void main() {
       await tester.pump();
       const rise = '응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요';
       final paragraph = tester.renderObject<RenderParagraph>(
-        find.descendant(of: _text(rise), matching: find.byType(RichText)),
+        find.descendant(of: shownText(rise), matching: find.byType(RichText)),
       );
       final plain = paragraph.text.toPlainText();
       // The paragraph's own text laid out at its width, to read its lines.
@@ -577,7 +578,7 @@ void main() {
       // past them count apart once answered.
       expect(find.text('30/30'), findsOneWidget);
       expect(find.text('+1 extra'), findsNothing);
-      expect(_text(_earlier), findsOneWidget);
+      expect(shownText(_earlier), findsOneWidget);
       expect(find.byType(PreviousPlaceholder), findsNothing);
       // No card is left of the day's, so nothing goes on to announce.
       expect(find.textContaining('Picking up'), findsNothing);
@@ -586,7 +587,7 @@ void main() {
       expect(study.current, 'c31 front');
       expect(find.text('30/30'), findsOneWidget);
       expect(find.text('+1 extra'), findsOneWidget);
-      expect(_text(_earlier), findsNothing);
+      expect(shownText(_earlier), findsNothing);
       expect(_previous('c30 front'), findsOneWidget);
     },
   );
@@ -796,7 +797,7 @@ void main() {
       // Titled as the card; 앞면 and 뒷면 each a label of the same rank.
       expect(
         tester.getSemantics(
-          find.descendant(of: sheet, matching: _text('Card')),
+          find.descendant(of: sheet, matching: shownText('Card')),
         ),
         isSemantics(isHeader: true),
       );
@@ -1526,7 +1527,7 @@ void main() {
       // the count goes on at 3 of the same 6, not 0 of 3, and a notice says
       // the session goes on with the day.
       expect(find.text('3/6'), findsOneWidget);
-      final notice = _text('Picking up · 3 left · about 1 min');
+      final notice = shownText('Picking up · 3 left · about 1 min');
       expect(notice, findsOneWidget);
       // In the top bar's row, in the progress bar's place, clear of the card
       // above the current one and its chip; the count stays beside it.
@@ -1679,7 +1680,7 @@ void main() {
       // a, due again a day after its answer, and b and c, new.
       expect(find.text('0/3'), findsOneWidget);
       expect(find.byType(PreviousPlaceholder), findsOneWidget);
-      expect(_text(_earlier), findsNothing);
+      expect(shownText(_earlier), findsNothing);
       expect(find.textContaining('Picking up'), findsNothing);
     },
   );
@@ -1804,7 +1805,7 @@ void main() {
           mode == ThemeMode.dark ? Brightness.dark : Brightness.light,
         );
         // The empty previous card's place.
-        expect(_text(_placeholder), findsOneWidget);
+        expect(shownText(_placeholder), findsOneWidget);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         await study.know();
         await study.dontKnow();
@@ -1896,7 +1897,7 @@ void main() {
         final study = await _open(tester, ['a', 'b', 'c'], coachShown: false);
         // Stored as shown as soon as it shows, before any step is taken.
         expect(study.storage.getBool(studyCoachShownKey), isTrue);
-        expect(_text('Swipe right if you know it'), findsOneWidget);
+        expect(shownText('Swipe right if you know it'), findsOneWidget);
         // The caption takes the guide's row's place under the card.
         expect(
           find.widgetWithText(TextButton, 'Show the guide again'),
@@ -1927,7 +1928,7 @@ void main() {
 
         await tester.tap(find.widgetWithText(AppButton, 'Next'));
         await tester.pump();
-        expect(_text("Swipe left if you don't"), findsOneWidget);
+        expect(shownText("Swipe left if you don't"), findsOneWidget);
         final dontKnow = await sweep(
           tester,
           'a front',
@@ -1941,7 +1942,7 @@ void main() {
         await tester.tap(find.widgetWithText(AppButton, 'Next'));
         await tester.pump();
         expect(
-          _text(
+          shownText(
             'Cards you responded to come up here. Swipe one to change its response',
           ),
           findsOneWidget,
@@ -2014,7 +2015,7 @@ void main() {
           find.widgetWithText(TextButton, 'Show the guide again'),
         );
         await tester.pump();
-        expect(_text('Swipe right if you know it'), findsOneWidget);
+        expect(shownText('Swipe right if you know it'), findsOneWidget);
         // A drag of the previous card changes its answer, and the coach runs on.
         await tester.timedDrag(
           _previous('a front'),
@@ -2026,14 +2027,14 @@ void main() {
           _label(tester, _previous('a front')),
           endsWith("Response: Don't know. Changed"),
         );
-        expect(_text('Swipe right if you know it'), findsOneWidget);
+        expect(shownText('Swipe right if you know it'), findsOneWidget);
         // A tap opens it whole, and the coach runs on.
         await tester.tap(_previous('a front'));
         await tester.pump(const Duration(seconds: 1));
         expect(find.byType(BottomSheet), findsOneWidget);
         await tester.tapAt(const Offset(20, 20));
         await tester.pump(const Duration(seconds: 1));
-        expect(_text('Swipe right if you know it'), findsOneWidget);
+        expect(shownText('Swipe right if you know it'), findsOneWidget);
 
         // A drag of the current card answers it and ends the coach.
         await study.know();
@@ -2122,9 +2123,9 @@ void main() {
         "$_earlier. Front: b front. Back: b back. Response: Know",
       );
       expect(card, findsOneWidget);
-      expect(_text(_earlier), findsOneWidget);
+      expect(shownText(_earlier), findsOneWidget);
       expect(
-        tester.getRect(_text(_earlier)).bottom,
+        tester.getRect(shownText(_earlier)).bottom,
         lessThan(tester.getRect(_currentCard).top),
       );
       expect(find.byType(PreviousPlaceholder), findsNothing);
@@ -2132,12 +2133,12 @@ void main() {
 
       // The notice, a status a screen reader announces as it shows.
       const notice = 'Picking up · 1 left · about 1 min';
-      expect(_text(notice), findsOneWidget);
+      expect(shownText(notice), findsOneWidget);
       final semantics = tester.ensureSemantics();
       expect(
         tester.getSemantics(
           find
-              .ancestor(of: _text(notice), matching: find.byType(Semantics))
+              .ancestor(of: shownText(notice), matching: find.byType(Semantics))
               .first,
         ),
         isSemantics(isLiveRegion: true),
@@ -2167,11 +2168,11 @@ void main() {
 
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      expect(_text(notice), findsNothing);
+      expect(shownText(notice), findsNothing);
 
       // The first answer takes its place.
       await study.know();
-      expect(_text(_earlier), findsNothing);
+      expect(shownText(_earlier), findsNothing);
       expect(_previous('c front'), findsOneWidget);
     },
   );
@@ -2299,7 +2300,7 @@ void main() {
 
         await tester.tap(_previousCard);
         await tester.pumpAndSettle();
-        expect(_text('Card'), findsOneWidget);
+        expect(shownText('Card'), findsOneWidget);
         expect(find.text('Back'), findsNothing);
         expect(blanksUnder(find.byType(BottomSheet)), {'Paris': true});
       },
@@ -2357,12 +2358,6 @@ void main() {
 /// Due at 05:00 UTC tomorrow, an hour after the next study day starts.
 /// The word joiner set between the characters of each word.
 const _wordJoiner = '\u2060';
-
-/// The text on screen that reads [line] once its word joiners are left out.
-Finder _text(String line) => find.byWidgetPredicate(
-  (widget) =>
-      widget is Text && widget.data?.replaceAll(_wordJoiner, '') == line,
-);
 
 /// The empty previous card's place's line, in English.
 const _placeholder = 'Cards you responded to stack up here';

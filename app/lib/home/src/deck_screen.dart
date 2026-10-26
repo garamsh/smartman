@@ -17,6 +17,7 @@ import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
 import '../../study/study.dart';
+import '../../design/word_break.dart';
 
 /// A deck's page: its tile, name and card count, the white card that studies
 /// it, and its cards under a pinned row whose "뜻 보기" switch shows or hides
@@ -210,7 +211,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   ),
                   sliver: SliverToBoxAdapter(
                     child: Text(
-                      l10n.noCards,
+                      keepWords(l10n.noCards),
+                      semanticsLabel: l10n.noCards,
                       textAlign: TextAlign.center,
                       style: AppType.body.copyWith(color: colors.muted),
                     ),
@@ -285,7 +287,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 padding: const EdgeInsets.symmetric(vertical: AppSpace.s32),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    l10n.noMatches,
+                    keepWords(l10n.noMatches),
+                    semanticsLabel: l10n.noMatches,
                     textAlign: TextAlign.center,
                     style: AppType.body.copyWith(
                       color: AppColors.of(context).muted,

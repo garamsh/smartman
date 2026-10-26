@@ -6,12 +6,7 @@ import 'package:smartman/sharing/sharing.dart';
 
 import 'fakes.dart';
 import 'sharing_app.dart';
-
-/// A [Text] that reads [text] once its word joiners are left out: sheets and
-/// the first run keep their words whole with them.
-Finder _shown(String text) => find.byWidgetPredicate(
-  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
-);
+import '../word_breaks.dart';
 
 const _french = {
   'French': {'chat': 'cat'},
@@ -50,7 +45,7 @@ void main() {
       final app = await _openFrench(tester);
 
       await app.deckMenu('Publish');
-      expect(_shown('Publish "French"'), findsOneWidget);
+      expect(shownText('Publish "French"'), findsOneWidget);
       expect(find.widgetWithText(AppTextField, 'Public name'), findsOneWidget);
       await tester.enterText(
         find.widgetWithText(AppTextField, 'Public name'),
@@ -64,7 +59,7 @@ void main() {
       // The agreement is required: without it nothing can be published.
       expect(_publishButton(tester).onPressed, isNull);
       await app.tap(
-        _shown("I won't publish inappropriate or copyrighted content"),
+        shownText("I won't publish inappropriate or copyrighted content"),
       );
       expect(_publishButton(tester).onPressed, isNotNull);
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
@@ -90,7 +85,7 @@ void main() {
       final app = await _openFrench(tester);
       await app.deckMenu('Publish');
       await app.tap(
-        _shown("I won't publish inappropriate or copyrighted content"),
+        shownText("I won't publish inappropriate or copyrighted content"),
       );
 
       await tester.enterText(
@@ -134,7 +129,7 @@ void main() {
         '👍🏽' * 151,
       );
       await app.tap(
-        _shown("I won't publish inappropriate or copyrighted content"),
+        shownText("I won't publish inappropriate or copyrighted content"),
       );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
 
@@ -155,7 +150,7 @@ void main() {
 
     expect(find.widgetWithText(AppTextField, 'Public name'), findsNothing);
     await app.tap(
-      _shown("I won't publish inappropriate or copyrighted content"),
+      shownText("I won't publish inappropriate or copyrighted content"),
     );
     await app.tap(find.widgetWithText(FilledButton, 'Publish'));
     expect(find.text('Deck published'), findsOneWidget);
@@ -170,7 +165,7 @@ void main() {
       await app.deckMenu('Publish');
       server.failure = SharingOffline(Exception('no network'));
       await app.tap(
-        _shown("I won't publish inappropriate or copyrighted content"),
+        shownText("I won't publish inappropriate or copyrighted content"),
       );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
 
@@ -192,7 +187,7 @@ void main() {
     );
     await app.deckMenu('Publish');
     await app.tap(
-      _shown("I won't publish inappropriate or copyrighted content"),
+      shownText("I won't publish inappropriate or copyrighted content"),
     );
     await app.tap(find.widgetWithText(FilledButton, 'Publish'));
     expect(find.text('1 card · Public'), findsOneWidget);
@@ -242,7 +237,7 @@ void main() {
     expect(find.text("Available when you're online"), findsOneWidget);
     await tester.tap(find.text('Publish'));
     await tester.pumpAndSettle();
-    expect(_shown('Publish "French"'), findsNothing);
+    expect(shownText('Publish "French"'), findsNothing);
     expect(app.server.writes, isEmpty);
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
@@ -251,7 +246,7 @@ void main() {
     app.network.online = true;
     await tester.pumpAndSettle();
     await app.deckMenu('Publish');
-    expect(_shown('Publish "French"'), findsOneWidget);
+    expect(shownText('Publish "French"'), findsOneWidget);
     await app.close();
   });
 
@@ -270,7 +265,7 @@ void main() {
           'A',
         );
         await app.tap(
-          _shown("I won't publish inappropriate or copyrighted content"),
+          shownText("I won't publish inappropriate or copyrighted content"),
         );
         await app.tap(find.widgetWithText(FilledButton, 'Publish'));
         await app.meetsGuidelines();

@@ -15,6 +15,7 @@ import 'providers.dart';
 import 'queue.dart';
 import 'stats.dart';
 import 'stats_style.dart';
+import '../../design/word_break.dart';
 
 /// The 기록 tab's content: [title], then the retention against its target
 /// with the period selector it alone follows, the recall bands, the mastered
@@ -273,7 +274,8 @@ class _RetentionCard extends StatelessWidget {
         control: choice,
         content: [
           Text(
-            l10n.retentionEmpty,
+            keepWords(l10n.retentionEmpty),
+            semanticsLabel: l10n.retentionEmpty,
             style: AppType.secondary.copyWith(color: colors.ink2),
           ),
         ],
@@ -603,7 +605,8 @@ class _RecallCard extends StatelessWidget {
         title: l10n.recallTitle,
         content: [
           Text(
-            l10n.recallEmpty,
+            keepWords(l10n.recallEmpty),
+            semanticsLabel: l10n.recallEmpty,
             style: AppType.secondary.copyWith(color: colors.ink2),
           ),
         ],
@@ -721,7 +724,8 @@ class _MasteredCard extends StatelessWidget {
         title: l10n.masteredTitle,
         content: [
           Text(
-            l10n.masteredEmpty,
+            keepWords(l10n.masteredEmpty),
+            semanticsLabel: l10n.masteredEmpty,
             style: AppType.secondary.copyWith(color: colors.ink2),
           ),
         ],

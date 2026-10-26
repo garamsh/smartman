@@ -1,42 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_sheet.dart';
 import 'package:smartman/design/theme.dart';
 
 import 'harness.dart';
-
-/// The word joiner `keepWords` puts between a word's characters.
-const _wordJoiner = '\u2060';
-
-/// A [Text] whose text, word joiners aside, is [text].
-Finder _text(String text) => find.byWidgetPredicate(
-  (widget) =>
-      widget is Text && widget.data?.replaceAll(_wordJoiner, '') == text,
-);
-
-/// Where each line of [text]'s paragraph ends, as offsets into its text with
-/// the word joiners in, and that text.
-(List<int>, String) _lineEnds(WidgetTester tester, String text) {
-  final paragraph = tester.renderObject<RenderParagraph>(
-    find.descendant(of: _text(text), matching: find.byType(RichText)),
-  );
-  final plain = paragraph.text.toPlainText();
-  // The paragraph's own text laid out at its width, to read its lines.
-  final lines = TextPainter(
-    text: paragraph.text,
-    textDirection: paragraph.textDirection,
-    textScaler: paragraph.textScaler,
-  )..layout(maxWidth: paragraph.size.width);
-  addTearDown(lines.dispose);
-  final ends = <int>[];
-  for (var offset = 0; offset < plain.length;) {
-    offset = lines.getLineBoundary(TextPosition(offset: offset)).end;
-    ends.add(offset);
-  }
-  return (ends, plain);
-}
+import '../word_breaks.dart';
 
 /// A button that opens [open] and keeps what it resolved to in [results].
 Widget _opener(
@@ -94,8 +63,8 @@ void main() {
               )
               .first,
         );
-        final title = tester.getRect(_text('New deck'));
-        final body = tester.getRect(_text('Name it after what you study.'));
+        final title = tester.getRect(shownText('New deck'));
+        final body = tester.getRect(shownText('Name it after what you study.'));
         final content = tester.getRect(find.byType(TextField));
         final later = tester.getRect(
           find.widgetWithText(OutlinedButton, 'Later'),
@@ -110,7 +79,7 @@ void main() {
         expect(create.width, sheet.width - AppSpace.gutter * 2);
         expect(create.height, AppSize.cta);
         expect(
-          tester.getSemantics(_text('New deck')),
+          tester.getSemantics(shownText('New deck')),
           isSemantics(isHeader: true, label: 'New deck'),
         );
         final shape = tester
@@ -202,9 +171,9 @@ void main() {
         await tester.tap(find.text('open'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 16));
-        final early = tester.getRect(_text('New deck')).top;
+        final early = tester.getRect(shownText('New deck')).top;
         await tester.pumpAndSettle();
-        final settled = tester.getRect(_text('New deck')).top;
+        final settled = tester.getRect(shownText('New deck')).top;
 
         if (reduceMotion) {
           expect(early, settled);
@@ -237,7 +206,7 @@ void main() {
           await tester.tap(find.text('open'));
           await tester.pumpAndSettle();
 
-          expect(_text('Its 3 cards will be deleted too.'), findsOneWidget);
+          expect(shownText('Its 3 cards will be deleted too.'), findsOneWidget);
           expect(
             tester
                 .widget<Material>(
@@ -352,21 +321,11 @@ void main() {
         await tester.pumpAndSettle();
 
         if (sheetBody == word) {
-          final (ends, _) = _lineEnds(tester, word);
-          expect(ends.length, greaterThan(1), reason: 'the control wraps');
+          expectWrapsInsideWord(tester, word);
           continue;
         }
         for (final text in [title, body]) {
-          final (ends, plain) = _lineEnds(tester, text);
-          // The text wraps at this width, so where it breaks is tested.
-          expect(ends.length, greaterThan(1), reason: text);
-          for (final end in ends.take(ends.length - 1)) {
-            expect(
-              plain[end - 1] == ' ' || plain[end] == ' ',
-              isTrue,
-              reason: 'a break at $end in "$text"',
-            );
-          }
+          expectBreaksBetweenWords(tester, text);
           // A screen reader reads it as written, without the joiners.
           expect(find.bySemanticsLabel(text), findsOneWidget);
         }
