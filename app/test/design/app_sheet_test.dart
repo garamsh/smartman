@@ -1,10 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_sheet.dart';
 import 'package:smartman/design/theme.dart';
 
 import 'harness.dart';
+
+/// The word joiner `keepWords` puts between a word's characters.
+const _wordJoiner = '\u2060';
+
+/// A [Text] whose text, word joiners aside, is [text].
+Finder _text(String text) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Text && widget.data?.replaceAll(_wordJoiner, '') == text,
+);
+
+/// Where each line of [text]'s paragraph ends, as offsets into its text with
+/// the word joiners in, and that text.
+(List<int>, String) _lineEnds(WidgetTester tester, String text) {
+  final paragraph = tester.renderObject<RenderParagraph>(
+    find.descendant(of: _text(text), matching: find.byType(RichText)),
+  );
+  final plain = paragraph.text.toPlainText();
+  // The paragraph's own text laid out at its width, to read its lines.
+  final lines = TextPainter(
+    text: paragraph.text,
+    textDirection: paragraph.textDirection,
+    textScaler: paragraph.textScaler,
+  )..layout(maxWidth: paragraph.size.width);
+  addTearDown(lines.dispose);
+  final ends = <int>[];
+  for (var offset = 0; offset < plain.length;) {
+    offset = lines.getLineBoundary(TextPosition(offset: offset)).end;
+    ends.add(offset);
+  }
+  return (ends, plain);
+}
 
 /// A button that opens [open] and keeps what it resolved to in [results].
 Widget _opener(
@@ -62,8 +94,8 @@ void main() {
               )
               .first,
         );
-        final title = tester.getRect(find.text('New deck'));
-        final body = tester.getRect(find.text('Name it after what you study.'));
+        final title = tester.getRect(_text('New deck'));
+        final body = tester.getRect(_text('Name it after what you study.'));
         final content = tester.getRect(find.byType(TextField));
         final later = tester.getRect(
           find.widgetWithText(OutlinedButton, 'Later'),
@@ -78,7 +110,7 @@ void main() {
         expect(create.width, sheet.width - AppSpace.gutter * 2);
         expect(create.height, AppSize.cta);
         expect(
-          tester.getSemantics(find.text('New deck')),
+          tester.getSemantics(_text('New deck')),
           isSemantics(isHeader: true, label: 'New deck'),
         );
         final shape = tester
@@ -170,9 +202,9 @@ void main() {
         await tester.tap(find.text('open'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 16));
-        final early = tester.getRect(find.text('New deck')).top;
+        final early = tester.getRect(_text('New deck')).top;
         await tester.pumpAndSettle();
-        final settled = tester.getRect(find.text('New deck')).top;
+        final settled = tester.getRect(_text('New deck')).top;
 
         if (reduceMotion) {
           expect(early, settled);
@@ -205,7 +237,7 @@ void main() {
           await tester.tap(find.text('open'));
           await tester.pumpAndSettle();
 
-          expect(find.text('Its 3 cards will be deleted too.'), findsOneWidget);
+          expect(_text('Its 3 cards will be deleted too.'), findsOneWidget);
           expect(
             tester
                 .widget<Material>(
@@ -290,4 +322,55 @@ void main() {
       });
     }
   });
+
+  testWidgets(
+    'on a 390 wide phone a Korean title and body break only between words, read as written, and a word wider than the line still wraps',
+    (tester) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      const title = '동기화되지 않은 변경이 있어요 로그아웃할까요';
+      const body = '동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.';
+      // The control: one word, so it can break only inside itself.
+      const word = '동기화되지않은변경은로그아웃하면이기기에서지워지고다른기기에서도볼수없어요';
+      for (final (sheetTitle, sheetBody) in [(title, body), ('제목', word)]) {
+        // A fresh app, so the first sheet is not under the second.
+        await tester.pumpWidget(const SizedBox());
+        await pumpComponent(
+          tester,
+          _opener(
+            (context) => showAppSheet<void>(
+              context,
+              builder: (context) =>
+                  AppSheet(title: sheetTitle, body: sheetBody),
+            ),
+            [],
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        if (sheetBody == word) {
+          final (ends, _) = _lineEnds(tester, word);
+          expect(ends.length, greaterThan(1), reason: 'the control wraps');
+          continue;
+        }
+        for (final text in [title, body]) {
+          final (ends, plain) = _lineEnds(tester, text);
+          // The text wraps at this width, so where it breaks is tested.
+          expect(ends.length, greaterThan(1), reason: text);
+          for (final end in ends.take(ends.length - 1)) {
+            expect(
+              plain[end - 1] == ' ' || plain[end] == ' ',
+              isTrue,
+              reason: 'a break at $end in "$text"',
+            );
+          }
+          // A screen reader reads it as written, without the joiners.
+          expect(find.bySemanticsLabel(text), findsOneWidget);
+        }
+      }
+    },
+  );
 }

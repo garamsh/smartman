@@ -988,7 +988,7 @@ abstract class AppLocalizations {
   /// Body of the sign-out warning: unsynced changes are lost when signing out.
   ///
   /// In ko, this message translates to:
-  /// **'로그아웃하면 이 기기에서 지워지고 다른 기기에서는 볼 수 없어요.'**
+  /// **'동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.'**
   String get unsyncedChangesBody;
 
   /// Sign-out warning action that signs out despite unsynced changes.

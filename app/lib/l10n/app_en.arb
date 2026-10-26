@@ -147,7 +147,7 @@
   "deleteCardTitle": "Delete this card?",
   "deleteCardBody": "Its study history is deleted with it.",
   "unsyncedChangesTitle": "Some changes aren't synced",
-  "unsyncedChangesBody": "Signing out removes them from this device, and your other devices won't have them.",
+  "unsyncedChangesBody": "Changes that aren't synced are removed from this device when you sign out, and your other devices won't have them either.",
   "signOutAnyway": "Sign out anyway",
   "dataNotCleared": "Couldn't remove this device's data. It's removed when another account signs in.",
   "deleteAccount": "Delete account",

@@ -568,7 +568,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unsyncedChangesBody =>
-      'Signing out removes them from this device, and your other devices won\'t have them.';
+      'Changes that aren\'t synced are removed from this device when you sign out, and your other devices won\'t have them either.';
 
   @override
   String get signOutAnyway => 'Sign out anyway';

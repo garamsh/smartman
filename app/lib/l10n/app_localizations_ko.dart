@@ -543,7 +543,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unsyncedChangesTitle => '동기화되지 않은 변경이 있어요';
 
   @override
-  String get unsyncedChangesBody => '로그아웃하면 이 기기에서 지워지고 다른 기기에서는 볼 수 없어요.';
+  String get unsyncedChangesBody =>
+      '동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.';
 
   @override
   String get signOutAnyway => '그래도 로그아웃';

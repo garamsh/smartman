@@ -117,7 +117,12 @@ void main() {
 
       await screens.tap(find.text('Study'));
       expect(
-        find.text('How many minutes a day will you study?'),
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'How many minutes a day will you study?',
+        ),
         findsOneWidget,
       );
       expect(find.byType(StudyScreen), findsNothing);
@@ -628,7 +633,14 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(find.text('Delete "Français"?'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') == 'Delete "Français"?',
+        ),
+        findsOneWidget,
+      );
       await screens.tap(find.text('Cancel'));
 
       await screens.tap(find.text('Add card'));
@@ -680,7 +692,15 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(find.text('Its 3 cards will be deleted too.'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'Its 3 cards will be deleted too.',
+        ),
+        findsOneWidget,
+      );
       await screens.tap(find.text('Delete'));
 
       expect(find.byType(DeckScreen), findsNothing);
