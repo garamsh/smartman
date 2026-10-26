@@ -17,6 +17,7 @@ import 'generated/schema_v9.dart' as v9;
 import 'generated/schema_v10.dart' as v10;
 import 'generated/schema_v11.dart' as v11;
 import 'generated/schema_v12.dart' as v12;
+import 'generated/schema_v13.dart' as v13;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -880,6 +881,102 @@ void main() {
         expect(deck.imageMediaId, null);
         expect(await db.select(db.mediaUploads).get(), isEmpty);
         expect(await db.select(db.mediaDeletions).get(), isEmpty);
+      },
+    );
+  });
+
+  test("the upgrade from 12 to 13 makes every live card of a known template, or none, a free card at version 1, and keeps its content, edit time and dirty flag, and every other card as it was", () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    const edited = '2026-10-20T09:30:00.000Z';
+    const deleted = '2026-10-21T00:00:00.000Z';
+    const text = '[{"type":"text","v":1,"id":"b1","payload":{"text":"chat"}}]';
+    // Each card's id, template, template version, tombstone and dirty flag.
+    const cards = [
+      ('flip', 'flip', 1, null, 0),
+      ('flip-unsynced', 'flip', 1, null, 1),
+      ('cloze', 'cloze', 1, null, 0),
+      ('table', 'table', 1, null, 1),
+      ('none', null, null, null, 0),
+      ('free', 'free', 1, null, 0),
+      ('unknown', 'mindmap', 1, null, 0),
+      ('newer', 'flip', 2, null, 0),
+      ('deleted', 'flip', 1, deleted, 1),
+    ];
+    await verifier.testWithDataIntegrity(
+      oldVersion: 12,
+      newVersion: 13,
+      createOld: v12.DatabaseAtV12.new,
+      createNew: v13.DatabaseAtV13.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v12.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+        for (final (id, template, version, deletedAt, dirty) in cards) {
+          batch.insert(
+            old.cards,
+            v12.CardsData(
+              id: id,
+              deckId: 'deck',
+              front: text,
+              back:
+                  '[{"type":"text","v":1,"id":"b2","payload":{"text":"$id"}}]',
+              cardKey: 'chat',
+              source: 'manual',
+              template: template,
+              templateVersion: version,
+              createdAt: at,
+              updatedAt: edited,
+              deletedAt: deletedAt,
+              dirty: dirty,
+            ),
+          );
+        }
+      },
+      validateItems: (db) async {
+        final rows = {
+          for (final row in await db.select(db.cards).get()) row.id: row,
+        };
+        expect(rows.keys, unorderedEquals([for (final card in cards) card.$1]));
+        expect(
+          {
+            for (final MapEntry(:key, value: row) in rows.entries)
+              key: (row.template, row.templateVersion),
+          },
+          {
+            'flip': ('free', 1),
+            'flip-unsynced': ('free', 1),
+            'cloze': ('free', 1),
+            'table': ('free', 1),
+            'none': ('free', 1),
+            'free': ('free', 1),
+            'unknown': ('mindmap', 1),
+            'newer': ('flip', 2),
+            'deleted': ('flip', 1),
+          },
+        );
+        for (final (id, _, _, _, dirty) in cards) {
+          final row = rows[id]!;
+          expect(
+            (row.front, row.back, row.cardKey, row.updatedAt, row.dirty),
+            (
+              text,
+              '[{"type":"text","v":1,"id":"b2","payload":{"text":"$id"}}]',
+              'chat',
+              edited,
+              dirty,
+            ),
+            reason: '$id keeps its content, edit time and dirty flag',
+          );
+        }
       },
     );
   });
