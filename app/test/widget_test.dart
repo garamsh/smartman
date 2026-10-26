@@ -381,6 +381,104 @@ void main() {
     await unmountApp(tester);
   });
 
+  group('the keyboard', () {
+    /// Opens a new card's editor in a deck named French, on a phone's screen.
+    Future<void> openEditor(WidgetTester tester) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pumpApp(tester);
+      await createDeckAndOpen(tester, 'French');
+      await tester.tap(find.text('Add card'));
+      await tester.pumpAndSettle();
+    }
+
+    EditableText field(WidgetTester tester, String label) => tester.widget(
+      find.descendant(
+        of: find.widgetWithText(AppTextField, label),
+        matching: find.byType(EditableText),
+      ),
+    );
+
+    /// The action key the platform was last asked to show.
+    String? actionKey(WidgetTester tester) {
+      final client = tester.testTextInput.log.lastWhere(
+        (call) => call.method == 'TextInput.setClient',
+      );
+      final [_, configuration as Map<Object?, Object?>] =
+          client.arguments as List<Object?>;
+      return configuration['inputAction'] as String?;
+    }
+
+    testWidgets(
+      'closes on a tap outside a field, while a tap on another field or a button does what it did',
+      (tester) async {
+        await openEditor(tester);
+        await tester.tap(find.widgetWithText(AppTextField, 'Front'));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+
+        await tester.tap(find.widgetWithText(AppTextField, 'Back'));
+        await tester.pumpAndSettle();
+        expect(field(tester, 'Back').focusNode.hasFocus, isTrue);
+        expect(tester.testTextInput.isVisible, isTrue);
+
+        await tester.tap(find.text('Add meaning'));
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(AppTextField, 'Meaning 2'), findsOneWidget);
+
+        // The deck's name over the form handles no tap.
+        await tester.tap(find.text('French'));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        expect(FocusManager.instance.primaryFocus, isA<FocusScopeNode>());
+        await unmountApp(tester);
+      },
+    );
+
+    testWidgets(
+      'closes on a drag that scrolls the form, and stays up for a drag across the label strip',
+      (tester) async {
+        await openEditor(tester);
+        await tester.tap(find.widgetWithText(TextField, 'Label'));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+        final strip = find.ancestor(
+          of: find.widgetWithText(ChoiceChip, '명'),
+          matching: find.byType(Scrollable),
+        );
+
+        await tester.drag(strip, const Offset(-200, 0));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+
+        await tester.drag(find.text('French'), const Offset(0, -200));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        await unmountApp(tester);
+      },
+    );
+
+    testWidgets(
+      "keeps a multi-line field's newline key, and a single-line field's action closes it",
+      (tester) async {
+        await openEditor(tester);
+        await tester.tap(find.widgetWithText(AppTextField, 'Front'));
+        await tester.pumpAndSettle();
+        expect(actionKey(tester), 'TextInputAction.newline');
+
+        await tester.tap(find.widgetWithText(TextField, 'Label'));
+        await tester.pumpAndSettle();
+        expect(actionKey(tester), 'TextInputAction.done');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        await unmountApp(tester);
+      },
+    );
+  });
+
   testWidgets('a storage failure is shown to the user', (tester) async {
     await pumpApp(tester);
     await createDeckAndOpen(tester, 'French');
