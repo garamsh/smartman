@@ -216,6 +216,36 @@ void main() {
     );
   });
 
+  test("the move and size tools keep inside the photo a box another writer stored a rounding past its edge, or narrower than the least side", () {
+    final draft = ImageDraft(
+      const ImageContent(
+        media: MediaId('photo'),
+        width: 4,
+        height: 3,
+        boxes: [
+          ImageBox(id: '1', x: 0, y: 0, w: 1 + 1e-9, h: 0.5),
+          ImageBox(id: '2', x: 0.99, y: 0.99, w: 0.01, h: 0.01),
+        ],
+      ),
+    );
+    addTearDown(draft.dispose);
+
+    draft
+      ..move(0, 0.05, 0.05)
+      ..resize(0, 0.05, 0.05)
+      ..move(1, 0.05, 0.05)
+      ..resize(1, 0.05, 0.05);
+
+    final [wide, sliver] = draft.image!.boxes;
+    expect((wide.x, wide.y, wide.w, wide.h), (0, 0.05, 1, 0.55));
+    expect(sliver.x, moreOrLessEquals(0.98));
+    expect(sliver.y, moreOrLessEquals(0.98));
+    expect(sliver.w, moreOrLessEquals(0.02));
+    expect(sliver.h, moreOrLessEquals(0.02));
+    expect(sliver.x + sliver.w, lessThanOrEqualTo(1));
+    expect(sliver.y + sliver.h, lessThanOrEqualTo(1));
+  });
+
   group('the editor (ADR 0109)', () {
     late Directory directory;
     late AppDatabase mediaDb;

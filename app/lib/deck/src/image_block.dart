@@ -262,7 +262,9 @@ class ImageDraft {
     if (image == null) return;
     _image = image.withBoxes([
       for (final (at, box) in image.boxes.indexed)
-        at == index ? _clamped(change(box)) : box,
+        // Clamped first too: a box another writer stored can sit a rounding
+        // past the photo, or be narrower than the least side.
+        at == index ? _clamped(change(_clamped(box))) : box,
     ]);
   }
 
