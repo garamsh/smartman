@@ -24,7 +24,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - The tabs compose:
   - `deck`'s `decksProvider`, `cardCountsProvider`, `DeckRow`, `DeckTile`, `showNameSheet` and `DeckRepository`, for the decks, their rows and a new deck ([`deck.md`](deck.md));
   - `study`'s `TodayOverviewReader`, for the 오늘 tab's count, goal, streak, next review and last seven study days; `TodayCounter`, for each deck's count; `ProgressCounter`, for each deck's progress; `StatsView`, the 기록 tab's content, given the tab's title; `openStudy`, through which every study button opens a `StudyScreen`; and `DailyMinutesButton`, `FirstDailyMinutes` and `DailyMinutesRow`, the daily study minutes' control, first-run step and account row ([`study.md`](study.md), [ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md));
-  - `account`'s `AccountAvatar` on the account button, and `AccountScreen`, given `sync`'s `SyncStatusView` as the status it shows and `study`'s `DailyMinutesRow` as its study setting ([`account.md`](account.md), [`sync.md`](sync.md));
+  - `account`'s `AccountAvatar` on the account button, and `AccountScreen`, given `sync`'s `SyncStatusView` as the status it shows and, as its study setting, `study`'s `DailyMinutesRow` over `deck`'s `PartOfSpeechPresetsRow` ([`account.md`](account.md), [`sync.md`](sync.md));
   - `sharing`'s `sharingServiceProvider`, for the browse screen ([`sharing.md`](sharing.md));
   - `photo_import`'s `photoImportProvider`, for the photo options, and `photoImportsProvider`, `PhotoImportBar`, `openPhotoImport` and `offerPhotoImportResume`, for the import under way ([`ai-extraction.md`](ai-extraction.md)).
 - The deck screen composes `deck`'s `deckProvider`, `cardsProvider`, `DeckTile`, `CardBackRow`, `CardEditorScreen`, `showNameSheet` and `DeckRepository`; `study`'s `TodayCounter`, `ProgressCounter` and `openStudy`; `sharing`'s `sharingServiceProvider` and `onlineProvider`, for publishing; and `photo_import`'s `photoImportProvider`.
@@ -91,7 +91,7 @@ The app's `home/` shell: the signed-in screens that show more than one domain or
 - `app/test/home/hero_test.dart` checks the shades the navy cards and the charts derive from the tokens: the quiet text at 4.5:1, and the flame, the today card's bar and a quiet bar at 3:1, in both themes.
 - `app/test/widget_test.dart` checks every tab, the new-deck sheet and the deck screen with every answer shown by the switch, with one shown by a tap, with the search open and with the deck menu open, its "덱 삭제" in the destructive colour, against the tap target and contrast guidelines in both themes.
 - `app/test/widget_test.dart` also composes the app over a photo import a closed app left, offered on opening and, once resumed, shown reading in the bar.
-- `app/test/widget_test.dart` also opens the account screen the account button composes, and its "하루 공부 시간" row opening the picker as a screen whose "저장" the row then shows.
+- `app/test/widget_test.dart` also opens the account screen the account button composes, and its "하루 공부 시간" row opening the picker as a screen whose "저장" the row then shows, and its "품사 표시" row, under it, opening the presets.
 - `app/test/architecture_test.dart` fails on an import of `home/` from anywhere but `main.dart`, on a file in `home/` that declares a provider or imports the database, and on a domain file that names a screen another domain exports ([`structure.md`](structure.md)).
 
 ## Rationale

@@ -212,22 +212,16 @@ abstract class AppLocalizations {
   /// **'앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
   String get sensesEditNote;
 
-  /// The card editor's kind switch: a card of a text front and a text back.
+  /// The card editor's kind switch: a card of a front and a back, the back one meaning or senses each with a typed label; named by its shape, as the cloze and table kinds are.
   ///
   /// In ko, this message translates to:
-  /// **'기본'**
-  String get cardKindBasic;
-
-  /// The card editor's kind switch: a word with its senses, each with its labels, meaning and examples.
-  ///
-  /// In ko, this message translates to:
-  /// **'단어'**
-  String get cardKindWord;
+  /// **'앞뒤'**
+  String get cardKindFlip;
 
   /// The card editor's kind switch: a line with the words to recall as blanks.
   ///
   /// In ko, this message translates to:
-  /// **'문장'**
+  /// **'빈칸'**
   String get cardKindCloze;
 
   /// Above the cloze form's word buttons: tap a word to make it a blank.
@@ -416,19 +410,103 @@ abstract class AppLocalizations {
   /// **'{deck} 덱'**
   String cardDeck(String deck);
 
-  /// Heading of one sense in the word form, numbered from 1.
+  /// Hint inside a sense's label field in the basic form, and what a screen reader reads for it while the back is one meaning.
+  ///
+  /// In ko, this message translates to:
+  /// **'품사'**
+  String get senseLabelHint;
+
+  /// What a screen reader reads for the label field of a numbered sense in the basic form.
+  ///
+  /// In ko, this message translates to:
+  /// **'뜻 {number} 품사'**
+  String senseLabelField(int number);
+
+  /// Title of the settings screen of the labels offered above the keyboard, its settings row, and the screen-reader name of that strip.
+  ///
+  /// In ko, this message translates to:
+  /// **'품사 표시'**
+  String get labelPresetsTitle;
+
+  /// The one sentence under the 품사 표시 screen's title.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드를 만들 때 키보드 위에 이 순서로 나와요.'**
+  String get labelPresetsBody;
+
+  /// Button at the end of the label strip above the keyboard that opens the 품사 표시 screen.
+  ///
+  /// In ko, this message translates to:
+  /// **'관리'**
+  String get manageLabelPresets;
+
+  /// Button under the presets on the 품사 표시 screen that adds one.
+  ///
+  /// In ko, this message translates to:
+  /// **'표시 추가'**
+  String get addLabelPreset;
+
+  /// Screen-reader name of a preset's handle, which a drag moves and a tap opens a menu of up and down.
+  ///
+  /// In ko, this message translates to:
+  /// **'{label} 순서 옮기기'**
+  String moveLabelPreset(String label);
+
+  /// Item of a preset's handle menu that moves it up one place.
+  ///
+  /// In ko, this message translates to:
+  /// **'위로'**
+  String get moveUp;
+
+  /// Item of a preset's handle menu that moves it down one place.
+  ///
+  /// In ko, this message translates to:
+  /// **'아래로'**
+  String get moveDown;
+
+  /// Screen-reader name of a preset's row, which a tap edits; name may be empty.
+  ///
+  /// In ko, this message translates to:
+  /// **'{label} {name} 고치기'**
+  String editLabelPreset(String label, String name);
+
+  /// Screen-reader name of the button that removes a preset.
+  ///
+  /// In ko, this message translates to:
+  /// **'{label} 지우기'**
+  String removeLabelPreset(String label);
+
+  /// Label of the field of a preset's label, such as 명, while it is edited.
+  ///
+  /// In ko, this message translates to:
+  /// **'표시'**
+  String get labelPresetLabel;
+
+  /// Label of the field of a preset's optional name, such as 명사, while it is edited.
+  ///
+  /// In ko, this message translates to:
+  /// **'이름 (선택)'**
+  String get labelPresetName;
+
+  /// Button that ends editing a preset and stores it.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료'**
+  String get labelPresetDone;
+
+  /// Error under an empty preset label when its editing is done.
+  ///
+  /// In ko, this message translates to:
+  /// **'표시를 적어 주세요'**
+  String get labelPresetRequired;
+
+  /// Label of a numbered sense's meaning field in the 앞뒤 form, numbered from 1.
   ///
   /// In ko, this message translates to:
   /// **'뜻 {number}'**
   String senseHeading(int number);
 
-  /// Label of a sense's meaning field in the word form.
-  ///
-  /// In ko, this message translates to:
-  /// **'뜻'**
-  String get senseMeaning;
-
-  /// Label of a sense's examples field in the word form.
+  /// Label of the examples field of a sense stored with examples, in the 앞뒤 form.
   ///
   /// In ko, this message translates to:
   /// **'예문'**
@@ -440,19 +518,19 @@ abstract class AppLocalizations {
   /// **'한 줄에 하나씩, 없으면 비워 두세요'**
   String get senseExamplesHint;
 
-  /// Error under a sense whose meaning is empty when the word is saved.
+  /// Error under a numbered sense whose meaning is empty when the card is saved.
   ///
   /// In ko, this message translates to:
   /// **'뜻을 적어 주세요'**
   String get senseMeaningRequired;
 
-  /// Button under the senses of the word form that adds an empty sense.
+  /// Button under the back of the 앞뒤 form that adds a sense, making the back a list of senses.
   ///
   /// In ko, this message translates to:
   /// **'뜻 추가'**
   String get addSense;
 
-  /// Label of a field in the word form holding a text block of the back besides its senses, such as photo import's extras or a merged back.
+  /// Label of a field in the 앞뒤 form holding a text block a back of senses holds beside them, such as photo import's extras or a merged back.
   ///
   /// In ko, this message translates to:
   /// **'덧붙인 내용'**
@@ -475,48 +553,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{number}번째 뜻 지우기'**
   String deleteSense(int number);
-
-  /// Button in a sense that opens the sheet for adding a label, and that sheet's title.
-  ///
-  /// In ko, this message translates to:
-  /// **'표시 추가'**
-  String get addLabel;
-
-  /// Screen-reader name of the button that removes a label from a sense.
-  ///
-  /// In ko, this message translates to:
-  /// **'[{label}] 표시 지우기'**
-  String removeLabel(String label);
-
-  /// The label sheet's one sentence: pick a part of speech or type another label.
-  ///
-  /// In ko, this message translates to:
-  /// **'품사를 고르거나 다른 표시를 적어요.'**
-  String get labelSheetBody;
-
-  /// Label of the field in the label sheet for a label that is not a part of speech, such as a semantic class.
-  ///
-  /// In ko, this message translates to:
-  /// **'다른 표시'**
-  String get otherLabel;
-
-  /// Hint inside the other-label field.
-  ///
-  /// In ko, this message translates to:
-  /// **'예: 사물'**
-  String get otherLabelHint;
-
-  /// The label sheet's button that adds the typed label; disabled while the field is empty.
-  ///
-  /// In ko, this message translates to:
-  /// **'이 표시 추가'**
-  String get addOtherLabel;
-
-  /// A part of speech in the label sheet: its short form in brackets and its name.
-  ///
-  /// In ko, this message translates to:
-  /// **'[{short}] {name}'**
-  String partOfSpeechChoice(String short, String name);
 
   /// The name of a part of speech of the closed list (ADR 0075), by its category.
   ///

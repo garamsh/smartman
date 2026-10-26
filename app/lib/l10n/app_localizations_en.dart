@@ -79,13 +79,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Editing the front saves labels such as [명] as plain text.';
 
   @override
-  String get cardKindBasic => 'Basic';
+  String get cardKindFlip => 'Front & back';
 
   @override
-  String get cardKindWord => 'Word';
-
-  @override
-  String get cardKindCloze => 'Sentence';
+  String get cardKindCloze => 'Cloze';
 
   @override
   String get clozeWordsHint => 'Tap the words to make blanks';
@@ -198,12 +195,63 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String senseHeading(int number) {
-    return 'Meaning $number';
+  String get senseLabelHint => 'Label';
+
+  @override
+  String senseLabelField(int number) {
+    return 'Meaning $number label';
   }
 
   @override
-  String get senseMeaning => 'Meaning';
+  String get labelPresetsTitle => 'Labels';
+
+  @override
+  String get labelPresetsBody =>
+      'They appear above the keyboard in this order as you write a card.';
+
+  @override
+  String get manageLabelPresets => 'Manage';
+
+  @override
+  String get addLabelPreset => 'Add label';
+
+  @override
+  String moveLabelPreset(String label) {
+    return 'Move $label';
+  }
+
+  @override
+  String get moveUp => 'Move up';
+
+  @override
+  String get moveDown => 'Move down';
+
+  @override
+  String editLabelPreset(String label, String name) {
+    return 'Edit $label $name';
+  }
+
+  @override
+  String removeLabelPreset(String label) {
+    return 'Remove $label';
+  }
+
+  @override
+  String get labelPresetLabel => 'Label';
+
+  @override
+  String get labelPresetName => 'Name (optional)';
+
+  @override
+  String get labelPresetDone => 'Done';
+
+  @override
+  String get labelPresetRequired => 'Write a label';
+
+  @override
+  String senseHeading(int number) {
+    return 'Meaning $number';
+  }
 
   @override
   String get senseExamples => 'Examples';
@@ -233,31 +281,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String deleteSense(int number) {
     return 'Delete meaning $number';
-  }
-
-  @override
-  String get addLabel => 'Add label';
-
-  @override
-  String removeLabel(String label) {
-    return 'Remove label [$label]';
-  }
-
-  @override
-  String get labelSheetBody => 'Pick a part of speech or type another label.';
-
-  @override
-  String get otherLabel => 'Other label';
-
-  @override
-  String get otherLabelHint => 'e.g. object';
-
-  @override
-  String get addOtherLabel => 'Add this label';
-
-  @override
-  String partOfSpeechChoice(String short, String name) {
-    return '[$short] $name';
   }
 
   @override

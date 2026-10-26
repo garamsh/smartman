@@ -47,6 +47,7 @@ export 'src/failure.dart'
 export 'src/failure_message.dart'
     show describeFailure, describeProviderError, reportingFailure;
 export 'src/name_sheet.dart' show showNameSheet;
+export 'src/label_presets_screen.dart' show PartOfSpeechPresetsRow;
 export 'src/model.dart'
     show
         Card,

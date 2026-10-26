@@ -745,7 +745,7 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('the word form in $mode', skip: !_capture, (tester) async {
+    testWidgets('the basic form in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -789,26 +789,63 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await tap(tester, find.text(ko.cardKindWord));
+      // The [index]th sense's label field.
+      Finder label([int index = 0]) => find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is TextField && widget.textAlign == TextAlign.center,
+          )
+          .at(index);
+
       await tap(tester, find.text(ko.save));
-      await shot(tester, '05b-card-editor-word-errors');
+      await shot(tester, '05b-card-editor-basic-errors');
 
       await fill(ko.cardFront, 'present');
-      await tap(tester, find.text(ko.addLabel));
-      await shot(tester, '05c-card-editor-label-sheet');
-      await tap(tester, find.text(ko.partOfSpeechChoice('명', '명사')));
-      await fill(ko.senseMeaning, '선물');
-      await fill(ko.senseExamples, 'a birthday present');
+      // A phone keyboard 336 points high, given in physical pixels, under
+      // the presets a label field shows.
+      await reveal(label());
+      tester.widget<TextField>(label()).focusNode!.requestFocus();
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await tap(tester, find.widgetWithText(ChoiceChip, '명'));
+      await shot(tester, '05c-card-editor-label-presets');
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      await fill(ko.cardBack, '선물');
       await reveal(find.text(ko.addSense));
       await tap(tester, find.text(ko.addSense));
-      await reveal(find.text(ko.addLabel).at(1));
-      await tap(tester, find.text(ko.addLabel).at(1));
-      await tap(tester, find.text(ko.partOfSpeechChoice('동', '동사')));
-      await fill(ko.senseMeaning, '주다, 제시하다', 1);
-      await reveal(find.text(ko.cardKindWord));
-      await shot(tester, '05d-card-editor-word');
+      await reveal(label(1));
+      await tester.enterText(label(1), '동');
+      await fill(ko.senseHeading(2), '주다, 제시하다');
+      await reveal(find.text(ko.cardKindFlip));
+      await shot(tester, '05d-card-editor-senses');
       await reveal(find.text(ko.addSense));
-      await shot(tester, '05e-card-editor-word-senses');
+      await shot(tester, '05e-card-editor-senses-buttons');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(body: PartOfSpeechPresetsRow()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.labelPresetsTitle));
+      await shot(tester, '05o-label-presets');
+      await tap(tester, find.bySemanticsLabel(ko.editLabelPreset('명', '명사')));
+      await shot(tester, '05p-label-presets-edit');
       await unmount(tester);
     });
 
@@ -847,7 +884,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tap(tester, find.text(ko.cardKindBasic));
+        await tap(tester, find.text(ko.cardKindFlip));
         // A phone keyboard 336 points high, given in physical pixels.
         tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
         addTearDown(tester.view.resetViewInsets);
@@ -864,7 +901,9 @@ void main() {
       },
     );
 
-    testWidgets('a word with extras in $mode', skip: !_capture, (tester) async {
+    testWidgets('a back of senses with extras in $mode', skip: !_capture, (
+      tester,
+    ) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -914,7 +953,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(ko.wordExtra));
       await tester.pumpAndSettle();
-      await shot(tester, '05n-card-editor-word-extras');
+      await shot(tester, '05n-card-editor-senses-extras');
       await unmount(tester);
     });
 

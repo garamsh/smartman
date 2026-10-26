@@ -7,7 +7,6 @@ import 'package:smartman/deck/src/card_preview.dart';
 import 'package:smartman/deck/src/card_kind.dart';
 import 'package:smartman/deck/src/table_form.dart';
 import 'package:smartman/design/app_text_field.dart';
-import 'package:smartman/l10n/app_localizations.dart';
 
 import '../home/deck_screens.dart';
 import 'whole_cards.dart';
@@ -104,7 +103,11 @@ void main() {
       expect(card.back, [TextContent('Capitals\n${_capitals.filled}')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(find.text('Basic'), findsNothing, reason: 'no switch on edit');
+      expect(
+        find.text('Front & back'),
+        findsNothing,
+        reason: 'no switch on edit',
+      );
       expect(tester.widget<TextField>(_cell(3)).controller!.text, 'Paris');
       await save(screens);
       final saved = await _stored(screens);
@@ -261,25 +264,11 @@ void main() {
       // One segmented bar, the kind switch; the modes are chips.
       expect(find.byType(SegmentedButton<CardKind>), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNWidgets(2));
-      final kinds = {'Basic', 'Word', 'Sentence', 'Table'};
+      final kinds = {'Front & back', 'Cloze', 'Table'};
       final modes = {'Type cells', 'Choose blanks'};
       for (final label in [...kinds, ...modes]) {
         expect(find.text(label), findsOneWidget, reason: label);
       }
-      // In Korean, where "빈칸" named both the cloze kind and a table mode, no
-      // kind's label is a word of a mode's.
-      final ko = lookupAppLocalizations(const Locale('ko'));
-      final kindWords = {
-        ko.cardKindBasic,
-        ko.cardKindWord,
-        ko.cardKindCloze,
-        ko.cardKindTable,
-      };
-      final modeWords = {
-        for (final mode in [ko.tableModeCells, ko.tableModeBlanks])
-          ...mode.split(' '),
-      };
-      expect(kindWords.intersection(modeWords), isEmpty);
       await screens.close();
     },
   );

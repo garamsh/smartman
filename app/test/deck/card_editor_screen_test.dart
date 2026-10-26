@@ -146,13 +146,13 @@ void main() {
       'without changes, Close leaves at once, a kind switch being no change, and Save and next card starts unchanged again',
       (tester) async {
         final screens = await openNew(tester);
-        await screens.tap(find.text('Word'));
+        await screens.tap(find.text('Table'));
         await screens.tap(find.byTooltip('Close'));
         expect(_shown('Discard this card?'), findsNothing);
         expect(find.byType(CardEditorScreen), findsNothing);
 
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await screens.tap(find.text('Basic'));
+        await screens.tap(find.text('Front & back'));
         await screens.enter('Front', 'Chat');
         await screens.enter('Back', 'cat');
         await screens.tap(find.text('Save and next card'));

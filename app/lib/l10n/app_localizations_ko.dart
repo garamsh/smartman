@@ -77,13 +77,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
 
   @override
-  String get cardKindBasic => '기본';
+  String get cardKindFlip => '앞뒤';
 
   @override
-  String get cardKindWord => '단어';
-
-  @override
-  String get cardKindCloze => '문장';
+  String get cardKindCloze => '빈칸';
 
   @override
   String get clozeWordsHint => '빈칸으로 할 낱말을 눌러요';
@@ -195,12 +192,62 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String senseHeading(int number) {
-    return '뜻 $number';
+  String get senseLabelHint => '품사';
+
+  @override
+  String senseLabelField(int number) {
+    return '뜻 $number 품사';
   }
 
   @override
-  String get senseMeaning => '뜻';
+  String get labelPresetsTitle => '품사 표시';
+
+  @override
+  String get labelPresetsBody => '카드를 만들 때 키보드 위에 이 순서로 나와요.';
+
+  @override
+  String get manageLabelPresets => '관리';
+
+  @override
+  String get addLabelPreset => '표시 추가';
+
+  @override
+  String moveLabelPreset(String label) {
+    return '$label 순서 옮기기';
+  }
+
+  @override
+  String get moveUp => '위로';
+
+  @override
+  String get moveDown => '아래로';
+
+  @override
+  String editLabelPreset(String label, String name) {
+    return '$label $name 고치기';
+  }
+
+  @override
+  String removeLabelPreset(String label) {
+    return '$label 지우기';
+  }
+
+  @override
+  String get labelPresetLabel => '표시';
+
+  @override
+  String get labelPresetName => '이름 (선택)';
+
+  @override
+  String get labelPresetDone => '완료';
+
+  @override
+  String get labelPresetRequired => '표시를 적어 주세요';
+
+  @override
+  String senseHeading(int number) {
+    return '뜻 $number';
+  }
 
   @override
   String get senseExamples => '예문';
@@ -230,31 +277,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String deleteSense(int number) {
     return '$number번째 뜻 지우기';
-  }
-
-  @override
-  String get addLabel => '표시 추가';
-
-  @override
-  String removeLabel(String label) {
-    return '[$label] 표시 지우기';
-  }
-
-  @override
-  String get labelSheetBody => '품사를 고르거나 다른 표시를 적어요.';
-
-  @override
-  String get otherLabel => '다른 표시';
-
-  @override
-  String get otherLabelHint => '예: 사물';
-
-  @override
-  String get addOtherLabel => '이 표시 추가';
-
-  @override
-  String partOfSpeechChoice(String short, String name) {
-    return '[$short] $name';
   }
 
   @override

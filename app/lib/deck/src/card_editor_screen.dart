@@ -15,6 +15,8 @@ import 'cloze_form.dart';
 import 'content.dart';
 import 'deck_repository.dart';
 import 'failure_message.dart';
+import 'label_presets.dart';
+import 'label_presets_screen.dart';
 import 'model.dart';
 import 'providers.dart';
 import 'table_form.dart';
@@ -22,10 +24,10 @@ import 'word_form.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
 /// of the card as the study screen shows it, in the form of its kind: a text
-/// front and back, a word with its senses, a line with blanks, or a table
-/// with blanks under its name. A new card starts in the kind the deck's last
-/// new card was added in, and a switch at the top changes it; a card being
-/// edited keeps its kind (ADR 0083).
+/// front and a back of one meaning or of senses, a line with blanks, or a
+/// table with blanks under its name. A new card starts in the kind the deck's
+/// last new card was added in, and a switch at the top changes it; a card
+/// being edited keeps its kind (ADR 0083, ADR 0100).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -50,9 +52,6 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       ...?widget.card?.front.where((block) => block is! TableContent),
     ]),
   );
-  late final _back = TextEditingController(
-    text: plainText(widget.card?.back ?? const []),
-  );
   final _frontFocus = FocusNode();
   bool _showRequired = false;
 
@@ -62,14 +61,22 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     null => rememberedKind(ref.read(deckStorageProvider), widget.deck.id),
   };
 
-  /// The word form's senses: those of the card's back, or one empty sense.
+  /// Whether the card's back held senses when the editor opened, so it is
+  /// saved as senses whatever they become.
+  late final bool _backHadSenses =
+      widget.card?.back.any((block) => block is SensesContent) ?? false;
+
+  /// The back's senses: those of the card's back, or one sense of its text,
+  /// which a plain back is.
   late final List<SenseDraft> _senses = _draftsOf(widget.card?.back);
 
-  /// A field for each text block of the card's back, by its place there: a
+  /// A field for each text block of a back of senses, by its place there: a
   /// word's extras or a merged back, edited beside its senses (issue #312).
   late final Map<int, TextEditingController> _extras = {
-    for (final (index, block) in (widget.card?.back ?? const []).indexed)
-      if (block is TextContent) index: TextEditingController(text: block.text),
+    if (_backHadSenses)
+      for (final (index, block) in widget.card!.back.indexed)
+        if (block is TextContent)
+          index: TextEditingController(text: block.text),
   };
 
   /// The cloze form's blanks: the card's own, or none.
@@ -99,6 +106,15 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// is no change.
   bool _edited = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // The presets show while a label field has focus.
+    FocusManager.instance.addListener(_focusChanged);
+  }
+
+  void _focusChanged() => setState(() {});
+
   /// Marks the card changed and redraws.
   void _change([VoidCallback? change]) => setState(() {
     change?.call();
@@ -122,8 +138,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_focusChanged);
     _front.dispose();
-    _back.dispose();
     _frontFocus.dispose();
     for (final sense in _senses) {
       sense.dispose();
@@ -139,8 +155,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   bool get _isComplete =>
       _front.text.trim().isNotEmpty &&
       switch (_kind) {
-        CardKind.basic => _back.text.trim().isNotEmpty,
-        CardKind.word => !_senses.any((sense) => sense.isBlank),
+        CardKind.basic => !_senses.any((sense) => sense.isBlank),
         CardKind.cloze => _cloze.content != null,
         CardKind.table => _table.problem == null,
       };
@@ -165,19 +180,28 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     _ => _replaceText(widget.card?.front ?? const [], _front.text),
   };
 
-  /// The back's block at [index] as a word saves it beside its senses: a
-  /// text block as its field holds it, or none once the field is cleared;
-  /// any other block but the senses as it is.
+  /// Whether the back is saved as its one meaning's text: a back that held
+  /// no senses, still of one sense with no label and no example.
+  bool get _savesText =>
+      !_backHadSenses && _senses.length == 1 && _senses.single.isPlain;
+
+  /// The back's block at [index] as a back of senses saves it beside them: a
+  /// text block as its field holds it, or none once the field is cleared or
+  /// when the back held no senses, its text being the first meaning; any
+  /// other block but the senses as it is.
   Content? _besideSenses(int index, Content block) => switch (_extras[index]) {
     final extra? => extra.text.trim().isEmpty ? null : TextContent(extra.text),
-    null => block is SensesContent ? null : block,
+    null => block is SensesContent || block is TextContent ? null : block,
   };
 
-  /// The back as saved: the text typed, as [_frontBlocks]; or a word's senses,
-  /// then any other block the card's back holds, such as its extras.
+  /// The back as saved: its one meaning's text, as [_frontBlocks]; or its
+  /// senses, then any other block the card's back holds, such as its extras.
   List<Content> get _backBlocks => switch (_kind) {
-    CardKind.basic => _replaceText(widget.card?.back ?? const [], _back.text),
-    CardKind.word => [
+    CardKind.basic when _savesText => _replaceText(
+      widget.card?.back ?? const [],
+      _senses.single.meaning.text,
+    ),
+    CardKind.basic => [
       SensesContent([for (final sense in _senses) sense.sense]),
       for (final (index, block) in (widget.card?.back ?? const []).indexed)
         ?_besideSenses(index, block),
@@ -228,7 +252,6 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         case (CardSaved(), _AfterSave.next):
           setState(() {
             _front.clear();
-            _back.clear();
             for (final sense in _senses) {
               sense.dispose();
             }
@@ -289,6 +312,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       if (mounted) Navigator.of(context).pop();
     });
   }
+
+  /// The sense whose label field has focus, while the basic form shows.
+  SenseDraft? _focusedSense() => _kind == CardKind.basic
+      ? _senses.where((sense) => sense.labelFocus.hasFocus).firstOrNull
+      : null;
 
   String? _requiredError(AppLocalizations l10n, TextEditingController side) =>
       _showRequired && side.text.trim().isEmpty ? l10n.cardSideRequired : null;
@@ -365,11 +393,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                           segments: [
                             ButtonSegment(
                               value: CardKind.basic,
-                              label: Text(l10n.cardKindBasic),
-                            ),
-                            ButtonSegment(
-                              value: CardKind.word,
-                              label: Text(l10n.cardKindWord),
+                              label: Text(l10n.cardKindFlip),
                             ),
                             ButtonSegment(
                               value: CardKind.cloze,
@@ -419,15 +443,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                     ],
                     const SizedBox(height: AppSpace.s16),
                     switch (_kind) {
-                      CardKind.basic => AppTextField(
-                        label: l10n.cardBack,
-                        controller: _back,
-                        minLines: 2,
-                        maxLines: null,
-                        errorText: _requiredError(l10n, _back),
-                        onChanged: (_) => _change(),
-                      ),
-                      CardKind.word => Column(
+                      CardKind.basic => Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         spacing: AppSpace.s16,
                         children: [
@@ -484,6 +500,22 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                   onPressed: () => _save(_AfterSave.close),
                 ),
               ),
+            // Last, so it sits right above the keyboard.
+            if (_focusedSense() case final sense?)
+              LabelPresetStrip(
+                presets: labelPresets(
+                  ref.read(deckStorageProvider),
+                  defaultLabelPresets(l10n),
+                ),
+                current: sense.label.text,
+                onPick: (label) => _change(() {
+                  sense.label.value = TextEditingValue(
+                    text: label,
+                    selection: TextSelection.collapsed(offset: label.length),
+                  );
+                }),
+                onManage: () => openPartOfSpeechPresets(context),
+              ),
           ],
         ),
       ),
@@ -539,14 +571,14 @@ List<Content> _replaceText(List<Content> blocks, String text) =>
         ),
       ];
 
-/// One draft per sense of [back]'s senses block, or one empty draft when it
-/// holds none.
+/// One draft per sense of [back]'s senses block, or, when it holds none, one
+/// draft whose meaning is [back]'s text.
 List<SenseDraft> _draftsOf(List<Content>? back) {
   final senses = [
     for (final block in back ?? const <Content>[])
       if (block is SensesContent) ...block.senses,
   ];
   return senses.isEmpty
-      ? [SenseDraft()]
+      ? [SenseDraft(CardSense(meaning: plainText(back ?? const [])))]
       : [for (final sense in senses) SenseDraft(sense)];
 }

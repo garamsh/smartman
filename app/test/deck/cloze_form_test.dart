@@ -22,7 +22,7 @@ void main() {
   Future<DeckScreens> openCloze(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await screens.tap(find.text('Sentence'));
+    await screens.tap(find.text('Cloze'));
     return screens;
   }
 
@@ -87,7 +87,11 @@ void main() {
       expect(card.back, [const TextContent('The cat sat on the mat.')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(find.text('Basic'), findsNothing, reason: 'no switch on edit');
+      expect(
+        find.text('Front & back'),
+        findsNothing,
+        reason: 'no switch on edit',
+      );
       expect(chosen(tester, 'cat'), isTrue);
       expect(chosen(tester, 'on'), isTrue);
       expect(chosen(tester, 'sat'), isFalse);
