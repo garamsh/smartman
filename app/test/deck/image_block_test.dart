@@ -159,12 +159,15 @@ void main() {
           reason: 'an opaque fill over the photo',
         );
 
-        final sizes = <(double, Size)>[];
-        for (final screen in [
-          _screens['phone portrait']!,
-          _screens['desktop']!,
+        final labels = <Size>[];
+        final photos = <Size>[];
+        for (final (image, screen) in [
+          (_wide, _screens['phone portrait']!),
+          (_wide, _screens['desktop']!),
+          // Tall on a short screen: fitted by its height, not its width.
+          (_tall, _screens['phone landscape']!),
         ]) {
-          await drawCard(tester, screen, [_wide], revealed: true);
+          await drawCard(tester, screen, [image], revealed: true);
           expect(find.text('Paris'), findsOneWidget);
           final border = tester
               .widgetList<DecoratedBox>(
@@ -176,14 +179,27 @@ void main() {
               .map((box) => (box.decoration as BoxDecoration).border)
               .nonNulls
               .single;
-          sizes.add((
-            (border as Border).top.width,
-            tester.getSize(find.text('Paris')),
-          ));
+          expect((border as Border).top.width, 2);
+          // As drawn on the screen: nothing scales the photo and its chrome
+          // as a picture, so the border and the label keep their size.
+          final photo = find.byType(ImagePhoto);
+          final drawn = tester.getRect(photo).size;
+          final laidOut = tester.getSize(photo);
+          expect(drawn.width, moreOrLessEquals(laidOut.width, epsilon: 1e-6));
+          expect(drawn.height, moreOrLessEquals(laidOut.height, epsilon: 1e-6));
+          labels.add(tester.getRect(find.text('Paris')).size);
+          photos.add(tester.getRect(photo).size);
         }
-        // Control: the photo itself is drawn larger on the desktop.
-        expect(sizes.first, sizes.last);
-        expect(sizes.first.$1, 2);
+        // Within a rounding of the text's layout.
+        for (final label in labels) {
+          expect(
+            label.width,
+            moreOrLessEquals(labels.first.width, epsilon: 0.5),
+          );
+          expect(label.height, labels.first.height, reason: '$labels');
+        }
+        // Control: the photo itself is drawn at three sizes.
+        expect(photos.toSet(), hasLength(3), reason: '$photos');
       },
     );
 
