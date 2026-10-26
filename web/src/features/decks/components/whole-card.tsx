@@ -1,10 +1,18 @@
-import { type Content, clozeBlank, isBlank, spokenContent } from "../card-content";
+import {
+  type Content,
+  type ImageBox,
+  clozeBlank,
+  isBlank,
+  spokenContent,
+} from "../card-content";
 import { SensesText } from "./side-text";
 
 /**
- * A whole card's front, its blocks in order: a text block as its title, a cloze as its sentence
- * and a table as its table, with each blank empty, or filled in place when [revealed] (ADR
- * 0068). An empty blank keeps its answer's width, so filling it moves nothing. It reads as
+ * A whole card's front, its blocks in order: a text block as its title, a cloze as its sentence,
+ * a table as its table and a photo as its frame with its boxes, with each blank empty, or filled
+ * in place when [revealed] (ADR 0068, ADR 0109). The web reads no photo from the bucket yet, so
+ * the frame is drawn on the ground at the photo's aspect ratio. An empty blank keeps its
+ * answer's width, so filling it moves nothing. It reads as
  * `spokenContent` says, blanks as "빈칸" until revealed. It is spans throughout, so a button can
  * hold it.
  */
@@ -83,6 +91,20 @@ export function WholeCard({
                 <SensesText senses={block.senses} />
               </span>
             );
+          case "image":
+            return (
+              <span
+                key={index}
+                aria-hidden
+                data-image={block.media}
+                className="relative block w-full rounded-sm bg-ground"
+                style={{ aspectRatio: `${String(block.width)} / ${String(block.height)}` }}
+              >
+                {block.boxes.map((box) => (
+                  <ImageBoxMark key={box.id} box={box} revealed={revealed} />
+                ))}
+              </span>
+            );
           case "unsupported":
             return (
               <span key={index} aria-hidden className="text-body text-muted italic">
@@ -91,6 +113,38 @@ export function WholeCard({
             );
         }
       })}
+    </span>
+  );
+}
+
+/** A percentage of the photo's frame, the CSS form of a box's fraction. */
+function percent(fraction: number): string {
+  return `${String(fraction * 100)}%`;
+}
+
+/**
+ * A box over a photo, placed in percentages of the frame, which has the photo's aspect ratio, so
+ * the one transform that sizes the frame places the box (ADR 0109): an opaque fill hiding what it
+ * covers, or, revealed, a border with its answer at its top left. The border, corners and label
+ * stay in CSS pixels at every width.
+ */
+function ImageBoxMark({ box, revealed }: { box: ImageBox; revealed: boolean }) {
+  return (
+    <span
+      data-box={revealed ? "revealed" : "hidden"}
+      className={`absolute rounded-sm ${revealed ? "border-2 border-brand" : "bg-hero"}`}
+      style={{
+        left: percent(box.x),
+        top: percent(box.y),
+        width: percent(box.w),
+        height: percent(box.h),
+      }}
+    >
+      {revealed && box.answer !== null && box.answer.trim() !== "" && (
+        <span className="absolute top-0 left-0 rounded-sm bg-brand-tint px-1 text-caption text-ink">
+          {box.answer}
+        </span>
+      )}
     </span>
   );
 }

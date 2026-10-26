@@ -24,6 +24,8 @@ export 'src/content.dart'
         CardSense,
         ClozeContent,
         Content,
+        ImageBox,
+        ImageContent,
         OtherLabel,
         PartOfSpeech,
         PartOfSpeechLabel,

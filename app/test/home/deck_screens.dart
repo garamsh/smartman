@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
@@ -65,7 +66,7 @@ class DeckScreens {
   /// an interval of [dueDays] days, those in [later] tomorrow, and the rest
   /// are new. [unreadable] makes the deck's cards unreadable to the count, and
   /// [stalled] holds the count unread; [photoImport] enables the photo
-  /// buttons.
+  /// buttons. [overrides] are applied last, such as a media store.
   static Future<DeckScreens> open(
     WidgetTester tester, {
     Map<String, String> cards = const {},
@@ -77,6 +78,7 @@ class DeckScreens {
     bool photoImport = false,
     ThemeMode themeMode = ThemeMode.light,
     bool minutesAsked = true,
+    List<Override> overrides = const [],
   }) async {
     // A phone's screen, so every card of a short deck is on it under the
     // pinned row.
@@ -142,6 +144,7 @@ class DeckScreens {
                 ),
               );
             }),
+          ...overrides,
         ],
         child: MaterialApp(
           navigatorKey: screens.navigator,

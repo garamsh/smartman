@@ -43,6 +43,35 @@ class FakeMediaServer implements MediaServer {
   }
 }
 
+/// Hands out [next] on each pick, recording the origin and shape asked for.
+class FakeImagePick implements ImagePick {
+  PreparedImage? next;
+  final picks = <(ImageOrigin, ImageShape)>[];
+
+  @override
+  Future<PreparedImage?> pick(
+    ImageOrigin origin, {
+    ImageShape shape = ImageShape.square,
+  }) async {
+    picks.add((origin, shape));
+    return next;
+  }
+}
+
+/// A whole JPEG [width] by [height], prepared as a card's photo is.
+PreparedImage preparedWholeImage(int width, int height) {
+  final bytes = img.encodeJpg(
+    img.Image(width: width, height: height)
+      ..clear(img.ColorRgb8(0, 120, 200)),
+  );
+  return PreparedImage(
+    bytes,
+    sha256.convert(bytes).toString(),
+    width: width,
+    height: height,
+  );
+}
+
 /// A new, empty directory under the system's temporary one, deleted by
 /// [deleteMediaDirectory].
 Directory newMediaDirectory() =>
@@ -65,5 +94,10 @@ PreparedImage preparedImage(int shade) {
     img.Image(width: 4, height: 4)
       ..clear(img.ColorRgb8(shade * 40 % 256, 0, 0)),
   );
-  return PreparedImage(bytes, sha256.convert(bytes).toString());
+  return PreparedImage(
+    bytes,
+    sha256.convert(bytes).toString(),
+    width: 4,
+    height: 4,
+  );
 }

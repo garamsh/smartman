@@ -392,6 +392,126 @@ abstract class AppLocalizations {
   /// **'문장 속 단어를 가리기'**
   String get blockClozeDescription;
 
+  /// An image block's type, in the add sheet and over the block in the card editor, and what a card side's text and a screen reader say for a photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진'**
+  String get blockImage;
+
+  /// The line under 사진 in the add sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 위에 빈칸 상자를 그려요'**
+  String get blockImageDescription;
+
+  /// In an image block of the card editor: the button that picks the photo from the photo library.
+  ///
+  /// In ko, this message translates to:
+  /// **'앨범에서 고르기'**
+  String get imageFromAlbum;
+
+  /// In an image block of the card editor: the button that takes the photo with the camera.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 찍기'**
+  String get imageFromCamera;
+
+  /// In an image block of the card editor: shown when the picked photo, the camera or the photo library could not be read.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진을 불러오지 못했어요. 다시 시도해 주세요.'**
+  String get imageUnreadable;
+
+  /// Error under an image block of the card editor on save while it holds no photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진을 골라 주세요'**
+  String get imageRequired;
+
+  /// Line under an image block's photo in the card editor, saying how to draw a box over it.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 위를 끌어서 빈칸을 그리거나 \'빈칸 추가\'를 눌러요'**
+  String get imageHint;
+
+  /// Accessible name of a box over a photo in the card editor, and the heading of its tools while it is selected.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 {number}'**
+  String imageBox(int number);
+
+  /// Accessible name of the corner handle that resizes a selected box over a photo by a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 {number} 크기 조절'**
+  String imageBoxResize(int number);
+
+  /// Button under an image block's photo that adds a box in its middle, the way to draw one without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 추가'**
+  String get imageAddBox;
+
+  /// Field of the selected box over a photo: the answer shown in it once revealed.
+  ///
+  /// In ko, this message translates to:
+  /// **'정답 (선택)'**
+  String get imageBoxAnswer;
+
+  /// Tooltip of the button that moves the selected box over a photo left, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'왼쪽으로 옮기기'**
+  String get imageBoxLeft;
+
+  /// Tooltip of the button that moves the selected box over a photo right, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'오른쪽으로 옮기기'**
+  String get imageBoxRight;
+
+  /// Tooltip of the button that moves the selected box over a photo up, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'위로 옮기기'**
+  String get imageBoxUp;
+
+  /// Tooltip of the button that moves the selected box over a photo down, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'아래로 옮기기'**
+  String get imageBoxDown;
+
+  /// Tooltip of the button that widens the selected box over a photo, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'가로 늘리기'**
+  String get imageBoxWider;
+
+  /// Tooltip of the button that narrows the selected box over a photo, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'가로 줄이기'**
+  String get imageBoxNarrower;
+
+  /// Tooltip of the button that makes the selected box over a photo taller, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'세로 늘리기'**
+  String get imageBoxTaller;
+
+  /// Tooltip of the button that makes the selected box over a photo shorter, without a drag.
+  ///
+  /// In ko, this message translates to:
+  /// **'세로 줄이기'**
+  String get imageBoxShorter;
+
+  /// Button that removes the selected box over a photo.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 지우기'**
+  String get imageBoxDelete;
+
   /// Screen-reader name of a block's menu in the card editor, which moves it up or down or deletes it.
   ///
   /// In ko, this message translates to:

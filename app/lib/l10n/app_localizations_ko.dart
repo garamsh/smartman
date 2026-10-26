@@ -199,6 +199,70 @@ class AppLocalizationsKo extends AppLocalizations {
   String get blockClozeDescription => '문장 속 단어를 가리기';
 
   @override
+  String get blockImage => '사진';
+
+  @override
+  String get blockImageDescription => '사진 위에 빈칸 상자를 그려요';
+
+  @override
+  String get imageFromAlbum => '앨범에서 고르기';
+
+  @override
+  String get imageFromCamera => '사진 찍기';
+
+  @override
+  String get imageUnreadable => '사진을 불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get imageRequired => '사진을 골라 주세요';
+
+  @override
+  String get imageHint => '사진 위를 끌어서 빈칸을 그리거나 \'빈칸 추가\'를 눌러요';
+
+  @override
+  String imageBox(int number) {
+    return '빈칸 $number';
+  }
+
+  @override
+  String imageBoxResize(int number) {
+    return '빈칸 $number 크기 조절';
+  }
+
+  @override
+  String get imageAddBox => '빈칸 추가';
+
+  @override
+  String get imageBoxAnswer => '정답 (선택)';
+
+  @override
+  String get imageBoxLeft => '왼쪽으로 옮기기';
+
+  @override
+  String get imageBoxRight => '오른쪽으로 옮기기';
+
+  @override
+  String get imageBoxUp => '위로 옮기기';
+
+  @override
+  String get imageBoxDown => '아래로 옮기기';
+
+  @override
+  String get imageBoxWider => '가로 늘리기';
+
+  @override
+  String get imageBoxNarrower => '가로 줄이기';
+
+  @override
+  String get imageBoxTaller => '세로 늘리기';
+
+  @override
+  String get imageBoxShorter => '세로 줄이기';
+
+  @override
+  String get imageBoxDelete => '빈칸 지우기';
+
+  @override
   String blockMenu(String side, int number) {
     return '$side $number번째 블록 메뉴';
   }

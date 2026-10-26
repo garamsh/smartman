@@ -35,15 +35,33 @@ final class MediaUpload {
   final DateTime createdAt;
 }
 
-/// An image made ready to store: cropped to a square, scaled to at most
+/// The shape an image is stored in.
+enum ImageShape {
+  /// Its centred square, as a deck's tile shows it.
+  square,
+
+  /// Whole, at its own aspect ratio, as a card's image block shows it.
+  whole,
+}
+
+/// An image made ready to store: in its [ImageShape], scaled to at most
 /// [maxImageSide] on a side, and encoded as JPEG.
 final class PreparedImage {
-  const PreparedImage(this.bytes, this.sha256);
+  const PreparedImage(
+    this.bytes,
+    this.sha256, {
+    required this.width,
+    required this.height,
+  });
 
   final Uint8List bytes;
 
   /// [bytes]' SHA-256 digest, in lowercase hex.
   final String sha256;
+
+  /// The encoded image's size in pixels, upright.
+  final int width;
+  final int height;
 }
 
 /// The longest side, in pixels, of a stored image.

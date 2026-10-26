@@ -7,8 +7,10 @@ import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/media.dart';
 import 'cloze_form.dart';
 import 'content.dart';
+import 'image_block.dart';
 import 'table_form.dart';
 import 'word_form.dart';
 
@@ -16,20 +18,23 @@ import 'word_form.dart';
 enum CardSide { front, back }
 
 /// A block type the add sheet offers. A type whose block issue has not
-/// landed, such as a photo or a recording, is not one of them (ADR 0108).
+/// landed, such as a recording, is not one of them (ADR 0108).
 enum BlockType {
   text,
   senses,
   table,
-  cloze;
+  cloze,
+  image;
 
   /// An empty block of this type: a 글 with no text, one empty meaning, a
-  /// table of two rows of two cells, or a line with no blank.
+  /// table of two rows of two cells, a line with no blank, or a 사진 with no
+  /// photo yet.
   BlockDraft draft() => switch (this) {
     text => TextBlockDraft(),
     senses => SensesBlockDraft(),
     table => TableBlockDraft(),
     cloze => ClozeBlockDraft(),
+    image => ImageBlockDraft(),
   };
 
   String title(AppLocalizations l10n) => switch (this) {
@@ -37,6 +42,7 @@ enum BlockType {
     senses => l10n.blockSenses,
     table => l10n.blockTable,
     cloze => l10n.blockCloze,
+    image => l10n.blockImage,
   };
 
   String description(AppLocalizations l10n) => switch (this) {
@@ -44,6 +50,7 @@ enum BlockType {
     senses => l10n.blockSensesDescription,
     table => l10n.blockTableDescription,
     cloze => l10n.blockClozeDescription,
+    image => l10n.blockImageDescription,
   };
 
   IconData get icon => switch (this) {
@@ -51,6 +58,7 @@ enum BlockType {
     senses => LucideIcons.listOrdered,
     table => LucideIcons.table,
     cloze => LucideIcons.textCursorInput,
+    image => LucideIcons.image,
   };
 }
 
@@ -63,6 +71,7 @@ sealed class BlockDraft {
     SensesContent(:final senses) => SensesBlockDraft(senses),
     TableContent() => TableBlockDraft(block),
     ClozeContent() => ClozeBlockDraft(block),
+    ImageContent() => ImageBlockDraft(block),
     final UnsupportedContent kept => KeptBlockDraft(kept),
   };
 
@@ -199,6 +208,27 @@ final class ClozeBlockDraft extends BlockDraft {
   }
 }
 
+/// A 사진 block: its photo, once chosen, and the boxes over it (ADR 0109).
+final class ImageBlockDraft extends BlockDraft {
+  ImageBlockDraft([ImageContent? image]) : image = ImageDraft(image);
+
+  final ImageDraft image;
+
+  @override
+  BlockType get type => BlockType.image;
+
+  /// The photo and its boxes; an empty 글 while no photo is chosen, which
+  /// [isComplete] refuses to save.
+  @override
+  Content get content => image.image ?? const TextContent('');
+
+  @override
+  bool get isComplete => image.image != null;
+
+  @override
+  void dispose() => image.dispose();
+}
+
 /// A block this build cannot read, kept and written back as it was stored.
 final class KeptBlockDraft extends BlockDraft {
   KeptBlockDraft(this.content);
@@ -229,6 +259,7 @@ class BlockList extends StatelessWidget {
     required this.blocks,
     required this.showErrors,
     required this.onChanged,
+    required this.onImagePicked,
     this.emptyError,
   });
 
@@ -239,6 +270,10 @@ class BlockList extends StatelessWidget {
 
   /// Called after every change, which this widget makes in place.
   final VoidCallback onChanged;
+
+  /// Called with each photo a 사진 block stores, so the editor can let go of
+  /// one the card is not saved with.
+  final ValueChanged<MediaId> onImagePicked;
 
   void _act(int index, _BlockAction action) {
     switch (action) {
@@ -317,6 +352,7 @@ class BlockList extends StatelessWidget {
             menuLabel: l10n.blockMenu(sideName, index + 1),
             showErrors: showErrors,
             onChanged: onChanged,
+            onImagePicked: onImagePicked,
             onAction: (action) => _act(index, action),
             canMoveUp: index > 0,
             canMoveDown: index < blocks.length - 1,
@@ -346,12 +382,14 @@ class _Block extends StatelessWidget {
     required this.menuLabel,
     required this.showErrors,
     required this.onChanged,
+    required this.onImagePicked,
     required this.onAction,
     required this.canMoveUp,
     required this.canMoveDown,
   });
 
   final BlockDraft block;
+  final ValueChanged<MediaId> onImagePicked;
 
   /// "앞면" or "뒷면", which a one-meaning 뜻 목록's field is labelled.
   final String sideName;
@@ -374,7 +412,8 @@ class _Block extends StatelessWidget {
       TextBlockDraft(:final type) ||
       SensesBlockDraft(:final type) ||
       TableBlockDraft(:final type) ||
-      ClozeBlockDraft(:final type) => (type.icon, type.title(l10n)),
+      ClozeBlockDraft(:final type) ||
+      ImageBlockDraft(:final type) => (type.icon, type.title(l10n)),
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -455,6 +494,12 @@ class _Block extends StatelessWidget {
                 showError: showErrors && !draft.isComplete,
               ),
             ],
+          ),
+          ImageBlockDraft(:final image) => ImageBlockFields(
+            draft: image,
+            showErrors: showErrors,
+            onChanged: onChanged,
+            onPicked: onImagePicked,
           ),
           KeptBlockDraft() => const SizedBox.shrink(),
         },

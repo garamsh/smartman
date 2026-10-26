@@ -167,11 +167,18 @@ class DeckRepository {
   }
 
   /// Deletes the deck and every card in it, as tombstones sync pushes, and
-  /// releases its image.
+  /// releases its image and its cards'.
   Future<void> deleteDeck(DeckId id) => _guard(
     () => _db.transaction(() async {
       final now = _clock();
       if (await _imageOf(id) case final image?) await _media?.release(image);
+      final cards = _db.select(_db.cards)
+        ..where(
+          (card) => card.deckId.equals(id.value) & card.deletedAt.isNull(),
+        );
+      for (final row in await cards.get()) {
+        await _releaseImages(row);
+      }
       await (_db.update(
         _db.decks,
       )..where((deck) => deck.id.equals(id.value))).write(_deckTombstone(now));
@@ -315,16 +322,27 @@ class DeckRepository {
         final row = await (_db.select(
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).getSingle();
+        final kept = mediaOf([...front, ...back]);
+        for (final image in mediaOf([...card.front, ...card.back])) {
+          if (!kept.contains(image)) await _media?.release(image);
+        }
         return CardSaved(_toCard(row));
       }),
     );
   }
 
-  /// Deletes the card as a tombstone sync pushes.
-  Future<void> deleteCard(CardId id) => _guard(() async {
-    await (_db.update(_db.cards)..where((card) => card.id.equals(id.value)))
-        .write(_cardTombstone(_clock()));
-  });
+  /// Deletes the card as a tombstone sync pushes, and releases its images.
+  Future<void> deleteCard(CardId id) => _guard(
+    () => _db.transaction(() async {
+      final cards = _db.select(_db.cards)
+        ..where((card) => card.id.equals(id.value));
+      for (final row in await cards.get()) {
+        await _releaseImages(row);
+      }
+      await (_db.update(_db.cards)..where((card) => card.id.equals(id.value)))
+          .write(_cardTombstone(_clock()));
+    }),
+  );
 
   /// Saves [cards] from [source] into [target] in one transaction, creating
   /// the deck first when the target is a new one. A card whose key collides
@@ -478,6 +496,22 @@ class DeckRepository {
       ..limit(1);
     final row = await query.getSingleOrNull();
     return row == null ? null : _toCard(row);
+  }
+
+  /// Releases the images [row]'s sides hold (ADR 0109). A side this build
+  /// cannot decode names no image it can find, so it releases none of its.
+  Future<void> _releaseImages(CardRow row) async {
+    for (final side in [row.front, row.back]) {
+      final List<Content> blocks;
+      try {
+        blocks = decodeContent(side);
+      } on FormatException {
+        continue;
+      }
+      for (final image in mediaOf(blocks)) {
+        await _media?.release(image);
+      }
+    }
   }
 
   /// The image of deck [id]; null when it has none or is not stored.

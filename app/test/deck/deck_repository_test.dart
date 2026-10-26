@@ -346,6 +346,68 @@ void main() {
         expect(await releasedIds(), [frenchImage.value]);
         expect((await repository.getDeck(spanish.id)).image, spanishImage);
       });
+
+      group("a card's photo (ADR 0109)", () {
+        ImageContent photo(MediaId media) => ImageContent(
+          media: media,
+          width: 4,
+          height: 3,
+          boxes: const [ImageBox(id: '1', x: 0, y: 0, w: 0.5, h: 0.5)],
+        );
+
+        Future<Card> cardWith(Deck deck, MediaId media, String front) async {
+          final saved = await repository.addCard(
+            deck.id,
+            front: [TextContent(front), photo(media)],
+            back: const [TextContent('back')],
+          );
+          return switch (saved) {
+            CardSaved(:final card) => card,
+            DuplicateFront() => fail('the deck held no duplicate'),
+          };
+        }
+
+        test('is kept through an edit that keeps it, and released by one that drops it', () async {
+          final deck = await repository.createDeck('French');
+          final image = await media.addImage(preparedImage(1));
+          final card = await cardWith(deck, image, 'a photo');
+
+          final kept = await repository.editCard(
+            card,
+            front: [const TextContent('the photo'), photo(image)],
+            back: card.back,
+          );
+          expect(await releasedIds(), isEmpty, reason: 'kept');
+
+          await repository.editCard(
+            (kept as CardSaved).card,
+            front: const [TextContent('no photo')],
+            back: card.back,
+          );
+          expect(await releasedIds(), [image.value]);
+        });
+
+        test("is released with its card, and with its deck, and another card's is kept", () async {
+          final french = await repository.createDeck('French');
+          final spanish = await repository.createDeck('Spanish');
+          final first = await media.addImage(preparedImage(1));
+          final second = await media.addImage(preparedImage(2));
+          final third = await media.addImage(preparedImage(3));
+          final deleted = await cardWith(french, first, 'one');
+          await cardWith(french, second, 'two');
+          await cardWith(spanish, third, 'three');
+
+          await repository.deleteCard(deleted.id);
+          expect(await releasedIds(), [first.value]);
+
+          await repository.deleteDeck(french.id);
+          expect(await releasedIds(), [first.value, second.value]);
+          expect(
+            (await repository.listCards(spanish.id)).single.front,
+            contains(photo(third)),
+          );
+        });
+      });
     });
 
     test('a key this build does not know reads as none, and the stored key is kept through an edit', () async {
