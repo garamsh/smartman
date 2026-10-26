@@ -15,6 +15,8 @@ with the locked dependencies writes the same files. The cards a vocabulary page 
 with the labels and examples it prints, are written beside its image as the ground truth; a notes
 page's truth is the rules and exceptions it teaches, each with its step, the terms that cover it
 and the worked examples the page prints for it, and every line it prints, from tools/eval/notes.json.
+A page for the two-stage eval adds its sections, each line with its marks and the spans to blank,
+from tools/eval/structure.json.
 """
 
 import json
@@ -357,6 +359,225 @@ LABEL_PAGES = [
 ]
 
 
+# The pages for the two-stage eval (#414), each in every hand and distortion after the pages for
+# prompt v8: sections of a comparison table or a table whose cells hold bullet lines, and a list,
+# with the writer's pen underlines, circles, highlights and stars on their lines.
+STRUCTURE_DOCUMENTS = ["ko-states", "ko-respiration", "en-markets", "ko-sentences", "en-organelles"]
+TABLE_CONTENT = {"comparison_table", "table"}
+# The marks that cover a span of a line, and so a word to blank; a star marks the whole line.
+SPAN_MARKS = {"underline", "circle", "highlight"}
+HIGHLIGHT_COLOUR = (250, 222, 90)
+BULLET = "- "
+
+
+def line_step(page: Page, size: int) -> float:
+    """The height of one row of a marked line: the handwriting face, set larger, needs more."""
+    return size * (1.75 if page.handwritten else 1.45)
+
+
+def wrap_offsets(page: Page, text: str, face: str, size: int, width: float) -> list[tuple[int, str]]:
+    """Breaks text at spaces into rows no wider than width, each with the offset of its first
+    character in text; fails when one word alone is wider."""
+    rows: list[tuple[int, str]] = []
+    start, row, at = 0, "", 0
+    for word in text.split(" "):
+        candidate = word if not row else f"{row} {word}"
+        if row and page.width(candidate, face, size) > width:
+            rows.append((start, row))
+            start, row = at, word
+        else:
+            row = candidate
+        at += len(word) + 1
+    rows.append((start, row))
+    if any(page.width(part, face, size) > width for _, part in rows):
+        raise SystemExit(f"a word of '{text}' is wider than its box")
+    return rows
+
+
+def marked_line(page: Page, xy: tuple[float, float], line: dict, size: int, width: float) -> float:
+    """Draws a line wrapped to width, with its pen marks on the spans they cover, and returns the
+    height it took."""
+    x, y = xy
+    face = page.front_face
+    step = line_step(page, size)
+    rows = wrap_offsets(page, line["text"], face, size, width)
+
+    def overlaps(mark: dict):
+        for i, (start, part) in enumerate(rows):
+            lo, hi = max(mark["start"], start), min(mark["end"], start + len(part))
+            if lo < hi:
+                yield (x + page.width(part[:lo - start], face, size), x + page.width(part[:hi - start], face, size),
+                       y + i * step)
+
+    for mark in line["marks"]:
+        if mark["kind"] == "highlight":
+            for x0, x1, top in overlaps(mark):
+                page.draw.rectangle([(x0, top + size * 0.2), (x1, top + size * 1.2)], fill=HIGHLIGHT_COLOUR)
+    for i, (_, part) in enumerate(rows):
+        page.text((x, y + i * step), part, face, size)
+    for mark in line["marks"]:
+        if mark["kind"] == "underline":
+            for x0, x1, top in overlaps(mark):
+                page.draw.line([(x0, top + size * 1.25), (x1, top + size * 1.25)], fill=MARK_COLOUR, width=3)
+        elif mark["kind"] == "circle":
+            for x0, x1, top in overlaps(mark):
+                page.draw.ellipse([(x0 - 9, top - size * 0.05), (x1 + 9, top + size * 1.4)], outline=MARK_COLOUR,
+                                  width=3)
+        elif mark["kind"] == "star":
+            star(page, (x - 22, y + size * 0.6), size * 0.5)
+    return len(rows) * step
+
+
+def truth_line(line_id: str, spec: dict) -> dict:
+    """A line's truth: its text, each mark's span counted in characters, and the spans a card should
+    blank: every span a mark covers and every further one the page names."""
+    text = spec["text"]
+
+    def span(part: str) -> dict:
+        start = text.find(part)
+        if start < 0:
+            raise SystemExit(f"'{part}' is not in '{text}'")
+        return {"start": start, "end": start + len(part)}
+
+    marks = [{**({"start": 0, "end": len(text)} if mark.get("line") else span(mark["span"])),
+              "kind": mark["kind"], "ink": "pen"} for mark in spec.get("marks", [])]
+    blanks = [{"start": mark["start"], "end": mark["end"]} for mark in marks if mark["kind"] in SPAN_MARKS]
+    blanks += [span(part) for part in spec.get("blanks", [])]
+    if not blanks:
+        raise SystemExit(f"'{text}' names no blank")
+    return {"id": line_id, "text": text, "marks": marks, "blanks": sorted(blanks, key=lambda b: b["start"])}
+
+
+def truth_sections(doc: dict) -> list[dict]:
+    """A structure document's sections as their truth: each table cell's lines, or each list line."""
+    sections = []
+    for s, section in enumerate(doc["sections"], 1):
+        truth = {"title": section["title"], "language": doc["language"], "content_type": section["content_type"]}
+        if section["content_type"] in TABLE_CONTENT:
+            table = section["table"]
+            truth["lines"] = []
+            truth["table"] = {"columns": table["columns"], "rows": [
+                {"header": row["header"], "cells": [
+                    {"lines": [truth_line(f"s{s}-r{r}-c{c}-l{n}", line) for n, line in enumerate(cell, 1)]}
+                    for c, cell in enumerate(row["cells"], 1)]}
+                for r, row in enumerate(table["rows"], 1)]}
+        else:
+            truth["lines"] = [truth_line(f"s{s}-l{n}", line) for n, line in enumerate(section["lines"], 1)]
+            truth["table"] = None
+        sections.append(truth)
+    return sections
+
+
+def section_lines(section: dict) -> list[dict]:
+    """Every line of a truth section, a table's row by row and cell by cell."""
+    if section["table"] is None:
+        return section["lines"]
+    return [line for row in section["table"]["rows"] for cell in row["cells"] for line in cell["lines"]]
+
+
+def structure(page: Page, doc: dict, sections: list[dict]) -> None:
+    """A page of sections: each a heading, then a ruled table whose first column names its rows and
+    whose cells hold bullet lines, or a list of lines; every line drawn with its marks."""
+    scale = doc.get("scale", 1.0)
+    size = round(30 * scale)
+    page.text((100, 80), doc["title"], page.front_face, 50, (30, 60, 120) if not page.handwritten else None)
+    page.draw.line([(100, 160), (PAGE[0] - 100, 160)], fill=(30, 60, 120), width=3)
+    y = 190.0
+    left, right, pad = 110, PAGE[0] - 100, 12
+    for section in sections:
+        y += 20
+        page.text((left, y), section["title"], page.front_face, round(38 * scale),
+                  (30, 60, 120) if not page.handwritten else None)
+        y += round(38 * scale) * 1.7
+        if section["table"] is None:
+            for line in section["lines"]:
+                bullet = page.text((left + 20, y), BULLET, page.front_face, size)
+                y += marked_line(page, (left + 20 + bullet, y), line, size, right - left - 40 - bullet)
+            continue
+        table = section["table"]
+        header_width = (right - left) * 0.25
+        width = (right - left - header_width) / len(table["columns"])
+        xs = [left, left + header_width] + [left + header_width + width * (i + 1) for i in range(len(table["columns"]))]
+        bullet = page.width(BULLET, page.front_face, size)
+        rows = [[None, *table["columns"]]] + [[row["header"], *row["cells"]] for row in table["rows"]]
+        for r, row in enumerate(rows):
+            heights = []
+            for c, cell in enumerate(row):
+                inner = xs[c + 1] - xs[c] - 2 * pad
+                if cell is None:
+                    heights.append(0.0)
+                elif isinstance(cell, str):
+                    heights.append(len(wrap_offsets(page, cell, page.front_face, size, inner)) * line_step(page, size))
+                else:
+                    heights.append(sum(len(wrap_offsets(page, line["text"], page.front_face, size, inner - bullet))
+                                       for line in cell["lines"]) * line_step(page, size))
+            height = max(heights) + 2 * pad
+            for c, cell in enumerate(row):
+                page.draw.rectangle([(xs[c], y), (xs[c + 1], y + height)], outline=(90, 90, 90), width=2)
+                inner = xs[c + 1] - xs[c] - 2 * pad
+                if cell is None:
+                    continue
+                if isinstance(cell, str):
+                    if r == 0:
+                        page.draw.rectangle([(xs[c] + 2, y + 2), (xs[c + 1] - 2, y + height - 2)], fill=(225, 230, 240))
+                    marked_line(page, (xs[c] + pad, y + pad), {"text": cell, "marks": []}, size, inner)
+                    continue
+                at = y + pad
+                for line in cell["lines"]:
+                    page.text((xs[c] + pad, at), BULLET, page.front_face, size)
+                    at += marked_line(page, (xs[c] + pad + bullet, at), line, size, inner - bullet)
+            y += height
+    if y > PAGE[1] - 60:
+        raise SystemExit(f"the structure page {doc['title']} runs off the page")
+
+
+def write_structure_samples(index: int, name: str, doc: dict) -> int:
+    """Writes the structure page `name` in every hand and distortion, numbered after `index`, with
+    its truth: its sections, its lines as notes facts, each fact the spans its line should blank,
+    and every line it prints; returns the last index."""
+    sections = truth_sections(doc)
+    lines = [line for section in sections for line in section_lines(section)]
+    facts = [{"id": line["id"], "step": 1 if line["marks"] else 2,
+              "terms": [line["text"][b["start"]:b["end"]] for b in line["blanks"]]} for line in lines]
+    printed = [doc["title"]]
+    for section in sections:
+        printed.append(section["title"])
+        if section["table"] is not None:
+            printed += section["table"]["columns"]
+            for row in section["table"]["rows"]:
+                printed.append(row["header"])
+                printed += [line["text"] for cell in row["cells"] for line in cell["lines"]]
+        else:
+            printed += [line["text"] for line in section["lines"]]
+    for hand in NOTE_HANDS:
+        for distortion in NOTE_DISTORTIONS:
+            index += 1
+            rng = np.random.default_rng([SEED, index])
+            face = NOTE_FACES[hand]
+            page = Page(rng, "", hand, (face, face))
+            structure(page, doc, sections)
+            check_coverage(page.covered)
+            d = HARSH if distortion == "harsh" else MILD
+            photo = photograph(page.image, rng, d)
+            sample = f"{index:02d}-structure-{name}-{hand}-{distortion}"
+            photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
+            truth = {
+                "image": f"{sample}.jpg",
+                "kind": "notes",
+                "layout": "structure",
+                "languages": {"front": doc["language"], "back": doc["language"]},
+                "hand": hand,
+                "distortion": distortion,
+                "fonts": [face],
+                "facts": facts,
+                "lines": printed,
+                "sections": sections,
+            }
+            (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                    encoding="utf-8")
+    return index
+
+
 RENDER = {"two-column": two_column, "bilingual-table": bilingual_table, "dictionary": dictionary, "glossary": glossary}
 COUNTS = {"two-column": (12, 16), "bilingual-table": (10, 14), "dictionary": (6, 9), "glossary": (14, 20)}
 
@@ -558,6 +779,9 @@ def main() -> None:
     for name, key, strip, languages, title in LABEL_PAGES:
         entries = unlabelled(vocabulary[key]) if strip else vocabulary[key]
         index = write_word_book_samples(index, name, entries, languages, title)
+    structures = json.loads((HERE / "structure.json").read_text(encoding="utf-8"))
+    for name in STRUCTURE_DOCUMENTS:
+        index = write_structure_samples(index, name, structures[name])
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 

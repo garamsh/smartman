@@ -1,0 +1,493 @@
+{
+  "ko-states": {
+    "title": "초기 국가의 성장",
+    "language": "ko",
+    "scale": 0.85,
+    "sections": [
+      {
+        "title": "여러 나라의 비교",
+        "content_type": "comparison_table",
+        "table": {
+          "columns": ["부여", "고구려", "삼한"],
+          "rows": [
+            {
+              "header": "정치",
+              "cells": [
+                [
+                  {
+                    "text": "5부족 연맹체",
+                    "marks": [{ "span": "5부족 연맹체", "kind": "underline" }]
+                  },
+                  {
+                    "text": "여러 가들이 사출도 다스림",
+                    "marks": [{ "span": "사출도", "kind": "circle" }]
+                  }
+                ],
+                [
+                  { "text": "5부 연맹체", "blanks": ["5부 연맹체"] },
+                  {
+                    "text": "제가 회의에서 중대사 결정",
+                    "marks": [{ "span": "제가 회의", "kind": "underline" }]
+                  }
+                ],
+                [
+                  { "text": "신지, 읍차 등 군장", "blanks": ["신지, 읍차"] },
+                  {
+                    "text": "제사장 천군이 소도 관리",
+                    "marks": [
+                      { "span": "천군", "kind": "circle" },
+                      { "span": "소도", "kind": "underline" }
+                    ]
+                  }
+                ]
+              ]
+            },
+            {
+              "header": "경제",
+              "cells": [
+                [
+                  { "text": "반농반목", "blanks": ["반농반목"] },
+                  {
+                    "text": "말, 주옥, 모피 특산",
+                    "blanks": ["말, 주옥, 모피"]
+                  }
+                ],
+                [
+                  { "text": "산악 지대로 식량 부족", "blanks": ["식량 부족"] },
+                  {
+                    "text": "약탈 경제, 부경 창고",
+                    "marks": [{ "span": "부경", "kind": "circle" }]
+                  }
+                ],
+                [
+                  { "text": "벼농사 발달", "blanks": ["벼농사"] },
+                  {
+                    "text": "변한은 철 수출",
+                    "marks": [{ "span": "철", "kind": "underline" }]
+                  }
+                ]
+              ]
+            },
+            {
+              "header": "풍습",
+              "cells": [
+                [
+                  {
+                    "text": "1책 12법",
+                    "marks": [{ "span": "1책 12법", "kind": "circle" }]
+                  },
+                  { "text": "순장, 우제점복", "blanks": ["우제점복"] }
+                ],
+                [
+                  {
+                    "text": "서옥제 (데릴사위제)",
+                    "marks": [{ "span": "서옥제", "kind": "underline" }]
+                  }
+                ],
+                [
+                  { "text": "두레 조직", "blanks": ["두레"] }
+                ]
+              ]
+            },
+            {
+              "header": "제천 행사",
+              "cells": [
+                [
+                  {
+                    "text": "영고 (12월)",
+                    "marks": [{ "span": "영고", "kind": "circle" }]
+                  }
+                ],
+                [
+                  {
+                    "text": "동맹 (10월)",
+                    "marks": [{ "span": "동맹", "kind": "circle" }]
+                  }
+                ],
+                [
+                  {
+                    "text": "수릿날과 계절제",
+                    "marks": [{ "span": "계절제", "kind": "underline" }],
+                    "blanks": ["수릿날"]
+                  }
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "더 기억할 점",
+        "content_type": "rule_list",
+        "lines": [
+          {
+            "text": "옥저와 동예는 읍군, 삼로가 다스렸다",
+            "marks": [{ "span": "읍군, 삼로", "kind": "underline" }]
+          },
+          {
+            "text": "동예는 다른 부족을 침범하면 책화로 갚았다",
+            "marks": [
+              { "span": "책화", "kind": "circle" },
+              { "line": true, "kind": "star" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "ko-respiration": {
+    "title": "광합성과 세포 호흡",
+    "language": "ko",
+    "scale": 0.9,
+    "sections": [
+      {
+        "title": "두 과정의 비교",
+        "content_type": "comparison_table",
+        "table": {
+          "columns": ["광합성", "세포 호흡"],
+          "rows": [
+            {
+              "header": "장소",
+              "cells": [
+                [{
+                  "text": "엽록체",
+                  "marks": [{ "span": "엽록체", "kind": "underline" }]
+                }],
+                [{
+                  "text": "미토콘드리아",
+                  "marks": [{ "span": "미토콘드리아", "kind": "circle" }]
+                }]
+              ]
+            },
+            {
+              "header": "물질 변화",
+              "cells": [
+                [{
+                  "text": "이산화 탄소와 물 -> 포도당과 산소",
+                  "blanks": ["포도당과 산소"]
+                }],
+                [{
+                  "text": "포도당과 산소 -> 이산화 탄소와 물",
+                  "blanks": ["이산화 탄소와 물"]
+                }]
+              ]
+            },
+            {
+              "header": "에너지",
+              "cells": [
+                [
+                  {
+                    "text": "빛에너지를 흡수",
+                    "marks": [{ "span": "빛에너지", "kind": "underline" }]
+                  },
+                  { "text": "화학 에너지로 저장", "blanks": ["저장"] }
+                ],
+                [
+                  { "text": "화학 에너지를 방출", "blanks": ["방출"] },
+                  {
+                    "text": "ATP를 만든다",
+                    "marks": [{ "span": "ATP", "kind": "circle" }]
+                  }
+                ]
+              ]
+            },
+            {
+              "header": "일어나는 때",
+              "cells": [
+                [{
+                  "text": "빛이 있을 때만",
+                  "marks": [{ "span": "빛이 있을 때만", "kind": "highlight" }]
+                }],
+                [{ "text": "밤낮없이 항상", "blanks": ["항상"] }]
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "세포 호흡의 단계",
+        "content_type": "process",
+        "lines": [
+          {
+            "text": "1단계 해당 과정: 세포질에서 포도당 분해",
+            "marks": [{ "span": "세포질", "kind": "circle" }],
+            "blanks": ["해당 과정"]
+          },
+          {
+            "text": "2단계 TCA 회로: 미토콘드리아 기질에서 진행",
+            "marks": [{ "span": "TCA 회로", "kind": "underline" }]
+          },
+          {
+            "text": "3단계 전자 전달계: ATP를 가장 많이 만든다",
+            "marks": [{ "span": "전자 전달계", "kind": "circle" }]
+          }
+        ]
+      }
+    ]
+  },
+  "en-markets": {
+    "title": "Market Structures",
+    "language": "en",
+    "scale": 0.85,
+    "sections": [
+      {
+        "title": "Comparing markets",
+        "content_type": "comparison_table",
+        "table": {
+          "columns": ["Perfect competition", "Monopoly", "Oligopoly"],
+          "rows": [
+            {
+              "header": "Firms",
+              "cells": [
+                [{
+                  "text": "Many small firms",
+                  "blanks": ["Many small firms"]
+                }],
+                [{
+                  "text": "One firm",
+                  "marks": [{ "span": "One firm", "kind": "underline" }]
+                }],
+                [{
+                  "text": "A few large firms",
+                  "marks": [{ "span": "A few", "kind": "circle" }]
+                }]
+              ]
+            },
+            {
+              "header": "Price",
+              "cells": [
+                [{
+                  "text": "Price taker",
+                  "marks": [{ "span": "Price taker", "kind": "underline" }]
+                }],
+                [{
+                  "text": "Price maker",
+                  "marks": [{ "span": "Price maker", "kind": "circle" }]
+                }],
+                [
+                  {
+                    "text": "Interdependent pricing",
+                    "blanks": ["Interdependent"]
+                  },
+                  {
+                    "text": "Prices tend to be sticky",
+                    "marks": [{ "span": "sticky", "kind": "underline" }]
+                  }
+                ]
+              ]
+            },
+            {
+              "header": "Entry",
+              "cells": [
+                [{
+                  "text": "Free entry and exit",
+                  "blanks": ["Free entry and exit"]
+                }],
+                [{
+                  "text": "High barriers to entry",
+                  "marks": [
+                    { "span": "barriers to entry", "kind": "underline" }
+                  ]
+                }],
+                [{
+                  "text": "Significant barriers",
+                  "blanks": ["Significant barriers"]
+                }]
+              ]
+            },
+            {
+              "header": "Product",
+              "cells": [
+                [{ "text": "Identical products", "blanks": ["Identical"] }],
+                [{
+                  "text": "No close substitutes",
+                  "marks": [
+                    { "span": "No close substitutes", "kind": "highlight" }
+                  ]
+                }],
+                [{
+                  "text": "Identical or differentiated",
+                  "blanks": ["differentiated"]
+                }]
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "Key ideas",
+        "content_type": "prose",
+        "lines": [
+          {
+            "text": "In the long run, firms in perfect competition earn zero economic profit.",
+            "marks": [{ "span": "zero economic profit", "kind": "underline" }]
+          },
+          {
+            "text": "A monopolist produces where marginal revenue equals marginal cost.",
+            "marks": [
+              {
+                "span": "marginal revenue equals marginal cost",
+                "kind": "highlight"
+              },
+              { "line": true, "kind": "star" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "ko-sentences": {
+    "title": "문장의 종류",
+    "language": "ko",
+    "scale": 0.9,
+    "sections": [
+      {
+        "title": "종결 표현에 따른 문장",
+        "content_type": "table",
+        "table": {
+          "columns": ["종결 어미", "예"],
+          "rows": [
+            {
+              "header": "평서문",
+              "cells": [
+                [{
+                  "text": "-다",
+                  "marks": [{ "span": "-다", "kind": "circle" }]
+                }],
+                [{ "text": "비가 온다.", "blanks": ["온다"] }]
+              ]
+            },
+            {
+              "header": "의문문",
+              "cells": [
+                [{
+                  "text": "-니, -까",
+                  "marks": [{ "span": "-니", "kind": "underline" }],
+                  "blanks": ["-까"]
+                }],
+                [{ "text": "비가 오니?", "blanks": ["오니"] }]
+              ]
+            },
+            {
+              "header": "명령문",
+              "cells": [
+                [{
+                  "text": "-아라/-어라",
+                  "marks": [{ "span": "-아라/-어라", "kind": "underline" }]
+                }],
+                [{ "text": "어서 먹어라.", "blanks": ["먹어라"] }]
+              ]
+            },
+            {
+              "header": "청유문",
+              "cells": [
+                [{
+                  "text": "-자",
+                  "marks": [{ "span": "-자", "kind": "circle" }]
+                }],
+                [{ "text": "함께 가자.", "blanks": ["가자"] }]
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "더 알아보기",
+        "content_type": "worked_examples",
+        "lines": [
+          {
+            "text": "감탄문은 -구나로 끝난다: 꽃이 피었구나!",
+            "marks": [{ "span": "-구나", "kind": "circle" }]
+          },
+          {
+            "text": "약속문은 -마로 끝난다: 내일 주마.",
+            "marks": [
+              { "span": "-마", "kind": "underline" },
+              { "line": true, "kind": "star" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "en-organelles": {
+    "title": "Cell Organelles",
+    "language": "en",
+    "scale": 0.9,
+    "sections": [
+      {
+        "title": "What each organelle does",
+        "content_type": "table",
+        "table": {
+          "columns": ["Function", "Membrane"],
+          "rows": [
+            {
+              "header": "Nucleus",
+              "cells": [
+                [
+                  {
+                    "text": "Stores DNA",
+                    "marks": [{ "span": "DNA", "kind": "circle" }]
+                  },
+                  { "text": "Controls the cell", "blanks": ["Controls"] }
+                ],
+                [{ "text": "Double membrane", "blanks": ["Double"] }]
+              ]
+            },
+            {
+              "header": "Mitochondrion",
+              "cells": [
+                [{
+                  "text": "Makes ATP by respiration",
+                  "marks": [{ "span": "ATP", "kind": "underline" }],
+                  "blanks": ["respiration"]
+                }],
+                [{ "text": "Double membrane", "blanks": ["Double"] }]
+              ]
+            },
+            {
+              "header": "Ribosome",
+              "cells": [
+                [{
+                  "text": "Builds proteins",
+                  "marks": [{ "span": "proteins", "kind": "underline" }]
+                }],
+                [{
+                  "text": "No membrane",
+                  "marks": [{ "span": "No membrane", "kind": "circle" }]
+                }]
+              ]
+            },
+            {
+              "header": "Chloroplast",
+              "cells": [
+                [{
+                  "text": "Carries out photosynthesis",
+                  "marks": [{ "span": "photosynthesis", "kind": "highlight" }]
+                }],
+                [{ "text": "Double membrane", "blanks": ["Double"] }]
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "Remember",
+        "content_type": "rule_list",
+        "lines": [
+          {
+            "text": "Plant cells have a cell wall made of cellulose.",
+            "marks": [{ "span": "cellulose", "kind": "circle" }]
+          },
+          {
+            "text": "Animal cells have no cell wall.",
+            "marks": [
+              { "span": "no cell wall", "kind": "underline" },
+              { "line": true, "kind": "star" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -953,8 +953,11 @@ Deno.test("the committed pages for prompt v8 print the word book without labels,
 });
 
 Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step from 1 to 4, and only terms and examples their page prints", async () => {
+  // The pages of `notes.json`; the two-stage eval's pages of `structure.json` are tested apart.
   const notes = (await committedSamples()).flatMap((sample) =>
-    sample.kind === "notes" ? [sample] : []
+    sample.kind === "notes" && !sample.name.includes("-structure-")
+      ? [sample]
+      : []
   );
   assert.equal(notes.length, 28);
   const documents = JSON.parse(

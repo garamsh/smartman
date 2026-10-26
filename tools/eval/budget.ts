@@ -52,7 +52,8 @@ export const TYPICAL_REASONING_TOKENS = 1000;
 // the reply at the function's output cap.
 export const WORST_PROMPT_TOKENS = 6000;
 
-function cost(
+/** What a call of [promptTokens] and [completionTokens] costs at [pricing], uncached. */
+export function cost(
   pricing: Pricing,
   promptTokens: number,
   completionTokens: number,

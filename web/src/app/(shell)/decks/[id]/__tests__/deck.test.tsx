@@ -8,6 +8,7 @@ import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { supabaseUnreachable } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
+import { expectTextReadable } from "@/testing/contrast";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
 import { sensesUnder } from "@/testing/senses";
@@ -86,11 +87,17 @@ describe("the deck page", () => {
     expect(rows()).toEqual(["Chat, 뒷면 가려짐", "chien, 뒷면 가려짐", "oiseau, 뒷면 가려짐"]);
     // Two learning and one new: the progress, read as one sentence.
     const bar = screen.getByRole("img", { name: "익힘 0장, 학습 중 2장, 새 카드 1장" });
-    // On the navy card: learning in white at 45%, as the phone draws it, with no gap between shares.
+    // On the white card: learning in ink at 45% on the hairline track, as the phone draws it, with
+    // no gap between shares.
     const learning = Array.from(bar.querySelectorAll<HTMLElement>("span[style]")).find((span) =>
       span.style.width.startsWith("66.6"),
     );
-    expect(learning?.className.split(" ")).toEqual(["bg-on-hero/45"]);
+    expect(learning?.className.split(" ")).toEqual(["bg-ink/45"]);
+    expect(bar).toHaveClass("bg-hairline");
+    const card = screen.getByRole("region", { name: "오늘 이 덱" });
+    expect(card).toHaveClass("bg-surface", "text-ink", "shadow-card");
+    expect(screen.getByRole("link", { name: "학습하기" })).toHaveClass("bg-ink", "text-on-primary");
+    expectTextReadable(card);
     expect(bar.className.split(" ")).not.toEqual(
       expect.arrayContaining([expect.stringMatching(/^gap-/)]),
     );
