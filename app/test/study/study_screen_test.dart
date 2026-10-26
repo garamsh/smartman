@@ -2145,8 +2145,7 @@ void main() {
       );
       expect(find.byType(PreviousPlaceholder), findsNothing);
       await expectLater(tester, meetsGuideline(textContrastGuideline));
-      // The label's quiet ink on the Know tint is under 4.5:1 (issue #434).
-      expectScreenTextReadable(tester, failing: {'Last card last time'});
+      expectScreenTextReadable(tester);
 
       // The notice, a status a screen reader announces as it shows.
       const notice = 'Picking up · 1 left · about 1 min';
