@@ -18,6 +18,7 @@ import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
 import 'package:smartman/study/src/previous_card.dart';
@@ -32,6 +33,7 @@ import 'package:smartman/study/src/study_style.dart';
 import 'package:smartman/study/src/today_overview.dart';
 
 import '../deck/whole_cards.dart';
+import '../media/fakes.dart';
 import 'fixtures.dart';
 import 'study_storage.dart';
 import '../word_breaks.dart';
@@ -313,6 +315,16 @@ Future<_Study> _open(
         studyZoneProvider.overrideWithValue((_) => Duration.zero),
         studyRandomProvider.overrideWithValue((_) => FirstDraw()),
         studyStorageProvider.overrideWithValue(storage),
+        // No photo is stored, so a card's photo is drawn as its fallback.
+        mediaStoreProvider.overrideWithValue(
+          MediaStore(
+            db,
+            FakeMediaServer(),
+            directory: unusedMediaDirectory,
+            clock: () => study.now,
+            newId: () => 'media${ids++}',
+          ),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigator,
@@ -1010,7 +1022,7 @@ void main() {
       ['a'],
       sides: {
         'a': (
-          const [TextContent('a front'), UnsupportedContent('image', null)],
+          const [TextContent('a front'), UnsupportedContent('audio', null)],
           const [TextContent('a back')],
         ),
       },
@@ -1019,7 +1031,7 @@ void main() {
     expect(
       find.descendant(
         of: _currentCard,
-        matching: find.text('[Content this version cannot show: image]'),
+        matching: find.text('[Content this version cannot show: audio]'),
       ),
       findsOneWidget,
     );
@@ -2180,6 +2192,17 @@ void main() {
         blanks: [(row: 0, column: 0), (row: 1, column: 0)],
       ),
     ];
+    const spans = [
+      TextContent('초기 국가'),
+      TableContent(
+        columns: ['', '정치'],
+        rows: [
+          ['부여', '5부족 연맹체, 왕 아래 마가'],
+        ],
+        blanks: [],
+        spans: [(row: 0, column: 1, start: 0, end: 7)],
+      ),
+    ];
 
     Future<_Study> openWhole(
       WidgetTester tester,
@@ -2192,6 +2215,70 @@ void main() {
         'whole': (front, [TextContent(plainText(front))]),
       },
       themeMode: themeMode,
+    );
+
+    testWidgets(
+      'a photo card hides each box on the current card, and once answered the previous card reveals it in place with its answer, as one face even with the photo on its back alone (ADR 0109)',
+      (tester) async {
+        const photo = ImageContent(
+          media: MediaId('photo'),
+          width: 400,
+          height: 300,
+          boxes: [
+            ImageBox(id: '1', x: 0.1, y: 0.1, w: 0.4, h: 0.3, answer: 'Paris'),
+          ],
+        );
+        final study = await _open(
+          tester,
+          ['front photo', 'back photo'],
+          sides: {
+            'front photo': ([photo], [const TextContent('France')]),
+            'back photo': ([const TextContent('Where is it?')], [photo]),
+          },
+        );
+        final current = study.tester.widget<CurrentCard>(_currentCard).card;
+        final first = current.front.contains(photo)
+            ? 'front photo'
+            : 'back photo';
+        Finder under(Finder card, Finder what) =>
+            find.descendant(of: card, matching: what);
+
+        for (final name in [
+          first,
+          first == 'front photo' ? 'back photo' : 'front photo',
+        ]) {
+          expect(
+            under(_currentCard, find.byType(MediaImage)),
+            findsOneWidget,
+            reason: '$name: one face, the photo on it',
+          );
+          expect(
+            under(_currentCard, find.text('Paris')),
+            findsNothing,
+            reason: '$name: the box hides its answer',
+          );
+          if (name == 'back photo') {
+            expect(
+              under(_currentCard, find.text('Where is it?')),
+              findsOneWidget,
+              reason: 'the front stays the prompt',
+            );
+          }
+
+          await study.know();
+
+          expect(
+            under(_previousCard, find.text('Paris')),
+            findsOneWidget,
+            reason: '$name: revealed in place',
+          );
+          expect(
+            under(_previousCard, find.byType(VerticalDivider)),
+            findsNothing,
+            reason: '$name: one face, not split',
+          );
+        }
+      },
     );
 
     testWidgets(
@@ -2262,11 +2349,48 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a table card with a span blank draws it empty inside its cell\'s text, read as "blank", and once answered fills it in place, the rest of the cell the cue (ADR 0110)',
+      (tester) async {
+        final study = await openWhole(tester, spans);
+        // The cell's one line of text, the blank inside it.
+        Finder cellUnder(Finder card) => find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is RichText &&
+                RegExp(r'^\s*5부족 연맹체\s*, 왕 아래 마가$').hasMatch(
+                  widget.text.toPlainText().replaceAll(_wordJoiner, ''),
+                ),
+          ),
+        );
+        expect(blanksUnder(_currentCard), {'5부족 연맹체': false});
+        expect(
+          cellUnder(_currentCard),
+          findsOneWidget,
+          reason: 'empty inside the cell, the rest of it the cue',
+        );
+        expect(
+          _label(tester, _cardNode),
+          'Front: 초기 국가. , 정치. 부여, blank, 왕 아래 마가',
+        );
+
+        await study.know();
+
+        expect(blanksUnder(_previousCard), {'5부족 연맹체': true});
+        expect(
+          cellUnder(_previousCard),
+          findsOneWidget,
+          reason: 'filled in place, inside its cell',
+        );
+      },
+    );
+
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
       testWidgets(
-        'in the ${mode.name} theme a cloze and a table card meet the contrast guideline before and after the answer',
+        'in the ${mode.name} theme a cloze and a table card, whole cells and spans, meet the contrast guideline before and after the answer',
         (tester) async {
-          for (final front in [cloze, table]) {
+          for (final front in [cloze, table, spans]) {
             final study = await openWhole(tester, front, themeMode: mode);
             await expectLater(tester, meetsGuideline(textContrastGuideline));
             await study.know();

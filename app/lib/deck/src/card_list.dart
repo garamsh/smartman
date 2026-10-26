@@ -166,13 +166,15 @@ class CardBackRow extends StatelessWidget {
 }
 
 /// One line of text for a card side: a cloze or a table with its blanks
-/// filled, and a block this version cannot show named by its type.
+/// filled, a photo as "사진", and a block this version cannot show named by
+/// its type.
 String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
     .map(
       (block) => switch (block) {
         TextContent(:final text) => text,
         ClozeContent(:final filled) || TableContent(:final filled) => filled,
         SensesContent(:final lines) => lines,
+        ImageContent() => l10n.blockImage,
         UnsupportedContent(:final type) => l10n.unsupportedContent(type),
       },
     )
@@ -180,7 +182,8 @@ String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
 
 /// A card side as a screen reader reads it: as [describeContent] has it, but
 /// each blank as its answer only when [revealed], else as "빈칸", a table row
-/// by row, its cells joined by commas, and the blocks as sentences.
+/// by row, its cells joined by commas, a span in its cell's text, and the
+/// blocks as sentences.
 String spokenContent(
   AppLocalizations l10n,
   List<Content> blocks, {
@@ -200,10 +203,22 @@ String spokenContent(
             columns.join(', '),
             for (final (row, cells) in rows.indexed)
               [
-                for (final (column, cell) in cells.indexed)
-                  block.isBlank(row, column) ? blank(cell) : cell,
+                for (final (column, _) in cells.indexed)
+                  [
+                    for (final run in block.cellRuns(row, column))
+                      run.blank ? blank(run.text) : run.text,
+                  ].join(),
               ].join(', '),
           ].join('. '),
+          // A photo, then each box as a blank, or its answer once revealed.
+          ImageContent(:final boxes) => [
+            l10n.blockImage,
+            for (final box in boxes)
+              switch (box.answer) {
+                final answer? when answer.trim().isNotEmpty => blank(answer),
+                _ => l10n.blank,
+              },
+          ].join(', '),
           _ => describeContent(l10n, [block]),
         },
       )

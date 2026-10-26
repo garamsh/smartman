@@ -18,22 +18,28 @@ enum ImageOrigin {
 
 /// Lets the user pick one image, made ready to store.
 abstract interface class ImagePick {
-  /// The image picked, cropped and scaled by [prepareImage], or null when
+  /// The image picked, prepared in [shape] by [prepareImage], or null when
   /// the user cancels. Throws [MediaUnreadable] when the camera or library
   /// cannot be opened or the image cannot be read.
-  Future<PreparedImage?> pick(ImageOrigin origin);
+  Future<PreparedImage?> pick(
+    ImageOrigin origin, {
+    ImageShape shape = ImageShape.square,
+  });
 }
 
 /// The device's system camera and photo library through `image_picker`.
 final class DeviceImagePick implements ImagePick {
   const DeviceImagePick();
 
-  /// Twice a stored image's side, so the crop keeps detail without decoding
-  /// a full camera frame.
+  /// Twice a stored image's side, so the crop or the scale keeps detail
+  /// without decoding a full camera frame.
   static const _pickSide = maxImageSide * 2.0;
 
   @override
-  Future<PreparedImage?> pick(ImageOrigin origin) async {
+  Future<PreparedImage?> pick(
+    ImageOrigin origin, {
+    ImageShape shape = ImageShape.square,
+  }) async {
     final Uint8List bytes;
     try {
       final file = await ImagePicker().pickImage(
@@ -52,6 +58,6 @@ final class DeviceImagePick implements ImagePick {
     } on IOException catch (cause) {
       throw MediaUnreadable(cause);
     }
-    return prepareImage(bytes);
+    return prepareImage(bytes, shape);
   }
 }

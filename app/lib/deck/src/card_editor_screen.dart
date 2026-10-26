@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../media/media.dart';
 import 'block_list.dart';
 import 'card_kind.dart';
 import 'card_preview.dart';
@@ -220,7 +223,33 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     ]) {
       block.dispose();
     }
+    // Photos chosen here that no saved card holds, the card left unsaved.
+    for (final image in _picked) {
+      unawaited(_media?.release(image));
+    }
     super.dispose();
+  }
+
+  /// The photos 사진 blocks stored since the card was last saved; those the
+  /// saved card does not hold are let go (ADR 0109).
+  final _picked = <MediaId>{};
+
+  /// The store the photos went to, read on the first, so an editor that
+  /// stores none needs none.
+  MediaStore? _media;
+
+  void _imagePicked(MediaId image) {
+    _media ??= ref.read(mediaStoreProvider);
+    _picked.add(image);
+  }
+
+  /// Lets go of the photos chosen since the last save that [saved] does not
+  /// hold.
+  Future<void> _releaseUnsaved(Set<MediaId> saved) async {
+    for (final image in _picked.difference(saved)) {
+      await _media?.release(image);
+    }
+    _picked.clear();
   }
 
   /// Whether every field the kind requires is filled, and every listed block
@@ -373,6 +402,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               kind: kind,
               allowDuplicate: allowDuplicate,
             );
+      if (result is CardSaved) {
+        await _releaseUnsaved(mediaOf([...front, ...back]));
+      }
       if (!mounted) return;
       switch ((result, after)) {
         case (CardSaved(), _AfterSave.close):
@@ -480,6 +512,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         ? _sideRequired(side)
         : null,
     onChanged: _change,
+    onImagePicked: _imagePicked,
   );
 
   String? _requiredError(AppLocalizations l10n, TextEditingController side) =>
