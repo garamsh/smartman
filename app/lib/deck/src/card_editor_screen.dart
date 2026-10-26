@@ -157,8 +157,10 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// text is left as it was.
   List<Content> get _frontBlocks => switch (_kind) {
     CardKind.cloze when _keepsCloze => widget.card!.front,
-    // The line itself, while it has no blank, so the preview shows it.
-    CardKind.cloze => [_cloze.content ?? TextContent(_front.text)],
+    // While it has no blank, the line as a cloze without one, so the preview
+    // draws it whole as the card will be, not on both halves (issue #313).
+    // Such a cloze is never saved: the form refuses it.
+    CardKind.cloze => [_cloze.content ?? ClozeContent(_front.text, const [])],
     CardKind.table => [TextContent(_front.text), _table.table],
     _ => _replaceText(widget.card?.front ?? const [], _front.text),
   };
@@ -313,15 +315,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 icon: const Icon(LucideIcons.trash2),
                 onPressed: () => _delete(card),
               ),
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpace.gutter),
-              child: Text(
-                widget.deck.name,
-                style: AppType.secondary.copyWith(
-                  color: AppColors.of(context).muted,
-                ),
-              ),
-            ),
+            const SizedBox(width: AppSpace.s8),
           ],
         ),
         // The actions sit in the body under the form, not in the bottom bar, so
@@ -336,6 +330,33 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // The deck, in the form rather than the top bar, where a
+                    // long name pushed the title out (issue #310).
+                    Semantics(
+                      label: l10n.cardDeck(widget.deck.name),
+                      excludeSemantics: true,
+                      child: Row(
+                        spacing: AppSpace.s8,
+                        children: [
+                          Icon(
+                            LucideIcons.layers,
+                            size: AppSize.smallIcon,
+                            color: AppColors.of(context).muted,
+                          ),
+                          Expanded(
+                            child: Text(
+                              widget.deck.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppType.secondary.copyWith(
+                                color: AppColors.of(context).muted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpace.s16),
                     if (_isNew) ...[
                       Semantics(
                         label: l10n.cardKindLabel,
@@ -369,7 +390,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                     CardPreview(front: _frontBlocks, back: _backBlocks),
                     const SizedBox(height: AppSpace.s24),
                     AppTextField(
-                      label: l10n.cardFront,
+                      // A table's front is its name, and says so while typed
+                      // (issue #313).
+                      label: _kind == CardKind.table
+                          ? l10n.tableNameLabel
+                          : l10n.cardFront,
                       controller: _front,
                       hint: _kind == CardKind.table ? l10n.tableNameHint : null,
                       focusNode: _frontFocus,

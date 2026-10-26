@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
+import 'package:smartman/home/src/progress_bar.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart' show StudyScreen;
 
@@ -56,6 +58,27 @@ void main() {
   );
 
   testWidgets(
+    'a deck with no card shows no navy card of zeros, where a deck with one shows its count, mastered line and bar',
+    (tester) async {
+      // Control: a deck with a card has its navy card.
+      var screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text("Today's cards"), findsOneWidget);
+      expect(find.text('0 / 1 mastered'), findsOneWidget);
+      expect(find.byType(ProgressBar), findsOneWidget);
+      await screens.close();
+
+      screens = await DeckScreens.open(tester);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
+      expect(find.text("Today's cards"), findsNothing);
+      expect(find.text('0 / 0 mastered'), findsNothing);
+      expect(find.byType(ProgressBar), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
     "the header names the deck, counts its cards and today's, and Study opens a session over it",
     (tester) async {
       final screens = await DeckScreens.open(
@@ -94,7 +117,12 @@ void main() {
 
       await screens.tap(find.text('Study'));
       expect(
-        find.text('How many minutes a day will you study?'),
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'How many minutes a day will you study?',
+        ),
         findsOneWidget,
       );
       expect(find.byType(StudyScreen), findsNothing);
@@ -418,6 +446,73 @@ void main() {
     },
   );
 
+  testWidgets(
+    'while searching above a phone keyboard, the first match starts under the top bar and shows above the keyboard',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      // Control: before the search, the deck's header and navy card are up.
+      expect(find.byType(DeckTile), findsOneWidget);
+      expect(find.text("Today's cards"), findsOneWidget);
+
+      await screens.tap(find.byTooltip('Search cards'));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+      addTearDown(tester.view.resetViewInsets);
+      await screens.enter('Search', 'ch');
+      await tester.pumpAndSettle();
+      expect(tester.view.viewInsets.bottom, 336, reason: 'the keyboard is up');
+
+      final first = tester.getRect(find.byType(CardBackRow).first);
+      final topBar = tester.getRect(find.byType(AppBar));
+      expect(first.bottom, lessThanOrEqualTo(844 - 336));
+      expect(first.top - topBar.bottom, lessThan(AppSize.tapTarget * 2));
+      expect(find.byType(DeckTile), findsNothing);
+      expect(find.text("Today's cards"), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'the back closes an open search and keeps the screen, and a second back leaves it',
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      await screens.tap(find.byTooltip('Search cards'));
+      await screens.enter('Search', 'ch');
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AppTextField), findsNothing);
+      expect(find.byType(DeckScreen), findsOneWidget);
+      expect(_rowFronts(tester), ['Chat', 'Chien', 'Hund']);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(DeckScreen), findsNothing);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    '"Delete deck" is drawn in the destructive text colour, where "Rename" is not',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      await screens.tap(find.byTooltip('Deck actions'));
+
+      final colors = AppColors.of(tester.element(find.text('Delete deck')));
+      expect(
+        tester.widget<Text>(find.text('Delete deck')).style?.color,
+        colors.dontKnowText,
+      );
+      expect(
+        tester.widget<Text>(find.text('Rename')).style?.color,
+        isNot(colors.dontKnowText),
+      );
+      await screens.close();
+    },
+  );
+
   testWidgets('without photo import, Add card opens the editor at once', (
     tester,
   ) async {
@@ -538,7 +633,14 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(find.text('Delete "Français"?'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') == 'Delete "Français"?',
+        ),
+        findsOneWidget,
+      );
       await screens.tap(find.text('Cancel'));
 
       await screens.tap(find.text('Add card'));
@@ -590,7 +692,15 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Delete deck'));
-      expect(find.text('Its 3 cards will be deleted too.'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'Its 3 cards will be deleted too.',
+        ),
+        findsOneWidget,
+      );
       await screens.tap(find.text('Delete'));
 
       expect(find.byType(DeckScreen), findsNothing);

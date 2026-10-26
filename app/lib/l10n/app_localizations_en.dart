@@ -85,7 +85,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardKindWord => 'Word';
 
   @override
-  String get cardKindCloze => 'Cloze';
+  String get cardKindCloze => 'Sentence';
 
   @override
   String get clozeWordsHint => 'Tap the words to make blanks';
@@ -129,6 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tableNameHint => 'The table\'s name';
+
+  @override
+  String get tableNameLabel => 'Front · table name';
 
   @override
   String get tableModeLabel => 'Table editing';
@@ -188,6 +191,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardKindLabel => 'Card kind';
+
+  @override
+  String cardDeck(String deck) {
+    return 'Deck $deck';
+  }
 
   @override
   String senseHeading(int number) {
@@ -560,7 +568,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unsyncedChangesBody =>
-      'Signing out removes them from this device, and your other devices won\'t have them.';
+      'Changes that aren\'t synced are removed from this device when you sign out, and your other devices won\'t have them either.';
 
   @override
   String get signOutAnyway => 'Sign out anyway';

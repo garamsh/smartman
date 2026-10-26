@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'app_button.dart';
 import 'theme.dart';
+import 'word_break.dart';
 
 /// Opens the sheet [builder] makes over the current screen, with the
 /// platform's sheet motion, or none under reduce motion. Resolves to what the
@@ -79,11 +80,16 @@ class AppSheet extends StatelessWidget {
                     children: [
                       Semantics(
                         header: true,
-                        child: Text(title, style: AppType.headline),
+                        child: Text(
+                          keepWords(title),
+                          semanticsLabel: title,
+                          style: AppType.headline,
+                        ),
                       ),
                       if (body != null)
                         Text(
-                          body,
+                          keepWords(body),
+                          semanticsLabel: body,
                           style: AppType.secondary.copyWith(
                             color: colors.muted,
                           ),

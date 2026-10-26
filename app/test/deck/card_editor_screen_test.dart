@@ -9,6 +9,12 @@ import 'package:smartman/design/word_break.dart';
 
 import '../home/deck_screens.dart';
 
+/// A [Text] that reads [text] once its word joiners are left out: sheets and
+/// the first run keep their words whole with them.
+Finder _shown(String text) => find.byWidgetPredicate(
+  (widget) => widget is Text && widget.data?.replaceAll('\u2060', '') == text,
+);
+
 /// The text of the preview's two halves, front then back, its word joiners
 /// left out.
 List<String?> _preview(WidgetTester tester) => [
@@ -120,7 +126,7 @@ void main() {
         await screens.enter('Back', '덧없는');
 
         await screens.tap(find.byTooltip('Close'));
-        expect(find.text('Discard this card?'), findsOneWidget);
+        expect(_shown('Discard this card?'), findsOneWidget);
         await screens.tap(find.text('Keep writing'));
         expect(find.byType(CardEditorScreen), findsOneWidget);
         expect(find.widgetWithText(TextField, 'ephemeral'), findsOneWidget);
@@ -128,7 +134,7 @@ void main() {
         // Android's back, as the platform sends it.
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
-        expect(find.text('Discard this card?'), findsOneWidget);
+        expect(_shown('Discard this card?'), findsOneWidget);
         await screens.tap(find.text('Discard'));
         expect(find.byType(CardEditorScreen), findsNothing);
         expect(await screens.cards(), isEmpty);
@@ -142,7 +148,7 @@ void main() {
         final screens = await openNew(tester);
         await screens.tap(find.text('Word'));
         await screens.tap(find.byTooltip('Close'));
-        expect(find.text('Discard this card?'), findsNothing);
+        expect(_shown('Discard this card?'), findsNothing);
         expect(find.byType(CardEditorScreen), findsNothing);
 
         await screens.push((deck) => CardEditorScreen(deck: deck));
@@ -173,6 +179,38 @@ void main() {
       },
     );
   });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'at $scale times the text size a long deck name leaves the title readable and nothing in the top bar overflows, for a new card and an edited one',
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+        const name = '토익 실전 어휘 900 — 2026 개정판 Part 5 & 6 집중 대비 단어장';
+        final deck = Deck(
+          id: screens.deck.id,
+          name: name,
+          createdAt: screens.deck.createdAt,
+          updatedAt: screens.deck.updatedAt,
+        );
+        final card = (await screens.cards()).single;
+        for (final (title, editor) in [
+          ('Add card', CardEditorScreen(deck: deck)),
+          ('Edit card', CardEditorScreen(deck: deck, card: card)),
+        ]) {
+          await screens.push((_) => editor);
+          expect(tester.takeException(), isNull, reason: title);
+          expect(find.text(title), findsOneWidget);
+          // The title is drawn whole, inside the screen.
+          expect(tester.getRect(find.text(title)).right, lessThan(390));
+          expect(find.text(name), findsOneWidget, reason: 'the deck shows');
+          await screens.tap(find.byTooltip('Close'));
+        }
+        await screens.close();
+      },
+    );
+  }
 
   testWidgets('Save stores the card and closes the editor', (tester) async {
     final screens = await openNew(tester);
@@ -280,7 +318,7 @@ void main() {
     expect(find.text('Save and next card'), findsNothing);
 
     await screens.tap(find.byTooltip('Delete card'));
-    expect(find.text('Delete this card?'), findsOneWidget);
+    expect(_shown('Delete this card?'), findsOneWidget);
     // The confirmation keeps its cancel, and the delete comes last, below it.
     expect(
       tester.getRect(find.text('Cancel')).bottom,
@@ -299,9 +337,9 @@ void main() {
       await screens.enter('Front', '  CHAT ');
       await screens.enter('Back', 'chat (talk)');
       await screens.tap(find.text('Save'));
-      expect(find.text('This deck already has this card'), findsOneWidget);
+      expect(_shown('This deck already has this card'), findsOneWidget);
       expect(
-        find.text('Case and spacing are ignored when comparing.'),
+        _shown('Case and spacing are ignored when comparing.'),
         findsOneWidget,
       );
       // The existing card, in the same split preview as the editor's.

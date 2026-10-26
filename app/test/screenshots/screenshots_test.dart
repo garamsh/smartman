@@ -995,7 +995,7 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.cardKindTable));
       await tester.enterText(
-        find.widgetWithText(AppTextField, ko.cardFront),
+        find.widgetWithText(AppTextField, ko.tableNameLabel),
         '불규칙 동사',
       );
       // The table's fields follow the front's: its headers, then its cells.
@@ -1582,7 +1582,14 @@ void main() {
         find.widgetWithText(AppTextField, ko.displayName),
         '아다',
       );
-      await tap(tester, find.text(ko.publishAgreement));
+      await tap(
+        tester,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') == ko.publishAgreement,
+        ),
+      );
       await tap(tester, find.text(ko.publishConfirm));
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();

@@ -82,142 +82,160 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       _ => false,
     };
     final query = _query;
-    return Scaffold(
-      appBar: AppBar(
-        title: query == null
-            ? null
-            : AppTextField(
-                hint: l10n.searchCards,
-                prefixIcon: const Icon(LucideIcons.search),
-                height: AppSize.search,
-                autofocus: true,
-                onChanged: (query) => setState(() => _query = query),
-              ),
-        actions: [
-          if (query == null)
-            IconButton(
-              tooltip: l10n.searchCardsAction,
-              icon: const Icon(LucideIcons.search),
-              onPressed: () => setState(() => _query = ''),
-            )
-          else
-            IconButton(
-              tooltip: l10n.closeSearch,
-              icon: const Icon(LucideIcons.x),
-              onPressed: () => setState(() => _query = null),
-            ),
-          PopupMenuButton<_DeckAction>(
-            tooltip: l10n.deckActions,
-            icon: const Icon(LucideIcons.ellipsisVertical),
-            onSelected: (action) => switch (action) {
-              _DeckAction.rename => _rename(),
-              _DeckAction.publish => sharing?.publish(context, current),
-              _DeckAction.unpublish => sharing?.unpublish(context, current),
-              _DeckAction.delete => _delete(),
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: _DeckAction.rename,
-                child: Text(l10n.rename),
-              ),
-              if (sharing != null)
-                PopupMenuItem(
-                  value: public ? _DeckAction.unpublish : _DeckAction.publish,
-                  enabled: online,
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    enabled: online,
-                    title: Text(public ? l10n.unpublish : l10n.publish),
-                    subtitle: online ? null : Text(l10n.publishNeedsNetwork),
-                  ),
+    // An open search closes on the back, and a second back leaves.
+    return PopScope(
+      canPop: query == null,
+      onPopInvokedWithResult: (popped, _) {
+        if (!popped) setState(() => _query = null);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: query == null
+              ? null
+              : AppTextField(
+                  hint: l10n.searchCards,
+                  prefixIcon: const Icon(LucideIcons.search),
+                  height: AppSize.search,
+                  autofocus: true,
+                  onChanged: (query) => setState(() => _query = query),
                 ),
-              PopupMenuItem(
-                value: _DeckAction.delete,
-                child: Text(l10n.deleteDeck),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: switch (cards) {
-        AsyncData(:final value) => CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter),
-              sliver: SliverList.list(
-                children: [
-                  Row(
-                    spacing: AppSpace.s12,
-                    children: [
-                      DeckTile(deck: current),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Semantics(
-                              header: true,
-                              child: Text(current.name, style: AppType.title),
-                            ),
-                            Text(
-                              public
-                                  ? l10n.deckSummaryPublic(value.length)
-                                  : l10n.deckSummary(value.length),
-                              style: AppType.secondary.copyWith(
-                                color: colors.muted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpace.s16),
-                  _DeckTodayCard(
-                    deck: widget.deck.id,
-                    onStudy: empty ? null : _study,
-                  ),
-                  const SizedBox(height: AppSpace.s12),
-                ],
-              ),
-            ),
-            if (value.isEmpty)
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.gutter,
-                  vertical: AppSpace.s40,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Text(
-                    l10n.noCards,
-                    textAlign: TextAlign.center,
-                    style: AppType.body.copyWith(color: colors.muted),
-                  ),
-                ),
+          actions: [
+            if (query == null)
+              IconButton(
+                tooltip: l10n.searchCardsAction,
+                icon: const Icon(LucideIcons.search),
+                onPressed: () => setState(() => _query = ''),
               )
             else
-              ..._cardList(l10n, value),
+              IconButton(
+                tooltip: l10n.closeSearch,
+                icon: const Icon(LucideIcons.x),
+                onPressed: () => setState(() => _query = null),
+              ),
+            PopupMenuButton<_DeckAction>(
+              tooltip: l10n.deckActions,
+              icon: const Icon(LucideIcons.ellipsisVertical),
+              onSelected: (action) => switch (action) {
+                _DeckAction.rename => _rename(),
+                _DeckAction.publish => sharing?.publish(context, current),
+                _DeckAction.unpublish => sharing?.unpublish(context, current),
+                _DeckAction.delete => _delete(),
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: _DeckAction.rename,
+                  child: Text(l10n.rename),
+                ),
+                if (sharing != null)
+                  PopupMenuItem(
+                    value: public ? _DeckAction.unpublish : _DeckAction.publish,
+                    enabled: online,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      enabled: online,
+                      title: Text(public ? l10n.unpublish : l10n.publish),
+                      subtitle: online ? null : Text(l10n.publishNeedsNetwork),
+                    ),
+                  ),
+                PopupMenuItem(
+                  value: _DeckAction.delete,
+                  child: Text(
+                    l10n.deleteDeck,
+                    style: TextStyle(color: colors.dontKnowText),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        AsyncError(:final error, :final stackTrace) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpace.gutter),
-            child: Text(describeProviderError(l10n, error, stackTrace)),
+        body: switch (cards) {
+          AsyncData(:final value) => CustomScrollView(
+            slivers: [
+              // While searching, the matches start under the top bar.
+              if (query == null)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpace.gutter,
+                  ),
+                  sliver: SliverList.list(
+                    children: [
+                      Row(
+                        spacing: AppSpace.s12,
+                        children: [
+                          DeckTile(deck: current),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Semantics(
+                                  header: true,
+                                  child: Text(
+                                    current.name,
+                                    style: AppType.title,
+                                  ),
+                                ),
+                                Text(
+                                  public
+                                      ? l10n.deckSummaryPublic(value.length)
+                                      : l10n.deckSummary(value.length),
+                                  style: AppType.secondary.copyWith(
+                                    color: colors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpace.s16),
+                      // With no card, the empty line and "카드 추가" are the
+                      // screen's content, with no count of zeros above them.
+                      if (!empty) ...[
+                        _DeckTodayCard(deck: widget.deck.id, onStudy: _study),
+                        const SizedBox(height: AppSpace.s12),
+                      ],
+                    ],
+                  ),
+                ),
+              if (value.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpace.gutter,
+                    vertical: AppSpace.s40,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      l10n.noCards,
+                      textAlign: TextAlign.center,
+                      style: AppType.body.copyWith(color: colors.muted),
+                    ),
+                  ),
+                )
+              else
+                ..._cardList(l10n, value),
+            ],
           ),
-        ),
-        _ => const Center(child: CircularProgressIndicator()),
-      },
-      bottomNavigationBar: BottomActions(
-        secondary: AppButton(
-          label: l10n.newCard,
-          icon: LucideIcons.plus,
-          // With no card, adding one is the screen's one primary action.
-          variant: empty
-              ? AppButtonVariant.primary
-              : AppButtonVariant.secondary,
-          size: AppButtonSize.cta,
-          onPressed: photoImport == null
-              ? () => _open(null)
-              : () => _addCard(photoImport),
+          AsyncError(:final error, :final stackTrace) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.gutter),
+              child: Text(describeProviderError(l10n, error, stackTrace)),
+            ),
+          ),
+          _ => const Center(child: CircularProgressIndicator()),
+        },
+        bottomNavigationBar: BottomActions(
+          secondary: AppButton(
+            label: l10n.newCard,
+            icon: LucideIcons.plus,
+            // With no card, adding one is the screen's one primary action.
+            variant: empty
+                ? AppButtonVariant.primary
+                : AppButtonVariant.secondary,
+            size: AppButtonSize.cta,
+            onPressed: photoImport == null
+                ? () => _open(null)
+                : () => _addCard(photoImport),
+          ),
         ),
       ),
     );
@@ -460,13 +478,12 @@ class _CardListHeader extends StatelessWidget {
 }
 
 /// The deck's navy card: today's count and its minutes, how many cards are
-/// mastered, the progress bar, and the button that studies the deck, which
-/// shows unless [onStudy] is null.
+/// mastered, the progress bar, and the button that studies the deck.
 class _DeckTodayCard extends StatelessWidget {
   const _DeckTodayCard({required this.deck, required this.onStudy});
 
   final DeckId deck;
-  final VoidCallback? onStudy;
+  final VoidCallback onStudy;
 
   @override
   Widget build(BuildContext context) {
@@ -532,13 +549,12 @@ class _DeckTodayCard extends StatelessWidget {
                         ],
                       ),
               ),
-              if (onStudy case final onStudy?)
-                AppButton(
-                  label: l10n.studyDeck,
-                  icon: LucideIcons.play,
-                  variant: AppButtonVariant.onHero,
-                  onPressed: onStudy,
-                ),
+              AppButton(
+                label: l10n.studyDeck,
+                icon: LucideIcons.play,
+                variant: AppButtonVariant.onHero,
+                onPressed: onStudy,
+              ),
             ],
           ),
         ),

@@ -818,7 +818,7 @@ void main() {
       // Titled as the card; 앞면 and 뒷면 each a label of the same rank.
       expect(
         tester.getSemantics(
-          find.descendant(of: sheet, matching: find.text('Card')),
+          find.descendant(of: sheet, matching: _text('Card')),
         ),
         isSemantics(isHeader: true),
       );
@@ -2094,7 +2094,7 @@ void main() {
 
         await tester.tap(_previousCard);
         await tester.pumpAndSettle();
-        expect(find.text('Card'), findsOneWidget);
+        expect(_text('Card'), findsOneWidget);
         expect(find.text('Back'), findsNothing);
         expect(blanksUnder(find.byType(BottomSheet)), {'Paris': true});
       },

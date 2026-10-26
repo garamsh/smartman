@@ -83,7 +83,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cardKindWord => '단어';
 
   @override
-  String get cardKindCloze => '빈칸';
+  String get cardKindCloze => '문장';
 
   @override
   String get clozeWordsHint => '빈칸으로 할 낱말을 눌러요';
@@ -128,6 +128,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tableNameHint => '표의 이름';
 
   @override
+  String get tableNameLabel => '앞면 · 표 이름';
+
+  @override
   String get tableModeLabel => '표 편집 방식';
 
   @override
@@ -137,14 +140,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tableModeBlanks => '빈칸 고르기';
 
   @override
-  String get tableCellsHint => '제목과 칸에 내용을 적어요';
+  String get tableCellsHint => '머리글과 칸에 내용을 적어요';
 
   @override
   String get tableBlanksHint => '빈칸으로 할 칸을 눌러요';
 
   @override
   String tableHeaderCell(int column) {
-    return '$column열 제목';
+    return '$column열 머리글';
   }
 
   @override
@@ -185,6 +188,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cardKindLabel => '카드 종류';
+
+  @override
+  String cardDeck(String deck) {
+    return '$deck 덱';
+  }
 
   @override
   String senseHeading(int number) {
@@ -535,7 +543,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unsyncedChangesTitle => '동기화되지 않은 변경이 있어요';
 
   @override
-  String get unsyncedChangesBody => '로그아웃하면 이 기기에서 지워지고 다른 기기에서는 볼 수 없어요.';
+  String get unsyncedChangesBody =>
+      '동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.';
 
   @override
   String get signOutAnyway => '그래도 로그아웃';
