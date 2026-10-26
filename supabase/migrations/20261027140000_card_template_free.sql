@@ -2,9 +2,8 @@
 -- wrote, `flip`, `cloze` or `table` at version 1, or none at all, becomes `free` at version 1, the
 -- one template the app's editor now writes. Its content is not touched: a template only decides how
 -- the editor opens a card, and study draws by the blocks (ADR 0106). It changes existing data, which
--- the owner approved on 2026-10-27. No backup is kept: the content is unchanged, and the template
--- before is what its front's blocks derive (ADR 0083), but for a card whose blocks were added to it
--- under ADR 0108.
+-- the owner approved on 2026-10-27. No backup is kept: only the template changes, which seeds
+-- nothing once the editor has one mode, and the content is untouched (ADR 0114).
 --
 -- A card's revision is drawn anew by its update trigger, so every device pulls it; its `updated_at`
 -- is left as it was. A device holding the card synced takes the server's copy on the tie, and a
