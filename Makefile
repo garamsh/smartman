@@ -1,4 +1,4 @@
-.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web
+.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web
 
 # lint and test are each the sum of their parts, run in this order. CI runs the parts as parallel
 # jobs; lint-repo reads only the repository's files and needs no toolchain, so CI runs it on every
@@ -28,7 +28,7 @@ APK := build/app/outputs/flutter-apk/app-debug.apk
 IOS_APP := build/ios/iphonesimulator/Runner.app
 BRIDGE_LIB := rust_lib_smartman
 # What make build builds, set on the command line: all (the default), or ios for the iOS simulator
-# app alone, which CI's macOS job builds; the ubuntu job's make ci builds the rest.
+# app alone, which CI's macOS job builds; CI's ubuntu jobs build the rest.
 BUILD := all
 ifeq ($(filter $(BUILD),all ios),)
 $(error BUILD is "$(BUILD)"; it is all or ios)
@@ -102,7 +102,15 @@ test-web:
 	./web.sh test
 	./supabase/test-web.sh
 
-build:
+# build is the sum of its parts; CI runs build-apk and build-ios build-engine-web as parallel jobs.
+ifeq ($(BUILD),all)
+build: build-ios build-apk build-engine-web
+else
+build: build-ios
+	echo "skipped the Android APK, engine, WebAssembly and web app builds: BUILD=$(BUILD)"
+endif
+
+build-ios:
 	if [ "$$(uname -s)" = Darwin ]; then \
 		cd app && flutter build ios --simulator --debug --no-codesign $(APP_CONFIG) && \
 		test -f $(IOS_APP)/Frameworks/$(BRIDGE_LIB).framework/$(BRIDGE_LIB) && \
@@ -112,12 +120,15 @@ build:
 	else \
 		echo "skipped the iOS simulator build: it needs macOS, and this host is $$(uname -s)"; \
 	fi
-ifeq ($(BUILD),all)
+
+build-apk:
 	cd app && flutter build apk --debug $(APP_CONFIG) && \
 	libs=$$(unzip -Z1 $(APK) 'lib/*/lib$(BRIDGE_LIB).so'); \
 	if [ -z "$$libs" ]; then echo "app/$(APK) holds no lib$(BRIDGE_LIB).so" >&2; exit 1; fi; \
 	echo "built the debug APK app/$(APK), holding the bridge library for $$(echo "$$libs" | wc -l | tr -d ' ') ABIs:"; \
 	echo "$$libs"
+
+build-engine-web:
 	cd engine && cargo build --locked && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the library crate smartman_engine and its rustdoc from engine/Cargo.toml"
@@ -125,8 +136,5 @@ ifeq ($(BUILD),all)
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
 	./web.sh build
-else
-	echo "skipped the Android APK, engine, WebAssembly and web app builds: BUILD=$(BUILD)"
-endif
 
 ci: lint format test build

@@ -61,9 +61,11 @@ jobs:
           - { id: test-db, target: test-db }
           - { id: test-sync, target: test-sync }
           - { id: test-web, target: test-web }
-          - { id: build, target: build }
+          - { id: build-apk, target: build-apk }
+          - { id: build, target: build-ios build-engine-web }
     # Every job installs every tool make ci needs, as the single job did: the scripts skip a check
-    # whose tool is missing, and saying so is not running it.
+    # whose tool is missing, and saying so is not running it. The one exception is the bridge
+    # codegen, which only check-generated.sh in make lint-code runs, and which fails without it.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # make lint-code's check-migration-order.sh reads main as the merge commit's first parent.
@@ -73,8 +75,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # Caches Gradle's home for flutter build apk, through actions/cache (cache-provider basic).
-      - if: matrix.id == 'build'
+      # Caches Gradle's home for flutter build apk, through actions/cache (cache-provider basic). As
+      # the action defaults, only a run on main saves it; a pull request restores main's.
+      - if: matrix.id == 'build-apk'
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
@@ -95,8 +98,10 @@ jobs:
           cache-key: ${{ matrix.id }}
       # The codegen release is the flutter_rust_bridge crate's in the bridge crate's lock file.
       - id: frb
+        if: matrix.id == 'lint'
         run: echo "version=$(sed -n '/^name = "flutter_rust_bridge"$/{n;s/^version = "\(.*\)"$/\1/p;}' app/rust/Cargo.lock)" >> "$GITHUB_OUTPUT"
-      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - if: matrix.id == 'lint'
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: flutter_rust_bridge_codegen@${{ steps.frb.outputs.version }}
           fallback: cargo-install
