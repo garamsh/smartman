@@ -1,4 +1,8 @@
-.PHONY: lint format test build ci
+.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web
+
+# lint and test are each the sum of their parts, run in this order. CI runs the parts as parallel
+# jobs; lint-repo reads only the repository's files and needs no toolchain, so CI runs it on every
+# pull request, one touching only docs/ or *.md files included.
 
 # Every Dart file under app/ that git tracks or would track; ignored output such as
 # build/ and .dart_tool/ stays out. Printed beside each count so the coverage reads true.
@@ -30,7 +34,9 @@ ifeq ($(filter $(BUILD),all ios),)
 $(error BUILD is "$(BUILD)"; it is all or ios)
 endif
 
-lint:
+lint: lint-repo lint-code
+
+lint-repo:
 	./check-contents-list.sh
 	./check-object-names.sh
 	./check-convention-index.sh
@@ -39,6 +45,8 @@ lint:
 	./check-heading-prefixes.sh
 	./check-secrets.sh
 	./check-ios-client-id.sh
+
+lint-code:
 	./check-generated.sh
 	./check-migration-order.sh
 	./deno.sh lint
@@ -67,19 +75,30 @@ format:
 		echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Rust files in $$crate/, selected by: $(RUST_SCOPE)") || exit 1; \
 	done
 
-test:
-	./check-migration-order.test.sh
+test: test-app test-db test-sync test-web
+
+# flutter test loads the bridge library from here, in test-app and in test-sync's stack tests.
+bridge:
 	cd app/rust && cargo build --locked --release && \
 	echo "built the bridge library into app/rust/target/release/, where flutter_rust_bridge loads it under flutter test"
+
+test-app: bridge
+	./check-migration-order.test.sh
 	cd app && flutter test --reporter expanded $(APP_CONFIG) && \
 	echo "ran the tests flutter test selects by default: app/test/**/*_test.dart"
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
 	./wasm-bindgen.sh test
+
+test-db:
 	./supabase/test-db.sh
 	./supabase/senses-dry-run.test.sh
-	./supabase/test-sync.sh
 	./deno.sh test
+
+test-sync: bridge
+	./supabase/test-sync.sh
+
+test-web:
 	./web.sh test
 	./supabase/test-web.sh
 

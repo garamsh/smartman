@@ -7,35 +7,92 @@ on:
 
 permissions: read-all
 
-# The ubuntu job runs make ci, which skips the iOS simulator build off macOS; the macos job runs
-# that build alone.
+# make ci runs as parallel jobs, each calling the make targets that are its part: lint-repo, and
+# the parts in the matrix of `checks`, which together are make ci's lint, format, test and build.
+# `ios` runs make build BUILD=ios, which needs macOS. The required checks, ci (ubuntu) and
+# ci (macos), are the jobs `ubuntu` and `macos`: each waits on its jobs and fails when one of them
+# failed, was cancelled or was skipped without cause. A pull request that touches only docs/ or
+# *.md files skips `checks` and `ios`; lint-repo, which reads those files, still runs. A push to
+# main runs everything.
 #
 # Each job runs on a versioned runner label, the image `-latest` named when it was set. A label
 # cannot be pinned to a digest, and Dependabot moves `uses:` references only, so the PM moves the
 # labels, in one pull request, when GitHub announces that `-latest` moves to a newer image or that
-# a pinned image is deprecated (github.com/actions/runner-images, its announcements). The job names
-# carry the OS family alone, so a move renames no required check. Each run's "Set up job" step
-# logs the image it resolved to: its name, version and release.
+# a pinned image is deprecated (github.com/actions/runner-images, its announcements). The required
+# checks' names carry the OS family alone, so a move renames no required check. Each run's
+# "Set up job" step logs the image it resolved to: its name, version and release.
 jobs:
-  ubuntu:
-    name: ci (ubuntu)
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      # On a pull request the filter lists the changed files through the API, with no checkout.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          predicate-quantifier: 'every'
+          filters: |
+            code:
+              - '**'
+              - '!docs/**'
+              - '!**/*.md'
+
+  lint-repo:
+    name: make lint-repo
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # make lint's check-migration-order.sh reads main as the merge commit's first parent.
+      - run: make lint-repo
+
+  checks:
+    name: make ${{ matrix.target }}
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-24.04
+    strategy:
+      # Every part reports, whichever fails first.
+      fail-fast: false
+      matrix:
+        include:
+          - { id: lint, target: lint-code format }
+          - { id: test-app, target: test-app }
+          - { id: test-db, target: test-db }
+          - { id: test-sync, target: test-sync }
+          - { id: test-web, target: test-web }
+          - { id: build, target: build }
+    # Every job installs every tool make ci needs, as the single job did: the scripts skip a check
+    # whose tool is missing, and saying so is not running it.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # make lint-code's check-migration-order.sh reads main as the merge commit's first parent.
         with:
           fetch-depth: 2
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '17'
+      # Caches Gradle's home for flutter build apk, through actions/cache (cache-provider basic).
+      - if: matrix.id == 'build'
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      # cache: true caches the Flutter SDK and the pub packages.
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
           flutter-version-file: app/pubspec.yaml
+          cache: true
+      # Caches the cargo registry and each crate's target/, per job.
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           rust-src-dir: engine
+          cache-workspaces: |
+            engine
+            app/rust
+            engine-wasm
+          cache-key: ${{ matrix.id }}
       # The codegen release is the flutter_rust_bridge crate's in the bridge crate's lock file.
       - id: frb
         run: echo "version=$(sed -n '/^name = "flutter_rust_bridge"$/{n;s/^version = "\(.*\)"$/\1/p;}' app/rust/Cargo.lock)" >> "$GITHUB_OUTPUT"
@@ -49,22 +106,27 @@ jobs:
       - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: wasm-bindgen@${{ steps.wasm-bindgen.outputs.version }}
-      # make test runs engine-wasm/'s tests in node, through wasm-bindgen-test-runner.
+      # make test-app runs engine-wasm/'s tests in node, through wasm-bindgen-test-runner. The npm
+      # cache holds the downloads web.sh's npm ci installs from web/package-lock.json.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.22.0
-      # make test runs the database tests where Docker is, which the ubuntu runner has.
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The stack tests run where Docker is, which the ubuntu runner has.
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: 2.120.0
-      # make lint, format and test run deno over supabase/functions/ and tools/eval/.
+      # make lint-code, format and test-db run deno over supabase/functions/ and tools/eval/.
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: 2.9.7
-      - run: make ci
+      - run: make ${{ matrix.target }}
 
-  macos:
-    name: ci (macos)
+  ios:
+    name: make build BUILD=ios
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.changes.outputs.code == 'true') }}
     runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,7 +134,48 @@ jobs:
         with:
           channel: stable
           flutter-version-file: app/pubspec.yaml
+          cache: true
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           rust-src-dir: engine
+          cache-workspaces: |
+            engine
+            app/rust
       - run: make build BUILD=ios
+
+  ubuntu:
+    name: ci (ubuntu)
+    needs: [changes, lint-repo, checks]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      # A job passes when it succeeded. It may be skipped only as the docs-only filter or a push
+      # skips it: `changes` on a push, any job but lint-repo when no code changed.
+      - &verdict
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          CODE: ${{ github.event_name == 'push' || needs.changes.outputs.code == 'true' }}
+          PUSH: ${{ github.event_name == 'push' }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          [ "$CODE" = true ] || echo "no file outside docs/ and *.md changed, so only lint-repo ran"
+          failed=$(echo "$NEEDS" | jq -r --argjson code "$CODE" --argjson push "$PUSH" '
+            to_entries[]
+            | select(.value.result != "success")
+            | select(.value.result != "skipped"
+                or (.key == "changes" and ($push | not))
+                or (.key != "changes" and .key != "lint-repo" and $code))
+            | .key')
+          if [ -n "$failed" ]; then
+            echo "did not pass: $(echo $failed)" >&2
+            exit 1
+          fi
+
+  macos:
+    name: ci (macos)
+    needs: [changes, ios]
+    if: always()
+    # It only reads ios's result; the build itself is on macos-26.
+    runs-on: ubuntu-24.04
+    steps:
+      - *verdict
