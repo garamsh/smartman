@@ -14,13 +14,14 @@ The `media` domain: the user's images, kept on the device and in the private `me
   - `ImagePick`, the seam through which the user picks an image, `ImageOrigin`, the camera or the album, and `imagePickProvider`, the device's camera and photo library unless a test replaces it;
   - `MediaServer`, the seam to the server, `SupabaseMediaServer`, its implementation, and `UnavailableMediaServer`, the server of a build that cannot sign in;
   - the failures: `MediaFailure`, `MediaTransferFailed` and `MediaUnreadable`.
-- It imports no other domain. `deck` imports it for a deck's image, and `sync` to drain its queues ([`deck.md`](deck.md), [`sync.md`](sync.md)). It imports `supabase_flutter` for PostgREST and Storage, beside `account`, `sync` and `sharing`, and `image_picker`, `image` and `crypto`, as `app/pubspec.yaml` already declares them.
+- It imports no other domain. `deck` imports it for a deck's image and a card's photos, and `sync` to drain its queues ([`deck.md`](deck.md), [`sync.md`](sync.md)). It imports `supabase_flutter` for PostgREST and Storage, beside `account`, `sync` and `sharing`, and `image_picker`, `image` and `crypto`, as `app/pubspec.yaml` already declares them.
 - `main.dart` builds `SupabaseMediaServer` over `connectAccount`'s client, or `UnavailableMediaServer` without one, and keeps files in `media/` under the app's support directory.
 
 ### Images
 
 - A stored file is named by a media id, a UUID v7 from the composition site's generator; a deck holds that id, never a URL ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
-- `DeviceImagePick` takes one photo from the camera or the album through `image_picker`, at most 2048 px a side, and prepares it on a background isolate: its EXIF orientation applied, cropped to its centred square, scaled to at most 1024 px a side and encoded as JPEG at quality 85, with its SHA-256. A refused camera or library, or bytes no decoder reads, is `MediaUnreadable`.
+- `DeviceImagePick` takes one photo from the camera or the album through `image_picker`, at most 2048 px a side, and prepares it on a background isolate in the `ImageShape` its caller asks for: its EXIF orientation applied, then, for `square`, the default and a deck's tile's, cropped to its centred square, or, for `whole`, a card's photo's, kept whole at its aspect ratio; scaled to at most 1024 px on its longer side and encoded as JPEG at quality 85, with its SHA-256 and its width and height in pixels. A refused camera or library, or bytes no decoder reads, is `MediaUnreadable`.
+- A whole image keeps its aspect ratio through the scale, so a box stored in fractions of it covers the same pixels at the size it was drawn on and the size it is stored at ([ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md)).
 - The server's ceiling is 10 MiB a file (`server.md` §Media storage); it is a ceiling, not the target, and the resize above, not the ceiling, sets a prepared image's size, far below it ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
 
 ### Store
@@ -43,19 +44,20 @@ The `media` domain: the user's images, kept on the device and in the private `me
 
 ### Drawing
 
-- `MediaImage` draws the image covering its box, and its `fallback` while the image is read and when it cannot be. `DeckTile` gives it the deck's icon tile as the fallback ([`deck.md`](deck.md)).
+- `MediaImage` draws the image covering its box, and its `fallback` while the image is read and when it cannot be. `DeckTile` gives it the deck's icon tile as the fallback, and a card's photo a frame of the image's own aspect ratio, so covering it draws it whole, with `ground` as the fallback ([`deck.md`](deck.md)).
 
 ### Tests
 
 - `app/test/media/media_store_test.dart` — an added image read from the device before any upload, a drain uploading with its row and emptying the queue, a failed upload and deletion kept queued until a later drain, a released image never uploaded and deleted from the server and the device, a download kept on a second device, and a missing file read as null and tried again.
-- `app/test/media/image_test.dart` — a wide image cropped to its centred square, a large one scaled to the bound, the digest, and unreadable bytes refused against a readable image.
+- `app/test/media/image_test.dart` — a wide image cropped to its centred square, a large one scaled to the bound, the digest, unreadable bytes refused against a readable image, a whole image keeping its aspect ratio and size against a square from the same source, and a box in fractions covering the same pixels of an image at its full and its stored size.
 - `app/test/media/supabase_media_server_test.dart` — `SupabaseMediaServer` over a substituted HTTP client: the row then the file at `{owner}/{media id}` without overwriting, a duplicate file counted as uploaded against another refusal failing, a missing download as null, a delete's two requests, and an unreachable server as `MediaTransferFailed`.
-- `app/test/media/fakes.dart` holds `FakeMediaServer`, the server in memory, and the test images; the deck and sync tests use them.
+- `app/test/media/fakes.dart` holds `FakeMediaServer`, the server in memory, `FakeImagePick`, a picker that records the origin and shape asked for, and the test images; the deck, study and sync tests use them.
 
 ## Rationale
 
 - [ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md) records why media lives in a private Supabase Storage bucket named by id, the path scheme and the size limits, why an image is cropped to a centred square, and why the device stores first and uploads after.
 - Issue #383 records the owner's request and the PM's decision.
+- [ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md) records why a card's photo is kept whole at its aspect ratio, with its size, rather than cropped as a tile's is.
 
 ## Open questions
 
