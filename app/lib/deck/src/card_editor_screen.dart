@@ -60,8 +60,15 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 
   /// The kind the card is written in; a card being edited keeps its own.
   late CardKind _kind = switch (widget.card) {
-    final card? => kindOf(card),
+    final card? => kindOf(card) ?? CardKind.basic,
     null => rememberedKind(ref.read(deckStorageProvider), widget.deck.id),
+  };
+
+  /// Whether the card records a template this build does not know, so the
+  /// editor shows it read-only and never writes it (ADR 0106).
+  late final bool _readOnly = switch (widget.card) {
+    final card? => kindOf(card) == null,
+    null => false,
   };
 
   /// Whether the card's back held senses when the editor opened, so it is
@@ -262,12 +269,14 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               widget.deck.id,
               front: front,
               back: back,
+              kind: kind,
               allowDuplicate: allowDuplicate,
             )
           : await repository.editCard(
               card,
               front: front,
               back: back,
+              kind: kind,
               allowDuplicate: allowDuplicate,
             );
       if (!mounted) return;
@@ -350,6 +359,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final card = widget.card;
+    if (card != null && _readOnly) {
+      return _ReadOnlyCard(card: card, onDelete: _delete);
+    }
     return PopScope(
       canPop: !_edited,
       onPopInvokedWithResult: (didPop, _) => _confirmLeave(didPop),
@@ -551,6 +563,50 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A card whose template this build does not know: shown as it is, with a
+/// line saying the app needs an update to edit it, and nothing to save; it
+/// can still be deleted (ADR 0106).
+class _ReadOnlyCard extends StatelessWidget {
+  const _ReadOnlyCard({required this.card, required this.onDelete});
+
+  final Card card;
+  final ValueChanged<Card> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: l10n.close,
+          icon: const Icon(LucideIcons.x),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(l10n.editCard),
+        actions: [
+          IconButton(
+            tooltip: l10n.deleteCard,
+            icon: const Icon(LucideIcons.trash2),
+            onPressed: () => onDelete(card),
+          ),
+          const SizedBox(width: AppSpace.s8),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpace.gutter),
+        children: [
+          CardPreview(front: card.front, back: card.back),
+          const SizedBox(height: AppSpace.s24),
+          Text(
+            l10n.cardNeedsUpdate,
+            style: AppType.body.copyWith(color: AppColors.of(context).ink2),
+          ),
+        ],
       ),
     );
   }

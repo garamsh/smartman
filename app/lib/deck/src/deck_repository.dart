@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../../database/database.dart';
 import 'add_cards.dart';
 import 'card_key.dart';
+import 'card_kind.dart';
 import 'content.dart';
 import 'failure.dart';
 import 'model.dart';
@@ -33,11 +34,20 @@ final class DuplicateFront extends SaveCardResult {
 /// Every database failure reaches the caller as [StorageFailure], and a card
 /// whose stored content cannot be decoded as [UnreadableCard].
 class DeckRepository {
-  DeckRepository(this._db, {required this._clock, required this._newId});
+  DeckRepository(
+    this._db, {
+    required this._clock,
+    required this._newId,
+    String Function()? newBlockId,
+  }) : _newBlockId = newBlockId ?? _newId;
 
   final AppDatabase _db;
   final DateTime Function() _clock;
   final String Function() _newId;
+
+  /// Makes each block's id: [_newId] unless another is given, so a test can
+  /// keep its card ids apart from its block ids.
+  final String Function() _newBlockId;
 
   /// Every deck, ordered by name, re-emitted on each change.
   Stream<List<Deck>> watchDecks() {
@@ -198,12 +208,14 @@ class DeckRepository {
     return (await query.get()).map(_toCard).toList();
   });
 
-  /// Adds a manual card. A card in the same deck with an equal key blocks the
-  /// save unless [allowDuplicate] is set.
+  /// Adds a manual card, recording [kind]'s template, or the one its front
+  /// derives when [kind] is null. A card in the same deck with an equal key
+  /// blocks the save unless [allowDuplicate] is set.
   Future<SaveCardResult> addCard(
     DeckId deckId, {
     required List<Content> front,
     required List<Content> back,
+    CardKind? kind,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -219,10 +231,12 @@ class DeckRepository {
         final row = CardRow(
           id: _newId(),
           deckId: deckId.value,
-          front: encodeContent(front),
-          back: encodeContent(back),
+          front: encodeContent(_withIds(front, const [])),
+          back: encodeContent(_withIds(back, const [])),
           cardKey: key.value,
           source: CardSource.manual.name,
+          template: (kind ?? derivedKind(front)).template,
+          templateVersion: cardTemplateVersion,
           createdAt: now,
           updatedAt: now,
           dirty: true,
@@ -233,13 +247,15 @@ class DeckRepository {
     );
   }
 
-  /// Replaces [card]'s front and back. Another card in the same deck with an
+  /// Replaces [card]'s front and back, recording [kind]'s template, or the
+  /// card's own when [kind] is null. Another card in the same deck with an
   /// equal key blocks the save unless [allowDuplicate] is set. Content that
   /// cannot be read back is not stored: the save fails as [UnreadableCard].
   Future<SaveCardResult> editCard(
     Card card, {
     required List<Content> front,
     required List<Content> back,
+    CardKind? kind,
     bool allowDuplicate = false,
   }) {
     final key = CardKey.fromFront(plainText(front));
@@ -252,13 +268,16 @@ class DeckRepository {
           }
         }
         final now = _clock();
+        final (template, templateVersion) = _templateFor(card, kind);
         await (_db.update(
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).write(
           CardsCompanion(
-            front: Value(encodeContent(front)),
-            back: Value(encodeContent(back)),
+            front: Value(encodeContent(_withIds(front, card.front))),
+            back: Value(encodeContent(_withIds(back, card.back))),
             cardKey: Value(key.value),
+            template: Value(template),
+            templateVersion: Value(templateVersion),
             updatedAt: Value(now),
             dirty: const Value(true),
           ),
@@ -308,9 +327,11 @@ class DeckRepository {
                   CardRow(
                     id: _newId(),
                     deckId: deck.id.value,
-                    front: encodeContent(card.front),
-                    back: encodeContent(card.back),
+                    front: encodeContent(_withIds(card.front, const [])),
+                    back: encodeContent(_withIds(card.back, const [])),
                     cardKey: key.value,
+                    template: derivedKind(card.front).template,
+                    templateVersion: cardTemplateVersion,
                     source: switch (source) {
                       FromPhoto() => CardSource.import.name,
                       FromCopy() => CardSource.copy.name,
@@ -332,7 +353,9 @@ class DeckRepository {
                 _db.cards,
               )..where((row) => row.id.equals(existing.id.value))).write(
                 CardsCompanion(
-                  back: Value(encodeContent(back)),
+                  back: Value(encodeContent(_withIds(back, existing.back))),
+                  template: Value(_templateFor(existing, null).$1),
+                  templateVersion: Value(_templateFor(existing, null).$2),
                   updatedAt: Value(_clock()),
                   dirty: const Value(true),
                 ),
@@ -375,6 +398,42 @@ class DeckRepository {
     updatedAt: Value(at),
     dirty: const Value(true),
   );
+
+  /// [blocks] as written: each keeps its id, or takes the id of the next
+  /// block of its kind in [previous] not yet taken, or a new one, so a block
+  /// keeps its id across edits and every block has one once written
+  /// (ADR 0106). A block this build cannot read is kept as it is.
+  List<Content> _withIds(List<Content> blocks, List<Content> previous) {
+    final unused = [
+      for (final block in previous)
+        if (block.id != null && block is! UnsupportedContent) block,
+    ];
+    final taken = {for (final block in blocks) ?block.id};
+    return [
+      for (final block in blocks)
+        switch (block) {
+          UnsupportedContent() || Content(id: _?) => block,
+          _ => withBlockId(block, switch (unused.indexWhere(
+            (old) =>
+                old.runtimeType == block.runtimeType && !taken.contains(old.id),
+          )) {
+            -1 => _newBlockId(),
+            final index => unused.removeAt(index).id!,
+          }),
+        },
+    ];
+  }
+
+  /// The template and version a write of [card] records: [kind]'s when the
+  /// editor names one; otherwise the card's own, kept as it is, a template
+  /// this build does not know included; or, when it records none yet, the
+  /// one its front derives, filled in on this write (ADR 0106).
+  static (String, int?) _templateFor(Card card, CardKind? kind) =>
+      switch ((kind, card.template)) {
+        (final kind?, _) => (kind.template, cardTemplateVersion),
+        (null, final template?) => (template, card.templateVersion),
+        (null, null) => (derivedKind(card.front).template, cardTemplateVersion),
+      };
 
   /// One lookup on the `(deck_id, card_key)` index.
   Future<Card?> _findByKey(DeckId deckId, CardKey key, {CardId? except}) async {
@@ -424,6 +483,8 @@ class DeckRepository {
           final origin? => DeckId(origin),
           null => null,
         },
+        template: row.template,
+        templateVersion: row.templateVersion,
       );
     } on FormatException catch (cause) {
       throw UnreadableCard(id, cause);

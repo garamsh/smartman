@@ -254,10 +254,12 @@ Future<_Study> _open(
   final db = AppDatabase(NativeDatabase.memory());
   var created = DateTime.utc(2026, 9, 1);
   var ids = 0;
+  var blockIds = 0;
   final deckRepository = DeckRepository(
     db,
     clock: () => created = created.add(const Duration(minutes: 1)),
     newId: () => 'id${ids++}',
+    newBlockId: () => 'block${blockIds++}',
   );
   final studyRepository =
       (repository ??

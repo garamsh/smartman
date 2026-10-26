@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +25,12 @@ Finder _labelField([int index = 0]) => find
       ),
     )
     .at(index);
+
+/// [blocks] as stored, without the ids a write gives them.
+List<Object?> _withoutIds(List<Content> blocks) => [
+  for (final block in jsonDecode(encodeContent(blocks)) as List<Object?>)
+    {...block! as Map<String, Object?>}..remove('id'),
+];
 
 /// The stored card, front and back.
 Future<Card> _stored(DeckScreens screens) async =>
@@ -411,7 +419,7 @@ void main() {
       await tap(screens, find.text('Save'));
       expect(
         encodeContent((await _stored(screens)).back),
-        encodeContent(back),
+        encodeContent(card.back),
         reason: 'untouched, stored as it was',
       );
 
@@ -421,8 +429,8 @@ void main() {
       await enter(tester, 'More on the back', '', 1);
       await tap(screens, find.text('Save'));
       expect(
-        encodeContent((await _stored(screens)).back),
-        encodeContent([
+        _withoutIds((await _stored(screens)).back),
+        _withoutIds([
           senses,
           const TextContent('유의어 confront, encounter'),
           unknown,

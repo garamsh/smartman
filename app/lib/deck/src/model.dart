@@ -143,6 +143,8 @@ final class Card {
     required this.createdAt,
     required this.updatedAt,
     this.originDeckId,
+    this.template,
+    this.templateVersion,
   });
 
   final CardId id;
@@ -157,4 +159,13 @@ final class Card {
   /// The public deck a [CardSource.copy] card was copied from; null for any
   /// other card.
   final DeckId? originDeckId;
+
+  /// The template the card was made from, as stored: `flip`, `cloze`,
+  /// `table`, or one a later build added. It only decides how the editor
+  /// opens the card; null until the card's first write in a build that
+  /// records it (ADR 0106).
+  final String? template;
+
+  /// The version of [template] the card was written in; null with it.
+  final int? templateVersion;
 }

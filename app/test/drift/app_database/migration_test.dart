@@ -15,6 +15,7 @@ import 'generated/schema_v7.dart' as v7;
 import 'generated/schema_v8.dart' as v8;
 import 'generated/schema_v9.dart' as v9;
 import 'generated/schema_v10.dart' as v10;
+import 'generated/schema_v11.dart' as v11;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -793,6 +794,54 @@ void main() {
           ('deck', 'French', 'Verbs', 0),
         );
         expect((deck.icon, deck.color), (null, null));
+      },
+    );
+  });
+
+  test('the upgrade from 10 to 11 gives every card neither template column, and keeps it as it was', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    const front = '[{"type":"text","payload":{"text":"chat"}}]';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 10,
+      newVersion: 11,
+      createOld: v10.DatabaseAtV10.new,
+      createNew: v11.DatabaseAtV11.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v10.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+        batch.insert(
+          old.cards,
+          const v10.CardsData(
+            id: 'card',
+            deckId: 'deck',
+            front: front,
+            back: '[{"type":"text","payload":{"text":"cat"}}]',
+            cardKey: 'chat',
+            source: 'manual',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final card = await db.select(db.cards).getSingle();
+        expect(
+          (card.id, card.front, card.cardKey, card.dirty),
+          ('card', front, 'chat', 0),
+          reason: 'no row is rewritten',
+        );
+        expect((card.template, card.templateVersion), (null, null));
       },
     );
   });

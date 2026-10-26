@@ -38,6 +38,7 @@ export 'src/content.dart'
         encodeContent,
         decodeSense,
         isWholeCard,
+        oneFaceOf,
         plainText;
 export 'src/content_view.dart' show ContentView, contentSpan, sensesSpan;
 export 'src/deck_repository.dart'

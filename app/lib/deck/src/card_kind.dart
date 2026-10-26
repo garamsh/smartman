@@ -9,16 +9,42 @@ import 'label_presets.dart';
 import 'model.dart';
 
 /// The form a card is written in: a front and a back of one meaning or of
-/// senses, a line with blanks, or a table with blanks (ADR 0100).
-enum CardKind { basic, cloze, table }
+/// senses, a line with blanks, or a table with blanks (ADR 0100). Each is a
+/// template a card records, which only decides how the editor opens it
+/// (ADR 0106).
+enum CardKind {
+  basic('flip'),
+  cloze('cloze'),
+  table('table');
 
-/// The kind [card] is edited in: a cloze or a table when its front holds one,
-/// and otherwise basic, its back's senses included.
-CardKind kindOf(Card card) => card.front.any((block) => block is ClozeContent)
+  const CardKind(this.template);
+
+  /// The `template` a card written in this kind records: `flip` for 앞뒤.
+  final String template;
+}
+
+/// The version of every template this build writes.
+const cardTemplateVersion = 1;
+
+/// The kind a card whose front is [front] is read as when it records no
+/// template: a cloze or a table when its front holds one, and otherwise
+/// basic, its back's senses included.
+CardKind derivedKind(List<Content> front) =>
+    front.any((block) => block is ClozeContent)
     ? CardKind.cloze
-    : card.front.any((block) => block is TableContent)
+    : front.any((block) => block is TableContent)
     ? CardKind.table
     : CardKind.basic;
+
+/// The kind [card] is edited in: the one its template names, or
+/// [derivedKind] while it records none; null for a template, or a template
+/// version, this build does not know, which opens the card read-only.
+CardKind? kindOf(Card card) => switch ((card.template, card.templateVersion)) {
+  (null, _) => derivedKind(card.front),
+  (_, final version?) when version > cardTemplateVersion => null,
+  (final template?, _) =>
+    CardKind.values.where((kind) => kind.template == template).firstOrNull,
+};
 
 const _cardKindsKey = 'deckCardKinds';
 

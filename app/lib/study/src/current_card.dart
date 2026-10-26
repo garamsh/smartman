@@ -374,26 +374,27 @@ class _CardFace extends StatelessWidget {
                 padding: const EdgeInsets.all(StudyStyle.cardPadding),
                 child: SizedBox(
                   width: double.infinity,
-                  child: isWholeCard(card.front)
-                      ? WholeCardView(
-                          card.front,
-                          revealed: false,
-                          style: AppType.front,
-                          minFontSize: AppType.frontFloor,
-                          width:
-                              constraints.maxWidth - 2 * StudyStyle.cardPadding,
-                        )
-                      : ContentView(
-                          card.front,
-                          style: AppType.front,
-                          fit: (
-                            minFontSize: AppType.frontFloor,
-                            width:
-                                constraints.maxWidth -
-                                2 * StudyStyle.cardPadding,
-                            height: null,
-                          ),
-                        ),
+                  // One face when the card holds a blank anywhere
+                  // (ADR 0106).
+                  child: switch (oneFaceOf(card.front, card.back)) {
+                    final face? => WholeCardView(
+                      face,
+                      revealed: false,
+                      style: AppType.front,
+                      minFontSize: AppType.frontFloor,
+                      width: constraints.maxWidth - 2 * StudyStyle.cardPadding,
+                    ),
+                    null => ContentView(
+                      card.front,
+                      style: AppType.front,
+                      fit: (
+                        minFontSize: AppType.frontFloor,
+                        width:
+                            constraints.maxWidth - 2 * StudyStyle.cardPadding,
+                        height: null,
+                      ),
+                    ),
+                  },
                 ),
               ),
             ),
