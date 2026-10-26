@@ -125,6 +125,13 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
+# The private media bucket (ADR 0107); the migration 20261026140000_media.sql creates the same
+# in every project, with the same limits.
+[storage.buckets.media]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true

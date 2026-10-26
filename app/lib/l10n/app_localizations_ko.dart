@@ -31,6 +31,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckAppearanceColor => '색';
 
   @override
+  String get deckAppearanceImage => '사진 넣기';
+
+  @override
+  String get deckImageFromAlbum => '앨범에서 고르기';
+
+  @override
+  String get deckImageFromCamera => '사진 찍기';
+
+  @override
+  String get deckImageRemove => '사진 빼기';
+
+  @override
+  String get deckImageUnreadable => '사진을 불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String deckIconName(String icon) {
     String _temp0 = intl.Intl.selectLogic(icon, {
       'layers': '카드 묶음',

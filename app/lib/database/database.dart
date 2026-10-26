@@ -46,6 +46,10 @@ class Decks extends Table {
   /// The key of the colour the owner chose for the deck's tile; null, or a
   /// key this build does not know, draws the colour the deck's id selects.
   TextColumn get color => text().nullable()();
+
+  /// The media id of the image the owner chose for the deck's tile; null
+  /// draws its icon (ADR 0107).
+  TextColumn get imageMediaId => text().nullable()();
   DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
   DateTimeColumn get deletedAt =>
@@ -175,15 +179,52 @@ class StudySettings extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Media this device stored, owned by the media domain: each row waits for
+/// its file, kept on the device, to be uploaded, and goes once it is
+/// (ADR 0107).
+@DataClassName('MediaUploadRow')
+class MediaUploads extends Table {
+  TextColumn get id => text()();
+  TextColumn get kind =>
+      text().check(const CustomExpression("kind IN ('image', 'audio')"))();
+  TextColumn get mimeType => text()();
+  IntColumn get byteSize => integer()();
+  TextColumn get sha256 => text()();
+  DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Media the user let go, owned by the media domain: each row waits for its
+/// file and row on the server to be deleted, and goes once they are
+/// (ADR 0107).
+@DataClassName('MediaDeletionRow')
+class MediaDeletions extends Table {
+  TextColumn get id => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// The app's local SQLite database, shared by every domain below which it sits.
 @DriftDatabase(
-  tables: [Decks, Cards, Reviews, CardStates, SyncState, StudySettings],
+  tables: [
+    Decks,
+    Cards,
+    Reviews,
+    CardStates,
+    SyncState,
+    StudySettings,
+    MediaUploads,
+    MediaDeletions,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -347,6 +388,13 @@ class AppDatabase extends _$AppDatabase {
       from10To11: (m, schema) async {
         await m.addColumn(schema.cards, schema.cards.template);
         await m.addColumn(schema.cards, schema.cards.templateVersion);
+      },
+      // A deck's image and the media queues (ADR 0107): a nullable column and
+      // two new tables, so no row changes.
+      from11To12: (m, schema) async {
+        await m.addColumn(schema.decks, schema.decks.imageMediaId);
+        await m.createTable(schema.mediaUploads);
+        await m.createTable(schema.mediaDeletions);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

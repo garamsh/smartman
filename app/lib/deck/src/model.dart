@@ -1,3 +1,4 @@
+import '../../media/media.dart';
 import 'card_key.dart';
 import 'content.dart';
 
@@ -107,6 +108,7 @@ final class Deck {
     this.description,
     this.icon,
     this.color,
+    this.image,
   });
 
   final DeckId id;
@@ -125,6 +127,10 @@ final class Deck {
   /// The colour the owner chose for the deck's tile; null while none this
   /// build knows is chosen.
   final DeckColor? color;
+
+  /// The image the owner chose for the deck's tile, drawn in place of its
+  /// icon; null while none is chosen.
+  final MediaId? image;
 }
 
 /// Where a card came from: the editor writes [manual], photo import

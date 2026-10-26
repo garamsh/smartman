@@ -77,6 +77,17 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _imageMediaIdMeta = const VerificationMeta(
+    'imageMediaId',
+  );
+  @override
+  late final GeneratedColumn<String> imageMediaId = GeneratedColumn<String>(
+    'image_media_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   late final GeneratedColumnWithTypeConverter<DateTime, DateTime> createdAt =
       GeneratedColumn<DateTime>(
@@ -126,6 +137,7 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
     description,
     icon,
     color,
+    imageMediaId,
     createdAt,
     updatedAt,
     deletedAt,
@@ -183,6 +195,15 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
         color.isAcceptableOrUnknown(data['color']!, _colorMeta),
       );
     }
+    if (data.containsKey('image_media_id')) {
+      context.handle(
+        _imageMediaIdMeta,
+        imageMediaId.isAcceptableOrUnknown(
+          data['image_media_id']!,
+          _imageMediaIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('dirty')) {
       context.handle(
         _dirtyMeta,
@@ -227,6 +248,10 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, DeckRow> {
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}color'],
+      ),
+      imageMediaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_media_id'],
       ),
       createdAt: $DecksTable.$convertercreatedAt.fromSql(
         attachedDatabase.typeMapping.read(
@@ -289,6 +314,10 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
   /// The key of the colour the owner chose for the deck's tile; null, or a
   /// key this build does not know, draws the colour the deck's id selects.
   final String? color;
+
+  /// The media id of the image the owner chose for the deck's tile; null
+  /// draws its icon (ADR 0107).
+  final String? imageMediaId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -301,6 +330,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     this.description,
     this.icon,
     this.color,
+    this.imageMediaId,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -325,6 +355,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     }
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<String>(color);
+    }
+    if (!nullToAbsent || imageMediaId != null) {
+      map['image_media_id'] = Variable<String>(imageMediaId);
     }
     {
       map['created_at'] = Variable<DateTime>(
@@ -360,6 +393,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
+      imageMediaId: imageMediaId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageMediaId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -382,6 +418,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       description: serializer.fromJson<String?>(json['description']),
       icon: serializer.fromJson<String?>(json['icon']),
       color: serializer.fromJson<String?>(json['color']),
+      imageMediaId: serializer.fromJson<String?>(json['imageMediaId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -399,6 +436,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
       'description': serializer.toJson<String?>(description),
       'icon': serializer.toJson<String?>(icon),
       'color': serializer.toJson<String?>(color),
+      'imageMediaId': serializer.toJson<String?>(imageMediaId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -414,6 +452,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     Value<String?> description = const Value.absent(),
     Value<String?> icon = const Value.absent(),
     Value<String?> color = const Value.absent(),
+    Value<String?> imageMediaId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -426,6 +465,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     description: description.present ? description.value : this.description,
     icon: icon.present ? icon.value : this.icon,
     color: color.present ? color.value : this.color,
+    imageMediaId: imageMediaId.present ? imageMediaId.value : this.imageMediaId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -446,6 +486,9 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           : this.description,
       icon: data.icon.present ? data.icon.value : this.icon,
       color: data.color.present ? data.color.value : this.color,
+      imageMediaId: data.imageMediaId.present
+          ? data.imageMediaId.value
+          : this.imageMediaId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -463,6 +506,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           ..write('description: $description, ')
           ..write('icon: $icon, ')
           ..write('color: $color, ')
+          ..write('imageMediaId: $imageMediaId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -480,6 +524,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
     description,
     icon,
     color,
+    imageMediaId,
     createdAt,
     updatedAt,
     deletedAt,
@@ -496,6 +541,7 @@ class DeckRow extends DataClass implements Insertable<DeckRow> {
           other.description == this.description &&
           other.icon == this.icon &&
           other.color == this.color &&
+          other.imageMediaId == this.imageMediaId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -510,6 +556,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
   final Value<String?> description;
   final Value<String?> icon;
   final Value<String?> color;
+  final Value<String?> imageMediaId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -523,6 +570,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     this.description = const Value.absent(),
     this.icon = const Value.absent(),
     this.color = const Value.absent(),
+    this.imageMediaId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -537,6 +585,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     this.description = const Value.absent(),
     this.icon = const Value.absent(),
     this.color = const Value.absent(),
+    this.imageMediaId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -554,6 +603,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     Expression<String>? description,
     Expression<String>? icon,
     Expression<String>? color,
+    Expression<String>? imageMediaId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -568,6 +618,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       if (description != null) 'description': description,
       if (icon != null) 'icon': icon,
       if (color != null) 'color': color,
+      if (imageMediaId != null) 'image_media_id': imageMediaId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -584,6 +635,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     Value<String?>? description,
     Value<String?>? icon,
     Value<String?>? color,
+    Value<String?>? imageMediaId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -598,6 +650,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
       description: description ?? this.description,
       icon: icon ?? this.icon,
       color: color ?? this.color,
+      imageMediaId: imageMediaId ?? this.imageMediaId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -631,6 +684,9 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
+    }
+    if (imageMediaId.present) {
+      map['image_media_id'] = Variable<String>(imageMediaId.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(
@@ -666,6 +722,7 @@ class DecksCompanion extends UpdateCompanion<DeckRow> {
           ..write('description: $description, ')
           ..write('icon: $icon, ')
           ..write('color: $color, ')
+          ..write('imageMediaId: $imageMediaId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -3168,6 +3225,570 @@ class StudySettingsCompanion extends UpdateCompanion<StudySettingsRow> {
   }
 }
 
+class $MediaUploadsTable extends MediaUploads
+    with TableInfo<$MediaUploadsTable, MediaUploadRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MediaUploadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    check: () => const CustomExpression("kind IN ('image', 'audio')"),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _byteSizeMeta = const VerificationMeta(
+    'byteSize',
+  );
+  @override
+  late final GeneratedColumn<int> byteSize = GeneratedColumn<int>(
+    'byte_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, DateTime> createdAt =
+      GeneratedColumn<DateTime>(
+        'created_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($MediaUploadsTable.$convertercreatedAt);
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kind,
+    mimeType,
+    byteSize,
+    sha256,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'media_uploads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MediaUploadRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mimeTypeMeta);
+    }
+    if (data.containsKey('byte_size')) {
+      context.handle(
+        _byteSizeMeta,
+        byteSize.isAcceptableOrUnknown(data['byte_size']!, _byteSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_byteSizeMeta);
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MediaUploadRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MediaUploadRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      )!,
+      byteSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}byte_size'],
+      )!,
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      createdAt: $MediaUploadsTable.$convertercreatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}created_at'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $MediaUploadsTable createAlias(String alias) {
+    return $MediaUploadsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, DateTime> $convertercreatedAt =
+      const StoredTime();
+}
+
+class MediaUploadRow extends DataClass implements Insertable<MediaUploadRow> {
+  final String id;
+  final String kind;
+  final String mimeType;
+  final int byteSize;
+  final String sha256;
+  final DateTime createdAt;
+  const MediaUploadRow({
+    required this.id,
+    required this.kind,
+    required this.mimeType,
+    required this.byteSize,
+    required this.sha256,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['kind'] = Variable<String>(kind);
+    map['mime_type'] = Variable<String>(mimeType);
+    map['byte_size'] = Variable<int>(byteSize);
+    map['sha256'] = Variable<String>(sha256);
+    {
+      map['created_at'] = Variable<DateTime>(
+        $MediaUploadsTable.$convertercreatedAt.toSql(createdAt),
+      );
+    }
+    return map;
+  }
+
+  MediaUploadsCompanion toCompanion(bool nullToAbsent) {
+    return MediaUploadsCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      mimeType: Value(mimeType),
+      byteSize: Value(byteSize),
+      sha256: Value(sha256),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory MediaUploadRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MediaUploadRow(
+      id: serializer.fromJson<String>(json['id']),
+      kind: serializer.fromJson<String>(json['kind']),
+      mimeType: serializer.fromJson<String>(json['mimeType']),
+      byteSize: serializer.fromJson<int>(json['byteSize']),
+      sha256: serializer.fromJson<String>(json['sha256']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(kind),
+      'mimeType': serializer.toJson<String>(mimeType),
+      'byteSize': serializer.toJson<int>(byteSize),
+      'sha256': serializer.toJson<String>(sha256),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  MediaUploadRow copyWith({
+    String? id,
+    String? kind,
+    String? mimeType,
+    int? byteSize,
+    String? sha256,
+    DateTime? createdAt,
+  }) => MediaUploadRow(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    mimeType: mimeType ?? this.mimeType,
+    byteSize: byteSize ?? this.byteSize,
+    sha256: sha256 ?? this.sha256,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  MediaUploadRow copyWithCompanion(MediaUploadsCompanion data) {
+    return MediaUploadRow(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      byteSize: data.byteSize.present ? data.byteSize.value : this.byteSize,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MediaUploadRow(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('byteSize: $byteSize, ')
+          ..write('sha256: $sha256, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, kind, mimeType, byteSize, sha256, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MediaUploadRow &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.mimeType == this.mimeType &&
+          other.byteSize == this.byteSize &&
+          other.sha256 == this.sha256 &&
+          other.createdAt == this.createdAt);
+}
+
+class MediaUploadsCompanion extends UpdateCompanion<MediaUploadRow> {
+  final Value<String> id;
+  final Value<String> kind;
+  final Value<String> mimeType;
+  final Value<int> byteSize;
+  final Value<String> sha256;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const MediaUploadsCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.byteSize = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MediaUploadsCompanion.insert({
+    required String id,
+    required String kind,
+    required String mimeType,
+    required int byteSize,
+    required String sha256,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kind = Value(kind),
+       mimeType = Value(mimeType),
+       byteSize = Value(byteSize),
+       sha256 = Value(sha256),
+       createdAt = Value(createdAt);
+  static Insertable<MediaUploadRow> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? mimeType,
+    Expression<int>? byteSize,
+    Expression<String>? sha256,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (byteSize != null) 'byte_size': byteSize,
+      if (sha256 != null) 'sha256': sha256,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MediaUploadsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? kind,
+    Value<String>? mimeType,
+    Value<int>? byteSize,
+    Value<String>? sha256,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return MediaUploadsCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      mimeType: mimeType ?? this.mimeType,
+      byteSize: byteSize ?? this.byteSize,
+      sha256: sha256 ?? this.sha256,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (byteSize.present) {
+      map['byte_size'] = Variable<int>(byteSize.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(
+        $MediaUploadsTable.$convertercreatedAt.toSql(createdAt.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MediaUploadsCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('byteSize: $byteSize, ')
+          ..write('sha256: $sha256, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MediaDeletionsTable extends MediaDeletions
+    with TableInfo<$MediaDeletionsTable, MediaDeletionRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MediaDeletionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'media_deletions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MediaDeletionRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MediaDeletionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MediaDeletionRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+    );
+  }
+
+  @override
+  $MediaDeletionsTable createAlias(String alias) {
+    return $MediaDeletionsTable(attachedDatabase, alias);
+  }
+}
+
+class MediaDeletionRow extends DataClass
+    implements Insertable<MediaDeletionRow> {
+  final String id;
+  const MediaDeletionRow({required this.id});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    return map;
+  }
+
+  MediaDeletionsCompanion toCompanion(bool nullToAbsent) {
+    return MediaDeletionsCompanion(id: Value(id));
+  }
+
+  factory MediaDeletionRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MediaDeletionRow(id: serializer.fromJson<String>(json['id']));
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{'id': serializer.toJson<String>(id)};
+  }
+
+  MediaDeletionRow copyWith({String? id}) =>
+      MediaDeletionRow(id: id ?? this.id);
+  MediaDeletionRow copyWithCompanion(MediaDeletionsCompanion data) {
+    return MediaDeletionRow(id: data.id.present ? data.id.value : this.id);
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MediaDeletionRow(')
+          ..write('id: $id')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => id.hashCode;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MediaDeletionRow && other.id == this.id);
+}
+
+class MediaDeletionsCompanion extends UpdateCompanion<MediaDeletionRow> {
+  final Value<String> id;
+  final Value<int> rowid;
+  const MediaDeletionsCompanion({
+    this.id = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MediaDeletionsCompanion.insert({
+    required String id,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<MediaDeletionRow> custom({
+    Expression<String>? id,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MediaDeletionsCompanion copyWith({Value<String>? id, Value<int>? rowid}) {
+    return MediaDeletionsCompanion(
+      id: id ?? this.id,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MediaDeletionsCompanion(')
+          ..write('id: $id, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3177,6 +3798,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CardStatesTable cardStates = $CardStatesTable(this);
   late final $SyncStateTable syncState = $SyncStateTable(this);
   late final $StudySettingsTable studySettings = $StudySettingsTable(this);
+  late final $MediaUploadsTable mediaUploads = $MediaUploadsTable(this);
+  late final $MediaDeletionsTable mediaDeletions = $MediaDeletionsTable(this);
   late final Index decksUnsynced = Index(
     'decks_unsynced',
     'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
@@ -3220,6 +3843,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cardStates,
     syncState,
     studySettings,
+    mediaUploads,
+    mediaDeletions,
     decksUnsynced,
     cardsDeckIdCardKey,
     cardsDeckIdCreatedAt,
@@ -3266,6 +3891,7 @@ typedef $$DecksTableCreateCompanionBuilder = DecksCompanion Function({
   Value<String?> description,
   Value<String?> icon,
   Value<String?> color,
+  Value<String?> imageMediaId,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> deletedAt,
@@ -3280,6 +3906,7 @@ typedef $$DecksTableUpdateCompanionBuilder = DecksCompanion Function({
   Value<String?> description,
   Value<String?> icon,
   Value<String?> color,
+  Value<String?> imageMediaId,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> deletedAt,
@@ -3352,6 +3979,11 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
 
   ColumnFilters<String> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imageMediaId => $composableBuilder(
+    column: $table.imageMediaId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3448,6 +4080,11 @@ class $$DecksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get imageMediaId => $composableBuilder(
+    column: $table.imageMediaId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3505,6 +4142,11 @@ class $$DecksTableAnnotationComposer
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get imageMediaId => $composableBuilder(
+    column: $table.imageMediaId,
+    builder: (column) => column,
+  );
 
   GeneratedColumnWithTypeConverter<DateTime, DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3579,6 +4221,7 @@ class $$DecksTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<String?> icon = const Value.absent(),
                 Value<String?> color = const Value.absent(),
+                Value<String?> imageMediaId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3592,6 +4235,7 @@ class $$DecksTableTableManager
                 description: description,
                 icon: icon,
                 color: color,
+                imageMediaId: imageMediaId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -3607,6 +4251,7 @@ class $$DecksTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<String?> icon = const Value.absent(),
                 Value<String?> color = const Value.absent(),
+                Value<String?> imageMediaId = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3620,6 +4265,7 @@ class $$DecksTableTableManager
                 description: description,
                 icon: icon,
                 color: color,
+                imageMediaId: imageMediaId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -5492,6 +6138,360 @@ typedef $$StudySettingsTableProcessedTableManager =
       StudySettingsRow,
       PrefetchHooks Function()
     >;
+typedef $$MediaUploadsTableCreateCompanionBuilder =
+    MediaUploadsCompanion Function({
+      required String id,
+      required String kind,
+      required String mimeType,
+      required int byteSize,
+      required String sha256,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$MediaUploadsTableUpdateCompanionBuilder =
+    MediaUploadsCompanion Function({
+      Value<String> id,
+      Value<String> kind,
+      Value<String> mimeType,
+      Value<int> byteSize,
+      Value<String> sha256,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$MediaUploadsTableFilterComposer
+    extends Composer<_$AppDatabase, $MediaUploadsTable> {
+  $$MediaUploadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get byteSize => $composableBuilder(
+    column: $table.byteSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<DateTime, DateTime, DateTime> get createdAt =>
+      $composableBuilder(
+        column: $table.createdAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+}
+
+class $$MediaUploadsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MediaUploadsTable> {
+  $$MediaUploadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get byteSize => $composableBuilder(
+    column: $table.byteSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MediaUploadsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MediaUploadsTable> {
+  $$MediaUploadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<int> get byteSize =>
+      $composableBuilder(column: $table.byteSize, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<DateTime, DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$MediaUploadsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MediaUploadsTable,
+          MediaUploadRow,
+          $$MediaUploadsTableFilterComposer,
+          $$MediaUploadsTableOrderingComposer,
+          $$MediaUploadsTableAnnotationComposer,
+          $$MediaUploadsTableCreateCompanionBuilder,
+          $$MediaUploadsTableUpdateCompanionBuilder,
+          (
+            MediaUploadRow,
+            BaseReferences<_$AppDatabase, $MediaUploadsTable, MediaUploadRow>,
+          ),
+          MediaUploadRow,
+          PrefetchHooks Function()
+        > {
+  $$MediaUploadsTableTableManager(_$AppDatabase db, $MediaUploadsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MediaUploadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MediaUploadsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MediaUploadsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> mimeType = const Value.absent(),
+                Value<int> byteSize = const Value.absent(),
+                Value<String> sha256 = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MediaUploadsCompanion(
+                id: id,
+                kind: kind,
+                mimeType: mimeType,
+                byteSize: byteSize,
+                sha256: sha256,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String kind,
+                required String mimeType,
+                required int byteSize,
+                required String sha256,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => MediaUploadsCompanion.insert(
+                id: id,
+                kind: kind,
+                mimeType: mimeType,
+                byteSize: byteSize,
+                sha256: sha256,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MediaUploadsTable, MediaUploadRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $MediaUploadsTable,
+                    MediaUploadRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MediaUploadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MediaUploadsTable,
+      MediaUploadRow,
+      $$MediaUploadsTableFilterComposer,
+      $$MediaUploadsTableOrderingComposer,
+      $$MediaUploadsTableAnnotationComposer,
+      $$MediaUploadsTableCreateCompanionBuilder,
+      $$MediaUploadsTableUpdateCompanionBuilder,
+      (
+        MediaUploadRow,
+        BaseReferences<_$AppDatabase, $MediaUploadsTable, MediaUploadRow>,
+      ),
+      MediaUploadRow,
+      PrefetchHooks Function()
+    >;
+typedef $$MediaDeletionsTableCreateCompanionBuilder =
+    MediaDeletionsCompanion Function({required String id, Value<int> rowid});
+typedef $$MediaDeletionsTableUpdateCompanionBuilder =
+    MediaDeletionsCompanion Function({Value<String> id, Value<int> rowid});
+
+class $$MediaDeletionsTableFilterComposer
+    extends Composer<_$AppDatabase, $MediaDeletionsTable> {
+  $$MediaDeletionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MediaDeletionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MediaDeletionsTable> {
+  $$MediaDeletionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MediaDeletionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MediaDeletionsTable> {
+  $$MediaDeletionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+}
+
+class $$MediaDeletionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MediaDeletionsTable,
+          MediaDeletionRow,
+          $$MediaDeletionsTableFilterComposer,
+          $$MediaDeletionsTableOrderingComposer,
+          $$MediaDeletionsTableAnnotationComposer,
+          $$MediaDeletionsTableCreateCompanionBuilder,
+          $$MediaDeletionsTableUpdateCompanionBuilder,
+          (
+            MediaDeletionRow,
+            BaseReferences<
+              _$AppDatabase,
+              $MediaDeletionsTable,
+              MediaDeletionRow
+            >,
+          ),
+          MediaDeletionRow,
+          PrefetchHooks Function()
+        > {
+  $$MediaDeletionsTableTableManager(
+    _$AppDatabase db,
+    $MediaDeletionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MediaDeletionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MediaDeletionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MediaDeletionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => MediaDeletionsCompanion(id: id, rowid: rowid),
+          createCompanionCallback: ({
+            required String id,
+            Value<int> rowid = const Value.absent(),
+          }) => MediaDeletionsCompanion.insert(id: id, rowid: rowid),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MediaDeletionsTable, MediaDeletionRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $MediaDeletionsTable,
+                    MediaDeletionRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MediaDeletionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MediaDeletionsTable,
+      MediaDeletionRow,
+      $$MediaDeletionsTableFilterComposer,
+      $$MediaDeletionsTableOrderingComposer,
+      $$MediaDeletionsTableAnnotationComposer,
+      $$MediaDeletionsTableCreateCompanionBuilder,
+      $$MediaDeletionsTableUpdateCompanionBuilder,
+      (
+        MediaDeletionRow,
+        BaseReferences<_$AppDatabase, $MediaDeletionsTable, MediaDeletionRow>,
+      ),
+      MediaDeletionRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5508,4 +6508,8 @@ class $AppDatabaseManager {
       $$SyncStateTableTableManager(_db, _db.syncState);
   $$StudySettingsTableTableManager get studySettings =>
       $$StudySettingsTableTableManager(_db, _db.studySettings);
+  $$MediaUploadsTableTableManager get mediaUploads =>
+      $$MediaUploadsTableTableManager(_db, _db.mediaUploads);
+  $$MediaDeletionsTableTableManager get mediaDeletions =>
+      $$MediaDeletionsTableTableManager(_db, _db.mediaDeletions);
 }

@@ -21,6 +21,7 @@ import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
@@ -34,6 +35,7 @@ import '../sharing/sharing_service_test.dart' show publicCard, publicDeck;
 import '../sync/fake_sync_server.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
+import '../media/fakes.dart';
 
 /// Screenshots of every screen and sheet in both themes, for review. They are
 /// written, not compared, and only when asked for:
@@ -203,6 +205,8 @@ void main() {
           MemoryImportJobStore(),
           FakeSharingServer(),
           FakeReachability(),
+          const UnavailableMediaServer(),
+          unusedMediaDirectory,
           '1.0.0',
         ),
       );
@@ -1541,6 +1545,8 @@ void main() {
           store,
           FakeSharingServer(),
           FakeReachability(),
+          const UnavailableMediaServer(),
+          unusedMediaDirectory,
           '1.0.0',
         ),
       );

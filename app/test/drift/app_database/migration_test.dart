@@ -16,6 +16,7 @@ import 'generated/schema_v8.dart' as v8;
 import 'generated/schema_v9.dart' as v9;
 import 'generated/schema_v10.dart' as v10;
 import 'generated/schema_v11.dart' as v11;
+import 'generated/schema_v12.dart' as v12;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -842,6 +843,43 @@ void main() {
           reason: 'no row is rewritten',
         );
         expect((card.template, card.templateVersion), (null, null));
+      },
+    );
+  });
+
+  test('the upgrade from 11 to 12 gives every deck no image and leaves both media queues empty', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 11,
+      newVersion: 12,
+      createOld: v11.DatabaseAtV11.new,
+      createNew: v12.DatabaseAtV12.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v11.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            icon: 'book',
+            color: 'violet',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final deck = await db.select(db.decks).getSingle();
+        expect(
+          (deck.id, deck.icon, deck.color, deck.dirty),
+          ('deck', 'book', 'violet', 0),
+          reason: 'no row is rewritten',
+        );
+        expect(deck.imageMediaId, null);
+        expect(await db.select(db.mediaUploads).get(), isEmpty);
+        expect(await db.select(db.mediaDeletions).get(), isEmpty);
       },
     );
   });

@@ -22,6 +22,7 @@ import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
 import 'package:smartman/main.dart';
+import 'package:smartman/media/media.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
@@ -32,6 +33,7 @@ import '../sharing/fakes.dart';
 import '../sync/fake_sync_server.dart';
 import 'fake_account_service.dart';
 import 'fake_google_sign_in.dart';
+import '../media/fakes.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
@@ -119,6 +121,8 @@ void main() {
         MemoryImportJobStore(),
         null,
         FakeReachability(),
+        const UnavailableMediaServer(),
+        unusedMediaDirectory,
         '1.0.0',
       ),
     );
