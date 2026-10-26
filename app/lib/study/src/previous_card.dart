@@ -363,50 +363,52 @@ class _GradedCard extends StatelessWidget {
         ),
         // The card is given its height, so its halves are laid out at
         // it and each side reads the height its half leaves it.
-        child: isWholeCard(front)
-            ? Padding(
-                padding: const EdgeInsets.all(StudyStyle.cardPadding),
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Center(
-                    child: WholeCardView(
-                      front,
-                      revealed: true,
-                      style: AppType.front.copyWith(color: colors.ink),
-                      minFontSize: AppType.frontFloor,
-                      width: constraints.maxWidth,
-                      height: constraints.maxHeight,
-                    ),
-                  ),
-                ),
-              )
-            : SplitCard(
-                padding: StudyStyle.cardPadding,
-                dividerInset: StudyStyle.dividerInset,
-                dividerColor: line,
-                stackBelow: StudyStyle.minHalfWidth,
-                front: (context, width) => LayoutBuilder(
-                  builder: (context, constraints) => ContentView(
-                    front,
-                    style: AppType.front.copyWith(color: colors.ink),
-                    fit: (
-                      minFontSize: AppType.frontFloor,
-                      width: width,
-                      height: constraints.maxHeight,
-                    ),
-                  ),
-                ),
-                back: (context, width) => LayoutBuilder(
-                  builder: (context, constraints) => ContentView(
-                    back,
-                    style: AppType.back.copyWith(color: colors.ink2),
-                    fit: (
-                      minFontSize: AppType.backFloor,
-                      width: width,
-                      height: constraints.maxHeight,
-                    ),
-                  ),
+        // One face when the card holds a blank anywhere (ADR 0106).
+        child: switch (oneFaceOf(front, back)) {
+          final face? => Padding(
+            padding: const EdgeInsets.all(StudyStyle.cardPadding),
+            child: LayoutBuilder(
+              builder: (context, constraints) => Center(
+                child: WholeCardView(
+                  face,
+                  revealed: true,
+                  style: AppType.front.copyWith(color: colors.ink),
+                  minFontSize: AppType.frontFloor,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
                 ),
               ),
+            ),
+          ),
+          null => SplitCard(
+            padding: StudyStyle.cardPadding,
+            dividerInset: StudyStyle.dividerInset,
+            dividerColor: line,
+            stackBelow: StudyStyle.minHalfWidth,
+            front: (context, width) => LayoutBuilder(
+              builder: (context, constraints) => ContentView(
+                front,
+                style: AppType.front.copyWith(color: colors.ink),
+                fit: (
+                  minFontSize: AppType.frontFloor,
+                  width: width,
+                  height: constraints.maxHeight,
+                ),
+              ),
+            ),
+            back: (context, width) => LayoutBuilder(
+              builder: (context, constraints) => ContentView(
+                back,
+                style: AppType.back.copyWith(color: colors.ink2),
+                fit: (
+                  minFontSize: AppType.backFloor,
+                  width: width,
+                  height: constraints.maxHeight,
+                ),
+              ),
+            ),
+          ),
+        },
       ),
     );
   }
@@ -417,13 +419,13 @@ class _GradedCard extends StatelessWidget {
 /// blanks filled.
 void _showWholeCard(BuildContext context, Card card) {
   final l10n = AppLocalizations.of(context);
-  final isWhole = isWholeCard(card.front);
+  final face = oneFaceOf(card.front, card.back);
   showAppSheet<void>(
     context,
     builder: (context) => AppSheet(
       title: l10n.wholeCard,
-      content: isWhole
-          ? WholeCardView(card.front, revealed: true, style: AppType.body)
+      content: face != null
+          ? WholeCardView(face, revealed: true, style: AppType.body)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

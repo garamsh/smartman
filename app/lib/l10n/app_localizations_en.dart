@@ -214,6 +214,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tableBlankEmpty => 'Fill in each cell chosen as a blank';
 
   @override
+  String get cardNeedsUpdate =>
+      'This card was made in a newer version of the app, so this version can\'t edit it. Update the app.';
+
+  @override
   String get cardKindLabel => 'Card kind';
 
   @override

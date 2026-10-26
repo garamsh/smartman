@@ -753,6 +753,28 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _templateMeta = const VerificationMeta(
+    'template',
+  );
+  @override
+  late final GeneratedColumn<String> template = GeneratedColumn<String>(
+    'template',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _templateVersionMeta = const VerificationMeta(
+    'templateVersion',
+  );
+  @override
+  late final GeneratedColumn<int> templateVersion = GeneratedColumn<int>(
+    'template_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   late final GeneratedColumnWithTypeConverter<DateTime, DateTime> createdAt =
       GeneratedColumn<DateTime>(
@@ -802,6 +824,8 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
     cardKey,
     source,
     originDeckId,
+    template,
+    templateVersion,
     createdAt,
     updatedAt,
     deletedAt,
@@ -873,6 +897,21 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
         ),
       );
     }
+    if (data.containsKey('template')) {
+      context.handle(
+        _templateMeta,
+        template.isAcceptableOrUnknown(data['template']!, _templateMeta),
+      );
+    }
+    if (data.containsKey('template_version')) {
+      context.handle(
+        _templateVersionMeta,
+        templateVersion.isAcceptableOrUnknown(
+          data['template_version']!,
+          _templateVersionMeta,
+        ),
+      );
+    }
     if (data.containsKey('dirty')) {
       context.handle(
         _dirtyMeta,
@@ -915,6 +954,14 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, CardRow> {
       originDeckId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}origin_deck_id'],
+      ),
+      template: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}template'],
+      ),
+      templateVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}template_version'],
       ),
       createdAt: $CardsTable.$convertercreatedAt.fromSql(
         attachedDatabase.typeMapping.read(
@@ -966,6 +1013,12 @@ class CardRow extends DataClass implements Insertable<CardRow> {
 
   /// The public deck a copied card came from; null for any other card.
   final String? originDeckId;
+
+  /// The template the card was made from and its version, null until its
+  /// first write in a build that records them; never checked against a list,
+  /// so a later build's template is kept (ADR 0106).
+  final String? template;
+  final int? templateVersion;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -978,6 +1031,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     required this.cardKey,
     required this.source,
     this.originDeckId,
+    this.template,
+    this.templateVersion,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -994,6 +1049,12 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     map['source'] = Variable<String>(source);
     if (!nullToAbsent || originDeckId != null) {
       map['origin_deck_id'] = Variable<String>(originDeckId);
+    }
+    if (!nullToAbsent || template != null) {
+      map['template'] = Variable<String>(template);
+    }
+    if (!nullToAbsent || templateVersion != null) {
+      map['template_version'] = Variable<int>(templateVersion);
     }
     {
       map['created_at'] = Variable<DateTime>(
@@ -1025,6 +1086,12 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       originDeckId: originDeckId == null && nullToAbsent
           ? const Value.absent()
           : Value(originDeckId),
+      template: template == null && nullToAbsent
+          ? const Value.absent()
+          : Value(template),
+      templateVersion: templateVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(templateVersion),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -1047,6 +1114,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       cardKey: serializer.fromJson<String>(json['cardKey']),
       source: serializer.fromJson<String>(json['source']),
       originDeckId: serializer.fromJson<String?>(json['originDeckId']),
+      template: serializer.fromJson<String?>(json['template']),
+      templateVersion: serializer.fromJson<int?>(json['templateVersion']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -1064,6 +1133,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       'cardKey': serializer.toJson<String>(cardKey),
       'source': serializer.toJson<String>(source),
       'originDeckId': serializer.toJson<String?>(originDeckId),
+      'template': serializer.toJson<String?>(template),
+      'templateVersion': serializer.toJson<int?>(templateVersion),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -1079,6 +1150,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     String? cardKey,
     String? source,
     Value<String?> originDeckId = const Value.absent(),
+    Value<String?> template = const Value.absent(),
+    Value<int?> templateVersion = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -1091,6 +1164,10 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     cardKey: cardKey ?? this.cardKey,
     source: source ?? this.source,
     originDeckId: originDeckId.present ? originDeckId.value : this.originDeckId,
+    template: template.present ? template.value : this.template,
+    templateVersion: templateVersion.present
+        ? templateVersion.value
+        : this.templateVersion,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -1107,6 +1184,10 @@ class CardRow extends DataClass implements Insertable<CardRow> {
       originDeckId: data.originDeckId.present
           ? data.originDeckId.value
           : this.originDeckId,
+      template: data.template.present ? data.template.value : this.template,
+      templateVersion: data.templateVersion.present
+          ? data.templateVersion.value
+          : this.templateVersion,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -1124,6 +1205,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           ..write('cardKey: $cardKey, ')
           ..write('source: $source, ')
           ..write('originDeckId: $originDeckId, ')
+          ..write('template: $template, ')
+          ..write('templateVersion: $templateVersion, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -1141,6 +1224,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
     cardKey,
     source,
     originDeckId,
+    template,
+    templateVersion,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1157,6 +1242,8 @@ class CardRow extends DataClass implements Insertable<CardRow> {
           other.cardKey == this.cardKey &&
           other.source == this.source &&
           other.originDeckId == this.originDeckId &&
+          other.template == this.template &&
+          other.templateVersion == this.templateVersion &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -1171,6 +1258,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
   final Value<String> cardKey;
   final Value<String> source;
   final Value<String?> originDeckId;
+  final Value<String?> template;
+  final Value<int?> templateVersion;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -1184,6 +1273,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     this.cardKey = const Value.absent(),
     this.source = const Value.absent(),
     this.originDeckId = const Value.absent(),
+    this.template = const Value.absent(),
+    this.templateVersion = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1198,6 +1289,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     required String cardKey,
     required String source,
     this.originDeckId = const Value.absent(),
+    this.template = const Value.absent(),
+    this.templateVersion = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.deletedAt = const Value.absent(),
@@ -1219,6 +1312,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Expression<String>? cardKey,
     Expression<String>? source,
     Expression<String>? originDeckId,
+    Expression<String>? template,
+    Expression<int>? templateVersion,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -1233,6 +1328,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       if (cardKey != null) 'card_key': cardKey,
       if (source != null) 'source': source,
       if (originDeckId != null) 'origin_deck_id': originDeckId,
+      if (template != null) 'template': template,
+      if (templateVersion != null) 'template_version': templateVersion,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -1249,6 +1346,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     Value<String>? cardKey,
     Value<String>? source,
     Value<String?>? originDeckId,
+    Value<String?>? template,
+    Value<int?>? templateVersion,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -1263,6 +1362,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
       cardKey: cardKey ?? this.cardKey,
       source: source ?? this.source,
       originDeckId: originDeckId ?? this.originDeckId,
+      template: template ?? this.template,
+      templateVersion: templateVersion ?? this.templateVersion,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -1294,6 +1395,12 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
     }
     if (originDeckId.present) {
       map['origin_deck_id'] = Variable<String>(originDeckId.value);
+    }
+    if (template.present) {
+      map['template'] = Variable<String>(template.value);
+    }
+    if (templateVersion.present) {
+      map['template_version'] = Variable<int>(templateVersion.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(
@@ -1329,6 +1436,8 @@ class CardsCompanion extends UpdateCompanion<CardRow> {
           ..write('cardKey: $cardKey, ')
           ..write('source: $source, ')
           ..write('originDeckId: $originDeckId, ')
+          ..write('template: $template, ')
+          ..write('templateVersion: $templateVersion, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -3574,6 +3683,8 @@ typedef $$CardsTableCreateCompanionBuilder = CardsCompanion Function({
   required String cardKey,
   required String source,
   Value<String?> originDeckId,
+  Value<String?> template,
+  Value<int?> templateVersion,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> deletedAt,
@@ -3588,6 +3699,8 @@ typedef $$CardsTableUpdateCompanionBuilder = CardsCompanion Function({
   Value<String> cardKey,
   Value<String> source,
   Value<String?> originDeckId,
+  Value<String?> template,
+  Value<int?> templateVersion,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> deletedAt,
@@ -3689,6 +3802,16 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
 
   ColumnFilters<String> get originDeckId => $composableBuilder(
     column: $table.originDeckId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get template => $composableBuilder(
+    column: $table.template,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get templateVersion => $composableBuilder(
+    column: $table.templateVersion,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3828,6 +3951,16 @@ class $$CardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get template => $composableBuilder(
+    column: $table.template,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get templateVersion => $composableBuilder(
+    column: $table.templateVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3898,6 +4031,14 @@ class $$CardsTableAnnotationComposer
 
   GeneratedColumn<String> get originDeckId => $composableBuilder(
     column: $table.originDeckId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get template =>
+      $composableBuilder(column: $table.template, builder: (column) => column);
+
+  GeneratedColumn<int> get templateVersion => $composableBuilder(
+    column: $table.templateVersion,
     builder: (column) => column,
   );
 
@@ -4026,6 +4167,8 @@ class $$CardsTableTableManager
                 Value<String> cardKey = const Value.absent(),
                 Value<String> source = const Value.absent(),
                 Value<String?> originDeckId = const Value.absent(),
+                Value<String?> template = const Value.absent(),
+                Value<int?> templateVersion = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -4039,6 +4182,8 @@ class $$CardsTableTableManager
                 cardKey: cardKey,
                 source: source,
                 originDeckId: originDeckId,
+                template: template,
+                templateVersion: templateVersion,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -4054,6 +4199,8 @@ class $$CardsTableTableManager
                 required String cardKey,
                 required String source,
                 Value<String?> originDeckId = const Value.absent(),
+                Value<String?> template = const Value.absent(),
+                Value<int?> templateVersion = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -4067,6 +4214,8 @@ class $$CardsTableTableManager
                 cardKey: cardKey,
                 source: source,
                 originDeckId: originDeckId,
+                template: template,
+                templateVersion: templateVersion,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

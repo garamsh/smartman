@@ -1921,6 +1921,222 @@ i1.GeneratedColumn<String> _column_41(String aliasedName) =>
       type: i1.DriftSqlType.string,
       $customConstraints: 'NULL',
     );
+
+final class Schema11 extends i0.VersionedSchema {
+  Schema11({required super.database}) : super(version: 11);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    decks,
+    cards,
+    reviews,
+    cardStates,
+    syncState,
+    studySettings,
+    decksUnsynced,
+    cardsDeckIdCardKey,
+    cardsDeckIdCreatedAt,
+    cardsUnsynced,
+    reviewsCardIdReviewedAt,
+    reviewsReviewedAt,
+    reviewsUnsynced,
+    cardStatesUnsynced,
+  ];
+  late final Shape19 decks = Shape19(
+    source: i0.VersionedTable(
+      entityName: 'decks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_26,
+        _column_31,
+        _column_28,
+        _column_40,
+        _column_41,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape20 cards = Shape20(
+    source: i0.VersionedTable(
+      entityName: 'cards',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+        _column_38,
+        _column_30,
+        _column_42,
+        _column_43,
+        _column_32,
+        _column_33,
+        _column_34,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 reviews = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'reviews',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_9,
+        _column_10,
+        _column_35,
+        _column_12,
+        _column_17,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape17 cardStates = Shape17(
+    source: i0.VersionedTable(
+      entityName: 'card_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(card_id)'],
+      columns: [
+        _column_9,
+        _column_13,
+        _column_14,
+        _column_36,
+        _column_37,
+        _column_33,
+        _column_19,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 syncState = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'sync_state',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_20,
+        _column_21,
+        _column_22,
+        _column_23,
+        _column_24,
+        _column_25,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape18 studySettings = Shape18(
+    source: i0.VersionedTable(
+      entityName: 'study_settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_20, _column_39, _column_33, _column_19],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index decksUnsynced = i1.Index(
+    'decks_unsynced',
+    'CREATE INDEX decks_unsynced ON decks (id) WHERE dirty',
+  );
+  final i1.Index cardsDeckIdCardKey = i1.Index(
+    'cards_deck_id_card_key',
+    'CREATE INDEX cards_deck_id_card_key ON cards (deck_id, card_key) WHERE deleted_at IS NULL',
+  );
+  final i1.Index cardsDeckIdCreatedAt = i1.Index(
+    'cards_deck_id_created_at',
+    'CREATE INDEX cards_deck_id_created_at ON cards (deck_id, created_at)',
+  );
+  final i1.Index cardsUnsynced = i1.Index(
+    'cards_unsynced',
+    'CREATE INDEX cards_unsynced ON cards (id) WHERE dirty',
+  );
+  final i1.Index reviewsCardIdReviewedAt = i1.Index(
+    'reviews_card_id_reviewed_at',
+    'CREATE INDEX reviews_card_id_reviewed_at ON reviews (card_id, reviewed_at)',
+  );
+  final i1.Index reviewsReviewedAt = i1.Index(
+    'reviews_reviewed_at',
+    'CREATE INDEX reviews_reviewed_at ON reviews (reviewed_at)',
+  );
+  final i1.Index reviewsUnsynced = i1.Index(
+    'reviews_unsynced',
+    'CREATE INDEX reviews_unsynced ON reviews (id) WHERE dirty',
+  );
+  final i1.Index cardStatesUnsynced = i1.Index(
+    'card_states_unsynced',
+    'CREATE INDEX card_states_unsynced ON card_states (card_id) WHERE dirty',
+  );
+}
+
+class Shape20 extends i0.VersionedTable {
+  Shape20({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deckId =>
+      columnsByName['deck_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get front =>
+      columnsByName['front']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get back =>
+      columnsByName['back']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get cardKey =>
+      columnsByName['card_key']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get source =>
+      columnsByName['source']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get originDeckId =>
+      columnsByName['origin_deck_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get template =>
+      columnsByName['template']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get templateVersion =>
+      columnsByName['template_version']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get dirty =>
+      columnsByName['dirty']! as i1.GeneratedColumn<int>;
+}
+
+i1.GeneratedColumn<String> _column_42(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'template',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+i1.GeneratedColumn<int> _column_43(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'template_version',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
@@ -1931,6 +2147,7 @@ i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema8 schema) from7To8,
   required Future<void> Function(i1.Migrator m, Schema9 schema) from8To9,
   required Future<void> Function(i1.Migrator m, Schema10 schema) from9To10,
+  required Future<void> Function(i1.Migrator m, Schema11 schema) from10To11,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -1979,6 +2196,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from9To10(migrator, schema);
         return 10;
+      case 10:
+        final schema = Schema11(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from10To11(migrator, schema);
+        return 11;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -1995,6 +2217,7 @@ i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema8 schema) from7To8,
   required Future<void> Function(i1.Migrator m, Schema9 schema) from8To9,
   required Future<void> Function(i1.Migrator m, Schema10 schema) from9To10,
+  required Future<void> Function(i1.Migrator m, Schema11 schema) from10To11,
 }) => i0.VersionedSchema.stepByStepHelper(
   step: migrationSteps(
     from1To2: from1To2,
@@ -2006,5 +2229,6 @@ i1.OnUpgrade stepByStep({
     from7To8: from7To8,
     from8To9: from8To9,
     from9To10: from9To10,
+    from10To11: from10To11,
   ),
 );

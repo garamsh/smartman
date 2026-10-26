@@ -211,6 +211,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tableBlankEmpty => '빈칸으로 고른 칸에 내용을 적어 주세요';
 
   @override
+  String get cardNeedsUpdate =>
+      '새 버전의 앱에서 만든 카드라 이 버전에서는 고칠 수 없어요. 앱을 업데이트해 주세요.';
+
+  @override
   String get cardKindLabel => '카드 종류';
 
   @override

@@ -78,6 +78,12 @@ class Cards extends Table {
 
   /// The public deck a copied card came from; null for any other card.
   TextColumn get originDeckId => text().nullable()();
+
+  /// The template the card was made from and its version, null until its
+  /// first write in a build that records them; never checked against a list,
+  /// so a later build's template is kept (ADR 0106).
+  TextColumn get template => text().nullable()();
+  IntColumn get templateVersion => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
   DateTimeColumn get deletedAt =>
@@ -177,7 +183,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -335,6 +341,12 @@ class AppDatabase extends _$AppDatabase {
       from9To10: (m, schema) async {
         await m.addColumn(schema.decks, schema.decks.icon);
         await m.addColumn(schema.decks, schema.decks.color);
+      },
+      // A card's template and its version (ADR 0106): two nullable columns,
+      // so no row changes; a card gains them on its next write.
+      from10To11: (m, schema) async {
+        await m.addColumn(schema.cards, schema.cards.template);
+        await m.addColumn(schema.cards, schema.cards.templateVersion);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

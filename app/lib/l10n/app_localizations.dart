@@ -392,6 +392,12 @@ abstract class AppLocalizations {
   /// **'빈칸으로 고른 칸에 내용을 적어 주세요'**
   String get tableBlankEmpty;
 
+  /// Under a card the card editor shows read-only, because it records a template, or a template version, this build does not know.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 버전의 앱에서 만든 카드라 이 버전에서는 고칠 수 없어요. 앱을 업데이트해 주세요.'**
+  String get cardNeedsUpdate;
+
   /// What a screen reader reads for the card editor's kind switch.
   ///
   /// In ko, this message translates to:

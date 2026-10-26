@@ -49,6 +49,7 @@
   "deleteColumn": "Delete column {column}",
   "tableBlankRequired": "Choose at least one cell as a blank",
   "tableBlankEmpty": "Fill in each cell chosen as a blank",
+  "cardNeedsUpdate": "This card was made in a newer version of the app, so this version can't edit it. Update the app.",
   "cardKindLabel": "Card kind",
   "cardDeck": "Deck {deck}",
   "senseLabelHint": "Label",
