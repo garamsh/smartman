@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  audioLength,
+  audioOf,
+  type Content,
   describeContent,
   isWholeCard,
   type LibraryFailure,
@@ -17,6 +20,7 @@ import {
   newCards,
   readToday,
   readyServerEngine,
+  signSounds,
   studyDecks,
   StudyScreen,
   studyReturn,
@@ -45,6 +49,21 @@ export async function Study({
   if ("failure" in today) return <Failure failure={today.failure} back={back} />;
   if (!read.library.decks.some((deck) => named.includes(deck.id))) notFound();
 
+  // Each sound's signed address, in one request (ADR 0112).
+  const signed = await signSounds([
+    ...new Set(
+      read.library.cards.flatMap((card) =>
+        audioOf([...card.front, ...card.back]).map((sound) => sound.media),
+      ),
+    ),
+  ]);
+  const sounds = (blocks: Content[]) =>
+    audioOf(blocks).map((sound) => ({
+      media: sound.media,
+      length: audioLength(sound.durationMs),
+      url: signed.get(sound.media) ?? null,
+    }));
+
   // Each side's text, and a whole card's faces, for the client, which cannot import decks' entry
   // point.
   const cards = read.library.cards.map((card) => ({
@@ -62,6 +81,9 @@ export async function Study({
         front: <SideText blocks={card.front} />,
         back: <SideText blocks={card.back} />,
       },
+    }),
+    ...(audioOf([...card.front, ...card.back]).length > 0 && {
+      sounds: { front: sounds(card.front), back: sounds(card.back) },
     }),
   }));
   const { day, answers, states, readAt, pace, streakBefore } = today.today;

@@ -8,6 +8,7 @@ import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
+import 'audio_block.dart';
 import 'cloze_form.dart';
 import 'content.dart';
 import 'image_block.dart';
@@ -18,23 +19,25 @@ import 'word_form.dart';
 enum CardSide { front, back }
 
 /// A block type the add sheet offers. A type whose block issue has not
-/// landed, such as a recording, is not one of them (ADR 0108).
+/// landed is not one of them (ADR 0108).
 enum BlockType {
   text,
   senses,
   table,
   cloze,
-  image;
+  image,
+  audio;
 
   /// An empty block of this type: a 글 with no text, one empty meaning, a
-  /// table of two rows of two cells, a line with no blank, or a 사진 with no
-  /// photo yet.
+  /// table of two rows of two cells, a line with no blank, a 사진 with no
+  /// photo yet, or a 음성 with no sound yet.
   BlockDraft draft() => switch (this) {
     text => TextBlockDraft(),
     senses => SensesBlockDraft(),
     table => TableBlockDraft(),
     cloze => ClozeBlockDraft(),
     image => ImageBlockDraft(),
+    audio => AudioBlockDraft(),
   };
 
   String title(AppLocalizations l10n) => switch (this) {
@@ -43,6 +46,7 @@ enum BlockType {
     table => l10n.blockTable,
     cloze => l10n.blockCloze,
     image => l10n.blockImage,
+    audio => l10n.blockAudio,
   };
 
   String description(AppLocalizations l10n) => switch (this) {
@@ -51,6 +55,7 @@ enum BlockType {
     table => l10n.blockTableDescription,
     cloze => l10n.blockClozeDescription,
     image => l10n.blockImageDescription,
+    audio => l10n.blockAudioDescription,
   };
 
   IconData get icon => switch (this) {
@@ -59,6 +64,7 @@ enum BlockType {
     table => LucideIcons.table,
     cloze => LucideIcons.textCursorInput,
     image => LucideIcons.image,
+    audio => LucideIcons.audioLines,
   };
 }
 
@@ -72,6 +78,7 @@ sealed class BlockDraft {
     TableContent() => TableBlockDraft(block),
     ClozeContent() => ClozeBlockDraft(block),
     ImageContent() => ImageBlockDraft(block),
+    AudioContent() => AudioBlockDraft(block),
     final UnsupportedContent kept => KeptBlockDraft(kept),
   };
 
@@ -229,6 +236,24 @@ final class ImageBlockDraft extends BlockDraft {
   void dispose() => image.dispose();
 }
 
+/// A 음성 block: its sound, once recorded or picked (ADR 0112).
+final class AudioBlockDraft extends BlockDraft {
+  AudioBlockDraft([AudioContent? audio]) : audio = AudioDraft(audio);
+
+  final AudioDraft audio;
+
+  @override
+  BlockType get type => BlockType.audio;
+
+  /// The sound; an empty 글 while none is in it, which [isComplete] refuses
+  /// to save.
+  @override
+  Content get content => audio.audio ?? const TextContent('');
+
+  @override
+  bool get isComplete => audio.audio != null;
+}
+
 /// A block this build cannot read, kept and written back as it was stored.
 final class KeptBlockDraft extends BlockDraft {
   KeptBlockDraft(this.content);
@@ -259,7 +284,7 @@ class BlockList extends StatelessWidget {
     required this.blocks,
     required this.showErrors,
     required this.onChanged,
-    required this.onImagePicked,
+    required this.onMediaStored,
     this.emptyError,
   });
 
@@ -271,9 +296,9 @@ class BlockList extends StatelessWidget {
   /// Called after every change, which this widget makes in place.
   final VoidCallback onChanged;
 
-  /// Called with each photo a 사진 block stores, so the editor can let go of
-  /// one the card is not saved with.
-  final ValueChanged<MediaId> onImagePicked;
+  /// Called with each photo a 사진 block and each sound a 음성 block stores,
+  /// so the editor can let go of one the card is not saved with.
+  final ValueChanged<MediaId> onMediaStored;
 
   void _act(int index, _BlockAction action) {
     switch (action) {
@@ -352,7 +377,7 @@ class BlockList extends StatelessWidget {
             menuLabel: l10n.blockMenu(sideName, index + 1),
             showErrors: showErrors,
             onChanged: onChanged,
-            onImagePicked: onImagePicked,
+            onMediaStored: onMediaStored,
             onAction: (action) => _act(index, action),
             canMoveUp: index > 0,
             canMoveDown: index < blocks.length - 1,
@@ -382,14 +407,14 @@ class _Block extends StatelessWidget {
     required this.menuLabel,
     required this.showErrors,
     required this.onChanged,
-    required this.onImagePicked,
+    required this.onMediaStored,
     required this.onAction,
     required this.canMoveUp,
     required this.canMoveDown,
   });
 
   final BlockDraft block;
-  final ValueChanged<MediaId> onImagePicked;
+  final ValueChanged<MediaId> onMediaStored;
 
   /// "앞면" or "뒷면", which a one-meaning 뜻 목록's field is labelled.
   final String sideName;
@@ -413,7 +438,8 @@ class _Block extends StatelessWidget {
       SensesBlockDraft(:final type) ||
       TableBlockDraft(:final type) ||
       ClozeBlockDraft(:final type) ||
-      ImageBlockDraft(:final type) => (type.icon, type.title(l10n)),
+      ImageBlockDraft(:final type) ||
+      AudioBlockDraft(:final type) => (type.icon, type.title(l10n)),
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -499,7 +525,13 @@ class _Block extends StatelessWidget {
             draft: image,
             showErrors: showErrors,
             onChanged: onChanged,
-            onPicked: onImagePicked,
+            onPicked: onMediaStored,
+          ),
+          AudioBlockDraft(:final audio) => AudioBlockFields(
+            draft: audio,
+            showErrors: showErrors,
+            onChanged: onChanged,
+            onStored: onMediaStored,
           ),
           KeptBlockDraft() => const SizedBox.shrink(),
         },

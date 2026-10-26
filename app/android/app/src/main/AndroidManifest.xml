@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Records a sound added to a card, asked for on first use. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:label="smartman"
         android:name="${applicationName}"

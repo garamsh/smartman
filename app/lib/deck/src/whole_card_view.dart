@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'audio_block.dart';
 import 'card_list.dart';
 import 'card_text.dart';
 import 'content.dart';
@@ -9,7 +10,8 @@ import 'content_view.dart';
 import 'image_block.dart';
 
 /// A whole card's front, its blocks in order: a text block as its title, a
-/// cloze as its sentence, a table as its table and an image as its photo,
+/// cloze as its sentence, a table as its table, an image as its photo and a
+/// sound as its play control (ADR 0112),
 /// with each blank empty, or each box hidden, or filled or revealed in place
 /// when [revealed] (ADR 0068, ADR 0109), a table's span inside its cell's
 /// text (ADR 0110). An empty blank keeps its answer's width, so filling it
@@ -68,6 +70,7 @@ class WholeCardView extends StatelessWidget {
               width: this.width,
               maxHeight: height,
             ),
+            AudioContent() => Center(child: AudioBlockView(block)),
             UnsupportedContent(:final type) => Text(
               l10n.unsupportedContent(type),
               textAlign: TextAlign.center,

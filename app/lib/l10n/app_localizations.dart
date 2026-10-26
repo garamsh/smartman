@@ -506,6 +506,108 @@ abstract class AppLocalizations {
   /// **'빈칸 지우기'**
   String get imageBoxDelete;
 
+  /// A sound block's type, in the add sheet and over the block in the card editor, and what a card side's text and a screen reader say for a sound.
+  ///
+  /// In ko, this message translates to:
+  /// **'음성'**
+  String get blockAudio;
+
+  /// The line under 음성 in the add sheet.
+  ///
+  /// In ko, this message translates to:
+  /// **'녹음하거나 소리 파일을 넣어요'**
+  String get blockAudioDescription;
+
+  /// Accessible name and tooltip of a sound block's play control, and the study cards' screen reader action that plays the card's sound.
+  ///
+  /// In ko, this message translates to:
+  /// **'소리 듣기'**
+  String get playAudio;
+
+  /// In a sound block of the card editor: the button that starts recording from the microphone.
+  ///
+  /// In ko, this message translates to:
+  /// **'녹음하기'**
+  String get audioRecord;
+
+  /// In a sound block of the card editor: the button that picks an audio file.
+  ///
+  /// In ko, this message translates to:
+  /// **'파일에서 고르기'**
+  String get audioPick;
+
+  /// In a sound block of the card editor holding a sound: the button that records a new one in its place.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 녹음'**
+  String get audioRecordAgain;
+
+  /// In a sound block of the card editor holding a sound: the button that picks another audio file in its place.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 파일 고르기'**
+  String get audioPickAnother;
+
+  /// In a sound block of the card editor holding a sound: the button that takes the sound out of the block.
+  ///
+  /// In ko, this message translates to:
+  /// **'소리 빼기'**
+  String get audioRemove;
+
+  /// In a sound block of the card editor while recording: the button that stops recording and keeps it.
+  ///
+  /// In ko, this message translates to:
+  /// **'녹음 끝내기'**
+  String get audioStopRecording;
+
+  /// In a sound block of the card editor while recording: the time recorded so far and the longest a recording may be, each as m:ss.
+  ///
+  /// In ko, this message translates to:
+  /// **'녹음 중 {elapsed} / {limit}'**
+  String audioRecording(String elapsed, String limit);
+
+  /// In a sound block of the card editor: shown when the recording or the picked file could not be read.
+  ///
+  /// In ko, this message translates to:
+  /// **'소리를 불러오지 못했어요. 다시 시도해 주세요.'**
+  String get audioUnreadable;
+
+  /// In a sound block of the card editor: shown when the picked file plays longer, or is larger, than a sound may be.
+  ///
+  /// In ko, this message translates to:
+  /// **'{seconds}초, 5MB까지 넣을 수 있어요'**
+  String audioTooLarge(int seconds);
+
+  /// In a sound block of the card editor: shown when the user has not let the app use the microphone.
+  ///
+  /// In ko, this message translates to:
+  /// **'마이크를 쓸 수 없어요. 설정에서 마이크 접근을 허용해 주세요.'**
+  String get microphoneDenied;
+
+  /// Error under a sound block of the card editor on save while it holds no sound.
+  ///
+  /// In ko, this message translates to:
+  /// **'소리를 넣어 주세요'**
+  String get audioRequired;
+
+  /// Snack bar shown when a sound cannot be read or played, such as one not yet downloaded while offline.
+  ///
+  /// In ko, this message translates to:
+  /// **'소리를 재생하지 못했어요'**
+  String get audioUnplayable;
+
+  /// Settings row: the switch that plays a study card's front sound once when the card appears.
+  ///
+  /// In ko, this message translates to:
+  /// **'앞면 소리 자동 재생'**
+  String get autoplayAudio;
+
+  /// Line under the autoplay setting's title.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드가 나오면 앞면의 소리를 한 번 들려줘요'**
+  String get autoplayAudioDescription;
+
   /// Screen-reader name of a block's menu in the card editor, which moves it up or down or deletes it.
   ///
   /// In ko, this message translates to:
