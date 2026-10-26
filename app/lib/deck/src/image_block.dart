@@ -540,7 +540,6 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
                   _draft.boxes[selected].rectIn(size).bottomRight +
                       const Offset(inset, inset),
                   size,
-                  l10n,
                   colors,
                 ),
             ],
@@ -612,43 +611,37 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
   }
 
   /// The selected box's resize handle, a tap target centred on its bottom
-  /// right corner at [corner]; a drag resizes the box.
-  Widget _handle(
-    int index,
-    Offset corner,
-    Size size,
-    AppLocalizations l10n,
-    AppColors colors,
-  ) => Positioned.fromRect(
-    rect: Rect.fromCenter(center: corner, width: _target, height: _target),
-    child: Semantics(
-      container: true,
-      label: l10n.imageBoxResize(index + 1),
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        dragStartBehavior: DragStartBehavior.down,
-        onPanUpdate: (details) => _change(
-          () => _draft.resize(
-            index,
-            details.delta.dx / size.width,
-            details.delta.dy / size.height,
-          ),
-        ),
-        child: Center(
-          child: Container(
-            width: AppSpace.s12,
-            height: AppSpace.s12,
-            decoration: BoxDecoration(
-              color: colors.ink,
-              shape: BoxShape.circle,
-              border: Border.all(color: colors.surface, width: _boxBorder),
+  /// right corner at [corner]; a drag resizes the box. A screen reader skips
+  /// it, as the tools resize the box without a drag.
+  Widget _handle(int index, Offset corner, Size size, AppColors colors) =>
+      Positioned.fromRect(
+        key: const ValueKey('image box handle'),
+        rect: Rect.fromCenter(center: corner, width: _target, height: _target),
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            dragStartBehavior: DragStartBehavior.down,
+            onPanUpdate: (details) => _change(
+              () => _draft.resize(
+                index,
+                details.delta.dx / size.width,
+                details.delta.dy / size.height,
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: AppSpace.s12,
+                height: AppSpace.s12,
+                decoration: BoxDecoration(
+                  color: colors.ink,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colors.surface, width: _boxBorder),
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 
   /// The selected box's answer, and the tools that move, resize and delete
   /// it without a drag.

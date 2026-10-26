@@ -440,12 +440,6 @@ abstract class AppLocalizations {
   /// **'빈칸 {number}'**
   String imageBox(int number);
 
-  /// Accessible name of the corner handle that resizes a selected box over a photo by a drag.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸 {number} 크기 조절'**
-  String imageBoxResize(int number);
-
   /// Button under an image block's photo that adds a box in its middle, the way to draw one without a drag.
   ///
   /// In ko, this message translates to:

@@ -229,11 +229,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String imageBoxResize(int number) {
-    return 'Resize blank $number';
-  }
-
-  @override
   String get imageAddBox => 'Add blank';
 
   @override

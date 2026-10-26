@@ -225,11 +225,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String imageBoxResize(int number) {
-    return '빈칸 $number 크기 조절';
-  }
-
-  @override
   String get imageAddBox => '빈칸 추가';
 
   @override

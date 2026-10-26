@@ -120,8 +120,6 @@
   "@imageHint": {"description": "Line under an image block's photo in the card editor, saying how to draw a box over it."},
   "imageBox": "빈칸 {number}",
   "@imageBox": {"description": "Accessible name of a box over a photo in the card editor, and the heading of its tools while it is selected.", "placeholders": {"number": {"type": "int"}}},
-  "imageBoxResize": "빈칸 {number} 크기 조절",
-  "@imageBoxResize": {"description": "Accessible name of the corner handle that resizes a selected box over a photo by a drag.", "placeholders": {"number": {"type": "int"}}},
   "imageAddBox": "빈칸 추가",
   "@imageAddBox": {"description": "Button under an image block's photo that adds a box in its middle, the way to draw one without a drag."},
   "imageBoxAnswer": "정답 (선택)",

@@ -427,7 +427,7 @@ void main() {
         await tester.dragFrom(box.center, Offset(0.2 * frame.width, 0));
         await tester.pumpAndSettle();
         final handle = tester.getCenter(
-          find.bySemanticsLabel('Resize blank 1'),
+          find.byKey(const ValueKey('image box handle')),
         );
         await tester.dragFrom(handle, Offset(0, 0.3 * frame.height));
         await tester.pumpAndSettle();
@@ -441,6 +441,25 @@ void main() {
         expect(stored.y, moreOrLessEquals(0.2, epsilon: epsilon));
         expect(stored.w, moreOrLessEquals(0.4, epsilon: epsilon));
         expect(stored.h, moreOrLessEquals(0.7, epsilon: epsilon));
+      },
+    );
+
+    testWidgets(
+      'a screen reader stops on a selected box but not on its resize handle, which the tools stand in for',
+      (tester) async {
+        await openWithPhoto(tester);
+        await tapVisible(tester, find.text('Add blank'));
+        final semantics = tester.ensureSemantics();
+        final handle = find.byKey(const ValueKey('image box handle'));
+        expect(handle, findsOneWidget, reason: 'setup: the box is selected');
+
+        // Control: the box's target is a node of its own.
+        expect(tester.getSemantics(_target('Blank 1')).label, 'Blank 1');
+        // The handle's node is an ancestor's, larger than the handle.
+        final node = tester.getSemantics(handle);
+        expect(node.rect.width, greaterThan(tester.getSize(handle).width));
+        expect(node.label, isNot(contains('1')));
+        semantics.dispose();
       },
     );
 
