@@ -211,7 +211,7 @@ class EarlierCardView extends StatelessWidget {
               left: StudyStyle.cardPadding,
               child: Text(
                 l10n.earlierCard,
-                style: AppType.micro.copyWith(color: colors.muted),
+                style: AppType.micro.copyWith(color: colors.ink2),
               ),
             ),
           ],
