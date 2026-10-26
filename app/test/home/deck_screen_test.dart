@@ -13,6 +13,7 @@ import 'package:smartman/study/study.dart' show StudyScreen;
 
 import '../deck/whole_cards.dart';
 import '../study/minutes_sheet.dart';
+import 'contrast.dart';
 import 'deck_screens.dart';
 
 /// The front of every card row on screen, top to bottom.
@@ -58,9 +59,9 @@ void main() {
   );
 
   testWidgets(
-    'a deck with no card shows no navy card of zeros, where a deck with one shows its count, mastered line and bar',
+    'a deck with no card shows no today card of zeros, where a deck with one shows its count, mastered line and bar',
     (tester) async {
-      // Control: a deck with a card has its navy card.
+      // Control: a deck with a card has its today card.
       var screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
       await screens.push((deck) => DeckScreen(deck: deck));
       expect(find.text("Today's cards"), findsOneWidget);
@@ -77,6 +78,50 @@ void main() {
       await screens.close();
     },
   );
+
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+      'in the ${mode.name} theme the deck\'s today card is white with an ink Study button, and meets the contrast guideline',
+      (tester) async {
+        final screens = await DeckScreens.open(
+          tester,
+          cards: cards,
+          due: {'Chat'},
+          themeMode: mode,
+        );
+        await screens.push((deck) => DeckScreen(deck: deck));
+        final colors = AppColors.of(tester.element(find.byType(DeckScreen)));
+        final study = find.widgetWithText(AppButton, 'Study');
+        final card = find
+            .ancestor(
+              of: study,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is DecoratedBox &&
+                    widget.decoration is BoxDecoration &&
+                    (widget.decoration as BoxDecoration).borderRadius ==
+                        BorderRadius.circular(AppRadius.card),
+              ),
+            )
+            .first;
+        expect(
+          (tester.widget<DecoratedBox>(card).decoration as BoxDecoration).color,
+          colors.surface,
+        );
+        expect(
+          tester.widget<AppButton>(study).variant,
+          AppButtonVariant.primary,
+        );
+        expect(
+          find.descendant(of: card, matching: find.byType(ProgressBar)),
+          findsOneWidget,
+        );
+        expectTextReadable(tester, card, colors.surface);
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+        await screens.close();
+      },
+    );
+  }
 
   testWidgets(
     "the header names the deck, counts its cards and today's, and Study opens a session over it",
@@ -376,7 +421,7 @@ void main() {
       expect(find.text('word 0'), findsOneWidget);
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
       await tester.pumpAndSettle();
-      // The list scrolled past its first card and the navy card.
+      // The list scrolled past its first card and the today card.
       expect(find.text('word 0'), findsNothing);
       expect(find.text('Study'), findsNothing);
       expect(tester.getTopLeft(find.text('Cards 30')).dy, lessThan(top));
@@ -486,7 +531,7 @@ void main() {
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
-      // Control: before the search, the deck's header and navy card are up.
+      // Control: before the search, the deck's header and today card are up.
       expect(find.byType(DeckTile), findsOneWidget);
       expect(find.text("Today's cards"), findsOneWidget);
 

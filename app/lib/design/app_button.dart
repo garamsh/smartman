@@ -10,7 +10,7 @@ enum AppButtonVariant {
   /// in the dark theme.
   primary,
 
-  /// The action on the today card: a white fill with a navy label.
+  /// The study coach's action: a white fill with a navy label.
   onHero,
 
   /// An action beside the primary one: an outline on the surface.
