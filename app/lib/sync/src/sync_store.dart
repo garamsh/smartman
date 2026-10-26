@@ -133,7 +133,10 @@ class SyncStore {
     )..where((deck) => deck.id.equals(row.id))).getSingleOrNull(),
     hasParent: (row) async => true,
     merge: mergeDeck,
-    take: (row) => _db.into(_db.decks).insertOnConflictUpdate(row),
+    // As a companion, so a column the server cleared, such as a removed
+    // image, is written as null; a row class leaves its nulls out.
+    take: (row) =>
+        _db.into(_db.decks).insertOnConflictUpdate(row.toCompanion(false)),
     keep: (row) =>
         _db.into(_db.decks).insertOnConflictUpdate(row.copyWith(dirty: true)),
     cursor: (revision) => SyncStateCompanion(decksRevision: Value(revision)),

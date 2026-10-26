@@ -6,6 +6,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
+import '../media/fakes.dart';
 import 'device.dart';
 import 'fake_sync_server.dart';
 
@@ -42,6 +43,22 @@ void main() {
     );
     return (saved as CardSaved).card;
   }
+
+  test("a deck's image removed on one device is removed on the other, where a set one arrives", () async {
+    final deck = await a.deck.createDeck('French');
+    final image = await a.media.addImage(preparedImage(1));
+    await a.deck.setImage(deck.id, image);
+    await a.sync(_ada);
+    await b.sync(_ada);
+    expect((await b.deck.getDeck(deck.id)).image, image);
+
+    a.now = a.now.add(const Duration(minutes: 1));
+    await a.deck.setImage(deck.id, null);
+    await a.sync(_ada);
+    await b.sync(_ada);
+
+    expect((await b.deck.getDeck(deck.id)).image, isNull);
+  });
 
   group('push', () {
     test('sends every unsynced row and marks it synced', () async {

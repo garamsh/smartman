@@ -139,6 +139,8 @@ void main() {
     await b.sync(account);
     expect((await b.deck.getDeck(deck.id)).image, image);
 
+    // A later edit, so it wins over the row both devices hold.
+    a.now = a.now.add(const Duration(minutes: 1));
     await a.deck.setImage(deck.id, null);
     await a.sync(account);
     await b.sync(account);
