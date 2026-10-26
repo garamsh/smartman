@@ -5,6 +5,9 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/media/media.dart';
+
+import '../media/fakes.dart';
 
 List<Content> _text(String text) => [TextContent(text)];
 
@@ -234,6 +237,271 @@ void main() {
       await repository.renameDeck(deck.id, 'French');
 
       expect((await repository.watchDecks().first).single.name, 'French');
+    });
+
+    test("setting a deck's appearance stores both keys, unsynced, and other decks keep the default", () async {
+      final french = await repository.createDeck('French');
+      final spanish = await repository.createDeck('Spanish');
+      await db
+          .update(db.decks)
+          .write(const DecksCompanion(dirty: Value(false)));
+
+      await repository.setAppearance(
+        french.id,
+        DeckIcon.book,
+        DeckColor.violet,
+      );
+
+      final decks = {
+        for (final deck in await repository.watchDecks().first) deck.id: deck,
+      };
+      expect(
+        (decks[french.id]!.icon, decks[french.id]!.color),
+        (DeckIcon.book, DeckColor.violet),
+      );
+      expect((decks[spanish.id]!.icon, decks[spanish.id]!.color), (null, null));
+      final row = await (db.select(
+        db.decks,
+      )..where((deck) => deck.id.equals(french.id.value))).getSingle();
+      expect((row.icon, row.color, row.dirty), ('book', 'violet', true));
+      expect(row.updatedAt.isAfter(french.updatedAt), isTrue);
+    });
+
+    group("a deck's image", () {
+      late Directory directory;
+      late FakeMediaServer server;
+      late MediaStore media;
+
+      setUp(() {
+        directory = newMediaDirectory();
+        server = FakeMediaServer();
+        var nextMedia = 0;
+        media = MediaStore(
+          db,
+          server,
+          directory: directory,
+          clock: () => DateTime.utc(2026, 1, 1),
+          newId: () =>
+              '00000000-0000-4000-8000-${'${nextMedia++}'.padLeft(12, '0')}',
+        );
+        repository = DeckRepository(
+          db,
+          clock: DateTime.now,
+          newId: () => 'id-${nextMedia++}',
+          media: media,
+        );
+      });
+
+      tearDown(() => deleteMediaDirectory(directory));
+
+      Future<List<String>> releasedIds() async => [
+        for (final row in await db.select(db.mediaDeletions).get()) row.id,
+      ];
+
+      test(
+        'is stored, unsynced, and a new one releases the one it replaces',
+        () async {
+          final deck = await repository.createDeck('French');
+          final first = await media.addImage(preparedImage(1));
+          final second = await media.addImage(preparedImage(2));
+
+          await repository.setImage(deck.id, first);
+          expect((await repository.getDeck(deck.id)).image, first);
+          expect(await releasedIds(), isEmpty);
+
+          await db
+              .update(db.decks)
+              .write(const DecksCompanion(dirty: Value(false)));
+          await repository.setImage(deck.id, second);
+          final row = await db.select(db.decks).getSingle();
+          expect((row.imageMediaId, row.dirty), (second.value, true));
+          expect(await releasedIds(), [first.value]);
+        },
+      );
+
+      test(
+        'removed, leaves the deck its icon and releases the image',
+        () async {
+          final deck = await repository.createDeck('French');
+          final image = await media.addImage(preparedImage(1));
+          await repository.setImage(deck.id, image);
+
+          await repository.setImage(deck.id, null);
+
+          expect((await repository.getDeck(deck.id)).image, isNull);
+          expect(await releasedIds(), [image.value]);
+        },
+      );
+
+      test("is released with its deck, and another deck's is kept", () async {
+        final french = await repository.createDeck('French');
+        final spanish = await repository.createDeck('Spanish');
+        final frenchImage = await media.addImage(preparedImage(1));
+        final spanishImage = await media.addImage(preparedImage(2));
+        await repository.setImage(french.id, frenchImage);
+        await repository.setImage(spanish.id, spanishImage);
+
+        await repository.deleteDeck(french.id);
+
+        expect(await releasedIds(), [frenchImage.value]);
+        expect((await repository.getDeck(spanish.id)).image, spanishImage);
+      });
+
+      group("a card's photo (ADR 0109)", () {
+        ImageContent photo(MediaId media) => ImageContent(
+          media: media,
+          width: 4,
+          height: 3,
+          boxes: const [ImageBox(id: '1', x: 0, y: 0, w: 0.5, h: 0.5)],
+        );
+
+        Future<Card> cardWith(Deck deck, MediaId media, String front) async {
+          final saved = await repository.addCard(
+            deck.id,
+            front: [TextContent(front), photo(media)],
+            back: const [TextContent('back')],
+          );
+          return switch (saved) {
+            CardSaved(:final card) => card,
+            DuplicateFront() => fail('the deck held no duplicate'),
+          };
+        }
+
+        test('is kept through an edit that keeps it, and released by one that drops it', () async {
+          final deck = await repository.createDeck('French');
+          final image = await media.addImage(preparedImage(1));
+          final card = await cardWith(deck, image, 'a photo');
+
+          final kept = await repository.editCard(
+            card,
+            front: [const TextContent('the photo'), photo(image)],
+            back: card.back,
+          );
+          expect(await releasedIds(), isEmpty, reason: 'kept');
+
+          await repository.editCard(
+            (kept as CardSaved).card,
+            front: const [TextContent('no photo')],
+            back: card.back,
+          );
+          expect(await releasedIds(), [image.value]);
+        });
+
+        test("is released with its card, and with its deck, and another card's is kept", () async {
+          final french = await repository.createDeck('French');
+          final spanish = await repository.createDeck('Spanish');
+          final first = await media.addImage(preparedImage(1));
+          final second = await media.addImage(preparedImage(2));
+          final third = await media.addImage(preparedImage(3));
+          final deleted = await cardWith(french, first, 'one');
+          await cardWith(french, second, 'two');
+          await cardWith(spanish, third, 'three');
+
+          await repository.deleteCard(deleted.id);
+          expect(await releasedIds(), [first.value]);
+
+          await repository.deleteDeck(french.id);
+          expect(await releasedIds(), [first.value, second.value]);
+          expect(
+            (await repository.listCards(spanish.id)).single.front,
+            contains(photo(third)),
+          );
+        });
+
+        test('an edit releases what the stored card held, not what the given copy holds', () async {
+          final deck = await repository.createDeck('French');
+          final image = await media.addImage(preparedImage(1));
+          final stale = _saved(
+            await repository.addCard(
+              deck.id,
+              front: _text('no photo yet'),
+              back: _text('back'),
+            ),
+          );
+          // Another writer, as sync would, gives the stored card a photo.
+          await repository.editCard(
+            stale,
+            front: [const TextContent('a photo'), photo(image)],
+            back: stale.back,
+          );
+          expect(
+            (await repository.listCards(deck.id)).single.front,
+            contains(photo(image)),
+          );
+
+          await repository.editCard(
+            stale,
+            front: _text('no photo'),
+            back: stale.back,
+          );
+
+          expect(await releasedIds(), [image.value]);
+        });
+
+        test(
+          'shared by two cards is kept until the last of them lets it go',
+          () async {
+            final french = await repository.createDeck('French');
+            final spanish = await repository.createDeck('Spanish');
+            final shared = await media.addImage(preparedImage(1));
+            final first = await cardWith(french, shared, 'one');
+            final copy = await cardWith(french, shared, 'copy');
+            final other = await cardWith(spanish, shared, 'other');
+
+            await repository.editCard(
+              first,
+              front: _text('no photo'),
+              back: first.back,
+            );
+            await repository.deleteCard(copy.id);
+            await repository.deleteDeck(french.id);
+            expect(
+              await releasedIds(),
+              isEmpty,
+              reason: 'the Spanish card holds it',
+            );
+
+            await repository.deleteCard(other.id);
+            expect(await releasedIds(), [shared.value]);
+          },
+        );
+
+        test("equal to a deck's image is kept until both let it go", () async {
+          final french = await repository.createDeck('French');
+          final spanish = await repository.createDeck('Spanish');
+          final first = await media.addImage(preparedImage(1));
+          final second = await media.addImage(preparedImage(2));
+          await repository.setImage(french.id, first);
+          final frenchCard = await cardWith(french, first, 'one');
+          await repository.setImage(spanish.id, second);
+          final spanishCard = await cardWith(spanish, second, 'two');
+
+          await repository.deleteCard(frenchCard.id);
+          await repository.setImage(spanish.id, null);
+          expect(await releasedIds(), isEmpty, reason: 'each is still held');
+
+          await repository.setImage(french.id, null);
+          await repository.deleteCard(spanishCard.id);
+          expect(await releasedIds(), [first.value, second.value]);
+        });
+      });
+    });
+
+    test('a key this build does not know reads as none, and the stored key is kept through an edit', () async {
+      final deck = await repository.createDeck('French');
+      await (db.update(
+        db.decks,
+      )..where((row) => row.id.equals(deck.id.value))).write(
+        const DecksCompanion(icon: Value('rocket'), color: Value('teal')),
+      );
+
+      final read = await repository.getDeck(deck.id);
+      expect((read.icon, read.color), (null, null));
+
+      // A rename writes the name alone, so a newer app's keys survive it.
+      await repository.renameDeck(deck.id, 'Français');
+      final row = await db.select(db.decks).getSingle();
+      expect((row.name, row.icon, row.color), ('Français', 'rocket', 'teal'));
     });
 
     test('deleting a deck tombstones it and its cards, unsynced, and leaves other decks', () async {

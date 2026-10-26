@@ -5,6 +5,7 @@ import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_section_label.dart';
 
+import '../word_breaks.dart';
 import 'harness.dart';
 
 /// The fill of the nearest [Material] around [finder].
@@ -68,7 +69,12 @@ void main() {
         );
 
         Color? textColor(String text) => tester
-            .renderObject<RenderParagraph>(find.text(text))
+            .renderObject<RenderParagraph>(
+              find.descendant(
+                of: shownText(text),
+                matching: find.byType(RichText),
+              ),
+            )
             .text
             .style
             ?.color;
@@ -158,7 +164,7 @@ void main() {
       );
 
       await tester.tap(find.text('French'));
-      await tester.longPress(find.text('3 cards'));
+      await tester.longPress(shownText('3 cards'));
 
       expect(events, ['tap', 'long']);
       expect(
@@ -174,4 +180,40 @@ void main() {
       semantics.dispose();
     },
   );
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'on a 390 wide phone at text scale $scale a row\'s Korean subtitle breaks only between words and is read as written, and a word wider than the line still wraps',
+      (tester) async {
+        tester.view
+          ..physicalSize = const Size(390, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final semantics = tester.ensureSemantics();
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        const subtitle = '계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.';
+        // The control: one word, so it can break only inside itself.
+        const word = '계정을삭제하면서버와이기기에있는카드와기록이모두지워져요되돌릴수없어요';
+        await pumpComponent(
+          tester,
+          Column(
+            children: [
+              AppListRow(title: '계정 삭제', subtitle: subtitle, onTap: () {}),
+              AppListRow(title: '제목', subtitle: word, onTap: () {}),
+            ],
+          ),
+        );
+
+        expectBreaksBetweenWords(tester, subtitle);
+        expectWrapsInsideWord(tester, word);
+        // A screen reader reads the row's title and subtitle as written.
+        expect(
+          tester.getSemantics(find.text('계정 삭제')),
+          isSemantics(label: '계정 삭제\n$subtitle', hasTapAction: true),
+        );
+        semantics.dispose();
+      },
+    );
+  }
 }

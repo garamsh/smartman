@@ -14,25 +14,21 @@ abstract final class StudyStyle {
   /// The completion card's least height.
   static const completionMinHeight = 200.0;
 
-  /// Space above the previous card, which its grade chip stands into.
+  /// Space above the previous card.
   static const topGap = AppSpace.s20;
 
   /// Space between the previous card and the current card.
   static const cardGap = AppSpace.s16;
 
-  /// The space kept below the answer buttons, or below the completion card.
+  /// The space kept below the guide's row, or below the completion card.
   static const currentBottomGap = AppSpace.s16;
 
-  /// Space between the current card and the answer buttons under it.
-  static const answerGap = AppSpace.s20;
+  /// Space between the current card and the guide's row under it.
+  static const guideGap = AppSpace.s20;
 
-  /// The answer buttons' height.
-  static const answerHeight = AppSize.tapTarget;
-
-  /// The answer buttons' row under the current card, with the space above
-  /// it: each button's tap target is padded to Material's least interactive
-  /// size.
-  static const answerRow = answerGap + kMinInteractiveDimension;
+  /// The guide's row under the current card, with the space above it: its
+  /// one button's tap target is padded to Material's least interactive size.
+  static const guideRow = guideGap + kMinInteractiveDimension;
 
   /// A card half narrower than this, in logical pixels at text scale 1, puts
   /// the back under the front.
@@ -40,12 +36,6 @@ abstract final class StudyStyle {
 
   /// A previous card's line around it.
   static const previousLine = 1.5;
-
-  /// The grade chip on a previous card's top edge: its height, its icon and
-  /// how far it stands in from the card's right edge.
-  static const chipHeight = AppSpace.s24;
-  static const chipIcon = AppSpace.s12;
-  static const chipInset = AppSpace.s16;
 
   static const topBarHeight = 56.0;
   static const progressHeight = AppSize.progress;

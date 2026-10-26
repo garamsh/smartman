@@ -4,30 +4,23 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../study/study.dart';
 
-/// A deck's cards on one rounded bar: the mastered ones in [ink], the
-/// learning ones in a quieter shade of it, and the new ones as the track,
+/// A deck's cards on one rounded bar: the mastered ones in ink, the learning
+/// ones in a quieter shade of it, and the new ones as the hairline track,
 /// read as its three counts.
-///
-/// [ink] and [track] default to the ink and the hairline; on the today card's
-/// navy they are its white and its faint white.
 class ProgressBar extends StatelessWidget {
   const ProgressBar({
     super.key,
     required this.progress,
     this.height = AppSpace.s8 - 2,
-    this.ink,
-    this.track,
   });
 
   final DeckProgress progress;
   final double height;
-  final Color? ink;
-  final Color? track;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final ink = this.ink ?? colors.ink;
+    final ink = colors.ink;
     final total = progress.total;
     return Semantics(
       container: true,
@@ -40,7 +33,7 @@ class ProgressBar extends StatelessWidget {
         child: SizedBox(
           height: height,
           child: ColoredBox(
-            color: track ?? colors.hairline,
+            color: colors.hairline,
             child: total == 0
                 ? const SizedBox.expand()
                 : Row(

@@ -42,7 +42,7 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   const today = countDay(dayPlanOf(cards, states, day, answers), states);
   const total = today.review + today.fresh;
   const progress = deckProgress(cards, states);
-  const share = (part: number) => (cards.length === 0 ? 0 : (part / cards.length) * 100);
+  const share = (part: number) => (part / cards.length) * 100;
   return (
     <>
       <nav aria-label="위치" className="text-secondary">
@@ -61,7 +61,7 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
         </ol>
       </nav>
       <header className="flex items-center gap-3.5">
-        <DeckTile deck={deck} size="size-13 text-title lg:rounded-button" />
+        <DeckTile deck={deck} size="size-13 lg:rounded-button" />
         <div className="flex min-w-0 flex-col">
           <h1 className="text-deck-title break-words lg:text-display">{deck.name}</h1>
           <p className="text-secondary text-muted">
@@ -87,28 +87,34 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
             <p className="text-secondary">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
           )}
         </div>
+        {/* "n장 중 m장 익힘" over the bar, as the deck's row says it; "0장" and no bar for a
+            deck with no card (ADR 0096). */}
         <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-2">
           <p className="text-secondary">
-            {progress.mastered} / {cards.length} 익힘
+            {cards.length > 0
+              ? `${String(cards.length)}장 중 ${String(progress.mastered)}장 익힘`
+              : "0장"}
           </p>
-          <div
-            role="img"
-            aria-label={`익힘 ${String(progress.mastered)}장, 학습 중 ${String(progress.learning)}장, 새 카드 ${String(progress.fresh)}장`}
-            className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
-          >
-            <span
-              className="bg-on-hero"
-              style={{ width: `${String(share(progress.mastered))}%` }}
-            />
-            <span
-              className="bg-on-hero/60"
-              style={{ width: `${String(share(progress.learning))}%` }}
-            />
-            <span className="flex-1 bg-on-hero/20" />
-          </div>
+          {cards.length > 0 && (
+            <div
+              role="img"
+              aria-label={`익힘 ${String(progress.mastered)}장, 학습 중 ${String(progress.learning)}장, 새 카드 ${String(progress.fresh)}장`}
+              className="flex h-2.5 overflow-hidden rounded-full"
+            >
+              <span
+                className="bg-on-hero"
+                style={{ width: `${String(share(progress.mastered))}%` }}
+              />
+              <span
+                className="bg-on-hero/45"
+                style={{ width: `${String(share(progress.learning))}%` }}
+              />
+              <span className="flex-1 bg-on-hero/20" />
+            </div>
+          )}
         </div>
         {/* A deck with no card has nothing to study. */}
-        {cards.length > 0 && <EnterLink href={studyHref([deck.id])} label="학습하기" />}
+        {cards.length > 0 && <EnterLink href={studyHref([deck.id], "deck")} label="학습하기" />}
       </section>
       <CardGrid cards={cards} />
     </>

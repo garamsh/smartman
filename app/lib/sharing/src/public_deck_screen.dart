@@ -10,6 +10,7 @@ import 'failure_message.dart';
 import 'copy_sheet.dart';
 import 'model.dart';
 import 'sharing_service.dart';
+import '../../design/word_break.dart';
 
 /// A public deck's name, owner, description, counts and first cards, with
 /// the action that copies it and a menu that reports it or blocks its owner.
@@ -215,7 +216,8 @@ class _State extends StatelessWidget {
         spacing: AppSpace.s12,
         children: [
           Text(
-            text,
+            keepWords(text),
+            semanticsLabel: text,
             textAlign: TextAlign.center,
             style: AppType.body.copyWith(color: AppColors.of(context).muted),
           ),

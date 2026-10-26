@@ -32,6 +32,9 @@ abstract final class StatsStyle {
   static const cellGap = AppSpace.s4;
   static const cellRadius = AppSpace.s4;
 
+  /// The ring around today's heatmap cell.
+  static const todayRing = 2.0;
+
   /// The recall bands, strong, fair and fading: the ink, the ink a step
   /// back, and the streak's amber. The fair band's alpha differs by theme so
   /// that each band stays 3:1 on the surface and every two differ in

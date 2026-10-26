@@ -6,11 +6,14 @@ import 'card_list.dart';
 import 'card_text.dart';
 import 'content.dart';
 import 'content_view.dart';
+import 'image_block.dart';
 
 /// A whole card's front, its blocks in order: a text block as its title, a
-/// cloze as its sentence and a table as its table, with each blank empty, or
-/// filled in place when [revealed] (ADR 0068). An empty blank keeps its
-/// answer's width, so filling it moves nothing.
+/// cloze as its sentence, a table as its table and an image as its photo,
+/// with each blank empty, or each box hidden, or filled or revealed in place
+/// when [revealed] (ADR 0068, ADR 0109), a table's span inside its cell's
+/// text (ADR 0110). An empty blank keeps its answer's width, so filling it
+/// moves nothing.
 ///
 /// A cloze is in [style], centred, scaled down as far as [minFontSize] until
 /// its widest word fits [width]. A table is in the body size, [width] wide.
@@ -55,6 +58,15 @@ class WholeCardView extends StatelessWidget {
               sensesSpan(block),
               textAlign: TextAlign.center,
               style: style,
+            ),
+            // Inside [width] and [height] itself, so the photo alone is
+            // not scaled down with the face and its boxes' chrome stays
+            // its size.
+            ImageContent() => ImageBlockView(
+              block,
+              revealed: revealed,
+              width: this.width,
+              maxHeight: height,
             ),
             UnsupportedContent(:final type) => Text(
               l10n.unsupportedContent(type),
@@ -130,12 +142,17 @@ class WholeCardView extends StatelessWidget {
         for (final (row, cells) in table.rows.indexed)
           TableRow(
             children: [
-              for (final (column, text) in cells.indexed)
+              for (final (column, _) in cells.indexed)
                 padded(
                   Text.rich(
-                    table.isBlank(row, column)
-                        ? _blank(context, text)
-                        : TextSpan(text: text),
+                    TextSpan(
+                      children: [
+                        for (final run in table.cellRuns(row, column))
+                          run.blank
+                              ? _blank(context, run.text)
+                              : TextSpan(text: run.text),
+                      ],
+                    ),
                     // Each row starts with its header.
                     style: column == 0 ? header : cell,
                     textAlign: TextAlign.center,

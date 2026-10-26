@@ -73,7 +73,7 @@ describe("the 오늘 and 덱 pages", () => {
   const rowNames = () =>
     deckList()
       .getAllByRole("link")
-      .map((link) => link.getAttribute("aria-label")?.replace(/, \d+장 중 \d+장 익힘$/, ""));
+      .map((link) => link.getAttribute("aria-label")?.replace(/, \d+장 중 \d+장 익힘, .*$/, ""));
 
   it("shows the server's decks by name, with their card counts and today's chips", async () => {
     postgrest.seed("decks", deckRow("d-es", "Spanish"), deckRow("d-fr", "French"));

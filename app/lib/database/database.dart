@@ -38,6 +38,18 @@ class Decks extends Table {
   DateTimeColumn get publishedAt =>
       dateTime().nullable().map(const StoredTime())();
   TextColumn get description => text().nullable()();
+
+  /// The key of the icon the owner chose for the deck's tile; null, or a key
+  /// this build does not know, draws the default.
+  TextColumn get icon => text().nullable()();
+
+  /// The key of the colour the owner chose for the deck's tile; null, or a
+  /// key this build does not know, draws the colour the deck's id selects.
+  TextColumn get color => text().nullable()();
+
+  /// The media id of the image the owner chose for the deck's tile; null
+  /// draws its icon (ADR 0107).
+  TextColumn get imageMediaId => text().nullable()();
   DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
   DateTimeColumn get deletedAt =>
@@ -70,6 +82,12 @@ class Cards extends Table {
 
   /// The public deck a copied card came from; null for any other card.
   TextColumn get originDeckId => text().nullable()();
+
+  /// The template the card was made from and its version, null until its
+  /// first write in a build that records them; never checked against a list,
+  /// so a later build's template is kept (ADR 0106).
+  TextColumn get template => text().nullable()();
+  IntColumn get templateVersion => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
   DateTimeColumn get updatedAt => dateTime().map(const StoredTime())();
   DateTimeColumn get deletedAt =>
@@ -161,15 +179,52 @@ class StudySettings extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Media this device stored, owned by the media domain: each row waits for
+/// its file, kept on the device, to be uploaded, and goes once it is
+/// (ADR 0107).
+@DataClassName('MediaUploadRow')
+class MediaUploads extends Table {
+  TextColumn get id => text()();
+  TextColumn get kind =>
+      text().check(const CustomExpression("kind IN ('image', 'audio')"))();
+  TextColumn get mimeType => text()();
+  IntColumn get byteSize => integer()();
+  TextColumn get sha256 => text()();
+  DateTimeColumn get createdAt => dateTime().map(const StoredTime())();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Media the user let go, owned by the media domain: each row waits for its
+/// file and row on the server to be deleted, and goes once they are
+/// (ADR 0107).
+@DataClassName('MediaDeletionRow')
+class MediaDeletions extends Table {
+  TextColumn get id => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// The app's local SQLite database, shared by every domain below which it sits.
 @DriftDatabase(
-  tables: [Decks, Cards, Reviews, CardStates, SyncState, StudySettings],
+  tables: [
+    Decks,
+    Cards,
+    Reviews,
+    CardStates,
+    SyncState,
+    StudySettings,
+    MediaUploads,
+    MediaDeletions,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -323,6 +378,23 @@ class AppDatabase extends _$AppDatabase {
       // The daily study minutes (ADR 0085): a new table, so no row changes.
       from8To9: (m, schema) async {
         await m.createTable(schema.studySettings);
+      },
+      from9To10: (m, schema) async {
+        await m.addColumn(schema.decks, schema.decks.icon);
+        await m.addColumn(schema.decks, schema.decks.color);
+      },
+      // A card's template and its version (ADR 0106): two nullable columns,
+      // so no row changes; a card gains them on its next write.
+      from10To11: (m, schema) async {
+        await m.addColumn(schema.cards, schema.cards.template);
+        await m.addColumn(schema.cards, schema.cards.templateVersion);
+      },
+      // A deck's image and the media queues (ADR 0107): a nullable column and
+      // two new tables, so no row changes.
+      from11To12: (m, schema) async {
+        await m.addColumn(schema.decks, schema.decks.imageMediaId);
+        await m.createTable(schema.mediaUploads);
+        await m.createTable(schema.mediaDeletions);
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

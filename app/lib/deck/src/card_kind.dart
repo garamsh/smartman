@@ -5,30 +5,56 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'content.dart';
 import 'failure.dart';
+import 'label_presets.dart';
 import 'model.dart';
 
-/// The form a card is written in: a front and a back of text, a word with its
-/// senses, a line with blanks, or a table with blanks (ADR 0083).
-enum CardKind { basic, word, cloze, table }
+/// The form a card is written in: a front and a back of one meaning or of
+/// senses, a line with blanks, a table with blanks (ADR 0100), or each side
+/// a list of blocks of any type (ADR 0108). Each is a template a card
+/// records, which only decides how the editor opens it (ADR 0106).
+enum CardKind {
+  basic('flip'),
+  cloze('cloze'),
+  table('table'),
+  free('free');
 
-/// The kind [card] is edited in: a cloze or a table when its front holds one,
-/// a word when its back holds senses, and otherwise basic.
-CardKind kindOf(Card card) => card.front.any((block) => block is ClozeContent)
+  const CardKind(this.template);
+
+  /// The `template` a card written in this kind records: `flip` for 앞뒤.
+  final String template;
+}
+
+/// The version of every template this build writes.
+const cardTemplateVersion = 1;
+
+/// The kind a card whose front is [front] is read as when it records no
+/// template: a cloze or a table when its front holds one, and otherwise
+/// basic, its back's senses included.
+CardKind derivedKind(List<Content> front) =>
+    front.any((block) => block is ClozeContent)
     ? CardKind.cloze
-    : card.front.any((block) => block is TableContent)
+    : front.any((block) => block is TableContent)
     ? CardKind.table
-    : card.back.any((block) => block is SensesContent)
-    ? CardKind.word
     : CardKind.basic;
+
+/// The kind [card] is edited in: the one its template names, or
+/// [derivedKind] while it records none; null for a template, or a template
+/// version, this build does not know, which opens the card read-only.
+CardKind? kindOf(Card card) => switch ((card.template, card.templateVersion)) {
+  (null, _) => derivedKind(card.front),
+  (_, final version?) when version > cardTemplateVersion => null,
+  (final template?, _) =>
+    CardKind.values.where((kind) => kind.template == template).firstOrNull,
+};
 
 const _cardKindsKey = 'deckCardKinds';
 
 /// The keys [deckStorageProvider] must be opened to cache.
-const deckStorageKeys = {_cardKindsKey};
+const deckStorageKeys = {_cardKindsKey, labelPresetsKey};
 
-/// The device storage the card editor keeps each deck's last kind in. The
-/// composition site overrides it with the storage it opens, which caches
-/// [deckStorageKeys].
+/// The device storage the card editor keeps each deck's last kind and the
+/// label presets in. The composition site overrides it with the storage it
+/// opens, which caches [deckStorageKeys].
 final deckStorageProvider = Provider<SharedPreferencesWithCache>(
   (ref) => throw UnimplementedError(
     'deckStorageProvider is overridden at the composition site',
@@ -36,7 +62,8 @@ final deckStorageProvider = Provider<SharedPreferencesWithCache>(
 );
 
 /// The kind a new card of [deck] starts in: the kind its last card was added
-/// in, or basic when none was, or when the stored value cannot be read.
+/// in, or basic when none was, when the stored value cannot be read, or when
+/// it names the word kind ADR 0100 folded into basic.
 CardKind rememberedKind(SharedPreferencesWithCache storage, DeckId deck) {
   final kinds = _kinds(storage);
   return CardKind.values.asNameMap()[kinds[deck.value]] ?? CardKind.basic;

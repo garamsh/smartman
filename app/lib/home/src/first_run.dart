@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/mascot.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 
 /// How to start, where there is nothing to study yet: the mascot in a white
 /// circle, [title] read as a heading, one [body] line, and the [actions]
@@ -35,11 +36,17 @@ class FirstRun extends StatelessWidget {
         const SizedBox(height: AppSpace.s24),
         Semantics(
           header: true,
-          child: Text(title, textAlign: TextAlign.center, style: AppType.title),
+          child: Text(
+            keepWords(title),
+            semanticsLabel: title,
+            textAlign: TextAlign.center,
+            style: AppType.title,
+          ),
         ),
         const SizedBox(height: AppSpace.s8),
         Text(
-          body,
+          keepWords(body),
+          semanticsLabel: body,
           textAlign: TextAlign.center,
           style: AppType.secondary.copyWith(color: colors.muted),
         ),
