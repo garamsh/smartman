@@ -17,11 +17,14 @@ import type { Completion } from "../session";
 export function CompletionCard({
   completion,
   onStudyOn,
+  back,
   onStop,
 }: {
   completion: Completion;
   /** Goes on with the new cards past today's; null when none is left. */
   onStudyOn: (() => void) | null;
+  /** Where "그만하기" leaves for: where the session was opened from. */
+  back: string;
   /** Runs on "그만하기" before its link is followed, and may hold it back. */
   onStop: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
@@ -69,7 +72,7 @@ export function CompletionCard({
         )}
         <Link
           ref={stop}
-          href="/"
+          href={back}
           onClick={onStop}
           className="pressable flex min-h-tap-target items-center justify-center rounded-button px-6 text-label text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >

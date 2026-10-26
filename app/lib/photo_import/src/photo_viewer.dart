@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'photo.dart';
+import 'import_job.dart';
 
 /// A photo's thumbnail, [width] by [height], drawn in a tap target at least
 /// [AppSize.tapTarget] wide, that opens [photos] full screen on [index]; a
@@ -20,7 +20,7 @@ class PhotoThumbnail extends StatelessWidget {
 
   /// Every photo of the import in pick order; null where one is not
   /// prepared yet.
-  final List<JpegPhoto?> photos;
+  final List<ImageProvider?> photos;
   final int index;
   final double width;
   final double height;
@@ -37,8 +37,12 @@ class PhotoThumbnail extends StatelessWidget {
         height: height,
         child: photo == null
             ? ColoredBox(color: colors.hairline)
-            : Image.memory(
-                photo.bytes,
+            : Image(
+                image: ResizeImage.resizeIfNeeded(
+                  thumbnailDecodeWidth,
+                  null,
+                  photo,
+                ),
                 fit: BoxFit.cover,
                 excludeFromSemantics: true,
               ),
@@ -70,7 +74,7 @@ class PhotoThumbnail extends StatelessWidget {
 /// goes on underneath.
 Future<void> showPhotoViewer(
   BuildContext context,
-  List<JpegPhoto?> photos,
+  List<ImageProvider?> photos,
   int index,
 ) => Navigator.of(context).push(
   PageRouteBuilder<void>(
@@ -88,7 +92,7 @@ Future<void> showPhotoViewer(
 class PhotoViewer extends StatefulWidget {
   const PhotoViewer({super.key, required this.photos, required this.initial});
 
-  final List<JpegPhoto?> photos;
+  final List<ImageProvider?> photos;
   final int initial;
 
   @override
@@ -172,7 +176,7 @@ class _ZoomablePhoto extends StatefulWidget {
     required this.onZoomed,
   });
 
-  final JpegPhoto? photo;
+  final ImageProvider? photo;
   final ValueChanged<bool> onZoomed;
 
   @override
@@ -219,8 +223,8 @@ class _ZoomablePhotoState extends State<_ZoomablePhoto> {
       panEnabled: _zoomed,
       maxScale: 4,
       child: SizedBox.expand(
-        child: Image.memory(
-          photo.bytes,
+        child: Image(
+          image: photo,
           fit: BoxFit.contain,
           excludeFromSemantics: true,
         ),

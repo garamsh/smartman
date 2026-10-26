@@ -88,6 +88,17 @@ final class PhotoUnreadable extends PhotoImportFailure {
   String toString() => 'PhotoUnreadable: $cause';
 }
 
+/// A photo of a job could not be written to the device, as on a full disk,
+/// or read back from it, as when its file is gone.
+final class PhotoNotKept extends PhotoImportFailure {
+  const PhotoNotKept(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'PhotoNotKept: $cause';
+}
+
 /// The user, or a restriction, has not let the app use the camera or the
 /// photo library.
 final class PhotoAccessDenied extends PhotoImportFailure {

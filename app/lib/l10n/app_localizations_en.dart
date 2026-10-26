@@ -698,6 +698,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discardImport => 'Discard';
 
   @override
+  String get navigateBack => 'Back';
+
+  @override
+  String get photoImportBusy =>
+      'Photos are still being read. You can start a new import once they\'re done.';
+
+  @override
+  String importBarReading(int read, int total) {
+    return 'Reading photos $read/$total';
+  }
+
+  @override
+  String importBarReady(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Review $count cards',
+      one: 'Review 1 card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importBarPaused(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Resume reading $count photos',
+      one: 'Resume reading 1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String resumeImportTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Resume reading $count photos?',
+      one: 'Resume reading 1 photo?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get resumeImportBody => 'Photos already read aren\'t sent again.';
+
+  @override
+  String get resumeImport => 'Resume';
+
+  @override
   String photoView(int number) {
     return 'View photo $number';
   }
@@ -771,6 +822,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get photoUnreadable =>
       'Couldn\'t read this photo. Choose another one.';
+
+  @override
+  String get photoNotKept =>
+      'Couldn\'t keep this photo on the device. Check the free space and choose it again.';
 
   @override
   String get deckDeleted => 'This deck was deleted. Choose another deck.';
