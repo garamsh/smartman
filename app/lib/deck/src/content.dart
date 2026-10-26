@@ -62,27 +62,63 @@ final class ClozeContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
-/// A cell of a [TableContent]'s rows to recall: its row and column, each
-/// counted from 0.
+/// A cell of a [TableContent]'s rows to recall whole: its row and column,
+/// each counted from 0.
 typedef TableBlank = ({int row, int column});
 
+/// A run of a [TableContent] cell's text to recall: the cell's row and
+/// column, each counted from 0, and the run's [start] and [end] in the
+/// cell's UTF-16 code units, as a cloze blank is a run of its line
+/// (ADR 0110).
+typedef CellSpan = ({int row, int column, int start, int end});
+
+/// A part of a table cell's text, and whether it is a blank.
+typedef CellRun = ({String text, bool blank});
+
 /// A table as the page prints it: its column headers, its rows of cells, each
-/// as many as there are columns and starting with the row's header, and the
-/// cells to recall (ADR 0068).
+/// as many as there are columns and starting with the row's header, the
+/// cells to recall whole (ADR 0068), and the runs of cells' text to recall
+/// (ADR 0110). A cell is a whole blank or holds spans, never both.
 final class TableContent extends Content {
   const TableContent({
     required this.columns,
     required this.rows,
     required this.blanks,
+    this.spans = const [],
     super.id,
   });
 
   final List<String> columns;
   final List<List<String>> rows;
   final List<TableBlank> blanks;
+  final List<CellSpan> spans;
 
-  bool isBlank(int row, int column) =>
-      blanks.any((blank) => blank.row == row && blank.column == column);
+  /// The cell at [row] and [column] as runs of its text, in order: one blank
+  /// run when it is a whole blank, its text split around its spans when it
+  /// holds any, and otherwise one plain run.
+  List<CellRun> cellRuns(int row, int column) {
+    final text = rows[row][column];
+    if (blanks.contains((row: row, column: column))) {
+      return [(text: text, blank: true)];
+    }
+    final inCell = [
+      for (final span in spans)
+        if (span.row == row && span.column == column) span,
+    ]..sort((a, b) => a.start.compareTo(b.start));
+    final runs = <CellRun>[];
+    var at = 0;
+    for (final span in inCell) {
+      if (at < span.start) {
+        runs.add((text: text.substring(at, span.start), blank: false));
+      }
+      runs.add((text: text.substring(span.start, span.end), blank: true));
+      at = span.end;
+    }
+    if (at < text.length || runs.isEmpty) {
+      runs.add((text: text.substring(at), blank: false));
+    }
+    return runs;
+  }
 
   /// The table as text, every cell shown: the headers on the first line, then
   /// a line per row, cells joined by " | ", as the function composes a table
@@ -384,13 +420,22 @@ String _type(Content block) => switch (block) {
 
 /// The steps that upgrade each known type's payload, one per version: the
 /// first turns a v1 payload into a v2 one, and so on. The version a type is
-/// written at is one more than its steps; every type is at v1 today.
+/// written at is one more than its steps: a table at v2, every other type
+/// at v1.
 const Map<String, List<Object? Function(Object? payload)>> blockUpcasters = {
   _textType: [],
   _clozeType: [],
-  _tableType: [],
+  _tableType: [_tableWithSpans],
   _sensesType: [],
   _imageType: [],
+};
+
+/// A v1 table's payload as v2's: its blanks stay whole cells, and it holds
+/// no span (ADR 0110). A payload that is not an object is left to fail
+/// decoding.
+Object? _tableWithSpans(Object? payload) => switch (payload) {
+  final Map<String, Object?> fields => {...fields, 'spans': const <Object?>[]},
+  _ => payload,
 };
 
 /// The version this build writes a block of [type] at.
@@ -424,12 +469,14 @@ Content withBlockId(Content block, String id) => switch (block) {
     answers,
     id: id,
   ),
-  TableContent(:final columns, :final rows, :final blanks) => TableContent(
-    columns: columns,
-    rows: rows,
-    blanks: blanks,
-    id: id,
-  ),
+  TableContent(:final columns, :final rows, :final blanks, :final spans) =>
+    TableContent(
+      columns: columns,
+      rows: rows,
+      blanks: blanks,
+      spans: spans,
+      id: id,
+    ),
   SensesContent(:final senses) => SensesContent(senses, id: id),
   ImageContent() => ImageContent(
     media: block.media,
@@ -448,11 +495,15 @@ Object? _payload(Content block) => switch (block) {
     'text': text,
     'answers': answers,
   },
-  TableContent(:final columns, :final rows, :final blanks) => {
+  TableContent(:final columns, :final rows, :final blanks, :final spans) => {
     'columns': columns,
     'rows': rows,
     'blanks': [
       for (final (:row, :column) in blanks) {'row': row, 'column': column},
+    ],
+    'spans': [
+      for (final (:row, :column, :start, :end) in spans)
+        {'row': row, 'column': column, 'start': start, 'end': end},
     ],
   },
   SensesContent(:final senses) => {
@@ -565,8 +616,10 @@ ClozeContent? _decodeCloze(Map<String, Object?> fields) {
 }
 
 /// A table of one or more columns and rows, each row as many cells as there
-/// are columns, and one or more distinct blanks inside it, each on a cell
-/// that holds text; null otherwise.
+/// are columns, and one or more blanks inside it, whole cells and spans
+/// together: each whole cell distinct and holding text, and each span a run
+/// of a cell's text holding more than whitespace, overlapping no other span
+/// and in no whole cell (ADR 0110); null otherwise.
 TableContent? _decodeTable(Map<String, Object?> fields) {
   List<String>? strings(Object? value) =>
       value is List<Object?> && value.every((cell) => cell is String)
@@ -576,6 +629,7 @@ TableContent? _decodeTable(Map<String, Object?> fields) {
     'columns': final Object? columnsValue,
     'rows': final List<Object?> rowsValue,
     'blanks': final List<Object?> blanksValue,
+    'spans': final List<Object?> spansValue,
   }) {
     final columns = strings(columnsValue);
     final rows = [for (final row in rowsValue) strings(row)];
@@ -584,26 +638,62 @@ TableContent? _decodeTable(Map<String, Object?> fields) {
         if (blank case {'row': final int row, 'column': final int column})
           (row: row, column: column),
     ];
+    final spans = [
+      for (final span in spansValue)
+        if (span case {
+          'row': final int row,
+          'column': final int column,
+          'start': final int start,
+          'end': final int end,
+        })
+          (row: row, column: column, start: start, end: end),
+    ];
     if (columns == null ||
         columns.isEmpty ||
         rows.isEmpty ||
         rows.any((row) => row == null || row.length != columns.length) ||
-        blanks.isEmpty ||
+        blanks.isEmpty && spans.isEmpty ||
         blanks.length != blanksValue.length ||
+        spans.length != spansValue.length ||
         blanks.toSet().length != blanks.length) {
       return null;
     }
     final cells = rows.cast<List<String>>();
-    final inside = blanks.every(
+    bool inTable(int row, int column) =>
+        row >= 0 &&
+        row < cells.length &&
+        column >= 0 &&
+        column < columns.length;
+    final blanksHold = blanks.every(
       (blank) =>
-          blank.row >= 0 &&
-          blank.row < cells.length &&
-          blank.column >= 0 &&
-          blank.column < columns.length &&
+          inTable(blank.row, blank.column) &&
           cells[blank.row][blank.column].trim().isNotEmpty,
     );
-    return inside
-        ? TableContent(columns: columns, rows: cells, blanks: blanks)
+    bool overlap(CellSpan a, CellSpan b) =>
+        a.row == b.row &&
+        a.column == b.column &&
+        a.start < b.end &&
+        b.start < a.end;
+    final spansHold = [
+      for (final (index, span) in spans.indexed)
+        inTable(span.row, span.column) &&
+            !blanks.contains((row: span.row, column: span.column)) &&
+            span.start >= 0 &&
+            span.start < span.end &&
+            span.end <= cells[span.row][span.column].length &&
+            cells[span.row][span.column]
+                .substring(span.start, span.end)
+                .trim()
+                .isNotEmpty &&
+            !spans.skip(index + 1).any((other) => overlap(span, other)),
+    ].every((holds) => holds);
+    return blanksHold && spansHold
+        ? TableContent(
+            columns: columns,
+            rows: cells,
+            blanks: blanks,
+            spans: spans,
+          )
         : null;
   }
   return null;

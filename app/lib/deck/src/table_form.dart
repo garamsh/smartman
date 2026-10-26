@@ -3,31 +3,91 @@ import 'package:flutter/material.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'cloze_form.dart';
 import 'content.dart';
+
+/// A body cell as the table form edits it: its field's controller, which
+/// draws each span as a block in the text, and the spans, kept through an
+/// edit as a cloze line's blanks are (ADR 0110).
+class TableCellDraft {
+  TableCellDraft([String text = '', Iterable<Span> spans = const []]) {
+    _spans.update(text);
+    for (final span in spans) {
+      _spans.insert(
+        TextSelection(baseOffset: span.start, extentOffset: span.end),
+      );
+    }
+    controller = ClozeLineController(text: text, blanks: () => _spans.blanks);
+    // Before the field rebuilds, so the spans drawn are the text's.
+    controller.addListener(() => _spans.update(controller.text));
+  }
+
+  final _spans = ClozeDraft();
+  late final ClozeLineController controller;
+
+  /// The spans, in the order of the text.
+  List<Span> get spans => _spans.blanks;
+
+  /// The span [selection] lies inside, or null.
+  Span? spanAt(TextSelection selection) =>
+      selection.isCollapsed ? null : _spans.blankAt(selection);
+
+  /// Makes [selection] a span, replacing the spans it overlaps, when it
+  /// holds more than whitespace; whether it did.
+  bool addSpan(TextSelection selection) {
+    if (controller.text
+        .substring(selection.start, selection.end)
+        .trim()
+        .isEmpty) {
+      return false;
+    }
+    _spans.insert(selection);
+    return true;
+  }
+
+  void removeSpan(Span span) => _spans.remove(span);
+
+  void clearSpans() {
+    for (final span in spans) {
+      _spans.remove(span);
+    }
+  }
+
+  void dispose() => controller.dispose();
+}
 
 /// A table as the table form edits it: its column headers, its rows of
 /// cells, each as many as there are columns and starting with the row's
-/// header, and its blanks, in the order they were chosen.
+/// header, its whole-cell blanks, in the order they were chosen, and each
+/// cell's spans.
 class TableDraft {
   TableDraft._(this.columns, this.rows, this.blanks);
 
   /// Two columns and two rows, every cell empty, with no blank.
-  TableDraft() : this._(_cells(2), [_cells(2), _cells(2)], {});
+  TableDraft() : this._(_headers(2), [_cells(2), _cells(2)], {});
 
-  /// The columns, rows and blanks of [table].
+  /// The columns, rows, blanks and spans of [table].
   factory TableDraft.of(TableContent table) => TableDraft._(
     [for (final text in table.columns) TextEditingController(text: text)],
     [
-      for (final row in table.rows)
-        [for (final text in row) TextEditingController(text: text)],
+      for (final (row, cells) in table.rows.indexed)
+        [
+          for (final (column, text) in cells.indexed)
+            TableCellDraft(text, [
+              for (final span in table.spans)
+                if (span.row == row && span.column == column)
+                  (start: span.start, end: span.end),
+            ]),
+        ],
     ],
     {...table.blanks},
   );
 
   final List<TextEditingController> columns;
-  final List<List<TextEditingController>> rows;
+  final List<List<TableCellDraft>> rows;
 
-  /// The cells chosen as blanks; a set keeps the order they were added in.
+  /// The cells chosen as blanks whole; a set keeps the order they were added
+  /// in.
   final Set<TableBlank> blanks;
 
   void addRow() => rows.add(_cells(columns.length));
@@ -35,7 +95,7 @@ class TableDraft {
   void addColumn() {
     columns.add(TextEditingController());
     for (final row in rows) {
-      row.add(TextEditingController());
+      row.add(TableCellDraft());
     }
   }
 
@@ -78,33 +138,83 @@ class TableDraft {
       ..addAll(moved);
   }
 
-  /// Chooses [cell] as a blank, or leaves it out.
-  void toggle(TableBlank cell) {
-    if (!blanks.remove(cell)) blanks.add(cell);
+  /// What "빈칸" does on [cell] with [selection] in its field: with
+  /// characters selected, turns the span they lie inside back into text, or
+  /// makes them a span, the cell no longer a whole blank; with none, makes
+  /// the whole cell a blank, its spans dropped, or a plain cell again
+  /// (ADR 0110).
+  void toggle(TableBlank cell, TextSelection selection) {
+    final draft = rows[cell.row][cell.column];
+    if (selection.isValid && !selection.isCollapsed) {
+      switch (draft.spanAt(selection)) {
+        case final span?:
+          draft.removeSpan(span);
+        case null when draft.addSpan(selection):
+          blanks.remove(cell);
+        case null:
+      }
+      return;
+    }
+    if (!blanks.remove(cell)) {
+      blanks.add(cell);
+      draft.clearSpans();
+    }
   }
 
+  /// Whether "빈칸" shows on for [cell] with [selection] in its field: the
+  /// selection lies inside a span, or, with none, the cell is a whole blank.
+  bool isOn(TableBlank cell, TextSelection selection) =>
+      selection.isValid && !selection.isCollapsed
+      ? rows[cell.row][cell.column].spanAt(selection) != null
+      : blanks.contains(cell);
+
   /// The text of [cell], trimmed.
-  String textAt(TableBlank cell) => rows[cell.row][cell.column].text.trim();
+  String textAt(TableBlank cell) =>
+      rows[cell.row][cell.column].controller.text.trim();
 
-  /// The table as typed, every cell trimmed, with its blanks.
-  TableContent get table => TableContent(
-    columns: [for (final header in columns) header.text.trim()],
-    rows: [
-      for (final row in rows) [for (final cell in row) cell.text.trim()],
-    ],
-    blanks: blanks.toList(),
-  );
+  /// The table as typed, every cell trimmed, with its blanks and its spans,
+  /// each moved with its cell's trim and cut to it.
+  TableContent get table {
+    final spans = <CellSpan>[];
+    for (final (row, cells) in rows.indexed) {
+      for (final (column, cell) in cells.indexed) {
+        final text = cell.controller.text;
+        final lead = text.length - text.trimLeft().length;
+        final trimmed = text.trim();
+        for (final span in cell.spans) {
+          final start = (span.start - lead).clamp(0, trimmed.length);
+          final end = (span.end - lead).clamp(0, trimmed.length);
+          if (trimmed.substring(start, end).trim().isNotEmpty) {
+            spans.add((row: row, column: column, start: start, end: end));
+          }
+        }
+      }
+    }
+    return TableContent(
+      columns: [for (final header in columns) header.text.trim()],
+      rows: [
+        for (final row in rows)
+          [for (final cell in row) cell.controller.text.trim()],
+      ],
+      blanks: blanks.toList(),
+      spans: spans,
+    );
+  }
 
-  /// Why the table cannot be saved yet: no blank, or a blank on an empty
-  /// cell; null once it can.
-  TableProblem? get problem => blanks.isEmpty
+  /// Why the table cannot be saved yet: no blank, whole or span, or a whole
+  /// blank on an empty cell; null once it can.
+  TableProblem? get problem =>
+      blanks.isEmpty && rows.every((row) => row.every((c) => c.spans.isEmpty))
       ? TableProblem.noBlank
       : blanks.any((blank) => textAt(blank).isEmpty)
       ? TableProblem.emptyBlank
       : null;
 
   void dispose() {
-    for (final cell in [...columns, ...rows.expand((row) => row)]) {
+    for (final header in columns) {
+      header.dispose();
+    }
+    for (final cell in rows.expand((row) => row)) {
       cell.dispose();
     }
   }
@@ -113,8 +223,12 @@ class TableDraft {
 /// Why a table cannot be saved yet.
 enum TableProblem { noBlank, emptyBlank }
 
-List<TextEditingController> _cells(int count) => [
+List<TextEditingController> _headers(int count) => [
   for (var i = 0; i < count; i++) TextEditingController(),
+];
+
+List<TableCellDraft> _cells(int count) => [
+  for (var i = 0; i < count; i++) TableCellDraft(),
 ];
 
 /// A cell of the grid: a row of the table, or -1 for the header row, and a
@@ -126,10 +240,12 @@ enum _Remove { row, column }
 
 /// The table form: a toolbar over the table, "행 추가", "열 추가", "빈칸" and
 /// "지우기", which act on the selected cell, and the table in a grid that
-/// scrolls sideways, each header and cell edited in place, a blank tinted
-/// `brandTint`. A tap on a cell selects it and edits it; the keyboard's next
-/// moves to the next cell. With [showErrors], what keeps it from being saved
-/// shows under it (ADR 0102).
+/// scrolls sideways, each header and cell edited in place, a whole blank
+/// tinted `brandTint` and a span a block on it in its cell's text. A tap on a
+/// cell selects it and edits it; the keyboard's next moves to the next cell.
+/// "빈칸" makes the selected text a span, or, with none selected, toggles the
+/// whole cell. With [showErrors], what keeps it from being saved shows under
+/// it (ADR 0102, ADR 0110).
 class TableFields extends StatefulWidget {
   const TableFields({
     super.key,
@@ -163,9 +279,15 @@ class _TableFieldsState extends State<TableFields> {
     widget.onChanged();
   }
 
-  /// Whether the selected cell is a body cell, the only kind a blank can be.
+  /// The selected cell when it is a body cell, the only kind a blank can be,
+  /// and still in the table: a focus change can name a cell a removal just
+  /// moved past the end.
   TableBlank? get _selectedBody => switch (_selected) {
-    (:final row, :final column) when row >= 0 => (row: row, column: column),
+    (:final row, :final column)
+        when row >= 0 &&
+            row < _draft.rows.length &&
+            column < _draft.columns.length =>
+      (row: row, column: column),
     _ => null,
   };
 
@@ -176,10 +298,10 @@ class _TableFieldsState extends State<TableFields> {
     if (cell == null) return;
     final l10n = AppLocalizations.of(context);
     final texts = switch (what) {
-      _Remove.row => [for (final c in _draft.rows[cell.row]) c.text],
+      _Remove.row => [for (final c in _draft.rows[cell.row]) c.controller.text],
       _Remove.column => [
         _draft.columns[cell.column].text,
-        for (final row in _draft.rows) row[cell.column].text,
+        for (final row in _draft.rows) row[cell.column].controller.text,
       ],
     };
     if (texts.any((text) => text.trim().isNotEmpty) &&
@@ -237,16 +359,16 @@ class _TableFieldsState extends State<TableFields> {
                 materialTapTargetSize: MaterialTapTargetSize.padded,
                 onPressed: () => _change(_draft.addColumn),
               ),
-              FilterChip(
-                label: Text(l10n.tableBlankToggle),
-                showCheckmark: false,
-                materialTapTargetSize: MaterialTapTargetSize.padded,
-                selected: body != null && _draft.blanks.contains(body),
-                selectedColor: colors.brandTint,
-                labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
-                onSelected: body == null
+              _BlankToggle(
+                field: body == null
                     ? null
-                    : (_) => _change(() => _draft.toggle(body)),
+                    : _draft.rows[body.row][body.column].controller,
+                selected: (selection) =>
+                    body != null && _draft.isOn(body, selection),
+                onToggle: body == null
+                    ? null
+                    : (selection) =>
+                          _change(() => _draft.toggle(body, selection)),
               ),
               PopupMenuButton<_Remove>(
                 tooltip: l10n.tableRemove,
@@ -307,7 +429,7 @@ class _TableFieldsState extends State<TableFields> {
                   children: [
                     for (final (column, cell) in cells.indexed)
                       _field(
-                        cell,
+                        cell.controller,
                         (row: row, column: column),
                         l10n,
                         problem: problem,
@@ -338,6 +460,8 @@ class _TableFieldsState extends State<TableFields> {
     final colors = AppColors.of(context);
     final body = cell.row >= 0 ? (row: cell.row, column: cell.column) : null;
     final blank = body != null && _draft.blanks.contains(body);
+    final spans =
+        body != null && _draft.rows[body.row][body.column].spans.isNotEmpty;
     final error =
         problem == TableProblem.emptyBlank &&
         blank &&
@@ -353,7 +477,7 @@ class _TableFieldsState extends State<TableFields> {
           l10n.tableHeaderCell(cell.column + 1)
         else
           l10n.tableCell(cell.row + 1, cell.column + 1),
-        if (blank) l10n.blank,
+        if (blank || spans) l10n.blank,
       ].join(', '),
       child: Focus(
         // Not a stop of its own: it hears the field inside gain focus.
@@ -390,6 +514,43 @@ class _TableFieldsState extends State<TableFields> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "빈칸", a toggle on the selected body cell's [field], or disabled with
+/// none: on while [selected] says so of the field's selection, which it
+/// follows, and [onToggle] given that selection when pressed.
+class _BlankToggle extends StatelessWidget {
+  const _BlankToggle({
+    required this.field,
+    required this.selected,
+    required this.onToggle,
+  });
+
+  final TextEditingController? field;
+  final bool Function(TextSelection selection) selected;
+  final ValueChanged<TextSelection>? onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final field = this.field;
+    final onToggle = this.onToggle;
+    Widget chip(TextSelection selection) => FilterChip(
+      label: Text(l10n.tableBlankToggle),
+      showCheckmark: false,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      selected: field != null && selected(selection),
+      selectedColor: colors.brandTint,
+      labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
+      onSelected: onToggle == null ? null : (_) => onToggle(selection),
+    );
+    if (field == null) return chip(const TextSelection.collapsed(offset: -1));
+    return ListenableBuilder(
+      listenable: field,
+      builder: (context, _) => chip(field.selection),
     );
   }
 }
