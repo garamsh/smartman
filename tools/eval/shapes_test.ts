@@ -99,7 +99,7 @@ function reply(shape: Shape): Record<string, unknown> {
         items: [{
           line_id: "e",
           sentence: "동예는 책화로 갚았다",
-          blanks: [{ start: 4, end: 6 }],
+          blanks: ["책화"],
           composed: false,
         }],
       };
@@ -213,7 +213,7 @@ Deno.test("a shape breaking what its section allows is refused", () => {
     }],
     ["cloze", LIST, (value) => {
       const [item] = value.items as Record<string, unknown>[];
-      item.blanks = [{ start: 4, end: 6 }, { start: 5, end: 7 }];
+      item.blanks = ["책벌"]; // not in the sentence
     }],
     ["vocabulary", TABLE, (value) => {
       const [card] = value.cards as Record<string, unknown>[];
@@ -236,7 +236,7 @@ Deno.test("a composed cloze sentence may reword its line, and its blanks are rea
   const value = reply("cloze");
   const [item] = value.items as Record<string, unknown>[];
   item.sentence = "동예는 다른 부족을 침범하면 책화로 갚았다";
-  item.blanks = [{ start: 16, end: 18 }];
+  item.blanks = ["책화"];
   item.composed = true;
   const output = parseShape("cloze", value, LIST);
   assert.ok(output !== null);
@@ -253,6 +253,23 @@ Deno.test("a composed cloze sentence may reword its line, and its blanks are rea
   assert.deepEqual(composedOf(output), [
     "동예는 다른 부족을 침범하면 책화로 갚았다",
   ]);
+});
+
+Deno.test("cloze blanks are the texts they hide, found in the sentence in order, a repeated text at its next place", () => {
+  const value = reply("cloze");
+  const [item] = value.items as Record<string, unknown>[];
+  item.sentence = "책화는 책화로 갚았다";
+  item.blanks = ["책화", "책화", "갚았다"];
+  item.composed = true;
+  const output = parseShape("cloze", value, LIST);
+  assert.ok(output !== null);
+  assert.deepEqual(cardsOf(output, LIST)[0].front, "___는 ___로 ___");
+  item.blanks = ["갚았다", "책화"];
+  assert.equal(
+    parseShape("cloze", value, LIST),
+    null,
+    "blanks out of the sentence's order are refused",
+  );
 });
 
 Deno.test("table shapes make one table card with the row headers as its first column; questions answer with their cell's lines", () => {
