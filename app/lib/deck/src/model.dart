@@ -1,3 +1,4 @@
+import '../../media/media.dart';
 import 'card_key.dart';
 import 'content.dart';
 
@@ -37,6 +38,65 @@ final class PublicDeck extends DeckVisibility {
   final DateTime publishedAt;
 }
 
+/// The icons a deck's tile can hold, each stored under its [key].
+enum DeckIcon {
+  layers('layers'),
+  book('book'),
+  languages('languages'),
+  pencil('pencil'),
+  flask('flask'),
+  calculator('calculator'),
+  globe('globe'),
+  music('music'),
+  palette('palette'),
+  brain('brain'),
+  code('code'),
+  landmark('landmark'),
+  briefcase('briefcase'),
+  star('star');
+
+  const DeckIcon(this.key);
+
+  /// What the deck stores for the icon.
+  final String key;
+
+  /// The icon a deck shows while it holds none this build knows.
+  static const fallback = DeckIcon.layers;
+
+  /// The icon stored as [key]; null for none, or for a key this build does
+  /// not know, such as one a newer app wrote.
+  static DeckIcon? fromKey(String? key) {
+    for (final icon in values) {
+      if (icon.key == key) return icon;
+    }
+    return null;
+  }
+}
+
+/// The colours a deck's tile can take, each stored under its [key].
+enum DeckColor {
+  blue('blue'),
+  sky('sky'),
+  violet('violet'),
+  sand('sand'),
+  amber('amber'),
+  slate('slate');
+
+  const DeckColor(this.key);
+
+  /// What the deck stores for the colour.
+  final String key;
+
+  /// The colour stored as [key]; null for none, or for a key this build
+  /// does not know, such as one a newer app wrote.
+  static DeckColor? fromKey(String? key) {
+    for (final color in values) {
+      if (color.key == key) return color;
+    }
+    return null;
+  }
+}
+
 /// A named collection of cards.
 final class Deck {
   const Deck({
@@ -46,6 +106,9 @@ final class Deck {
     required this.updatedAt,
     this.visibility = const PrivateDeck(),
     this.description,
+    this.icon,
+    this.color,
+    this.image,
   });
 
   final DeckId id;
@@ -56,6 +119,18 @@ final class Deck {
 
   /// What the owner wrote about the deck when publishing it, if anything.
   final String? description;
+
+  /// The icon the owner chose for the deck's tile; null while none this
+  /// build knows is chosen.
+  final DeckIcon? icon;
+
+  /// The colour the owner chose for the deck's tile; null while none this
+  /// build knows is chosen.
+  final DeckColor? color;
+
+  /// The image the owner chose for the deck's tile, drawn in place of its
+  /// icon; null while none is chosen.
+  final MediaId? image;
 }
 
 /// Where a card came from: the editor writes [manual], photo import
@@ -74,6 +149,8 @@ final class Card {
     required this.createdAt,
     required this.updatedAt,
     this.originDeckId,
+    this.template,
+    this.templateVersion,
   });
 
   final CardId id;
@@ -88,4 +165,13 @@ final class Card {
   /// The public deck a [CardSource.copy] card was copied from; null for any
   /// other card.
   final DeckId? originDeckId;
+
+  /// The template the card was made from, as stored: `flip`, `cloze`,
+  /// `table`, or one a later build added. It only decides how the editor
+  /// opens the card; null until the card's first write in a build that
+  /// records it (ADR 0106).
+  final String? template;
+
+  /// The version of [template] the card was written in; null with it.
+  final int? templateVersion;
 }

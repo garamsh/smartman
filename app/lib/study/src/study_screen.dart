@@ -60,7 +60,7 @@ Future<void> openStudy(BuildContext context, DeckSelection decks) async {
 ///
 /// On a device's first session, a coach teaches the swipes on the cards, and
 /// "안내 다시 보기" shows it again. A session that goes on with a day that has
-/// cards done says so for a moment under the progress bar.
+/// cards done says so for a moment in the progress bar's place.
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key, required this.decks});
 
@@ -204,21 +204,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                     SessionComplete(:final progress) => progress,
                     _ => null,
                   },
+                  notice: _resume,
                   onClose: () => Navigator.of(context).maybePop(),
                 ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(child: _body(context, state)),
-                      Positioned(
-                        top: AppSpace.s8,
-                        left: StudyStyle.cardMargin,
-                        right: StudyStyle.cardMargin,
-                        child: _ResumeNotice(text: _resume),
-                      ),
-                    ],
-                  ),
-                ),
+                Expanded(child: _body(context, state)),
               ],
             ),
           ),
@@ -345,15 +334,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     final dimmed = _coach == _CoachStep.know || _coach == _CoachStep.dontKnow;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // The two cards share the height between the top bar and the answer
-        // buttons equally, the completion card's place included, so the
+        // The two cards share the height between the top bar and the guide's
+        // row equally, the completion card's place included, so the
         // previous card keeps its size when the completion card arrives.
         final card = max(
           0.0,
           (constraints.maxHeight -
                   StudyStyle.topGap -
                   StudyStyle.cardGap -
-                  StudyStyle.answerRow -
+                  StudyStyle.guideRow -
                   StudyStyle.currentBottomGap) /
               2,
         );
@@ -376,7 +365,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                 ),
               ),
               const SizedBox(height: StudyStyle.cardGap),
-              // The completion card may take the answer buttons' place too,
+              // The completion card may take the guide's row's place too,
               // so its actions stay in reach.
               Expanded(child: switcher(current, _emerge)),
             ],
@@ -393,7 +382,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
       ? StudyStyle.coachStill
       : _demo.value;
 
-  /// The coach's caption in the answer buttons' place while it shows.
+  /// The coach's caption in the guide's row's place while it shows.
   Widget? _coachCaption() {
     final step = _coach;
     if (step == null) return null;
@@ -436,11 +425,17 @@ Widget _emerge(Widget child, Animation<double> animation) => AnimatedBuilder(
   child: child,
 );
 
-/// The close button, the progress bar and the count of cards answered.
+/// The close button, the progress bar, or in its place the [notice] while
+/// it shows, and the count of cards answered.
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.progress, required this.onClose});
+  const _TopBar({
+    required this.progress,
+    required this.notice,
+    required this.onClose,
+  });
 
   final SessionProgress? progress;
+  final String? notice;
   final VoidCallback onClose;
 
   @override
@@ -462,24 +457,29 @@ class _TopBar extends StatelessWidget {
                 icon: const Icon(LucideIcons.x),
                 onPressed: onClose,
               ),
-              if (progress != null) ...[
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value: progress.total == 0
-                        ? 1
-                        : progress.done / progress.total,
-                    minHeight: StudyStyle.progressHeight,
-                    color: colors.ink,
-                    backgroundColor: colors.hairline,
-                    borderRadius: BorderRadius.circular(
-                      StudyStyle.progressHeight,
-                    ),
-                    semanticsLabel: l10n.studyProgressSemantics(
-                      progress.done,
-                      progress.total,
-                    ),
-                  ),
+              Expanded(
+                child: _ResumeNotice(
+                  text: notice,
+                  otherwise: progress == null
+                      ? const SizedBox.shrink()
+                      : LinearProgressIndicator(
+                          value: progress.total == 0
+                              ? 1
+                              : progress.done / progress.total,
+                          minHeight: StudyStyle.progressHeight,
+                          color: colors.ink,
+                          backgroundColor: colors.hairline,
+                          borderRadius: BorderRadius.circular(
+                            StudyStyle.progressHeight,
+                          ),
+                          semanticsLabel: l10n.studyProgressSemantics(
+                            progress.done,
+                            progress.total,
+                          ),
+                        ),
                 ),
+              ),
+              if (progress != null) ...[
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpace.s12),
                   child: Row(
@@ -519,14 +519,15 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// The notice that the session goes on with the day, [text], centred under
-/// the progress bar on the navy surface while it is not null, and announced
-/// to a screen reader as it appears. It slides in and out, or fades under
-/// reduce motion.
+/// The notice that the session goes on with the day, [text], on the navy
+/// surface in the top bar's row while it is not null, clear of the cards and
+/// announced to a screen reader as it appears; [otherwise], the progress bar,
+/// in its place. It slides in and out, or fades under reduce motion.
 class _ResumeNotice extends StatelessWidget {
-  const _ResumeNotice({required this.text});
+  const _ResumeNotice({required this.text, required this.otherwise});
 
   final String? text;
+  final Widget otherwise;
 
   @override
   Widget build(BuildContext context) {
@@ -549,9 +550,11 @@ class _ResumeNotice extends StatelessWidget {
               ),
       ),
       child: text == null
-          ? const SizedBox.shrink()
-          : Center(
+          ? KeyedSubtree(key: const ValueKey('progress'), child: otherwise)
+          : FittedBox(
               key: ValueKey(text),
+              // One line in the bar's place, however large the text.
+              fit: BoxFit.scaleDown,
               child: Semantics(
                 container: true,
                 liveRegion: true,

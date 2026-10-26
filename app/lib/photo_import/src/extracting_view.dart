@@ -4,7 +4,7 @@ import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'photo.dart';
+import 'import_job.dart';
 
 /// The photo, "카드를 찾고 있어요", an indeterminate bar and skeleton rows
 /// while the cards are extracted, with the privacy note and a cancel.
@@ -15,7 +15,8 @@ class ExtractingView extends StatelessWidget {
     required this.onCancel,
   });
 
-  final JpegPhoto photo;
+  /// The photo being read; null until it is prepared.
+  final ImageProvider? photo;
   final VoidCallback onCancel;
 
   @override
@@ -37,12 +38,21 @@ class ExtractingView extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.button),
-                  child: Image.memory(
-                    photo.bytes,
+                  child: SizedBox(
                     width: 72,
                     height: 96,
-                    fit: BoxFit.cover,
-                    semanticLabel: l10n.photoThumbnail,
+                    child: switch (photo) {
+                      final photo? => Image(
+                        image: ResizeImage.resizeIfNeeded(
+                          thumbnailDecodeWidth,
+                          null,
+                          photo,
+                        ),
+                        fit: BoxFit.cover,
+                        semanticLabel: l10n.photoThumbnail,
+                      ),
+                      null => ColoredBox(color: colors.hairline),
+                    },
                   ),
                 ),
                 Expanded(

@@ -172,7 +172,8 @@ select results_eq($$select text, created_by from private.prompt_versions where i
 
 -- Serving.
 
-update private.plans set model = 'vendor/free-model', daily_limit = 3 where id = 'free';
+insert into private.plan_versions (plan, quota, amount, model, starts_at, applies_to_all) values
+  ('free', 'daily', 3, 'vendor/free-model', now(), true);
 select results_eq($$select plan, model, allowed, prompt_version_id from pg_temp.begin('b')$$,
   $$values ('free', 'vendor/free-model', true, 1::bigint)$$, 'a user is served the active version');
 reset role;

@@ -19,6 +19,7 @@ import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
+import { testRouter } from "@/testing/router";
 import { signedInCookies } from "@/testing/session";
 import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
@@ -228,6 +229,133 @@ describe("the study page", () => {
       });
       expect(postgrest.rows.reviews).toHaveLength(2);
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("leaving with answers not saved", () => {
+    /** The page's three ways out: the top bar's close, Esc, and the completion card's 그만하기. */
+    const exits = {
+      close: async () => {
+        await userEvent.setup().click(closeLink());
+      },
+      Esc: async () => {
+        await userEvent.setup().keyboard("{Escape}");
+      },
+      "the completion card": async () => {
+        const completion = screen.getByRole("region", { name: "오늘 학습 완료" });
+        await userEvent.setup().click(within(completion).getByRole("link", { name: "그만하기" }));
+      },
+    };
+    const confirm = () => screen.queryByRole("dialog", { name: "저장하지 못한 응답이 있어요" });
+    /** The top bar's close, the 그만하기 that Esc follows. */
+    const closeLink = () => {
+      const link = screen
+        .getAllByRole("link", { name: "그만하기" })
+        .find((candidate) => candidate.getAttribute("aria-keyshortcuts") === "Escape");
+      if (!link) throw new Error("no close in the top bar");
+      return link;
+    };
+
+    it.each(Object.keys(exits) as (keyof typeof exits)[])(
+      "by %s, sends the failed write again and, when it fails again, asks before leaving without it",
+      async (way) => {
+        seedDeck(postgrest, "d1", ["un"]);
+        await open("d1");
+        postgrest.fail("reviews", 500);
+        await userEvent.setup().keyboard("{ArrowRight}");
+        await screen.findByRole("alert");
+        // The one card is answered, so the completion card shows.
+        expect(screen.getByRole("region", { name: "오늘 학습 완료" })).toBeInTheDocument();
+
+        await exits[way]();
+
+        const dialog = await screen.findByRole("dialog", { name: "저장하지 못한 응답이 있어요" });
+        expect(dialog).toHaveTextContent("지금 나가면 저장하지 못한 응답 1개가 사라져요.");
+        // The dialog takes the focus once it has mounted.
+        await waitFor(() => {
+          expect(within(dialog).getByRole("button", { name: "취소" })).toHaveFocus();
+        });
+        expect(testRouter.push).not.toHaveBeenCalled();
+        // 취소 stays, the answer still waiting.
+        await userEvent.setup().click(within(dialog).getByRole("button", { name: "취소" }));
+        expect(confirm()).not.toBeInTheDocument();
+        expect(screen.getByRole("alert")).toBeInTheDocument();
+        expect(testRouter.push).not.toHaveBeenCalled();
+
+        await exits[way]();
+        await userEvent
+          .setup()
+          .click(
+            within(
+              await screen.findByRole("dialog", { name: "저장하지 못한 응답이 있어요" }),
+            ).getByRole("button", { name: "나가기" }),
+          );
+        expect(testRouter.push).toHaveBeenCalledExactlyOnceWith("/");
+        expect(postgrest.rows.reviews).toHaveLength(0);
+      },
+    );
+
+    it("sends the waiting answers and then leaves, without asking, when the server answers again", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      const stop = postgrest.fail("reviews", 500);
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await screen.findByRole("alert");
+      stop();
+
+      await exits.close();
+
+      await waitFor(() => {
+        expect(testRouter.push).toHaveBeenCalledExactlyOnceWith("/");
+      });
+      expect(confirm()).not.toBeInTheDocument();
+      expect(postgrest.rows.reviews).toHaveLength(1);
+    });
+
+    it("sends the waiting answers and then returns to the deck page the session was opened from", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      vi.setSystemTime(start);
+      await render(Study, {
+        searchParams: Promise.resolve({ decks: uuidOf("d1"), from: "deck" }),
+      });
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+      });
+      const stop = postgrest.fail("reviews", 500);
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await screen.findByRole("alert");
+      stop();
+
+      await exits.close();
+
+      await waitFor(() => {
+        expect(testRouter.push).toHaveBeenCalledExactlyOnceWith(`/decks/${uuidOf("d1")}`);
+      });
+    });
+
+    it("follows the close at once when every answer is saved", async () => {
+      seedDeck(postgrest, "d1", ["un", "deux"]);
+      await open("d1");
+      await userEvent.setup().keyboard("{ArrowRight}");
+      await waitFor(() => {
+        expect(postgrest.rows.reviews).toHaveLength(1);
+      });
+      // Read after the screen's own handler, which runs at React's root, below the document.
+      const heldBack: boolean[] = [];
+      const listener = (event: Event) => {
+        heldBack.push(event.defaultPrevented);
+        event.preventDefault();
+      };
+      document.addEventListener("click", listener);
+      try {
+        await userEvent.setup().click(closeLink());
+      } finally {
+        document.removeEventListener("click", listener);
+      }
+
+      expect(heldBack).toEqual([false]);
+      expect(testRouter.push).not.toHaveBeenCalled();
+      expect(confirm()).not.toBeInTheDocument();
     });
   });
 
@@ -509,6 +637,45 @@ describe("the study page", () => {
       expect(stack()[2]).toBe(label(third ?? "", "안다"));
     });
 
+    it("closes the whole card on a click outside it, not inside, with the focus back on the card", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      await answerThree();
+      const user = userEvent.setup();
+      const face = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
+      await user.click(face);
+      const detail = screen.getByRole("dialog", { name: "카드" });
+
+      // Control: a click inside the card keeps it open.
+      await user.click(within(detail).getByRole("heading", { name: "카드" }));
+      expect(screen.getByRole("dialog", { name: "카드" })).toBeInTheDocument();
+      await user.click(detail.parentElement ?? detail);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(face).toHaveFocus();
+    });
+
+    it("bounds 이번 학습 to the screen with a list that scrolls on its own, to the newest answer as each is added", async () => {
+      seedDeck(postgrest, "d1", fronts);
+      await open("d1");
+      const user = userEvent.setup();
+      await user.keyboard("{ArrowRight}");
+      const aside = screen.getByRole("complementary", { name: "이번 학습" });
+      const list = within(aside).getByRole("list");
+      expect(aside.className.split(" ")).toContain("max-h-[calc(100dvh-3rem)]");
+      expect(list.className.split(" ")).toEqual(
+        expect.arrayContaining(["min-h-0", "overflow-y-auto"]),
+      );
+      // jsdom lays nothing out, so the list is given the height its answers would take.
+      Object.defineProperty(list, "scrollHeight", { configurable: true, value: 900 });
+      expect(list.scrollTop).toBe(0);
+
+      await user.keyboard("{ArrowLeft}");
+
+      expect(within(list).getAllByRole("button")).toHaveLength(2);
+      expect(list.scrollTop).toBe(900);
+    });
+
     it("opens the previous card whole on a click, and closes it on 닫기 or Esc with the focus back on the card", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
@@ -758,20 +925,14 @@ describe("the study page", () => {
       expect(currentFront()).toBe(front);
     });
 
-    it("grades the previous card by its fill, its line and a chip naming the answer", async () => {
+    it("grades the previous card by its fill and line alone, with no chip, its name and its whole card naming the answer", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
       const user = userEvent.setup();
 
-      for (const [key, answer, fill, line, chip] of [
-        ["{ArrowRight}", "안다", "bg-know-card", "border-know-line", "bg-know"],
-        [
-          "{ArrowLeft}",
-          "모른다",
-          "bg-dont-know-card",
-          "border-dont-know-line",
-          "bg-dont-know-text",
-        ],
+      for (const [key, answer, fill, line] of [
+        ["{ArrowRight}", "안다", "bg-know-card", "border-know-line"],
+        ["{ArrowLeft}", "모른다", "bg-dont-know-card", "border-dont-know-line"],
       ] as const) {
         const front = currentFront();
         await user.keyboard(key);
@@ -779,9 +940,15 @@ describe("the study page", () => {
         const face = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
         expect(face.className).toContain(fill);
         expect(face.className).toContain(line);
-        const word = within(previousCard()).getByText(answer);
-        expect(word.className).toContain(chip);
-        expect(word.querySelector("svg")).not.toBeNull();
+        // Nothing on the card but its sides: no word or mark of the grade.
+        expect(within(previousCard()).queryByText(answer)).not.toBeInTheDocument();
+        expect(face.querySelector("svg")).toBeNull();
+        // The whole card still states the grade in words.
+        await user.click(face);
+        const detail = screen.getByRole("dialog", { name: "카드" });
+        expect(within(detail).getByText(answer)).toBeInTheDocument();
+        await user.keyboard("{Escape}");
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       }
     });
 
@@ -915,6 +1082,27 @@ describe("the study page", () => {
       expect(stack()[1]).toMatch(/응답: 모른다$/);
     });
 
+    it("leaves on Esc for the deck page it was opened from", async () => {
+      cleanup();
+      await render(Study, {
+        searchParams: Promise.resolve({ decks: uuidOf("d1"), from: "deck" }),
+      });
+      await waitFor(() => {
+        expect(screen.queryByText("카드를 불러오는 중이에요.")).not.toBeInTheDocument();
+      });
+      const close = screen.getByRole("link", { name: "그만하기" });
+      const followed = vi.fn();
+      close.addEventListener("click", (event) => {
+        event.preventDefault();
+        followed();
+      });
+
+      await userEvent.setup().keyboard("{Escape}");
+
+      expect(close).toHaveAttribute("href", `/decks/${uuidOf("d1")}`);
+      expect(followed).toHaveBeenCalledOnce();
+    });
+
     it("leaves for 오늘 on Esc", async () => {
       const user = userEvent.setup();
       const close = screen.getByRole("link", { name: "그만하기" });
@@ -964,6 +1152,20 @@ describe("the study page", () => {
       expect(done).toHaveFocus();
       await user.keyboard("{Escape}");
       expect(face).toHaveFocus();
+    });
+
+    it("closes the shortcut list on a click outside it, not inside, with the focus back on 단축키", async () => {
+      const user = userEvent.setup();
+      await user.keyboard("?");
+      const help = screen.getByRole("dialog", { name: "단축키" });
+
+      // Control: a click inside the list keeps it open.
+      await user.click(within(help).getByText("마지막 응답 바꾸기"));
+      expect(screen.getByRole("dialog", { name: "단축키" })).toBeInTheDocument();
+      await user.click(help.parentElement ?? help);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "단축키" })).toHaveFocus();
     });
 
     it("lists every shortcut on ?, and closes the list on Esc without ending the session", async () => {
@@ -1079,7 +1281,10 @@ describe("the study page", () => {
       const user = userEvent.setup();
 
       expect(caption()).toBeInTheDocument();
-      expect(window.localStorage.getItem("studyCoachShown")).toBe("true");
+      // The flag is written by an effect after the render that shows the coach, so it is waited on.
+      await waitFor(() => {
+        expect(window.localStorage.getItem("studyCoachShown")).toBe("true");
+      });
       expect(announced()).toBe("사용 방법, 3단계 중 1단계. 알면 안다(→)를 눌러요");
       expect(caption()).toHaveTextContent("알면 안다(→)를 눌러요");
       expect(answerButton("모른다")).not.toBeInTheDocument();
@@ -1108,6 +1313,8 @@ describe("the study page", () => {
       const sample = screen.getByTestId("coach-sample");
       expect(sample).toHaveTextContent("deadline");
       expect(sample).toHaveTextContent("모른다로 바꿔요");
+      // A previous card, so graded by its fill and line alone, with no chip.
+      expect(within(sample).queryByText("안다")).not.toBeInTheDocument();
       expect(screen.queryByTestId("coach-demo")).not.toBeInTheDocument();
       expect(
         screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
@@ -1203,7 +1410,11 @@ describe("the study page", () => {
     expect(shown()).toEqual([label]);
     const card = within(cards()).getByRole("article");
     expect(within(card).getByText("지난번 마지막 카드")).toBeInTheDocument();
-    expect(within(card).getByText("안다")).toBeInTheDocument();
+    // Graded by its fill and line alone, as the previous card is.
+    expect(within(card).queryByText("안다")).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "카드 전체 보기" }).className).toContain(
+      "bg-know-card",
+    );
     expect(
       screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
     ).not.toBeInTheDocument();

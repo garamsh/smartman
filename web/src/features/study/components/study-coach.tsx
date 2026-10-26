@@ -2,7 +2,7 @@ import { Pointer } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { Answer } from "../answer-write";
-import { answerTints, GradeChip, grades } from "./graded-card";
+import { answerTints, grades } from "./graded-card";
 
 /** The coach's steps: answering "안다", answering "모른다", and changing an answered card. */
 export const coachSteps = ["know", "dontKnow", "redecide"] as const;
@@ -145,7 +145,6 @@ export function CoachSample() {
       <div
         className={`relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center motion-safe:animate-coach-change motion-reduce:animate-coach-change-held ${grades.know.card}`}
       >
-        <GradeChip answer="know" className="absolute -top-3 right-4" />
         <span className="flex items-center justify-center p-4 text-front text-ink lg:p-6">
           deadline
         </span>

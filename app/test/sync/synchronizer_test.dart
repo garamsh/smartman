@@ -6,6 +6,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
+import '../media/fakes.dart';
 import 'device.dart';
 import 'fake_sync_server.dart';
 
@@ -42,6 +43,22 @@ void main() {
     );
     return (saved as CardSaved).card;
   }
+
+  test("a deck's image removed on one device is removed on the other, where a set one arrives", () async {
+    final deck = await a.deck.createDeck('French');
+    final image = await a.media.addImage(preparedImage(1));
+    await a.deck.setImage(deck.id, image);
+    await a.sync(_ada);
+    await b.sync(_ada);
+    expect((await b.deck.getDeck(deck.id)).image, image);
+
+    a.now = a.now.add(const Duration(minutes: 1));
+    await a.deck.setImage(deck.id, null);
+    await a.sync(_ada);
+    await b.sync(_ada);
+
+    expect((await b.deck.getDeck(deck.id)).image, isNull);
+  });
 
   group('push', () {
     test('sends every unsynced row and marks it synced', () async {
@@ -585,6 +602,83 @@ void main() {
       await a.study.setDailyMinutes(15, at: a.now);
       await a.store.clear();
       expect(await a.study.dailyMinutes(), isNull);
+    });
+  });
+
+  group('templates and block versions (ADR 0106)', () {
+    test('a card a newer build wrote keeps its unknown template and blocks '
+        'unchanged through this build, a merged back included', () async {
+      // The newer build: a template this build does not know, at a version
+      // above its own, and a block of a type and version it does not know.
+      final newer = Device('newer', server, scheduler);
+      addTearDown(newer.close);
+      final deck = await newer.deck.createDeck('French');
+      const front =
+          '[{"type":"image","v":3,"id":"img","payload":{"media":"m1"},'
+          '"boxes":[{"x":1}]},{"type":"text","v":7,"payload":{"body":"chat"}}]';
+      await newer.db
+          .into(newer.db.cards)
+          .insert(
+            CardsCompanion.insert(
+              id: 'newer-card',
+              deckId: deck.id.value,
+              front: front,
+              back: '[{"type":"text","v":1,"id":"t","payload":{"text":"cat"}}]',
+              cardKey: 'chat',
+              source: 'manual',
+              template: const Value('image_occlusion'),
+              templateVersion: const Value(2),
+              createdAt: newer.now,
+              updatedAt: newer.now,
+            ),
+          );
+      await newer.sync(_ada);
+
+      await a.sync(_ada);
+      final onA = (await a.deck.listCards(deck.id)).single;
+      expect((onA.template, onA.templateVersion), ('image_occlusion', 2));
+      expect(onA.front.every((block) => block is UnsupportedContent), isTrue);
+
+      // A merges a photo's back into it, the one write this build makes.
+      a.now = a.now.add(const Duration(minutes: 1));
+      await a.deck.addCards(AddToDeck(deck.id), [
+        const IncomingCard(
+          front: [TextContent('chat')],
+          back: [TextContent('a cat')],
+          onDuplicate: DuplicateChoice.mergeBack,
+        ),
+      ]);
+      await a.sync(_ada);
+      await b.sync(_ada);
+
+      final onServer = server.cards['newer-card']!.row;
+      expect(
+        (onServer.template, onServer.templateVersion),
+        ('image_occlusion', 2),
+      );
+      expect(onServer.front, front, reason: 'byte for byte');
+      expect(onServer.back, contains('a cat'), reason: 'the merge arrived');
+      final onB = await b.db.select(b.db.cards).getSingle();
+      expect(
+        (onB.template, onB.templateVersion, onB.front),
+        ('image_occlusion', 2, front),
+      );
+    });
+
+    test('a template set on one device reaches the other', () async {
+      final deck = await a.deck.createDeck('French');
+      await a.deck.addCard(
+        deck.id,
+        front: [
+          const ClozeContent('___ is in France', ['Paris']),
+        ],
+        back: _text('Paris is in France'),
+      );
+      await a.sync(_ada);
+      await b.sync(_ada);
+
+      final onB = (await b.deck.listCards(deck.id)).single;
+      expect((onB.template, onB.templateVersion), ('cloze', 1));
     });
   });
 }

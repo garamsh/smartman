@@ -1,9 +1,12 @@
 /**
- * One block of a card side, as the phone stores it: a `{type, payload}` object in the side's
- * JSON array (`deck.md`). A text block; a cloze, its text writing each blank as `___` with what
- * fills each, in order; or a table, its column headers, its rows of cells and the cells to
- * recall (ADR 0068); or a vocabulary entry's senses (ADR 0075). A block of another type is
- * shown as a placeholder naming it, so a card a later version wrote is shown, not lost.
+ * One block of a card side, as the phone stores it: a `{type, v, id, payload}` object in the
+ * side's JSON array (`deck.md`), its kind the `type` and its version the `v`, read as 1 when
+ * absent (ADR 0106). A text block; a cloze, its text writing each blank as `___` with what fills
+ * each, in order; or a table, its column headers, its rows of cells and the cells to recall
+ * (ADR 0068); or a vocabulary entry's senses (ADR 0075). A block of another type, or of a known
+ * type at a version above the one this build reads, is shown as a placeholder naming it, so a
+ * card a later version wrote is shown, not lost; the web never writes a card, so it stays as
+ * stored.
  */
 export type Content =
   | { kind: "text"; text: string }
@@ -58,6 +61,44 @@ export type TableBlank = { row: number; column: number };
 
 /** How a cloze's text writes each blank. */
 export const clozeBlank = "___";
+
+type KnownType = "text" | "cloze" | "table" | "senses";
+
+/**
+ * The steps that upgrade each known type's payload, one per version: the first turns a v1
+ * payload into a v2 one, and so on, as the app's `blockUpcasters` does. The version a type is
+ * read at is one more than its steps; every type is at v1 today.
+ */
+export const blockUpcasters: Record<KnownType, ((payload: unknown) => unknown)[]> = {
+  text: [],
+  cloze: [],
+  table: [],
+  senses: [],
+};
+
+function isKnownType(type: string): type is KnownType {
+  return Object.hasOwn(blockUpcasters, type);
+}
+
+/** The version of [type] this build reads, given the [steps] that reach it. */
+export function blockVersion(
+  type: KnownType,
+  steps: Record<KnownType, ((payload: unknown) => unknown)[]> = blockUpcasters,
+): number {
+  return steps[type].length + 1;
+}
+
+/** [payload], stored at [version] of [type], upgraded step by step to the version this build reads. */
+export function upcastPayload(
+  type: KnownType,
+  version: number,
+  payload: unknown,
+  steps: Record<KnownType, ((payload: unknown) => unknown)[]> = blockUpcasters,
+): unknown {
+  let upgraded = payload;
+  for (const step of steps[type].slice(version - 1)) upgraded = step(upgraded);
+  return upgraded;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -137,7 +178,9 @@ function parseSenses(payload: Record<string, unknown>): Content | null {
 
 /**
  * The blocks of a stored card side, or null when [value] is not an array of blocks each with
- * a string `type`, and a payload of its type's shape for a text, cloze, table or senses block.
+ * a string `type`, a `v` that is a positive integer when present, an `id` that is text when
+ * present, and a payload of its type's shape for a text, cloze, table or senses block at the
+ * version this build reads, an older one upgraded first.
  */
 export function parseContent(value: unknown): Content[] | null {
   if (!Array.isArray(value)) return null;
@@ -145,12 +188,20 @@ export function parseContent(value: unknown): Content[] | null {
   for (const block of value as unknown[]) {
     if (!isRecord(block)) return null;
     const type = "type" in block ? block.type : null;
-    const payload = "payload" in block ? block.payload : null;
+    const version = "v" in block ? block.v : 1;
+    const id = "id" in block ? block.id : undefined;
     if (typeof type !== "string") return null;
-    if (type !== "text" && type !== "cloze" && type !== "table" && type !== "senses") {
+    if (!Number.isInteger(version) || (version as number) < 1) return null;
+    if (id !== undefined && typeof id !== "string") return null;
+    if (!isKnownType(type) || (version as number) > blockVersion(type)) {
       blocks.push({ kind: "unsupported", type });
       continue;
     }
+    const payload = upcastPayload(
+      type,
+      version as number,
+      "payload" in block ? block.payload : null,
+    );
     if (!isRecord(payload)) return null;
     const parsed =
       type === "text"

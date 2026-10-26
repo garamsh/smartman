@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../account/account.dart';
+import '../../media/media.dart';
 import 'failure.dart';
 import 'status.dart';
 import 'sync_store.dart';
@@ -23,6 +24,7 @@ class SyncController implements AccountData {
     required this._synchronizer,
     required this._store,
     required this._edits,
+    required this._media,
     this.editDelay = const Duration(seconds: 3),
     this.firstRetry = const Duration(seconds: 5),
     this.maxRetry = const Duration(minutes: 5),
@@ -34,6 +36,9 @@ class SyncController implements AccountData {
 
   /// An event for each write to a synced table.
   final Stream<void> _edits;
+
+  /// Uploads and deletes the user's media after each run of the rows.
+  final MediaStore _media;
 
   final Duration editDelay;
   final Duration firstRetry;
@@ -130,7 +135,14 @@ class SyncController implements AccountData {
     _status.value = const Syncing();
     try {
       await _synchronizer.run(state.userId);
-      _failures = 0;
+      // After the rows, so a deck's image is named on the server before its
+      // file lands. A transfer left queued retries with the run's backoff,
+      // and the rows stay synced.
+      if (await _media.drain()) {
+        _failures = 0;
+      } else {
+        _scheduleRetry();
+      }
       _status.value = const Synced();
     } on SyncFailure catch (failure) {
       _status.value = SyncInterrupted(failure);

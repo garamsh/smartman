@@ -24,11 +24,12 @@ export {
   readExtractionBreakdown,
   readIsAdmin,
   readOverview,
-  readPlans,
+  readPlanVersions,
   readPromptVersion,
   readPromptVersions,
   readPublicDecks,
   readReportedDecks,
   readUser,
   searchUsers,
+  searchUsersThrough,
 } from "./read-admin";

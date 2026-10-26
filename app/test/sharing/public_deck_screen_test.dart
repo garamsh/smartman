@@ -7,6 +7,7 @@ import 'package:smartman/sharing/sharing.dart';
 import 'fakes.dart';
 import 'sharing_app.dart';
 import 'sharing_service_test.dart' show publicCard, publicDeck;
+import '../word_breaks.dart';
 
 final _spanish = publicDeck(
   'spanish',
@@ -239,7 +240,7 @@ void main() {
       final app = await _openSpanish(tester, server: server);
 
       await app.deckMenu('Block this user');
-      expect(find.text('Block Dee?'), findsOneWidget);
+      expect(shownText('Block Dee?'), findsOneWidget);
       await app.tapText('Block');
 
       expect(find.text('Blocked Dee.'), findsOneWidget);

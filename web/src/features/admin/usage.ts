@@ -37,7 +37,7 @@ export type Usage = {
   unrecordedModel: string | null;
 };
 
-const planNames: Record<PlanId, string> = { free: "무료", pro: "프로", special: "스페셜" };
+const planNames: Record<PlanId, string> = { free: "무료", pro: "프로", max: "맥스" };
 /** The series of the photos counted before calls were recorded. */
 export const unrecorded = "기록 전";
 
@@ -111,7 +111,7 @@ export function summarizeUsage(
     [...series.values()].toSorted(
       (a, b) => rank(a.key) - rank(b.key) || a.key.localeCompare(b.key),
     );
-  const planRank = (key: string) => ["free", "pro", "special", unrecorded].indexOf(key);
+  const planRank = (key: string) => ["free", "pro", "max", unrecorded].indexOf(key);
   const modelRank = (key: string) => (key === unrecorded ? 1 : 0);
   return {
     days: dayList.map((day) => ({ day, ...(days.get(day) ?? empty()) })),

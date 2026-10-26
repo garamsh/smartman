@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -16,6 +18,7 @@ import 'design/theme.dart';
 import 'design/theme_choice.dart';
 import 'home/home.dart';
 import 'l10n/app_localizations.dart';
+import 'media/media.dart';
 import 'photo_import/photo_import.dart';
 import 'sharing/sharing.dart';
 import 'study/study.dart';
@@ -27,6 +30,7 @@ Future<void> main() async {
   final scheduler = await Scheduler.load();
   final account = await connectAccount(accountDefines());
   final package = await PackageInfo.fromPlatform();
+  final support = await getApplicationSupportDirectory();
   final preferences = await SharedPreferencesWithCache.create(
     cacheOptions: const SharedPreferencesWithCacheOptions(
       allowList: {
@@ -53,11 +57,17 @@ Future<void> main() async {
         ),
         null => null,
       },
+      FileImportJobStore(Directory('${support.path}/photo_import')),
       switch (account.client) {
         final client? => SupabaseSharingServer(client),
         null => null,
       },
       DeviceReachability(),
+      switch (account.client) {
+        final client? => SupabaseMediaServer(client),
+        null => const UnavailableMediaServer(),
+      },
+      Directory('${support.path}/media'),
       package.version,
     ),
   );
@@ -67,10 +77,12 @@ Future<void> main() async {
 /// with the loaded [scheduler], signing in through [account], syncing with
 /// [server], keeping the theme choice and whether photo import's and the
 /// study screen's coaches have shown in [preferences], extracting cards from
-/// photos through [extraction], whose absence hides photo import, and sharing
+/// photos through [extraction], whose absence hides photo import, keeping a
+/// photo import's photos and cards in [jobStore] until it is saved, and sharing
 /// decks through [sharing] while [reachability] says the device is online;
-/// without [sharing] the app offers no sharing. The account screen names the
-/// app's [version]. Sync starts at once.
+/// without [sharing] the app offers no sharing. Decks' images are kept in
+/// [mediaDirectory] and stored through [mediaServer]. The account screen names
+/// the app's [version]. Sync starts at once.
 Widget composeApp(
   QueryExecutor executor,
   Scheduler scheduler,
@@ -78,16 +90,27 @@ Widget composeApp(
   SyncServer server,
   SharedPreferencesWithCache preferences,
   ExtractionClient? extraction,
+  ImportJobStore jobStore,
   SharingServer? sharing,
   Reachability reachability,
+  MediaServer mediaServer,
+  Directory mediaDirectory,
   String version,
 ) {
   final database = AppDatabase(executor);
   const uuid = Uuid();
+  final media = MediaStore(
+    database,
+    mediaServer,
+    directory: mediaDirectory,
+    clock: DateTime.now,
+    newId: uuid.v7,
+  );
   final deckRepository = DeckRepository(
     database,
     clock: DateTime.now,
     newId: uuid.v7,
+    media: media,
   );
   final studyRepository = StudyRepository(database, newId: uuid.v7);
   final syncStore = SyncStore(database, scheduler, clock: DateTime.now);
@@ -102,12 +125,25 @@ Widget composeApp(
         database.reviews,
         database.cardStates,
         database.studySettings,
+        database.mediaUploads,
+        database.mediaDeletions,
       ]),
     ),
+    media: media,
   )..start();
+  final imports = extraction == null
+      ? null
+      : (PhotoImports(
+          client: extraction,
+          photos: const DevicePhotoSource(),
+          preferences: preferences,
+          store: jobStore,
+          decks: deckRepository,
+        )..restore());
   return ProviderScope(
     overrides: [
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      mediaStoreProvider.overrideWithValue(media),
       sharingServiceProvider.overrideWithValue(
         sharing == null
             ? null
@@ -119,17 +155,16 @@ Widget composeApp(
               ),
       ),
       photoImportProvider.overrideWithValue(
-        extraction == null
+        imports == null
             ? null
             : (context, deck, origin) => importFromPhoto(
                 context,
+                imports: imports,
                 deck: deck,
                 origin: origin,
-                client: extraction,
-                photos: const DevicePhotoSource(),
-                preferences: preferences,
               ),
       ),
+      photoImportsProvider.overrideWithValue(imports),
       studyRepositoryProvider.overrideWithValue(studyRepository),
       schedulerProvider.overrideWithValue(scheduler),
       studyClockProvider.overrideWithValue(DateTime.now),

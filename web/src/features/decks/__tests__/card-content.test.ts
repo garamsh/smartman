@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { describeContent, isWholeCard, parseContent, spokenContent } from "../card-content";
+import {
+  blockVersion,
+  describeContent,
+  isWholeCard,
+  parseContent,
+  spokenContent,
+  upcastPayload,
+} from "../card-content";
 
 // The cases of the app's `app/test/deck/content_test.dart`: both clients read one stored shape.
 const cloze = { type: "cloze", payload: { text: "___ is in ___", answers: ["Paris", "France"] } };
@@ -167,5 +174,70 @@ describe("a senses block", () => {
     expect(describeContent(blocks)).toBe(
       "[동] 살다, 거주하다\n[사물] 철도 위를 다니는 긴 차\n사과",
     );
+  });
+});
+
+// ADR 0106's block versions, as the app's `content_test.dart` states them.
+describe("a block's version and id", () => {
+  const known = [
+    { type: "text", payload: { text: "bonjour" } },
+    cloze,
+    table(rows, cell),
+    {
+      type: "senses",
+      payload: { senses: [{ labels: [], meaning: "기차", examples: [] }] },
+    },
+  ];
+
+  it("reads each known type at v1 with or without the field, and with an id", () => {
+    for (const block of known) {
+      const read = parseContent([block]);
+      expect(read, block.type).not.toBeNull();
+      expect(parseContent([{ ...block, v: 1 }]), block.type).toEqual(read);
+      expect(parseContent([{ ...block, v: 1, id: "b1" }]), block.type).toEqual(read);
+    }
+  });
+
+  it("shows a known type above the version it reads, or an unknown type, as a placeholder", () => {
+    for (const block of known) {
+      expect(parseContent([{ ...block, v: 2 }]), block.type).toEqual([
+        { kind: "unsupported", type: block.type },
+      ]);
+    }
+    expect(parseContent([{ type: "image", v: 1, payload: { media: "m1" } }])).toEqual([
+      { kind: "unsupported", type: "image" },
+    ]);
+  });
+
+  it("refuses a v that is not a positive integer, or an id that is not text", () => {
+    const text = { type: "text", payload: { text: "cat" } };
+    for (const broken of [
+      { ...text, v: 0 },
+      { ...text, v: "1" },
+      { ...text, v: 1.5 },
+      { ...text, v: 1, id: 7 },
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    expect(parseContent([{ ...text, v: 1, id: "a" }]), "control").not.toBeNull();
+  });
+
+  it("upgrades an older payload one step per version", () => {
+    const steps = {
+      text: [
+        (payload: unknown) => ({ body: (payload as { text: string }).text }),
+        (payload: unknown) => ({ body: (payload as { body: string }).body.trim() }),
+      ],
+      cloze: [],
+      table: [],
+      senses: [],
+    };
+    expect(blockVersion("text", steps)).toBe(3);
+    expect(upcastPayload("text", 1, { text: " cat " }, steps)).toEqual({ body: "cat" });
+    expect(upcastPayload("text", 2, { body: " cat " }, steps)).toEqual({ body: "cat" });
+    expect(upcastPayload("text", 3, { body: "cat" }, steps)).toEqual({ body: "cat" });
+    for (const type of ["text", "cloze", "table", "senses"] as const) {
+      expect(blockVersion(type), type).toBe(1);
+    }
   });
 });

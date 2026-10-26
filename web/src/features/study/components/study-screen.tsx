@@ -2,7 +2,15 @@
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import {
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { v7 } from "uuid";
 
 import type { Answer, AnswerWrite } from "../answer-write";
@@ -15,6 +23,7 @@ import { AnswerList } from "./answer-list";
 import { CardDetail } from "./card-detail";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
+import { LeaveConfirm } from "./leave-confirm";
 import { PreviousPlaceholder } from "./previous-placeholder";
 import { answerTints, GradedCard, grades, tiltPerPixel } from "./graded-card";
 import { ShortcutHelp } from "./shortcut-help";
@@ -102,9 +111,18 @@ const noticeMs = 3000;
  * takes the current card's place, and the new cards past today's go on from it. Every action
  * shows at once; its write runs behind it, and a write that fails is shown with a retry while
  * its answer stays. Each action has a keyboard shortcut, listed by "단축키", and a visible
- * control.
+ * control. Every way out, the close, Esc and "그만하기", leaves for [back], where the session was
+ * opened from.
  */
-export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: ReactNode }) {
+export function StudyScreen({
+  plan,
+  loading,
+  back = "/",
+}: {
+  plan: SessionPlan;
+  loading: ReactNode;
+  back?: string;
+}) {
   // The session places its cards through the engine's today's list, a synchronous call, so it
   // starts once the engine's module has loaded in the browser.
   const [engine, setEngine] = useState<"loading" | "ready" | "failed">(() =>
@@ -138,7 +156,7 @@ export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: Rea
             >
               다시 시도
             </button>
-            <Link href="/" className={quiet}>
+            <Link href={back} className={quiet}>
               그만하기
             </Link>
           </div>
@@ -147,11 +165,11 @@ export function StudyScreen({ plan, loading }: { plan: SessionPlan; loading: Rea
     );
   }
   if (engine === "loading") return loading;
-  return <Session plan={plan} />;
+  return <Session plan={plan} back={back} />;
 }
 
 /** The study screen over a session that has started, the engine loaded. */
-function Session({ plan }: { plan: SessionPlan }) {
+function Session({ plan, back }: { plan: SessionPlan; back: string }) {
   const [session] = useState(() => new StudySession(plan, Date.now, () => v7()));
   const [writes] = useState(() => new WriteQueue(saveAnswer));
   const [view, setView] = useState(() => session.view());
@@ -162,6 +180,11 @@ function Session({ plan }: { plan: SessionPlan }) {
   const helpButton = useRef<HTMLButtonElement>(null);
   const closeLink = useRef<HTMLAnchorElement>(null);
   const status = useSyncExternalStore(writes.subscribe, writes.getStatus, writes.getStatus);
+  const router = useRouter();
+  /** Where a leave held back by unsaved answers was going, while the screen asks; else null. */
+  const [leaving, setLeaving] = useState<string | null>(null);
+  /** The control that asked to leave, which takes the focus back if the user stays. */
+  const leaveFrom = useRef<HTMLElement | null>(null);
   /** The coach's step; null while it does not show. */
   const [coach, setCoach] = useState<CoachStep | null>(null);
   /** Whether a card has been on screen, after which the coach no longer starts on its own. */
@@ -226,6 +249,23 @@ function Session({ plan }: { plan: SessionPlan }) {
   function leave() {
     closeLink.current?.click();
   }
+  /**
+   * A link out of the page while answers wait to be saved: instead of following it, sends them,
+   * the failed one again first, then goes to [href], or asks before leaving if one fails again.
+   */
+  function exit(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (writes.getStatus().pending === 0) return;
+    event.preventDefault();
+    leaveFrom.current = event.currentTarget;
+    void writes.flush().then((saved) => {
+      if (saved) router.push(href);
+      else setLeaving(href);
+    });
+  }
+  function stay() {
+    setLeaving(null);
+    leaveFrom.current?.focus();
+  }
   function studyOn() {
     session.studyOn();
     setView(session.view());
@@ -244,6 +284,13 @@ function Session({ plan }: { plan: SessionPlan }) {
   useEffect(() => {
     keys.current = (event) => {
       if (isForeign(event)) return;
+      if (leaving !== null) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          stay();
+        }
+        return;
+      }
       if (helpOpen) {
         if (event.key === "Escape" || event.key === "?") {
           event.preventDefault();
@@ -301,7 +348,8 @@ function Session({ plan }: { plan: SessionPlan }) {
     };
   }, [session]);
 
-  // Leaving the page drops the writes still waiting, so the browser asks first.
+  // Unloading the page drops the writes still waiting, so the browser asks first; the page's own
+  // links out go through [exit].
   const unsaved = status.pending > 0;
   useEffect(() => {
     if (!unsaved) return;
@@ -331,7 +379,14 @@ function Session({ plan }: { plan: SessionPlan }) {
         currentCard
       )
     ) : view.kind === "complete" ? (
-      <CompletionCard completion={view.completion} onStudyOn={view.more ? studyOn : null} />
+      <CompletionCard
+        completion={view.completion}
+        back={back}
+        onStudyOn={view.more ? studyOn : null}
+        onStop={(event) => {
+          exit(event, back);
+        }}
+      />
     ) : null;
 
   return (
@@ -339,7 +394,10 @@ function Session({ plan }: { plan: SessionPlan }) {
       <header className="relative flex items-center gap-4">
         <Link
           ref={closeLink}
-          href="/"
+          href={back}
+          onClick={(event) => {
+            exit(event, back);
+          }}
           aria-label="그만하기"
           aria-keyshortcuts="Escape"
           title="그만하기 (Esc)"
@@ -509,6 +567,15 @@ function Session({ plan }: { plan: SessionPlan }) {
       )}
 
       {helpOpen && <ShortcutHelp onClose={closeHelp} />}
+      {leaving !== null && (
+        <LeaveConfirm
+          count={status.pending}
+          onStay={stay}
+          onLeave={() => {
+            router.push(leaving);
+          }}
+        />
+      )}
       {detailOpen && shown && <CardDetail answer={shown} onClose={closeDetail} />}
     </main>
   );
