@@ -65,6 +65,13 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// The word form's senses: those of the card's back, or one empty sense.
   late final List<SenseDraft> _senses = _draftsOf(widget.card?.back);
 
+  /// A field for each text block of the card's back, by its place there: a
+  /// word's extras or a merged back, edited beside its senses (issue #312).
+  late final Map<int, TextEditingController> _extras = {
+    for (final (index, block) in (widget.card?.back ?? const []).indexed)
+      if (block is TextContent) index: TextEditingController(text: block.text),
+  };
+
   /// The cloze form's blanks: the card's own, or none.
   late ClozeDraft _cloze = switch (widget.card?.front
       .whereType<ClozeContent>()
@@ -121,6 +128,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     for (final sense in _senses) {
       sense.dispose();
     }
+    for (final extra in _extras.values) {
+      extra.dispose();
+    }
     _table.dispose();
     super.dispose();
   }
@@ -153,13 +163,22 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     _ => _replaceText(widget.card?.front ?? const [], _front.text),
   };
 
+  /// The back's block at [index] as a word saves it beside its senses: a
+  /// text block as its field holds it, or none once the field is cleared;
+  /// any other block but the senses as it is.
+  Content? _besideSenses(int index, Content block) => switch (_extras[index]) {
+    final extra? => extra.text.trim().isEmpty ? null : TextContent(extra.text),
+    null => block is SensesContent ? null : block,
+  };
+
   /// The back as saved: the text typed, as [_frontBlocks]; or a word's senses,
   /// then any other block the card's back holds, such as its extras.
   List<Content> get _backBlocks => switch (_kind) {
     CardKind.basic => _replaceText(widget.card?.back ?? const [], _back.text),
     CardKind.word => [
       SensesContent([for (final sense in _senses) sense.sense]),
-      ...?widget.card?.back.where((block) => block is! SensesContent),
+      for (final (index, block) in (widget.card?.back ?? const []).indexed)
+        ?_besideSenses(index, block),
     ],
     CardKind.cloze when _keepsCloze => widget.card!.back,
     // The line with its blanks filled, as photo import writes a cloze's back.
@@ -383,10 +402,24 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                         errorText: _requiredError(l10n, _back),
                         onChanged: (_) => _change(),
                       ),
-                      CardKind.word => SenseFields(
-                        senses: _senses,
-                        showErrors: _showRequired,
-                        onChanged: _change,
+                      CardKind.word => Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: AppSpace.s16,
+                        children: [
+                          SenseFields(
+                            senses: _senses,
+                            showErrors: _showRequired,
+                            onChanged: _change,
+                          ),
+                          for (final extra in _extras.values)
+                            AppTextField(
+                              label: l10n.wordExtra,
+                              controller: extra,
+                              minLines: 2,
+                              maxLines: null,
+                              onChanged: (_) => _change(),
+                            ),
+                        ],
                       ),
                       CardKind.cloze => ClozeWords(
                         line: _front.text,

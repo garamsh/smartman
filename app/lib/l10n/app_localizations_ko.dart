@@ -207,6 +207,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addSense => '뜻 추가';
 
   @override
+  String get wordExtra => '덧붙인 내용';
+
+  @override
   String moveSenseUp(int number) {
     return '$number번째 뜻을 위로';
   }

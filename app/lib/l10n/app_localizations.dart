@@ -440,6 +440,12 @@ abstract class AppLocalizations {
   /// **'뜻 추가'**
   String get addSense;
 
+  /// Label of a field in the word form holding a text block of the back besides its senses, such as photo import's extras or a merged back.
+  ///
+  /// In ko, this message translates to:
+  /// **'덧붙인 내용'**
+  String get wordExtra;
+
   /// Screen-reader name of the button that moves a sense up one place.
   ///
   /// In ko, this message translates to:
