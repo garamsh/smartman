@@ -1,6 +1,6 @@
 # ADR 0112: Store an audio block by media id and length, up to 60 seconds, and play the front's sound once as a study card appears
 
-> Status: accepted
+> Status: accepted; its copy keeping the owner's media id refined by ADR-0113
 > Date: 2026-10-27
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

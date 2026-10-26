@@ -15,6 +15,7 @@ import 'package:smartman/study/src/stats.dart' show StatsPeriod;
 import 'package:smartman/study/src/stats_style.dart';
 import 'package:smartman/study/study.dart';
 
+import '../contrast.dart';
 import '../word_breaks.dart';
 
 /// 09:00 UTC on Thursday 15 October, five hours into the study day.
@@ -493,6 +494,7 @@ void main() {
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
       },
     );
   }

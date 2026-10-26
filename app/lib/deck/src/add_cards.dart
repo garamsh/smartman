@@ -32,11 +32,16 @@ final class FromPhoto extends AddSource {
 }
 
 /// Cards copied from another user's public deck [origin], stored as
-/// [CardSource.copy] with that origin.
+/// [CardSource.copy] with that origin, their photos and sounds copied from
+/// [owner]'s media as the user's own (ADR 0113).
 final class FromCopy extends AddSource {
-  const FromCopy(this.origin);
+  const FromCopy(this.origin, {required this.owner});
 
   final DeckId origin;
+
+  /// The id of the user who owns [origin], whose media folder holds its
+  /// cards' files.
+  final String owner;
 }
 
 /// What an incoming card does when a card in its deck already has its key.

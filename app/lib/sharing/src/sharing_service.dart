@@ -106,7 +106,7 @@ class SharingService {
             onDuplicate: onDuplicate,
           ),
       ],
-      source: FromCopy(deck.id),
+      source: FromCopy(deck.id, owner: deck.owner.value),
     );
   }
 

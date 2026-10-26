@@ -10,6 +10,7 @@ import 'package:smartman/account/src/sign_in_screen.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 
+import '../contrast.dart';
 import 'fake_account_service.dart';
 
 /// The stacked logo, read as the app's name.
@@ -199,6 +200,7 @@ void main() {
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
 
         await tester.tap(button);
         await tester.pumpAndSettle();

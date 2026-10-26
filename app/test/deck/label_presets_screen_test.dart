@@ -8,6 +8,7 @@ import 'package:smartman/deck/src/label_presets_screen.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 
+import '../contrast.dart';
 import '../study/study_storage.dart';
 
 /// The 품사 표시 row on a settings screen of its own, over device storage in
@@ -276,6 +277,7 @@ void main() {
         await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         handle.dispose();
       },
     );

@@ -8,6 +8,7 @@ import 'package:smartman/deck/src/table_form.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 
+import '../contrast.dart';
 import '../home/deck_screens.dart';
 import 'whole_cards.dart';
 import '../word_breaks.dart';
@@ -639,6 +640,7 @@ void main() {
           await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           await expectLater(tester, meetsGuideline(textContrastGuideline));
+          expectScreenTextReadable(tester);
         }
 
         await meetsGuidelines();

@@ -23,6 +23,7 @@ import 'package:smartman/sharing/sharing.dart';
 import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
+import 'contrast.dart';
 import 'account/fake_account_service.dart';
 import 'photo_import/fakes.dart';
 import 'sharing/fakes.dart';
@@ -665,6 +666,7 @@ void main() {
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(textContrastGuideline));
+          expectScreenTextReadable(tester);
         }
 
         await pumpApp(tester, themeMode: mode, account: FakeAccountService());

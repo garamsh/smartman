@@ -7,6 +7,7 @@ import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 
+import '../contrast.dart';
 import '../home/deck_screens.dart';
 
 /// The stored card, front and back.
@@ -451,6 +452,7 @@ void main() {
         await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await expectLater(tester, meetsGuideline(textContrastGuideline));
+        expectScreenTextReadable(tester);
         handle.dispose();
         await screens.close();
       },

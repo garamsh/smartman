@@ -71,26 +71,26 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
       </header>
       <section
         aria-label="오늘 이 덱"
-        className="flex flex-wrap items-center gap-6 rounded-card bg-hero px-6 py-6 text-on-hero shadow-card lg:px-7"
+        className="flex flex-wrap items-center gap-6 rounded-card bg-surface px-6 py-6 text-ink shadow-card lg:px-7"
       >
         <div className="flex flex-[0_1_220px] flex-col gap-1.5">
-          <p className="text-secondary">오늘 할 카드</p>
+          <p className="text-secondary text-muted">오늘 할 카드</p>
           <p
             aria-label={`오늘 할 카드 ${String(total)}장, 약 ${String(sessionMinutes(today.review, today.fresh, pace))}분`}
           >
             <span className="text-figure">{total}</span>{" "}
-            <span className="text-headline">
+            <span className="text-headline text-muted">
               장 · 약 {sessionMinutes(today.review, today.fresh, pace)}분
             </span>
           </p>
           {today.backlog && (
-            <p className="text-secondary">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
+            <p className="text-secondary text-muted">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
           )}
         </div>
         {/* "n장 중 m장 익힘" over the bar, as the deck's row says it; "0장" and no bar for a
             deck with no card (ADR 0096). */}
         <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-2">
-          <p className="text-secondary">
+          <p className="text-secondary text-muted">
             {cards.length > 0
               ? `${String(cards.length)}장 중 ${String(progress.mastered)}장 익힘`
               : "0장"}
@@ -99,17 +99,13 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
             <div
               role="img"
               aria-label={`익힘 ${String(progress.mastered)}장, 학습 중 ${String(progress.learning)}장, 새 카드 ${String(progress.fresh)}장`}
-              className="flex h-2.5 overflow-hidden rounded-full"
+              className="flex h-2.5 overflow-hidden rounded-full bg-hairline"
             >
+              <span className="bg-ink" style={{ width: `${String(share(progress.mastered))}%` }} />
               <span
-                className="bg-on-hero"
-                style={{ width: `${String(share(progress.mastered))}%` }}
-              />
-              <span
-                className="bg-on-hero/45"
+                className="bg-ink/45"
                 style={{ width: `${String(share(progress.learning))}%` }}
               />
-              <span className="flex-1 bg-on-hero/20" />
             </div>
           )}
         </div>

@@ -11,6 +11,7 @@ import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/photo_import/src/photo_viewer.dart' show PhotoViewer;
 
+import '../contrast.dart';
 import '../home/home_data.dart';
 
 import '../deck/whole_cards.dart';
@@ -2281,6 +2282,7 @@ void main() {
               meetsGuideline(androidTapTargetGuideline),
             );
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
           }
 
           await import.pickSeveral(2);
@@ -2314,6 +2316,7 @@ void main() {
               meetsGuideline(androidTapTargetGuideline),
             );
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
           }
 
           await import.pickSeveral(3);
@@ -2355,6 +2358,7 @@ void main() {
               meetsGuideline(androidTapTargetGuideline),
             );
             await expectLater(tester, meetsGuideline(textContrastGuideline));
+            expectScreenTextReadable(tester);
           }
 
           await import.shoot();
