@@ -4,18 +4,18 @@
 -- without an image draws its icon.
 
 -- One stored file. Cards and decks name it by id, never by URL, so moving the bytes elsewhere
--- changes how an id resolves and rewrites no row.
+-- changes how an id resolves and rewrites no row. The key is the owner and the id together, so
+-- no user can take an id another user's device made, as a public deck's image shows it to anyone.
 create table public.media (
-  id uuid primary key,
   user_id uuid not null references auth.users on delete cascade,
+  id uuid not null,
   kind text not null check (kind in ('image', 'audio')),
   mime_type text not null check (char_length(mime_type) between 1 and 100),
   byte_size integer not null check (byte_size between 1 and 10485760),
   sha256 text not null check (sha256 ~ '^[0-9a-f]{64}$'),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  primary key (user_id, id)
 );
-
-create index media_user_id on public.media (user_id);
 
 alter table public.media enable row level security;
 
@@ -28,6 +28,9 @@ create policy media_insert on public.media for insert to authenticated
   with check ((select auth.uid()) = user_id);
 create policy media_delete on public.media for delete to authenticated
   using ((select auth.uid()) = user_id);
+-- A suspended user stores no new media, as it writes no deck or card (20261019200000_admin_users.sql).
+create policy media_not_suspended_insert on public.media as restrictive for insert to authenticated
+  with check (not (select public.is_suspended()));
 
 -- A deck's image, the id of one of its owner's media rows. No foreign key: a device pushes the
 -- deck before its upload lands, and a reader draws the icon until the file can be read.
@@ -36,10 +39,14 @@ grant insert (image_media_id) on public.decks to authenticated;
 grant update (image_media_id) on public.decks to authenticated;
 
 -- The private bucket; config.toml declares the same for the local stack. Its limits match the
--- table's checks.
+-- table's checks. A bucket of that id made earlier, by hand or otherwise, is set to the same, so
+-- these settings hold in every project.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   values ('media', 'media', false, 10485760, array['image/jpeg'])
-  on conflict (id) do nothing;
+  on conflict (id) do update set
+    public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
 
 -- An object's name is {owner}/{media id}. Its owner writes it only after inserting the media row
 -- it names, and reads and deletes it; no one updates one, so a stored file never changes.
@@ -68,6 +75,11 @@ create policy media_objects_select on storage.objects for select to authenticate
       )
     )
   );
+
+-- A suspended user uploads no file to the bucket; other buckets are left to their own policies.
+create policy media_objects_not_suspended_insert on storage.objects as restrictive
+  for insert to authenticated
+  with check (bucket_id <> 'media' or not (select public.is_suspended()));
 
 create policy media_objects_delete on storage.objects for delete to authenticated
   using (

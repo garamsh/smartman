@@ -28,15 +28,21 @@ final class SupabaseMediaServer implements MediaServer {
   Future<void> upload(MediaUpload upload, Uint8List bytes) =>
       _request(() async {
         final owner = _owner();
-        await _client.from('media').upsert({
-          'id': upload.id.value,
-          'user_id': owner,
-          'kind': upload.kind.key,
-          'mime_type': upload.mimeType,
-          'byte_size': upload.byteSize,
-          'sha256': upload.sha256,
-          'created_at': upload.createdAt.toUtc().toIso8601String(),
-        }, ignoreDuplicates: true);
+        await _client
+            .from('media')
+            .upsert(
+              {
+                'id': upload.id.value,
+                'user_id': owner,
+                'kind': upload.kind.key,
+                'mime_type': upload.mimeType,
+                'byte_size': upload.byteSize,
+                'sha256': upload.sha256,
+                'created_at': upload.createdAt.toUtc().toIso8601String(),
+              },
+              onConflict: 'user_id,id',
+              ignoreDuplicates: true,
+            );
         try {
           await _client.storage
               .from(_bucket)
@@ -65,7 +71,11 @@ final class SupabaseMediaServer implements MediaServer {
   Future<void> delete(MediaId id) => _request(() async {
     final owner = _owner();
     await _client.storage.from(_bucket).remove([_path(owner, id)]);
-    await _client.from('media').delete().eq('id', id.value);
+    await _client
+        .from('media')
+        .delete()
+        .eq('user_id', owner)
+        .eq('id', id.value);
   });
 
   String _owner() => switch (_client.auth.currentUser) {

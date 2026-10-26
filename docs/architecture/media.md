@@ -35,9 +35,10 @@ The `media` domain: the user's images, kept on the device and in the private `me
 ### Server
 
 - `SupabaseMediaServer` acts as the signed-in user, whose id is the folder of each file, `{owner}/{media id}` ([`server.md`](server.md) §Media storage):
-  - an upload inserts the `media` row, keeping one already there, then uploads the file without overwriting; a file Storage already holds counts as uploaded, so a retry after a lost answer succeeds;
+  - an upload inserts the `media` row, keeping the user's own row already there under the id, the table's key being `(user_id, id)`, then uploads the file without overwriting; a file Storage already holds counts as uploaded, so a retry after a lost answer succeeds;
+  - a suspended user's upload is refused, and stays queued like any refusal;
   - a download of a file Storage does not hold returns null;
-  - a delete removes the file, then the row.
+  - a delete removes the file, then the user's row under the id.
 - Each request is bounded by 20 seconds. A timeout, a refusal, an unreachable server or no signed-in user is `MediaTransferFailed`, which the store keeps queued.
 
 ### Drawing

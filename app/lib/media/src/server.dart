@@ -6,8 +6,10 @@ import 'model.dart';
 /// Where the signed-in user's media is stored. Each method throws
 /// [MediaTransferFailed] when the server cannot be reached or refuses.
 abstract interface class MediaServer {
-  /// Stores [upload]'s row, then [bytes] as its file; a row or file already
-  /// stored, by an earlier attempt that lost its answer, counts as stored.
+  /// Stores [upload]'s row, then [bytes] as its file; the user's own row or
+  /// file already stored under the id, by an earlier attempt that lost its
+  /// answer, counts as stored. Another user's id is no conflict: a row's key
+  /// is its owner and its id.
   Future<void> upload(MediaUpload upload, Uint8List bytes);
 
   /// The file of [id]; null when the server holds none.

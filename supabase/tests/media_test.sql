@@ -2,7 +2,7 @@
 -- named {owner}/{media id}, are written and deleted by their owner and read by their owner and by
 -- any user the image of a public deck is shown to.
 begin;
-select plan(26);
+select plan(38);
 
 select results_eq(
   $$select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'media'$$,
@@ -77,6 +77,14 @@ select throws_ok(
   $$insert into storage.objects (bucket_id, name) values
     ('media', 'x/00000000-0000-4000-8000-00000000000a/e0000000-0000-4000-8000-000000000001')$$,
   '42501', null, 'an object under any other path than {owner}/{media id} is refused');
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name) values
+    ('media', upper('00000000-0000-4000-8000-00000000000a/e0000000-0000-4000-8000-000000000001'))$$,
+  '42501', null, 'an object named in upper case is refused, as no row''s path is');
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name) values
+    ('media', '00000000-0000-4000-8000-00000000000a/e0000000-0000-4000-8000-000000000001')$$,
+  '23505', null, 'a second object under a stored name is refused');
 select results_eq(
   $$select count(*)::int from storage.objects where bucket_id = 'media'$$, $$values (2)$$,
   'the owner reads its objects');
@@ -121,6 +129,14 @@ select is_empty(
   $$select name from storage.objects where bucket_id = 'media'$$,
   'B reads nothing once A''s public deck is hidden');
 
+-- Nor does a deleted one.
+reset role;
+update public.decks set hidden = false, deleted_at = now() where id = 'd0000000-0000-4000-8000-00000000000a';
+set local role authenticated;
+select is_empty(
+  $$select name from storage.objects where bucket_id = 'media'$$,
+  'B reads nothing once A''s public deck is deleted');
+
 -- A public deck of B's naming A's media reads nothing of A's.
 reset role;
 insert into public.decks (id, user_id, name, created_at, updated_at, visibility, published_at, image_media_id)
@@ -130,6 +146,53 @@ set local role authenticated;
 select is_empty(
   $$select name from storage.objects where bucket_id = 'media'$$,
   'a deck names only its owner''s files, so B''s deck naming A''s media reads nothing');
+
+-- An id is its owner's alone: A storing a row under an id B's device made takes nothing from B.
+set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-00000000000a","role":"authenticated"}';
+select lives_ok(
+  $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
+    ('e0000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-00000000000a', 'image',
+     'image/jpeg', 1, repeat('a', 64))$$,
+  'A stores a row under the id B''s image will have, in A''s own name');
+set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-00000000000b","role":"authenticated"}';
+select lives_ok(
+  $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
+    ('e0000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-00000000000b', 'image',
+     'image/jpeg', 1, repeat('b', 64))$$,
+  'B still stores its row under that id');
+select lives_ok(
+  $$insert into storage.objects (bucket_id, name) values
+    ('media', '00000000-0000-4000-8000-00000000000b/e0000000-0000-4000-8000-0000000000b1')$$,
+  'and still uploads its file');
+
+-- A suspended user stores no new row or file; a user not suspended, A, is the control.
+select lives_ok(
+  $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
+    ('e0000000-0000-4000-8000-0000000000b2', '00000000-0000-4000-8000-00000000000b', 'image',
+     'image/jpeg', 1, repeat('b', 64))$$,
+  'B stores a row before its suspension');
+reset role;
+insert into private.suspensions (user_id, reason) values ('00000000-0000-4000-8000-00000000000b', 'spam');
+set local role authenticated;
+select throws_ok(
+  $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
+    ('e0000000-0000-4000-8000-0000000000b3', '00000000-0000-4000-8000-00000000000b', 'image',
+     'image/jpeg', 1, repeat('b', 64))$$,
+  '42501', null, 'suspended, B stores no new media row');
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name) values
+    ('media', '00000000-0000-4000-8000-00000000000b/e0000000-0000-4000-8000-0000000000b2')$$,
+  '42501', null, 'nor uploads the file of a row it stored before');
+set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-00000000000a","role":"authenticated"}';
+select lives_ok(
+  $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
+    ('e0000000-0000-4000-8000-0000000000a3', '00000000-0000-4000-8000-00000000000a', 'image',
+     'image/jpeg', 1, repeat('a', 64))$$,
+  'control: A, not suspended, stores a row');
+select lives_ok(
+  $$insert into storage.objects (bucket_id, name) values
+    ('media', '00000000-0000-4000-8000-00000000000a/e0000000-0000-4000-8000-0000000000a3')$$,
+  'control: and uploads its file');
 
 -- A deletes its object and row; the objects of no one else are touched.
 set local request.jwt.claims to '{"sub":"00000000-0000-4000-8000-00000000000a","role":"authenticated"}';
@@ -145,10 +208,15 @@ select results_eq(
   $$values (1)$$,
   'the owner deletes its media row');
 
--- Deleting the account deletes its media rows by cascade.
+-- Deleting the account deletes its media rows by cascade, and no one else's.
 reset role;
 delete from auth.users where id = '00000000-0000-4000-8000-00000000000a';
-select is_empty($$select id from public.media$$, 'deleting the user deletes its media rows');
+select is_empty(
+  $$select id from public.media where user_id = '00000000-0000-4000-8000-00000000000a'$$,
+  'deleting the user deletes its media rows');
+select isnt_empty(
+  $$select id from public.media where user_id = '00000000-0000-4000-8000-00000000000b'$$,
+  'and leaves another user''s');
 
 select * from finish();
 rollback;

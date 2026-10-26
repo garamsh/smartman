@@ -25,11 +25,12 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 ## Decision
 
 - **Referenced by id.** A stored file is named by a media id, a UUID the device makes. A deck, and later a card block, holds that id, never a URL. Moving the bytes to S3 or R2 is a copy plus a change to how an id resolves; no row is rewritten.
-- **The `media` table** holds one row per file: `id`, `user_id`, `kind` (`image`, with `audio` reserved), `mime_type`, `byte_size`, `sha256` and `created_at`. Its owner inserts, reads and deletes its rows; no one updates one, and no one else reads one. It goes with its user by cascade.
+- **The `media` table** holds one row per file: `id`, `user_id`, `kind` (`image`, with `audio` reserved), `mime_type`, `byte_size`, `sha256` and `created_at`. Its key is `(user_id, id)`: an id is unique only within its owner's rows, so no user can take an id another user's device made, which a public deck's `image_media_id` shows to anyone. Its owner inserts, reads and deletes its rows; no one updates one, and no one else reads one. It goes with its user by cascade.
 - **The private bucket `media`** holds each file at `{owner}/{media id}`.
   - Its owner uploads a file only after inserting the row that names it, at exactly that path, and reads and deletes its own files. No one overwrites a file.
   - Any signed-in user reads the image of a deck the decks policy shows them as public: not hidden, not deleted, and the object's owner's own deck. No one else reads a file.
-  - The migration creates the bucket in every project; `supabase/config.toml` declares the same for the local stack.
+  - A suspended user inserts no `media` row and uploads no file, through restrictive insert policies like those on `decks` and `cards`.
+  - The migration creates the bucket in every project, and sets a `media` bucket already there to the same privacy and limits; `supabase/config.toml` declares the same for the local stack.
 - **Size limits.** A stored image is a JPEG, cropped to its centred square and scaled to at most 1024 px a side, at quality 85. The bucket accepts `image/jpeg` alone and at most 10 MiB a file, which `media.byte_size` checks too. The limit is a ceiling, not the target: the prepared image is far smaller, and the client's resize, not the limit, sets its size (the owner's decision on #383, 2026-10-26). Audio widens the MIME types in its own migration.
 - **A deck's image.** `decks.image_media_id`, nullable with no foreign key, synced with the deck. A deck with one draws it on its tile; one without, or whose file cannot be read, draws its icon.
 - **The device.** A new domain, `media` (`app/lib/media/`), keeps files in the app's support directory under their ids.
@@ -45,6 +46,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - A deck deleted on another device leaves its downloaded file on this one until the app's data is cleared.
 - A file released but still queued for deletion when the user signs out, which clears the queues with the rest of the device's data, stays on the server until the account is deleted.
 - The web draws only icons until its own follow-up issue reads the bucket.
+- An owner can replace its own file's bytes by deleting it and uploading again under the same name, and nothing compares `sha256` or `byte_size` with the file stored. Both reach only the owner's own content.
+- `delete-account` can leave a file behind if another of the user's devices uploads between its last listing and the user's deletion; the user's row goes by cascade, and the file stays orphaned in the bucket.
 
 ## Signs the decision was wrong
 

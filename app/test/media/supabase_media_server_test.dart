@@ -80,6 +80,11 @@ void main() {
     final row = requests.first;
     expect(row.url.path, '/rest/v1/media');
     expect(row.headers['Prefer'], contains('resolution=ignore-duplicates'));
+    expect(
+      row.url.queryParameters['on_conflict'],
+      'user_id,id',
+      reason: 'only the owner\'s own row under the id counts as stored',
+    );
     expect(jsonDecode(row.body), {
       'id': _id.value,
       'user_id': _owner,
@@ -168,6 +173,7 @@ void main() {
       'prefixes': ['$_owner/${_id.value}'],
     });
     expect(requests.last.url.queryParameters['id'], 'eq.${_id.value}');
+    expect(requests.last.url.queryParameters['user_id'], 'eq.$_owner');
   });
 
   test('an unreachable server fails a transfer as one to retry', () async {
