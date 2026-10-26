@@ -341,7 +341,6 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.dontKnowText,
     required this.onDontKnowText,
     required this.shadow,
-    required this.tintBlue,
     required this.tintAmber,
     required this.tintGreen,
     required this.tintRed,
@@ -381,7 +380,6 @@ final class AppColors extends ThemeExtension<AppColors> {
     dontKnowText: Color(0xFFC2402F),
     onDontKnowText: Color(0xFFFFFFFF),
     shadow: Color(0xFF1F2A44),
-    tintBlue: Color(0xFFE8ECF5),
     tintAmber: Color(0xFFFFF1D6),
     tintGreen: Color(0xFFE3F4EC),
     tintRed: Color(0xFFFCE8E6),
@@ -422,7 +420,6 @@ final class AppColors extends ThemeExtension<AppColors> {
     dontKnowText: Color(0xFFFF8577),
     onDontKnowText: Color(0xFF0E1424),
     shadow: Color(0xFF000000),
-    tintBlue: Color(0xFF2A3560),
     tintAmber: Color(0xFF4A3B1E),
     tintGreen: Color(0xFF1E3F33),
     tintRed: Color(0xFF4A2624),
@@ -493,10 +490,6 @@ final class AppColors extends ThemeExtension<AppColors> {
 
   /// The colour of every shadow, before its opacity.
   final Color shadow;
-
-  /// A blue tint, which the web's deck tiles take until they follow the
-  /// deck palette.
-  final Color tintBlue;
 
   /// An amber tint: the backlog card's check and a chart's shortfall.
   final Color tintAmber;
@@ -575,7 +568,6 @@ final class AppColors extends ThemeExtension<AppColors> {
     Color? dontKnowText,
     Color? onDontKnowText,
     Color? shadow,
-    Color? tintBlue,
     Color? tintAmber,
     Color? tintGreen,
     Color? tintRed,
@@ -612,7 +604,6 @@ final class AppColors extends ThemeExtension<AppColors> {
     dontKnowText: dontKnowText ?? this.dontKnowText,
     onDontKnowText: onDontKnowText ?? this.onDontKnowText,
     shadow: shadow ?? this.shadow,
-    tintBlue: tintBlue ?? this.tintBlue,
     tintAmber: tintAmber ?? this.tintAmber,
     tintGreen: tintGreen ?? this.tintGreen,
     tintRed: tintRed ?? this.tintRed,
@@ -655,7 +646,6 @@ final class AppColors extends ThemeExtension<AppColors> {
       dontKnowText: mix(dontKnowText, other.dontKnowText),
       onDontKnowText: mix(onDontKnowText, other.onDontKnowText),
       shadow: mix(shadow, other.shadow),
-      tintBlue: mix(tintBlue, other.tintBlue),
       tintAmber: mix(tintAmber, other.tintAmber),
       tintGreen: mix(tintGreen, other.tintGreen),
       tintRed: mix(tintRed, other.tintRed),
