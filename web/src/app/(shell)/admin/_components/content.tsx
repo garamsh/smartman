@@ -22,13 +22,13 @@ import {
   readDeck,
   readExtractionBreakdown,
   readOverview,
-  readPlans,
+  readPlanVersions,
   readPromptVersion,
   readPromptVersions,
   readPublicDecks,
   readReportedDecks,
   readUser,
-  searchUsers,
+  searchUsersThrough,
   ReportedDecks,
   UserSearch,
   UserView,
@@ -40,25 +40,31 @@ function searchText(value: string | string[] | undefined): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/** The last page of the user search an address names, 0 when it names none or no whole number. */
+function pageIndex(value: string | string[] | undefined): number {
+  return typeof value === "string" && /^\d{1,3}$/.test(value) ? Number(value) : 0;
+}
+
 export async function OverviewContent() {
   const [read, plans, breakdown] = await Promise.all([
     readOverview(),
-    readPlans(),
+    readPlanVersions(),
     readExtractionBreakdown(),
   ]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if ("failure" in plans) return <AdminFailureMessage failure={plans.failure} />;
   if ("failure" in breakdown) return <AdminFailureMessage failure={breakdown.failure} />;
-  // A photo counted before calls were recorded is costed at the Free plan's model, as ADR 0071 did.
-  const free = plans.data.find((plan) => plan.id === "free")?.model ?? null;
+  // A photo counted before calls were recorded is costed at the model of Free's current version.
+  const free =
+    plans.data.find((version) => version.plan === "free" && version.current)?.model ?? null;
   const today = new Date().toISOString().slice(0, 10);
   return <OverviewView overview={read.data} usage={summarizeUsage(breakdown.data, today, free)} />;
 }
 
 export async function PlansContent() {
-  const [read, timeZone] = await Promise.all([readPlans(), adminTimeZone()]);
+  const [read, timeZone] = await Promise.all([readPlanVersions(), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
-  return <PlansView plans={read.data} timeZone={timeZone} />;
+  return <PlansView versions={read.data} timeZone={timeZone} />;
 }
 
 export async function ReportsContent() {
@@ -114,15 +120,19 @@ export async function UsersContent({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = searchText((await searchParams).q);
+  const { q, page } = await searchParams;
+  const query = searchText(q);
+  const shown = pageIndex(page);
   const timeZone = await adminTimeZone();
-  // An address with a query opens on its first page, read on the server.
-  const read = query === "" ? null : await searchUsers(query, 0);
+  // An address with a query opens on the pages it names, read on the server, so a search the
+  // admin left for a user's page comes back as it was.
+  const read = query === "" ? null : await searchUsersThrough(query, shown);
   return (
     <>
       <UserSearch
         initialQuery={query}
         initialPage={read === null || "failure" in read ? null : read.data}
+        initialPageIndex={shown}
         timeZone={timeZone}
       />
       {read !== null && "failure" in read && <AdminFailureMessage failure={read.failure} />}

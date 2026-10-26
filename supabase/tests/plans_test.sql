@@ -1,25 +1,65 @@
--- Plans (ADR 0071): each user's plan resolves to Free, Pro or an unended Special; extract-cards
--- counts a photo by its plan's limit and learns its model; only an admin sets plans and grants
--- them, each write recorded.
+-- Plans (ADR 0097): each user's plan resolves to Free, Pro or an unended Max, on the version a new
+-- grant began on until its renewal, the version in effect at the last renewal after it, and a
+-- later version for all once it starts; extract-cards counts a photo by that version; only an
+-- admin creates versions and grants plans, each write recorded.
 begin;
-select plan(34);
+select plan(45);
 
--- The log starts empty here: a migration may record a change of its own, as
--- 20261019230003_activate_prompt_v9.sql records prompt v9's activation.
+-- The log starts empty here, and so do the versions: the migration records and creates its own,
+-- which plan_versions_migration_test.sql covers.
 delete from private.admin_audit;
+delete from private.plan_versions;
 
--- A is an admin, B a signed-in user who is not, C, D and E users on each plan.
-insert into auth.users (id, email) values
-  ('00000000-0000-4000-8000-00000000000a', 'admin@example.com'),
-  ('00000000-0000-4000-8000-00000000000b', 'user@example.com'),
-  ('00000000-0000-4000-8000-00000000000c', 'pro@example.com'),
-  ('00000000-0000-4000-8000-00000000000d', 'special@example.com'),
-  ('00000000-0000-4000-8000-00000000000e', 'ended@example.com');
+-- The last renewal, the 1st of this month at 00:00 Asia/Seoul, and a time this month before now.
+create function pg_temp.renewed() returns timestamptz language sql stable as $$
+  select date_trunc('month', now(), 'Asia/Seoul');
+$$;
+create function pg_temp.this_month(fraction double precision) returns timestamptz language sql stable as $$
+  select pg_temp.renewed() + (now() - pg_temp.renewed()) * fraction;
+$$;
+
+-- Each plan's versions: Free's from before this month and one begun this month; Pro's from two
+-- months back, one before the renewal and one begun this month; Max's from before and one for all
+-- begun this month; and a version for all of Free's that starts tomorrow.
+create table pg_temp.ids (name text primary key, id bigint);
+with added as (
+  insert into private.plan_versions (plan, quota, amount, model, starts_at, applies_to_all)
+  values
+    ('free', 'monthly', 5, 'vendor/free-old', pg_temp.renewed() - interval '40 days', false),
+    ('free', 'monthly', 2, 'vendor/free-new', pg_temp.this_month(0.5), false),
+    ('free', 'monthly', 50, 'vendor/free-new', now() + interval '1 day', true),
+    ('pro', 'daily', 7, 'vendor/pro-model', pg_temp.renewed() - interval '60 days', false),
+    ('pro', 'daily', 3, 'vendor/pro-model', pg_temp.renewed() - interval '20 days', false),
+    ('pro', 'daily', 1, 'vendor/pro-model', pg_temp.this_month(0.5), false),
+    ('max', 'daily', 1, 'vendor/max-model', pg_temp.renewed() - interval '40 days', false),
+    ('max', 'unlimited', 4, 'vendor/max-model', pg_temp.this_month(0.5), true)
+  returning id, plan, amount
+) insert into pg_temp.ids select plan || amount, id from added;
+create function pg_temp.id(name text) returns bigint language sql stable as $$
+  select id from pg_temp.ids where ids.name = id.name;
+$$;
+grant select on pg_temp.ids to public;
+grant execute on function pg_temp.id(text), pg_temp.renewed(), pg_temp.this_month(double precision) to public;
+
+-- A is an admin and B a Free user who is not, both from before this month; C on Pro from before
+-- the renewal, its grant on Pro's version of two months back; D on Pro since this month, after
+-- Pro's latest version; E on Max from before the renewal; F on a Max that has ended; 1 a Free
+-- user who signed up after Free's latest version; 2 a user Pro is granted now.
+insert into auth.users (id, email, created_at) values
+  ('00000000-0000-4000-8000-00000000000a', 'admin@example.com', pg_temp.renewed() - interval '50 days'),
+  ('00000000-0000-4000-8000-00000000000b', 'user@example.com', pg_temp.renewed() - interval '50 days'),
+  ('00000000-0000-4000-8000-00000000000c', 'pro@example.com', pg_temp.renewed() - interval '50 days'),
+  ('00000000-0000-4000-8000-00000000000d', 'new-pro@example.com', pg_temp.renewed() - interval '50 days'),
+  ('00000000-0000-4000-8000-00000000000e', 'max@example.com', pg_temp.renewed() - interval '50 days'),
+  ('00000000-0000-4000-8000-00000000000f', 'ended@example.com', pg_temp.renewed() - interval '50 days'),
+  ('00000000-0000-4000-8000-000000000001', 'new@example.com', now()),
+  ('00000000-0000-4000-8000-000000000002', 'granted@example.com', pg_temp.renewed() - interval '50 days');
 insert into private.admins (user_id) values ('00000000-0000-4000-8000-00000000000a');
-insert into private.user_plans (user_id, plan, ends_at) values
-  ('00000000-0000-4000-8000-00000000000c', 'pro', null),
-  ('00000000-0000-4000-8000-00000000000d', 'special', now() + interval '1 day'),
-  ('00000000-0000-4000-8000-00000000000e', 'special', now() - interval '1 second');
+insert into private.user_plans (user_id, plan, ends_at, granted_at, version_id) values
+  ('00000000-0000-4000-8000-00000000000c', 'pro', null, pg_temp.renewed() - interval '30 days', pg_temp.id('pro7')),
+  ('00000000-0000-4000-8000-00000000000d', 'pro', null, pg_temp.this_month(0.75), pg_temp.id('pro1')),
+  ('00000000-0000-4000-8000-00000000000e', 'max', now() + interval '1 day', pg_temp.renewed() - interval '30 days', pg_temp.id('max1')),
+  ('00000000-0000-4000-8000-00000000000f', 'max', now() - interval '1 second', pg_temp.renewed() - interval '30 days', pg_temp.id('max1'));
 
 -- Signs in as the user whose id ends in [who], or as anon for null.
 create function pg_temp.sign_in(who text) returns void language plpgsql as $$
@@ -39,8 +79,8 @@ grant execute on function pg_temp.sign_in(text) to public;
 -- Every admin plan function, called with arguments that change nothing.
 create function pg_temp.calls() returns setof text language sql as $$
   values
-    ($q$select * from public.admin_plans()$q$),
-    ($q$select public.admin_set_plan('none', 'anthropic/claude-haiku-5.5', 30)$q$),
+    ($q$select * from public.admin_plan_versions()$q$),
+    ($q$select public.admin_create_plan_version('pro', 'daily', 9, 'vendor/pro-model', now() - interval '1 day')$q$),
     ($q$select * from public.admin_user_plan('00000000-0000-4000-8000-00000000000b')$q$),
     ($q$select public.admin_grant_plan('00000000-0000-4000-8000-00000000ffff', 'pro')$q$),
     ($q$select public.admin_revoke_plan('00000000-0000-4000-8000-00000000000b')$q$)
@@ -69,23 +109,18 @@ end;
 $$;
 
 -- What extract-cards gets for one photo of the user whose id ends in [who].
-create function pg_temp.start(who text) returns table (plan text, model text, daily_limit integer, allowed boolean)
+create function pg_temp.start(who text)
+returns table (plan text, model text, photo_limit integer, period text, allowed boolean)
 language plpgsql as $$
 begin
   perform set_config('role', 'service_role', true);
-  return query select b.plan, b.model, b.daily_limit, b.allowed
+  return query select b.plan, b.model, b.photo_limit, b.period, b.allowed
     from public.begin_extraction(('00000000-0000-4000-8000-00000000000' || who)::uuid) as b;
   perform set_config('role', 'none', true);
 end;
 $$;
 
--- The seed and the role.
-
-select results_eq(
-  $$select id, model, daily_limit from private.plans order by id$$,
-  $$values ('free', 'anthropic/claude-haiku-5.5', 30), ('pro', 'anthropic/claude-haiku-5.5', 30),
-           ('special', 'anthropic/claude-haiku-5.5', 30)$$,
-  'the migration seeds the three plans on the model and the limit production runs now');
+-- The role.
 
 select results_eq(
   $$select count(*) from pg_temp.refused_as('b') as r (call) where call not like 'failed: %'$$,
@@ -104,92 +139,142 @@ reset role;
 select pg_temp.sign_in('b');
 select throws_ok($$select * from public.begin_extraction('00000000-0000-4000-8000-00000000000b')$$,
   '42501', null, 'a signed-in user cannot start an extraction itself');
-select throws_ok($$select * from private.plans$$, '42501', null, 'nor read the plans');
+select throws_ok($$select * from private.plan_versions$$, '42501', null, 'nor read the versions');
 select throws_ok($$select * from private.user_plans$$, '42501', null, 'nor read the grants');
-select throws_ok($$insert into private.user_plans (user_id, plan) values ('00000000-0000-4000-8000-00000000000b', 'pro')$$,
+select throws_ok($$insert into private.user_plans (user_id, plan, version_id) values ('00000000-0000-4000-8000-00000000000b', 'pro', 1)$$,
   '42501', null, 'nor grant itself a plan');
 reset role;
 
--- Resolution and the count by the plan's limit.
+-- Resolution.
 
-update private.plans set model = 'vendor/free-model', daily_limit = 2 where id = 'free';
-update private.plans set model = 'vendor/pro-model', daily_limit = 3 where id = 'pro';
-update private.plans set model = 'vendor/special-model', daily_limit = 1 where id = 'special';
+select results_eq($$select plan, model, photo_limit, period from pg_temp.start('b')$$,
+  $$values ('free', 'vendor/free-old', 5, 'month')$$,
+  'a Free user from before this month is on the Free version in effect at the renewal');
+reset role;
+select results_eq($$select plan, model, photo_limit, period from pg_temp.start('1')$$,
+  $$values ('free', 'vendor/free-new', 2, 'month')$$,
+  'a Free user who signed up since Free''s latest version is on it at once');
+reset role;
+select results_eq($$select plan, photo_limit, period from pg_temp.start('c')$$,
+  $$values ('pro', 3, 'day')$$,
+  'a grant from before the renewal is on the version in effect at the renewal, not the one it began on');
+reset role;
+select results_eq($$select plan, photo_limit from pg_temp.start('d')$$,
+  $$values ('pro', 1)$$,
+  'a grant begun this month keeps the version it began on, not the one in effect at the renewal');
+reset role;
+select results_eq($$select plan, model, photo_limit, period from pg_temp.start('e')$$,
+  $$values ('max', 'vendor/max-model', 4, 'day')$$,
+  'a later version for all applies to a grant from before it, its fair-use cap a day');
+reset role;
+select results_eq($$select plan, model, photo_limit from pg_temp.start('f')$$,
+  $$values ('free', 'vendor/free-old', 5)$$, 'a Max past its end is on Free');
+reset role;
 
-select results_eq($$select plan, model, daily_limit, allowed from pg_temp.start('b')$$,
-  $$values ('free', 'vendor/free-model', 2, true)$$, 'a user without a grant is on Free');
-reset role;
-select results_eq($$select plan, model, allowed from pg_temp.start('c')$$,
-  $$values ('pro', 'vendor/pro-model', true)$$, 'a Pro user is served by Pro''s model');
-reset role;
-select results_eq($$select plan, model, allowed from pg_temp.start('d')$$,
-  $$values ('special', 'vendor/special-model', true)$$, 'a Special user before its end is on Special');
-reset role;
-select results_eq($$select plan, model, daily_limit from pg_temp.start('e')$$,
-  $$values ('free', 'vendor/free-model', 2)$$, 'a Special user past its end is on Free');
-reset role;
-
-select results_eq($$select allowed from pg_temp.start('b')$$, $$values (true)$$, 'Free''s second photo is allowed');
-reset role;
-select results_eq($$select allowed from pg_temp.start('b')$$, $$values (false)$$,
-  'Free''s third photo is over its limit of 2');
-reset role;
-select results_eq($$select allowed from pg_temp.start('c')$$, $$values (true)$$,
-  'control: Pro''s second photo is allowed under its limit of 3');
-reset role;
-select results_eq($$select allowed from pg_temp.start('d')$$, $$values (false)$$,
-  'Special''s second photo is over its limit of 1');
+select results_eq(
+  $$select allowed from pg_temp.start('1') union all select allowed from pg_temp.start('1')$$,
+  $$values (true), (false)$$, 'the new Free user''s third photo this month is over its 2');
 reset role;
 select results_eq(
   $$select user_id, count(*) from public.extraction_usage group by user_id order by user_id$$,
-  $$values ('00000000-0000-4000-8000-00000000000b'::uuid, 2::bigint), ('00000000-0000-4000-8000-00000000000c'::uuid, 2::bigint),
-           ('00000000-0000-4000-8000-00000000000d'::uuid, 1::bigint), ('00000000-0000-4000-8000-00000000000e'::uuid, 1::bigint)$$,
+  $$values ('00000000-0000-4000-8000-000000000001'::uuid, 2::bigint),
+           ('00000000-0000-4000-8000-00000000000b'::uuid, 1::bigint), ('00000000-0000-4000-8000-00000000000c'::uuid, 1::bigint),
+           ('00000000-0000-4000-8000-00000000000d'::uuid, 1::bigint), ('00000000-0000-4000-8000-00000000000e'::uuid, 1::bigint),
+           ('00000000-0000-4000-8000-00000000000f'::uuid, 1::bigint)$$,
   'only allowed photos are recorded');
-
-delete from private.plans where id = 'free';
-select is_empty($$select * from pg_temp.start('b')$$,
-  'without Free''s settings, a Free user gets no plan, which the function answers as not configured');
-reset role;
 
 -- Admin writes.
 
 select pg_temp.sign_in('a');
-select results_eq($$select id, daily_limit from public.admin_plans()$$,
-  $$values ('pro', 3), ('special', 1)$$, 'the plans, in plan order');
-select is(public.admin_set_plan('pro', 'openai/gpt-6-luna', 10), true, 'set Pro''s model and limit');
-select is(public.admin_set_plan('pro', 'openai/gpt-6-luna', 10), false, 'setting the same again changes nothing');
-select throws_ok($$select public.admin_set_plan('pro', 'not a model', 10)$$, '23514', null,
-  'a model id of another form cannot be saved');
-select throws_ok($$select public.admin_set_plan('pro', 'openai/gpt-6-luna', 1001)$$, '23514', null,
-  'nor a limit over 1000');
-
-select is(public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'special', now() + interval '7 days'), 'granted',
-  'grant Special with an end');
 select results_eq(
-  $$select plan, daily_limit, granted_plan, ends_at > now(), granted_by_email from public.admin_user_plan('00000000-0000-4000-8000-00000000000b')$$,
-  $$values ('special', 1, 'special', true, 'admin@example.com')$$,
-  'the user is on Special, with its limit and the grant behind it');
+  $$select plan, amount, current from public.admin_plan_versions()$$,
+  $$values ('free', 50, false), ('free', 2, true), ('free', 5, false),
+           ('pro', 1, true), ('pro', 3, false), ('pro', 7, false),
+           ('max', 4, true), ('max', 1, false)$$,
+  'the versions by plan, the latest start first, each plan''s new subscribers'' marked');
+select is(public.admin_grant_plan('00000000-0000-4000-8000-000000000002', 'pro'), 'granted',
+  'grant Pro now');
+reset role;
+select results_eq($$select photo_limit from pg_temp.start('2')$$, $$values (1)$$,
+  'a user granted a plan now is on its latest version at once');
+reset role;
+
+select pg_temp.sign_in('a');
+select is(public.admin_create_plan_version('pro', 'daily', 9, 'vendor/pro-model'), 'created',
+  'create a Pro version from now');
+select is(public.admin_create_plan_version('pro', 'daily', 9, 'vendor/pro-model'), 'unchanged',
+  'the same terms again change nothing');
+select is(public.admin_create_plan_version('pro', 'daily', 12, 'vendor/pro-model', now() - interval '1 minute'),
+  'past_start', 'a start before now is refused');
+select is(public.admin_create_plan_version('pro', 'daily', 2, 'vendor/pro-model', null, true),
+  'not_in_favour', 'fewer photos cannot apply to all');
+select is(public.admin_create_plan_version('pro', 'daily', 20, 'vendor/other-model', null, true),
+  'not_in_favour', 'nor a change of model');
+select is(public.admin_create_plan_version('pro', 'monthly', 20, 'vendor/pro-model', null, true),
+  'not_in_favour', 'nor a monthly count where a daily one was');
+select is(public.admin_create_plan_version('free', 'monthly', 60, 'vendor/free-new', now() + interval '2 days'),
+  'created', 'create a Free version that starts in two days');
+reset role;
+select results_eq($$select photo_limit from pg_temp.start('d')$$, $$values (1)$$,
+  'control: an existing grant keeps its version after a version not for all');
+reset role;
+select results_eq($$select photo_limit from pg_temp.start('2')$$, $$values (1)$$,
+  'and so does one granted before it this month');
+reset role;
+select pg_temp.sign_in('a');
+select is(public.admin_create_plan_version('pro', 'daily', 20, 'vendor/pro-model', null, true),
+  'created', 'more photos a day on the same model apply to all');
+reset role;
+select results_eq(
+  $$select photo_limit from pg_temp.start('c') union all select photo_limit from pg_temp.start('d')
+    union all select photo_limit from pg_temp.start('2')$$,
+  $$values (20), (20), (20)$$, 'every Pro grant is on it at once');
+reset role;
+select pg_temp.sign_in('a');
+select throws_ok($$select public.admin_create_plan_version('pro', 'daily', 30, 'not a model')$$, '23514', null,
+  'a model id of another form cannot be saved');
+select throws_ok($$select public.admin_create_plan_version('pro', 'daily', 100001, 'vendor/pro-model')$$, '23514', null,
+  'nor an amount over 100,000');
+select throws_ok($$select public.admin_create_plan_version('pro', 'weekly', 30, 'vendor/pro-model')$$, '23514', null,
+  'nor a quota of another kind');
+select throws_ok($$select public.admin_create_plan_version('special', 'daily', 30, 'vendor/pro-model')$$, '23514', null,
+  'nor a plan that does not exist');
+select results_eq($$select plan, amount, current from public.admin_plan_versions() where plan = 'free'$$,
+  $$values ('free', 60, false), ('free', 50, false), ('free', 2, true), ('free', 5, false)$$,
+  'a version starting later is listed and not yet current');
+
+select is(public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'max', now() + interval '7 days'), 'granted',
+  'grant Max with an end');
+select results_eq(
+  $$select plan, quota, amount, granted_plan, ends_at > now(), granted_by_email from public.admin_user_plan('00000000-0000-4000-8000-00000000000b')$$,
+  $$values ('max', 'unlimited', 4, 'max', true, 'admin@example.com')$$,
+  'the user is on Max, with its terms and the grant behind it');
 select is(public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'pro'), 'granted', 'replace it with Pro');
-select results_eq($$select plan, ends_at from public.admin_user_plan('00000000-0000-4000-8000-00000000000b')$$,
-  $$values ('pro', null::timestamptz)$$, 'one grant per user, the latest');
+select results_eq($$select plan, ends_at, version_id = pg_temp.id('pro1') from public.admin_user_plan('00000000-0000-4000-8000-00000000000b')$$,
+  $$values ('pro', null::timestamptz, false)$$, 'one grant per user, the latest, on the latest version');
 select results_eq(
   $$select public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'pro', now() + interval '1 day'),
-           public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'special', now() - interval '1 day'),
+           public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'max', now() - interval '1 day'),
            public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'free'),
+           public.admin_grant_plan('00000000-0000-4000-8000-00000000000b', 'special'),
            public.admin_grant_plan('00000000-0000-4000-8000-00000000ffff', 'pro')$$,
-  $$values ('bad_plan', 'bad_plan', 'bad_plan', 'no_user')$$,
-  'Pro with an end, Special ending in the past, Free and an unknown user are refused');
-select results_eq($$select plan, granted_plan from public.admin_user_plan('00000000-0000-4000-8000-00000000000e')$$,
-  $$values (null::text, 'special')$$,
-  'an ended Special shows its grant beside no plan when Free''s settings are missing');
+  $$values ('bad_plan', 'bad_plan', 'bad_plan', 'bad_plan', 'no_user')$$,
+  'Pro with an end, Max ending in the past, Free, Special and an unknown user are refused');
+select results_eq(
+  $$select plan, amount, used, granted_plan from public.admin_user_plan('00000000-0000-4000-8000-00000000000f')$$,
+  $$values ('free', 5, 1, 'max')$$,
+  'an ended Max shows its grant beside Free, with the photos counted this month');
 select is(public.admin_revoke_plan('00000000-0000-4000-8000-00000000000b'), true, 'revoke the plan');
 select is(public.admin_revoke_plan('00000000-0000-4000-8000-00000000000b'), false, 'revoking again changes nothing');
 reset role;
 select results_eq(
-  $$select action, target_kind, target_id, detail - 'ends_at' from private.admin_audit order by id$$,
+  $$select action, target_kind, target_id, detail - 'ends_at' - 'starts_at' - 'version_id' from private.admin_audit order by id$$,
   $$values
-    ('set_plan', 'plan', 'pro', '{"model": "openai/gpt-6-luna", "daily_limit": 10, "model_before": "vendor/pro-model", "daily_limit_before": 3}'::jsonb),
-    ('grant_plan', 'user', '00000000-0000-4000-8000-00000000000b', '{"email": "user@example.com", "plan": "special"}'::jsonb),
+    ('grant_plan', 'user', '00000000-0000-4000-8000-000000000002', '{"email": "granted@example.com", "plan": "pro"}'::jsonb),
+    ('create_plan_version', 'plan', 'pro', '{"quota": "daily", "amount": 9, "model": "vendor/pro-model", "applies_to_all": false, "quota_before": "daily", "amount_before": 1, "model_before": "vendor/pro-model"}'::jsonb),
+    ('create_plan_version', 'plan', 'free', '{"quota": "monthly", "amount": 60, "model": "vendor/free-new", "applies_to_all": false, "quota_before": "monthly", "amount_before": 50, "model_before": "vendor/free-new"}'::jsonb),
+    ('create_plan_version', 'plan', 'pro', '{"quota": "daily", "amount": 20, "model": "vendor/pro-model", "applies_to_all": true, "quota_before": "daily", "amount_before": 9, "model_before": "vendor/pro-model"}'::jsonb),
+    ('grant_plan', 'user', '00000000-0000-4000-8000-00000000000b', '{"email": "user@example.com", "plan": "max"}'::jsonb),
     ('grant_plan', 'user', '00000000-0000-4000-8000-00000000000b', '{"email": "user@example.com", "plan": "pro"}'::jsonb),
     ('revoke_plan', 'user', '00000000-0000-4000-8000-00000000000b', '{"email": "user@example.com", "plan": "pro"}'::jsonb)$$,
   'each change is recorded once, and the refusals and no-ops not at all');
@@ -197,13 +282,15 @@ select results_eq(
 -- Account deletion.
 
 update private.user_plans set granted_by = '00000000-0000-4000-8000-00000000000a' where user_id = '00000000-0000-4000-8000-00000000000c';
-delete from auth.users where id in ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000d');
+delete from auth.users where id in ('00000000-0000-4000-8000-00000000000a', '00000000-0000-4000-8000-00000000000e');
 select results_eq(
   $$select user_id, granted_by from private.user_plans order by user_id$$,
-  $$values ('00000000-0000-4000-8000-00000000000c'::uuid, null::uuid), ('00000000-0000-4000-8000-00000000000e'::uuid, null::uuid)$$,
+  $$values ('00000000-0000-4000-8000-000000000002'::uuid, null::uuid),
+           ('00000000-0000-4000-8000-00000000000c'::uuid, null::uuid), ('00000000-0000-4000-8000-00000000000d'::uuid, null::uuid),
+           ('00000000-0000-4000-8000-00000000000f'::uuid, null::uuid)$$,
   'a deleted user''s grant goes with it, and a deleted admin''s grants stay with no granter');
-select results_eq($$select updated_by from private.plans where id = 'pro'$$, $$values (null::uuid)$$,
-  'and the plan it set stays, with no editor');
+select results_eq($$select count(*) from private.plan_versions where amount = 20 and created_by is null$$,
+  $$values (1::bigint)$$, 'and the version it created stays, with no author');
 
 select * from finish();
 rollback;

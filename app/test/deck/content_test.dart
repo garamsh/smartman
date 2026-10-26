@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui' show Rect, Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/src/content.dart';
+import 'package:smartman/media/media.dart';
 
 void main() {
   group('content encoding', () {
@@ -10,22 +12,28 @@ void main() {
 
       final encoded = encodeContent(blocks);
 
-      expect(encoded, '[{"type":"text","payload":{"text":"bonjour"}}]');
+      expect(encoded, '[{"type":"text","v":1,"payload":{"text":"bonjour"}}]');
       expect(decodeContent(encoded), blocks);
     });
 
     test('decodes an unknown type as unsupported and re-encodes it intact', () {
       const stored =
           '[{"type":"text","payload":{"text":"cat"}},'
-          '{"type":"image","payload":{"path":"cat.png"}}]';
+          '{"type":"audio","payload":{"path":"cat.m4a"}}]';
 
       final blocks = decodeContent(stored);
 
       expect(blocks.first, const TextContent('cat'));
       final unsupported = blocks.last;
       expect(unsupported, isA<UnsupportedContent>());
-      expect((unsupported as UnsupportedContent).type, 'image');
-      expect(encodeContent(blocks), stored);
+      expect((unsupported as UnsupportedContent).type, 'audio');
+      // The text block is written at this build's version; the audio block
+      // as it was stored.
+      expect(
+        encodeContent(blocks),
+        '[{"type":"text","v":1,"payload":{"text":"cat"}},'
+        '{"type":"audio","payload":{"path":"cat.m4a"}}]',
+      );
     });
 
     test(
@@ -47,11 +55,12 @@ void main() {
 
         expect(
           encoded,
-          '[{"type":"text","payload":{"text":"Capitals"}},'
-          '{"type":"cloze","payload":{"text":"___ is in France",'
+          '[{"type":"text","v":1,"payload":{"text":"Capitals"}},'
+          '{"type":"cloze","v":1,"payload":{"text":"___ is in France",'
           '"answers":["Paris"]}},'
-          '{"type":"table","payload":{"columns":["Capital","Country"],'
-          '"rows":[["Paris","France"]],"blanks":[{"row":0,"column":0}]}}]',
+          '{"type":"table","v":2,"payload":{"columns":["Capital","Country"],'
+          '"rows":[["Paris","France"]],"blanks":[{"row":0,"column":0}],'
+          '"spans":[]}}]',
         );
         expect(decodeContent(encoded), blocks);
       },
@@ -149,7 +158,7 @@ void main() {
 
       expect(
         encoded,
-        '[{"type":"senses","payload":{"senses":['
+        '[{"type":"senses","v":1,"payload":{"senses":['
         '{"labels":[{"kind":"part_of_speech","category":"noun","text":"명"},'
         '{"kind":"other","category":null,"text":"사물"}],'
         '"meaning":"기차","examples":["기차를 타다"]},'
@@ -279,6 +288,455 @@ void main() {
         () => decodeContent('[{"type":"text","payload":{}}]'),
         throwsFormatException,
       );
+    });
+  });
+
+  group('block versions and ids (ADR 0106)', () {
+    // One block of each type this build knows, the version it writes it at
+    // and its payload as written.
+    const blocks = <(String, int, Content, String)>[
+      ('text', 1, TextContent('bonjour'), '{"text":"bonjour"}'),
+      (
+        'cloze',
+        1,
+        ClozeContent('___ is in France', ['Paris']),
+        '{"text":"___ is in France","answers":["Paris"]}',
+      ),
+      (
+        'table',
+        2,
+        TableContent(
+          columns: ['Capital', 'Country'],
+          rows: [
+            ['Paris', 'France, in Europe'],
+          ],
+          blanks: [(row: 0, column: 0)],
+          spans: [(row: 0, column: 1, start: 0, end: 6)],
+        ),
+        '{"columns":["Capital","Country"],"rows":[["Paris","France, in Europe"]],'
+            '"blanks":[{"row":0,"column":0}],'
+            '"spans":[{"row":0,"column":1,"start":0,"end":6}]}',
+      ),
+      (
+        'senses',
+        1,
+        SensesContent([CardSense(meaning: '기차')]),
+        '{"senses":[{"labels":[],"meaning":"기차","examples":[]}]}',
+      ),
+      (
+        'image',
+        1,
+        ImageContent(
+          media: MediaId('m1'),
+          width: 4,
+          height: 3,
+          boxes: [ImageBox(id: '1', x: 0.25, y: 0.5, w: 0.5, h: 0.25)],
+        ),
+        '{"media":"m1","width":4,"height":3,'
+            '"boxes":[{"id":"1","x":0.25,"y":0.5,"w":0.5,"h":0.25}]}',
+      ),
+    ];
+
+    for (final (type, version, block, payload) in blocks) {
+      test('a $type block is read at v$version, and written with it', () {
+        final withV = '[{"type":"$type","v":$version,"payload":$payload}]';
+
+        expect(decodeContent(withV), [block]);
+        expect(encodeContent([block]), withV);
+        if (version == 1) {
+          final without = '[{"type":"$type","payload":$payload}]';
+          expect(decodeContent(without), [block], reason: 'no v reads as v1');
+        }
+      });
+
+      test('a $type block above the version this build writes is kept, '
+          'byte for byte, as unsupported', () {
+        final stored =
+            '[{"type":"$type","v":${version + 1},"id":"b1","payload":$payload,'
+            '"extra":true}]';
+
+        final decoded = decodeContent(stored);
+
+        expect(decoded.single, isA<UnsupportedContent>());
+        expect((decoded.single as UnsupportedContent).type, type);
+        expect(encodeContent(decoded), stored);
+      });
+    }
+
+    test('a block keeps its id through a read and a write', () {
+      const stored =
+          '[{"type":"text","v":1,"id":"0190a8c4-0000-7000-8000-000000000001",'
+          '"payload":{"text":"cat"}}]';
+
+      final decoded = decodeContent(stored);
+
+      expect(decoded.single.id, '0190a8c4-0000-7000-8000-000000000001');
+      expect(encodeContent(decoded), stored);
+      expect(
+        decoded.single,
+        const TextContent('cat'),
+        reason: 'ids are not compared',
+      );
+    });
+
+    test('a v that is not a positive integer, or an id that is not text, '
+        'is a format error, and a v of 1 is not', () {
+      for (final broken in [
+        '[{"type":"text","v":0,"payload":{"text":"cat"}}]',
+        '[{"type":"text","v":"1","payload":{"text":"cat"}}]',
+        '[{"type":"text","v":1,"id":7,"payload":{"text":"cat"}}]',
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+      expect(
+        decodeContent(
+          '[{"type":"text","v":1,"id":"a","payload":{"text":"x"}}]',
+        ),
+        [const TextContent('x')],
+        reason: 'control',
+      );
+    });
+
+    test('the upcaster chain upgrades an older payload one step per '
+        'version, to the version a type is written at', () {
+      // A text block whose v2 renamed text to body, and v3 trimmed it.
+      final steps = <String, List<Object? Function(Object?)>>{
+        'text': [
+          (payload) => {'body': (payload! as Map)['text']},
+          (payload) => {'body': ((payload! as Map)['body'] as String).trim()},
+        ],
+      };
+
+      expect(blockVersion('text', steps: steps), 3);
+      expect(upcastPayload('text', 1, {'text': ' cat '}, steps: steps), {
+        'body': 'cat',
+      });
+      expect(upcastPayload('text', 2, {'body': ' cat '}, steps: steps), {
+        'body': 'cat',
+      }, reason: 'a v2 payload takes the last step only');
+      expect(upcastPayload('text', 3, {'body': 'cat'}, steps: steps), {
+        'body': 'cat',
+      }, reason: 'the current version takes none');
+      // Today a table is written at v2, after one step, and every other
+      // type this build knows at v1, with none.
+      expect(blockVersion('table'), 2);
+      for (final type in ['text', 'cloze', 'senses', 'image']) {
+        expect(blockVersion(type), 1, reason: type);
+      }
+    });
+  });
+
+  group('the face a card is studied on (ADR 0106)', () {
+    const text = TextContent('Paris');
+    const cloze = ClozeContent('___ is in France', ['Paris']);
+    const table = TableContent(
+      columns: ['Capital'],
+      rows: [
+        ['Paris'],
+      ],
+      blanks: [(row: 0, column: 0)],
+    );
+    const senses = SensesContent([CardSense(meaning: '파리')]);
+    const unknown = UnsupportedContent('audio', {'media': 'm1'});
+
+    test('a card with no blank is studied front then back, whatever its '
+        'blocks', () {
+      for (final block in <Content>[text, senses, unknown]) {
+        expect(
+          oneFaceOf([block], [text]),
+          isNull,
+          reason: '$block on the front',
+        );
+        expect(
+          oneFaceOf([text], [block]),
+          isNull,
+          reason: '$block on the back',
+        );
+      }
+    });
+
+    test('a cloze or a table on the front makes the front the one face', () {
+      for (final block in <Content>[cloze, table]) {
+        expect(oneFaceOf([text, block], [text]), [text, block]);
+        expect(oneFaceOf([block], [block]), [block], reason: 'front first');
+      }
+    });
+
+    test('a cloze or a table on the back alone makes one face of the front '
+        'followed by the back (ADR 0108)', () {
+      for (final block in <Content>[cloze, table]) {
+        expect(oneFaceOf([text], [senses, block]), [text, senses, block]);
+        expect(oneFaceOf(const [], [senses, block]), [
+          senses,
+          block,
+        ], reason: 'an empty front adds nothing');
+      }
+    });
+
+    test('an image with a box is a blank, on the front or on the back alone, '
+        'and an image with none is not (ADR 0109)', () {
+      const photo = ImageContent(media: MediaId('m1'), width: 4, height: 3);
+      final boxed = photo.withBoxes(const [
+        ImageBox(id: '1', x: 0, y: 0, w: 0.5, h: 0.5),
+      ]);
+
+      expect(oneFaceOf([boxed], [text]), [boxed]);
+      expect(oneFaceOf([text], [boxed]), [text, boxed]);
+      expect(isWholeCard([boxed]), isTrue);
+      // Control: the same photo without its box is studied front then back.
+      expect(oneFaceOf([photo], [text]), isNull);
+      expect(oneFaceOf([text], [photo]), isNull);
+      expect(isWholeCard([photo]), isFalse);
+    });
+  });
+
+  group('an image block (ADR 0109)', () {
+    // A stored block a later build wrote: fields this build does not know on
+    // the payload and on a box, and a box with an answer beside one without.
+    const stored =
+        '[{"type":"image","v":1,"id":"b1","payload":{"media":"m1",'
+        '"width":1200,"height":800,"boxes":['
+        '{"id":"1","x":0.1,"y":0.2,"w":0.3,"h":0.4,"answer":"Paris",'
+        '"shape":"oval"},'
+        '{"id":"2","x":0.5,"y":0.5,"w":0.5,"h":0.5}],'
+        '"crop":{"x":0,"y":0}}}]';
+
+    test('reads its photo, size and boxes in fractions of the image, and '
+        'writes back the fields it does not know', () {
+      final image = decodeContent(stored).single as ImageContent;
+
+      expect(image.media, const MediaId('m1'));
+      expect((image.width, image.height), (1200, 800));
+      expect(image.aspectRatio, 1.5);
+      expect(image.id, 'b1');
+      expect(
+        [for (final box in image.boxes) (box.id, box.x, box.y, box.w, box.h)],
+        [('1', 0.1, 0.2, 0.3, 0.4), ('2', 0.5, 0.5, 0.5, 0.5)],
+      );
+      expect([for (final box in image.boxes) box.answer], ['Paris', null]);
+      expect(jsonDecode(encodeContent([image])), jsonDecode(stored));
+    });
+
+    test('a box covers the same part of the image at any size it is drawn '
+        'at', () {
+      const box = ImageBox(id: '1', x: 0.1, y: 0.2, w: 0.3, h: 0.4);
+
+      expect(
+        box.rectIn(const Size(1200, 800)),
+        const Rect.fromLTWH(120, 160, 360, 320),
+      );
+      expect(
+        box.rectIn(const Size(300, 200)),
+        const Rect.fromLTWH(30, 40, 90, 80),
+      );
+    });
+
+    test('is refused when it breaks its shape, where a whole one is read', () {
+      String block(String payload) => '[{"type":"image","payload":$payload}]';
+      String boxed(String box) =>
+          block('{"media":"m1","width":4,"height":3,"boxes":[$box]}');
+      // Control: a whole block of each kind is read.
+      expect(
+        decodeContent(boxed('{"id":"1","x":0,"y":0,"w":1,"h":1}')),
+        hasLength(1),
+      );
+      expect(
+        decodeContent(block('{"media":"m1","width":4,"height":3,"boxes":[]}')),
+        hasLength(1),
+      );
+
+      for (final broken in [
+        block('{"width":4,"height":3,"boxes":[]}'),
+        block('{"media":"","width":4,"height":3,"boxes":[]}'),
+        block('{"media":"m1","width":0,"height":3,"boxes":[]}'),
+        block('{"media":"m1","width":4.5,"height":3,"boxes":[]}'),
+        block('{"media":"m1","width":4,"height":3}'),
+        boxed('{"x":0,"y":0,"w":1,"h":1}'),
+        boxed('{"id":"1","x":-0.1,"y":0,"w":0.5,"h":0.5}'),
+        boxed('{"id":"1","x":0,"y":0,"w":0,"h":0.5}'),
+        boxed('{"id":"1","x":0.6,"y":0,"w":0.5,"h":0.5}'),
+        boxed('{"id":"1","x":0,"y":0.6,"w":0.5,"h":0.5}'),
+        boxed('{"id":"1","x":0,"y":0,"w":0.5,"h":0.5,"answer":3}'),
+        boxed(
+          '{"id":"1","x":0,"y":0,"w":0.5,"h":0.5},'
+          '{"id":"1","x":0.5,"y":0.5,"w":0.5,"h":0.5}',
+        ),
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+    });
+
+    test('reads as its media id and then its answers, so two photos never '
+        'share a card key, and names its photo', () {
+      final image = decodeContent(stored).single as ImageContent;
+
+      expect(plainText([image]), 'm1\nParis');
+      expect(
+        plainText([
+          const ImageContent(media: MediaId('m2'), width: 1, height: 1),
+        ]),
+        'm2',
+      );
+      expect(mediaOf([const TextContent('a'), image]), {const MediaId('m1')});
+    });
+  });
+
+  group("a table's spans (ADR 0110)", () {
+    const cell = '5부족 연맹체, 왕 아래 마가·우가';
+    String table({
+      int? v,
+      Object? blanks = const <Object>[],
+      Object? spans = const <Object>[],
+      bool withSpans = true,
+    }) => jsonEncode([
+      {
+        'type': 'table',
+        'v': ?v,
+        'payload': {
+          'columns': ['', '정치'],
+          'rows': [
+            ['부여', cell],
+            ['고구려', '5부'],
+          ],
+          'blanks': blanks,
+          if (withSpans) 'spans': spans,
+        },
+      },
+    ]);
+    Map<String, int> span(int row, int column, int start, int end) => {
+      'row': row,
+      'column': column,
+      'start': start,
+      'end': end,
+    };
+
+    test('a v1 table, with or without its v, is upcast to v2 with its blanks '
+        'whole cells and no span, and written back at v2', () {
+      const whole = [
+        {'row': 1, 'column': 1},
+      ];
+      for (final stored in [
+        table(blanks: whole, withSpans: false),
+        table(v: 1, blanks: whole, withSpans: false),
+      ]) {
+        final decoded = decodeContent(stored).single as TableContent;
+
+        expect(decoded.blanks, [(row: 1, column: 1)], reason: stored);
+        expect(decoded.spans, isEmpty, reason: stored);
+        expect(
+          jsonDecode(encodeContent([decoded])),
+          jsonDecode(table(v: 2, blanks: whole)),
+          reason: stored,
+        );
+      }
+    });
+
+    test('a v2 table round-trips its spans beside whole-cell blanks, several '
+        'in one cell', () {
+      const block = TableContent(
+        columns: ['', '정치'],
+        rows: [
+          ['부여', cell],
+          ['고구려', '5부'],
+        ],
+        blanks: [(row: 1, column: 1)],
+        spans: [
+          (row: 0, column: 1, start: 0, end: 7),
+          (row: 0, column: 1, start: 14, end: 16),
+        ],
+      );
+
+      final encoded = encodeContent([block]);
+
+      expect(
+        encoded,
+        table(
+          v: 2,
+          blanks: [
+            {'row': 1, 'column': 1},
+          ],
+          spans: [span(0, 1, 0, 7), span(0, 1, 14, 16)],
+        ),
+      );
+      expect(decodeContent(encoded), [block]);
+      expect(
+        plainText([block]),
+        ' | 정치\n부여 | $cell\n고구려 | 5부',
+        reason: 'the card key reads every cell whole',
+      );
+    });
+
+    test('a v2 table refuses a span outside its cell, empty, of whitespace, '
+        'overlapping another or in a whole-cell blank, and a table of no '
+        'blank at all, where a whole one decodes', () {
+      for (final broken in [
+        table(v: 2, spans: [span(0, 1, 0, cell.length + 1)]),
+        table(v: 2, spans: [span(0, 2, 0, 1)]),
+        table(v: 2, spans: [span(2, 1, 0, 1)]),
+        table(v: 2, spans: [span(0, 1, -1, 3)]),
+        table(v: 2, spans: [span(0, 1, 3, 3)]),
+        table(v: 2, spans: [span(0, 1, 8, 9)]),
+        table(v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 6, 9)]),
+        table(v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 0, 7)]),
+        table(
+          v: 2,
+          blanks: [
+            {'row': 0, 'column': 1},
+          ],
+          spans: [span(0, 1, 0, 7)],
+        ),
+        table(v: 2, spans: [span(0, 1, 0, 7), 'not a span']),
+        table(v: 2),
+        table(
+          v: 2,
+          blanks: [
+            {'row': 0, 'column': 1},
+          ],
+          withSpans: false,
+        ),
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+      // Control: spans alone, two touching in one cell.
+      final whole = table(v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 7, 9)]);
+      expect(decodeContent(whole).single, isA<TableContent>());
+    });
+
+    test('a cell reads as its runs: a whole blank as one, spans between its '
+        'plain text, and a plain cell as one', () {
+      const block = TableContent(
+        columns: ['', '정치'],
+        rows: [
+          ['부여', cell],
+          ['고구려', '5부'],
+        ],
+        blanks: [(row: 1, column: 1)],
+        spans: [
+          (row: 0, column: 1, start: 14, end: 16),
+          (row: 0, column: 1, start: 0, end: 7),
+        ],
+      );
+
+      expect(block.cellRuns(0, 1), [
+        (text: '5부족 연맹체', blank: true),
+        (text: ', 왕 아래 ', blank: false),
+        (text: '마가', blank: true),
+        (text: '·우가', blank: false),
+      ]);
+      expect(block.cellRuns(1, 1), [(text: '5부', blank: true)]);
+      expect(block.cellRuns(0, 0), [(text: '부여', blank: false)]);
     });
   });
 }

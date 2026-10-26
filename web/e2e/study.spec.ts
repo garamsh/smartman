@@ -188,7 +188,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
     .getByRole("link", { name: "덱", exact: true })
     .click();
   const deckRow = page.getByRole("link", {
-    name: "French, 카드 2장, 공개, 오늘 2, 2장 중 0장 익힘",
+    name: "French, 카드 2장, 공개, 오늘 2, 2장 중 0장 익힘, 익힘 0장, 학습 중 0장, 새 카드 2장",
     exact: true,
   });
   await expect(deckRow).toBeVisible();
@@ -207,7 +207,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "02b-deck-answers");
   // Enter opens the deck's session.
   await page.getByRole("heading", { name: "French", exact: true }).click();
-  const studyPath = new RegExp(`/study\\?decks=${deckId}$`);
+  const studyPath = new RegExp(`/study\\?decks=${deckId}&from=deck$`);
   await untilReacted(
     () => page.keyboard.press("Enter"),
     () => Promise.resolve(studyPath.test(page.url())),
@@ -308,9 +308,33 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(completion.getByText("더 학습할 카드가 없어요", { exact: true })).toBeVisible();
   await expect(completion.getByRole("button", { name: "학습하기" })).toHaveCount(0);
 
-  // Esc leaves for the deck list.
+  // A change whose write fails is not dropped by leaving: Esc sends it again, and when that
+  // fails too, asks first. The Server Action posts to this page's address.
+  const refuse = (url: URL) => url.pathname === "/study";
+  await page.route(refuse, (route) =>
+    route.request().method() === "POST" ? route.abort() : route.continue(),
+  );
+  await page.keyboard.press("z");
+  // Next's route announcer is an alert too, so the write failure is told apart by its text.
+  const writeFailure = page.getByRole("alert").filter({ hasText: "응답을 저장하지 못했어요" });
+  await expect(writeFailure).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(`${baseURL}/`);
+  const leave = page.getByRole("dialog", { name: "저장하지 못한 응답이 있어요", exact: true });
+  await expect(leave).toContainText("지금 나가면 저장하지 못한 응답 1개가 사라져요.");
+  await expect(leave.getByRole("button", { name: "취소", exact: true })).toBeFocused();
+  await shot(page, "06b-study-leave-unsaved");
+  await leave.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(leave).toHaveCount(0);
+  await expect(page).toHaveURL(studyPath);
+  await page.unroute(refuse);
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(writeFailure).toHaveCount(0);
+  // Z changes the card back to 안다, so the day stays done for 오늘 below.
+  await page.keyboard.press("z");
+
+  // Esc sends that write, then returns to the deck page the session was opened from.
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(`${baseURL}/decks/${deckId}`);
 
   // A deck whose one card is due next week, and was not answered today, has nothing to study.
   const laterDeck = randomUUID();
@@ -735,7 +759,7 @@ test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
       page.getByRole("img", { name: new RegExp(`^${String(cards.length)}장 중 단단함 `) }),
     ).toBeVisible();
     await expect(
-      page.getByRole("img", { name: /^주별 익힌 카드, 8주 전부터 이번 주까지: / }),
+      page.getByRole("img", { name: /^주별 익힌 카드, 7주 전부터 이번 주까지: / }),
     ).toBeVisible();
     await expect(
       page.getByRole("img", { name: /^최근 12주 동안 \d+일 학습했어요: / }),

@@ -21,7 +21,6 @@
   --color-dont-know-text: #c2402f;
   --color-on-dont-know-text: #ffffff;
   --color-shadow: #1f2a44;
-  --color-tint-blue: #e8ecf5;
   --color-tint-amber: #fff1d6;
   --color-tint-green: #e3f4ec;
   --color-tint-red: #fce8e6;
@@ -32,6 +31,12 @@
   --color-dont-know-line: #ebb3aa;
   --color-on-dont-know-tint: #b03a2b;
   --color-streak: #c26a0a;
+  --color-deck-blue: #e8ecf5;
+  --color-deck-sky: #e0f0fa;
+  --color-deck-violet: #ece7f8;
+  --color-deck-amber: #fff1d6;
+  --color-deck-slate: #e9ecf1;
+  --color-deck-sand: #f4ecdf;
 
   /* Google's button (GoogleButtonStyle in app/lib/account/src/google_button.dart): its guidelines' colours, not the brand's. */
   --color-google-fill: #ffffff;
@@ -294,7 +299,6 @@
     --color-dont-know-text: #ff8577;
     --color-on-dont-know-text: #0e1424;
     --color-shadow: #000000;
-    --color-tint-blue: #2a3560;
     --color-tint-amber: #4a3b1e;
     --color-tint-green: #1e3f33;
     --color-tint-red: #4a2624;
@@ -305,6 +309,12 @@
     --color-dont-know-line: #7a3a36;
     --color-on-dont-know-tint: #ff8577;
     --color-streak: #f5a623;
+    --color-deck-blue: #2a3560;
+    --color-deck-sky: #1d3a50;
+    --color-deck-violet: #382d5c;
+    --color-deck-amber: #4a3b1e;
+    --color-deck-slate: #2d3445;
+    --color-deck-sand: #3f3527;
     --color-google-fill: #131314;
     --color-google-stroke: #8e918f;
     --color-google-label: #e3e3e3;
@@ -331,7 +341,6 @@
   --color-dont-know-text: #ff8577;
   --color-on-dont-know-text: #0e1424;
   --color-shadow: #000000;
-  --color-tint-blue: #2a3560;
   --color-tint-amber: #4a3b1e;
   --color-tint-green: #1e3f33;
   --color-tint-red: #4a2624;
@@ -342,6 +351,12 @@
   --color-dont-know-line: #7a3a36;
   --color-on-dont-know-tint: #ff8577;
   --color-streak: #f5a623;
+  --color-deck-blue: #2a3560;
+  --color-deck-sky: #1d3a50;
+  --color-deck-violet: #382d5c;
+  --color-deck-amber: #4a3b1e;
+  --color-deck-slate: #2d3445;
+  --color-deck-sand: #3f3527;
   --color-google-fill: #131314;
   --color-google-stroke: #8e918f;
   --color-google-label: #e3e3e3;

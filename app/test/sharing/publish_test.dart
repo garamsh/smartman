@@ -6,6 +6,7 @@ import 'package:smartman/sharing/sharing.dart';
 
 import 'fakes.dart';
 import 'sharing_app.dart';
+import '../word_breaks.dart';
 
 const _french = {
   'French': {'chat': 'cat'},
@@ -44,7 +45,7 @@ void main() {
       final app = await _openFrench(tester);
 
       await app.deckMenu('Publish');
-      expect(find.text('Publish "French"'), findsOneWidget);
+      expect(shownText('Publish "French"'), findsOneWidget);
       expect(find.widgetWithText(AppTextField, 'Public name'), findsOneWidget);
       await tester.enterText(
         find.widgetWithText(AppTextField, 'Public name'),
@@ -57,7 +58,9 @@ void main() {
       await tester.pump();
       // The agreement is required: without it nothing can be published.
       expect(_publishButton(tester).onPressed, isNull);
-      await app.tapText("I won't publish inappropriate or copyrighted content");
+      await app.tap(
+        shownText("I won't publish inappropriate or copyrighted content"),
+      );
       expect(_publishButton(tester).onPressed, isNotNull);
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
 
@@ -81,7 +84,9 @@ void main() {
     (tester) async {
       final app = await _openFrench(tester);
       await app.deckMenu('Publish');
-      await app.tapText("I won't publish inappropriate or copyrighted content");
+      await app.tap(
+        shownText("I won't publish inappropriate or copyrighted content"),
+      );
 
       await tester.enterText(
         find.widgetWithText(AppTextField, 'Public name'),
@@ -123,7 +128,9 @@ void main() {
         // 151 characters the field counts once each, of two code points each.
         '👍🏽' * 151,
       );
-      await app.tapText("I won't publish inappropriate or copyrighted content");
+      await app.tap(
+        shownText("I won't publish inappropriate or copyrighted content"),
+      );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
 
       expect(find.text('Use at most 300 characters'), findsOneWidget);
@@ -142,7 +149,9 @@ void main() {
     await app.deckMenu('Publish');
 
     expect(find.widgetWithText(AppTextField, 'Public name'), findsNothing);
-    await app.tapText("I won't publish inappropriate or copyrighted content");
+    await app.tap(
+      shownText("I won't publish inappropriate or copyrighted content"),
+    );
     await app.tap(find.widgetWithText(FilledButton, 'Publish'));
     expect(find.text('Deck published'), findsOneWidget);
     await app.close();
@@ -155,7 +164,9 @@ void main() {
       final app = await _openFrench(tester, server: server);
       await app.deckMenu('Publish');
       server.failure = SharingOffline(Exception('no network'));
-      await app.tapText("I won't publish inappropriate or copyrighted content");
+      await app.tap(
+        shownText("I won't publish inappropriate or copyrighted content"),
+      );
       await app.tap(find.widgetWithText(FilledButton, 'Publish'));
 
       expect(
@@ -175,7 +186,9 @@ void main() {
       server: FakeSharingServer(name: DisplayName.tryParse('Ada')),
     );
     await app.deckMenu('Publish');
-    await app.tapText("I won't publish inappropriate or copyrighted content");
+    await app.tap(
+      shownText("I won't publish inappropriate or copyrighted content"),
+    );
     await app.tap(find.widgetWithText(FilledButton, 'Publish'));
     expect(find.text('1 card · Public'), findsOneWidget);
     // Snack bars queue; the first leaves before the second shows.
@@ -224,7 +237,7 @@ void main() {
     expect(find.text("Available when you're online"), findsOneWidget);
     await tester.tap(find.text('Publish'));
     await tester.pumpAndSettle();
-    expect(find.text('Publish "French"'), findsNothing);
+    expect(shownText('Publish "French"'), findsNothing);
     expect(app.server.writes, isEmpty);
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
@@ -233,7 +246,7 @@ void main() {
     app.network.online = true;
     await tester.pumpAndSettle();
     await app.deckMenu('Publish');
-    expect(find.text('Publish "French"'), findsOneWidget);
+    expect(shownText('Publish "French"'), findsOneWidget);
     await app.close();
   });
 
@@ -251,8 +264,8 @@ void main() {
           find.widgetWithText(AppTextField, 'Public name'),
           'A',
         );
-        await app.tapText(
-          "I won't publish inappropriate or copyrighted content",
+        await app.tap(
+          shownText("I won't publish inappropriate or copyrighted content"),
         );
         await app.tap(find.widgetWithText(FilledButton, 'Publish'));
         await app.meetsGuidelines();

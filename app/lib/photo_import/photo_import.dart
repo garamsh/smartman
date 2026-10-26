@@ -16,18 +16,25 @@ export 'src/failure.dart'
     show
         AccountSuspendedFailure,
         CameraUnavailable,
-        DailyLimitReached,
         ExtractionOffline,
+        LimitPeriod,
         ModelFailed,
         NoCardsFound,
         PhotoAccessDenied,
         PhotoImportFailure,
+        PhotoLimitReached,
         PhotoRefused,
+        PhotoNotKept,
         PhotoUnreadable,
         ServiceFailed,
         SignInRequired;
+export 'src/job_store.dart' show FileImportJobStore, ImportJobStore;
 export 'src/photo.dart' show JpegPhoto;
 export 'src/photo_import_screen.dart'
-    show importFromPhoto, photoImportStorageKeys;
-export 'src/photo_source.dart' show DevicePhotoSource, PhotoOrigin, PhotoSource;
-export 'src/providers.dart' show PhotoImport, photoImportProvider;
+    show importFromPhoto, openPhotoImport, photoImportStorageKeys;
+export 'src/photo_imports.dart'
+    show PhotoImportBar, PhotoImports, offerPhotoImportResume;
+export 'src/photo_source.dart'
+    show DevicePhotoSource, PhotoOrigin, PhotoSource, PickedPhoto;
+export 'src/providers.dart'
+    show PhotoImport, photoImportProvider, photoImportsProvider;

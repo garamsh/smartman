@@ -428,8 +428,8 @@ void main() {
       (413, {'error': 'too_large'}): isA<PhotoRefused>(),
       (415, {'error': 'unsupported_type'}): isA<PhotoRefused>(),
       (422, {'error': 'no_cards'}): isA<NoCardsFound>(),
-      (429, {'error': 'rate_limited', 'daily_limit': 30}):
-          isA<DailyLimitReached>(),
+      (429, {'error': 'rate_limited', 'photo_limit': 30, 'period': 'day'}):
+          isA<PhotoLimitReached>(),
       (502, {'error': 'model_error'}): isA<ModelFailed>(),
       (503, {'error': 'not_configured'}): isA<ServiceFailed>(),
       (403, {'error': 'suspended'}): isA<AccountSuspendedFailure>(),
@@ -443,41 +443,49 @@ void main() {
     }
   });
 
-  test(
-    "a daily limit's refusal carries the plan's limit the body states, and "
-    'a 429 without one, as a gateway might send, is a service failure',
-    () async {
+  test("a photo limit's refusal carries the plan's limit and period the body "
+      'states, and a 429 without them, as a gateway might send, is a service '
+      'failure', () async {
+    for (final (period, expected) in [
+      ('day', LimitPeriod.day),
+      ('month', LimitPeriod.month),
+    ]) {
       final stated = _client(
-        (_) async => _json(429, {'error': 'rate_limited', 'daily_limit': 100}),
+        (_) async => _json(429, {
+          'error': 'rate_limited',
+          'photo_limit': 100,
+          'period': period,
+        }),
       );
       await expectLater(
         _extract(stated),
         throwsA(
-          isA<DailyLimitReached>().having(
-            (failure) => failure.dailyLimit,
-            'dailyLimit',
-            100,
-          ),
+          isA<PhotoLimitReached>()
+              .having((failure) => failure.limit, 'limit', 100)
+              .having((failure) => failure.period, 'period', expected),
         ),
       );
-      for (final body in <Object>[
-        {'error': 'rate_limited'},
-        {'error': 'rate_limited', 'daily_limit': -1},
-        {'error': 'rate_limited', 'daily_limit': '100'},
-        'Too Many Requests',
-      ]) {
-        final unstated = _client(
-          (_) async =>
-              body is String ? http.Response(body, 429) : _json(429, body),
-        );
-        await expectLater(
-          _extract(unstated),
-          throwsA(isA<ServiceFailed>()),
-          reason: '$body',
-        );
-      }
-    },
-  );
+    }
+    for (final body in <Object>[
+      {'error': 'rate_limited'},
+      {'error': 'rate_limited', 'photo_limit': 100},
+      {'error': 'rate_limited', 'photo_limit': -1, 'period': 'day'},
+      {'error': 'rate_limited', 'photo_limit': '100', 'period': 'day'},
+      {'error': 'rate_limited', 'photo_limit': 100, 'period': 'week'},
+      {'error': 'rate_limited', 'daily_limit': 100},
+      'Too Many Requests',
+    ]) {
+      final unstated = _client(
+        (_) async =>
+            body is String ? http.Response(body, 429) : _json(429, body),
+      );
+      await expectLater(
+        _extract(unstated),
+        throwsA(isA<ServiceFailed>()),
+        reason: '$body',
+      );
+    }
+  });
 
   test('a success body outside the contract is a service failure', () async {
     for (final body in [
@@ -598,38 +606,58 @@ void main() {
     );
   });
 
-  test("today's allowance is the one row extraction_allowance answers, and "
-      'unknown when the answer is anything else or the call fails', () async {
-    Future<ExtractionAllowance?> read(Future<Object?> Function() rows) =>
-        _client((_) async => _json(200, {}), readAllowance: rows).allowance();
+  test(
+    "the period's allowance is the one row extraction_allowance answers, "
+    'and unknown when the answer is anything else or the call fails',
+    () async {
+      Future<ExtractionAllowance?> read(Future<Object?> Function() rows) =>
+          _client((_) async => _json(200, {}), readAllowance: rows).allowance();
 
-    expect(
-      await read(
-        () async => [
-          {'daily_limit': 30, 'used': 28},
+      expect(
+        await read(
+          () async => [
+            {'photo_limit': 30, 'period': 'day', 'used': 28},
+          ],
+        ),
+        (limit: 30, period: LimitPeriod.day, used: 28),
+      );
+      expect(
+        await read(
+          () async => [
+            {'photo_limit': 10, 'period': 'month', 'used': 4},
+          ],
+        ),
+        (limit: 10, period: LimitPeriod.month, used: 4),
+      );
+      for (final rows in <Object?>[
+        null,
+        <Object>[],
+        [
+          {'photo_limit': 30, 'period': 'day'},
         ],
-      ),
-      (dailyLimit: 30, used: 28),
-    );
-    for (final rows in <Object?>[
-      null,
-      <Object>[],
-      [
-        {'daily_limit': 30},
-      ],
-      [
-        {'daily_limit': -1, 'used': 0},
-      ],
-      [
-        {'daily_limit': '30', 'used': 0},
-      ],
-    ]) {
-      expect(await read(() async => rows), isNull, reason: '$rows');
-    }
-    expect(
-      await read(() async => throw http.ClientException('offline')),
-      isNull,
-      reason: 'a call that fails is an allowance that cannot be read',
-    );
-  });
+        [
+          {'photo_limit': 30, 'used': 0},
+        ],
+        [
+          {'photo_limit': -1, 'period': 'day', 'used': 0},
+        ],
+        [
+          {'photo_limit': '30', 'period': 'day', 'used': 0},
+        ],
+        [
+          {'photo_limit': 30, 'period': 'week', 'used': 0},
+        ],
+        [
+          {'daily_limit': 30, 'used': 0},
+        ],
+      ]) {
+        expect(await read(() async => rows), isNull, reason: '$rows');
+      }
+      expect(
+        await read(() async => throw http.ClientException('offline')),
+        isNull,
+        reason: 'a call that fails is an allowance that cannot be read',
+      );
+    },
+  );
 }

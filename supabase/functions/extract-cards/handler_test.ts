@@ -30,7 +30,9 @@ type Fake = {
   /** Whether the caller is suspended, as user_suspended answers. */
   suspended: boolean;
   /** The row begin_extraction answers for the caller's plan, or none when its settings are missing. */
-  plan: { plan: string; model: string; daily_limit: number } | null;
+  plan:
+    | { plan: string; model: string; photo_limit: number; period: string }
+    | null;
   /** The prompt version begin_extraction serves; the seed, prompt v8, unless a test names another. */
   prompt: { prompt_version_id: unknown; prompt: unknown };
   calls: { url: string; init: RequestInit | undefined }[];
@@ -160,7 +162,12 @@ async function run(
     allowed: options.allowed ?? true,
     suspended: options.suspended ?? false,
     plan: options.plan === undefined
-      ? { plan: "free", model: "vendor/primary-model", daily_limit: 30 }
+      ? {
+        plan: "free",
+        model: "vendor/primary-model",
+        photo_limit: 10,
+        period: "month",
+      }
       : options.plan,
     prompt: options.prompt ?? { prompt_version_id: 1, prompt: SYSTEM_PROMPT },
     calls: [],
@@ -521,9 +528,14 @@ Deno.test("invalid output answers 502 after one call, with no retry", async () =
 });
 
 Deno.test("the call uses the model of the caller's plan", async () => {
-  for (const plan of ["free", "pro", "special"]) {
+  for (const plan of ["free", "pro", "max"]) {
     const r = await run({
-      plan: { plan, model: `vendor/${plan}-model`, daily_limit: 30 },
+      plan: {
+        plan,
+        model: `vendor/${plan}-model`,
+        photo_limit: 30,
+        period: "day",
+      },
       replies: [cardsReply(twoCards)],
     });
     assert.equal(r.status, 200);
@@ -538,7 +550,12 @@ Deno.test("missing plan settings, or a plan naming no model, answer 503 without 
   for (
     const plan of [
       null,
-      { plan: "free", model: "not a model id", daily_limit: 30 },
+      {
+        plan: "free",
+        model: "not a model id",
+        photo_limit: 10,
+        period: "month",
+      },
     ]
   ) {
     const r = await run({ plan, replies: [cardsReply(twoCards)] });
@@ -757,16 +774,28 @@ Deno.test("prompt v8 asks for #200's rules with a whole table on one table card 
   }
 });
 
-Deno.test("a user at the daily limit of its plan is refused with 429 stating that limit, and no model call", async () => {
-  const refused = await run({
-    allowed: false,
-    plan: { plan: "pro", model: "vendor/pro-model", daily_limit: 100 },
-    replies: [cardsReply(twoCards)],
-  });
-  assert.equal(refused.status, 429);
-  assert.deepEqual(refused.body, { error: "rate_limited", daily_limit: 100 });
-  assert.equal(refused.modelCalls.length, 0);
-  assert.equal(refused.logs[0].plan, "pro");
+Deno.test("a user at the photo limit of its plan is refused with 429 stating that limit and its period, and no model call", async () => {
+  for (
+    const [plan, limit, period] of [
+      ["free", 10, "month"],
+      ["pro", 100, "day"],
+      ["max", 1000, "day"],
+    ] as const
+  ) {
+    const refused = await run({
+      allowed: false,
+      plan: { plan, model: `vendor/${plan}-model`, photo_limit: limit, period },
+      replies: [cardsReply(twoCards)],
+    });
+    assert.equal(refused.status, 429);
+    assert.deepEqual(refused.body, {
+      error: "rate_limited",
+      photo_limit: limit,
+      period,
+    });
+    assert.equal(refused.modelCalls.length, 0);
+    assert.equal(refused.logs[0].plan, plan);
+  }
 
   const allowed = await run({ allowed: true, replies: [cardsReply(twoCards)] });
   assert.equal(
@@ -927,4 +956,24 @@ Deno.test("a served row without the prompt's text or version fails before any mo
       /begin_extraction answered a row it should not/,
     );
   }
+});
+
+Deno.test("a served row naming Special, or a period that is not a month or a day, fails before any model call", async () => {
+  for (
+    const plan of [
+      { plan: "special", model: "vendor/m", photo_limit: 30, period: "day" },
+      { plan: "free", model: "vendor/m", photo_limit: 10, period: "week" },
+    ]
+  ) {
+    await assert.rejects(
+      run({ plan }),
+      /begin_extraction answered a row it should not/,
+      JSON.stringify(plan),
+    );
+  }
+  const served = await run({
+    plan: { plan: "max", model: "vendor/m", photo_limit: 1000, period: "day" },
+    replies: [cardsReply(twoCards)],
+  });
+  assert.equal(served.status, 200, "control: a Max row a day is read");
 });

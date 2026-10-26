@@ -8,6 +8,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import '../account/fake_account_service.dart';
+import '../media/fakes.dart';
 import 'device.dart';
 import 'fake_sync_server.dart';
 
@@ -34,6 +35,7 @@ void main() {
   late Scheduler scheduler;
   late FakeSyncServer server;
   late FakeAccountService account;
+  late FakeMediaServer media;
   late Device device;
   late SyncController controller;
 
@@ -42,11 +44,13 @@ void main() {
   setUp(() {
     server = FakeSyncServer(_ada);
     account = FakeAccountService()..userId = _ada;
-    device = Device('device', server, scheduler);
+    media = FakeMediaServer();
+    device = Device('device', server, scheduler, mediaServer: media);
     controller = SyncController(
       account: account,
       synchronizer: device.synchronizer,
       store: device.store,
+      media: device.media,
       edits: device.db.tableUpdates(
         TableUpdateQuery.onAllTables([device.db.decks, device.db.cards]),
       ),
@@ -118,6 +122,47 @@ void main() {
     server.failure = null;
     expect(await controller.push(), isTrue);
     expect(server.decks, hasLength(1));
+  });
+
+  test("a deck's image is uploaded once its deck is pushed, and goes from the server with its deck", () async {
+    await account.signIn();
+    await until(controller.status, (status) => status is Synced);
+    final deck = await device.deck.createDeck('French');
+    final image = await device.media.addImage(preparedImage(1));
+
+    await device.deck.setImage(deck.id, image);
+    await until(controller.status, (status) => status is Syncing);
+    await until(controller.status, (status) => status is Synced);
+    expect(server.decks.values.single.row.imageMediaId, image.value);
+    expect(media.files.keys, [image]);
+
+    await device.deck.deleteDeck(deck.id);
+    await until(controller.status, (status) => status is Syncing);
+    await until(controller.status, (status) => status is Synced);
+    expect(media.files, isEmpty);
+    expect(media.rows, isEmpty);
+  });
+
+  test('an image the media server does not take keeps push false, and is retried until it lands', () async {
+    await account.signIn();
+    await until(controller.status, (status) => status is Synced);
+    final deck = await device.deck.createDeck('French');
+    media.offline = true;
+    final image = await device.media.addImage(preparedImage(1));
+    await device.deck.setImage(deck.id, image);
+
+    expect(await controller.push(), isFalse);
+    expect(
+      server.decks.values.single.row.imageMediaId,
+      image.value,
+      reason: 'the rows still sync',
+    );
+
+    media.offline = false;
+    while (media.files.isEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    expect(await controller.push(), isTrue);
   });
 
   test('clear removes every row and the owner', () async {

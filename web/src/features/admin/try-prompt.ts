@@ -21,7 +21,7 @@ const trialTimeoutMs = 90_000;
 /**
  * Runs extract-cards on the form's `photo` as the signed-in admin, who is served the test version
  * when one is set and the active one otherwise (ADR 0073). The photo counts against the admin's
- * own daily limit and is recorded with its version, as any extraction is. A user who is not an
+ * own plan's photo limit and is recorded with its version, as any extraction is. A user who is not an
  * admin is refused before the function is called.
  */
 export async function tryPrompt(form: FormData): Promise<TrialResult> {
@@ -70,12 +70,13 @@ function trialResult(status: number, body: unknown): TrialResult {
     case 422:
       return { message: "이 사진에서 카드를 찾지 못했어요." };
     case 429: {
-      const limit = field(body, "daily_limit");
+      const limit = field(body, "photo_limit");
+      const period = field(body, "period") === "month" ? "이번 달" : "오늘";
       return {
         message:
           typeof limit === "number"
-            ? `오늘 쓸 수 있는 사진 ${String(limit)}장을 다 썼어요.`
-            : "오늘 쓸 수 있는 사진을 다 썼어요.",
+            ? `${period} 쓸 수 있는 사진 ${String(limit)}장을 다 썼어요.`
+            : "쓸 수 있는 사진을 다 썼어요.",
       };
     }
     case 413:

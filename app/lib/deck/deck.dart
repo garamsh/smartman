@@ -1,6 +1,7 @@
 /// The deck domain: decks, the cards inside them, and the duplicate rule.
 library;
 
+export 'src/appearance_sheet.dart' show showDeckAppearanceSheet;
 export 'src/add_cards.dart'
     show
         CardsAdded,
@@ -23,6 +24,8 @@ export 'src/content.dart'
         CardSense,
         ClozeContent,
         Content,
+        ImageBox,
+        ImageContent,
         OtherLabel,
         PartOfSpeech,
         PartOfSpeechLabel,
@@ -34,8 +37,10 @@ export 'src/content.dart'
         UnsupportedContent,
         clozeBlank,
         decodeContent,
+        encodeContent,
         decodeSense,
         isWholeCard,
+        oneFaceOf,
         plainText;
 export 'src/content_view.dart' show ContentView, contentSpan, sensesSpan;
 export 'src/deck_repository.dart'
@@ -46,12 +51,15 @@ export 'src/failure.dart'
 export 'src/failure_message.dart'
     show describeFailure, describeProviderError, reportingFailure;
 export 'src/name_sheet.dart' show showNameSheet;
+export 'src/label_presets_screen.dart' show PartOfSpeechPresetsRow;
 export 'src/model.dart'
     show
         Card,
         CardId,
         CardSource,
         Deck,
+        DeckColor,
+        DeckIcon,
         DeckId,
         DeckSelection,
         DeckVisibility,

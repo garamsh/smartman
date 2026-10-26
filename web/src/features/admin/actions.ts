@@ -5,7 +5,7 @@ export { grantPlan, type GrantPlanState } from "./grant-plan";
 export { hideDeck } from "./hide-deck";
 export { revokeAdmin } from "./revoke-admin";
 export { revokePlan } from "./revoke-plan";
-export { type PlanFormState, setPlan } from "./set-plan";
+export { createPlanVersion, type PlanFormState } from "./create-plan-version";
 export { unhideDeck } from "./unhide-deck";
 export { unpublishDeck } from "./unpublish-deck";
 export { findUsers } from "./find-users";

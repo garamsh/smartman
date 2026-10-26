@@ -5,10 +5,12 @@ import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'failure.dart';
 import 'failure_message.dart';
-import 'photo_batch.dart';
+import 'import_job.dart';
+import 'photo_viewer.dart';
 
-/// Several photos being read: "사진 k/n 읽는 중", a bar of the photos read, and
+/// Several photos being read: "사진 n장 중 k장 읽음" over a bar of the same k, and
 /// one row per photo with its thumbnail and state. A photo that failed says
 /// why, with a retry where sending it again can help and a way to leave it
 /// out. [note] says when today's limit left photos out; the privacy note and
@@ -16,40 +18,50 @@ import 'photo_batch.dart';
 class ReadingView extends StatelessWidget {
   const ReadingView({
     super.key,
-    required this.batch,
-    required this.note,
-    required this.onRetry,
-    required this.onDrop,
+    required this.job,
+    required this.onBack,
     required this.onCancel,
   });
 
-  final PhotoBatch batch;
+  /// The job whose batch is read.
+  final ImportJob job;
 
-  /// Why fewer photos are read than were picked; null when all are.
-  final String? note;
+  /// Leaves the screen while the photos go on being read.
+  final VoidCallback onBack;
 
-  final ValueChanged<PhotoJob> onRetry;
-  final ValueChanged<PhotoJob> onDrop;
+  /// Stops reading and leaves the batch out.
   final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final jobs = batch.jobs;
-    final read = jobs.where((job) => job.state is PhotoRead).length;
-    final failed = jobs.where((job) => job.state is PhotoFailed).length;
+    final jobs = job.batch;
+    final images = [for (final photo in jobs) job.imageOf(photo)];
+    final read = jobs.where((photo) => photo.state is PhotoRead).length;
+    final failed = jobs.where((photo) => photo.state is PhotoFailed).length;
     final busy = jobs.any(
-      (job) => job.state is PhotoReading || job.state is PhotoWaiting,
+      (photo) => photo.state is PhotoReading || photo.state is PhotoWaiting,
     );
     final title = busy || failed == 0
-        ? l10n.readingTitle(
-            (read + failed + 1).clamp(1, jobs.length),
-            jobs.length,
-          )
+        ? l10n.readingTitle(read, jobs.length)
         : l10n.readingFailed(failed);
-    final note = this.note;
+    final note = switch (job.limitLeft) {
+      (:final count, period: LimitPeriod.day) => l10n.photosLeftToday(count),
+      (:final count, period: LimitPeriod.month) => l10n.photosLeftThisMonth(
+        count,
+      ),
+      null => null,
+    };
     return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: l10n.navigateBack,
+          icon: const Icon(LucideIcons.chevronLeft),
+          onPressed: onBack,
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
@@ -78,14 +90,15 @@ class ReadingView extends StatelessWidget {
               Text(note, style: AppType.body.copyWith(color: colors.ink2)),
             ],
             const SizedBox(height: AppSpace.s20),
-            for (final (i, job) in jobs.indexed) ...[
+            for (final (i, photo) in jobs.indexed) ...[
               if (i > 0) const SizedBox(height: AppSpace.rowGap),
               _PhotoRow(
-                key: ObjectKey(job),
-                job: job,
+                key: ObjectKey(photo),
+                state: photo.state,
+                photos: images,
                 number: i + 1,
-                onRetry: () => onRetry(job),
-                onDrop: () => onDrop(job),
+                onRetry: () => job.retry(photo),
+                onDrop: () => job.drop(photo),
               ),
             ],
             const SizedBox(height: AppSpace.s20),
@@ -122,13 +135,17 @@ class ReadingView extends StatelessWidget {
 class _PhotoRow extends StatelessWidget {
   const _PhotoRow({
     super.key,
-    required this.job,
+    required this.state,
+    required this.photos,
     required this.number,
     required this.onRetry,
     required this.onDrop,
   });
 
-  final PhotoJob job;
+  final PhotoState state;
+
+  /// Every photo of the batch in pick order, for the viewer.
+  final List<ImageProvider?> photos;
   final int number;
   final VoidCallback onRetry;
   final VoidCallback onDrop;
@@ -137,8 +154,7 @@ class _PhotoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final photo = job.photo;
-    final (IconData icon, Color iconColor, String status) = switch (job.state) {
+    final (IconData icon, Color iconColor, String status) = switch (state) {
       PhotoWaiting() => (LucideIcons.clock, colors.muted, l10n.photoWaiting),
       PhotoReading() => (LucideIcons.loader, colors.ink, l10n.photoReading),
       PhotoRead(:final cards) => (
@@ -152,7 +168,7 @@ class _PhotoRow extends StatelessWidget {
         describePhotoImportFailure(l10n, failure),
       ),
     };
-    final failure = switch (job.state) {
+    final failure = switch (state) {
       PhotoFailed(:final failure) => failure,
       _ => null,
     };
@@ -162,54 +178,55 @@ class _PhotoRow extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MergeSemantics(
-              child: Row(
-                spacing: AppSpace.s12,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.button / 2),
-                    child: SizedBox(
-                      width: 48,
-                      height: 64,
-                      child: photo == null
-                          ? ColoredBox(color: colors.hairline)
-                          : Image.memory(
-                              photo.bytes,
-                              fit: BoxFit.cover,
-                              excludeFromSemantics: true,
-                            ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: AppSpace.s4,
+            Row(
+              spacing: AppSpace.s12,
+              children: [
+                PhotoThumbnail(
+                  photos: photos,
+                  index: number - 1,
+                  width: 48,
+                  height: 64,
+                ),
+                Expanded(
+                  child: MergeSemantics(
+                    child: Row(
+                      spacing: AppSpace.s12,
                       children: [
-                        Text(
-                          l10n.photoNumber(number),
-                          style: AppType.bodyStrong,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: AppSpace.s4,
+                            children: [
+                              Text(
+                                l10n.photoNumber(number),
+                                style: AppType.bodyStrong,
+                              ),
+                              Semantics(
+                                liveRegion: failure != null,
+                                child: Text(
+                                  status,
+                                  style: AppType.body.copyWith(
+                                    color: failure == null
+                                        ? colors.ink2
+                                        : colors.ink,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Semantics(
-                          liveRegion: failure != null,
-                          child: Text(
-                            status,
-                            style: AppType.body.copyWith(
-                              color: failure == null ? colors.ink2 : colors.ink,
-                            ),
+                        ExcludeSemantics(
+                          child: Icon(
+                            icon,
+                            size: AppSize.smallIcon,
+                            color: iconColor,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  ExcludeSemantics(
-                    child: Icon(
-                      icon,
-                      size: AppSize.smallIcon,
-                      color: iconColor,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             if (failure != null) ...[
               const SizedBox(height: AppSpace.s12),
