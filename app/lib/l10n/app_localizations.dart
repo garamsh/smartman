@@ -739,7 +739,7 @@ abstract class AppLocalizations {
   /// **'응답한 카드는 위로 올라와요. 밀어서 응답을 바꿀 수 있어요'**
   String get studyCoachRedecide;
 
-  /// Small text button between the answer buttons that shows the study screen's coach again.
+  /// Small text button alone, centred under the study screen's cards, that shows its coach again.
   ///
   /// In ko, this message translates to:
   /// **'안내 다시 보기'**

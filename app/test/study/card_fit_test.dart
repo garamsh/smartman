@@ -278,7 +278,11 @@ void main() {
 
       // Answered "모른다", the card is shown again at once, under itself as
       // the previous card, which shows the back whole, uncut.
-      await tester.tap(find.widgetWithText(TextButton, '모른다'));
+      await tester.timedDrag(
+        find.byType(CurrentCard),
+        const Offset(-200, 0),
+        const Duration(seconds: 1),
+      );
       await tester.pumpAndSettle();
       final previous = find.byType(PreviousCardView);
       expect(previous, findsOneWidget);

@@ -47,6 +47,19 @@ const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
 /// A phone's screen: 390 × 844 logical pixels at twice the density.
 const _phone = Size(780, 1688);
+
+/// Swipes the current card [dx] to the side from inside it, the lower of the
+/// study screen's two cards, then lets the answer land.
+Future<void> _swipeCurrent(WidgetTester tester, double dx) async {
+  final screen = _phone / _density;
+  await tester.timedDragFrom(
+    Offset(screen.width / 2, screen.height * 0.72),
+    Offset(dx, 0),
+    const Duration(seconds: 1),
+  );
+  await tester.pumpAndSettle();
+}
+
 const _density = 2.0;
 
 /// Loads the bundled font, Lucide's icons and Material's, which tests
@@ -324,8 +337,10 @@ void main() {
       await tap(tester, find.text(ko.coachSkip));
       // A day's first session: the empty previous card's place.
       await shot(tester, '12c-study-start');
+      // Answers by a swipe of the current card, right for 안다.
       Future<void> answer(String label) =>
-          tap(tester, find.widgetWithText(TextButton, label));
+          _swipeCurrent(tester, label == ko.know ? 200 : -200);
+
       for (final label in [ko.know, ko.dontKnow, ko.know, ko.know]) {
         await answer(label);
       }
@@ -720,7 +735,7 @@ void main() {
         '32b-whole-card-answered',
         '32c-whole-card-answered',
       ]) {
-        await tap(tester, find.widgetWithText(TextButton, ko.know));
+        await _swipeCurrent(tester, 200);
         await shot(tester, name);
       }
       // The answers' writes land before the database closes.

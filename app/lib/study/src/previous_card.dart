@@ -21,8 +21,8 @@ Answer _other(Answer answer) => switch (answer) {
 };
 
 /// The card answered just before the current one: front and back, both
-/// always shown, on its grade's fill and line, with the grade's chip on its
-/// top edge. It fills the height it is given, as the current card does.
+/// always shown, on its grade's fill and line. It fills the height it is
+/// given, as the current card does.
 ///
 /// Dragged left or right, it shows the answer the drag would give behind it,
 /// and released past [StudyStyle.commitDistance], or flung, toward the other
@@ -334,7 +334,8 @@ class _Reveal extends StatelessWidget {
 /// A previous card's face: its sides on the grade's fill inside the grade's
 /// line, at the current card's sizes and shrunk as far as their floors to fit
 /// their halves, then cut, or a whole card's front with its blanks filled,
-/// fitted to the card; and the grade's chip on its top edge.
+/// fitted to the card. The grade shows by the fill and the line alone; the
+/// card's semantics label names it.
 class _GradedCard extends StatelessWidget {
   const _GradedCard({
     required this.front,
@@ -353,110 +354,59 @@ class _GradedCard extends StatelessWidget {
       Answer.know => (colors.knowCard, colors.knowLine),
       Answer.dontKnow => (colors.dontKnowCard, colors.dontKnowLine),
     };
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: fill,
-              borderRadius: BorderRadius.circular(StudyStyle.previousRadius),
-              border: Border.all(color: line, width: StudyStyle.previousLine),
-            ),
-            // The card is given its height, so its halves are laid out at
-            // it and each side reads the height its half leaves it.
-            child: isWholeCard(front)
-                ? Padding(
-                    padding: const EdgeInsets.all(StudyStyle.cardPadding),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) => Center(
-                        child: WholeCardView(
-                          front,
-                          revealed: true,
-                          style: AppType.front.copyWith(color: colors.ink),
-                          minFontSize: AppType.frontFloor,
-                          width: constraints.maxWidth,
-                          height: constraints.maxHeight,
-                        ),
-                      ),
-                    ),
-                  )
-                : SplitCard(
-                    padding: StudyStyle.cardPadding,
-                    dividerInset: StudyStyle.dividerInset,
-                    dividerColor: line,
-                    stackBelow: StudyStyle.minHalfWidth,
-                    front: (context, width) => LayoutBuilder(
-                      builder: (context, constraints) => ContentView(
-                        front,
-                        style: AppType.front.copyWith(color: colors.ink),
-                        fit: (
-                          minFontSize: AppType.frontFloor,
-                          width: width,
-                          height: constraints.maxHeight,
-                        ),
-                      ),
-                    ),
-                    back: (context, width) => LayoutBuilder(
-                      builder: (context, constraints) => ContentView(
-                        back,
-                        style: AppType.back.copyWith(color: colors.ink2),
-                        fit: (
-                          minFontSize: AppType.backFloor,
-                          width: width,
-                          height: constraints.maxHeight,
-                        ),
-                      ),
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(StudyStyle.previousRadius),
+          border: Border.all(color: line, width: StudyStyle.previousLine),
+        ),
+        // The card is given its height, so its halves are laid out at
+        // it and each side reads the height its half leaves it.
+        child: isWholeCard(front)
+            ? Padding(
+                padding: const EdgeInsets.all(StudyStyle.cardPadding),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Center(
+                    child: WholeCardView(
+                      front,
+                      revealed: true,
+                      style: AppType.front.copyWith(color: colors.ink),
+                      minFontSize: AppType.frontFloor,
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
                     ),
                   ),
-          ),
-        ),
-        Positioned(
-          top: -StudyStyle.chipHeight / 2,
-          right: StudyStyle.chipInset,
-          child: _GradeChip(answer: answer),
-        ),
-      ],
-    );
-  }
-}
-
-/// A grade's chip: its icon and its word, white on the grade's colour, so the
-/// grade never rests on colour alone.
-class _GradeChip extends StatelessWidget {
-  const _GradeChip({required this.answer});
-
-  final Answer answer;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final (fill, text, icon) = switch (answer) {
-      Answer.know => (colors.know, colors.onKnow, LucideIcons.check),
-      Answer.dontKnow => (
-        colors.dontKnowText,
-        colors.onDontKnowText,
-        LucideIcons.x,
-      ),
-    };
-    return Container(
-      height: StudyStyle.chipHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s8),
-      decoration: ShapeDecoration(color: fill, shape: const StadiumBorder()),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: AppSpace.s4,
-        children: [
-          Icon(icon, size: StudyStyle.chipIcon, color: text),
-          Text(
-            _answerName(l10n, answer),
-            style: AppType.micro.copyWith(
-              color: text,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+                ),
+              )
+            : SplitCard(
+                padding: StudyStyle.cardPadding,
+                dividerInset: StudyStyle.dividerInset,
+                dividerColor: line,
+                stackBelow: StudyStyle.minHalfWidth,
+                front: (context, width) => LayoutBuilder(
+                  builder: (context, constraints) => ContentView(
+                    front,
+                    style: AppType.front.copyWith(color: colors.ink),
+                    fit: (
+                      minFontSize: AppType.frontFloor,
+                      width: width,
+                      height: constraints.maxHeight,
+                    ),
+                  ),
+                ),
+                back: (context, width) => LayoutBuilder(
+                  builder: (context, constraints) => ContentView(
+                    back,
+                    style: AppType.back.copyWith(color: colors.ink2),
+                    fit: (
+                      minFontSize: AppType.backFloor,
+                      width: width,
+                      height: constraints.maxHeight,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }

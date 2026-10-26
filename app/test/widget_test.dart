@@ -500,7 +500,12 @@ void main() {
       await addCard(tester, 'Chat', 'cat');
       await tester.tap(find.text('Study'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Know'));
+      // Answered "Know" by a swipe of the current card.
+      await tester.timedDrag(
+        find.text('Chat'),
+        const Offset(200, 0),
+        const Duration(seconds: 1),
+      );
       await tester.pumpAndSettle();
       // The deck page reads its count again when the session closes, so wait
       // until the answer's review row is stored: its write runs on real time,

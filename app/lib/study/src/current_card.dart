@@ -11,15 +11,15 @@ import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
 import 'study_style.dart';
 
-/// The card under study, filling the height it is given less the answer
-/// buttons under it: its front alone, centred; its back shows once answered,
-/// on the previous card. Dragged right, or by its "안다" button, it answers
-/// "Know"; left, or by "모른다", "Don't know". "안내 다시 보기" between the
-/// buttons calls [onGuide].
+/// The card under study, filling the height it is given less the guide's
+/// row under it: its front alone, centred; its back shows once answered, on
+/// the previous card. Swiped right it answers "Know", left "Don't know"; a
+/// screen reader has both as actions. "안내 다시 보기", alone in the row,
+/// calls [onGuide].
 ///
 /// While the coach demonstrates an answer, [demo], the card moves toward it
 /// over the answer's tint under a finger, [demoProgress] through one
-/// [coachCycle], and [coach] takes the answer buttons' place.
+/// [coachCycle], and [coach] takes the guide's row's place.
 class CurrentCard extends StatefulWidget {
   const CurrentCard({
     super.key,
@@ -154,9 +154,8 @@ class _CurrentCardState extends State<CurrentCard>
             ),
           ),
         ),
-        const SizedBox(height: StudyStyle.answerGap),
-        widget.coach ??
-            _AnswerButtons(onAnswer: _commit, onGuide: widget.onGuide),
+        const SizedBox(height: StudyStyle.guideGap),
+        widget.coach ?? _GuideButton(onGuide: widget.onGuide),
       ],
     );
   }
@@ -257,89 +256,28 @@ class _Demo extends StatelessWidget {
   }
 }
 
-/// "모른다" after a left chevron and "안다" before a right chevron, under the
-/// card: the answers without a drag.
-class _AnswerButtons extends StatelessWidget {
-  const _AnswerButtons({required this.onAnswer, required this.onGuide});
+/// "안내 다시 보기", alone and centred under the card: the coach again.
+class _GuideButton extends StatelessWidget {
+  const _GuideButton({required this.onGuide});
 
-  final void Function(Answer answer) onAnswer;
   final VoidCallback onGuide;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    ButtonStyle style(Color fill, Color text, EdgeInsets padding) =>
-        TextButton.styleFrom(
-          backgroundColor: fill,
-          foregroundColor: text,
-          shape: const StadiumBorder(),
-          minimumSize: const Size(AppSize.tapTarget, StudyStyle.answerHeight),
-          padding: padding,
-          textStyle: AppType.secondary.copyWith(fontWeight: FontWeight.w700),
-        );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        spacing: AppSpace.s12,
-        children: [
-          Flexible(
-            child: TextButton(
-              style: style(
-                colors.tintRed,
-                colors.onDontKnowTint,
-                const EdgeInsets.only(left: AppSpace.s8, right: AppSpace.s16),
-              ),
-              onPressed: () => onAnswer(Answer.dontKnow),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: AppSpace.s4,
-                children: [
-                  const Icon(LucideIcons.chevronLeft, size: AppSize.smallIcon),
-                  Flexible(
-                    child: Text(l10n.dontKnow, overflow: TextOverflow.ellipsis),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Flexible(
-            child: TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: colors.muted,
-                minimumSize: const Size(AppSize.tapTarget, AppSize.tapTarget),
-                textStyle: AppType.micro,
-              ),
-              onPressed: onGuide,
-              child: Text(
-                l10n.studyCoachReplay,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          Flexible(
-            child: TextButton(
-              style: style(
-                colors.tintGreen,
-                colors.onKnowTint,
-                const EdgeInsets.only(left: AppSpace.s16, right: AppSpace.s8),
-              ),
-              onPressed: () => onAnswer(Answer.know),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: AppSpace.s4,
-                children: [
-                  Flexible(
-                    child: Text(l10n.know, overflow: TextOverflow.ellipsis),
-                  ),
-                  const Icon(LucideIcons.chevronRight, size: AppSize.smallIcon),
-                ],
-              ),
-            ),
-          ),
-        ],
+    return Center(
+      child: TextButton(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.of(context).muted,
+          minimumSize: const Size(AppSize.tapTarget, AppSize.tapTarget),
+          textStyle: AppType.micro,
+        ),
+        onPressed: onGuide,
+        child: Text(
+          l10n.studyCoachReplay,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
