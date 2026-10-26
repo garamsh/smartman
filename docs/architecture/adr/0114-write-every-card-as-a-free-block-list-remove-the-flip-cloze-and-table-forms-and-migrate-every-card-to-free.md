@@ -24,7 +24,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - **Keep the forms, and make 자유 the default.** The owner asked for the forms to go.
   - **Leave the stored templates as they are, and open every template in the block editor.** The rows would keep naming a form that no longer exists. The owner asked for the data to be migrated.
   - **Rewrite the content to a canonical 자유 shape,** for example a cloze card's derived back dropped. ADR 0106 keeps content and its encoding, and the issue's constraints forbid it. A card's blocks already are a 자유 card's blocks.
-  - **Keep each migrated card's template in a backup table, with a revert,** as the senses and plan-versions migrations keep what they change. Those changed content or terms that nothing else records. A template only decides how the editor opens a card, and its value before is derivable from the blocks. A backup table would also need rows in `supabase/preview-seed.sql`, outside this change.
+  - **Keep each migrated card's template in a backup table, with a revert,** as the senses and plan-versions migrations keep what they change. Those changed content or terms that nothing else records. This migration changes only `template`, which seeds nothing once the editor has one mode, and leaves content untouched, so a value kept would restore nothing a reader uses. A backup table would also need rows in `supabase/preview-seed.sql`, outside this change. The PM decided against the backup on issue #438, 2026-10-27.
+  - **Search a card's stored back whatever its face,** as the deck screen did. A former 빈칸 or 표 card keeps the back its form derived, and that back no longer follows its front once the front is edited. Study never shows it, so a match on it finds a card by text the user cannot see.
   - **Bump each migrated card's `updated_at`,** so the server's copy wins every merge. A device's edit not yet pushed would then lose to the migration.
   - **Make a new card's back a 뜻 목록, so a label can be typed at once.** A plain back would then be stored as senses. ADR 0100 refused that, because the web, photo import and a merged back read text there.
 
@@ -36,6 +37,15 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A text block beside a back's senses is a 글 block of its own. A front that holds senses opens as a 뜻 목록.
   - A back is the blocks listed on it. Nothing writes a cloze's or a table's back for it. A new one has no back block, since a blank makes it a card of one face. A stored back stays a 글 block and is not rewritten when the front is edited.
   - A 빈칸 문장's action shows while its line has focus. A table's name is a 글 before the 표, and a 표 needs no name.
+- **What the forms did that the block editor drops,** accepted by the PM on issue #438, 2026-10-27, each for its reason:
+  - A back no longer turns from text into senses once a label is typed; the 글 is swapped for a 뜻 목록, two taps more. A back that changes its own type as it is typed is the form-specific behaviour the owner asked to remove, and a plain back stays text, as ADR 0100 requires.
+  - The 빈칸 action bar shows only while its line has focus. The form held one line, so its bar always had a line to act on; a side may now hold several 빈칸 문장 blocks, and the focus says which one the action blanks.
+  - A table's name is optional. The name was the 표 form's derived back, and a card with a blank is studied on its one face, so nothing reads a name the user did not write.
+  - A front that holds senses opens as a 뜻 목록, not as text. It is edited as it is stored, and the note that a typed `[명]` would be saved as text goes with the text field.
+  - "덧붙인 내용" fields become 글 blocks. They were 글 blocks in storage already; the editor now shows them as such.
+  - The kind each deck remembered goes, since there is one kind to remember.
+- **Search.** The deck screen's search reads what study draws: the one face `oneFaceOf` gives a card with a blank, and its front and back otherwise. A former 빈칸 or 표 card's stored back is not searched, and no migration rewrites it.
+- **File names.** `word_form.dart`, `cloze_form.dart` and `table_form.dart` become `senses_block.dart`, `cloze_block.dart` and `table_block.dart`, with their tests, since no form remains and each holds one block's editor. The PM accepted the renames on issue #438, 2026-10-27.
 - **The template.** Every card the app writes, by the editor, photo import, a copy or a merged back, records `free` at version 1.
   - A template an earlier build wrote (`flip`, `cloze`, `table` or `free` at version 1), or no template, opens in the editor (`canEdit`).
   - Any other template, or a later version, opens read-only and is never rewritten, a merged back included, as ADR 0106 has it.
@@ -53,7 +63,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - The editor is one block list, so a card is written and read the same way whatever template it came from, and the editor code drops the form-split logic.
 - A vocabulary card takes one more step: the back's 글 is swapped for a 뜻 목록 before a label is typed.
-- A cloze or table card made now has no back block, and an edited one keeps its old back. Study draws its one face, so neither shows there, but a search of backs finds the old text.
+- A cloze or table card made now has no back block, and an edited one keeps its old back. Study draws its one face, so neither shows there, and the deck screen's search does not read it.
 - The device storage under `deckCardKinds` stays on devices that wrote it, read by nothing.
 - The server migration draws a new revision for every live card, so every device pulls every card once.
 
