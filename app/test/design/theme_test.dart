@@ -193,7 +193,16 @@ void main() {
           (colors.onDontKnowText, colors.dontKnowText),
           (colors.dontKnowText, colors.surface),
           (colors.dontKnowText, colors.ground),
-          for (final tint in colors.deckTints) (colors.ink, tint),
+          // A deck tile's icon on each colour of the deck palette.
+          for (final fill in [
+            colors.deckBlue,
+            colors.deckSky,
+            colors.deckViolet,
+            colors.deckAmber,
+            colors.deckSlate,
+            colors.deckSand,
+          ])
+            (colors.ink, fill),
           // A previous card's sides on its grade's fill, and the answers'
           // words on the green and red tints behind a dragged card.
           for (final card in [colors.knowCard, colors.dontKnowCard]) ...[

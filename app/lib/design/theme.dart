@@ -352,6 +352,12 @@ final class AppColors extends ThemeExtension<AppColors> {
     required this.dontKnowLine,
     required this.onDontKnowTint,
     required this.streak,
+    required this.deckBlue,
+    required this.deckSky,
+    required this.deckViolet,
+    required this.deckAmber,
+    required this.deckSlate,
+    required this.deckSand,
   });
 
   /// Light tokens: navy ink on white surfaces over a pale blue-grey ground.
@@ -386,6 +392,12 @@ final class AppColors extends ThemeExtension<AppColors> {
     dontKnowLine: Color(0xFFEBB3AA),
     onDontKnowTint: Color(0xFFB03A2B),
     streak: Color(0xFFC26A0A),
+    deckBlue: Color(0xFFE8ECF5),
+    deckSky: Color(0xFFE0F0FA),
+    deckViolet: Color(0xFFECE7F8),
+    deckAmber: Color(0xFFFFF1D6),
+    deckSlate: Color(0xFFE9ECF1),
+    deckSand: Color(0xFFF4ECDF),
   );
 
   /// Dark tokens: pale ink on navy surfaces, the primary fill inverted, and
@@ -421,6 +433,12 @@ final class AppColors extends ThemeExtension<AppColors> {
     dontKnowLine: Color(0xFF7A3A36),
     onDontKnowTint: Color(0xFFFF8577),
     streak: Color(0xFFF5A623),
+    deckBlue: Color(0xFF2A3560),
+    deckSky: Color(0xFF1D3A50),
+    deckViolet: Color(0xFF382D5C),
+    deckAmber: Color(0xFF4A3B1E),
+    deckSlate: Color(0xFF2D3445),
+    deckSand: Color(0xFF3F3527),
   );
 
   /// The screen's background, under every surface.
@@ -476,16 +494,17 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// The colour of every shadow, before its opacity.
   final Color shadow;
 
-  /// The first of the four deck tile tints.
+  /// A blue tint, which the web's deck tiles take until they follow the
+  /// deck palette.
   final Color tintBlue;
 
-  /// The second deck tile tint.
+  /// An amber tint: the backlog card's check and a chart's shortfall.
   final Color tintAmber;
 
-  /// The third deck tile tint.
+  /// A green tint, behind a study card dragged toward "Know".
   final Color tintGreen;
 
-  /// The fourth deck tile tint.
+  /// A red tint, behind a study card dragged toward "Don't know".
   final Color tintRed;
 
   /// A previous card answered "Know": its fill and its line.
@@ -516,8 +535,15 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// The streak flame's glow, from its fourth stage.
   Color get flameGlow => streak.withValues(alpha: 0.35);
 
-  /// The four tints a deck's initial tile is drawn on, in order.
-  List<Color> get deckTints => [tintBlue, tintAmber, tintGreen, tintRed];
+  /// The deck palette, the colours a deck's tile takes: blue, sky, violet,
+  /// amber, slate and sand, none green or red, which mean "Know" and "Don't
+  /// know".
+  final Color deckBlue;
+  final Color deckSky;
+  final Color deckViolet;
+  final Color deckAmber;
+  final Color deckSlate;
+  final Color deckSand;
 
   /// A chart's bar that is not the one it stresses: [color] a step back, ink's
   /// still 3:1 on the surface. Derived, so no token holds it.
@@ -560,6 +586,12 @@ final class AppColors extends ThemeExtension<AppColors> {
     Color? dontKnowLine,
     Color? onDontKnowTint,
     Color? streak,
+    Color? deckBlue,
+    Color? deckSky,
+    Color? deckViolet,
+    Color? deckAmber,
+    Color? deckSlate,
+    Color? deckSand,
   }) => AppColors(
     ground: ground ?? this.ground,
     surface: surface ?? this.surface,
@@ -591,6 +623,12 @@ final class AppColors extends ThemeExtension<AppColors> {
     dontKnowLine: dontKnowLine ?? this.dontKnowLine,
     onDontKnowTint: onDontKnowTint ?? this.onDontKnowTint,
     streak: streak ?? this.streak,
+    deckBlue: deckBlue ?? this.deckBlue,
+    deckSky: deckSky ?? this.deckSky,
+    deckViolet: deckViolet ?? this.deckViolet,
+    deckAmber: deckAmber ?? this.deckAmber,
+    deckSlate: deckSlate ?? this.deckSlate,
+    deckSand: deckSand ?? this.deckSand,
   );
 
   @override
@@ -628,6 +666,12 @@ final class AppColors extends ThemeExtension<AppColors> {
       dontKnowLine: mix(dontKnowLine, other.dontKnowLine),
       onDontKnowTint: mix(onDontKnowTint, other.onDontKnowTint),
       streak: mix(streak, other.streak),
+      deckBlue: mix(deckBlue, other.deckBlue),
+      deckSky: mix(deckSky, other.deckSky),
+      deckViolet: mix(deckViolet, other.deckViolet),
+      deckAmber: mix(deckAmber, other.deckAmber),
+      deckSlate: mix(deckSlate, other.deckSlate),
+      deckSand: mix(deckSand, other.deckSand),
     );
   }
 }

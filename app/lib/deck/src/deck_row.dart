@@ -150,13 +150,12 @@ IconData deckIconData(DeckIcon icon) => switch (icon) {
 
 /// The tile's fill for [color], from the theme's deck palette.
 Color deckTileColor(AppColors colors, DeckColor color) => switch (color) {
-  // TODO(worker-382): the palette tokens, once #384 frees theme.dart.
-  DeckColor.blue => colors.tintBlue,
-  DeckColor.sky => colors.brandTint,
-  DeckColor.violet => colors.brandTint,
-  DeckColor.sand => colors.brandTint,
-  DeckColor.amber => colors.tintAmber,
-  DeckColor.slate => colors.hairline,
+  DeckColor.blue => colors.deckBlue,
+  DeckColor.sky => colors.deckSky,
+  DeckColor.violet => colors.deckViolet,
+  DeckColor.amber => colors.deckAmber,
+  DeckColor.slate => colors.deckSlate,
+  DeckColor.sand => colors.deckSand,
 };
 
 /// Which of [count] colours a deck's tile takes by default: the sum of its id's UTF-16

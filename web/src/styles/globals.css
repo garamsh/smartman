@@ -32,6 +32,12 @@
   --color-dont-know-line: #ebb3aa;
   --color-on-dont-know-tint: #b03a2b;
   --color-streak: #c26a0a;
+  --color-deck-blue: #e8ecf5;
+  --color-deck-sky: #e0f0fa;
+  --color-deck-violet: #ece7f8;
+  --color-deck-amber: #fff1d6;
+  --color-deck-slate: #e9ecf1;
+  --color-deck-sand: #f4ecdf;
 
   /* Google's button (GoogleButtonStyle in app/lib/account/src/google_button.dart): its guidelines' colours, not the brand's. */
   --color-google-fill: #ffffff;
@@ -305,6 +311,12 @@
     --color-dont-know-line: #7a3a36;
     --color-on-dont-know-tint: #ff8577;
     --color-streak: #f5a623;
+    --color-deck-blue: #2a3560;
+    --color-deck-sky: #1d3a50;
+    --color-deck-violet: #382d5c;
+    --color-deck-amber: #4a3b1e;
+    --color-deck-slate: #2d3445;
+    --color-deck-sand: #3f3527;
     --color-google-fill: #131314;
     --color-google-stroke: #8e918f;
     --color-google-label: #e3e3e3;
@@ -342,6 +354,12 @@
   --color-dont-know-line: #7a3a36;
   --color-on-dont-know-tint: #ff8577;
   --color-streak: #f5a623;
+  --color-deck-blue: #2a3560;
+  --color-deck-sky: #1d3a50;
+  --color-deck-violet: #382d5c;
+  --color-deck-amber: #4a3b1e;
+  --color-deck-slate: #2d3445;
+  --color-deck-sand: #3f3527;
   --color-google-fill: #131314;
   --color-google-stroke: #8e918f;
   --color-google-label: #e3e3e3;
