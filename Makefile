@@ -1,4 +1,4 @@
-.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web
+.PHONY: lint format test build ci lint-repo lint-code bridge test-app test-db test-sync test-web build-ios build-apk build-engine-web preview-migrations
 
 # lint and test are each the sum of their parts, run in this order. CI runs the parts as parallel
 # jobs; lint-repo reads only the repository's files and needs no toolchain, so CI runs it on every
@@ -93,7 +93,14 @@ test-app: bridge
 test-db:
 	./supabase/test-db.sh
 	./supabase/senses-dry-run.test.sh
+	./supabase/migration-preview.test.sh
 	./deno.sh test
+
+# Writes $(PREVIEW).json and $(PREVIEW).md: what the migrations this branch adds do to main's
+# schema holding supabase/preview-seed.sql (server.md). Not part of make ci: it reports, it checks nothing.
+PREVIEW := $(or $(TMPDIR),/tmp)/migration-preview
+preview-migrations:
+	./supabase/migration-preview.sh $(PREVIEW)
 
 test-sync: bridge
 	./supabase/test-sync.sh
