@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 import 'account/account.dart';
 import 'database/database.dart';
 import 'deck/deck.dart';
+import 'design/keyboard_dismissal.dart';
 import 'design/theme.dart';
 import 'design/theme_choice.dart';
 import 'home/home.dart';
@@ -185,7 +186,7 @@ Widget composeApp(
 }
 
 /// The application root, opening on the account gate in the theme the user
-/// chose.
+/// chose, every route closing the keyboard as [KeyboardDismissal] says.
 class SmartmanApp extends ConsumerWidget {
   const SmartmanApp({super.key});
 
@@ -198,6 +199,7 @@ class SmartmanApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => KeyboardDismissal(child: child),
       home: const AccountGate(signedIn: HomeScreen()),
     );
   }
