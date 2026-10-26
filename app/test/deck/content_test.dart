@@ -58,8 +58,9 @@ void main() {
           '[{"type":"text","v":1,"payload":{"text":"Capitals"}},'
           '{"type":"cloze","v":1,"payload":{"text":"___ is in France",'
           '"answers":["Paris"]}},'
-          '{"type":"table","v":1,"payload":{"columns":["Capital","Country"],'
-          '"rows":[["Paris","France"]],"blanks":[{"row":0,"column":0}]}}]',
+          '{"type":"table","v":2,"payload":{"columns":["Capital","Country"],'
+          '"rows":[["Paris","France"]],"blanks":[{"row":0,"column":0}],'
+          '"spans":[]}}]',
         );
         expect(decodeContent(encoded), blocks);
       },
@@ -291,33 +292,40 @@ void main() {
   });
 
   group('block versions and ids (ADR 0106)', () {
-    // One block of each type this build knows, as it writes each at v1.
-    const blocks = <(String, Content, String)>[
-      ('text', TextContent('bonjour'), '{"text":"bonjour"}'),
+    // One block of each type this build knows, the version it writes it at
+    // and its payload as written.
+    const blocks = <(String, int, Content, String)>[
+      ('text', 1, TextContent('bonjour'), '{"text":"bonjour"}'),
       (
         'cloze',
+        1,
         ClozeContent('___ is in France', ['Paris']),
         '{"text":"___ is in France","answers":["Paris"]}',
       ),
       (
         'table',
+        2,
         TableContent(
           columns: ['Capital', 'Country'],
           rows: [
-            ['Paris', 'France'],
+            ['Paris', 'France, in Europe'],
           ],
           blanks: [(row: 0, column: 0)],
+          spans: [(row: 0, column: 1, start: 0, end: 6)],
         ),
-        '{"columns":["Capital","Country"],"rows":[["Paris","France"]],'
-            '"blanks":[{"row":0,"column":0}]}',
+        '{"columns":["Capital","Country"],"rows":[["Paris","France, in Europe"]],'
+            '"blanks":[{"row":0,"column":0}],'
+            '"spans":[{"row":0,"column":1,"start":0,"end":6}]}',
       ),
       (
         'senses',
+        1,
         SensesContent([CardSense(meaning: '기차')]),
         '{"senses":[{"labels":[],"meaning":"기차","examples":[]}]}',
       ),
       (
         'image',
+        1,
         ImageContent(
           media: MediaId('m1'),
           width: 4,
@@ -329,21 +337,22 @@ void main() {
       ),
     ];
 
-    for (final (type, block, payload) in blocks) {
-      test('a $type block is read at v1 with and without the field, and '
-          'written with it', () {
-        final without = '[{"type":"$type","payload":$payload}]';
-        final withV = '[{"type":"$type","v":1,"payload":$payload}]';
+    for (final (type, version, block, payload) in blocks) {
+      test('a $type block is read at v$version, and written with it', () {
+        final withV = '[{"type":"$type","v":$version,"payload":$payload}]';
 
-        expect(decodeContent(without), [block], reason: 'no v reads as v1');
         expect(decodeContent(withV), [block]);
         expect(encodeContent([block]), withV);
+        if (version == 1) {
+          final without = '[{"type":"$type","payload":$payload}]';
+          expect(decodeContent(without), [block], reason: 'no v reads as v1');
+        }
       });
 
       test('a $type block above the version this build writes is kept, '
           'byte for byte, as unsupported', () {
         final stored =
-            '[{"type":"$type","v":2,"id":"b1","payload":$payload,'
+            '[{"type":"$type","v":${version + 1},"id":"b1","payload":$payload,'
             '"extra":true}]';
 
         final decoded = decodeContent(stored);
@@ -412,8 +421,10 @@ void main() {
       expect(upcastPayload('text', 3, {'body': 'cat'}, steps: steps), {
         'body': 'cat',
       }, reason: 'the current version takes none');
-      // Today every type this build knows is written at v1, with no step.
-      for (final type in ['text', 'cloze', 'table', 'senses']) {
+      // Today a table is written at v2, after one step, and every other
+      // type this build knows at v1, with none.
+      expect(blockVersion('table'), 2);
+      for (final type in ['text', 'cloze', 'senses', 'image']) {
         expect(blockVersion(type), 1, reason: type);
       }
     });
@@ -575,6 +586,157 @@ void main() {
         'm2',
       );
       expect(mediaOf([const TextContent('a'), image]), {const MediaId('m1')});
+    });
+  });
+
+  group("a table's spans (ADR 0110)", () {
+    const cell = '5부족 연맹체, 왕 아래 마가·우가';
+    String table({
+      int? v,
+      Object? blanks = const <Object>[],
+      Object? spans = const <Object>[],
+      bool withSpans = true,
+    }) => jsonEncode([
+      {
+        'type': 'table',
+        'v': ?v,
+        'payload': {
+          'columns': ['', '정치'],
+          'rows': [
+            ['부여', cell],
+            ['고구려', '5부'],
+          ],
+          'blanks': blanks,
+          if (withSpans) 'spans': spans,
+        },
+      },
+    ]);
+    Map<String, int> span(int row, int column, int start, int end) => {
+      'row': row,
+      'column': column,
+      'start': start,
+      'end': end,
+    };
+
+    test('a v1 table, with or without its v, is upcast to v2 with its blanks '
+        'whole cells and no span, and written back at v2', () {
+      const whole = [
+        {'row': 1, 'column': 1},
+      ];
+      for (final stored in [
+        table(blanks: whole, withSpans: false),
+        table(v: 1, blanks: whole, withSpans: false),
+      ]) {
+        final decoded = decodeContent(stored).single as TableContent;
+
+        expect(decoded.blanks, [(row: 1, column: 1)], reason: stored);
+        expect(decoded.spans, isEmpty, reason: stored);
+        expect(
+          jsonDecode(encodeContent([decoded])),
+          jsonDecode(table(v: 2, blanks: whole)),
+          reason: stored,
+        );
+      }
+    });
+
+    test('a v2 table round-trips its spans beside whole-cell blanks, several '
+        'in one cell', () {
+      const block = TableContent(
+        columns: ['', '정치'],
+        rows: [
+          ['부여', cell],
+          ['고구려', '5부'],
+        ],
+        blanks: [(row: 1, column: 1)],
+        spans: [
+          (row: 0, column: 1, start: 0, end: 7),
+          (row: 0, column: 1, start: 14, end: 16),
+        ],
+      );
+
+      final encoded = encodeContent([block]);
+
+      expect(
+        encoded,
+        table(
+          v: 2,
+          blanks: [
+            {'row': 1, 'column': 1},
+          ],
+          spans: [span(0, 1, 0, 7), span(0, 1, 14, 16)],
+        ),
+      );
+      expect(decodeContent(encoded), [block]);
+      expect(
+        plainText([block]),
+        ' | 정치\n부여 | $cell\n고구려 | 5부',
+        reason: 'the card key reads every cell whole',
+      );
+    });
+
+    test('a v2 table refuses a span outside its cell, empty, of whitespace, '
+        'overlapping another or in a whole-cell blank, and a table of no '
+        'blank at all, where a whole one decodes', () {
+      for (final broken in [
+        table(v: 2, spans: [span(0, 1, 0, cell.length + 1)]),
+        table(v: 2, spans: [span(0, 2, 0, 1)]),
+        table(v: 2, spans: [span(2, 1, 0, 1)]),
+        table(v: 2, spans: [span(0, 1, -1, 3)]),
+        table(v: 2, spans: [span(0, 1, 3, 3)]),
+        table(v: 2, spans: [span(0, 1, 8, 9)]),
+        table(v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 6, 9)]),
+        table(v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 0, 7)]),
+        table(
+          v: 2,
+          blanks: [
+            {'row': 0, 'column': 1},
+          ],
+          spans: [span(0, 1, 0, 7)],
+        ),
+        table(v: 2, spans: [span(0, 1, 0, 7), 'not a span']),
+        table(v: 2),
+        table(
+          v: 2,
+          blanks: [
+            {'row': 0, 'column': 1},
+          ],
+          withSpans: false,
+        ),
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+      // Control: spans alone, two touching in one cell.
+      final whole = table(v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 7, 9)]);
+      expect(decodeContent(whole).single, isA<TableContent>());
+    });
+
+    test('a cell reads as its runs: a whole blank as one, spans between its '
+        'plain text, and a plain cell as one', () {
+      const block = TableContent(
+        columns: ['', '정치'],
+        rows: [
+          ['부여', cell],
+          ['고구려', '5부'],
+        ],
+        blanks: [(row: 1, column: 1)],
+        spans: [
+          (row: 0, column: 1, start: 14, end: 16),
+          (row: 0, column: 1, start: 0, end: 7),
+        ],
+      );
+
+      expect(block.cellRuns(0, 1), [
+        (text: '5부족 연맹체', blank: true),
+        (text: ', 왕 아래 ', blank: false),
+        (text: '마가', blank: true),
+        (text: '·우가', blank: false),
+      ]);
+      expect(block.cellRuns(1, 1), [(text: '5부', blank: true)]);
+      expect(block.cellRuns(0, 0), [(text: '부여', blank: false)]);
     });
   });
 }

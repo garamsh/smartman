@@ -182,7 +182,8 @@ String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
 
 /// A card side as a screen reader reads it: as [describeContent] has it, but
 /// each blank as its answer only when [revealed], else as "빈칸", a table row
-/// by row, its cells joined by commas, and the blocks as sentences.
+/// by row, its cells joined by commas, a span in its cell's text, and the
+/// blocks as sentences.
 String spokenContent(
   AppLocalizations l10n,
   List<Content> blocks, {
@@ -202,8 +203,11 @@ String spokenContent(
             columns.join(', '),
             for (final (row, cells) in rows.indexed)
               [
-                for (final (column, cell) in cells.indexed)
-                  block.isBlank(row, column) ? blank(cell) : cell,
+                for (final (column, _) in cells.indexed)
+                  [
+                    for (final run in block.cellRuns(row, column))
+                      run.blank ? blank(run.text) : run.text,
+                  ].join(),
               ].join(', '),
           ].join('. '),
           // A photo, then each box as a blank, or its answer once revealed.

@@ -1,6 +1,8 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { blanksUnder } from "@/testing/whole-cards";
+
 import type { Content } from "../card-content";
 import { WholeCard } from "../components/whole-card";
 
@@ -110,5 +112,31 @@ describe("a photo on a whole card", () => {
     expect(revealed.container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe(
       "사진, Paris, 빈칸",
     );
+  });
+});
+
+// A table card whose cell holds a span blank, as the app's `study_screen_test.dart` draws it
+// (ADR 0110).
+describe("a table on a whole card", () => {
+  const table: Content = {
+    kind: "table",
+    columns: ["", "정치"],
+    rows: [["부여", "5부족 연맹체, 왕 아래 마가"]],
+    blanks: [],
+    spans: [{ row: 0, column: 1, start: 0, end: 7 }],
+  };
+
+  it("draws a span empty inside its cell's text, read as 빈칸, and fills it in place once revealed", () => {
+    for (const revealed of [false, true]) {
+      const { container, unmount } = render(<WholeCard blocks={[table]} revealed={revealed} />);
+      const blank = container.querySelector<HTMLElement>("[data-blank]");
+      expect(blanksUnder(container)).toEqual({ "5부족 연맹체": revealed });
+      // The blank and the rest of the cell, the cue, are one cell.
+      expect(blank?.parentElement?.textContent).toBe("5부족 연맹체, 왕 아래 마가");
+      expect(container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe(
+        revealed ? ", 정치. 부여, 5부족 연맹체, 왕 아래 마가" : ", 정치. 부여, 빈칸, 왕 아래 마가",
+      );
+      unmount();
+    }
   });
 });
