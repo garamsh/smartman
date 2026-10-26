@@ -138,6 +138,21 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Waits until the block holds the sound just recorded or picked, which
+    /// "Remove sound" shows only then: the store's file and row are written
+    /// outside the test's fake time.
+    Future<void> stored(WidgetTester tester) async {
+      final holding = find.text('Remove sound');
+      for (var step = 0; step < 500 && holding.evaluate().isEmpty; step++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
+      expect(holding, findsOneWidget, reason: 'the sound was stored');
+      await tester.pumpAndSettle();
+    }
+
     Future<void> tapVisible(WidgetTester tester, Finder finder) async {
       await tester.ensureVisible(finder);
       await tester.pumpAndSettle();
@@ -198,7 +213,7 @@ void main() {
         expect(find.text('Recording 0:03 / 1:00'), findsOneWidget);
 
         await tapVisible(tester, find.text('Stop recording'));
-        await settle(tester);
+        await stored(tester);
         expect(find.text('0:04'), findsWidgets, reason: '3.4 s, rounded up');
         await tapVisible(tester, find.byTooltip('Play sound').last);
         expect(playback.plays, [const MediaId('sound0')]);
@@ -222,7 +237,7 @@ void main() {
       expect(recording.stops, 0, reason: 'still under the limit');
 
       await tester.pump(const Duration(seconds: 1));
-      await settle(tester);
+      await stored(tester);
 
       expect(recording.stops, 1);
       expect(find.text('Stop recording'), findsNothing);
@@ -264,7 +279,7 @@ void main() {
 
         pick.failure = null;
         await tapVisible(tester, find.text('Choose a file'));
-        await settle(tester);
+        await stored(tester);
         expect(find.text('0:09'), findsWidgets);
         await tapVisible(tester, find.text('Remove sound'));
         await save(tester);
@@ -272,7 +287,7 @@ void main() {
         expect(await screens.cards(), isEmpty);
 
         await tapVisible(tester, find.text('Choose a file'));
-        await settle(tester);
+        await stored(tester);
         await save(tester);
         expect(
           (await storedSound(screens)).media,
@@ -289,7 +304,7 @@ void main() {
       await openWithSoundBlock(tester);
       await tapVisible(tester, find.text('Record'));
       await tapVisible(tester, find.text('Stop recording'));
-      await settle(tester);
+      await stored(tester);
       await tapVisible(tester, find.byTooltip('Close'));
       await tapVisible(tester, find.text('Discard'));
       await settle(tester);
@@ -303,7 +318,7 @@ void main() {
         (tester) async {
           await openWithSoundBlock(tester, themeMode: mode);
           await tapVisible(tester, find.text('Choose a file'));
-          await settle(tester);
+          await stored(tester);
           await tester.ensureVisible(find.text('Remove sound'));
           await tester.pumpAndSettle();
           final handle = tester.ensureSemantics();
