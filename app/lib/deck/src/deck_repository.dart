@@ -354,10 +354,11 @@ class DeckRepository {
   /// deleted.
   ///
   /// A copy's photos and sounds become the user's own: each file is read
-  /// from the owner's folder before the transaction, then stored under a new
-  /// id as its card is written, and its blocks name that id. A file that
-  /// could not be read leaves its block naming a new id no file holds
-  /// (ADR 0113).
+  /// from the owner's folder and kept on the device under a new id before
+  /// the transaction, then queued for upload as its card is written, and its
+  /// blocks name that id. The files no written card holds are deleted after
+  /// the transaction, and all of them when it fails. A file that could not
+  /// be read leaves its block naming a new id no file holds (ADR 0113).
   Future<CardsAdded> addCards(
     AddTarget target,
     List<IncomingCard> cards, {
@@ -401,70 +402,82 @@ class DeckRepository {
           },
       ],
     };
-    return _db.transaction(() async {
-      final deck = switch (target) {
-        AddToDeck(:final deck) => await getDeck(deck),
-        AddToNewDeck(:final name) => await createDeck(name),
-      };
-      var added = 0;
-      var merged = 0;
-      for (final card in cards) {
-        // A copied front with a photo or sound names a new id, so its key
-        // matches no card already stored.
-        final front = await own(card.front);
-        final key = CardKey.fromFront(plainText(front));
-        final existing = await _findByKey(deck.id, key);
-        switch ((existing, card.onDuplicate)) {
-          case (null, _) || (_, DuplicateChoice.addNew):
-            final now = _clock();
-            final back = await own(card.back);
-            await _db
-                .into(_db.cards)
-                .insert(
-                  CardRow(
-                    id: _newId(),
-                    deckId: deck.id.value,
-                    front: encodeContent(_withIds(front, const [])),
-                    back: encodeContent(_withIds(back, const [])),
-                    cardKey: key.value,
-                    template: derivedKind(front).template,
-                    templateVersion: cardTemplateVersion,
-                    source: switch (source) {
-                      FromPhoto() => CardSource.import.name,
-                      FromCopy() => CardSource.copy.name,
-                    },
-                    originDeckId: switch (source) {
-                      FromPhoto() => null,
-                      FromCopy(:final origin) => origin.value,
-                    },
-                    createdAt: now,
-                    updatedAt: now,
-                    dirty: true,
+    final CardsAdded result;
+    try {
+      result = await _db.transaction(() async {
+        final deck = switch (target) {
+          AddToDeck(:final deck) => await getDeck(deck),
+          AddToNewDeck(:final name) => await createDeck(name),
+        };
+        var added = 0;
+        var merged = 0;
+        for (final card in cards) {
+          // A copied front with a photo or sound names a new id, so its key
+          // matches no card already stored.
+          final front = await own(card.front);
+          final key = CardKey.fromFront(plainText(front));
+          final existing = await _findByKey(deck.id, key);
+          switch ((existing, card.onDuplicate)) {
+            case (null, _) || (_, DuplicateChoice.addNew):
+              final now = _clock();
+              final back = await own(card.back);
+              await _db
+                  .into(_db.cards)
+                  .insert(
+                    CardRow(
+                      id: _newId(),
+                      deckId: deck.id.value,
+                      front: encodeContent(_withIds(front, const [])),
+                      back: encodeContent(_withIds(back, const [])),
+                      cardKey: key.value,
+                      template: derivedKind(front).template,
+                      templateVersion: cardTemplateVersion,
+                      source: switch (source) {
+                        FromPhoto() => CardSource.import.name,
+                        FromCopy() => CardSource.copy.name,
+                      },
+                      originDeckId: switch (source) {
+                        FromPhoto() => null,
+                        FromCopy(:final origin) => origin.value,
+                      },
+                      createdAt: now,
+                      updatedAt: now,
+                      dirty: true,
+                    ),
+                  );
+              added++;
+            case (final existing?, DuplicateChoice.mergeBack):
+              if (mergeBack(existing.back, plainText(card.back))
+                  case final back?) {
+                await (_db.update(
+                  _db.cards,
+                )..where((row) => row.id.equals(existing.id.value))).write(
+                  CardsCompanion(
+                    back: Value(encodeContent(_withIds(back, existing.back))),
+                    template: Value(_templateFor(existing, null).$1),
+                    templateVersion: Value(_templateFor(existing, null).$2),
+                    updatedAt: Value(_clock()),
+                    dirty: const Value(true),
                   ),
                 );
-            added++;
-          case (final existing?, DuplicateChoice.mergeBack):
-            if (mergeBack(existing.back, plainText(card.back))
-                case final back?) {
-              await (_db.update(
-                _db.cards,
-              )..where((row) => row.id.equals(existing.id.value))).write(
-                CardsCompanion(
-                  back: Value(encodeContent(_withIds(back, existing.back))),
-                  template: Value(_templateFor(existing, null).$1),
-                  templateVersion: Value(_templateFor(existing, null).$2),
-                  updatedAt: Value(_clock()),
-                  dirty: const Value(true),
-                ),
-              );
-              merged++;
-            }
-          case (_?, DuplicateChoice.skip):
-            break;
+                merged++;
+              }
+            case (_?, DuplicateChoice.skip):
+              break;
+          }
         }
-      }
-      return CardsAdded(deck: deck, added: added, merged: merged);
-    });
+        return CardsAdded(deck: deck, added: added, merged: merged);
+      });
+    } on Object {
+      // Nothing the transaction wrote holds a fetched file.
+      await _media?.discardFetched(fetched.values);
+      rethrow;
+    }
+    await _media?.discardFetched([
+      for (final MapEntry(:key, :value) in fetched.entries)
+        if (!copies.containsKey(key)) value,
+    ]);
+    return result;
   });
 
   /// The deck, unless it was deleted; then [DeckDeleted].

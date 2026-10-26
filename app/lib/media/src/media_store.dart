@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 
 import '../../database/database.dart';
@@ -51,10 +52,14 @@ class MediaStore {
   /// How many files [fetchShared] reads at once.
   static const fetchesAtOnce = 4;
 
-  /// The files of [ids] in [owner]'s folder, read to copy them as the
-  /// user's own (ADR 0113). An id is absent when the server holds no file
-  /// the user may read, its bytes are of no type the bucket takes, or the
-  /// network fails [fetchAttempts] times. Nothing is written.
+  /// The files of [ids] in [owner]'s folder, each copied onto the device
+  /// under a new id as it arrives, so only the files in flight are held in
+  /// memory, and not yet queued (ADR 0113). An id is absent when the server
+  /// holds no file the user may read, its bytes are of no type the bucket
+  /// takes, or the network fails [fetchAttempts] times.
+  ///
+  /// Each file returned is then queued by [addFetched] or deleted by
+  /// [discardFetched].
   Future<Map<MediaId, FetchedMedia>> fetchShared(
     String owner,
     Iterable<MediaId> ids,
@@ -74,19 +79,44 @@ class MediaStore {
 
   Future<FetchedMedia?> _fetch(String owner, MediaId id) async {
     for (var attempt = 1; ; attempt++) {
+      final Uint8List? bytes;
       try {
-        final bytes = await _server.download(id, owner: owner);
-        return bytes == null ? null : FetchedMedia.tryParse(bytes);
+        bytes = await _server.download(id, owner: owner);
       } on MediaFailure {
         if (attempt == fetchAttempts) return null;
+        continue;
       }
+      if (bytes == null) return null;
+      if (mediaTypeOf(bytes) case (final kind, final mimeType)) {
+        final copy = MediaId(_newId());
+        await _write(copy, bytes);
+        return FetchedMedia(
+          id: copy,
+          kind: kind,
+          mimeType: mimeType,
+          byteSize: bytes.length,
+          sha256: sha256.convert(bytes).toString(),
+        );
+      }
+      return null;
     }
   }
 
-  /// Keeps [file] on the device under a new id and queues it for upload, as
-  /// [addImage] does; returns its id. Its row joins a caller's transaction.
-  Future<MediaId> addFetched(FetchedMedia file) =>
-      _add(file.kind, file.mimeType, file.bytes, file.sha256);
+  /// Queues [file], already on the device, for upload, as [addImage] does;
+  /// returns its id. Its row joins a caller's transaction.
+  Future<MediaId> addFetched(FetchedMedia file) async {
+    await _queue(file.id, file.kind, file.mimeType, file.byteSize, file.sha256);
+    return file.id;
+  }
+
+  /// Deletes each of [files] from the device: fetched, but held by nothing
+  /// written.
+  Future<void> discardFetched(Iterable<FetchedMedia> files) async {
+    for (final file in files) {
+      final kept = _file(file.id);
+      if (await kept.exists()) await kept.delete();
+    }
+  }
 
   Future<MediaId> _add(
     MediaKind kind,
@@ -96,20 +126,28 @@ class MediaStore {
   ) async {
     final id = MediaId(_newId());
     await _write(id, bytes);
-    await _db
-        .into(_db.mediaUploads)
-        .insert(
-          MediaUploadRow(
-            id: id.value,
-            kind: kind.key,
-            mimeType: mimeType,
-            byteSize: bytes.length,
-            sha256: sha256,
-            createdAt: _clock(),
-          ),
-        );
+    await _queue(id, kind, mimeType, bytes.length, sha256);
     return id;
   }
+
+  Future<void> _queue(
+    MediaId id,
+    MediaKind kind,
+    String mimeType,
+    int byteSize,
+    String sha256,
+  ) => _db
+      .into(_db.mediaUploads)
+      .insert(
+        MediaUploadRow(
+          id: id.value,
+          kind: kind.key,
+          mimeType: mimeType,
+          byteSize: byteSize,
+          sha256: sha256,
+          createdAt: _clock(),
+        ),
+      );
 
   /// Lets [id] go: it is no longer uploaded, and is queued for deletion from
   /// the server and the device. Only database rows are written, so a caller's

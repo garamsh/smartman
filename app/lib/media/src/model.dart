@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' as crypto;
-
 /// A stored file's id, a UUID the device makes. Decks and cards name a file
 /// by it, never by a URL, so where the bytes live can change (ADR 0107).
 extension type const MediaId(String value) {}
@@ -100,44 +98,44 @@ const maxAudioDuration = Duration(seconds: 60);
 /// ceiling.
 const maxAudioBytes = 5 * 1024 * 1024;
 
-/// A file read from another user's folder, ready to store as the user's
-/// own: its kind and type read from its first bytes, since the owner's row
-/// is not readable (ADR 0113).
+/// Another user's file, copied onto the device under [id], a new media id of
+/// the user's own, with what its upload's row records; not yet queued
+/// (ADR 0113).
 final class FetchedMedia {
-  const FetchedMedia._(this.kind, this.mimeType, this.bytes, this.sha256);
+  const FetchedMedia({
+    required this.id,
+    required this.kind,
+    required this.mimeType,
+    required this.byteSize,
+    required this.sha256,
+  });
 
-  /// [bytes] as a JPEG image, an MPEG-4 sound or an MP3, the types the
-  /// bucket accepts; null for any other bytes.
-  static FetchedMedia? tryParse(Uint8List bytes) {
-    final type = switch (bytes) {
-      [0xFF, 0xD8, 0xFF, ...] => (MediaKind.image, 'image/jpeg'),
-      [_, _, _, _, 0x66, 0x74, 0x79, 0x70, ...] => (
-        MediaKind.audio,
-        'audio/mp4',
-      ),
-      [0x49, 0x44, 0x33, ...] => (MediaKind.audio, 'audio/mpeg'),
-      // An MP3 without a tag opens on a frame's sync bits.
-      [0xFF, final second, ...] when second & 0xE0 == 0xE0 => (
-        MediaKind.audio,
-        'audio/mpeg',
-      ),
-      _ => null,
-    };
-    if (type == null) return null;
-    return FetchedMedia._(
-      type.$1,
-      type.$2,
-      bytes,
-      crypto.sha256.convert(bytes).toString(),
-    );
-  }
-
+  final MediaId id;
   final MediaKind kind;
 
   /// `image/jpeg`, `audio/mp4` or `audio/mpeg`.
   final String mimeType;
-  final Uint8List bytes;
+  final int byteSize;
 
-  /// [bytes]' SHA-256 digest, in lowercase hex.
+  /// The file's SHA-256 digest, in lowercase hex.
   final String sha256;
 }
+
+/// The kind and MIME type [bytes] open with, among the types the bucket
+/// accepts: a JPEG image; an MPEG-4 file, or an ADTS AAC stream as a picked
+/// `.aac` is stored; or an MP3. Null for any other bytes. The owner's row is
+/// not readable, so a fetched file's type comes from its bytes (ADR 0113).
+(MediaKind, String)? mediaTypeOf(Uint8List bytes) => switch (bytes) {
+  [0xFF, 0xD8, 0xFF, ...] => (MediaKind.image, 'image/jpeg'),
+  [_, _, _, _, 0x66, 0x74, 0x79, 0x70, ...] => (MediaKind.audio, 'audio/mp4'),
+  // An ADTS header is a frame sync whose layer bits are 00.
+  [0xFF, final second, ...] when second & 0xF6 == 0xF0 => (
+    MediaKind.audio,
+    'audio/mp4',
+  ),
+  [0x49, 0x44, 0x33, ...] => (MediaKind.audio, 'audio/mpeg'),
+  // An MP3 without a tag opens on a frame sync whose layer is not 00.
+  [0xFF, final second, ...] when second & 0xE0 == 0xE0 && second & 0x06 != 0 =>
+    (MediaKind.audio, 'audio/mpeg'),
+  _ => null,
+};

@@ -376,6 +376,12 @@ void main() {
         row.id: row.mimeType,
     };
 
+    /// The ids of the files kept on the device.
+    Set<String> filesOnDevice() => {
+      if (directory.existsSync())
+        for (final file in directory.listSync()) file.uri.pathSegments.last,
+    };
+
     test("a copy stores each of the owner's files under a new id, names it in "
         'the blocks and queues it for upload', () async {
       final copied = await sharing.copy(source, const CopyIntoNewDeck());
@@ -459,38 +465,53 @@ void main() {
       },
     );
 
-    test(
-      "a card skipped as a duplicate stores none of its back's files",
-      () async {
-        server.cards = {
-          source.id: [
-            const PublicCard(
-              front: [TextContent('robin')],
-              back: [ImageContent(media: photo, width: 4, height: 4)],
-            ),
-          ],
-        };
-        final deck = await decks.createDeck('Mine');
-        await decks.addCard(
-          deck.id,
-          front: [const TextContent('robin')],
-          back: [const TextContent('a bird')],
-        );
+    test("a card skipped as a duplicate leaves none of its back's files queued "
+        'or on the device', () async {
+      server.cards = {
+        source.id: [
+          const PublicCard(
+            front: [TextContent('robin')],
+            back: [ImageContent(media: photo, width: 4, height: 4)],
+          ),
+        ],
+      };
+      final deck = await decks.createDeck('Mine');
+      await decks.addCard(
+        deck.id,
+        front: [const TextContent('robin')],
+        back: [const TextContent('a bird')],
+      );
 
-        final skipped = await sharing.copy(
-          source,
-          CopyIntoDeck(deck.id, DuplicateChoice.skip),
-        );
+      final skipped = await sharing.copy(
+        source,
+        CopyIntoDeck(deck.id, DuplicateChoice.skip),
+      );
 
-        expect(skipped.added, 0);
-        expect(await queued(), isEmpty);
-        // Control: the same card added as new stores its file.
-        await sharing.copy(
-          source,
-          CopyIntoDeck(deck.id, DuplicateChoice.addNew),
-        );
-        expect(await queued(), hasLength(1));
-      },
-    );
+      expect(skipped.added, 0);
+      expect(await queued(), isEmpty);
+      expect(filesOnDevice(), isEmpty);
+      // Control: the same card added as new stores its file.
+      await sharing.copy(source, CopyIntoDeck(deck.id, DuplicateChoice.addNew));
+      expect(await queued(), hasLength(1));
+      expect(filesOnDevice(), (await queued()).keys.toSet());
+    });
+
+    test('a copy whose write fails leaves none of the files it fetched on the '
+        'device', () async {
+      final deck = await decks.createDeck('Mine');
+      await decks.deleteDeck(deck.id);
+
+      await expectLater(
+        sharing.copy(source, CopyIntoDeck(deck.id, DuplicateChoice.skip)),
+        throwsA(isA<DeckDeleted>()),
+      );
+
+      expect(media.requests, 2, reason: 'both files were fetched');
+      expect(await queued(), isEmpty);
+      expect(filesOnDevice(), isEmpty);
+      // Control: the same copy into a new deck keeps both files.
+      await sharing.copy(source, const CopyIntoNewDeck());
+      expect(filesOnDevice(), hasLength(2));
+    });
   });
 }

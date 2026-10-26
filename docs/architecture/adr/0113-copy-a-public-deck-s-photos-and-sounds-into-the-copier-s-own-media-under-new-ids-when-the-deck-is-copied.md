@@ -17,19 +17,21 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - **Store the owner's original id beside the new one, so a re-copy finds its duplicates.** The PM rejected this field in the dispatch of #428: it is the rejected alternative above in another form.
   - **Fetch the files in `SharingService` and pass new ids to `addCards`.** `SharingService` holds no `MediaStore`, so `main.dart` would change and `sharing` would come to depend on `media`. A copied file that a skipped card held would also have to be released again.
   - **Download inside the transaction.** A slow network would hold every other database write.
+  - **Hold the fetched bytes in memory until the transaction commits.** At 5 MiB a sound, a deck of 200 sound cards would hold about 1 GiB, and a phone kills the app for that (PM review of #431).
 
 ## Decision
 
 - **A copy owns its media.** Copying a public deck reads each photo and sound its cards hold from the owner's folder and stores it under a new media id in the copier's own media. Each copied block names the new id. Every later read stays in the copier's folder.
 - **Where it happens.** `DeckRepository.addCards`, given `FromCopy` with the owner's id, does it in two steps:
-  - before its transaction, it reads every file the incoming cards name through `MediaStore.fetchShared`;
-  - inside the transaction, it stores each file through `MediaStore.addFetched` as the card holding it is written. The file is kept on the device and queued in `media_uploads`, so it uploads with the rest of the queue.
+  - before its transaction, it reads every file the incoming cards name through `MediaStore.fetchShared`. Each file is written to the device under its new id as it arrives, and only its id and its row's metadata are kept, so only the files in flight are held in memory;
+  - inside the transaction, `MediaStore.addFetched` queues each file in `media_uploads` as the card holding it is written, so it uploads with the rest of the queue;
+  - after the transaction, `MediaStore.discardFetched` deletes from the device each fetched file that no written card holds. If the transaction fails, it deletes them all.
   - `SharingService` passes the owner. `sharing` gains no dependency.
 - **Once per file.** A file of the owner's that several cards in one copy hold is stored once, and they all name its one new id. A back's files are stored only when its card is added: a card skipped or merged as a duplicate stores none.
 - **The type from the bytes.** A fetched file's kind and MIME type are read from its first bytes, the only types the bucket accepts:
   - JPEG is `image/jpeg`;
-  - an MPEG-4 `ftyp` box is `audio/mp4`;
-  - an ID3 tag or an MPEG audio frame's sync bits are `audio/mpeg`.
+  - an MPEG-4 `ftyp` box is `audio/mp4`, and so is an ADTS AAC header (a frame sync with layer bits `00`), which is how a picked `.aac` is stored;
+  - an ID3 tag, or a frame sync whose layer is not `00`, is `audio/mpeg`.
   - Other bytes count as a file that could not be read.
 - **A file that cannot be read.** It cannot be read when:
   - the server holds none the copier may read, for example because the owner removed it;
@@ -48,7 +50,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - A file missing at the time of the copy stays missing in that copy. Nothing fetches it again later.
 - A photo's or a sound's card key is its media id. So a re-copy into a deck that already holds the same cards never finds a photo or sound card a duplicate, and it adds the card again whatever the duplicate choice says.
 - A side whose blocks include one this build cannot read keeps that block as it is, unchanged. Any media id inside such a block is not copied.
-- A copy that fails after the transaction began leaves the files it wrote on the device with no queue row. Like a deleted deck's downloaded file, a file left that way stays until the app's data is cleared.
+- A copy writes its files to the device before it knows which cards it adds, and deletes the unused ones after. If the app is killed between the two, the unused files stay on the device with no queue row until the app's data is cleared, as a deleted deck's downloaded file does.
 
 ## Signs the decision was wrong
 

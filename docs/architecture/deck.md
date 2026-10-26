@@ -87,9 +87,10 @@ The `deck` domain: decks, the cards inside them, card content, the card key, and
 - `DeckRepository.addCards` saves a list of `IncomingCard`s into an existing deck, or into a new deck it creates, in one transaction: a failure writes nothing, the new deck included.
 - Each card's sides are content blocks, a table or cloze card's front kept as its blocks, and it is written unsynced like every write, with the source its `AddSource` gives: `import` from a photo, or `copy` and the origin deck from a public deck ([`sharing.md`](sharing.md)).
 - A copy's photos and sounds become the user's own ([ADR 0113](adr/0113-copy-a-public-deck-s-photos-and-sounds-into-the-copier-s-own-media-under-new-ids-when-the-deck-is-copied.md)):
-  - before the transaction, `addCards` reads each file the cards name from the folder of the owner `FromCopy` names, through `MediaStore.fetchShared`, since a network request inside the transaction would hold every other write;
-  - inside it, it stores each file under a new media id through `MediaStore.addFetched` as the card holding it is written, and writes the block naming that id;
-  - a front is rewritten before its key is taken, and a back only when its card is added, so a skipped or merged card stores none of its back's files;
+  - before the transaction, `addCards` reads each file the cards name from the folder of the owner `FromCopy` names, through `MediaStore.fetchShared`, since a network request inside the transaction would hold every other write. Each file is kept on the device under a new media id as it arrives, and only its id and metadata are held;
+  - inside it, `MediaStore.addFetched` queues each file for upload as the card holding it is written, and the block names its id;
+  - a front is rewritten before its key is taken, and a back only when its card is added, so a skipped or merged card queues none of its back's files;
+  - after the transaction, `MediaStore.discardFetched` deletes from the device each fetched file no written card holds, and every one when the transaction fails;
   - a file several cards hold is stored once, and one that could not be read leaves its block naming a new id no file holds.
   - Every copy makes new ids, and a photo's or a sound's key is its media id, so a re-copy into a deck finds no photo or sound card a duplicate and adds it whatever the choice.
 - An import into a deck deleted meanwhile, on this device or through sync, is refused with `DeckDeleted` and writes nothing.
