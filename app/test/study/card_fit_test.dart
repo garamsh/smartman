@@ -148,7 +148,7 @@ void main() {
             ),
           ),
         );
-        // The card's face, without the answer buttons under it.
+        // The card's face, without the guide's row under it.
         final card = tester.getRect(
           find
               .descendant(
