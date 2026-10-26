@@ -426,7 +426,7 @@ export async function runEval(
 }
 
 /** [send], recording each OpenRouter call's status and body, or its error, into [calls]. */
-function recording(send: typeof fetch, calls: Call[]): typeof fetch {
+export function recording(send: typeof fetch, calls: Call[]): typeof fetch {
   return async (input, init) => {
     if (String(input) !== OPENROUTER_URL) return send(input, init);
     let response: Response;
@@ -449,7 +449,7 @@ function recording(send: typeof fetch, calls: Call[]): typeof fetch {
 }
 
 /** A configuration's label as a folder name: lower case, runs of other characters as one dash. */
-function slug(label: string): string {
+export function slug(label: string): string {
   return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
