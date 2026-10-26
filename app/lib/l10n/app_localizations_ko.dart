@@ -86,6 +86,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeInsertBlank => '빈칸 넣기';
 
   @override
+  String get clozeUndoBlank => '빈칸 풀기';
+
+  @override
   String clozeRemoveBlank(String answer) {
     return '빈칸 풀기, $answer';
   }

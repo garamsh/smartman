@@ -1010,13 +1010,19 @@ void main() {
           baseOffset: start,
           extentOffset: end,
         );
+        await tester.pump();
         await tap(tester, find.text(ko.clozeInsertBlank));
       }
       await tester.ensureVisible(find.text(ko.cardKindCloze));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
+      // The caret in "present": the one action turns it back into text.
+      controller.selection = const TextSelection.collapsed(offset: 17);
+      await tester.pumpAndSettle();
+      await shot(tester, '05q-card-editor-cloze-undo');
       // An empty blank at the cursor, over a phone keyboard 336 points high.
       controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
       await tap(tester, find.text(ko.clozeInsertBlank));
       tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
       addTearDown(tester.view.resetViewInsets);

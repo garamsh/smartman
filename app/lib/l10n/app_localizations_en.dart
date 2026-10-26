@@ -88,6 +88,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clozeInsertBlank => 'Insert blank';
 
   @override
+  String get clozeUndoBlank => 'Undo blank';
+
+  @override
   String clozeRemoveBlank(String answer) {
     return 'Undo blank, $answer';
   }

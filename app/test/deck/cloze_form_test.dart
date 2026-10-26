@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 
@@ -21,8 +22,25 @@ TextEditingController _controller(WidgetTester tester) => tester
     )
     .controller!;
 
-/// The blank chip reading [answer].
-Finder _blank(String answer) => find.widgetWithText(InputChip, answer);
+/// The blanks the line draws as blocks, in order: the spans of its text on
+/// `brandTint`.
+List<String> _blocks(WidgetTester tester) {
+  final colors = AppColors.of(tester.element(_line));
+  final blocks = <String>[];
+  _controller(tester)
+      .buildTextSpan(context: tester.element(_line), withComposing: false)
+      .visitChildren((child) {
+        if (child is TextSpan &&
+            child.style?.backgroundColor == colors.brandTint) {
+          blocks.add(child.text!);
+        }
+        return true;
+      });
+  return blocks;
+}
+
+/// The bar's one action while it reads [label].
+Finder _action(String label) => find.widgetWithText(AppButton, label);
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -61,12 +79,6 @@ void main() {
     await tester.pump();
   }
 
-  /// Taps [finder] once it is scrolled into view.
-  Future<void> tap(DeckScreens screens, Finder finder) async {
-    await screens.tester.ensureVisible(finder);
-    await screens.tap(finder);
-  }
-
   Future<void> insertBlank(DeckScreens screens) =>
       screens.tap(find.text('Insert blank'));
 
@@ -82,7 +94,7 @@ void main() {
       await typeLine(tester, 'H₂O예요');
       await select(tester, 0, 3);
       await insertBlank(screens);
-      expect(_blank('H₂O'), findsOneWidget);
+      expect(_blocks(tester), ['H₂O']);
       await save(screens);
       final card = await _stored(screens);
       expect(card.front, [
@@ -91,7 +103,7 @@ void main() {
       expect(card.back, [const TextContent('H₂O예요')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(_blank('H₂O'), findsOneWidget, reason: 'opens with its blank');
+      expect(_blocks(tester), ['H₂O'], reason: 'opens with its blank');
       await save(screens);
       expect((await _stored(screens)).front, card.front, reason: 'unchanged');
 
@@ -117,11 +129,15 @@ void main() {
       await typeLine(tester, '물은 예요');
       await select(tester, 3);
       await insertBlank(screens);
-      expect(_blank('Blank'), findsOneWidget, reason: 'an empty blank');
+      expect(
+        _action('Undo blank'),
+        findsOneWidget,
+        reason: 'the caret is in the empty blank',
+      );
       await typeAt(tester, '물은 H예요', 4);
       await typeAt(tester, '물은 H₂예요', 5);
       await typeAt(tester, '물은 H₂O예요', 6);
-      expect(_blank('H₂O'), findsOneWidget);
+      expect(_blocks(tester), ['H₂O']);
       // The cursor leaves it: typing there is text again.
       await select(tester, 0);
       await typeAt(tester, '그 물은 H₂O예요', 2);
@@ -134,11 +150,13 @@ void main() {
       await typeLine(tester, 'one two');
       await select(tester, 3);
       await insertBlank(screens);
-      expect(_blank('Blank'), findsOneWidget);
+      expect(_action('Undo blank'), findsOneWidget);
       await select(tester, 0);
+      // Back where it was: no blank there any more.
+      await select(tester, 3);
       expect(
-        _blank('Blank'),
-        findsNothing,
+        _action('Insert blank'),
+        findsOneWidget,
         reason: 'left with nothing typed into it, it goes',
       );
       await screens.close();
@@ -146,7 +164,7 @@ void main() {
   );
 
   testWidgets(
-    'a blank\'s button, named for a screen reader, turns it back into text',
+    'the one action follows the caret: inside a blank it reads Undo blank, is named for a screen reader with that blank, and turns exactly that blank into text; elsewhere it reads Insert blank',
     (tester) async {
       final screens = await openCloze(tester);
       await typeLine(tester, 'a cat and a dog');
@@ -154,9 +172,28 @@ void main() {
       await insertBlank(screens);
       await select(tester, 12, 15);
       await insertBlank(screens);
-      await tap(screens, find.byTooltip('Undo blank, cat'));
-      expect(_blank('cat'), findsNothing);
-      expect(_blank('dog'), findsOneWidget, reason: 'control: the other stays');
+      expect(_blocks(tester), ['cat', 'dog']);
+
+      await select(tester, 7);
+      expect(_action('Insert blank'), findsOneWidget, reason: 'outside');
+      expect(_action('Undo blank'), findsNothing);
+
+      final handle = tester.ensureSemantics();
+      await select(tester, 3);
+      expect(_action('Undo blank'), findsOneWidget, reason: 'inside cat');
+      expect(_action('Insert blank'), findsNothing);
+      expect(find.bySemanticsLabel('Undo blank, cat'), findsOneWidget);
+      await select(tester, 2, 5);
+      expect(
+        find.bySemanticsLabel('Undo blank, cat'),
+        findsOneWidget,
+        reason: 'the whole blank selected',
+      );
+      handle.dispose();
+
+      await screens.tap(_action('Undo blank'));
+      expect(_blocks(tester), ['dog'], reason: 'exactly that blank goes');
+      expect(_controller(tester).text, 'a cat and a dog');
       await save(screens);
       expect((await _stored(screens)).front, [
         const ClozeContent('a cat and a ___', ['dog']),
@@ -166,7 +203,7 @@ void main() {
   );
 
   testWidgets(
-    'the word chips, Pick letters, the blank list and the hint are gone, and the line draws its blanks as blocks in place',
+    'the word chips, Pick letters, the blank list, the hint and any row of blank chips are gone, and the line draws its blanks as blocks in place',
     (tester) async {
       final screens = await openCloze(tester);
       await typeLine(tester, 'The cat sat');
@@ -176,19 +213,8 @@ void main() {
       await insertBlank(screens);
       expect(find.text('Pick letters'), findsNothing);
       expect(find.textContaining('Blank 1'), findsNothing);
-
-      final colors = AppColors.of(tester.element(_line));
-      final span = _controller(tester)
-          .buildTextSpan(context: tester.element(_line), withComposing: false);
-      final blocks = <String>[];
-      span.visitChildren((child) {
-        if (child is TextSpan &&
-            child.style?.backgroundColor == colors.brandTint) {
-          blocks.add(child.text!);
-        }
-        return true;
-      });
-      expect(blocks, ['cat']);
+      expect(find.byType(InputChip), findsNothing, reason: 'no chip row');
+      expect(_blocks(tester), ['cat']);
       await screens.close();
     },
   );
@@ -249,9 +275,7 @@ void main() {
       await typeLine(tester, 'one cat and a dog');
       await typeLine(tester, 'one cot and a dog');
       await typeLine(tester, 'one cot and a big dog');
-      expect(_blank('a'), findsOneWidget);
-      expect(_blank('dog'), findsOneWidget);
-      expect(_blank('cot'), findsNothing, reason: 'a changed blank goes');
+      expect(_blocks(tester), ['a', 'dog'], reason: 'a changed blank goes');
       await save(screens);
       expect((await _stored(screens)).front, [
         const ClozeContent('one cot and ___ big ___', ['a', 'dog']),
@@ -295,7 +319,7 @@ void main() {
       );
       final card = await _stored(screens);
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(_blank('believ'), findsOneWidget);
+      expect(_blocks(tester), ['believ']);
       await save(screens);
       expect((await _stored(screens)).front, [cloze]);
 
@@ -358,7 +382,10 @@ void main() {
       for (final line in ['capital ___ Paris', 'capital ____ Paris']) {
         await typeLine(tester, line);
         await select(tester, line.length - 5, line.length);
-        await insertBlank(screens);
+        // The second line keeps the first one's blank on "Paris".
+        if (_action('Insert blank').evaluate().isNotEmpty) {
+          await insertBlank(screens);
+        }
         await save(screens);
         expect(
           find.text("___ marks a blank, so the line can't contain it"),

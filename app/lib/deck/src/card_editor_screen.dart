@@ -487,10 +487,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                             ),
                         ],
                       ),
-                      CardKind.cloze => ClozeBlanks(
+                      CardKind.cloze => ClozeProblemText(
                         draft: _cloze,
                         showError: _showRequired,
-                        onChanged: () => _change(() => _clozeEdited = true),
                       ),
                       CardKind.table => TableFields(
                         draft: _table,
@@ -525,7 +524,16 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 ),
               ),
             // Last, so it sits right above the keyboard.
-            if (_kind == CardKind.cloze) ClozeToolbar(onInsert: _insertBlank),
+            if (_kind == CardKind.cloze)
+              ClozeToolbar(
+                draft: _cloze,
+                blank: _cloze.blankAt(_front.selection),
+                onInsert: _insertBlank,
+                onUndo: (blank) => _change(() {
+                  _cloze.remove(blank);
+                  _clozeEdited = true;
+                }),
+              ),
             if (_focusedSense() case final sense?)
               LabelPresetStrip(
                 presets: labelPresets(

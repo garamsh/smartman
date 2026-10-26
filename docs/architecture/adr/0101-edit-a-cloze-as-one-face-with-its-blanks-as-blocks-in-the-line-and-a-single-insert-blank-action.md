@@ -14,22 +14,22 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - the one action is "빈칸 넣기". It makes the selected characters a blank, or, with nothing selected, inserts an empty blank at the cursor to type into. Selection works on characters, so any run is possible, punctuation and special characters included;
   - the form shows no counts and no explanatory lines;
   - storage is unchanged.
+- **The PM's amendment of #377** (2026-10-26, from the review of #386) meets "each removable by its own control" through the one action, which follows the caret. Inside a blank it reads "빈칸 풀기" and turns that blank back into text; elsewhere it reads "빈칸 넣기". There is no row of chips under the line, which keeps the owner's "빈칸 넣기 버튼만".
 - Alternatives considered:
   - **A remove control drawn inside the line field, beside each block.**
     - A Flutter text field draws only text: a widget placed in its text counts as a character, which would shift every caret position against the line it edits.
     - A control laid over the field at a block's end would sit inside text the user taps to place the caret.
     - Such a control would fall below the 44-point minimum target ([`design.md`](../design.md), Principle 6).
-    - Each block is therefore drawn in the line, and its control is a chip of the same block under the line.
+  - **A row of chips under the line, one per blank, each with a remove button.** It was built first and rejected in review. It repeats every blank a second time, the clutter the owner asked to remove, when the blocks in the line already show where each blank is.
   - **An editor of separate fields between the blocks.** A selection could not cross a block, which the "any run" rule needs.
   - **Keep "글자 고르기" beside the selection.** A selection in the line already chooses any run of characters, which is what "글자 고르기" existed for.
 
 ## Decision
 
 - **The line** is the front field. Its blanks are drawn in it as blocks: their text on `brandTint`, in ink.
-- **"빈칸 넣기"** is the form's one action, in a bar right above the keyboard.
-  - With characters selected, it makes exactly them a blank, replacing the blanks they overlap.
-  - With none selected, it opens an empty blank at the cursor. What is typed at its end becomes its answer until the cursor leaves it, and a blank left empty goes. A cursor inside a blank adds none.
-- **Each blank** is also a chip under the line, of its answer or "빈칸" while it is empty. The chip's button, named "빈칸 풀기, {answer}", turns the blank back into text.
+- **One action** sits in a bar right above the keyboard, and follows the caret.
+  - **Inside a blank** it reads "빈칸 풀기", is named for a screen reader as "빈칸 풀기, {answer}" ("빈칸" for an empty one), and turns exactly that blank back into text. The caret is inside a blank when it is strictly between the blank's ends, or anywhere in the blank just opened. A selection is inside one when the blank holds all of it.
+  - **Elsewhere** it reads "빈칸 넣기". With characters selected, it makes exactly them a blank, replacing the blanks they overlap. With none selected, it opens an empty blank at the cursor: what is typed at its end becomes its answer until the cursor leaves it, and a blank left empty goes.
 - **The preview** draws the cloze whole on its one face, each blank a block in place with its answer, an empty one as an empty block.
 - **No counts and no explanatory lines.** Only the save's validation messages remain: no blank holding text, and `___` in the line (issue #306).
 - **Blanks stay spans of the line**, as ADR 0092 has them. A stored cloze opens with each blank where the card has it, and an edit keeps every blank it leaves whole.
@@ -40,11 +40,11 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - Any run of characters can be a blank, part of a word or a run with punctuation included, in one step.
 - Making a blank needs a text selection. On a phone that is a long-press and its handles, where a word chip was one tap.
-- The remove control sits under the line, not inside the block it removes.
+- Removing a blank takes putting the caret in it first, where a control on the block would take one tap.
 - An empty blank is drawn in the preview; the line field shows only the caret where it is.
 
 ## Signs the decision was wrong
 
 - Users make blanks one word at a time and find the selection slow, which would ask for a one-tap way to blank the word under the cursor.
-- Users tap a block in the line expecting to remove it, and miss the chip under it.
+- Users tap a block in the line expecting to remove it, and do not find "빈칸 풀기" when the button changes under the caret.
 - Blanks are saved with stray spaces or punctuation that a word chip would have left outside.

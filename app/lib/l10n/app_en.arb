@@ -22,6 +22,7 @@
   "cardKindFlip": "Front & back",
   "cardKindCloze": "Cloze",
   "clozeInsertBlank": "Insert blank",
+  "clozeUndoBlank": "Undo blank",
   "clozeRemoveBlank": "Undo blank, {answer}",
   "clozeEmptyBlank": "Blank",
   "clozeBlankRequired": "Insert at least one blank",

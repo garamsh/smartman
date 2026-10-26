@@ -230,13 +230,19 @@ abstract class AppLocalizations {
   /// **'빈칸 넣기'**
   String get clozeInsertBlank;
 
-  /// Screen-reader name of a blank's button that turns it back into text.
+  /// The cloze form's one action while the caret or the selection is inside a blank: turns that blank back into text.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸 풀기'**
+  String get clozeUndoBlank;
+
+  /// Screen-reader name of the cloze form's action while the caret is inside a blank, naming the blank it turns back into text.
   ///
   /// In ko, this message translates to:
   /// **'빈칸 풀기, {answer}'**
   String clozeRemoveBlank(String answer);
 
-  /// What a blank chip shows, and its button reads, while nothing is typed into it yet.
+  /// What the screen-reader name of 빈칸 풀기 says for a blank while nothing is typed into it yet.
   ///
   /// In ko, this message translates to:
   /// **'빈칸'**

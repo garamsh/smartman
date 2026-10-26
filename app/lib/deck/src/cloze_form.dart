@@ -135,6 +135,28 @@ class ClozeDraft {
     _open = null;
   }
 
+  /// The blank [selection] is inside, which "빈칸 풀기" acts on: the blank
+  /// that holds the whole selection, the open blank while the caret is in
+  /// it, or one the caret is strictly inside; null elsewhere.
+  Span? blankAt(TextSelection selection) {
+    if (!selection.isValid) return null;
+    final (start, end) = (selection.start, selection.end);
+    final open = _open;
+    if (selection.isCollapsed &&
+        open != null &&
+        open.start <= start &&
+        start <= open.end) {
+      return open;
+    }
+    for (final blank in _blanks) {
+      final inside = selection.isCollapsed
+          ? blank.start < start && start < blank.end
+          : blank.start <= start && end <= blank.end;
+      if (inside) return blank;
+    }
+    return null;
+  }
+
   /// Turns [blank] back into text.
   void remove(Span blank) {
     _blanks.remove(blank);
@@ -242,79 +264,77 @@ class ClozeLineController extends TextEditingController {
   }
 }
 
-/// The blanks of the line, each a chip of its answer with a button that turns
-/// it back into text, read as "빈칸 풀기, {answer}". With [showError], a line
-/// under them says what keeps the cloze from being saved.
-class ClozeBlanks extends StatelessWidget {
-  const ClozeBlanks({
+/// What keeps the cloze from being saved, in a line under it while
+/// [showError]; nothing otherwise.
+class ClozeProblemText extends StatelessWidget {
+  const ClozeProblemText({
     super.key,
     required this.draft,
     required this.showError,
-    required this.onChanged,
   });
 
   final ClozeDraft draft;
   final bool showError;
 
-  /// Called after every change, which this widget makes on [draft].
-  final VoidCallback onChanged;
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final problem = showError ? draft.problem : null;
+    if (problem == null) return const SizedBox.shrink();
+    return Text(
+      switch (problem) {
+        ClozeProblem.noBlank => l10n.clozeBlankRequired,
+        ClozeProblem.blankMarker => l10n.clozeBlankMarker,
+      },
+      style: AppType.caption.copyWith(
+        color: AppColors.of(context).dontKnowText,
+      ),
+    );
+  }
+}
+
+/// The cloze form's one action, in a bar right above the keyboard. With the
+/// caret or the selection inside [blank], it reads "빈칸 풀기", is named for a
+/// screen reader with the blank's answer, and turns that blank back into
+/// text; elsewhere it reads "빈칸 넣기" (ADR 0101).
+class ClozeToolbar extends StatelessWidget {
+  const ClozeToolbar({
+    super.key,
+    required this.draft,
+    required this.blank,
+    required this.onInsert,
+    required this.onUndo,
+  });
+
+  final ClozeDraft draft;
+
+  /// The blank the caret or the selection is in, or null.
+  final Span? blank;
+  final VoidCallback onInsert;
+  final ValueChanged<Span> onUndo;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final problem = showError ? draft.problem : null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s8,
-      children: [
-        if (draft.blanks.isNotEmpty)
-          Wrap(
-            spacing: AppSpace.s8,
-            runSpacing: AppSpace.s8,
-            children: [
-              for (final blank in draft.blanks)
-                InputChip(
-                  label: Text(
-                    blank.start == blank.end
-                        ? l10n.clozeEmptyBlank
-                        : draft.textOf(blank),
-                  ),
-                  labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
-                  backgroundColor: colors.brandTint,
-                  side: BorderSide(color: colors.brandTint),
-                  deleteButtonTooltipMessage: l10n.clozeRemoveBlank(
-                    blank.start == blank.end
-                        ? l10n.clozeEmptyBlank
-                        : draft.textOf(blank),
-                  ),
-                  onDeleted: () {
-                    draft.remove(blank);
-                    onChanged();
-                  },
-                ),
-            ],
-          ),
-        if (problem != null)
-          Text(switch (problem) {
-            ClozeProblem.noBlank => l10n.clozeBlankRequired,
-            ClozeProblem.blankMarker => l10n.clozeBlankMarker,
-          }, style: AppType.caption.copyWith(color: colors.dontKnowText)),
-      ],
-    );
-  }
-}
-
-/// The cloze form's one action, "빈칸 넣기", in a bar right above the
-/// keyboard.
-class ClozeToolbar extends StatelessWidget {
-  const ClozeToolbar({super.key, required this.onInsert});
-
-  final VoidCallback onInsert;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
+    final blank = this.blank;
+    final button = blank == null
+        ? AppButton(label: l10n.clozeInsertBlank, onPressed: onInsert)
+        : Semantics(
+            label: l10n.clozeRemoveBlank(
+              blank.start == blank.end
+                  ? l10n.clozeEmptyBlank
+                  : draft.textOf(blank),
+            ),
+            button: true,
+            excludeSemantics: true,
+            onTap: () => onUndo(blank),
+            child: AppButton(
+              label: l10n.clozeUndoBlank,
+              variant: AppButtonVariant.secondary,
+              onPressed: () => onUndo(blank),
+            ),
+          );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -325,13 +345,7 @@ class ClozeToolbar extends StatelessWidget {
           horizontal: AppSpace.s12,
           vertical: AppSpace.s8,
         ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: AppButton(
-            label: AppLocalizations.of(context).clozeInsertBlank,
-            onPressed: onInsert,
-          ),
-        ),
+        child: Align(alignment: Alignment.centerLeft, child: button),
       ),
     );
   }
