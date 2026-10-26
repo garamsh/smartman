@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_chip.dart';
 import '../../design/app_list_row.dart';
@@ -82,36 +83,83 @@ class DeckRow extends StatelessWidget {
   }
 }
 
-/// The deck name's first letter on a rounded tile, in one of the four tints,
-/// the same one for a deck every time; decorative, beside the name.
+/// The deck's icon on its colour, on a rounded tile; decorative, beside the
+/// name. A deck that holds no icon or colour this build knows shows
+/// [DeckIcon.fallback] on the colour its id selects ([deckTintIndex]).
+///
+/// [icon] and [color] are drawn in place of the deck's own, as the 덱 꾸미기
+/// sheet previews a choice; [size] is the tile's side.
 class DeckTile extends StatelessWidget {
-  const DeckTile({super.key, required this.deck});
+  const DeckTile({
+    super.key,
+    required this.deck,
+    this.icon,
+    this.color,
+    this.size = AppSize.deckTile,
+  });
 
   final Deck deck;
+  final DeckIcon? icon;
+  final DeckColor? color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final tints = AppColors.of(context).deckTints;
-    final name = deck.name.trim();
+    final colors = AppColors.of(context);
+    final shown = color ?? deck.color ?? defaultDeckColor(deck.id);
     return ExcludeSemantics(
       child: Container(
-        width: AppSize.deckTile,
-        height: AppSize.deckTile,
+        width: size,
+        height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: tints[deckTintIndex(deck.id, tints.length)],
+          color: deckTileColor(colors, shown),
           borderRadius: BorderRadius.circular(AppRadius.field),
         ),
-        child: Text(
-          name.isEmpty ? '' : name.characters.first.toUpperCase(),
-          style: AppType.headline,
+        child: Icon(
+          deckIconData(icon ?? deck.icon ?? DeckIcon.fallback),
+          size: size / 2,
+          color: colors.ink,
         ),
       ),
     );
   }
 }
 
-/// Which of [count] tints a deck's tile takes: the sum of its id's UTF-16
+/// The colour a deck with none chosen takes, selected by its id.
+DeckColor defaultDeckColor(DeckId deck) =>
+    DeckColor.values[deckTintIndex(deck, DeckColor.values.length)];
+
+/// The line icon drawn for [icon].
+IconData deckIconData(DeckIcon icon) => switch (icon) {
+  DeckIcon.layers => LucideIcons.layers,
+  DeckIcon.book => LucideIcons.bookOpen,
+  DeckIcon.languages => LucideIcons.languages,
+  DeckIcon.pencil => LucideIcons.pencil,
+  DeckIcon.flask => LucideIcons.flaskConical,
+  DeckIcon.calculator => LucideIcons.calculator,
+  DeckIcon.globe => LucideIcons.globe,
+  DeckIcon.music => LucideIcons.music,
+  DeckIcon.palette => LucideIcons.palette,
+  DeckIcon.brain => LucideIcons.brain,
+  DeckIcon.code => LucideIcons.code,
+  DeckIcon.landmark => LucideIcons.landmark,
+  DeckIcon.briefcase => LucideIcons.briefcase,
+  DeckIcon.star => LucideIcons.star,
+};
+
+/// The tile's fill for [color], from the theme's deck palette.
+Color deckTileColor(AppColors colors, DeckColor color) => switch (color) {
+  // TODO(worker-382): the palette tokens, once #384 frees theme.dart.
+  DeckColor.blue => colors.tintBlue,
+  DeckColor.sky => colors.brandTint,
+  DeckColor.violet => colors.brandTint,
+  DeckColor.sand => colors.brandTint,
+  DeckColor.amber => colors.tintAmber,
+  DeckColor.slate => colors.hairline,
+};
+
+/// Which of [count] colours a deck's tile takes by default: the sum of its id's UTF-16
 /// code units, modulo [count]. The web app computes the same.
 int deckTintIndex(DeckId deck, int count) =>
     deck.value.codeUnits.fold(0, (sum, unit) => sum + unit) % count;

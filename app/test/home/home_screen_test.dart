@@ -1109,9 +1109,21 @@ void main() {
         expect(_shown('New deck'), findsOneWidget);
         await tester.enterText(find.byType(EditableText).last, 'Delta');
         await list.tap('Create');
+        // 덱 꾸미기 comes next, and the pair chosen there reaches the tile.
+        expect(_shown('Customize deck'), findsOneWidget);
+        await tester.tap(find.bySemanticsLabel('Star'));
+        await tester.pumpAndSettle();
+        await list.tap('Save');
 
         // The new deck opens, as a photo import's deck does.
         expect(find.byType(DeckScreen), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(DeckTile),
+            matching: find.byIcon(LucideIcons.star),
+          ),
+          findsOneWidget,
+        );
         expect(find.text('Delta'), findsOneWidget);
         expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
         await tester.pageBack();

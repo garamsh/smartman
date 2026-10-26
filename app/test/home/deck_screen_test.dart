@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_text_field.dart';
@@ -122,6 +123,81 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    "Customize deck in the menu names each icon and colour as a 48 pt button, previews the choice, and Save stores it on the header's tile",
+    (tester) async {
+      final screens = await DeckScreens.open(tester, cards: cards);
+      await screens.push((deck) => DeckScreen(deck: deck));
+      Finder header(IconData icon) => find.descendant(
+        of: find.byType(DeckTile),
+        matching: find.byIcon(icon),
+      );
+      expect(header(LucideIcons.layers), findsOneWidget);
+
+      await screens.tap(find.byTooltip('Deck actions'));
+      await screens.tap(find.text('Customize deck'));
+      // The deck's own default pair is selected, and every option is a
+      // labelled button with a selected state, at least 48 square.
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Cards')),
+        isSemantics(isButton: true, hasSelectedState: true, isSelected: true),
+      );
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Book')),
+        isSemantics(isButton: true, hasSelectedState: true, isSelected: false),
+      );
+      for (final option in ['Cards', 'Star', 'Blue', 'Slate']) {
+        final size = tester.getSize(find.bySemanticsLabel(option));
+        expect(size.width, greaterThanOrEqualTo(48), reason: option);
+        expect(size.height, greaterThanOrEqualTo(48), reason: option);
+      }
+
+      await screens.tap(find.bySemanticsLabel('Book'));
+      await screens.tap(find.bySemanticsLabel('Amber'));
+      // The sheet's preview shows the pair before it is saved.
+      expect(header(LucideIcons.bookOpen), findsOneWidget);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Book')),
+        isSemantics(isButton: true, hasSelectedState: true, isSelected: true),
+      );
+      await screens.tap(find.text('Save'));
+
+      expect(find.text('Customize deck'), findsNothing);
+      expect(header(LucideIcons.bookOpen), findsOneWidget);
+      expect(header(LucideIcons.layers), findsNothing);
+      final stored = (await tester.runAsync(
+        () => screens.repository.getDeck(screens.deck.id),
+      ))!;
+      expect((stored.icon, stored.color), (DeckIcon.book, DeckColor.amber));
+      await screens.close();
+    },
+  );
+
+  testWidgets('dismissing Customize deck keeps the deck as it was', (
+    tester,
+  ) async {
+    final screens = await DeckScreens.open(tester, cards: cards);
+    await screens.push((deck) => DeckScreen(deck: deck));
+
+    await screens.tap(find.byTooltip('Deck actions'));
+    await screens.tap(find.text('Customize deck'));
+    await screens.tap(find.bySemanticsLabel('Book'));
+    Finder onTile(IconData icon) =>
+        find.descendant(of: find.byType(DeckTile), matching: find.byIcon(icon));
+    // Control: the choice was made, so the sheet's preview shows it.
+    expect(onTile(LucideIcons.bookOpen), findsOneWidget);
+    await tester.tapAt(const Offset(195, 40));
+    await tester.pumpAndSettle();
+
+    expect(onTile(LucideIcons.bookOpen), findsNothing);
+    expect(onTile(LucideIcons.layers), findsOneWidget);
+    final stored = (await tester.runAsync(
+      () => screens.repository.getDeck(screens.deck.id),
+    ))!;
+    expect((stored.icon, stored.color), (null, null));
+    await screens.close();
+  });
 
   testWidgets(
     "the header names the deck, counts its cards and today's, and Study opens a session over it",

@@ -112,6 +112,20 @@ void main() {
     expect(cards.map((card) => plainText(card.front)), ['chat']);
   }, skip: skip);
 
+  test("a deck's appearance set on A reaches B, and a deck without one stays without", () async {
+    final french = await a.deck.createDeck('French');
+    final spanish = await a.deck.createDeck('Spanish');
+    await a.deck.setAppearance(french.id, DeckIcon.book, DeckColor.violet);
+
+    await a.sync(account);
+    await b.sync(account);
+
+    final onB = await b.deck.getDeck(french.id);
+    expect((onB.icon, onB.color), (DeckIcon.book, DeckColor.violet));
+    final plain = await b.deck.getDeck(spanish.id);
+    expect((plain.icon, plain.color), (null, null));
+  }, skip: skip);
+
   test('an edit conflict keeps the later edit on both devices', () async {
     final deck = await shared();
     a.now = a.now.add(const Duration(minutes: 2));

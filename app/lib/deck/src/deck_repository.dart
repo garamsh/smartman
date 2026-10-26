@@ -75,6 +75,21 @@ class DeckRepository {
     );
   });
 
+  /// Stores [icon] and [color] as the deck's appearance.
+  Future<void> setAppearance(DeckId id, DeckIcon icon, DeckColor color) =>
+      _guard(() async {
+        await (_db.update(
+          _db.decks,
+        )..where((deck) => deck.id.equals(id.value))).write(
+          DecksCompanion(
+            icon: Value(icon.key),
+            color: Value(color.key),
+            updatedAt: Value(_clock()),
+            dirty: const Value(true),
+          ),
+        );
+      });
+
   /// Publishes the deck as [visibility] says, with [description] when it is
   /// public; a private deck keeps the description it had, for the next
   /// publish. Refused with [DeckDeleted] once the deck is deleted.
@@ -389,6 +404,8 @@ class DeckRepository {
       _ => const PrivateDeck(),
     },
     description: row.description,
+    icon: DeckIcon.fromKey(row.icon),
+    color: DeckColor.fromKey(row.color),
   );
 
   Card _toCard(CardRow row) {

@@ -236,6 +236,51 @@ void main() {
       expect((await repository.watchDecks().first).single.name, 'French');
     });
 
+    test("setting a deck's appearance stores both keys, unsynced, and other decks keep the default", () async {
+      final french = await repository.createDeck('French');
+      final spanish = await repository.createDeck('Spanish');
+      await db
+          .update(db.decks)
+          .write(const DecksCompanion(dirty: Value(false)));
+
+      await repository.setAppearance(
+        french.id,
+        DeckIcon.book,
+        DeckColor.violet,
+      );
+
+      final decks = {
+        for (final deck in await repository.watchDecks().first) deck.id: deck,
+      };
+      expect(
+        (decks[french.id]!.icon, decks[french.id]!.color),
+        (DeckIcon.book, DeckColor.violet),
+      );
+      expect((decks[spanish.id]!.icon, decks[spanish.id]!.color), (null, null));
+      final row = await (db.select(
+        db.decks,
+      )..where((deck) => deck.id.equals(french.id.value))).getSingle();
+      expect((row.icon, row.color, row.dirty), ('book', 'violet', true));
+      expect(row.updatedAt.isAfter(french.updatedAt), isTrue);
+    });
+
+    test('a key this build does not know reads as none, and the stored key is kept through an edit', () async {
+      final deck = await repository.createDeck('French');
+      await (db.update(
+        db.decks,
+      )..where((row) => row.id.equals(deck.id.value))).write(
+        const DecksCompanion(icon: Value('rocket'), color: Value('teal')),
+      );
+
+      final read = await repository.getDeck(deck.id);
+      expect((read.icon, read.color), (null, null));
+
+      // A rename writes the name alone, so a newer app's keys survive it.
+      await repository.renameDeck(deck.id, 'Français');
+      final row = await db.select(db.decks).getSingle();
+      expect((row.name, row.icon, row.color), ('Français', 'rocket', 'teal'));
+    });
+
     test('deleting a deck tombstones it and its cards, unsynced, and leaves other decks', () async {
       final french = await repository.createDeck('French');
       final spanish = await repository.createDeck('Spanish');
