@@ -212,7 +212,11 @@ class AccountButton extends StatelessWidget {
           builder: (_) => const AccountScreen(
             syncStatus: SyncStatusView(),
             studySetting: Column(
-              children: [DailyMinutesRow(), PartOfSpeechPresetsRow()],
+              children: [
+                DailyMinutesRow(),
+                AutoplayAudioRow(),
+                PartOfSpeechPresetsRow(),
+              ],
             ),
           ),
         ),

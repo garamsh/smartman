@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadEngine, studyDayStart } from "@/features/study";
 
@@ -14,7 +15,7 @@ import {
   stateRow,
   uuidOf,
 } from "@/testing/library";
-import { testUser } from "@/testing/mocks/handlers";
+import { supabaseUrl, testUser } from "@/testing/mocks/handlers";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
@@ -1477,6 +1478,114 @@ describe("the study page", () => {
     expect(shown()).toEqual(["앞면: train. 뒷면: [명] 기차\n[구어] 열차. 응답: 안다"]);
     await user.click(within(card).getByRole("button", { name: "카드 전체 보기" }));
     expect(sensesUnder(screen.getByRole("dialog", { name: "카드" }))).toEqual(drawn);
+  });
+
+  describe("a card's sound (ADR 0112)", () => {
+    const signPath = `${supabaseUrl}/storage/v1/object/sign/media`;
+    /** The paths each signing request asked for. */
+    let signed: string[][];
+    /** The address each play started from. */
+    let played: string[];
+    /** The address each pause was asked of. */
+    let paused: string[];
+
+    beforeEach(() => {
+      signed = [];
+      played = [];
+      paused = [];
+      vi.spyOn(window.HTMLMediaElement.prototype, "pause").mockImplementation(function (
+        this: HTMLMediaElement,
+      ) {
+        paused.push(this.src);
+      });
+      vi.spyOn(window.HTMLMediaElement.prototype, "play").mockImplementation(function (
+        this: HTMLMediaElement,
+      ) {
+        played.push(this.src);
+        return Promise.resolve();
+      });
+      postgrest.seed("decks", deckRow("d1", "d1"));
+      postgrest.seed("cards", {
+        ...cardRow("d1-0", "d1", "meow"),
+        front: [
+          { type: "text", payload: { text: "meow" } },
+          { type: "audio", v: 1, payload: { media: "m1", duration_ms: 1250 } },
+        ],
+        back: [
+          { type: "text", payload: { text: "cat" } },
+          { type: "audio", v: 1, payload: { media: "m2", duration_ms: 3000 } },
+        ],
+      });
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    /** Storage signing each path asked for, as `createSignedUrls` reads its answer. */
+    function signEach() {
+      server.use(
+        http.post(signPath, async ({ request }) => {
+          const { paths } = (await request.json()) as { paths: string[] };
+          signed.push(paths);
+          return HttpResponse.json(
+            paths.map((path) => ({
+              path,
+              signedURL: `/object/sign/media/${path}?token=t`,
+              error: null,
+            })),
+          );
+        }),
+      );
+    }
+
+    it("signs the user's sounds once, plays nothing on its own, and plays the front's from 소리 듣기, then the back's from the opened card", async () => {
+      signEach();
+      await open("d1");
+
+      expect(signed).toEqual([[`${testUser.id}/m1`, `${testUser.id}/m2`]]);
+      expect(played).toEqual([]);
+      const current = screen.getByRole("region", { name: "현재 카드" });
+      expect(within(current).getByText("0:02")).toBeInTheDocument();
+      const user = userEvent.setup();
+      await user.click(within(current).getByRole("button", { name: "소리 듣기" }));
+      expect(played).toEqual([`${signPath}/${testUser.id}/m1?token=t`]);
+
+      await user.keyboard("{ArrowRight}");
+      await user.click(within(cards()).getByRole("button", { name: "카드 전체 보기" }));
+      const detail = screen.getByRole("dialog", { name: "카드" });
+      const controls = within(detail).getAllByRole("button", { name: "소리 듣기" });
+      expect(controls).toHaveLength(2);
+      await user.click(controls[1] as HTMLElement);
+      expect(played.at(-1)).toBe(`${signPath}/${testUser.id}/m2?token=t`);
+    });
+
+    it("says a sound cannot play when Storage signs none, where a signed one plays", async () => {
+      server.use(http.post(signPath, () => HttpResponse.json({ error: "down" }, { status: 500 })));
+      await open("d1");
+      const user = userEvent.setup();
+      const current = screen.getByRole("region", { name: "현재 카드" });
+
+      await user.click(within(current).getByRole("button", { name: "소리 듣기" }));
+
+      expect(played).toEqual([]);
+      expect(within(current).getByText("소리를 재생하지 못했어요")).toBeInTheDocument();
+    });
+
+    it("pauses a sound still playing when its card leaves", async () => {
+      signEach();
+      await open("d1");
+      const user = userEvent.setup();
+      const current = screen.getByRole("region", { name: "현재 카드" });
+      await user.click(within(current).getByRole("button", { name: "소리 듣기" }));
+      expect(played).toEqual([`${signPath}/${testUser.id}/m1?token=t`]);
+      expect(paused, "setup: still on the card").toEqual([]);
+
+      await user.keyboard("{ArrowRight}");
+      // The answered card stacks up, so the answer has been taken.
+      await within(cards()).findByRole("button", { name: "카드 전체 보기" });
+
+      expect(paused).toEqual([`${signPath}/${testUser.id}/m1?token=t`]);
+    });
   });
 
   describe("a whole card", () => {

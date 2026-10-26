@@ -7,10 +7,11 @@ import { keepFocusInside } from "@/design/focus-trap";
 import type { PreviousAnswer } from "../session";
 import { CardSide } from "./card-side";
 import { GradeChip, grades } from "./graded-card";
+import { SoundControls } from "./sound-controls";
 
 /**
  * The whole of a card answered earlier, front and back, or a whole card's front with its blanks
- * filled, over the screen until it is closed by "닫기", Esc or a click outside it.
+ * filled, each with its sounds' controls (ADR 0112), over the screen until it is closed by "닫기", Esc or a click outside it.
  */
 export function CardDetail({
   answer,
@@ -20,6 +21,7 @@ export function CardDetail({
   onClose: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
+  const sounds = answer.card.sounds;
   useEffect(() => {
     close.current?.focus();
   }, []);
@@ -46,7 +48,10 @@ export function CardDetail({
           <span className="sr-only">응답: {grades[answer.answer].name}</span>
         </div>
         {answer.card.whole ? (
-          <div className="text-back">{answer.card.whole.filled}</div>
+          <>
+            <div className="text-back">{answer.card.whole.filled}</div>
+            {sounds && <SoundControls sounds={[...sounds.front, ...sounds.back]} />}
+          </>
         ) : (
           <>
             <section aria-labelledby="card-detail-front" className="flex flex-col gap-2">
@@ -58,6 +63,7 @@ export function CardDetail({
               ) : (
                 <CardSide blocks={answer.card.front} size="front" />
               )}
+              {sounds && <SoundControls sounds={sounds.front} />}
             </section>
             <section aria-labelledby="card-detail-back" className="flex flex-col gap-2">
               <h3 id="card-detail-back" className="text-section text-muted">
@@ -68,6 +74,7 @@ export function CardDetail({
               ) : (
                 <CardSide blocks={answer.card.back} size="back" />
               )}
+              {sounds && <SoundControls sounds={sounds.back} />}
             </section>
           </>
         )}

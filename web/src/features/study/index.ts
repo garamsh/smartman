@@ -17,6 +17,7 @@ export { readRecentRetention, readRecord } from "./read-record";
 export { loadEngine } from "./engine";
 export { readyServerEngine } from "./engine-server";
 export { readToday } from "./read-today";
+export { signSounds } from "./sign-sounds";
 export { countDay, dayPlanOf } from "./today-list";
 export { recordDays } from "./stats";
 export { type MinutesPlan, sessionMinutes } from "./study-time";

@@ -258,6 +258,61 @@ class AppLocalizationsKo extends AppLocalizations {
   String get imageBoxDelete => '빈칸 지우기';
 
   @override
+  String get blockAudio => '음성';
+
+  @override
+  String get blockAudioDescription => '녹음하거나 소리 파일을 넣어요';
+
+  @override
+  String get playAudio => '소리 듣기';
+
+  @override
+  String get audioRecord => '녹음하기';
+
+  @override
+  String get audioPick => '파일에서 고르기';
+
+  @override
+  String get audioRecordAgain => '다시 녹음';
+
+  @override
+  String get audioPickAnother => '다른 파일 고르기';
+
+  @override
+  String get audioRemove => '소리 빼기';
+
+  @override
+  String get audioStopRecording => '녹음 끝내기';
+
+  @override
+  String audioRecording(String elapsed, String limit) {
+    return '녹음 중 $elapsed / $limit';
+  }
+
+  @override
+  String get audioUnreadable => '소리를 불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String audioTooLarge(int seconds) {
+    return '$seconds초, 5MB까지 넣을 수 있어요';
+  }
+
+  @override
+  String get microphoneDenied => '마이크를 쓸 수 없어요. 설정에서 마이크 접근을 허용해 주세요.';
+
+  @override
+  String get audioRequired => '소리를 넣어 주세요';
+
+  @override
+  String get audioUnplayable => '소리를 재생하지 못했어요';
+
+  @override
+  String get autoplayAudio => '앞면 소리 자동 재생';
+
+  @override
+  String get autoplayAudioDescription => '카드가 나오면 앞면의 소리를 한 번 들려줘요';
+
+  @override
   String blockMenu(String side, int number) {
     return '$side $number번째 블록 메뉴';
   }

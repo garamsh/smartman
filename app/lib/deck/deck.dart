@@ -14,6 +14,7 @@ export 'src/add_cards.dart'
         AddToNewDeck,
         AddTarget,
         mergeBack;
+export 'src/audio_block.dart' show playAudio;
 export 'src/card_editor_screen.dart' show CardEditorScreen;
 export 'src/card_kind.dart' show deckStorageKeys, deckStorageProvider;
 export 'src/card_key.dart' show CardKey;
@@ -21,6 +22,7 @@ export 'src/card_list.dart'
     show CardBackRow, CardSplitRow, describeContent, spokenContent;
 export 'src/content.dart'
     show
+        AudioContent,
         CardSense,
         ClozeContent,
         Content,
@@ -35,6 +37,7 @@ export 'src/content.dart'
         TableContent,
         TextContent,
         UnsupportedContent,
+        audioOf,
         clozeBlank,
         decodeContent,
         encodeContent,
