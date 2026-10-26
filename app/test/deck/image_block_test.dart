@@ -17,6 +17,7 @@ import 'package:uuid/uuid.dart';
 
 import '../home/deck_screens.dart';
 import '../media/fakes.dart';
+import '../settle_until.dart';
 
 /// Two boxes, one near the top left and one near the bottom right, the first
 /// with an answer.
@@ -312,26 +313,6 @@ void main() {
       await mediaDb.close();
       await deleteMediaDirectory(directory);
     });
-
-    /// Lets the store's file and database writes run, a slice of real time
-    /// and then a frame as long at a time, until [done] holds. They take real
-    /// time, so a fixed count of slices runs out first on a slow machine.
-    Future<void> settleUntil(
-      WidgetTester tester,
-      String what,
-      FutureOr<bool> Function() done,
-    ) async {
-      const slice = Duration(milliseconds: 10);
-      final waited = Stopwatch()..start();
-      while (!await done()) {
-        if (waited.elapsed > const Duration(seconds: 10)) {
-          fail('waited 10 s for $what');
-        }
-        await tester.runAsync(() => Future<void>.delayed(slice));
-        await tester.pump(slice);
-      }
-      await tester.pumpAndSettle();
-    }
 
     Future<Set<String>> released(WidgetTester tester) async => {
       for (final row in (await tester.runAsync(
