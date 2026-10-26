@@ -22,7 +22,7 @@ void main() {
   Future<DeckScreens> openCloze(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await screens.tap(find.text('Sentence'));
+    await screens.tap(find.text('Cloze'));
     return screens;
   }
 

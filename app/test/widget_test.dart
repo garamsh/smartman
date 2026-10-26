@@ -593,6 +593,25 @@ void main() {
     },
   );
 
+  testWidgets(
+    "the account screen's 품사 표시 row, under Study beside the minutes, opens the labels the card editor offers",
+    (tester) async {
+      await pumpApp(tester);
+
+      await tester.tap(find.byTooltip('Account'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.text('Labels')).top,
+        greaterThan(tester.getRect(find.text('Daily study time')).bottom),
+      );
+      await tester.tap(find.text('Labels'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AccountScreen), findsNothing);
+      expect(find.bySemanticsLabel('Edit 명 noun'), findsOneWidget);
+      await unmountApp(tester);
+    },
+  );
+
   testWidgets('the theme follows the system until a choice overrides it', (
     tester,
   ) async {

@@ -1,6 +1,6 @@
 # ADR 0083: Write every card kind by hand, in a form of its own, chosen by a kind switch each deck remembers
 
-> Status: accepted; its cloze blank units (adjacent chosen words make one blank; an edited stored cloze's blanks cover whole words) superseded by ADR-0092
+> Status: accepted; its cloze blank units (adjacent chosen words make one blank; an edited stored cloze's blanks cover whole words) superseded by ADR-0092; its four kinds, its word kind and the word form's label chips and part-of-speech sheet superseded by ADR-0100
 > Date: 2026-10-20
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
