@@ -98,12 +98,18 @@ void main() {
   );
 
   testWidgets(
-    'the add sheet offers Text, Meanings, Table and Cloze sentence, and no photo or recording',
+    'the add sheet offers Text, Meanings, Table, Cloze sentence and Photo, and no recording',
     (tester) async {
       final screens = await openNew(tester);
       await tap(screens, find.text('Add to front'));
       final sheet = find.byType(BottomSheet);
-      for (final type in ['Text', 'Meanings', 'Table', 'Cloze sentence']) {
+      for (final type in [
+        'Text',
+        'Meanings',
+        'Table',
+        'Cloze sentence',
+        'Photo',
+      ]) {
         expect(
           find.descendant(of: sheet, matching: find.text(type)),
           findsOneWidget,
@@ -114,7 +120,7 @@ void main() {
         find.descendant(of: sheet, matching: find.byType(ListTile)),
         findsNothing,
       );
-      for (final type in ['Photo', 'Audio', 'Recording']) {
+      for (final type in ['Audio', 'Recording']) {
         expect(find.text(type), findsNothing, reason: type);
       }
     },
