@@ -925,20 +925,14 @@ describe("the study page", () => {
       expect(currentFront()).toBe(front);
     });
 
-    it("grades the previous card by its fill, its line and a chip naming the answer", async () => {
+    it("grades the previous card by its fill and line alone, with no chip, its name and its whole card naming the answer", async () => {
       seedDeck(postgrest, "d1", fronts);
       await open("d1");
       const user = userEvent.setup();
 
-      for (const [key, answer, fill, line, chip] of [
-        ["{ArrowRight}", "안다", "bg-know-card", "border-know-line", "bg-know"],
-        [
-          "{ArrowLeft}",
-          "모른다",
-          "bg-dont-know-card",
-          "border-dont-know-line",
-          "bg-dont-know-text",
-        ],
+      for (const [key, answer, fill, line] of [
+        ["{ArrowRight}", "안다", "bg-know-card", "border-know-line"],
+        ["{ArrowLeft}", "모른다", "bg-dont-know-card", "border-dont-know-line"],
       ] as const) {
         const front = currentFront();
         await user.keyboard(key);
@@ -946,9 +940,15 @@ describe("the study page", () => {
         const face = within(previousCard()).getByRole("button", { name: "카드 전체 보기" });
         expect(face.className).toContain(fill);
         expect(face.className).toContain(line);
-        const word = within(previousCard()).getByText(answer);
-        expect(word.className).toContain(chip);
-        expect(word.querySelector("svg")).not.toBeNull();
+        // Nothing on the card but its sides: no word or mark of the grade.
+        expect(within(previousCard()).queryByText(answer)).not.toBeInTheDocument();
+        expect(face.querySelector("svg")).toBeNull();
+        // The whole card still states the grade in words.
+        await user.click(face);
+        const detail = screen.getByRole("dialog", { name: "카드" });
+        expect(within(detail).getByText(answer)).toBeInTheDocument();
+        await user.keyboard("{Escape}");
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       }
     });
 
@@ -1313,6 +1313,8 @@ describe("the study page", () => {
       const sample = screen.getByTestId("coach-sample");
       expect(sample).toHaveTextContent("deadline");
       expect(sample).toHaveTextContent("모른다로 바꿔요");
+      // A previous card, so graded by its fill and line alone, with no chip.
+      expect(within(sample).queryByText("안다")).not.toBeInTheDocument();
       expect(screen.queryByTestId("coach-demo")).not.toBeInTheDocument();
       expect(
         screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
@@ -1408,7 +1410,11 @@ describe("the study page", () => {
     expect(shown()).toEqual([label]);
     const card = within(cards()).getByRole("article");
     expect(within(card).getByText("지난번 마지막 카드")).toBeInTheDocument();
-    expect(within(card).getByText("안다")).toBeInTheDocument();
+    // Graded by its fill and line alone, as the previous card is.
+    expect(within(card).queryByText("안다")).not.toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "카드 전체 보기" }).className).toContain(
+      "bg-know-card",
+    );
     expect(
       screen.queryByRole("region", { name: "응답한 카드가 여기에 쌓여요" }),
     ).not.toBeInTheDocument();
