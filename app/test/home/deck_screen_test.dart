@@ -15,7 +15,7 @@ import 'package:smartman/study/study.dart' show StudyScreen;
 import '../deck/whole_cards.dart';
 import '../study/minutes_sheet.dart';
 import '../word_breaks.dart';
-import 'contrast.dart';
+import '../contrast.dart';
 import 'deck_screens.dart';
 
 /// The front of every card row on screen, top to bottom.
