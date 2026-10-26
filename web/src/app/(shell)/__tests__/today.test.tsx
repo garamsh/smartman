@@ -9,6 +9,7 @@ import { server } from "@/testing/mocks/server";
 import { cardRow, day, deckRow, reviewRow, start, stateRow, uuidOf } from "@/testing/library";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
+import { expectTextReadable } from "@/testing/contrast";
 import { signedInCookies } from "@/testing/session";
 
 import { Study } from "../../study/_components/study";
@@ -157,7 +158,12 @@ describe("the 오늘 and 덱 pages", () => {
     postgrest.seed("card_states", stateRow("fr-a", overdue), stateRow("fr-b", overdue));
     await renderBoth();
 
-    const card = within(screen.getByRole("region", { name: title }));
+    const backlog = screen.getByRole("region", { name: title });
+    const card = within(backlog);
+    // White with ink accents, as the phone's (ADR 0098).
+    expect(backlog).toHaveClass("bg-surface", "shadow-card");
+    expect(card.getByRole("link", { name: /3장 학습/ })).toHaveClass("bg-ink", "text-on-primary");
+    expectTextReadable(backlog);
     // The minutes are set in 계정과 설정 alone.
     expect(card.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
     expect(
@@ -601,6 +607,30 @@ describe("the 오늘 and 덱 pages", () => {
     expect(todayLine()).toBe("0 / 4장 · 약 1분");
     expect(screen.getAllByText("2일 연속")).toHaveLength(2);
     expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
+  });
+
+  it("draws the today card white with ink accents and every text outside its button readable on it in both themes", async () => {
+    postgrest.seed("decks", deckRow("d-fr", "French"));
+    postgrest.seed("cards", cardRow("fr-new", "d-fr", "chat"), cardRow("fr-due", "d-fr", "chien"));
+    postgrest.seed("card_states", stateRow("fr-due", due));
+    await render(Today, {});
+
+    const card = screen.getByRole("region", { name: "오늘 할 카드" });
+    expect(card).toHaveClass("bg-surface", "text-ink", "shadow-card");
+    const bar = within(card).getByRole("progressbar");
+    expect(bar).toHaveClass("bg-hairline");
+    expect(bar.firstElementChild).toHaveClass("bg-ink");
+    expect(within(card).getByRole("link", { name: "모두 학습" })).toHaveClass(
+      "bg-ink",
+      "text-on-primary",
+    );
+    expectTextReadable(card);
+    // Control: the same check fails once the quiet status line takes the card's own colour.
+    const status = within(card).getByText("오늘의 첫 카드를 기다리고 있어요");
+    status.classList.replace("text-muted", "text-surface");
+    expect(() => {
+      expectTextReadable(card);
+    }).toThrow(/오늘의 첫 카드를 기다리고 있어요/);
   });
 
   it("agrees with the study page on the day's cards: a card answered 모른다 today is left, one answered 안다 done", async () => {
