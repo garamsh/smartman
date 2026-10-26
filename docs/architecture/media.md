@@ -21,6 +21,7 @@ The `media` domain: the user's images, kept on the device and in the private `me
 
 - A stored file is named by a media id, a UUID v7 from the composition site's generator; a deck holds that id, never a URL ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
 - `DeviceImagePick` takes one photo from the camera or the album through `image_picker`, at most 2048 px a side, and prepares it on a background isolate: its EXIF orientation applied, cropped to its centred square, scaled to at most 1024 px a side and encoded as JPEG at quality 85, with its SHA-256. A refused camera or library, or bytes no decoder reads, is `MediaUnreadable`.
+- The server's ceiling is 10 MiB a file (`server.md` §Media storage); it is a ceiling, not the target, and the resize above, not the ceiling, sets a prepared image's size, far below it ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
 
 ### Store
 

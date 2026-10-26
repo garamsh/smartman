@@ -159,9 +159,9 @@ The Supabase schema the app syncs to, and the extraction count, the plans and th
 
 ### Media storage
 
-- `public.media` holds one row per stored file: `id`, a uuid the device makes, `user_id`, `kind` (`image` or `audio`), `mime_type`, `byte_size` (1 byte to 5 MiB), `sha256` (64 lowercase hex digits) and `created_at` ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
+- `public.media` holds one row per stored file: `id`, a uuid the device makes, `user_id`, `kind` (`image` or `audio`), `mime_type`, `byte_size` (1 byte to 10 MiB), `sha256` (64 lowercase hex digits) and `created_at` ([ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
 - Row-level security lets its owner select, insert and delete its rows; no client role updates one, and no one else reads one.
-- The private bucket `media` holds each file at `{owner}/{media id}`, `image/jpeg` alone and at most 5 MiB. The migration creates it in every project, and `supabase/config.toml` declares the same for the local stack. Policies on `storage.objects`:
+- The private bucket `media` holds each file at `{owner}/{media id}`, `image/jpeg` alone and at most 10 MiB, a ceiling well above the app's prepared images. The migration creates it in every project, and `supabase/config.toml` declares the same for the local stack. Policies on `storage.objects`:
   - its owner uploads a file only at the path of a `media` row it owns, and reads and deletes its own files; no policy allows an update, so no file is overwritten;
   - any signed-in user reads the file a deck the decks policy shows as public names in `image_media_id`, when that deck is the file's owner's own.
 - Storage refuses a delete of `storage.objects` in SQL, so a file is deleted through the Storage API: by its owner's app, and by `delete-account`.

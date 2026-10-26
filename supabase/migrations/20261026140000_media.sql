@@ -10,7 +10,7 @@ create table public.media (
   user_id uuid not null references auth.users on delete cascade,
   kind text not null check (kind in ('image', 'audio')),
   mime_type text not null check (char_length(mime_type) between 1 and 100),
-  byte_size integer not null check (byte_size between 1 and 5242880),
+  byte_size integer not null check (byte_size between 1 and 10485760),
   sha256 text not null check (sha256 ~ '^[0-9a-f]{64}$'),
   created_at timestamptz not null default now()
 );
@@ -38,7 +38,7 @@ grant update (image_media_id) on public.decks to authenticated;
 -- The private bucket; config.toml declares the same for the local stack. Its limits match the
 -- table's checks.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-  values ('media', 'media', false, 5242880, array['image/jpeg'])
+  values ('media', 'media', false, 10485760, array['image/jpeg'])
   on conflict (id) do nothing;
 
 -- An object's name is {owner}/{media id}. Its owner writes it only after inserting the media row

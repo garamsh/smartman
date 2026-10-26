@@ -2,12 +2,12 @@
 -- named {owner}/{media id}, are written and deleted by their owner and read by their owner and by
 -- any user the image of a public deck is shown to.
 begin;
-select plan(25);
+select plan(26);
 
 select results_eq(
   $$select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'media'$$,
-  $$values (false, 5242880::bigint, array['image/jpeg'])$$,
-  'the media bucket is private, holds JPEG files alone, and at most 5 MiB each');
+  $$values (false, 10485760::bigint, array['image/jpeg'])$$,
+  'the media bucket is private, holds JPEG files alone, and at most 10 MiB each');
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.com'),
@@ -49,8 +49,14 @@ select throws_ok(
 select throws_ok(
   $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
     ('e0000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-00000000000a', 'image',
-     'image/jpeg', 5242881, repeat('a', 64))$$,
-  '23514', null, 'a file over 5 MiB is refused');
+     'image/jpeg', 10485761, repeat('a', 64))$$,
+  '23514', null, 'a file over 10 MiB is refused');
+-- Control: a row of exactly 10 MiB is stored, so the bound is the ceiling and no less.
+select lives_ok(
+  $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
+    ('e0000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-00000000000a', 'image',
+     'image/jpeg', 10485760, repeat('c', 64))$$,
+  'a file of exactly 10 MiB is stored');
 select throws_ok(
   $$insert into public.media (id, user_id, kind, mime_type, byte_size, sha256) values
     ('e0000000-0000-4000-8000-000000000008', '00000000-0000-4000-8000-00000000000a', 'image',
