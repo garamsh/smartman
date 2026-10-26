@@ -1334,7 +1334,7 @@ void main() {
         () => repository.createDeck('영단어 기본'),
       ))!;
       final client = FakeExtractionClient()
-        ..todayAllowance = (dailyLimit: 30, used: 27);
+        ..todayAllowance = (limit: 30, period: LimitPeriod.day, used: 27);
       final photos = FakePhotoSource()
         ..libraryPhotos = [for (var i = 0; i < 4; i++) Future.value(testPhoto)];
       final preferences = await openPreferences(tester);

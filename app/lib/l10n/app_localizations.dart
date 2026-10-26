@@ -1147,6 +1147,12 @@ abstract class AppLocalizations {
   /// **'오늘 {count}장 더 만들 수 있어요. 처음 {count}장만 읽어요.'**
   String photosLeftToday(int count);
 
+  /// Shown before reading when fewer photos are left in this month's limit, on a plan counted by the calendar month, than were picked.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 달 {count}장 더 만들 수 있어요. 처음 {count}장만 읽어요.'**
+  String photosLeftThisMonth(int count);
+
   /// One photo of an import, by its place in the order picked.
   ///
   /// In ko, this message translates to:
@@ -1338,6 +1344,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘 사진으로 만들 수 있는 {limit}장을 다 썼어요. 내일 다시 시도해 주세요.'**
   String dailyLimitReachedOf(int limit);
+
+  /// Photo import failure: the user's plan's monthly extraction limit, which the server states, was reached; it resets on the 1st at 00:00 Korean time.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 달 사진으로 만들 수 있는 {limit}장을 다 썼어요. 다음 달 1일에 다시 시도해 주세요.'**
+  String monthlyLimitReachedOf(int limit);
 
   /// Photo import failure: the model failed.
   ///

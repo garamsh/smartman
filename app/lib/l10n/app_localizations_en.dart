@@ -675,6 +675,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String photosLeftThisMonth(int count) {
+    return 'You can read $count more this month, so only the first $count will be read.';
+  }
+
+  @override
   String photoNumber(int number) {
     return 'Photo $number';
   }
@@ -816,6 +821,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String dailyLimitReachedOf(int limit) {
     return 'You\'ve used today\'s $limit photos. Try again tomorrow.';
+  }
+
+  @override
+  String monthlyLimitReachedOf(int limit) {
+    return 'You\'ve used this month\'s $limit photos. Try again on the 1st of next month.';
   }
 
   @override

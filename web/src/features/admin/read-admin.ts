@@ -86,27 +86,44 @@ export type UserDeck = {
 export type Suspension = { reason: string; suspendedAt: number; suspendedByEmail: string | null };
 
 /** A plan, as the server names it. */
-export type PlanId = "free" | "pro" | "special";
+export type PlanId = "free" | "pro" | "max";
 
-/** A plan's settings, as the admin area sets them. */
-export type PlanSettings = {
-  id: PlanId;
+/**
+ * How a plan version counts photos: [amount] a calendar month or a day in Asia/Seoul, or
+ * unlimited with [amount] the fair-use cap a day (ADR 0097).
+ */
+export type Quota = "monthly" | "daily" | "unlimited";
+
+/** One version of a plan's terms, as an admin created it. */
+export type PlanVersion = {
+  id: number;
+  plan: PlanId;
+  quota: Quota;
+  amount: number;
   model: string;
-  dailyLimit: number;
-  updatedAt: number;
-  updatedByEmail: string | null;
+  startsAt: number;
+  /** Whether existing users take it from its start rather than at their renewal. */
+  appliesToAll: boolean;
+  /** Whether a user subscribing now takes it. */
+  current: boolean;
+  createdAt: number;
+  createdByEmail: string | null;
 };
 
 /**
- * A user's plan now, with its model and daily limit, null while its settings are missing, and the
- * grant behind it, when there is one; an ended Special grant shows beside Free.
+ * A user's plan now: the version's terms and the photos counted in its period, null while the plan
+ * has no version, and the grant behind it, when there is one; an ended Max grant shows beside Free.
  */
 export type UserPlan = {
-  plan: PlanId | null;
-  model: string | null;
-  dailyLimit: number | null;
+  entitlement: {
+    plan: PlanId;
+    quota: Quota;
+    amount: number;
+    model: string;
+    used: number;
+  } | null;
   grant: {
-    plan: "pro" | "special";
+    plan: "pro" | "max";
     endsAt: number | null;
     grantedAt: number;
     grantedByEmail: string | null;
@@ -120,7 +137,6 @@ export type AdminUser = {
   lastAnswerAt: number | null;
   decks: number;
   cards: number;
-  extractionsToday: number;
   admin: boolean;
   publicDecks: PublicDeck[];
   plan: UserPlan;
@@ -352,12 +368,11 @@ export async function readUser(id: string): Promise<AdminRead<AdminUser | null>>
   const lastAnswerAt = lastAnswer === null ? null : parseTime(lastAnswer);
   const decks = count(field(row, "decks"));
   const cards = count(field(row, "cards"));
-  const extractionsToday = count(field(row, "extractions_today"));
   const admin = field(row, "admin");
   if (email === null || createdAt === null || (lastAnswer !== null && lastAnswerAt === null)) {
     return { failure: "unreadable" };
   }
-  if (decks === null || cards === null || extractionsToday === null || typeof admin !== "boolean") {
+  if (decks === null || cards === null || typeof admin !== "boolean") {
     return { failure: "unreadable" };
   }
   return {
@@ -368,7 +383,6 @@ export async function readUser(id: string): Promise<AdminRead<AdminUser | null>>
       lastAnswerAt,
       decks,
       cards,
-      extractionsToday,
       admin,
       publicDecks: decksRead.data,
       plan,
@@ -378,42 +392,66 @@ export async function readUser(id: string): Promise<AdminRead<AdminUser | null>>
   };
 }
 
-/** The plans and their settings, Free first. */
-export async function readPlans(): Promise<AdminRead<PlanSettings[]>> {
-  return parsed(await call("admin_plans"), (row) => {
-    const id = planId(field(row, "id"));
+/** Every plan version, Free's first, then Pro's and Max's, each plan's latest start first. */
+export async function readPlanVersions(): Promise<AdminRead<PlanVersion[]>> {
+  return parsed(await call("admin_plan_versions"), (row) => {
+    const id = count(field(row, "id"));
+    const plan = planId(field(row, "plan"));
+    const kind = quota(field(row, "quota"));
+    const amount = count(field(row, "amount"));
     const model = text(field(row, "model"));
-    const dailyLimit = count(field(row, "daily_limit"));
-    const updatedAt = parseTime(field(row, "updated_at"));
-    const updatedBy = field(row, "updated_by_email");
-    if (id === null || model === null || dailyLimit === null || updatedAt === null) return null;
-    if (updatedBy !== null && typeof updatedBy !== "string") return null;
-    return { id, model, dailyLimit, updatedAt, updatedByEmail: updatedBy };
+    const startsAt = parseTime(field(row, "starts_at"));
+    const appliesToAll = field(row, "applies_to_all");
+    const current = field(row, "current");
+    const createdAt = parseTime(field(row, "created_at"));
+    const createdBy = field(row, "created_by_email");
+    if (id === null || plan === null || kind === null || amount === null || model === null) {
+      return null;
+    }
+    if (startsAt === null || createdAt === null) return null;
+    if (typeof appliesToAll !== "boolean" || typeof current !== "boolean") return null;
+    if (createdBy !== null && typeof createdBy !== "string") return null;
+    return {
+      id,
+      plan,
+      quota: kind,
+      amount,
+      model,
+      startsAt,
+      appliesToAll,
+      current,
+      createdAt,
+      createdByEmail: createdBy,
+    };
   });
 }
 
 function parseUserPlan(row: unknown): UserPlan | null {
   const plan = field(row, "plan");
-  const model = field(row, "model");
-  const dailyLimit = field(row, "daily_limit");
   const granted = field(row, "granted_plan");
   const endsAtValue = field(row, "ends_at");
   const grantedAtValue = field(row, "granted_at");
   const grantedBy = field(row, "granted_by_email");
-  // The plan's columns are null together, while its settings are missing.
-  const settings =
-    plan === null && model === null && dailyLimit === null
-      ? { plan: null, model: null, dailyLimit: null }
-      : { plan: planId(plan), model: text(model), dailyLimit: count(dailyLimit) };
-  if (plan !== null && (settings.plan === null || settings.model === null)) return null;
-  if (plan !== null && settings.dailyLimit === null) return null;
-  if (granted === null) return { ...settings, grant: null };
+  // The entitlement's columns are null together, while the plan has no version.
+  let entitlement: UserPlan["entitlement"] = null;
+  if (plan !== null) {
+    const id = planId(plan);
+    const kind = quota(field(row, "quota"));
+    const amount = count(field(row, "amount"));
+    const model = text(field(row, "model"));
+    const used = count(field(row, "used"));
+    if (id === null || kind === null || amount === null || model === null || used === null) {
+      return null;
+    }
+    entitlement = { plan: id, quota: kind, amount, model, used };
+  }
+  if (granted === null) return { entitlement, grant: null };
   const endsAt = endsAtValue === null ? null : parseTime(endsAtValue);
   const grantedAt = parseTime(grantedAtValue);
-  if (granted !== "pro" && granted !== "special") return null;
+  if (granted !== "pro" && granted !== "max") return null;
   if ((endsAtValue !== null && endsAt === null) || grantedAt === null) return null;
   if (grantedBy !== null && typeof grantedBy !== "string") return null;
-  return { ...settings, grant: { plan: granted, endsAt, grantedAt, grantedByEmail: grantedBy } };
+  return { entitlement, grant: { plan: granted, endsAt, grantedAt, grantedByEmail: grantedBy } };
 }
 
 function parseSuspension(row: unknown): Suspension | null {
@@ -439,7 +477,11 @@ function parseUserDeck(row: unknown): UserDeck | null {
 }
 
 function planId(value: unknown): PlanId | null {
-  return value === "free" || value === "pro" || value === "special" ? value : null;
+  return value === "free" || value === "pro" || value === "max" ? value : null;
+}
+
+function quota(value: unknown): Quota | null {
+  return value === "monthly" || value === "daily" || value === "unlimited" ? value : null;
 }
 
 /** The admins, earliest granted first, the signed-in one marked. */

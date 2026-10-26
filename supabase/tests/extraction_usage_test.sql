@@ -1,8 +1,12 @@
 -- extraction_usage: users read only their own rows, and only service_role records one, through
--- begin_extraction, which lets at most the user's plan's daily limit through per user and UTC
--- day; Free, every user's plan here, is seeded at 30.
+-- begin_extraction, which lets at most the user's plan's daily limit through per user and day in
+-- Asia/Seoul; Free, every user's plan here, is set at 30 a day.
 begin;
 select plan(21);
+
+delete from private.plan_versions;
+insert into private.plan_versions (plan, quota, amount, model, starts_at) values
+  ('free', 'daily', 30, 'anthropic/claude-haiku-5.5', now() - interval '60 days');
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-00000000000a', 'a@example.com'),
@@ -11,7 +15,7 @@ insert into auth.users (id, email) values
 insert into public.extraction_usage (user_id, created_at) values
   ('00000000-0000-4000-8000-00000000000a', now()),
   ('00000000-0000-4000-8000-00000000000b', now()),
-  ('00000000-0000-4000-8000-00000000000a', date_trunc('day', now(), 'UTC') - interval '1 second');
+  ('00000000-0000-4000-8000-00000000000a', date_trunc('day', now(), 'Asia/Seoul') - interval '1 second');
 
 -- Whether begin_extraction let [who] through on each of [times] calls, one after another.
 create function pg_temp.begin_times(who uuid, times integer) returns boolean
@@ -92,14 +96,15 @@ select is(
 select results_eq(
   $$select count(*) from public.extraction_usage
     where user_id = '00000000-0000-4000-8000-00000000000a'
-      and created_at >= date_trunc('day', now(), 'UTC')$$,
+      and created_at >= date_trunc('day', now(), 'Asia/Seoul')$$,
   array[30::bigint],
   'the refused call recorded no row');
 select is(
   (select allowed from public.begin_extraction('00000000-0000-4000-8000-00000000000b')), true,
   'B is let through while A is refused');
 reset role;
-update private.plans set daily_limit = 31 where id = 'free';
+insert into private.plan_versions (plan, quota, amount, model, starts_at, applies_to_all) values
+  ('free', 'daily', 31, 'anthropic/claude-haiku-5.5', now(), true);
 set local role service_role;
 set local request.jwt.claims to '{"role":"service_role"}';
 select is(

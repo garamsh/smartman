@@ -401,6 +401,11 @@
     "description": "Shown before reading when fewer photos are left in today's limit than were picked.",
     "placeholders": {"count": {"type": "int"}}
   },
+  "photosLeftThisMonth": "이번 달 {count}장 더 만들 수 있어요. 처음 {count}장만 읽어요.",
+  "@photosLeftThisMonth": {
+    "description": "Shown before reading when fewer photos are left in this month's limit, on a plan counted by the calendar month, than were picked.",
+    "placeholders": {"count": {"type": "int"}}
+  },
   "photoNumber": "사진 {number}",
   "@photoNumber": {
     "description": "One photo of an import, by its place in the order picked.",
@@ -489,6 +494,8 @@
   "@accountSuspended": {"description": "Shown when a suspended account tries to sign in or make cards from a photo."},
   "dailyLimitReachedOf": "오늘 사진으로 만들 수 있는 {limit}장을 다 썼어요. 내일 다시 시도해 주세요.",
   "@dailyLimitReachedOf": {"description": "Photo import failure: the user's plan's daily extraction limit, which the server states, was reached.", "placeholders": {"limit": {"type": "int"}}},
+  "monthlyLimitReachedOf": "이번 달 사진으로 만들 수 있는 {limit}장을 다 썼어요. 다음 달 1일에 다시 시도해 주세요.",
+  "@monthlyLimitReachedOf": {"description": "Photo import failure: the user's plan's monthly extraction limit, which the server states, was reached; it resets on the 1st at 00:00 Korean time.", "placeholders": {"limit": {"type": "int"}}},
   "modelFailed": "카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.",
   "@modelFailed": {"description": "Photo import failure: the model failed."},
   "signInRequired": "로그인이 필요해요. 계정 화면에서 다시 로그인해 주세요.",

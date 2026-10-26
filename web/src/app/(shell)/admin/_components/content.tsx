@@ -22,7 +22,7 @@ import {
   readDeck,
   readExtractionBreakdown,
   readOverview,
-  readPlans,
+  readPlanVersions,
   readPromptVersion,
   readPromptVersions,
   readPublicDecks,
@@ -48,22 +48,23 @@ function pageIndex(value: string | string[] | undefined): number {
 export async function OverviewContent() {
   const [read, plans, breakdown] = await Promise.all([
     readOverview(),
-    readPlans(),
+    readPlanVersions(),
     readExtractionBreakdown(),
   ]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
   if ("failure" in plans) return <AdminFailureMessage failure={plans.failure} />;
   if ("failure" in breakdown) return <AdminFailureMessage failure={breakdown.failure} />;
-  // A photo counted before calls were recorded is costed at the Free plan's model, as ADR 0071 did.
-  const free = plans.data.find((plan) => plan.id === "free")?.model ?? null;
+  // A photo counted before calls were recorded is costed at the model of Free's current version.
+  const free =
+    plans.data.find((version) => version.plan === "free" && version.current)?.model ?? null;
   const today = new Date().toISOString().slice(0, 10);
   return <OverviewView overview={read.data} usage={summarizeUsage(breakdown.data, today, free)} />;
 }
 
 export async function PlansContent() {
-  const [read, timeZone] = await Promise.all([readPlans(), adminTimeZone()]);
+  const [read, timeZone] = await Promise.all([readPlanVersions(), adminTimeZone()]);
   if ("failure" in read) return <AdminFailureMessage failure={read.failure} />;
-  return <PlansView plans={read.data} timeZone={timeZone} />;
+  return <PlansView versions={read.data} timeZone={timeZone} />;
 }
 
 export async function ReportsContent() {
