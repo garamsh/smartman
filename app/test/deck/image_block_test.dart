@@ -17,6 +17,7 @@ import 'package:uuid/uuid.dart';
 
 import '../home/deck_screens.dart';
 import '../media/fakes.dart';
+import '../settle_until.dart';
 
 /// Two boxes, one near the top left and one near the bottom right, the first
 /// with an answer.
@@ -313,23 +314,27 @@ void main() {
       await deleteMediaDirectory(directory);
     });
 
-    /// Lets the store's file and database writes finish.
-    Future<void> settle(WidgetTester tester) async {
-      for (var step = 0; step < 20; step++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 10)),
-        );
-        await tester.pump();
-      }
-      await tester.pumpAndSettle();
-    }
-
     Future<Set<String>> released(WidgetTester tester) async => {
       for (final row in (await tester.runAsync(
         () => mediaDb.select(mediaDb.mediaDeletions).get(),
       ))!)
         row.id,
     };
+
+    /// Waits until the store holds the chosen photo and the block shows it.
+    Future<void> chosen(WidgetTester tester) => settleUntil(
+      tester,
+      'the chosen photo',
+      () => find.byType(ImagePhoto).evaluate().isNotEmpty,
+    );
+
+    /// Waits until a photo is released: the editor lets go of one it does
+    /// not save without waiting for the store.
+    Future<void> anyReleased(WidgetTester tester) => settleUntil(
+      tester,
+      'a released photo',
+      () async => (await released(tester)).isNotEmpty,
+    );
 
     /// Fills a new 자유 card's empty 글 on each side.
     Future<void> fillText(WidgetTester tester) async {
@@ -361,7 +366,7 @@ void main() {
       await screens.tap(find.text('Photo').last);
       await tester.ensureVisible(find.text('Choose from album'));
       await tester.tap(find.text('Choose from album'));
-      await settle(tester);
+      await chosen(tester);
       return screens;
     }
 
@@ -372,9 +377,15 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Saves the card and waits until the editor closes, which it does once
+    /// the card is stored and the photos it does not hold are let go.
     Future<void> save(WidgetTester tester) async {
       await tapVisible(tester, find.text('Save'));
-      await settle(tester);
+      await settleUntil(
+        tester,
+        'the editor to close on the saved card',
+        () => find.byType(CardEditorScreen).evaluate().isEmpty,
+      );
     }
 
     Future<ImageContent> storedImage(DeckScreens screens) async =>
@@ -544,7 +555,7 @@ void main() {
       await screens.tap(find.text('Add to front'));
       await screens.tap(find.text('Photo').last);
       expect(find.text('Choose a photo'), findsNothing);
-      await save(tester);
+      await tapVisible(tester, find.text('Save'));
 
       expect(find.text('Choose a photo'), findsOneWidget);
       expect(await screens.cards(), isEmpty);
@@ -571,10 +582,10 @@ void main() {
         await screens.tap(find.text('Add to front'));
         await screens.tap(find.text('Photo').last);
         await tapVisible(tester, find.text('Choose from album'));
-        await settle(tester);
+        await chosen(tester);
         await tapVisible(tester, find.byTooltip('Close'));
         await tapVisible(tester, find.text('Discard'));
-        await settle(tester);
+        await anyReleased(tester);
 
         expect(await released(tester), {'photo1'});
       },
@@ -603,7 +614,7 @@ void main() {
         expect(find.byType(CardEditorScreen), findsNothing, reason: 'setup');
 
         hold.complete();
-        await settle(tester);
+        await anyReleased(tester);
 
         expect(tester.takeException(), isNull);
         expect(
