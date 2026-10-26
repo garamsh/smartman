@@ -998,20 +998,36 @@ void main() {
       await tester.ensureVisible(find.text(ko.save));
       await tap(tester, find.text(ko.save));
       await shot(tester, '05f-card-editor-cloze-error');
-      for (final word in ['a', 'present']) {
-        final chip = find.widgetWithText(FilterChip, word);
-        await tester.ensureVisible(chip);
-        await tap(tester, chip);
+      final line = find.widgetWithText(AppTextField, ko.cardFront);
+      final controller = tester
+          .widget<TextField>(
+            find.descendant(of: line, matching: find.byType(TextField)),
+          )
+          .controller!;
+      // "a" and "present", each selected and made a blank.
+      for (final (start, end) in [(12, 13), (14, 21)]) {
+        controller.selection = TextSelection(
+          baseOffset: start,
+          extentOffset: end,
+        );
+        await tester.pump();
+        await tap(tester, find.text(ko.clozeInsertBlank));
       }
       await tester.ensureVisible(find.text(ko.cardKindCloze));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
-      final pick = find.text(ko.clozePickLetters).last;
-      await tester.ensureVisible(pick);
-      await tap(tester, pick);
-      await tap(tester, find.text('p'));
-      await tap(tester, find.text('s'));
-      await shot(tester, '05m-card-editor-cloze-letters');
+      // The caret in "present": the one action turns it back into text.
+      controller.selection = const TextSelection.collapsed(offset: 17);
+      await tester.pumpAndSettle();
+      await shot(tester, '05q-card-editor-cloze-undo');
+      // An empty blank at the cursor, over a phone keyboard 336 points high.
+      controller.selection = const TextSelection.collapsed(offset: 4);
+      await tester.pump();
+      await tap(tester, find.text(ko.clozeInsertBlank));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await shot(tester, '05m-card-editor-cloze-insert');
       await unmount(tester);
     });
 

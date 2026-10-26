@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
-import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'content.dart';
@@ -10,31 +8,12 @@ import 'content.dart';
 /// A run of a line's characters: where it starts and where it ends.
 typedef Span = ({int start, int end});
 
-/// The words of [line], in order: each a run of characters other than
-/// whitespace.
-List<Span> wordsOf(String line) => [
-  for (final match in RegExp(r'\S+').allMatches(line))
-    (start: match.start, end: match.end),
-];
+/// What the preview draws for an empty blank, so it shows as a block before
+/// anything is typed into it.
+const _emptyAnswer = '  ';
 
-final _letterOrDigit = RegExp(r'[\p{L}\p{N}]', unicode: true);
-
-/// [word] of [line] without the punctuation it starts or ends with, which a
-/// blank leaves outside (`자기,` blanks `자기`); the whole word when it holds no
-/// letter or digit.
-Span coreOf(String line, Span word) {
-  final letters = _letterOrDigit.allMatches(
-    line.substring(word.start, word.end),
-  );
-  if (letters.isEmpty) return word;
-  return (
-    start: word.start + letters.first.start,
-    end: word.start + letters.last.end,
-  );
-}
-
-/// A cloze as the cloze form edits it: the line, typed once, and its blanks,
-/// each a span of the line (ADR 0092).
+/// A cloze as the cloze form edits it: the line, and its blanks, each a span
+/// of the line's characters (ADR 0092, ADR 0101).
 class ClozeDraft {
   ClozeDraft._(this._line, this._blanks);
 
@@ -62,24 +41,25 @@ class ClozeDraft {
   /// The blanks in the order of the line, none overlapping another.
   final List<Span> _blanks;
 
+  /// The blank "빈칸 넣기" opened at the cursor, which grows with what is
+  /// typed at its end until the cursor leaves it.
+  Span? _open;
+
   /// The blanks in the order of the line.
   List<Span> get blanks => List.unmodifiable(_blanks);
+
+  /// The line the blanks are spans of.
+  String get line => _line;
 
   /// The text of [span] in the line.
   String textOf(Span span) => _line.substring(span.start, span.end);
 
-  /// Whether a blank falls in the word at [index].
-  bool isChosen(int index) => _overlapping(wordsOf(_line)[index]).isNotEmpty;
-
-  List<Span> _overlapping(Span word) => [
-    for (final blank in _blanks)
-      if (blank.start < word.end && word.start < blank.end) blank,
-  ];
-
   /// Takes [line] as the line. A blank stays where the edit leaves it whole:
   /// the text before and after the changed part is unchanged, so a blank
-  /// there is the same text, moved.
+  /// there is the same text, moved. Text typed at the end of the open blank
+  /// becomes part of it.
   void update(String line) {
+    if (line == _line) return;
     final shorter = line.length < _line.length ? line.length : _line.length;
     var before = 0;
     while (before < shorter && line[before] == _line[before]) {
@@ -91,36 +71,96 @@ class ClozeDraft {
       after++;
     }
     final shift = line.length - _line.length;
+    final open = _open;
+    // Typed into the open blank: an insertion at its end, nothing removed.
+    final grows =
+        open != null &&
+        shift > 0 &&
+        before + after == _line.length &&
+        before == open.end;
     final kept = [
       for (final blank in _blanks)
-        if (blank.end <= before)
+        if (grows && blank == open)
+          (start: blank.start, end: blank.end + shift)
+        else if (blank.end <= before && !(blank.end == before && grows))
           blank
         else if (blank.start >= _line.length - after)
           (start: blank.start + shift, end: blank.end + shift),
     ];
+    _open = grows ? (start: open.start, end: open.end + shift) : null;
     _blanks
       ..clear()
       ..addAll(kept);
     _line = line;
   }
 
-  /// Chooses the word at [index] as a blank of its own, without the
-  /// punctuation around it, or leaves out every blank in it.
-  void toggle(int index) {
-    final word = wordsOf(_line)[index];
-    final inWord = _overlapping(word);
-    if (inWord.isEmpty) {
-      _place(coreOf(_line, word));
-    } else {
-      _blanks.removeWhere(inWord.contains);
+  /// Makes [selection] a blank: exactly its characters when it holds any,
+  /// replacing the blanks it overlaps; otherwise an empty blank at the
+  /// cursor, open to what is typed next. A cursor inside a blank adds none.
+  void insert(TextSelection selection) {
+    final start = selection.isValid ? selection.start : _line.length;
+    final end = selection.isValid ? selection.end : _line.length;
+    if (start < end) {
+      _blanks.removeWhere((blank) => blank.start < end && start < blank.end);
+      _place((start: start, end: end));
+      _open = null;
+      return;
     }
+    if (_blanks.any((blank) => blank.start < start && start < blank.end)) {
+      return;
+    }
+    _closeOpen();
+    final blank = (start: start, end: start);
+    _place(blank);
+    _open = blank;
   }
 
-  /// Makes [letters], a span inside the word at [index], that word's one
-  /// blank.
-  void narrow(int index, Span letters) {
-    _blanks.removeWhere(_overlapping(wordsOf(_line)[index]).contains);
-    _place(letters);
+  /// Ends the open blank once [selection] leaves it, dropping it when nothing
+  /// was typed into it.
+  void track(TextSelection selection) {
+    final open = _open;
+    if (open == null) return;
+    if (selection.isCollapsed &&
+        open.start <= selection.start &&
+        selection.start <= open.end) {
+      return;
+    }
+    _closeOpen();
+  }
+
+  void _closeOpen() {
+    final open = _open;
+    if (open == null) return;
+    if (open.start == open.end) _blanks.remove(open);
+    _open = null;
+  }
+
+  /// The blank [selection] is inside, which "빈칸 풀기" acts on: the blank
+  /// that holds the whole selection, the open blank while the caret is in
+  /// it, or one the caret is strictly inside; null elsewhere.
+  Span? blankAt(TextSelection selection) {
+    if (!selection.isValid) return null;
+    final (start, end) = (selection.start, selection.end);
+    final open = _open;
+    if (selection.isCollapsed &&
+        open != null &&
+        open.start <= start &&
+        start <= open.end) {
+      return open;
+    }
+    for (final blank in _blanks) {
+      final inside = selection.isCollapsed
+          ? blank.start < start && start < blank.end
+          : blank.start <= start && end <= blank.end;
+      if (inside) return blank;
+    }
+    return null;
+  }
+
+  /// Turns [blank] back into text.
+  void remove(Span blank) {
+    _blanks.remove(blank);
+    if (blank == _open) _open = null;
   }
 
   void _place(Span blank) {
@@ -129,25 +169,31 @@ class ClozeDraft {
       ..sort((a, b) => a.start.compareTo(b.start));
   }
 
-  /// The line with each blank as `___`, and the answers in order.
-  (String, List<String>) get _built {
+  /// The line with each of [blanks] as `___`, and their answers in order.
+  (String, List<String>) _built(Iterable<Span> blanks, {String empty = ''}) {
     final text = StringBuffer();
+    final answers = <String>[];
     var at = 0;
-    for (final blank in _blanks) {
+    for (final blank in blanks) {
       text
         ..write(_line.substring(at, blank.start))
         ..write(clozeBlank);
+      answers.add(blank.start == blank.end ? empty : textOf(blank));
       at = blank.end;
     }
     text.write(_line.substring(at));
-    return (text.toString(), [for (final blank in _blanks) textOf(blank)]);
+    return (text.toString(), answers);
   }
 
-  /// Why the line cannot be saved yet: no blank chosen, or underscores in
-  /// the line that would read as more blanks than it has answers; null once
-  /// it can.
+  /// The blanks that hold text, the ones a save keeps.
+  Iterable<Span> get _filled =>
+      _blanks.where((blank) => blank.start < blank.end);
+
+  /// Why the line cannot be saved yet: no blank holding text, or underscores
+  /// in the line that would read as more blanks than it has answers; null
+  /// once it can.
   ClozeProblem? get problem {
-    final (text, answers) = _built;
+    final (text, answers) = _built(_filled);
     if (answers.isEmpty) return ClozeProblem.noBlank;
     if (text.split(clozeBlank).length - 1 != answers.length) {
       return ClozeProblem.blankMarker;
@@ -155,11 +201,18 @@ class ClozeDraft {
     return null;
   }
 
-  /// The cloze the line and its blanks make, each blank `___` with its
-  /// answer, or null while it has a [problem].
+  /// The cloze the line and its blanks that hold text make, each blank `___`
+  /// with its answer, or null while it has a [problem].
   ClozeContent? get content {
     if (problem != null) return null;
-    final (text, answers) = _built;
+    final (text, answers) = _built(_filled);
+    return ClozeContent(text, answers);
+  }
+
+  /// The cloze as the preview draws it: every blank in place, an empty one
+  /// as a block of its own.
+  ClozeContent get preview {
+    final (text, answers) = _built(_blanks, empty: _emptyAnswer);
     return ClozeContent(text, answers);
   }
 }
@@ -167,254 +220,133 @@ class ClozeDraft {
 /// Why a cloze cannot be saved yet.
 enum ClozeProblem { noBlank, blankMarker }
 
-/// The line's words as toggle buttons under the line, each read as a word and
-/// whether it is a blank; a tap makes one a blank of its own or leaves it
-/// out. Under them, each blank in order with "글자 고르기", which narrows it to
-/// letters of its word. With [showError], a line under them says what keeps
-/// the cloze from being saved.
-class ClozeWords extends StatelessWidget {
-  const ClozeWords({
+/// The line's controller, which draws each blank of [blanks] as a block in
+/// the line: its text on `brandTint`, in ink.
+class ClozeLineController extends TextEditingController {
+  ClozeLineController({super.text, required this.blanks});
+
+  /// The blanks to draw, each within the text, or none while the line is
+  /// not a cloze's.
+  final List<Span> Function() blanks;
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final blanks = this.blanks();
+    if (blanks.isEmpty) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+    final colors = AppColors.of(context);
+    final block = TextStyle(
+      backgroundColor: colors.brandTint,
+      color: colors.ink,
+      fontWeight: FontWeight.w600,
+    );
+    final children = <TextSpan>[];
+    var at = 0;
+    for (final blank in blanks) {
+      children
+        ..add(TextSpan(text: text.substring(at, blank.start)))
+        ..add(
+          TextSpan(text: text.substring(blank.start, blank.end), style: block),
+        );
+      at = blank.end;
+    }
+    children.add(TextSpan(text: text.substring(at)));
+    return TextSpan(style: style, children: children);
+  }
+}
+
+/// What keeps the cloze from being saved, in a line under it while
+/// [showError]; nothing otherwise.
+class ClozeProblemText extends StatelessWidget {
+  const ClozeProblemText({
     super.key,
-    required this.line,
     required this.draft,
     required this.showError,
-    required this.onChanged,
   });
 
-  final String line;
   final ClozeDraft draft;
   final bool showError;
 
-  /// Called after every change, which this widget makes on [draft].
-  final VoidCallback onChanged;
-
-  Future<void> _pickLetters(BuildContext context, int index) async {
-    final word = wordsOf(line)[index];
-    final inWord = [
-      for (final blank in draft.blanks)
-        if (blank.start < word.end && word.start < blank.end) blank,
-    ];
-    final letters = await showAppSheet<Span>(
-      context,
-      builder: (_) => _LettersSheet(
-        word: line.substring(word.start, word.end),
-        initial: inWord.length == 1
-            ? (
-                start: inWord.single.start - word.start,
-                end: inWord.single.end - word.start,
-              )
-            : null,
-      ),
-    );
-    if (letters == null) return;
-    draft.narrow(index, (
-      start: word.start + letters.start,
-      end: word.start + letters.end,
-    ));
-    onChanged();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    final words = wordsOf(line);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s8,
-      children: [
-        Text(
-          l10n.clozeWordsHint,
-          style: AppType.secondary.copyWith(color: colors.muted),
-        ),
-        Wrap(
-          spacing: AppSpace.s8,
-          runSpacing: AppSpace.s8,
-          children: [
-            for (final (index, word) in words.indexed)
-              Semantics(
-                label: draft.isChosen(index)
-                    ? l10n.clozeWordBlank(line.substring(word.start, word.end))
-                    : l10n.clozeWord(line.substring(word.start, word.end)),
-                excludeSemantics: true,
-                button: true,
-                selected: draft.isChosen(index),
-                onTap: () {
-                  draft.toggle(index);
-                  onChanged();
-                },
-                // A chosen word is drawn as the preview draws a blank.
-                child: FilterChip(
-                  label: Text(line.substring(word.start, word.end)),
-                  showCheckmark: false,
-                  selectedColor: colors.brandTint,
-                  labelStyle: draft.isChosen(index)
-                      ? TextStyle(color: colors.ink)
-                      : null,
-                  side: draft.isChosen(index)
-                      ? BorderSide(color: colors.ink)
-                      : null,
-                  selected: draft.isChosen(index),
-                  onSelected: (_) {
-                    draft.toggle(index);
-                    onChanged();
-                  },
-                ),
-              ),
-          ],
-        ),
-        for (final (number, blank) in draft.blanks.indexed)
-          Row(
-            spacing: AppSpace.s8,
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.clozeBlankLine(number + 1, draft.textOf(blank)),
-                  style: AppType.secondary.copyWith(color: colors.ink2),
-                ),
-              ),
-              // A blank inside one word narrows to letters of it.
-              if (words.indexed
-                      .where(
-                        (entry) =>
-                            entry.$2.start <= blank.start &&
-                            blank.end <= entry.$2.end,
-                      )
-                      .firstOrNull
-                  case (final index, _))
-                AppButton(
-                  label: l10n.clozePickLetters,
-                  icon: LucideIcons.textCursorInput,
-                  variant: AppButtonVariant.text,
-                  onPressed: () => _pickLetters(context, index),
-                ),
-            ],
-          ),
-        if (showError ? draft.problem : null case final problem?)
-          Text(switch (problem) {
-            ClozeProblem.noBlank => l10n.clozeBlankRequired,
-            ClozeProblem.blankMarker => l10n.clozeBlankMarker,
-          }, style: AppType.caption.copyWith(color: colors.dontKnowText)),
-      ],
+    final problem = showError ? draft.problem : null;
+    if (problem == null) return const SizedBox.shrink();
+    return Text(
+      switch (problem) {
+        ClozeProblem.noBlank => l10n.clozeBlankRequired,
+        ClozeProblem.blankMarker => l10n.clozeBlankMarker,
+      },
+      style: AppType.caption.copyWith(
+        color: AppColors.of(context).dontKnowText,
+      ),
     );
   }
 }
 
-/// The letters of [word] as tiles; a tap on the first letter and then on the
-/// last chooses the run between them, and "이 글자로" returns it as a span of
-/// [word]. It opens on [initial] when the word's blank is one run of it.
-class _LettersSheet extends StatefulWidget {
-  const _LettersSheet({required this.word, required this.initial});
-
-  final String word;
-  final Span? initial;
-
-  @override
-  State<_LettersSheet> createState() => _LettersSheetState();
-}
-
-class _LettersSheetState extends State<_LettersSheet> {
-  /// Each letter of the word as a span of it, a surrogate pair kept whole.
-  late final List<Span> _letters = () {
-    final letters = <Span>[];
-    var at = 0;
-    for (final letter in widget.word.characters) {
-      letters.add((start: at, end: at + letter.length));
-      at += letter.length;
-    }
-    return letters;
-  }();
-
-  /// The chosen run, as the places of its first and last letters.
-  late (int, int)? _run = switch (widget.initial) {
-    final span? => (
-      _letters.indexWhere((letter) => letter.start == span.start),
-      _letters.lastIndexWhere((letter) => letter.end == span.end),
-    ),
-    null => null,
-  };
-
-  /// The first letter tapped, while the last is still to come.
-  int? _first;
-
-  void _tap(int index) => setState(() {
-    final first = _first;
-    if (first == null) {
-      _first = index;
-      _run = (index, index);
-    } else {
-      _first = null;
-      _run = first <= index ? (first, index) : (index, first);
-    }
+/// The cloze form's one action, in a bar right above the keyboard. With the
+/// caret or the selection inside [blank], it reads "빈칸 풀기", is named for a
+/// screen reader with the blank's answer, and turns that blank back into
+/// text; elsewhere it reads "빈칸 넣기" (ADR 0101).
+class ClozeToolbar extends StatelessWidget {
+  const ClozeToolbar({
+    super.key,
+    required this.draft,
+    required this.blank,
+    required this.onInsert,
+    required this.onUndo,
   });
 
-  bool _inRun(int index) => switch (_run) {
-    (final from, final to) => from <= index && index <= to,
-    null => false,
-  };
+  final ClozeDraft draft;
+
+  /// The blank the caret or the selection is in, or null.
+  final Span? blank;
+  final VoidCallback onInsert;
+  final ValueChanged<Span> onUndo;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final run = _run;
-    return AppSheet(
-      title: l10n.clozeLettersTitle,
-      body: l10n.clozeLettersBody,
-      content: Wrap(
-        spacing: AppSpace.s4,
-        runSpacing: AppSpace.s4,
-        children: [
-          for (final (index, letter) in _letters.indexed)
-            Semantics(
-              label: widget.word.substring(letter.start, letter.end),
-              button: true,
-              selected: _inRun(index),
-              excludeSemantics: true,
-              onTap: () => _tap(index),
-              child: Material(
-                color: _inRun(index) ? colors.brandTint : colors.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.field),
-                  side: BorderSide(
-                    color: _inRun(index) ? colors.ink : colors.outline,
-                  ),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => _tap(index),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: AppSize.field,
-                      minHeight: AppSize.field,
-                    ),
-                    // As wide as the letter, at least the tile's size.
-                    child: Center(
-                      widthFactor: 1,
-                      heightFactor: 1,
-                      child: Text(
-                        widget.word.substring(letter.start, letter.end),
-                        style: AppType.body.copyWith(color: colors.ink),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+    final blank = this.blank;
+    final button = blank == null
+        ? AppButton(label: l10n.clozeInsertBlank, onPressed: onInsert)
+        : Semantics(
+            label: l10n.clozeRemoveBlank(
+              blank.start == blank.end
+                  ? l10n.clozeEmptyBlank
+                  : draft.textOf(blank),
             ),
-        ],
+            button: true,
+            excludeSemantics: true,
+            onTap: () => onUndo(blank),
+            child: AppButton(
+              label: l10n.clozeUndoBlank,
+              variant: AppButtonVariant.secondary,
+              onPressed: () => onUndo(blank),
+            ),
+          );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.outline)),
       ),
-      actions: [
-        AppButton(
-          label: l10n.clozeLettersDone,
-          size: AppButtonSize.cta,
-          onPressed: run == null
-              ? null
-              : () => Navigator.of(context).pop<Span>((
-                  start: _letters[run.$1].start,
-                  end: _letters[run.$2].end,
-                )),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.s12,
+          vertical: AppSpace.s8,
         ),
-      ],
+        child: Align(alignment: Alignment.centerLeft, child: button),
+      ),
     );
   }
 }

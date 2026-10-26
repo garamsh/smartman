@@ -122,7 +122,19 @@ void main() {
 
       await screens.tap(find.text('Cloze'));
       await enter(tester, 'Front', 'The cat');
-      await tap(screens, find.text('cat'));
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: _field('Front'),
+              matching: find.byType(TextField),
+            ),
+          )
+          .controller!
+          .selection = const TextSelection(
+        baseOffset: 4,
+        extentOffset: 7,
+      );
+      await tap(screens, find.text('Insert blank'));
       await tap(screens, find.text('Save'));
       await screens.push((deck) => CardEditorScreen(deck: deck));
       expect(

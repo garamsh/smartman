@@ -46,11 +46,14 @@ enum _AfterSave { close, next }
 
 class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// The front's text; a table card's is its name, the table being the
-  /// table form's.
-  late final _front = TextEditingController(
+  /// table form's. A cloze's blanks are drawn in it as blocks.
+  late final ClozeLineController _front = ClozeLineController(
     text: plainText([
       ...?widget.card?.front.where((block) => block is! TableContent),
     ]),
+    blanks: () => _kind == CardKind.cloze && _cloze.line == _front.text
+        ? _cloze.blanks
+        : const [],
   );
   final _frontFocus = FocusNode();
   bool _showRequired = false;
@@ -111,9 +114,24 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     super.initState();
     // The presets show while a label field has focus.
     FocusManager.instance.addListener(_focusChanged);
+    _front.addListener(_lineChanged);
   }
 
   void _focusChanged() => setState(() {});
+
+  /// Keeps the cloze's blanks on the line as it is typed, and ends the blank
+  /// "빈칸 넣기" opened once the cursor leaves it.
+  void _lineChanged() => setState(() {
+    _cloze
+      ..update(_front.text)
+      ..track(_front.selection);
+  });
+
+  /// "빈칸 넣기": the selected characters, or an empty blank at the cursor.
+  void _insertBlank() => _change(() {
+    _cloze.insert(_front.selection);
+    _clozeEdited = true;
+  });
 
   /// Marks the card changed and redraws.
   void _change([VoidCallback? change]) => setState(() {
@@ -139,7 +157,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_focusChanged);
-    _front.dispose();
+    _front
+      ..removeListener(_lineChanged)
+      ..dispose();
     _frontFocus.dispose();
     for (final sense in _senses) {
       sense.dispose();
@@ -172,10 +192,10 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// text is left as it was.
   List<Content> get _frontBlocks => switch (_kind) {
     CardKind.cloze when _keepsCloze => widget.card!.front,
-    // While it has no blank, the line as a cloze without one, so the preview
-    // draws it whole as the card will be, not on both halves (issue #313).
-    // Such a cloze is never saved: the form refuses it.
-    CardKind.cloze => [_cloze.content ?? ClozeContent(_front.text, const [])],
+    // While it cannot be saved, the line as the preview draws it, whole as
+    // the card will be, not on both halves (issue #313); the form refuses
+    // the save.
+    CardKind.cloze => [_cloze.content ?? _cloze.preview],
     CardKind.table => [TextContent(_front.text), _table.table],
     _ => _replaceText(widget.card?.front ?? const [], _front.text),
   };
@@ -184,6 +204,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// no senses, still of one sense with no label and no example.
   bool get _savesText =>
       !_backHadSenses && _senses.length == 1 && _senses.single.isPlain;
+
+  /// The front as the preview draws it: as saved, but a cloze's every blank
+  /// in place, an empty one included (ADR 0101).
+  List<Content> get _previewFront =>
+      _kind == CardKind.cloze && !_keepsCloze ? [_cloze.preview] : _frontBlocks;
 
   /// The back's block at [index] as a back of senses saves it beside them: a
   /// text block as its field holds it, or none once the field is cleared or
@@ -411,7 +436,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                       ),
                       const SizedBox(height: AppSpace.s24),
                     ],
-                    CardPreview(front: _frontBlocks, back: _backBlocks),
+                    CardPreview(front: _previewFront, back: _backBlocks),
                     const SizedBox(height: AppSpace.s24),
                     AppTextField(
                       // A table's front is its name, and says so while typed
@@ -462,11 +487,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                             ),
                         ],
                       ),
-                      CardKind.cloze => ClozeWords(
-                        line: _front.text,
+                      CardKind.cloze => ClozeProblemText(
                         draft: _cloze,
                         showError: _showRequired,
-                        onChanged: () => _change(() => _clozeEdited = true),
                       ),
                       CardKind.table => TableFields(
                         draft: _table,
@@ -501,6 +524,16 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 ),
               ),
             // Last, so it sits right above the keyboard.
+            if (_kind == CardKind.cloze)
+              ClozeToolbar(
+                draft: _cloze,
+                blank: _cloze.blankAt(_front.selection),
+                onInsert: _insertBlank,
+                onUndo: (blank) => _change(() {
+                  _cloze.remove(blank);
+                  _clozeEdited = true;
+                }),
+              ),
             if (_focusedSense() case final sense?)
               LabelPresetStrip(
                 presets: labelPresets(

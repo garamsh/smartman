@@ -224,28 +224,34 @@ abstract class AppLocalizations {
   /// **'빈칸'**
   String get cardKindCloze;
 
-  /// Above the cloze form's word buttons: tap a word to make it a blank.
+  /// The cloze form's one action, above the keyboard: makes the selected characters a blank, or inserts an empty blank at the cursor.
   ///
   /// In ko, this message translates to:
-  /// **'빈칸으로 할 낱말을 눌러요'**
-  String get clozeWordsHint;
+  /// **'빈칸 넣기'**
+  String get clozeInsertBlank;
 
-  /// What a screen reader reads for a word of the cloze form that is not a blank.
+  /// The cloze form's one action while the caret or the selection is inside a blank: turns that blank back into text.
   ///
   /// In ko, this message translates to:
-  /// **'{word}'**
-  String clozeWord(String word);
+  /// **'빈칸 풀기'**
+  String get clozeUndoBlank;
 
-  /// What a screen reader reads for a word of the cloze form chosen as a blank.
+  /// Screen-reader name of the cloze form's action while the caret is inside a blank, naming the blank it turns back into text.
   ///
   /// In ko, this message translates to:
-  /// **'{word}, 빈칸'**
-  String clozeWordBlank(String word);
+  /// **'빈칸 풀기, {answer}'**
+  String clozeRemoveBlank(String answer);
 
-  /// Error under the cloze form's words when a cloze is saved with no blank.
+  /// What the screen-reader name of 빈칸 풀기 says for a blank while nothing is typed into it yet.
   ///
   /// In ko, this message translates to:
-  /// **'빈칸으로 할 낱말을 하나 이상 골라 주세요'**
+  /// **'빈칸'**
+  String get clozeEmptyBlank;
+
+  /// Error under the cloze line on save when it has no blank holding text.
+  ///
+  /// In ko, this message translates to:
+  /// **'빈칸을 하나 이상 넣어 주세요'**
   String get clozeBlankRequired;
 
   /// Error under the cloze form's words when the line holds underscores that would read as a blank of its own.
@@ -253,36 +259,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'___는 빈칸 표시라 줄에 쓸 수 없어요'**
   String get clozeBlankMarker;
-
-  /// A blank of the cloze form, numbered in the order of the line, with its answer.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸 {number}: {answer}'**
-  String clozeBlankLine(int number, String answer);
-
-  /// Button beside a blank of the cloze form: narrows the blank to letters of its word.
-  ///
-  /// In ko, this message translates to:
-  /// **'글자 고르기'**
-  String get clozePickLetters;
-
-  /// Title of the sheet that narrows a cloze blank to letters of its word.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸으로 할 글자를 골라요'**
-  String get clozeLettersTitle;
-
-  /// Body of the letters sheet: tap the first letter, then the last.
-  ///
-  /// In ko, this message translates to:
-  /// **'처음 글자와 끝 글자를 차례로 눌러요'**
-  String get clozeLettersBody;
-
-  /// The letters sheet's button: make the chosen letters the blank.
-  ///
-  /// In ko, this message translates to:
-  /// **'이 글자로'**
-  String get clozeLettersDone;
 
   /// The table kind's segment in the card editor's kind switch.
   ///
