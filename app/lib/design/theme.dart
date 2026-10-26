@@ -503,8 +503,18 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// it.
   final Color onDontKnowTint;
 
-  /// The completion card's streak flame.
+  /// The streak flame's body, on the 오늘 tab and the completion card.
   final Color streak;
+
+  /// The streak flame's line at its first stage, before it takes [streak].
+  Color get flameOutline => muted;
+
+  /// The streak flame's warm core, from its fourth stage: [streak] halfway
+  /// toward [onHero], so the web's token set needs no flame of its own.
+  Color get flameCore => Color.lerp(streak, onHero, 0.5)!;
+
+  /// The streak flame's glow, from its fourth stage.
+  Color get flameGlow => streak.withValues(alpha: 0.35);
 
   /// The four tints a deck's initial tile is drawn on, in order.
   List<Color> get deckTints => [tintBlue, tintAmber, tintGreen, tintRed];

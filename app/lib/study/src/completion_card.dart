@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
 import '../../design/mascot.dart';
+import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'session.dart';
@@ -114,10 +114,9 @@ class CompletionCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         spacing: AppSpace.s4,
                         children: [
-                          Icon(
-                            LucideIcons.flame,
+                          StreakFlame(
+                            days: completion.streak,
                             size: AppSize.smallIcon,
-                            color: colors.streak,
                           ),
                           Text.rich(
                             count(

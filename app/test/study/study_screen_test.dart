@@ -13,6 +13,7 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_section_label.dart';
+import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
 import 'package:smartman/design/theme.dart';
@@ -1311,6 +1312,18 @@ void main() {
           matching: find.text('1-day streak', findRichText: true),
         ),
         findsOneWidget,
+      );
+      // After the streak's flame, burning at its stage.
+      expect(
+        tester
+            .widget<StreakFlame>(
+              find.descendant(
+                of: find.byType(CompletionCard),
+                matching: find.byType(StreakFlame),
+              ),
+            )
+            .days,
+        1,
       );
       expect(find.text('2/2'), findsOneWidget);
       // The previous card stays above the completion card.

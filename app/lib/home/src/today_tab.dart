@@ -9,6 +9,7 @@ import '../../account/account.dart';
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
 import '../../design/mascot.dart';
+import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -434,11 +435,7 @@ class _StreakChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Pill(
     onHero: onHero,
-    icon: Icon(
-      LucideIcons.flame,
-      size: AppSpace.s16,
-      color: AppColors.of(context).streak,
-    ),
+    icon: StreakFlame(days: days, size: AppSpace.s16),
     label: AppLocalizations.of(context).streakDays(days),
   );
 }
