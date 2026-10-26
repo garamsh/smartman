@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
+import 'word_break.dart';
 
 /// A row of a list: a rounded surface on the ground, tappable when [onTap] or
 /// [onLongPress] is given, with the row gap below it. [child] fills it.
@@ -122,7 +123,8 @@ class AppListRow extends StatelessWidget {
                       ),
                       if (subtitle != null)
                         Text(
-                          subtitle,
+                          keepWords(subtitle),
+                          semanticsLabel: subtitle,
                           style: AppType.caption.copyWith(
                             color: AppColors.of(context).muted,
                           ),

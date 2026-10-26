@@ -36,6 +36,7 @@ import '../sync/fake_sync_server.dart';
 import '../study/minutes_sheet.dart';
 import '../study/study_storage.dart';
 import '../media/fakes.dart';
+import '../word_breaks.dart';
 
 /// Screenshots of every screen and sheet in both themes, for review. They are
 /// written, not compared, and only when asked for:
@@ -1332,17 +1333,6 @@ void main() {
         ),
       );
 
-      /// The text that reads [text] once its word joiners are left out.
-      Finder shown(String text) => find.byWidgetPredicate(
-        (widget) =>
-            widget is Text &&
-            (widget.data ?? widget.textSpan?.toPlainText())?.replaceAll(
-                  '\u2060',
-                  '',
-                ) ==
-                text,
-      );
-
       /// Taps [finder], which takes a photo with the camera, through to the
       /// extraction.
       Future<void> shoot(Finder finder) async {
@@ -1403,7 +1393,7 @@ void main() {
       await tap(tester, find.bySemanticsLabel(RegExp('^최빈출 단어 카드 모양')));
       await shot(tester, '22b-photo-list-menu');
       await tap(tester, find.widgetWithText(MenuItemButton, ko.importBoth));
-      await tap(tester, shown('face'));
+      await tap(tester, shownText('face'));
       await shot(tester, '22c-photo-edit');
       await tap(tester, find.text(ko.editDone));
       await tap(tester, find.text('영단어 기본'));
@@ -1608,6 +1598,10 @@ void main() {
       await tap(tester, find.text(ko.createManually));
       await tester.enterText(find.byType(EditableText), '영단어 기본');
       await tap(tester, find.text(ko.create));
+      // Dismissing 덱 꾸미기 keeps the default tile and opens the deck, which
+      // back leaves.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await shot(tester, '27a-photo-bar-paused');
