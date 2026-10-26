@@ -1837,7 +1837,7 @@ abstract class AppLocalizations {
   /// **'찾는 덱이 없어요. 다른 단어로 검색해 보세요.'**
   String get noDeckMatches;
 
-  /// Under a deck row's name and on the deck page's navy card, over the progress bar: how many of the deck's cards are mastered (interval of 21 days or more).
+  /// Under a deck row's name and on the deck page's today card, over the progress bar: how many of the deck's cards are mastered (interval of 21 days or more).
   ///
   /// In ko, this message translates to:
   /// **'{cards}장 중 {mastered}장 익힘'**
@@ -1879,13 +1879,13 @@ abstract class AppLocalizations {
   /// **'카드 {count}장 · 공개'**
   String deckSummaryPublic(int count);
 
-  /// What a screen reader calls the deck page's navy card.
+  /// What a screen reader calls the deck page's today card.
   ///
   /// In ko, this message translates to:
   /// **'오늘 이 덱'**
   String get todayThisDeck;
 
-  /// After the large count on a navy card: the unit and the minutes the cards take.
+  /// After the large count on the deck page's today card: the unit and the minutes the cards take.
   ///
   /// In ko, this message translates to:
   /// **'장 · 약 {minutes}분'**
