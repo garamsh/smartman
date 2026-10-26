@@ -91,8 +91,11 @@ export function WholeCard({
                 key={index}
                 aria-hidden
                 data-image={block.media}
-                className="relative block w-full rounded-sm bg-ground"
-                style={{ aspectRatio: `${String(block.width)} / ${String(block.height)}` }}
+                className="relative mx-auto block w-full rounded-sm bg-ground"
+                style={{
+                  aspectRatio: `${String(block.width)} / ${String(block.height)}`,
+                  maxWidth: `calc(${photoMaxHeight} * ${String(block.width)} / ${String(block.height)})`,
+                }}
               >
                 {block.boxes.map((box) => (
                   <ImageBoxMark key={box.id} box={box} revealed={revealed} />
@@ -110,6 +113,12 @@ export function WholeCard({
     </span>
   );
 }
+
+/**
+ * The tallest a photo's frame is drawn. Its width is bounded by the same height through its aspect
+ * ratio, so a tall photo fits whole on the screen, as the app's `imageFrame` fits it.
+ */
+const photoMaxHeight = "60dvh";
 
 /** A percentage of the photo's frame, the CSS form of a box's fraction. */
 function percent(fraction: number): string {

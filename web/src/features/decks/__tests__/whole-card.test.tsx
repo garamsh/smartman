@@ -74,6 +74,22 @@ describe("a photo on a whole card", () => {
     });
   }
 
+  it("bounds each photo's frame to a height, its width following from its aspect ratio, so a tall photo fits", () => {
+    for (const photo of photos) {
+      if (photo.kind !== "image") continue;
+      const { frame } = draw(photo, 1024);
+      // At most 60dvh tall: as wide as 60dvh times width over height, in whatever form jsdom
+      // keeps the calc.
+      const maxWidth = frame?.style.maxWidth ?? "";
+      expect(maxWidth, photo.media).toMatch(/^(calc\()?[\d.]+dvh\)?$/);
+      expect(Number.parseFloat(maxWidth.replace("calc(", "")), photo.media).toBeCloseTo(
+        (60 * photo.width) / photo.height,
+        2,
+      );
+      expect(frame?.className, photo.media).toContain("mx-auto");
+    }
+  });
+
   it("hides each box with an opaque fill until revealed, then outlines it with its answer", () => {
     const [photo] = photos;
     if (!photo) return;
