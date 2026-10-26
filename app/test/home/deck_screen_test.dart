@@ -58,13 +58,12 @@ void main() {
   );
 
   testWidgets(
-    'a deck with no card shows no navy card of zeros, where a deck with one shows its count, mastered line and bar',
+    'a deck with no card shows no navy card of zeros, where a deck with one shows its count and bar',
     (tester) async {
       // Control: a deck with a card has its navy card.
       var screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
       await screens.push((deck) => DeckScreen(deck: deck));
       expect(find.text("Today's cards"), findsOneWidget);
-      expect(find.text('0 mastered · 0 learning · 1 in all'), findsOneWidget);
       expect(find.byType(ProgressBar), findsOneWidget);
       await screens.close();
 
@@ -72,7 +71,6 @@ void main() {
       await screens.push((deck) => DeckScreen(deck: deck));
       expect(find.text('No cards yet. Add a card to start.'), findsOneWidget);
       expect(find.text("Today's cards"), findsNothing);
-      expect(find.textContaining('in all'), findsNothing);
       expect(find.byType(ProgressBar), findsNothing);
       await screens.close();
     },
@@ -91,8 +89,13 @@ void main() {
       expect(find.text('French'), findsOneWidget);
       expect(find.text('3 cards'), findsOneWidget);
       expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
-      // Chat was reviewed after a day's interval, so it is learning.
-      expect(find.text('0 mastered · 1 learning · 3 in all'), findsOneWidget);
+      // Chat was reviewed after a day's interval, so it is learning. The
+      // bar's label carries the counts, with no line of them beside it.
+      expect(
+        find.bySemanticsLabel('0 mastered, 1 learning, 2 new'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('mastered'), findsNothing);
 
       await screens.tap(find.text('Study'));
 

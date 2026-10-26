@@ -267,7 +267,7 @@ void main() {
 
   group('덱', () {
     testWidgets(
-      "a deck row's line counts the mastered, learning and all cards its bar draws, and a deck with no card shows its card count and no bar",
+      "a deck row shows its card count beside its name and a bar whose screen reader label breaks it down, with no line of counts, and a deck with no card shows 0 cards and no bar",
       (tester) async {
         // Alpha: one mastered, one learning after a day's interval, two new.
         final list = await _open(
@@ -278,23 +278,21 @@ void main() {
           decks: ['Alpha', 'Beta'],
         );
         await list.decks();
-        Finder inRow(String deck, Finder finder) => find.descendant(
-          of: find.ancestor(
-            of: find.text(deck),
-            matching: find.byType(DeckRow),
-          ),
-          matching: finder,
-        );
+        Finder row(String deck) =>
+            find.ancestor(of: find.text(deck), matching: find.byType(DeckRow));
+        Finder inRow(String deck, Finder finder) =>
+            find.descendant(of: row(deck), matching: finder);
 
-        expect(
-          inRow('Alpha', find.text('1 mastered · 1 learning · 4 in all')),
-          findsOneWidget,
-        );
+        expect(inRow('Alpha', find.text('4 cards')), findsOneWidget);
         expect(inRow('Alpha', find.byType(ProgressBar)), findsOneWidget);
+        expect(inRow('Alpha', find.textContaining('mastered')), findsNothing);
+        expect(
+          tester.getSemantics(row('Alpha')).getSemanticsData().label,
+          contains('1 mastered, 1 learning, 2 new'),
+        );
 
         expect(inRow('Beta', find.text('0 cards')), findsOneWidget);
         expect(inRow('Beta', find.byType(ProgressBar)), findsNothing);
-        expect(inRow('Beta', find.textContaining('in all')), findsNothing);
         await list.close();
       },
     );

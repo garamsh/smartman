@@ -86,13 +86,15 @@ class _DecksTabState extends ConsumerState<DecksTab> {
                 decks: DeckSelection(deck.id),
                 builder: (context, count) => TodayChip(count: count),
               ),
-              progress: ProgressCounter(
-                decks: DeckSelection(deck.id),
-                builder: (context, progress) => _DeckProgress(
-                  progress: progress,
-                  cardCount: widget.counts[deck.id] ?? 0,
-                ),
-              ),
+              // A deck with no card has no share to draw.
+              progress: (widget.counts[deck.id] ?? 0) == 0
+                  ? null
+                  : ProgressCounter(
+                      decks: DeckSelection(deck.id),
+                      builder: (context, progress) => progress == null
+                          ? const SizedBox.shrink()
+                          : ProgressBar(progress: progress),
+                    ),
             ),
           const SizedBox(height: AppSpace.s8),
           _ListEntry(
@@ -143,41 +145,6 @@ class TodayChip extends StatelessWidget {
       ),
       TodayCounted() || TodayPending() => const SizedBox.shrink(),
     };
-  }
-}
-
-/// A deck row's progress bar and "익힘 m · 학습 중 l · 전체 n", the counts the
-/// bar draws; the card count alone while the progress is read, and for a deck
-/// with no card, which has nothing to draw.
-class _DeckProgress extends StatelessWidget {
-  const _DeckProgress({required this.progress, required this.cardCount});
-
-  final DeckProgress? progress;
-  final int cardCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final quiet = AppType.caption.copyWith(color: AppColors.of(context).muted);
-    final progress = this.progress;
-    if (progress == null || progress.total == 0) {
-      return Text(l10n.cardCount(cardCount), style: quiet);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s4,
-      children: [
-        ExcludeSemantics(child: ProgressBar(progress: progress)),
-        Text(
-          l10n.deckProgress(
-            progress.mastered,
-            progress.learning,
-            progress.total,
-          ),
-          style: quiet,
-        ),
-      ],
-    );
   }
 }
 

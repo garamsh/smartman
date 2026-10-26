@@ -1118,8 +1118,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noDeckMatches => 'No deck matches. Try other words.';
 
   @override
-  String deckProgress(int mastered, int learning, int total) {
-    return '$mastered mastered · $learning learning · $total in all';
+  String deckRowCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '1 card',
+    );
+    return '$_temp0';
   }
 
   @override

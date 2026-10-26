@@ -287,7 +287,7 @@
   "tabsLabel": "Tabs",
   "searchDecks": "Search decks",
   "noDeckMatches": "No deck matches. Try other words.",
-  "deckProgress": "{mastered} mastered · {learning} learning · {total} in all",
+  "deckRowCards": "{count, plural, =1{1 card} other{{count} cards}}",
   "browsePublicDecksBody": "Copy decks other people made into yours",
   "createManuallyBody": "Name it and add cards one by one",
   "progressSemantics": "{mastered} mastered, {learning} learning, {fresh} new",

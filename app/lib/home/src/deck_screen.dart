@@ -477,8 +477,8 @@ class _CardListHeader extends StatelessWidget {
   }
 }
 
-/// The deck's navy card: today's count and its minutes, how many cards are
-/// mastered, the progress bar, and the button that studies the deck.
+/// The deck's navy card: today's count and its minutes, the progress bar, and
+/// the button that studies the deck.
 class _DeckTodayCard extends StatelessWidget {
   const _DeckTodayCard({required this.deck, required this.onStudy});
 
@@ -531,29 +531,12 @@ class _DeckTodayCard extends StatelessWidget {
               ProgressCounter(
                 decks: DeckSelection(deck),
                 builder: (context, progress) => progress == null
-                    ? const SizedBox(height: AppSpace.s28)
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: AppSpace.s8,
-                        children: [
-                          Text(
-                            l10n.deckProgress(
-                              progress.mastered,
-                              progress.learning,
-                              progress.total,
-                            ),
-                            style: quiet,
-                          ),
-                          // The line above reads the counts the bar draws.
-                          ExcludeSemantics(
-                            child: ProgressBar(
-                              progress: progress,
-                              height: AppSpace.s8,
-                              ink: colors.onHero,
-                              track: heroTrack(colors),
-                            ),
-                          ),
-                        ],
+                    ? const SizedBox(height: AppSpace.s8)
+                    : ProgressBar(
+                        progress: progress,
+                        height: AppSpace.s8,
+                        ink: colors.onHero,
+                        track: heroTrack(colors),
                       ),
               ),
               AppButton(
