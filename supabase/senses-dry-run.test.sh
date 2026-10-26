@@ -17,7 +17,7 @@ stack="the senses dry-run test stack"
 reserve port 54400 54499 || exit 1
 export SUPABASE_PROJECT_ID="smartman_dryrun_$port" SUPABASE_DB_PORT="$port"
 report=$(mktemp -d)
-trap 'rm -rf "$report"; stop_stack $?' EXIT
+trap 'status=$?; rm -rf "${report:?}"; stop_stack "$status"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
