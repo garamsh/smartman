@@ -106,3 +106,76 @@ PreparedImage preparedImage(int shade) {
     height: 4,
   );
 }
+
+/// A player that plays nothing, recording each id asked for in [plays].
+class FakeAudioPlayback implements AudioPlayback {
+  final plays = <MediaId>[];
+
+  /// What each play answers: whether the file could be played.
+  bool playable = true;
+
+  /// How many times playback was stopped.
+  int stops = 0;
+
+  /// Whether a sound plays now: started by a play that could play it, and
+  /// not stopped since.
+  bool playing = false;
+
+  @override
+  Future<bool> play(MediaId id) async {
+    plays.add(id);
+    playing = playable;
+    return playable;
+  }
+
+  @override
+  Future<void> stop() async {
+    stops++;
+    playing = false;
+  }
+}
+
+/// A recorder that hands out [next] when stopped, or throws [failure] when
+/// started, counting each call.
+class FakeAudioRecording implements AudioRecording {
+  PreparedAudio? next;
+  MediaFailure? failure;
+  int starts = 0;
+  int stops = 0;
+  int cancels = 0;
+
+  @override
+  Future<void> start() async {
+    starts++;
+    if (failure case final failure?) throw failure;
+  }
+
+  @override
+  Future<PreparedAudio?> stop() async {
+    stops++;
+    return next;
+  }
+
+  @override
+  Future<void> cancel() async => cancels++;
+}
+
+/// A file picker that hands out [next], or throws [failure].
+class FakeAudioPick implements AudioPick {
+  PreparedAudio? next;
+  MediaFailure? failure;
+
+  @override
+  Future<PreparedAudio?> pick() async {
+    if (failure case final failure?) throw failure;
+    return next;
+  }
+}
+
+/// A few bytes standing for a recording of [milliseconds], prepared as a
+/// recorded sound is.
+PreparedAudio preparedAudio(int milliseconds) => prepareAudio(
+  Uint8List.fromList(List.filled(64, milliseconds % 256)),
+  mimeType: 'audio/mp4',
+  duration: Duration(milliseconds: milliseconds),
+);

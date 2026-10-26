@@ -45,8 +45,9 @@ class DeckRepository {
 
   final AppDatabase _db;
 
-  /// Releases each image a deck lets go, by a new image or its deletion;
-  /// without it, as in a test that stores no image, none is released.
+  /// Releases each image or sound a deck or card lets go, by a new one or
+  /// its deletion; without it, as in a test that stores none, none is
+  /// released.
   final MediaStore? _media;
   final DateTime Function() _clock;
   final String Function() _newId;
@@ -167,7 +168,8 @@ class DeckRepository {
   }
 
   /// Deletes the deck and every card in it, as tombstones sync pushes, and
-  /// releases its image and its cards' unless another holds them.
+  /// releases its image and its cards' photos and sounds unless another
+  /// holds them.
   Future<void> deleteDeck(DeckId id) => _guard(
     () => _db.transaction(() async {
       final now = _clock();
@@ -177,7 +179,7 @@ class DeckRepository {
         );
       final images = {
         ?await _imageOf(id),
-        for (final row in await cards.get()) ..._imagesOf(row),
+        for (final row in await cards.get()) ..._mediaOf(row),
       };
       await (_db.update(
         _db.decks,
@@ -326,19 +328,19 @@ class DeckRepository {
         final row = await (_db.select(
           _db.cards,
         )..where((row) => row.id.equals(card.id.value))).getSingle();
-        await _releaseUnheld(_imagesOf(stored));
+        await _releaseUnheld(_mediaOf(stored));
         return CardSaved(_toCard(row));
       }),
     );
   }
 
-  /// Deletes the card as a tombstone sync pushes, and releases its images
-  /// unless another holds them.
+  /// Deletes the card as a tombstone sync pushes, and releases its photos and
+  /// sounds unless another holds them.
   Future<void> deleteCard(CardId id) => _guard(
     () => _db.transaction(() async {
       final cards = _db.select(_db.cards)
         ..where((card) => card.id.equals(id.value));
-      final images = {for (final row in await cards.get()) ..._imagesOf(row)};
+      final images = {for (final row in await cards.get()) ..._mediaOf(row)};
       await (_db.update(_db.cards)..where((card) => card.id.equals(id.value)))
           .write(_cardTombstone(_clock()));
       await _releaseUnheld(images);
@@ -499,13 +501,13 @@ class DeckRepository {
     return row == null ? null : _toCard(row);
   }
 
-  /// The images [row]'s sides hold (ADR 0109). A side this build cannot
-  /// decode names no image it can find, so it gives none.
-  static Set<MediaId> _imagesOf(CardRow row) => {
-    for (final side in [row.front, row.back]) ..._imagesOfSide(side),
+  /// The photos and sounds [row]'s sides hold (ADR 0109, ADR 0112). A side
+  /// this build cannot decode names no file it can find, so it gives none.
+  static Set<MediaId> _mediaOf(CardRow row) => {
+    for (final side in [row.front, row.back]) ..._mediaOfSide(side),
   };
 
-  static Set<MediaId> _imagesOfSide(String side) {
+  static Set<MediaId> _mediaOfSide(String side) {
     try {
       return mediaOf(decodeContent(side));
     } on FormatException {

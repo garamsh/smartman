@@ -141,6 +141,17 @@ void main() {
   }
 
   Future<void> tapAndSettle(WidgetTester tester, Finder target) async {
+    // The account screen's rows can run past the test's screen, and its list
+    // builds only the rows near it.
+    if (target.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        target,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await tester.ensureVisible(target);
+    await tester.pumpAndSettle();
     await tester.tap(target);
     await tester.pumpAndSettle();
   }

@@ -19,20 +19,20 @@ void main() {
     test('decodes an unknown type as unsupported and re-encodes it intact', () {
       const stored =
           '[{"type":"text","payload":{"text":"cat"}},'
-          '{"type":"audio","payload":{"path":"cat.m4a"}}]';
+          '{"type":"video","payload":{"path":"cat.mp4"}}]';
 
       final blocks = decodeContent(stored);
 
       expect(blocks.first, const TextContent('cat'));
       final unsupported = blocks.last;
       expect(unsupported, isA<UnsupportedContent>());
-      expect((unsupported as UnsupportedContent).type, 'audio');
-      // The text block is written at this build's version; the audio block
+      expect((unsupported as UnsupportedContent).type, 'video');
+      // The text block is written at this build's version; the video block
       // as it was stored.
       expect(
         encodeContent(blocks),
         '[{"type":"text","v":1,"payload":{"text":"cat"}},'
-        '{"type":"audio","payload":{"path":"cat.m4a"}}]',
+        '{"type":"video","payload":{"path":"cat.mp4"}}]',
       );
     });
 
@@ -335,6 +335,15 @@ void main() {
         '{"media":"m1","width":4,"height":3,'
             '"boxes":[{"id":"1","x":0.25,"y":0.5,"w":0.5,"h":0.25}]}',
       ),
+      (
+        'audio',
+        1,
+        AudioContent(
+          media: MediaId('m2'),
+          duration: Duration(milliseconds: 1250),
+        ),
+        '{"media":"m2","duration_ms":1250}',
+      ),
     ];
 
     for (final (type, version, block, payload) in blocks) {
@@ -441,7 +450,7 @@ void main() {
       blanks: [(row: 0, column: 0)],
     );
     const senses = SensesContent([CardSense(meaning: '파리')]);
-    const unknown = UnsupportedContent('audio', {'media': 'm1'});
+    const unknown = UnsupportedContent('video', {'media': 'm1'});
 
     test('a card with no blank is studied front then back, whatever its '
         'blocks', () {
@@ -586,6 +595,67 @@ void main() {
         'm2',
       );
       expect(mediaOf([const TextContent('a'), image]), {const MediaId('m1')});
+    });
+  });
+
+  group('an audio block (ADR 0112)', () {
+    // A stored block a later build wrote, with a field this build does not
+    // know.
+    const stored =
+        '[{"type":"audio","v":1,"id":"b1","payload":{"media":"m1",'
+        '"duration_ms":2400,"waveform":[1,2]}}]';
+
+    test('round-trips its media id and length, and writes back the fields it '
+        'does not know', () {
+      final audio = decodeContent(stored).single as AudioContent;
+
+      expect(audio.media, const MediaId('m1'));
+      expect(audio.duration, const Duration(milliseconds: 2400));
+      expect(audio.id, 'b1');
+      expect(jsonDecode(encodeContent([audio])), jsonDecode(stored));
+    });
+
+    test('is refused when it breaks its shape, where a whole one is read', () {
+      String block(String payload) => '[{"type":"audio","payload":$payload}]';
+      // Control: a whole block is read.
+      expect(
+        decodeContent(block('{"media":"m1","duration_ms":1}')),
+        hasLength(1),
+      );
+
+      for (final broken in [
+        block('{"duration_ms":1000}'),
+        block('{"media":"","duration_ms":1000}'),
+        block('{"media":"m1"}'),
+        block('{"media":"m1","duration_ms":0}'),
+        block('{"media":"m1","duration_ms":-5}'),
+        block('{"media":"m1","duration_ms":1.5}'),
+        block('{"media":"m1","duration_ms":"1000"}'),
+        block('{"url":"https://example.com/cat.m4a","duration_ms":1000}'),
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+    });
+
+    test('is no blank, names its file among the media, and reads as its '
+        'media id, so two sounds never share a card key', () {
+      const audio = AudioContent(
+        media: MediaId('m1'),
+        duration: Duration(seconds: 1),
+      );
+      const image = ImageContent(media: MediaId('m2'), width: 1, height: 1);
+
+      expect(oneFaceOf([audio], const [TextContent('cat')]), isNull);
+      expect(mediaOf([const TextContent('a'), audio, image]), {
+        const MediaId('m1'),
+        const MediaId('m2'),
+      });
+      expect(audioOf([const TextContent('a'), audio, image]), [audio]);
+      expect(plainText([const TextContent('cat'), audio]), 'cat\nm1');
     });
   });
 

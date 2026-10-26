@@ -12,6 +12,9 @@ const PRICING: Pricing = {
   completion: 0.000004,
   image: 0,
   request: 0,
+  // A list naming no cache price is read as the prompt's (`models.ts`).
+  cacheRead: 0.000001,
+  cacheWrite: 0.000001,
 };
 const CARD = {
   kind: "note",
