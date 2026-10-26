@@ -186,6 +186,58 @@ describe("the deck page", () => {
     expect(within(alert).getByRole("button", { name: "다시 시도" })).toBeInTheDocument();
   });
 
+  it("states 3장 중 0장 익힘 over the card's bar, and 0장 with no bar for a deck with no card", async () => {
+    await open("d-fr");
+    const card = () => within(screen.getByRole("region", { name: "오늘 이 덱" }));
+    expect(card().getByText("3장 중 0장 익힘")).toBeInTheDocument();
+    expect(card().queryByText(/ \/ 3 익힘/)).not.toBeInTheDocument();
+    expect(card().getByRole("img", { name: /^익힘 0장/ })).toBeInTheDocument();
+    cleanup();
+
+    postgrest.seed("decks", deckRow("d-empty", "Empty"));
+    await open("d-empty");
+    expect(card().getByText("0장")).toBeInTheDocument();
+    expect(card().queryByRole("img")).not.toBeInTheDocument();
+    expect(card().queryByText(/익힘/)).not.toBeInTheDocument();
+  });
+
+  it("draws the tile the server's icon and colour keys name, and layers on the id's colour for keys it does not know", async () => {
+    /** The header tile's fill and its icon's Lucide name. */
+    const tile = () => {
+      const box = screen.getByRole("banner").querySelector("[aria-hidden]");
+      return {
+        fill: box?.className.split(" ").find((name) => name.startsWith("bg-deck-")),
+        icon: box
+          ?.querySelector("svg")
+          ?.getAttribute("class")
+          ?.split(" ")
+          .find((name) => name.startsWith("lucide-")),
+      };
+    };
+    postgrest.seed(
+      "decks",
+      { ...deckRow("d-tiled", "Tiled"), icon: "book", color: "violet" },
+      { ...deckRow("d-newer", "Newer"), icon: "rocket", color: "teal" },
+    );
+
+    await open("d-tiled");
+    expect(tile()).toEqual({ icon: "lucide-book-open", fill: "bg-deck-violet" });
+    // The read asks for both keys: the fake answers whole rows whatever is selected.
+    expect(postgrest.selected.filter((read) => read.startsWith("decks: "))).toContain(
+      "decks: id,name,visibility,icon,color",
+    );
+    cleanup();
+    await open("d-newer");
+    // The colour the id selects, as a deck with no keys takes it: its UTF-16 code units' sum,
+    // modulo the six, in the app's order.
+    const id = uuidOf("d-newer");
+    const sum = Array.from(id).reduce((total, unit) => total + unit.charCodeAt(0), 0);
+    const selected = ["blue", "sky", "violet", "amber", "slate", "sand"][sum % 6];
+    expect(tile()).toEqual({ icon: "lucide-layers", fill: `bg-deck-${String(selected)}` });
+    // Control: that colour is not the stored key's, which no fill names.
+    expect(selected).not.toBe("teal");
+  });
+
   it("marks a deck its owner published with 공개 under its name", async () => {
     // Control: the private deck carries no chip.
     await open("d-fr");
