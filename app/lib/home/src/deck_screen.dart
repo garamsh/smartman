@@ -43,8 +43,6 @@ enum _DeckAction { rename, publish, unpublish, delete }
 enum _Add { byHand, camera, album }
 
 class _DeckScreenState extends ConsumerState<DeckScreen> {
-  late String _name = widget.deck.name;
-
   /// The card search, or null while it is closed.
   String? _query;
 
@@ -77,11 +75,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       AsyncData(:final value) => value,
       _ => false,
     };
-    // The deck as stored now, so a publish made here or synced in shows.
-    final current = switch (ref.watch(deckProvider(widget.deck.id))) {
-      AsyncData(value: final deck?) => deck,
-      _ => widget.deck,
-    };
+    final current = _stored(ref.watch(deckProvider(widget.deck.id)));
     final public = current.visibility is PublicDeck;
     final empty = switch (cards) {
       AsyncData(:final value) => value.isEmpty,
@@ -162,7 +156,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                           children: [
                             Semantics(
                               header: true,
-                              child: Text(_name, style: AppType.title),
+                              child: Text(current.name, style: AppType.title),
                             ),
                             Text(
                               public
@@ -349,6 +343,16 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     );
   }
 
+  /// The deck as [stored] holds it now, so a rename or a publish made here
+  /// or synced in shows; the deck the screen opened on until it is read.
+  Deck _stored(AsyncValue<Deck?> stored) => switch (stored) {
+    AsyncData(value: final deck?) => deck,
+    _ => widget.deck,
+  };
+
+  /// The deck's name as stored now.
+  String get _name => _stored(ref.read(deckProvider(widget.deck.id))).name;
+
   void _study() => unawaited(openStudy(context, DeckSelection(widget.deck.id)));
 
   Future<void> _open(Card? card) => Navigator.of(context).push(
@@ -377,7 +381,6 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     if (name == null || !mounted) return;
     await reportingFailure(context, () async {
       await repository.renameDeck(widget.deck.id, name);
-      if (mounted) setState(() => _name = name);
     });
   }
 

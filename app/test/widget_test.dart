@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:drift/native.dart';
@@ -22,6 +23,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 
 import 'account/fake_account_service.dart';
+import 'photo_import/fakes.dart';
 import 'sharing/fakes.dart';
 import 'study/minutes_sheet.dart';
 import 'sync/fake_sync_server.dart';
@@ -48,14 +50,16 @@ void main() {
 
   /// Composes the app over an in-memory database and theme storage holding
   /// [themeMode] when given, signed in through [account] when given and as a
-  /// restored session otherwise, extracting cards through [extraction], and
-  /// sharing decks through [sharing]; the first-run daily minutes step has
-  /// shown unless [minutesAsked] is false.
+  /// restored session otherwise, extracting cards through [extraction] with
+  /// a photo import kept in [jobStore], and sharing decks through [sharing];
+  /// the first-run daily minutes step has shown unless [minutesAsked] is
+  /// false.
   Future<void> pumpApp(
     WidgetTester tester, {
     String? themeMode,
     AccountService? account,
     ExtractionClient? extraction,
+    ImportJobStore? jobStore,
     SharingServer? sharing,
     bool minutesAsked = true,
   }) async {
@@ -89,6 +93,7 @@ void main() {
         FakeSyncServer(_ada),
         themeStorage,
         extraction,
+        jobStore ?? MemoryImportJobStore(),
         sharing,
         FakeReachability(),
         '1.0.0',
@@ -167,6 +172,39 @@ void main() {
     expect(find.text('Choose from album'), findsOneWidget);
     await unmountApp(tester);
   });
+
+  testWidgets(
+    'the composed app offers on opening to resume a photo import a closed app left, and reads only its unread photos',
+    (tester) async {
+      // As a closed app left it: photo p0 read, photo p1 not yet.
+      final store = MemoryImportJobStore()
+        ..photos.addAll({'p0': testPhoto.bytes, 'p1': testPhoto.bytes})
+        ..state = jsonEncode({
+          'version': 1,
+          'target': null,
+          'origin': 'album',
+          'photos': [
+            {
+              'key': 'p0',
+              'width': testPhoto.width,
+              'height': testPhoto.height,
+              'cards': <Object?>[],
+            },
+            {'key': 'p1', 'width': testPhoto.width, 'height': testPhoto.height},
+          ],
+        });
+      final client = FakeExtractionClient();
+      await pumpApp(tester, extraction: client, jobStore: store);
+
+      expect(find.text('Resume reading 1 photo?'), findsOneWidget);
+      expect(client.calls, isEmpty, reason: 'nothing read until asked');
+      await tester.tap(find.text('Resume'));
+      await tester.pumpAndSettle();
+      expect(client.calls, hasLength(1), reason: 'the unread photo alone');
+      expect(find.text('Reading photos 1/2'), findsOneWidget);
+      await unmountApp(tester);
+    },
+  );
 
   testWidgets(
     'the composed app gives every new row a version 7 uuid in canonical lowercase form',

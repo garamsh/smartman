@@ -27,6 +27,7 @@ import 'package:smartman/study/study.dart';
 import 'package:smartman/sync/sync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import '../sync/fake_sync_server.dart';
 import 'fake_account_service.dart';
@@ -115,6 +116,7 @@ void main() {
         server ?? FakeSyncServer(_ada),
         themeStorage,
         _NoExtraction(),
+        MemoryImportJobStore(),
         null,
         FakeReachability(),
         '1.0.0',
