@@ -471,6 +471,158 @@ void main() {
     },
   );
 
+  /// The [index]th field's controller.
+  TextEditingController controllerOf(WidgetTester tester, int index) =>
+      tester.widget<TextField>(_cell(index)).controller!;
+
+  /// The runs of the [index]th field's text drawn on a fill, its spans.
+  List<String> spansDrawnIn(WidgetTester tester, int index) {
+    final drawn = <String>[];
+    final editable = tester.widget<EditableText>(
+      find.descendant(of: _cell(index), matching: find.byType(EditableText)),
+    );
+    editable.controller
+        .buildTextSpan(
+          context: tester.element(_cell(index)),
+          style: editable.style,
+          withComposing: false,
+        )
+        .visitChildren((span) {
+          if (span is TextSpan && span.style?.backgroundColor != null) {
+            drawn.add(span.text!);
+          }
+          return true;
+        });
+    return drawn;
+  }
+
+  testWidgets(
+    'text selected in a cell and "Blank" make that span a blank, drawn as a block in the cell and filled in the preview, kept through an edit elsewhere in the cell and saved at v2 beside a whole-cell blank made with no selection; selected again it turns back into text',
+    (tester) async {
+      final screens = await openTable(tester);
+      await typeCapitals(screens);
+      await enter(tester, _cell(2), 'France, in Europe');
+      await select(screens, 2);
+      final france = controllerOf(tester, 2);
+      france.selection = const TextSelection(baseOffset: 0, extentOffset: 6);
+      await tester.pump();
+      expect(blankChip(tester).selected, isFalse, reason: 'no span yet');
+      await toggleBlank(screens);
+      expect(blankChip(tester).selected, isTrue, reason: 'inside the span');
+      expect(spansDrawnIn(tester, 2), ['France']);
+      final colors = AppColors.of(tester.element(_cell(2)));
+      expect(
+        tester.widget<TextField>(_cell(2)).decoration!.fillColor,
+        isNot(colors.brandTint),
+        reason: 'a cell holding a span is not tinted whole',
+      );
+
+      // An edit after the span keeps it.
+      await enter(tester, _cell(2), 'France, in Europe!');
+      expect(spansDrawnIn(tester, 2), ['France']);
+
+      // With no selection, "Blank" toggles the whole cell, as before.
+      await select(screens, 5);
+      expect(controllerOf(tester, 5).selection.isCollapsed, isTrue);
+      await toggleBlank(screens);
+      expect(
+        tester.widget<TextField>(_cell(5)).decoration!.fillColor,
+        colors.brandTint,
+      );
+      expect(spansDrawnIn(tester, 5), isEmpty, reason: 'whole, not a span');
+      expect(blanksUnder(find.byType(CardPreview)), {
+        'France': true,
+        'Tokyo': true,
+      }, reason: 'the preview draws the span in its cell, filled');
+
+      await save(screens);
+      final card = await _stored(screens);
+      expect(
+        card.front.last,
+        const TableContent(
+          columns: ['Country', 'Capital'],
+          rows: [
+            ['France, in Europe!', 'Paris'],
+            ['Japan', 'Tokyo'],
+          ],
+          blanks: [(row: 1, column: 1)],
+          spans: [(row: 0, column: 0, start: 0, end: 6)],
+        ),
+      );
+      expect(
+        encodeContent(card.front),
+        contains('"type":"table","v":2,'),
+        reason: 'written at v2',
+      );
+
+      // Reopened, the span is where the card has it; selected again, it goes.
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      expect(spansDrawnIn(tester, 2), ['France']);
+      await select(screens, 2);
+      controllerOf(tester, 2).selection = const TextSelection(
+        baseOffset: 1,
+        extentOffset: 4,
+      );
+      await tester.pump();
+      expect(blankChip(tester).selected, isTrue);
+      await toggleBlank(screens);
+      expect(spansDrawnIn(tester, 2), isEmpty);
+      await save(screens);
+      final saved = (await _stored(screens)).front.last as TableContent;
+      expect(saved.spans, isEmpty);
+      expect(saved.blanks, [(row: 1, column: 1)], reason: 'control: kept');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a span trimmed with its cell moves with the trim, a selection of whitespace makes no span, and a whole-cell blank and spans replace each other in a cell',
+    (tester) async {
+      final screens = await openTable(tester);
+      await typeCapitals(screens);
+      await enter(tester, _cell(2), '  France ');
+      await select(screens, 2);
+      controllerOf(tester, 2).selection = const TextSelection(
+        baseOffset: 0,
+        extentOffset: 2,
+      );
+      await tester.pump();
+      await toggleBlank(screens);
+      expect(spansDrawnIn(tester, 2), isEmpty, reason: 'whitespace alone');
+
+      controllerOf(tester, 2).selection = const TextSelection(
+        baseOffset: 2,
+        extentOffset: 8,
+      );
+      await tester.pump();
+      await toggleBlank(screens);
+      expect(spansDrawnIn(tester, 2), ['France']);
+
+      // The caret alone makes the cell whole, dropping its span ...
+      controllerOf(tester, 2).selection = const TextSelection.collapsed(
+        offset: 0,
+      );
+      await tester.pump();
+      await toggleBlank(screens);
+      expect(spansDrawnIn(tester, 2), isEmpty);
+      final draft = tester.widget<TableFields>(find.byType(TableFields)).draft;
+      expect(draft.table.blanks, [(row: 0, column: 0)]);
+      expect(draft.table.spans, isEmpty);
+
+      // ... and a span made in a whole cell makes it a cell of spans.
+      controllerOf(tester, 2).selection = const TextSelection(
+        baseOffset: 2,
+        extentOffset: 8,
+      );
+      await tester.pump();
+      await toggleBlank(screens);
+      expect(draft.table.blanks, isEmpty);
+      expect(draft.table.spans, [(row: 0, column: 0, start: 0, end: 6)]);
+      expect(draft.table.rows.first.first, 'France', reason: 'trimmed');
+      await screens.close();
+    },
+  );
+
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
       'in the ${mode.name} theme the table form meets the tap target, label and contrast guidelines, a blank selected and the save refused',

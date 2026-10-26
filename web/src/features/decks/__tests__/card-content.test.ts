@@ -25,7 +25,7 @@ describe("a card side's blocks", () => {
     ).toEqual([
       { kind: "text", text: "Capitals" },
       { kind: "cloze", text: "___ is in ___", answers: ["Paris", "France"] },
-      { kind: "table", columns: ["Capital", "Country"], rows, blanks: cell },
+      { kind: "table", columns: ["Capital", "Country"], rows, blanks: cell, spans: [] },
     ]);
   });
 
@@ -201,7 +201,8 @@ describe("a block's version and id", () => {
 
   it("shows a known type above the version it reads, or an unknown type, as a placeholder", () => {
     for (const block of known) {
-      expect(parseContent([{ ...block, v: 2 }]), block.type).toEqual([
+      const above = block.type === "table" ? 3 : 2;
+      expect(parseContent([{ ...block, v: above }]), block.type).toEqual([
         { kind: "unsupported", type: block.type },
       ]);
     }
@@ -238,7 +239,9 @@ describe("a block's version and id", () => {
     expect(upcastPayload("text", 1, { text: " cat " }, steps)).toEqual({ body: "cat" });
     expect(upcastPayload("text", 2, { body: " cat " }, steps)).toEqual({ body: "cat" });
     expect(upcastPayload("text", 3, { body: "cat" }, steps)).toEqual({ body: "cat" });
-    for (const type of ["text", "cloze", "table", "senses", "image"] as const) {
+    // Today a table is read at v2, after one step, and every other type at v1, with none.
+    expect(blockVersion("table")).toBe(2);
+    for (const type of ["text", "cloze", "senses", "image"] as const) {
       expect(blockVersion(type), type).toBe(1);
     }
   });
@@ -311,5 +314,96 @@ describe("an image block", () => {
     expect(isWholeCard(boxed)).toBe(true);
     // Control: the same photo without a box is split.
     expect(isWholeCard(bare)).toBe(false);
+  });
+});
+
+// The cases of the app's span tests in `content_test.dart` (ADR 0110).
+describe("a table's spans", () => {
+  const text = "5부족 연맹체, 왕 아래 마가·우가";
+  const spanTable = (
+    fields: { v?: number; blanks?: unknown; spans?: unknown } = {},
+    withSpans = true,
+  ) => ({
+    type: "table",
+    ...(fields.v === undefined ? {} : { v: fields.v }),
+    payload: {
+      columns: ["", "정치"],
+      rows: [
+        ["부여", text],
+        ["고구려", "5부"],
+      ],
+      blanks: fields.blanks ?? [],
+      ...(withSpans ? { spans: fields.spans ?? [] } : {}),
+    },
+  });
+  const span = (row: number, column: number, start: number, end: number) => ({
+    row,
+    column,
+    start,
+    end,
+  });
+  const whole = [{ row: 1, column: 1 }];
+
+  it("upcasts a v1 table, with or without its v, to v2 with its blanks whole cells and no span", () => {
+    for (const stored of [
+      spanTable({ blanks: whole }, false),
+      spanTable({ v: 1, blanks: whole }, false),
+    ]) {
+      expect(parseContent([stored]), JSON.stringify(stored)).toEqual([
+        expect.objectContaining({ kind: "table", blanks: whole, spans: [] }),
+      ]);
+    }
+  });
+
+  it("reads a v2 table's spans beside whole-cell blanks, several in one cell", () => {
+    const spans = [span(0, 1, 0, 7), span(0, 1, 14, 16)];
+    expect(parseContent([spanTable({ v: 2, blanks: whole, spans })])).toEqual([
+      {
+        kind: "table",
+        columns: ["", "정치"],
+        rows: [
+          ["부여", text],
+          ["고구려", "5부"],
+        ],
+        blanks: whole,
+        spans,
+      },
+    ]);
+  });
+
+  it("refuses a span outside its cell, empty, of whitespace, overlapping another or in a whole-cell blank, and a table of no blank at all, where a whole one is read", () => {
+    for (const broken of [
+      spanTable({ v: 2, spans: [span(0, 1, 0, text.length + 1)] }),
+      spanTable({ v: 2, spans: [span(0, 2, 0, 1)] }),
+      spanTable({ v: 2, spans: [span(2, 1, 0, 1)] }),
+      spanTable({ v: 2, spans: [span(0, -1, 0, 1)] }),
+      spanTable({ v: 2, spans: [span(0, 1, -1, 3)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 3, 3)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 8, 9)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 6, 9)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 0, 7)] }),
+      spanTable({ v: 2, blanks: [{ row: 0, column: 1 }], spans: [span(0, 1, 0, 7)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 0, 7), "not a span"] }),
+      spanTable({ v: 2 }),
+      spanTable({ v: 2, blanks: [{ row: 0, column: 1 }] }, false),
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    // Control: spans alone, two touching in one cell.
+    expect(
+      parseContent([spanTable({ v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 7, 9)] })]),
+    ).not.toBeNull();
+  });
+
+  it("speaks each span as 빈칸 inside its cell's text until revealed, and describes every cell whole", () => {
+    const blocks =
+      parseContent([
+        spanTable({ v: 2, blanks: whole, spans: [span(0, 1, 14, 16), span(0, 1, 0, 7)] }),
+      ]) ?? [];
+    expect(spokenContent(blocks, false)).toBe(
+      ", 정치. 부여, 빈칸, 왕 아래 빈칸·우가. 고구려, 빈칸",
+    );
+    expect(spokenContent(blocks, true)).toBe(`, 정치. 부여, ${text}. 고구려, 5부`);
+    expect(describeContent(blocks)).toBe(` | 정치\n부여 | ${text}\n고구려 | 5부`);
   });
 });
