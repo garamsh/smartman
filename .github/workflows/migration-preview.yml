@@ -1,0 +1,31 @@
+name: migration preview
+
+# On a pull request that touches supabase/migrations/, make preview-migrations applies main's
+# migrations to a throwaway local stack, loads supabase/preview-seed.sql, applies the pull request's
+# migrations and writes what changed, which this job posts as its summary on the pull request
+# (server.md). It is not a required check: it fails when a migration fails on the seeded data, and
+# its report is for the reviewer. It reads only the repository, so it holds no secret.
+#
+# Dependabot moves the `uses:` pins. The runner label and the CLI version are those of ci.yml's
+# ubuntu jobs, and move in the same pull request as theirs.
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+permissions: read-all
+
+jobs:
+  preview:
+    name: make preview-migrations
+    runs-on: ubuntu-24.04
+    steps:
+      # The script reads main as the merge commit's first parent, as check-migration-order.sh does.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.120.0
+      - run: make preview-migrations PREVIEW="$RUNNER_TEMP/migration-preview"
+      - run: cat "$RUNNER_TEMP/migration-preview.md" >> "$GITHUB_STEP_SUMMARY"
