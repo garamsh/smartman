@@ -85,7 +85,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardKindWord => 'Word';
 
   @override
-  String get cardKindCloze => 'Cloze';
+  String get cardKindCloze => 'Sentence';
 
   @override
   String get clozeWordsHint => 'Tap the words to make blanks';
@@ -129,6 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tableNameHint => 'The table\'s name';
+
+  @override
+  String get tableNameLabel => 'Front · table name';
 
   @override
   String get tableModeLabel => 'Table editing';
@@ -190,6 +193,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardKindLabel => 'Card kind';
 
   @override
+  String cardDeck(String deck) {
+    return 'Deck $deck';
+  }
+
+  @override
   String senseHeading(int number) {
     return 'Meaning $number';
   }
@@ -208,6 +216,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addSense => 'Add meaning';
+
+  @override
+  String get wordExtra => 'More on the back';
 
   @override
   String moveSenseUp(int number) {

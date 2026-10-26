@@ -3,6 +3,8 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/deck/src/card_preview.dart';
 
 import '../home/deck_screens.dart';
 
@@ -20,7 +22,7 @@ void main() {
   Future<DeckScreens> openCloze(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await screens.tap(find.text('Cloze'));
+    await screens.tap(find.text('Sentence'));
     return screens;
   }
 
@@ -316,6 +318,48 @@ void main() {
       await screens.close();
     },
   );
+
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+      'in the ${mode.name} theme a chosen word is drawn in the colour of the preview\'s blank, and before any blank the preview draws the line whole',
+      (tester) async {
+        final screens = await DeckScreens.open(tester, themeMode: mode);
+        await openCloze(tester, on: screens);
+        await typeLine(tester, 'The cat sat');
+        final preview = find.byType(CardPreview);
+        expect(
+          find.descendant(of: preview, matching: find.byType(WholeCardView)),
+          findsOneWidget,
+          reason: 'whole, not the line on both halves',
+        );
+        expect(
+          find.descendant(of: preview, matching: find.byType(VerticalDivider)),
+          findsNothing,
+          reason: 'no split card, whose halves a divider parts',
+        );
+
+        await toggle(screens, 'cat');
+        final colors = AppColors.of(tester.element(_word('cat')));
+        expect(
+          tester.widget<FilterChip>(_word('cat')).selectedColor,
+          colors.brandTint,
+        );
+        Color? blankFill;
+        for (final paragraph in tester.widgetList<RichText>(
+          find.descendant(of: preview, matching: find.byType(RichText)),
+        )) {
+          paragraph.text.visitChildren((span) {
+            if (span is TextSpan && span.text?.trim() == 'cat') {
+              blankFill = span.style?.backgroundColor;
+            }
+            return true;
+          });
+        }
+        expect(blankFill, colors.brandTint, reason: 'the preview draws it so');
+        await screens.close();
+      },
+    );
+  }
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(

@@ -65,6 +65,13 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// The word form's senses: those of the card's back, or one empty sense.
   late final List<SenseDraft> _senses = _draftsOf(widget.card?.back);
 
+  /// A field for each text block of the card's back, by its place there: a
+  /// word's extras or a merged back, edited beside its senses (issue #312).
+  late final Map<int, TextEditingController> _extras = {
+    for (final (index, block) in (widget.card?.back ?? const []).indexed)
+      if (block is TextContent) index: TextEditingController(text: block.text),
+  };
+
   /// The cloze form's blanks: the card's own, or none.
   late ClozeDraft _cloze = switch (widget.card?.front
       .whereType<ClozeContent>()
@@ -121,6 +128,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     for (final sense in _senses) {
       sense.dispose();
     }
+    for (final extra in _extras.values) {
+      extra.dispose();
+    }
     _table.dispose();
     super.dispose();
   }
@@ -147,10 +157,20 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   /// text is left as it was.
   List<Content> get _frontBlocks => switch (_kind) {
     CardKind.cloze when _keepsCloze => widget.card!.front,
-    // The line itself, while it has no blank, so the preview shows it.
-    CardKind.cloze => [_cloze.content ?? TextContent(_front.text)],
+    // While it has no blank, the line as a cloze without one, so the preview
+    // draws it whole as the card will be, not on both halves (issue #313).
+    // Such a cloze is never saved: the form refuses it.
+    CardKind.cloze => [_cloze.content ?? ClozeContent(_front.text, const [])],
     CardKind.table => [TextContent(_front.text), _table.table],
     _ => _replaceText(widget.card?.front ?? const [], _front.text),
+  };
+
+  /// The back's block at [index] as a word saves it beside its senses: a
+  /// text block as its field holds it, or none once the field is cleared;
+  /// any other block but the senses as it is.
+  Content? _besideSenses(int index, Content block) => switch (_extras[index]) {
+    final extra? => extra.text.trim().isEmpty ? null : TextContent(extra.text),
+    null => block is SensesContent ? null : block,
   };
 
   /// The back as saved: the text typed, as [_frontBlocks]; or a word's senses,
@@ -159,7 +179,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     CardKind.basic => _replaceText(widget.card?.back ?? const [], _back.text),
     CardKind.word => [
       SensesContent([for (final sense in _senses) sense.sense]),
-      ...?widget.card?.back.where((block) => block is! SensesContent),
+      for (final (index, block) in (widget.card?.back ?? const []).indexed)
+        ?_besideSenses(index, block),
     ],
     CardKind.cloze when _keepsCloze => widget.card!.back,
     // The line with its blanks filled, as photo import writes a cloze's back.
@@ -294,15 +315,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 icon: const Icon(LucideIcons.trash2),
                 onPressed: () => _delete(card),
               ),
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpace.gutter),
-              child: Text(
-                widget.deck.name,
-                style: AppType.secondary.copyWith(
-                  color: AppColors.of(context).muted,
-                ),
-              ),
-            ),
+            const SizedBox(width: AppSpace.s8),
           ],
         ),
         // The actions sit in the body under the form, not in the bottom bar, so
@@ -317,6 +330,33 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // The deck, in the form rather than the top bar, where a
+                    // long name pushed the title out (issue #310).
+                    Semantics(
+                      label: l10n.cardDeck(widget.deck.name),
+                      excludeSemantics: true,
+                      child: Row(
+                        spacing: AppSpace.s8,
+                        children: [
+                          Icon(
+                            LucideIcons.layers,
+                            size: AppSize.smallIcon,
+                            color: AppColors.of(context).muted,
+                          ),
+                          Expanded(
+                            child: Text(
+                              widget.deck.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppType.secondary.copyWith(
+                                color: AppColors.of(context).muted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpace.s16),
                     if (_isNew) ...[
                       Semantics(
                         label: l10n.cardKindLabel,
@@ -350,7 +390,11 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                     CardPreview(front: _frontBlocks, back: _backBlocks),
                     const SizedBox(height: AppSpace.s24),
                     AppTextField(
-                      label: l10n.cardFront,
+                      // A table's front is its name, and says so while typed
+                      // (issue #313).
+                      label: _kind == CardKind.table
+                          ? l10n.tableNameLabel
+                          : l10n.cardFront,
                       controller: _front,
                       hint: _kind == CardKind.table ? l10n.tableNameHint : null,
                       focusNode: _frontFocus,
@@ -383,10 +427,24 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                         errorText: _requiredError(l10n, _back),
                         onChanged: (_) => _change(),
                       ),
-                      CardKind.word => SenseFields(
-                        senses: _senses,
-                        showErrors: _showRequired,
-                        onChanged: _change,
+                      CardKind.word => Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: AppSpace.s16,
+                        children: [
+                          SenseFields(
+                            senses: _senses,
+                            showErrors: _showRequired,
+                            onChanged: _change,
+                          ),
+                          for (final extra in _extras.values)
+                            AppTextField(
+                              label: l10n.wordExtra,
+                              controller: extra,
+                              minLines: 2,
+                              maxLines: null,
+                              onChanged: (_) => _change(),
+                            ),
+                        ],
                       ),
                       CardKind.cloze => ClozeWords(
                         line: _front.text,
