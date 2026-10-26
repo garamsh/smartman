@@ -314,6 +314,18 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await page.route(refuse, (route) =>
     route.request().method() === "POST" ? route.abort() : route.continue(),
   );
+  // The route is set before the browser applies it, and a write sent in between goes through and
+  // shows no failure (#415); the step waits until a POST of the page is refused.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        fetch(location.href, { method: "POST" }).then(
+          () => "sent",
+          () => "refused",
+        ),
+      ),
+    )
+    .toBe("refused");
   await page.keyboard.press("z");
   // Next's route announcer is an alert too, so the write failure is told apart by its text.
   const writeFailure = page.getByRole("alert").filter({ hasText: "응답을 저장하지 못했어요" });
