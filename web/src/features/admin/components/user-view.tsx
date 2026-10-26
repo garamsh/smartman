@@ -1,11 +1,12 @@
 import { formatDate, formatTime } from "../format";
+import { termsLabel } from "../labels";
 import type { AdminUser } from "../read-admin";
 import { PublicDecks } from "./public-decks";
 import { UserDecks } from "./user-decks";
 import { UserPlan } from "./user-plan";
 import { UserSuspension } from "./user-suspension";
 
-/** One user, read-only: sign-up, last study, decks and cards, public decks and today's photos. */
+/** One user, read-only: sign-up, last study, decks and cards, public decks and the period's photos. */
 export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string }) {
   const facts = [
     ["가입일", formatDate(user.createdAt, timeZone)],
@@ -15,12 +16,14 @@ export function UserView({ user, timeZone }: { user: AdminUser; timeZone: string
     ],
     ["덱", `${String(user.decks)}개`],
     ["카드", `${String(user.cards)}장`],
-    [
-      "오늘 사진 추출 (UTC)",
-      user.plan.dailyLimit === null
-        ? `${String(user.extractionsToday)}장`
-        : `${String(user.extractionsToday)}장 / 하루 ${String(user.plan.dailyLimit)}장`,
-    ],
+    ...(user.plan.entitlement === null
+      ? []
+      : [
+          [
+            user.plan.entitlement.quota === "monthly" ? "이번 달 사진 추출" : "오늘 사진 추출",
+            `${String(user.plan.entitlement.used)}장 / ${termsLabel(user.plan.entitlement.quota, user.plan.entitlement.amount)}`,
+          ] as const,
+        ]),
   ] as const;
   return (
     <div className="flex flex-col gap-section-gap">

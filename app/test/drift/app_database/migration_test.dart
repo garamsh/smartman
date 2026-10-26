@@ -14,6 +14,9 @@ import 'generated/schema_v6.dart' as v6;
 import 'generated/schema_v7.dart' as v7;
 import 'generated/schema_v8.dart' as v8;
 import 'generated/schema_v9.dart' as v9;
+import 'generated/schema_v10.dart' as v10;
+import 'generated/schema_v11.dart' as v11;
+import 'generated/schema_v12.dart' as v12;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -759,6 +762,124 @@ void main() {
         expect(await db.select(db.studySettings).get(), isEmpty);
         final deck = await db.select(db.decks).getSingle();
         expect((deck.id, deck.name, deck.dirty), ('deck', 'French', 1));
+      },
+    );
+  });
+
+  test('the upgrade from 9 to 10 gives every deck neither appearance key, and keeps it as it was', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 9,
+      newVersion: 10,
+      createOld: v9.DatabaseAtV9.new,
+      createNew: v10.DatabaseAtV10.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v9.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            description: 'Verbs',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final deck = await db.select(db.decks).getSingle();
+        expect(
+          (deck.id, deck.name, deck.description, deck.dirty),
+          ('deck', 'French', 'Verbs', 0),
+        );
+        expect((deck.icon, deck.color), (null, null));
+      },
+    );
+  });
+
+  test('the upgrade from 10 to 11 gives every card neither template column, and keeps it as it was', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    const front = '[{"type":"text","payload":{"text":"chat"}}]';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 10,
+      newVersion: 11,
+      createOld: v10.DatabaseAtV10.new,
+      createNew: v11.DatabaseAtV11.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v10.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+        batch.insert(
+          old.cards,
+          const v10.CardsData(
+            id: 'card',
+            deckId: 'deck',
+            front: front,
+            back: '[{"type":"text","payload":{"text":"cat"}}]',
+            cardKey: 'chat',
+            source: 'manual',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final card = await db.select(db.cards).getSingle();
+        expect(
+          (card.id, card.front, card.cardKey, card.dirty),
+          ('card', front, 'chat', 0),
+          reason: 'no row is rewritten',
+        );
+        expect((card.template, card.templateVersion), (null, null));
+      },
+    );
+  });
+
+  test('the upgrade from 11 to 12 gives every deck no image and leaves both media queues empty', () async {
+    const at = '2026-10-01T00:00:00.000Z';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 11,
+      newVersion: 12,
+      createOld: v11.DatabaseAtV11.new,
+      createNew: v12.DatabaseAtV12.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, old) {
+        batch.insert(
+          old.decks,
+          const v11.DecksData(
+            id: 'deck',
+            name: 'French',
+            visibility: 'private',
+            icon: 'book',
+            color: 'violet',
+            createdAt: at,
+            updatedAt: at,
+            dirty: 0,
+          ),
+        );
+      },
+      validateItems: (db) async {
+        final deck = await db.select(db.decks).getSingle();
+        expect(
+          (deck.id, deck.icon, deck.color, deck.dirty),
+          ('deck', 'book', 'violet', 0),
+          reason: 'no row is rewritten',
+        );
+        expect(deck.imageMediaId, null);
+        expect(await db.select(db.mediaUploads).get(), isEmpty);
+        expect(await db.select(db.mediaDeletions).get(), isEmpty);
       },
     );
   });

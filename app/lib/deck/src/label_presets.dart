@@ -1,0 +1,89 @@
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../l10n/app_localizations.dart';
+import 'content.dart';
+import 'failure.dart';
+
+/// A label the card editor offers above the keyboard while a sense's label
+/// is typed: the [label] it fills in, and an optional [name] the "품사 표시"
+/// screen shows beside it (ADR 0100).
+final class LabelPreset {
+  const LabelPreset(this.label, [this.name = '']);
+
+  final String label;
+  final String name;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LabelPreset && other.label == label && other.name == name;
+
+  @override
+  int get hashCode => Object.hash(label, name);
+}
+
+const labelPresetsKey = 'labelPresets';
+
+/// The presets a device starts from: the fourteen short forms of ADR 0075,
+/// each named.
+List<LabelPreset> defaultLabelPresets(AppLocalizations l10n) => [
+  for (final category in PartOfSpeech.values)
+    LabelPreset(category.short, l10n.partOfSpeechName(category.name)),
+];
+
+/// The presets in the user's order: those stored, or [defaults] when none
+/// are, or when the stored value cannot be read.
+List<LabelPreset> labelPresets(
+  SharedPreferencesWithCache storage,
+  List<LabelPreset> defaults,
+) {
+  final stored = storage.getString(labelPresetsKey);
+  if (stored == null) return defaults;
+  try {
+    final decoded = jsonDecode(stored);
+    if (decoded is! List<Object?>) return defaults;
+    return [
+      for (final preset in decoded)
+        if (preset case {
+          'label': final String label,
+          'name': final String name,
+        })
+          LabelPreset(label, name),
+    ];
+  } on FormatException {
+    return defaults;
+  }
+}
+
+/// Stores [presets] as the user's, in their order; a write the device
+/// refuses is a [StorageFailure].
+Future<void> saveLabelPresets(
+  SharedPreferencesWithCache storage,
+  List<LabelPreset> presets,
+) async {
+  try {
+    await storage.setString(
+      labelPresetsKey,
+      jsonEncode([
+        for (final preset in presets)
+          {'label': preset.label, 'name': preset.name},
+      ]),
+    );
+  } on Exception catch (cause) {
+    throw StorageFailure(cause);
+  }
+}
+
+/// The labels [text] names, one per word, each without the brackets a card
+/// shows it in: a part of speech where a word is one of the short forms,
+/// another label otherwise.
+List<SenseLabel> labelsOf(String text) => [
+  for (final word in text.split(RegExp(r'\s+')))
+    if (word.replaceAll(RegExp(r'^\[|\]$'), '') case final label
+        when label.isNotEmpty)
+      switch (PartOfSpeech.values.where((p) => p.short == label).firstOrNull) {
+        final category? => PartOfSpeechLabel(category, label),
+        null => OtherLabel(label),
+      },
+];

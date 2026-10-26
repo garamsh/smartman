@@ -17,7 +17,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
   - `AccountScreen`, which takes the sync status and the study setting it shows as constructor arguments, and `AccountAvatar`, the account's initial in a circle;
   - `appVersionProvider`, the version the account screen names, which the composition site overrides.
 - It is the only domain that imports `google_sign_in` ([ADR 0006](adr/0006-account-native-google-sign-in.md)). `sync` and `sharing` also import `supabase_flutter`, for PostgREST with the client `connectAccount` returns ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
-- `home/`'s home screen shows `AccountAvatar` on its account button and opens `AccountScreen` with `sync`'s `SyncStatusView` and `study`'s `DailyMinutesRow` ([`home.md`](home.md)).
+- `home/`'s home screen shows `AccountAvatar` on its account button and opens `AccountScreen` with `sync`'s `SyncStatusView`, and `study`'s `DailyMinutesRow` over `deck`'s `PartOfSpeechPresetsRow` as its study setting ([`home.md`](home.md)).
 
 ### Gate
 
@@ -28,7 +28,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 - The Google button is Google's own, drawn to its branding guidelines in the light or dark variant of the theme, with the "G" mark from Google's asset bundle ([`design.md`](design.md), [ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)).
 - `AccountScreen` is reached only from the app, so it shows the signed-in account, the study setting, the theme, sign-out and deletion:
   - a profile card: a 56 px `AccountAvatar`, the email, and the sync status under it, synced with a check;
-  - "공부", the study setting it is given: the daily study minutes' row, which opens their picker as a screen, the one place they change after the first-run step ([ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md), [ADR 0091](adr/0091-draw-the-today-card-as-a-progress-bar-and-change-the-daily-study-minutes-only-in-settings.md), [`study.md`](study.md));
+  - "공부", the study setting it is given: the daily study minutes' row, which opens their picker as a screen, the one place they change after the first-run step, and under it "품사 표시", which opens the labels the card editor offers ([`deck.md`](deck.md)) ([ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md), [ADR 0091](adr/0091-draw-the-today-card-as-a-progress-bar-and-change-the-daily-study-minutes-only-in-settings.md), [`study.md`](study.md));
   - "화면", the theme control on a rounded surface;
   - "계정", with "로그아웃" as an `AppListRow`, and below it "계정 삭제", a destructive `AppListRow` with the note "계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요."
   - a foot: the mascot at half opacity, "버전 x.y.z", and the two links.
@@ -45,7 +45,7 @@ The `account` domain: signing in with Google through Supabase Auth, the session 
 ### Deletion
 
 - "계정 삭제" asks first through `showAppConfirm`: "계정을 삭제할까요?", one sentence saying the decks, cards and study history go from the server and this device while decks others copied and the Google account stay, then "취소" and, last, a red "삭제" ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)).
-- `AccountService.deleteAccount` posts to the `delete-account` Edge Function through the Supabase client's Edge Functions client, which sends the session's access token; the request names no user. The function deletes the token's user, and the server's cascade deletes every row it owns ([`server.md`](server.md)).
+- `AccountService.deleteAccount` posts to the `delete-account` Edge Function through the Supabase client's Edge Functions client, which sends the session's access token; the request names no user. The function first deletes the user's media files from the `media` bucket through the Storage API, then deletes the token's user, and the server's cascade deletes every row it owns ([`server.md`](server.md), [ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md)).
 - Once the account is deleted, the screen signs out of Supabase and Google and clears the device's data through `AccountData`, as sign-out does but without pushing first. The gate then shows the sign-in screen.
 - A failed deletion changes nothing: the account stays signed in with its data.
 - Merging the pull request that changes the function deploys it ([`server.md`](server.md) §Edge Function deploys); it lives in `supabase/functions/delete-account/` with its Deno tests, run by `make test` through `deno.sh` with Supabase Auth replaced by a fake `fetch`.

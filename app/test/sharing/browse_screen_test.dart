@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/sharing/sharing.dart';
 
+import '../word_breaks.dart';
 import 'fakes.dart';
 import 'sharing_app.dart';
 import 'sharing_service_test.dart' show publicDeck;
@@ -86,8 +87,8 @@ void main() {
       expect(find.text('Public decks'), findsOneWidget);
       expect(find.text('Browse'), findsNothing);
       expect(_listed(tester), ['French', 'German', 'Spanish']);
-      expect(find.text('Bea · 1 card · copied once'), findsOneWidget);
-      expect(find.text('Cal · 12 cards · copied 5 times'), findsOneWidget);
+      expect(shownText('Bea · 1 card · copied once'), findsOneWidget);
+      expect(shownText('Cal · 12 cards · copied 5 times'), findsOneWidget);
       await app.close();
     },
   );
@@ -125,7 +126,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
     expect(_listed(tester), isEmpty);
-    expect(find.text('No decks match. Try other words.'), findsOneWidget);
+    expect(shownText('No decks match. Try other words.'), findsOneWidget);
     await app.close();
   });
 
@@ -136,7 +137,7 @@ void main() {
     await app.browse();
 
     expect(
-      find.text("You're offline. Public decks appear once you're connected."),
+      shownText("You're offline. Public decks appear once you're connected."),
       findsOneWidget,
     );
     expect(_listed(tester), isEmpty);
@@ -157,7 +158,7 @@ void main() {
     await app.browse();
 
     expect(
-      find.text("You're offline. Check your connection and try again."),
+      shownText("You're offline. Check your connection and try again."),
       findsOneWidget,
     );
     server.failure = null;

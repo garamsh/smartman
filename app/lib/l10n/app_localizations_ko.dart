@@ -22,6 +22,66 @@ class AppLocalizationsKo extends AppLocalizations {
   String get renameDeck => '덱 이름 바꾸기';
 
   @override
+  String get deckAppearance => '덱 꾸미기';
+
+  @override
+  String get deckAppearanceIcon => '아이콘';
+
+  @override
+  String get deckAppearanceColor => '색';
+
+  @override
+  String get deckAppearanceImage => '사진 넣기';
+
+  @override
+  String get deckImageFromAlbum => '앨범에서 고르기';
+
+  @override
+  String get deckImageFromCamera => '사진 찍기';
+
+  @override
+  String get deckImageRemove => '사진 빼기';
+
+  @override
+  String get deckImageUnreadable => '사진을 불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String deckIconName(String icon) {
+    String _temp0 = intl.Intl.selectLogic(icon, {
+      'layers': '카드 묶음',
+      'book': '책',
+      'languages': '언어',
+      'pencil': '연필',
+      'flask': '실험',
+      'calculator': '계산기',
+      'globe': '지구본',
+      'music': '음악',
+      'palette': '팔레트',
+      'brain': '두뇌',
+      'code': '코드',
+      'landmark': '건축물',
+      'briefcase': '서류 가방',
+      'star': '별',
+      'other': '아이콘',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String deckColorName(String color) {
+    String _temp0 = intl.Intl.selectLogic(color, {
+      'blue': '파랑',
+      'sky': '하늘',
+      'violet': '보라',
+      'sand': '모래',
+      'amber': '노랑',
+      'slate': '회색',
+      'other': '색',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get deleteDeck => '덱 삭제';
 
   @override
@@ -77,29 +137,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
 
   @override
-  String get cardKindBasic => '기본';
-
-  @override
-  String get cardKindWord => '단어';
+  String get cardKindFlip => '앞뒤';
 
   @override
   String get cardKindCloze => '빈칸';
 
   @override
-  String get clozeWordsHint => '빈칸으로 할 낱말을 눌러요';
+  String get clozeInsertBlank => '빈칸 넣기';
 
   @override
-  String clozeWord(String word) {
-    return '$word';
+  String get clozeUndoBlank => '빈칸 풀기';
+
+  @override
+  String clozeRemoveBlank(String answer) {
+    return '빈칸 풀기, $answer';
   }
 
   @override
-  String clozeWordBlank(String word) {
-    return '$word, 빈칸';
-  }
+  String get clozeEmptyBlank => '빈칸';
 
   @override
-  String get clozeBlankRequired => '빈칸으로 할 낱말을 하나 이상 골라 주세요';
+  String get clozeBlankRequired => '빈칸을 하나 이상 넣어 주세요';
 
   @override
   String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
@@ -108,41 +166,145 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cardKindTable => '표';
 
   @override
+  String get cardKindFree => '자유';
+
+  @override
+  String get addToFront => '앞면에 추가';
+
+  @override
+  String get addToBack => '뒷면에 추가';
+
+  @override
+  String get blockText => '글';
+
+  @override
+  String get blockTextDescription => '단어, 문장, 설명';
+
+  @override
+  String get blockSenses => '뜻 목록';
+
+  @override
+  String get blockSensesDescription => '품사 표시와 뜻 여러 개';
+
+  @override
+  String get blockTable => '표';
+
+  @override
+  String get blockTableDescription => '칸을 빈칸으로 바꿀 수 있어요';
+
+  @override
+  String get blockCloze => '빈칸 문장';
+
+  @override
+  String get blockClozeDescription => '문장 속 단어를 가리기';
+
+  @override
+  String get blockImage => '사진';
+
+  @override
+  String get blockImageDescription => '사진 위에 빈칸 상자를 그려요';
+
+  @override
+  String get imageFromAlbum => '앨범에서 고르기';
+
+  @override
+  String get imageFromCamera => '사진 찍기';
+
+  @override
+  String get imageUnreadable => '사진을 불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get imageRequired => '사진을 골라 주세요';
+
+  @override
+  String get imageHint => '사진 위를 끌어서 빈칸을 그리거나 \'빈칸 추가\'를 눌러요';
+
+  @override
+  String imageBox(int number) {
+    return '빈칸 $number';
+  }
+
+  @override
+  String get imageAddBox => '빈칸 추가';
+
+  @override
+  String get imageBoxAnswer => '정답 (선택)';
+
+  @override
+  String get imageBoxLeft => '왼쪽으로 옮기기';
+
+  @override
+  String get imageBoxRight => '오른쪽으로 옮기기';
+
+  @override
+  String get imageBoxUp => '위로 옮기기';
+
+  @override
+  String get imageBoxDown => '아래로 옮기기';
+
+  @override
+  String get imageBoxWider => '가로 늘리기';
+
+  @override
+  String get imageBoxNarrower => '가로 줄이기';
+
+  @override
+  String get imageBoxTaller => '세로 늘리기';
+
+  @override
+  String get imageBoxShorter => '세로 줄이기';
+
+  @override
+  String get imageBoxDelete => '빈칸 지우기';
+
+  @override
+  String blockMenu(String side, int number) {
+    return '$side $number번째 블록 메뉴';
+  }
+
+  @override
+  String get deleteBlock => '지우기';
+
+  @override
+  String get sideBlockRequired => '블록을 하나 이상 넣어 주세요';
+
+  @override
   String get tableNameHint => '표의 이름';
 
   @override
-  String get tableModeLabel => '표 편집 방식';
+  String get tableNameLabel => '앞면 · 표 이름';
 
   @override
-  String get tableModeCells => '칸 입력';
+  String get tableToolbar => '표 도구';
 
   @override
-  String get tableModeBlanks => '빈칸 고르기';
+  String get tableBlankToggle => '빈칸';
 
   @override
-  String get tableCellsHint => '제목과 칸에 내용을 적어요';
+  String get tableRemove => '지우기';
 
   @override
-  String get tableBlanksHint => '빈칸으로 할 칸을 눌러요';
+  String tableRemoveRowTitle(int row) {
+    return '$row행을 지울까요?';
+  }
+
+  @override
+  String tableRemoveColumnTitle(int column) {
+    return '$column열을 지울까요?';
+  }
+
+  @override
+  String get tableRemoveBody => '그 줄에 적은 내용도 함께 지워져요.';
 
   @override
   String tableHeaderCell(int column) {
-    return '$column열 제목';
+    return '$column열 머리글';
   }
 
   @override
   String tableCell(int row, int column) {
     return '$row행 $column열';
   }
-
-  @override
-  String get tableEmptyCell => '내용 없음';
-
-  @override
-  String get tableMakeBlank => '빈칸으로';
-
-  @override
-  String get tableClearBlank => '빈칸 해제';
 
   @override
   String get addRow => '행 추가';
@@ -167,15 +329,74 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tableBlankEmpty => '빈칸으로 고른 칸에 내용을 적어 주세요';
 
   @override
+  String get cardNeedsUpdate =>
+      '새 버전의 앱에서 만든 카드라 이 버전에서는 고칠 수 없어요. 앱을 업데이트해 주세요.';
+
+  @override
   String get cardKindLabel => '카드 종류';
+
+  @override
+  String cardDeck(String deck) {
+    return '$deck 덱';
+  }
+
+  @override
+  String get senseLabelHint => '품사';
+
+  @override
+  String senseLabelField(int number) {
+    return '뜻 $number 품사';
+  }
+
+  @override
+  String get labelPresetsTitle => '품사 표시';
+
+  @override
+  String get labelPresetsBody => '카드를 만들 때 키보드 위에 이 순서로 나와요.';
+
+  @override
+  String get manageLabelPresets => '관리';
+
+  @override
+  String get addLabelPreset => '표시 추가';
+
+  @override
+  String moveLabelPreset(String label) {
+    return '$label 순서 옮기기';
+  }
+
+  @override
+  String get moveUp => '위로';
+
+  @override
+  String get moveDown => '아래로';
+
+  @override
+  String editLabelPreset(String label, String name) {
+    return '$label $name 고치기';
+  }
+
+  @override
+  String removeLabelPreset(String label) {
+    return '$label 지우기';
+  }
+
+  @override
+  String get labelPresetLabel => '표시';
+
+  @override
+  String get labelPresetName => '이름 (선택)';
+
+  @override
+  String get labelPresetDone => '완료';
+
+  @override
+  String get labelPresetRequired => '표시를 적어 주세요';
 
   @override
   String senseHeading(int number) {
     return '뜻 $number';
   }
-
-  @override
-  String get senseMeaning => '뜻';
 
   @override
   String get senseExamples => '예문';
@@ -190,6 +411,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addSense => '뜻 추가';
 
   @override
+  String get wordExtra => '덧붙인 내용';
+
+  @override
   String moveSenseUp(int number) {
     return '$number번째 뜻을 위로';
   }
@@ -202,31 +426,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String deleteSense(int number) {
     return '$number번째 뜻 지우기';
-  }
-
-  @override
-  String get addLabel => '표시 추가';
-
-  @override
-  String removeLabel(String label) {
-    return '[$label] 표시 지우기';
-  }
-
-  @override
-  String get labelSheetBody => '품사를 고르거나 다른 표시를 적어요.';
-
-  @override
-  String get otherLabel => '다른 표시';
-
-  @override
-  String get otherLabelHint => '예: 사물';
-
-  @override
-  String get addOtherLabel => '이 표시 추가';
-
-  @override
-  String partOfSpeechChoice(String short, String name) {
-    return '[$short] $name';
   }
 
   @override
@@ -407,7 +606,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String completionStreak(int days) {
-    return '$days일';
+    return '$days일 연속';
   }
 
   @override
@@ -515,7 +714,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unsyncedChangesTitle => '동기화되지 않은 변경이 있어요';
 
   @override
-  String get unsyncedChangesBody => '로그아웃하면 이 기기에서 지워지고 다른 기기에서는 볼 수 없어요.';
+  String get unsyncedChangesBody =>
+      '동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.';
 
   @override
   String get signOutAnyway => '그래도 로그아웃';
@@ -589,8 +789,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get extractingNote => '사진은 카드를 만드는 데만 쓰고 서버에 남기지 않아요';
 
   @override
-  String readingTitle(int current, int total) {
-    return '사진 $current/$total 읽는 중';
+  String readingTitle(int read, int total) {
+    return '사진 $total장 중 $read장 읽음';
   }
 
   @override
@@ -601,6 +801,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String photosLeftToday(int count) {
     return '오늘 $count장 더 만들 수 있어요. 처음 $count장만 읽어요.';
+  }
+
+  @override
+  String photosLeftThisMonth(int count) {
+    return '이번 달 $count장 더 만들 수 있어요. 처음 $count장만 읽어요.';
   }
 
   @override
@@ -630,6 +835,48 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get discardImport => '버리기';
+
+  @override
+  String get navigateBack => '뒤로';
+
+  @override
+  String get photoImportBusy => '읽고 있는 사진이 있어요. 끝난 뒤에 새로 가져올 수 있어요.';
+
+  @override
+  String importBarReading(int read, int total) {
+    return '사진 읽는 중 $read/$total';
+  }
+
+  @override
+  String importBarReady(int count) {
+    return '카드 $count장 확인하기';
+  }
+
+  @override
+  String importBarPaused(int count) {
+    return '읽던 사진 $count장 이어서 읽기';
+  }
+
+  @override
+  String resumeImportTitle(int count) {
+    return '읽던 사진 $count장을 이어서 읽을까요?';
+  }
+
+  @override
+  String get resumeImportBody => '이미 읽은 사진은 다시 보내지 않아요.';
+
+  @override
+  String get resumeImport => '이어서 읽기';
+
+  @override
+  String photoView(int number) {
+    return '사진 $number 크게 보기';
+  }
+
+  @override
+  String photoViewerTitle(int current, int total) {
+    return '사진 $current/$total';
+  }
 
   @override
   String get duplicateSkip => '건너뛰기';
@@ -676,6 +923,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String monthlyLimitReachedOf(int limit) {
+    return '이번 달 사진으로 만들 수 있는 $limit장을 다 썼어요. 다음 달 1일에 다시 시도해 주세요.';
+  }
+
+  @override
   String get modelFailed => '카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   @override
@@ -686,6 +938,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get photoUnreadable => '이 사진을 읽을 수 없어요. 다른 사진을 골라 주세요.';
+
+  @override
+  String get photoNotKept => '이 사진을 기기에 보관하지 못했어요. 저장 공간을 확인하고 다시 골라 주세요.';
 
   @override
   String get deckDeleted => '이 덱은 삭제됐어요. 다른 덱을 골라 주세요.';
@@ -941,6 +1196,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String deckRowCards(int count) {
+    return '$count장';
+  }
+
+  @override
   String get browsePublicDecksBody => '다른 사람이 만든 덱을 내 덱으로 가져와요';
 
   @override
@@ -967,11 +1227,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String todayCountMinutes(int minutes) {
     return '장 · 약 $minutes분';
-  }
-
-  @override
-  String masteredOf(int mastered, int total) {
-    return '$mastered / $total 익힘';
   }
 
   @override
@@ -1219,7 +1474,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String masteredSemantics(String counts) {
-    return '주별 익힌 카드, 8주 전부터 이번 주까지: $counts';
+    return '주별 익힌 카드, 7주 전부터 이번 주까지: $counts';
   }
 
   @override
@@ -1229,6 +1484,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String studyDaysStreak(int current, int best) {
     return '$current일 연속 · 최고 $best일';
   }
+
+  @override
+  String masteredWeeksAgo(int weeks) {
+    return '$weeks주 전';
+  }
+
+  @override
+  String get masteredThisWeek => '이번 주';
+
+  @override
+  String get studyDaysFewer => '적게';
+
+  @override
+  String get studyDaysMore => '많이';
 
   @override
   String studyDaysSemantics(int count, String days) {
@@ -1478,4 +1747,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dailyMinutesAfterToday => '오늘';
+
+  @override
+  String get discardCardTitle => '작성 중인 카드를 버릴까요?';
+
+  @override
+  String get discardCardBody => '입력한 내용은 저장되지 않아요.';
+
+  @override
+  String get discardCard => '버리기';
+
+  @override
+  String get keepWriting => '계속 쓰기';
 }

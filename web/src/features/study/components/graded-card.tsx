@@ -38,7 +38,10 @@ export function answerLabel(answer: Graded): string {
   return `앞면: ${front}. 뒷면: ${answer.card.text.back}. 응답: ${grades[answer.answer].name}${changed}`;
 }
 
-/** A grade's chip: its mark and its word, so the grade never rests on colour alone. */
+/**
+ * A grade's chip, its mark and its word, beside an answer in the whole card's dialog and the
+ * session's list. A previous card shows its grade by its fill and line alone (ADR 0105).
+ */
 export function GradeChip({ answer, className = "" }: { answer: Answer; className?: string }) {
   const { name, chip, Mark } = grades[answer];
   return (
@@ -70,7 +73,7 @@ const reveals = {
 /**
  * The card answered just before the current one, with both sides shown at the current card's
  * sizes, or a whole card's front with its blanks filled, on its grade's fill inside its grade's
- * line, and its grade's chip on its top edge. A click opens the whole card. A horizontal touch
+ * line, with no chip: its accessible name names the grade. A click opens the whole card. A horizontal touch
  * swipe ([useSwipe]) follows the finger, shows the answer it would give behind it, and toward
  * the other answer changes to it; a vertical one scrolls the page. Without [onRedecide] it is
  * not changed from here, and [label] names it above its sides.
@@ -123,7 +126,6 @@ export function GradedCard({
         }}
         className={`pressable relative grid w-full grid-cols-[1fr_auto_1fr] rounded-previous border-[1.5px] text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${grade.card} ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
       >
-        <GradeChip answer={answer.answer} className="absolute -top-3 right-4" />
         {label && (
           <span aria-hidden className="absolute top-3 left-4 text-micro text-muted">
             {label}

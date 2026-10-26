@@ -1,15 +1,26 @@
 import 'dart:convert';
+import 'dart:ui' show Rect, Size;
 
-/// A typed block of card content: text, a cloze, a table or a vocabulary
-/// entry's senses. A new kind adds a subclass and a discriminator value, and
+import '../../media/media.dart';
+
+/// A typed block of card content: text, a cloze, a table, a vocabulary
+/// entry's senses or an image. A block's kind is its stored `type`, and its
+/// version its `v` (ADR 0106). A new kind adds a subclass and a discriminator value, and
 /// stored rows keep their encoding.
+///
+/// Two blocks are equal when their kind and content are; their [id]s are not
+/// compared.
 sealed class Content {
-  const Content();
+  const Content({this.id});
+
+  /// The block's own id, kept across edits so a later block or an edit can
+  /// name it; null until the block is first written (ADR 0106).
+  final String? id;
 }
 
 /// A block of plain text.
 final class TextContent extends Content {
-  const TextContent(this.text);
+  const TextContent(this.text, {super.id});
 
   final String text;
 
@@ -26,7 +37,7 @@ const clozeBlank = '___';
 /// A line or sentence with blanks: its [text] writes each blank as
 /// [clozeBlank], and [answers] fill them in order, one each (ADR 0068).
 final class ClozeContent extends Content {
-  const ClozeContent(this.text, this.answers);
+  const ClozeContent(this.text, this.answers, {super.id});
 
   final String text;
   final List<String> answers;
@@ -51,26 +62,63 @@ final class ClozeContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
-/// A cell of a [TableContent]'s rows to recall: its row and column, each
-/// counted from 0.
+/// A cell of a [TableContent]'s rows to recall whole: its row and column,
+/// each counted from 0.
 typedef TableBlank = ({int row, int column});
 
+/// A run of a [TableContent] cell's text to recall: the cell's row and
+/// column, each counted from 0, and the run's [start] and [end] in the
+/// cell's UTF-16 code units, as a cloze blank is a run of its line
+/// (ADR 0110).
+typedef CellSpan = ({int row, int column, int start, int end});
+
+/// A part of a table cell's text, and whether it is a blank.
+typedef CellRun = ({String text, bool blank});
+
 /// A table as the page prints it: its column headers, its rows of cells, each
-/// as many as there are columns and starting with the row's header, and the
-/// cells to recall (ADR 0068).
+/// as many as there are columns and starting with the row's header, the
+/// cells to recall whole (ADR 0068), and the runs of cells' text to recall
+/// (ADR 0110). A cell is a whole blank or holds spans, never both.
 final class TableContent extends Content {
   const TableContent({
     required this.columns,
     required this.rows,
     required this.blanks,
+    this.spans = const [],
+    super.id,
   });
 
   final List<String> columns;
   final List<List<String>> rows;
   final List<TableBlank> blanks;
+  final List<CellSpan> spans;
 
-  bool isBlank(int row, int column) =>
-      blanks.any((blank) => blank.row == row && blank.column == column);
+  /// The cell at [row] and [column] as runs of its text, in order: one blank
+  /// run when it is a whole blank, its text split around its spans when it
+  /// holds any, and otherwise one plain run.
+  List<CellRun> cellRuns(int row, int column) {
+    final text = rows[row][column];
+    if (blanks.contains((row: row, column: column))) {
+      return [(text: text, blank: true)];
+    }
+    final inCell = [
+      for (final span in spans)
+        if (span.row == row && span.column == column) span,
+    ]..sort((a, b) => a.start.compareTo(b.start));
+    final runs = <CellRun>[];
+    var at = 0;
+    for (final span in inCell) {
+      if (at < span.start) {
+        runs.add((text: text.substring(at, span.start), blank: false));
+      }
+      runs.add((text: text.substring(span.start, span.end), blank: true));
+      at = span.end;
+    }
+    if (at < text.length || runs.isEmpty) {
+      runs.add((text: text.substring(at), blank: false));
+    }
+    return runs;
+  }
 
   /// The table as text, every cell shown: the headers on the first line, then
   /// a line per row, cells joined by " | ", as the function composes a table
@@ -170,7 +218,7 @@ final class CardSense {
 
 /// A vocabulary entry's senses, one or more, in the page's order (ADR 0075).
 final class SensesContent extends Content {
-  const SensesContent(this.senses);
+  const SensesContent(this.senses, {super.id});
 
   final List<CardSense> senses;
 
@@ -187,25 +235,157 @@ final class SensesContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
-/// A stored block whose type this version of the app does not know, kept
-/// intact so saving the card again does not lose it.
+/// A box over an image block's photo, a blank to recall: its left [x], top
+/// [y], width [w] and height [h] as fractions, from 0 to 1, of the stored
+/// image's own width and height, never of a screen, so it covers the same
+/// part of the photo at every size and aspect ratio it is drawn at
+/// (ADR 0109). Its [id] is unique in its block; its [answer], when given, is
+/// shown in it once revealed. [rest] holds the fields this build does not
+/// know, written back as they were read.
+final class ImageBox {
+  const ImageBox({
+    required this.id,
+    required this.x,
+    required this.y,
+    required this.w,
+    required this.h,
+    this.answer,
+    this.rest = const {},
+  });
+
+  final String id;
+  final double x;
+  final double y;
+  final double w;
+  final double h;
+  final String? answer;
+  final Map<String, Object?> rest;
+
+  /// The part of an image drawn at [size] that the box covers: the one
+  /// transform, a scale to [size] from the image's origin, that places the
+  /// image places the box.
+  Rect rectIn(Size size) => Rect.fromLTWH(
+    x * size.width,
+    y * size.height,
+    w * size.width,
+    h * size.height,
+  );
+
+  /// The box with its place, size or answer changed, its id and unknown
+  /// fields kept.
+  ImageBox copyWith({
+    double? x,
+    double? y,
+    double? w,
+    double? h,
+    String? Function()? answer,
+  }) => ImageBox(
+    id: id,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    w: w ?? this.w,
+    h: h ?? this.h,
+    answer: answer == null ? this.answer : answer(),
+    rest: rest,
+  );
+}
+
+/// A photo the `media` domain stores, named by its [media] id, with its
+/// intrinsic [width] and [height] in pixels, so its aspect ratio is known
+/// before the file is read, and the [boxes] over it to recall (ADR 0109).
+/// [rest] holds the payload's fields this build does not know, written back
+/// as they were read.
+final class ImageContent extends Content {
+  const ImageContent({
+    required this.media,
+    required this.width,
+    required this.height,
+    this.boxes = const [],
+    this.rest = const {},
+    super.id,
+  });
+
+  final MediaId media;
+  final int width;
+  final int height;
+  final List<ImageBox> boxes;
+  final Map<String, Object?> rest;
+
+  /// The image's width over its height.
+  double get aspectRatio => width / height;
+
+  /// The block with [boxes] in place of its own.
+  ImageContent withBoxes(List<ImageBox> boxes) => ImageContent(
+    media: media,
+    width: width,
+    height: height,
+    boxes: boxes,
+    rest: rest,
+    id: id,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ImageContent &&
+      jsonEncode(_payload(other)) == jsonEncode(_payload(this));
+
+  @override
+  int get hashCode => jsonEncode(_payload(this)).hashCode;
+}
+
+/// A stored block this build cannot read: a type it does not know, or a
+/// known type at a version above the one it writes. It is kept intact,
+/// [stored] written back as it was read, so saving the card again does not
+/// lose it, and it is shown as needing an update.
 final class UnsupportedContent extends Content {
-  const UnsupportedContent(this.type, this.payload);
+  const UnsupportedContent(this.type, this.payload, {this.stored});
 
   final String type;
   final Object? payload;
+
+  /// The whole stored block as it was read, written back unchanged; null for
+  /// a block made in this build.
+  final Map<String, Object?>? stored;
 }
 
-/// Whether a card with [front] is drawn whole, its front across the card
-/// with its blanks, rather than split into front and back: whether [front]
-/// holds a cloze or a table.
-bool isWholeCard(List<Content> front) =>
-    front.any((block) => block is ClozeContent || block is TableContent);
+/// Whether [block] is one that holds blanks to recall: a cloze or a table,
+/// each stored with one or more, or an image with a box over it
+/// (ADR 0109); a cloze still being written before its first blank counts,
+/// so the editor's preview draws it as it will be.
+bool _hasBlank(Content block) => switch (block) {
+  ClozeContent() || TableContent() => true,
+  ImageContent(:final boxes) => boxes.isNotEmpty,
+  TextContent() || SensesContent() || UnsupportedContent() => false,
+};
+
+/// The face a card with [front] and [back] is studied on, or null when it is
+/// studied front then back (ADR 0106). A card with a blank anywhere is
+/// studied on one face, its answers filled in place: its front when the
+/// front holds a blank, and otherwise its front's blocks followed by its
+/// back's, so the front stays the prompt (ADR 0108). No stored field says
+/// which, so the content and the mode cannot disagree.
+List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
+    front.any(_hasBlank)
+    ? front
+    : back.any(_hasBlank)
+    ? [...front, ...back]
+    : null;
+
+/// The media ids of the images in [blocks], in order.
+Set<MediaId> mediaOf(List<Content> blocks) => {
+  for (final block in blocks)
+    if (block case ImageContent(:final media)) media,
+};
+
+/// Whether a card whose front is [front] is drawn whole, that front across
+/// the card with its blanks, rather than split: [oneFaceOf] for that front.
+bool isWholeCard(List<Content> front) => oneFaceOf(front, const []) != null;
 
 const _textType = 'text';
 const _clozeType = 'cloze';
 const _tableType = 'table';
 const _sensesType = 'senses';
+const _imageType = 'image';
 const _partOfSpeechKind = 'part_of_speech';
 const _otherKind = 'other';
 
@@ -234,7 +414,79 @@ String _type(Content block) => switch (block) {
   ClozeContent() => _clozeType,
   TableContent() => _tableType,
   SensesContent() => _sensesType,
+  ImageContent() => _imageType,
   UnsupportedContent(:final type) => type,
+};
+
+/// The steps that upgrade each known type's payload, one per version: the
+/// first turns a v1 payload into a v2 one, and so on. The version a type is
+/// written at is one more than its steps: a table at v2, every other type
+/// at v1.
+const Map<String, List<Object? Function(Object? payload)>> blockUpcasters = {
+  _textType: [],
+  _clozeType: [],
+  _tableType: [_tableWithSpans],
+  _sensesType: [],
+  _imageType: [],
+};
+
+/// A v1 table's payload as v2's: its blanks stay whole cells, and it holds
+/// no span (ADR 0110). A payload that is not an object is left to fail
+/// decoding.
+Object? _tableWithSpans(Object? payload) => switch (payload) {
+  final Map<String, Object?> fields => {...fields, 'spans': const <Object?>[]},
+  _ => payload,
+};
+
+/// The version this build writes a block of [type] at.
+int blockVersion(
+  String type, {
+  Map<String, List<Object? Function(Object?)>> steps = blockUpcasters,
+}) => (steps[type]?.length ?? 0) + 1;
+
+/// [payload], stored at [version] of [type], upgraded step by step to the
+/// version this build writes; [version] must not be above it.
+Object? upcastPayload(
+  String type,
+  int version,
+  Object? payload, {
+  Map<String, List<Object? Function(Object?)>> steps = blockUpcasters,
+}) {
+  var upgraded = payload;
+  final typeSteps = steps[type] ?? const [];
+  for (var step = version - 1; step < typeSteps.length; step++) {
+    upgraded = typeSteps[step](upgraded);
+  }
+  return upgraded;
+}
+
+/// [block] given [id], its content unchanged; a block this build cannot read
+/// is returned as it is, since it is written back unchanged.
+Content withBlockId(Content block, String id) => switch (block) {
+  TextContent(:final text) => TextContent(text, id: id),
+  ClozeContent(:final text, :final answers) => ClozeContent(
+    text,
+    answers,
+    id: id,
+  ),
+  TableContent(:final columns, :final rows, :final blanks, :final spans) =>
+    TableContent(
+      columns: columns,
+      rows: rows,
+      blanks: blanks,
+      spans: spans,
+      id: id,
+    ),
+  SensesContent(:final senses) => SensesContent(senses, id: id),
+  ImageContent() => ImageContent(
+    media: block.media,
+    width: block.width,
+    height: block.height,
+    boxes: block.boxes,
+    rest: block.rest,
+    id: id,
+  ),
+  UnsupportedContent() => block,
 };
 
 Object? _payload(Content block) => switch (block) {
@@ -243,28 +495,67 @@ Object? _payload(Content block) => switch (block) {
     'text': text,
     'answers': answers,
   },
-  TableContent(:final columns, :final rows, :final blanks) => {
+  TableContent(:final columns, :final rows, :final blanks, :final spans) => {
     'columns': columns,
     'rows': rows,
     'blanks': [
       for (final (:row, :column) in blanks) {'row': row, 'column': column},
     ],
+    'spans': [
+      for (final (:row, :column, :start, :end) in spans)
+        {'row': row, 'column': column, 'start': start, 'end': end},
+    ],
   },
   SensesContent(:final senses) => {
     'senses': [for (final sense in senses) _senseJson(sense)],
   },
+  ImageContent(:final media, :final width, :final height, :final boxes) => {
+    ...block.rest,
+    'media': media.value,
+    'width': width,
+    'height': height,
+    'boxes': [
+      for (final box in boxes)
+        {
+          ...box.rest,
+          'id': box.id,
+          'x': box.x,
+          'y': box.y,
+          'w': box.w,
+          'h': box.h,
+          'answer': ?box.answer,
+        },
+    ],
+  },
   UnsupportedContent(:final payload) => payload,
 };
 
-/// Encodes [blocks] as a JSON array of `{type, payload}` objects.
+/// Encodes [blocks] as a JSON array of `{type, v, id, payload}` objects,
+/// each at the version this build writes and `id` only when the block has
+/// one; a block this build cannot read is written as it was stored.
 String encodeContent(List<Content> blocks) => jsonEncode([
   for (final block in blocks)
-    {'type': _type(block), 'payload': _payload(block)},
+    switch (block) {
+      UnsupportedContent(:final stored?) => stored,
+      UnsupportedContent(:final type, :final payload) => {
+        'type': type,
+        'payload': payload,
+      },
+      _ => {
+        'type': _type(block),
+        'v': blockVersion(_type(block)),
+        'id': ?block.id,
+        'payload': _payload(block),
+      },
+    },
 ]);
 
-/// Decodes what [encodeContent] wrote. An unknown `type` becomes
-/// [UnsupportedContent]; input that is not that shape at all, or a known
-/// block whose payload breaks its shape, throws [FormatException].
+/// Decodes what [encodeContent] wrote, and the blocks of earlier builds: a
+/// block with no `v` is read as v1, and an older `v` is upgraded through
+/// [upcastPayload]. An unknown `type`, or a `v` above what this build
+/// writes, becomes [UnsupportedContent]; input that is not that shape at
+/// all, a `v` that is not a positive integer, an `id` that is not text, or a
+/// known block whose payload breaks its shape, throws [FormatException].
 List<Content> decodeContent(String encoded) {
   final decoded = jsonDecode(encoded);
   if (decoded is! List<Object?>) {
@@ -278,10 +569,21 @@ Content _decodeBlock(Object? block, String source) {
     throw FormatException('content block is not an object', source);
   }
   final type = block['type'];
-  final payload = block['payload'];
   if (type is! String) {
     throw FormatException('content block has no string type', source);
   }
+  final version = block['v'] ?? 1;
+  if (version is! int || version < 1) {
+    throw FormatException('a $type block has no positive version', source);
+  }
+  final id = block['id'];
+  if (id != null && id is! String) {
+    throw FormatException('a $type block has an id that is not text', source);
+  }
+  if (!blockUpcasters.containsKey(type) || version > blockVersion(type)) {
+    return UnsupportedContent(type, block['payload'], stored: block);
+  }
+  final payload = upcastPayload(type, version, block['payload']);
   final decoded = switch ((type, payload)) {
     (_textType, {'text': final String text}) => TextContent(text),
     (_clozeType, final Map<String, Object?> fields) => _decodeCloze(fields),
@@ -289,11 +591,13 @@ Content _decodeBlock(Object? block, String source) {
     (_sensesType, {'senses': final List<Object?> senses}) => _decodeSenses(
       senses,
     ),
-    (_textType || _clozeType || _tableType || _sensesType, _) => null,
-    _ => UnsupportedContent(type, payload),
+    (_imageType, final Map<String, Object?> fields) => _decodeImage(fields),
+    _ => null,
   };
-  return decoded ??
-      (throw FormatException('a $type block breaks its shape', source));
+  if (decoded == null) {
+    throw FormatException('a $type block breaks its shape', source);
+  }
+  return id is String ? withBlockId(decoded, id) : decoded;
 }
 
 /// A cloze of text with one or more blanks, each with a non-empty answer;
@@ -312,8 +616,10 @@ ClozeContent? _decodeCloze(Map<String, Object?> fields) {
 }
 
 /// A table of one or more columns and rows, each row as many cells as there
-/// are columns, and one or more distinct blanks inside it, each on a cell
-/// that holds text; null otherwise.
+/// are columns, and one or more blanks inside it, whole cells and spans
+/// together: each whole cell distinct and holding text, and each span a run
+/// of a cell's text holding more than whitespace, overlapping no other span
+/// and in no whole cell (ADR 0110); null otherwise.
 TableContent? _decodeTable(Map<String, Object?> fields) {
   List<String>? strings(Object? value) =>
       value is List<Object?> && value.every((cell) => cell is String)
@@ -323,6 +629,7 @@ TableContent? _decodeTable(Map<String, Object?> fields) {
     'columns': final Object? columnsValue,
     'rows': final List<Object?> rowsValue,
     'blanks': final List<Object?> blanksValue,
+    'spans': final List<Object?> spansValue,
   }) {
     final columns = strings(columnsValue);
     final rows = [for (final row in rowsValue) strings(row)];
@@ -331,27 +638,149 @@ TableContent? _decodeTable(Map<String, Object?> fields) {
         if (blank case {'row': final int row, 'column': final int column})
           (row: row, column: column),
     ];
+    final spans = [
+      for (final span in spansValue)
+        if (span case {
+          'row': final int row,
+          'column': final int column,
+          'start': final int start,
+          'end': final int end,
+        })
+          (row: row, column: column, start: start, end: end),
+    ];
     if (columns == null ||
         columns.isEmpty ||
         rows.isEmpty ||
         rows.any((row) => row == null || row.length != columns.length) ||
-        blanks.isEmpty ||
+        blanks.isEmpty && spans.isEmpty ||
         blanks.length != blanksValue.length ||
+        spans.length != spansValue.length ||
         blanks.toSet().length != blanks.length) {
       return null;
     }
     final cells = rows.cast<List<String>>();
-    final inside = blanks.every(
+    bool inTable(int row, int column) =>
+        row >= 0 &&
+        row < cells.length &&
+        column >= 0 &&
+        column < columns.length;
+    final blanksHold = blanks.every(
       (blank) =>
-          blank.row >= 0 &&
-          blank.row < cells.length &&
-          blank.column >= 0 &&
-          blank.column < columns.length &&
+          inTable(blank.row, blank.column) &&
           cells[blank.row][blank.column].trim().isNotEmpty,
     );
-    return inside
-        ? TableContent(columns: columns, rows: cells, blanks: blanks)
+    bool overlap(CellSpan a, CellSpan b) =>
+        a.row == b.row &&
+        a.column == b.column &&
+        a.start < b.end &&
+        b.start < a.end;
+    final spansHold = [
+      for (final (index, span) in spans.indexed)
+        inTable(span.row, span.column) &&
+            !blanks.contains((row: span.row, column: span.column)) &&
+            span.start >= 0 &&
+            span.start < span.end &&
+            span.end <= cells[span.row][span.column].length &&
+            cells[span.row][span.column]
+                .substring(span.start, span.end)
+                .trim()
+                .isNotEmpty &&
+            !spans.skip(index + 1).any((other) => overlap(span, other)),
+    ].every((holds) => holds);
+    return blanksHold && spansHold
+        ? TableContent(
+            columns: columns,
+            rows: cells,
+            blanks: blanks,
+            spans: spans,
+          )
         : null;
+  }
+  return null;
+}
+
+/// How far past 1 a box's far edge may fall, for a fraction's rounding.
+const _boxTolerance = 1e-9;
+
+/// An image of a non-empty media id, a positive whole width and height, and
+/// boxes, each [_decodeBox]'s, their ids distinct; null otherwise. Fields it
+/// does not know are kept.
+ImageContent? _decodeImage(Map<String, Object?> fields) {
+  if (fields
+      case {
+        'media': final String media,
+        'width': final int width,
+        'height': final int height,
+        'boxes': final List<Object?> boxesValue,
+      }
+      when media.isNotEmpty && width > 0 && height > 0) {
+    final boxes = [
+      for (final box in boxesValue)
+        box is Map<String, Object?> ? _decodeBox(box) : null,
+    ];
+    if (boxes.contains(null)) return null;
+    final decoded = boxes.cast<ImageBox>();
+    if (decoded.map((box) => box.id).toSet().length != decoded.length) {
+      return null;
+    }
+    return ImageContent(
+      media: MediaId(media),
+      width: width,
+      height: height,
+      boxes: decoded,
+      rest: {...fields}
+        ..remove('media')
+        ..remove('width')
+        ..remove('height')
+        ..remove('boxes'),
+    );
+  }
+  return null;
+}
+
+/// A box of a non-empty id, an optional text answer, and a left and top at
+/// or above 0 and a width and height above 0 whose far edges fall inside
+/// the image; null otherwise. Fields it does not know are kept.
+ImageBox? _decodeBox(Map<String, Object?> box) {
+  if (box
+      case {
+        'id': final String id,
+        'x': final num x,
+        'y': final num y,
+        'w': final num w,
+        'h': final num h,
+      }
+      when id.isNotEmpty &&
+          x >= 0 &&
+          y >= 0 &&
+          w > 0 &&
+          h > 0 &&
+          x + w <= 1 + _boxTolerance &&
+          y + h <= 1 + _boxTolerance) {
+    final String? answer;
+    switch (box['answer']) {
+      case null:
+        answer = null;
+      case final String text:
+        answer = text;
+      default:
+        return null;
+    }
+    return ImageBox(
+      id: id,
+      x: x.toDouble(),
+      y: y.toDouble(),
+      w: w.toDouble(),
+      h: h.toDouble(),
+      answer: answer,
+      rest: {...box}
+        ..remove('id')
+        ..remove('x')
+        ..remove('y')
+        ..remove('w')
+        ..remove('h')
+        ..remove('answer'),
+    );
   }
   return null;
 }
@@ -405,15 +834,20 @@ SenseLabel? _decodeLabel(Object? label) => switch (label) {
   _ => null,
 };
 
-/// The text of [blocks], joined by newlines: a text block's text, and a
-/// cloze's and a table's filled form. The card key and a merged back read
-/// it.
+/// The text of [blocks], joined by newlines: a text block's text, a cloze's
+/// and a table's filled form, and an image's media id followed by its boxes'
+/// answers, so two photos never share a card key. The card key and a merged
+/// back read it.
 String plainText(List<Content> blocks) => [
   for (final block in blocks)
     switch (block) {
       TextContent(:final text) => text,
       ClozeContent(:final filled) || TableContent(:final filled) => filled,
       SensesContent(:final lines) => lines,
+      ImageContent(:final media, :final boxes) => [
+        media.value,
+        for (final box in boxes) ?box.answer,
+      ].join('\n'),
       UnsupportedContent() => null,
     },
 ].nonNulls.join('\n');

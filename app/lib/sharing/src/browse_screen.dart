@@ -13,6 +13,7 @@ import 'failure_message.dart';
 import 'model.dart';
 import 'public_deck_screen.dart';
 import 'sharing_service.dart';
+import '../../design/word_break.dart';
 
 /// Other users' public decks, searchable by name and description and sorted
 /// by newest or most copied; opens one for a preview.
@@ -221,7 +222,8 @@ class _Message extends StatelessWidget {
         children: [
           if (icon != null) Icon(icon, color: colors.muted),
           Text(
-            text,
+            keepWords(text),
+            semanticsLabel: text,
             textAlign: TextAlign.center,
             style: AppType.body.copyWith(color: colors.muted),
           ),

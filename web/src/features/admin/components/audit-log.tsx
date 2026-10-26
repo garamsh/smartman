@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatTime } from "../format";
-import { actionLabels, labelOf, planLabels } from "../labels";
+import { actionLabels, labelOf, planLabels, termsLabel } from "../labels";
 import type { AuditEntry } from "../read-admin";
 
 /** What an entry acted on: the deck's name or the user's email it recorded, linked where it can be opened. */
@@ -57,6 +57,12 @@ export function AuditLog({ entries, timeZone }: { entries: AuditEntry[]; timeZon
             {typeof entry.detail.model === "string" && typeof entry.detail.daily_limit === "number"
               ? ` · ${entry.detail.model} · 하루 ${String(entry.detail.daily_limit)}장`
               : ""}
+            {typeof entry.detail.model === "string" &&
+            typeof entry.detail.quota === "string" &&
+            typeof entry.detail.amount === "number"
+              ? ` · ${entry.detail.model} · ${termsLabel(entry.detail.quota, entry.detail.amount)}`
+              : ""}
+            {entry.detail.applies_to_all === true ? " · 기존 사용자도 적용" : ""}
           </span>
           <span className="text-caption text-muted">
             {formatTime(entry.at, timeZone)} · {entry.adminEmail}

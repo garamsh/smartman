@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { describeContent, isWholeCard, parseContent, spokenContent } from "../card-content";
+import {
+  blockVersion,
+  describeContent,
+  isWholeCard,
+  parseContent,
+  spokenContent,
+  upcastPayload,
+} from "../card-content";
 
 // The cases of the app's `app/test/deck/content_test.dart`: both clients read one stored shape.
 const cloze = { type: "cloze", payload: { text: "___ is in ___", answers: ["Paris", "France"] } };
@@ -18,7 +25,7 @@ describe("a card side's blocks", () => {
     ).toEqual([
       { kind: "text", text: "Capitals" },
       { kind: "cloze", text: "___ is in ___", answers: ["Paris", "France"] },
-      { kind: "table", columns: ["Capital", "Country"], rows, blanks: cell },
+      { kind: "table", columns: ["Capital", "Country"], rows, blanks: cell, spans: [] },
     ]);
   });
 
@@ -39,7 +46,7 @@ describe("a card side's blocks", () => {
     expect(parseContent([table(rows, cell)])).not.toBeNull();
   });
 
-  it("read as their filled text, or as a screen reader reads them, and only a cloze or a table makes a whole card", () => {
+  it("read as their filled text, or as a screen reader reads them, and a cloze or a table makes a whole card where text does not", () => {
     const blocks =
       parseContent([{ type: "text", payload: { text: "Capitals" } }, table(rows, cell)]) ?? [];
     const sentence = parseContent([cloze]) ?? [];
@@ -167,5 +174,236 @@ describe("a senses block", () => {
     expect(describeContent(blocks)).toBe(
       "[동] 살다, 거주하다\n[사물] 철도 위를 다니는 긴 차\n사과",
     );
+  });
+});
+
+// ADR 0106's block versions, as the app's `content_test.dart` states them.
+describe("a block's version and id", () => {
+  const known = [
+    { type: "text", payload: { text: "bonjour" } },
+    cloze,
+    table(rows, cell),
+    {
+      type: "senses",
+      payload: { senses: [{ labels: [], meaning: "기차", examples: [] }] },
+    },
+    { type: "image", payload: { media: "m1", width: 4, height: 3, boxes: [] } },
+  ];
+
+  it("reads each known type at v1 with or without the field, and with an id", () => {
+    for (const block of known) {
+      const read = parseContent([block]);
+      expect(read, block.type).not.toBeNull();
+      expect(parseContent([{ ...block, v: 1 }]), block.type).toEqual(read);
+      expect(parseContent([{ ...block, v: 1, id: "b1" }]), block.type).toEqual(read);
+    }
+  });
+
+  it("shows a known type above the version it reads, or an unknown type, as a placeholder", () => {
+    for (const block of known) {
+      const above = block.type === "table" ? 3 : 2;
+      expect(parseContent([{ ...block, v: above }]), block.type).toEqual([
+        { kind: "unsupported", type: block.type },
+      ]);
+    }
+    expect(parseContent([{ type: "audio", v: 1, payload: { media: "m1" } }])).toEqual([
+      { kind: "unsupported", type: "audio" },
+    ]);
+  });
+
+  it("refuses a v that is not a positive integer, or an id that is not text", () => {
+    const text = { type: "text", payload: { text: "cat" } };
+    for (const broken of [
+      { ...text, v: 0 },
+      { ...text, v: "1" },
+      { ...text, v: 1.5 },
+      { ...text, v: 1, id: 7 },
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    expect(parseContent([{ ...text, v: 1, id: "a" }]), "control").not.toBeNull();
+  });
+
+  it("upgrades an older payload one step per version", () => {
+    const steps = {
+      text: [
+        (payload: unknown) => ({ body: (payload as { text: string }).text }),
+        (payload: unknown) => ({ body: (payload as { body: string }).body.trim() }),
+      ],
+      cloze: [],
+      table: [],
+      senses: [],
+      image: [],
+    };
+    expect(blockVersion("text", steps)).toBe(3);
+    expect(upcastPayload("text", 1, { text: " cat " }, steps)).toEqual({ body: "cat" });
+    expect(upcastPayload("text", 2, { body: " cat " }, steps)).toEqual({ body: "cat" });
+    expect(upcastPayload("text", 3, { body: "cat" }, steps)).toEqual({ body: "cat" });
+    // Today a table is read at v2, after one step, and every other type at v1, with none.
+    expect(blockVersion("table")).toBe(2);
+    for (const type of ["text", "cloze", "senses", "image"] as const) {
+      expect(blockVersion(type), type).toBe(1);
+    }
+  });
+});
+
+// The cases of the app's image tests in `content_test.dart` (ADR 0109).
+describe("an image block", () => {
+  const image = (payload: Record<string, unknown>) => ({ type: "image", payload });
+  const box = (fields: Record<string, unknown>) =>
+    image({ media: "m1", width: 4, height: 3, boxes: [fields] });
+  const whole = { id: "1", x: 0.1, y: 0.2, w: 0.3, h: 0.4 };
+
+  it("reads its photo, size and boxes in fractions of the image, past fields it does not know", () => {
+    expect(
+      parseContent([
+        image({
+          media: "m1",
+          width: 1200,
+          height: 800,
+          boxes: [
+            { ...whole, answer: "Paris", shape: "oval" },
+            { id: "2", x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+          ],
+          crop: { x: 0 },
+        }),
+      ]),
+    ).toEqual([
+      {
+        kind: "image",
+        media: "m1",
+        width: 1200,
+        height: 800,
+        boxes: [
+          { ...whole, answer: "Paris" },
+          { id: "2", x: 0.5, y: 0.5, w: 0.5, h: 0.5, answer: null },
+        ],
+      },
+    ]);
+  });
+
+  it("is refused when it breaks its shape, where a whole one is read", () => {
+    for (const broken of [
+      image({ width: 4, height: 3, boxes: [] }),
+      image({ media: "", width: 4, height: 3, boxes: [] }),
+      image({ media: "m1", width: 0, height: 3, boxes: [] }),
+      image({ media: "m1", width: 4.5, height: 3, boxes: [] }),
+      image({ media: "m1", width: 4, height: 3 }),
+      box({ x: 0, y: 0, w: 1, h: 1 }),
+      box({ ...whole, x: -0.1 }),
+      box({ ...whole, w: 0 }),
+      box({ ...whole, x: 0.6, w: 0.5 }),
+      box({ ...whole, y: 0.6, h: 0.5 }),
+      box({ ...whole, answer: 3 }),
+      image({ media: "m1", width: 4, height: 3, boxes: [whole, whole] }),
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    // Control: each whole.
+    expect(parseContent([box(whole)])).not.toBeNull();
+    expect(parseContent([image({ media: "m1", width: 4, height: 3, boxes: [] })])).not.toBeNull();
+  });
+
+  it("reads as a photo with each box a blank until revealed, and makes a whole card only with a box", () => {
+    const boxed = parseContent([box({ ...whole, answer: "Paris" })]) ?? [];
+    const bare = parseContent([image({ media: "m1", width: 4, height: 3, boxes: [] })]) ?? [];
+
+    expect(describeContent(boxed)).toBe("사진");
+    expect(spokenContent(boxed, false)).toBe("사진, 빈칸");
+    expect(spokenContent(boxed, true)).toBe("사진, Paris");
+    expect(isWholeCard(boxed)).toBe(true);
+    // Control: the same photo without a box is split.
+    expect(isWholeCard(bare)).toBe(false);
+  });
+});
+
+// The cases of the app's span tests in `content_test.dart` (ADR 0110).
+describe("a table's spans", () => {
+  const text = "5부족 연맹체, 왕 아래 마가·우가";
+  const spanTable = (
+    fields: { v?: number; blanks?: unknown; spans?: unknown } = {},
+    withSpans = true,
+  ) => ({
+    type: "table",
+    ...(fields.v === undefined ? {} : { v: fields.v }),
+    payload: {
+      columns: ["", "정치"],
+      rows: [
+        ["부여", text],
+        ["고구려", "5부"],
+      ],
+      blanks: fields.blanks ?? [],
+      ...(withSpans ? { spans: fields.spans ?? [] } : {}),
+    },
+  });
+  const span = (row: number, column: number, start: number, end: number) => ({
+    row,
+    column,
+    start,
+    end,
+  });
+  const whole = [{ row: 1, column: 1 }];
+
+  it("upcasts a v1 table, with or without its v, to v2 with its blanks whole cells and no span", () => {
+    for (const stored of [
+      spanTable({ blanks: whole }, false),
+      spanTable({ v: 1, blanks: whole }, false),
+    ]) {
+      expect(parseContent([stored]), JSON.stringify(stored)).toEqual([
+        expect.objectContaining({ kind: "table", blanks: whole, spans: [] }),
+      ]);
+    }
+  });
+
+  it("reads a v2 table's spans beside whole-cell blanks, several in one cell", () => {
+    const spans = [span(0, 1, 0, 7), span(0, 1, 14, 16)];
+    expect(parseContent([spanTable({ v: 2, blanks: whole, spans })])).toEqual([
+      {
+        kind: "table",
+        columns: ["", "정치"],
+        rows: [
+          ["부여", text],
+          ["고구려", "5부"],
+        ],
+        blanks: whole,
+        spans,
+      },
+    ]);
+  });
+
+  it("refuses a span outside its cell, empty, of whitespace, overlapping another or in a whole-cell blank, and a table of no blank at all, where a whole one is read", () => {
+    for (const broken of [
+      spanTable({ v: 2, spans: [span(0, 1, 0, text.length + 1)] }),
+      spanTable({ v: 2, spans: [span(0, 2, 0, 1)] }),
+      spanTable({ v: 2, spans: [span(2, 1, 0, 1)] }),
+      spanTable({ v: 2, spans: [span(0, -1, 0, 1)] }),
+      spanTable({ v: 2, spans: [span(0, 1, -1, 3)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 3, 3)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 8, 9)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 6, 9)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 0, 7)] }),
+      spanTable({ v: 2, blanks: [{ row: 0, column: 1 }], spans: [span(0, 1, 0, 7)] }),
+      spanTable({ v: 2, spans: [span(0, 1, 0, 7), "not a span"] }),
+      spanTable({ v: 2 }),
+      spanTable({ v: 2, blanks: [{ row: 0, column: 1 }] }, false),
+    ]) {
+      expect(parseContent([broken]), JSON.stringify(broken)).toBeNull();
+    }
+    // Control: spans alone, two touching in one cell.
+    expect(
+      parseContent([spanTable({ v: 2, spans: [span(0, 1, 0, 7), span(0, 1, 7, 9)] })]),
+    ).not.toBeNull();
+  });
+
+  it("speaks each span as 빈칸 inside its cell's text until revealed, and describes every cell whole", () => {
+    const blocks =
+      parseContent([
+        spanTable({ v: 2, blanks: whole, spans: [span(0, 1, 14, 16), span(0, 1, 0, 7)] }),
+      ]) ?? [];
+    expect(spokenContent(blocks, false)).toBe(
+      ", 정치. 부여, 빈칸, 왕 아래 빈칸·우가. 고구려, 빈칸",
+    );
+    expect(spokenContent(blocks, true)).toBe(`, 정치. 부여, ${text}. 고구려, 5부`);
+    expect(describeContent(blocks)).toBe(` | 정치\n부여 | ${text}\n고구려 | 5부`);
   });
 });

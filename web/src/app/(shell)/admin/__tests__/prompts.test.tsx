@@ -258,10 +258,14 @@ describe("the trial on one photo", () => {
     expect(calls).toEqual([{ user: testUser.id, image: "AQID" }]);
   });
 
-  it("says why when the function makes no card, the day's photos are used, or the photo cannot be read", async () => {
+  it("says why when the function makes no card, the day's or the month's photos are used, or the photo cannot be read", async () => {
     const answers = [
       HttpResponse.json({ error: "no_cards" }, { status: 422 }),
-      HttpResponse.json({ error: "rate_limited", daily_limit: 30 }, { status: 429 }),
+      HttpResponse.json({ error: "rate_limited", photo_limit: 30, period: "day" }, { status: 429 }),
+      HttpResponse.json(
+        { error: "rate_limited", photo_limit: 10, period: "month" },
+        { status: 429 },
+      ),
     ];
     const calls = extractCards(() => answers.shift() ?? HttpResponse.json({}, { status: 500 }));
     const photo = (name: string) => {
@@ -275,7 +279,10 @@ describe("the trial on one photo", () => {
     expect(await tryPrompt(photo("b.jpg"))).toEqual({
       message: "오늘 쓸 수 있는 사진 30장을 다 썼어요.",
     });
-    expect(calls).toHaveLength(2);
+    expect(await tryPrompt(photo("c.jpg"))).toEqual({
+      message: "이번 달 쓸 수 있는 사진 10장을 다 썼어요.",
+    });
+    expect(calls).toHaveLength(3);
 
     const user = userEvent.setup();
     await render(PromptsContent, { searchParams: Promise.resolve({}) });
@@ -287,7 +294,7 @@ describe("the trial on one photo", () => {
     expect(
       await screen.findByText("이 사진을 읽지 못했어요. 다른 사진을 골라 주세요."),
     ).toBeInTheDocument();
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
   });
 
   it("is refused to a user who is not an admin before the function is called, and an admin's reaches it", async () => {
