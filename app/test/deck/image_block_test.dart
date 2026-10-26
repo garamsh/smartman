@@ -205,6 +205,48 @@ void main() {
     );
 
     testWidgets(
+      'at text scale 2.0 on a phone a photo under a title is still whole and inside the screen, each box over its part',
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final screen = _screens['phone portrait']!;
+        await drawCard(tester, screen, [
+          const TextContent('The capital of France'),
+          _wide,
+        ], revealed: true);
+        final photo = tester.getRect(find.byType(ImagePhoto));
+
+        expect(
+          photo.width / photo.height,
+          moreOrLessEquals(_wide.aspectRatio, epsilon: 1e-6),
+        );
+        expect((Offset.zero & screen).contains(photo.topLeft), isTrue);
+        expect(photo.right, lessThanOrEqualTo(screen.width));
+        expect(photo.bottom, lessThanOrEqualTo(screen.height));
+        for (final box in _wide.boxes) {
+          final drawn = tester.getRect(_box(box.id));
+          expect(
+            (drawn.left - photo.left) / photo.width,
+            moreOrLessEquals(box.x, epsilon: 1e-6),
+          );
+          expect(
+            (drawn.top - photo.top) / photo.height,
+            moreOrLessEquals(box.y, epsilon: 1e-6),
+          );
+          expect(
+            drawn.width / photo.width,
+            moreOrLessEquals(box.w, epsilon: 1e-6),
+          );
+          expect(
+            drawn.height / photo.height,
+            moreOrLessEquals(box.h, epsilon: 1e-6),
+          );
+        }
+        expect(find.text('Paris'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'a screen reader hears the photo and each box as a blank, and each answer once revealed',
       (tester) async {
         final l10n = await AppLocalizations.delegate.load(const Locale('ko'));
