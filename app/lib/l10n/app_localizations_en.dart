@@ -202,6 +202,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockClozeDescription => 'Hide words in a sentence';
 
   @override
+  String get blockImage => 'Photo';
+
+  @override
+  String get blockImageDescription => 'Draw blank boxes over a photo';
+
+  @override
+  String get imageFromAlbum => 'Choose from album';
+
+  @override
+  String get imageFromCamera => 'Take a photo';
+
+  @override
+  String get imageUnreadable => 'Couldn\'t load the photo. Try again.';
+
+  @override
+  String get imageRequired => 'Choose a photo';
+
+  @override
+  String get imageHint =>
+      'Drag over the photo to draw a blank, or tap Add blank';
+
+  @override
+  String imageBox(int number) {
+    return 'Blank $number';
+  }
+
+  @override
+  String get imageAddBox => 'Add blank';
+
+  @override
+  String get imageBoxAnswer => 'Answer (optional)';
+
+  @override
+  String get imageBoxLeft => 'Move left';
+
+  @override
+  String get imageBoxRight => 'Move right';
+
+  @override
+  String get imageBoxUp => 'Move up';
+
+  @override
+  String get imageBoxDown => 'Move down';
+
+  @override
+  String get imageBoxWider => 'Wider';
+
+  @override
+  String get imageBoxNarrower => 'Narrower';
+
+  @override
+  String get imageBoxTaller => 'Taller';
+
+  @override
+  String get imageBoxShorter => 'Shorter';
+
+  @override
+  String get imageBoxDelete => 'Delete blank';
+
+  @override
   String blockMenu(String side, int number) {
     return '$side block $number menu';
   }

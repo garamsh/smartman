@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:ui' show Rect, Size;
 
-/// A typed block of card content: text, a cloze, a table or a vocabulary
-/// entry's senses. A block's kind is its stored `type`, and its version its
-/// `v` (ADR 0106). A new kind adds a subclass and a discriminator value, and
+import '../../media/media.dart';
+
+/// A typed block of card content: text, a cloze, a table, a vocabulary
+/// entry's senses or an image. A block's kind is its stored `type`, and its
+/// version its `v` (ADR 0106). A new kind adds a subclass and a discriminator value, and
 /// stored rows keep their encoding.
 ///
 /// Two blocks are equal when their kind and content are; their [id]s are not
@@ -196,6 +199,104 @@ final class SensesContent extends Content {
   int get hashCode => jsonEncode(_payload(this)).hashCode;
 }
 
+/// A box over an image block's photo, a blank to recall: its left [x], top
+/// [y], width [w] and height [h] as fractions, from 0 to 1, of the stored
+/// image's own width and height, never of a screen, so it covers the same
+/// part of the photo at every size and aspect ratio it is drawn at
+/// (ADR 0109). Its [id] is unique in its block; its [answer], when given, is
+/// shown in it once revealed. [rest] holds the fields this build does not
+/// know, written back as they were read.
+final class ImageBox {
+  const ImageBox({
+    required this.id,
+    required this.x,
+    required this.y,
+    required this.w,
+    required this.h,
+    this.answer,
+    this.rest = const {},
+  });
+
+  final String id;
+  final double x;
+  final double y;
+  final double w;
+  final double h;
+  final String? answer;
+  final Map<String, Object?> rest;
+
+  /// The part of an image drawn at [size] that the box covers: the one
+  /// transform, a scale to [size] from the image's origin, that places the
+  /// image places the box.
+  Rect rectIn(Size size) => Rect.fromLTWH(
+    x * size.width,
+    y * size.height,
+    w * size.width,
+    h * size.height,
+  );
+
+  /// The box with its place, size or answer changed, its id and unknown
+  /// fields kept.
+  ImageBox copyWith({
+    double? x,
+    double? y,
+    double? w,
+    double? h,
+    String? Function()? answer,
+  }) => ImageBox(
+    id: id,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    w: w ?? this.w,
+    h: h ?? this.h,
+    answer: answer == null ? this.answer : answer(),
+    rest: rest,
+  );
+}
+
+/// A photo the `media` domain stores, named by its [media] id, with its
+/// intrinsic [width] and [height] in pixels, so its aspect ratio is known
+/// before the file is read, and the [boxes] over it to recall (ADR 0109).
+/// [rest] holds the payload's fields this build does not know, written back
+/// as they were read.
+final class ImageContent extends Content {
+  const ImageContent({
+    required this.media,
+    required this.width,
+    required this.height,
+    this.boxes = const [],
+    this.rest = const {},
+    super.id,
+  });
+
+  final MediaId media;
+  final int width;
+  final int height;
+  final List<ImageBox> boxes;
+  final Map<String, Object?> rest;
+
+  /// The image's width over its height.
+  double get aspectRatio => width / height;
+
+  /// The block with [boxes] in place of its own.
+  ImageContent withBoxes(List<ImageBox> boxes) => ImageContent(
+    media: media,
+    width: width,
+    height: height,
+    boxes: boxes,
+    rest: rest,
+    id: id,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ImageContent &&
+      jsonEncode(_payload(other)) == jsonEncode(_payload(this));
+
+  @override
+  int get hashCode => jsonEncode(_payload(this)).hashCode;
+}
+
 /// A stored block this build cannot read: a type it does not know, or a
 /// known type at a version above the one it writes. It is kept intact,
 /// [stored] written back as it was read, so saving the card again does not
@@ -212,9 +313,14 @@ final class UnsupportedContent extends Content {
 }
 
 /// Whether [block] is one that holds blanks to recall: a cloze or a table,
-/// each stored with one or more; a cloze still being written before its
-/// first blank counts, so the editor's preview draws it as it will be.
-bool _hasBlank(Content block) => block is ClozeContent || block is TableContent;
+/// each stored with one or more, or an image with a box over it
+/// (ADR 0109); a cloze still being written before its first blank counts,
+/// so the editor's preview draws it as it will be.
+bool _hasBlank(Content block) => switch (block) {
+  ClozeContent() || TableContent() => true,
+  ImageContent(:final boxes) => boxes.isNotEmpty,
+  TextContent() || SensesContent() || UnsupportedContent() => false,
+};
 
 /// The face a card with [front] and [back] is studied on, or null when it is
 /// studied front then back (ADR 0106). A card with a blank anywhere is
@@ -229,6 +335,12 @@ List<Content>? oneFaceOf(List<Content> front, List<Content> back) =>
     ? [...front, ...back]
     : null;
 
+/// The media ids of the images in [blocks], in order.
+Set<MediaId> mediaOf(List<Content> blocks) => {
+  for (final block in blocks)
+    if (block case ImageContent(:final media)) media,
+};
+
 /// Whether a card whose front is [front] is drawn whole, that front across
 /// the card with its blanks, rather than split: [oneFaceOf] for that front.
 bool isWholeCard(List<Content> front) => oneFaceOf(front, const []) != null;
@@ -237,6 +349,7 @@ const _textType = 'text';
 const _clozeType = 'cloze';
 const _tableType = 'table';
 const _sensesType = 'senses';
+const _imageType = 'image';
 const _partOfSpeechKind = 'part_of_speech';
 const _otherKind = 'other';
 
@@ -265,6 +378,7 @@ String _type(Content block) => switch (block) {
   ClozeContent() => _clozeType,
   TableContent() => _tableType,
   SensesContent() => _sensesType,
+  ImageContent() => _imageType,
   UnsupportedContent(:final type) => type,
 };
 
@@ -276,6 +390,7 @@ const Map<String, List<Object? Function(Object? payload)>> blockUpcasters = {
   _clozeType: [],
   _tableType: [],
   _sensesType: [],
+  _imageType: [],
 };
 
 /// The version this build writes a block of [type] at.
@@ -316,6 +431,14 @@ Content withBlockId(Content block, String id) => switch (block) {
     id: id,
   ),
   SensesContent(:final senses) => SensesContent(senses, id: id),
+  ImageContent() => ImageContent(
+    media: block.media,
+    width: block.width,
+    height: block.height,
+    boxes: block.boxes,
+    rest: block.rest,
+    id: id,
+  ),
   UnsupportedContent() => block,
 };
 
@@ -334,6 +457,24 @@ Object? _payload(Content block) => switch (block) {
   },
   SensesContent(:final senses) => {
     'senses': [for (final sense in senses) _senseJson(sense)],
+  },
+  ImageContent(:final media, :final width, :final height, :final boxes) => {
+    ...block.rest,
+    'media': media.value,
+    'width': width,
+    'height': height,
+    'boxes': [
+      for (final box in boxes)
+        {
+          ...box.rest,
+          'id': box.id,
+          'x': box.x,
+          'y': box.y,
+          'w': box.w,
+          'h': box.h,
+          'answer': ?box.answer,
+        },
+    ],
   },
   UnsupportedContent(:final payload) => payload,
 };
@@ -399,6 +540,7 @@ Content _decodeBlock(Object? block, String source) {
     (_sensesType, {'senses': final List<Object?> senses}) => _decodeSenses(
       senses,
     ),
+    (_imageType, final Map<String, Object?> fields) => _decodeImage(fields),
     _ => null,
   };
   if (decoded == null) {
@@ -467,6 +609,92 @@ TableContent? _decodeTable(Map<String, Object?> fields) {
   return null;
 }
 
+/// How far past 1 a box's far edge may fall, for a fraction's rounding.
+const _boxTolerance = 1e-9;
+
+/// An image of a non-empty media id, a positive whole width and height, and
+/// boxes, each [_decodeBox]'s, their ids distinct; null otherwise. Fields it
+/// does not know are kept.
+ImageContent? _decodeImage(Map<String, Object?> fields) {
+  if (fields
+      case {
+        'media': final String media,
+        'width': final int width,
+        'height': final int height,
+        'boxes': final List<Object?> boxesValue,
+      }
+      when media.isNotEmpty && width > 0 && height > 0) {
+    final boxes = [
+      for (final box in boxesValue)
+        box is Map<String, Object?> ? _decodeBox(box) : null,
+    ];
+    if (boxes.contains(null)) return null;
+    final decoded = boxes.cast<ImageBox>();
+    if (decoded.map((box) => box.id).toSet().length != decoded.length) {
+      return null;
+    }
+    return ImageContent(
+      media: MediaId(media),
+      width: width,
+      height: height,
+      boxes: decoded,
+      rest: {...fields}
+        ..remove('media')
+        ..remove('width')
+        ..remove('height')
+        ..remove('boxes'),
+    );
+  }
+  return null;
+}
+
+/// A box of a non-empty id, an optional text answer, and a left and top at
+/// or above 0 and a width and height above 0 whose far edges fall inside
+/// the image; null otherwise. Fields it does not know are kept.
+ImageBox? _decodeBox(Map<String, Object?> box) {
+  if (box
+      case {
+        'id': final String id,
+        'x': final num x,
+        'y': final num y,
+        'w': final num w,
+        'h': final num h,
+      }
+      when id.isNotEmpty &&
+          x >= 0 &&
+          y >= 0 &&
+          w > 0 &&
+          h > 0 &&
+          x + w <= 1 + _boxTolerance &&
+          y + h <= 1 + _boxTolerance) {
+    final String? answer;
+    switch (box['answer']) {
+      case null:
+        answer = null;
+      case final String text:
+        answer = text;
+      default:
+        return null;
+    }
+    return ImageBox(
+      id: id,
+      x: x.toDouble(),
+      y: y.toDouble(),
+      w: w.toDouble(),
+      h: h.toDouble(),
+      answer: answer,
+      rest: {...box}
+        ..remove('id')
+        ..remove('x')
+        ..remove('y')
+        ..remove('w')
+        ..remove('h')
+        ..remove('answer'),
+    );
+  }
+  return null;
+}
+
 /// One or more senses, each [decodeSense]'s; null otherwise.
 SensesContent? _decodeSenses(List<Object?> senses) {
   final decoded = [for (final sense in senses) decodeSense(sense)];
@@ -516,15 +744,20 @@ SenseLabel? _decodeLabel(Object? label) => switch (label) {
   _ => null,
 };
 
-/// The text of [blocks], joined by newlines: a text block's text, and a
-/// cloze's and a table's filled form. The card key and a merged back read
-/// it.
+/// The text of [blocks], joined by newlines: a text block's text, a cloze's
+/// and a table's filled form, and an image's media id followed by its boxes'
+/// answers, so two photos never share a card key. The card key and a merged
+/// back read it.
 String plainText(List<Content> blocks) => [
   for (final block in blocks)
     switch (block) {
       TextContent(:final text) => text,
       ClozeContent(:final filled) || TableContent(:final filled) => filled,
       SensesContent(:final lines) => lines,
+      ImageContent(:final media, :final boxes) => [
+        media.value,
+        for (final box in boxes) ?box.answer,
+      ].join('\n'),
       UnsupportedContent() => null,
     },
 ].nonNulls.join('\n');

@@ -20,10 +20,15 @@ class _FakePick implements ImagePick {
   PreparedImage? next;
   bool fails = false;
   final origins = <ImageOrigin>[];
+  final shapes = <ImageShape>[];
 
   @override
-  Future<PreparedImage?> pick(ImageOrigin origin) async {
+  Future<PreparedImage?> pick(
+    ImageOrigin origin, {
+    ImageShape shape = ImageShape.square,
+  }) async {
     origins.add(origin);
+    shapes.add(shape);
     if (fails) throw const MediaUnreadable('unreadable');
     return next;
   }
@@ -120,6 +125,8 @@ void main() {
 
       await tapAndFinish(tester, '앨범에서 고르기');
       expect(pick.origins, [ImageOrigin.album]);
+      // A tile's photo is its centred square, unlike a card's (ADR 0109).
+      expect(pick.shapes, [ImageShape.square]);
       final preview = tester.widget<Image>(find.byType(Image));
       expect((preview.image as MemoryImage).bytes, pick.next!.bytes);
       expect(find.text('사진 빼기'), findsOneWidget);

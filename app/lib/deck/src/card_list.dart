@@ -166,13 +166,15 @@ class CardBackRow extends StatelessWidget {
 }
 
 /// One line of text for a card side: a cloze or a table with its blanks
-/// filled, and a block this version cannot show named by its type.
+/// filled, a photo as "사진", and a block this version cannot show named by
+/// its type.
 String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
     .map(
       (block) => switch (block) {
         TextContent(:final text) => text,
         ClozeContent(:final filled) || TableContent(:final filled) => filled,
         SensesContent(:final lines) => lines,
+        ImageContent() => l10n.blockImage,
         UnsupportedContent(:final type) => l10n.unsupportedContent(type),
       },
     )
@@ -204,6 +206,15 @@ String spokenContent(
                   block.isBlank(row, column) ? blank(cell) : cell,
               ].join(', '),
           ].join('. '),
+          // A photo, then each box as a blank, or its answer once revealed.
+          ImageContent(:final boxes) => [
+            l10n.blockImage,
+            for (final box in boxes)
+              switch (box.answer) {
+                final answer? when answer.trim().isNotEmpty => blank(answer),
+                _ => l10n.blank,
+              },
+          ].join(', '),
           _ => describeContent(l10n, [block]),
         },
       )

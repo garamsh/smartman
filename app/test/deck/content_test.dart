@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui' show Rect, Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/src/content.dart';
+import 'package:smartman/media/media.dart';
 
 void main() {
   group('content encoding', () {
@@ -17,20 +19,20 @@ void main() {
     test('decodes an unknown type as unsupported and re-encodes it intact', () {
       const stored =
           '[{"type":"text","payload":{"text":"cat"}},'
-          '{"type":"image","payload":{"path":"cat.png"}}]';
+          '{"type":"audio","payload":{"path":"cat.m4a"}}]';
 
       final blocks = decodeContent(stored);
 
       expect(blocks.first, const TextContent('cat'));
       final unsupported = blocks.last;
       expect(unsupported, isA<UnsupportedContent>());
-      expect((unsupported as UnsupportedContent).type, 'image');
-      // The text block is written at this build's version; the image block
+      expect((unsupported as UnsupportedContent).type, 'audio');
+      // The text block is written at this build's version; the audio block
       // as it was stored.
       expect(
         encodeContent(blocks),
         '[{"type":"text","v":1,"payload":{"text":"cat"}},'
-        '{"type":"image","payload":{"path":"cat.png"}}]',
+        '{"type":"audio","payload":{"path":"cat.m4a"}}]',
       );
     });
 
@@ -314,6 +316,17 @@ void main() {
         SensesContent([CardSense(meaning: '기차')]),
         '{"senses":[{"labels":[],"meaning":"기차","examples":[]}]}',
       ),
+      (
+        'image',
+        ImageContent(
+          media: MediaId('m1'),
+          width: 4,
+          height: 3,
+          boxes: [ImageBox(id: '1', x: 0.25, y: 0.5, w: 0.5, h: 0.25)],
+        ),
+        '{"media":"m1","width":4,"height":3,'
+            '"boxes":[{"id":"1","x":0.25,"y":0.5,"w":0.5,"h":0.25}]}',
+      ),
     ];
 
     for (final (type, block, payload) in blocks) {
@@ -417,7 +430,7 @@ void main() {
       blanks: [(row: 0, column: 0)],
     );
     const senses = SensesContent([CardSense(meaning: '파리')]);
-    const unknown = UnsupportedContent('image', {'media': 'm1'});
+    const unknown = UnsupportedContent('audio', {'media': 'm1'});
 
     test('a card with no blank is studied front then back, whatever its '
         'blocks', () {
@@ -451,6 +464,117 @@ void main() {
           block,
         ], reason: 'an empty front adds nothing');
       }
+    });
+
+    test('an image with a box is a blank, on the front or on the back alone, '
+        'and an image with none is not (ADR 0109)', () {
+      const photo = ImageContent(media: MediaId('m1'), width: 4, height: 3);
+      final boxed = photo.withBoxes(const [
+        ImageBox(id: '1', x: 0, y: 0, w: 0.5, h: 0.5),
+      ]);
+
+      expect(oneFaceOf([boxed], [text]), [boxed]);
+      expect(oneFaceOf([text], [boxed]), [text, boxed]);
+      expect(isWholeCard([boxed]), isTrue);
+      // Control: the same photo without its box is studied front then back.
+      expect(oneFaceOf([photo], [text]), isNull);
+      expect(oneFaceOf([text], [photo]), isNull);
+      expect(isWholeCard([photo]), isFalse);
+    });
+  });
+
+  group('an image block (ADR 0109)', () {
+    // A stored block a later build wrote: fields this build does not know on
+    // the payload and on a box, and a box with an answer beside one without.
+    const stored =
+        '[{"type":"image","v":1,"id":"b1","payload":{"media":"m1",'
+        '"width":1200,"height":800,"boxes":['
+        '{"id":"1","x":0.1,"y":0.2,"w":0.3,"h":0.4,"answer":"Paris",'
+        '"shape":"oval"},'
+        '{"id":"2","x":0.5,"y":0.5,"w":0.5,"h":0.5}],'
+        '"crop":{"x":0,"y":0}}}]';
+
+    test('reads its photo, size and boxes in fractions of the image, and '
+        'writes back the fields it does not know', () {
+      final image = decodeContent(stored).single as ImageContent;
+
+      expect(image.media, const MediaId('m1'));
+      expect((image.width, image.height), (1200, 800));
+      expect(image.aspectRatio, 1.5);
+      expect(image.id, 'b1');
+      expect(
+        [for (final box in image.boxes) (box.id, box.x, box.y, box.w, box.h)],
+        [('1', 0.1, 0.2, 0.3, 0.4), ('2', 0.5, 0.5, 0.5, 0.5)],
+      );
+      expect([for (final box in image.boxes) box.answer], ['Paris', null]);
+      expect(jsonDecode(encodeContent([image])), jsonDecode(stored));
+    });
+
+    test('a box covers the same part of the image at any size it is drawn '
+        'at', () {
+      const box = ImageBox(id: '1', x: 0.1, y: 0.2, w: 0.3, h: 0.4);
+
+      expect(
+        box.rectIn(const Size(1200, 800)),
+        const Rect.fromLTWH(120, 160, 360, 320),
+      );
+      expect(
+        box.rectIn(const Size(300, 200)),
+        const Rect.fromLTWH(30, 40, 90, 80),
+      );
+    });
+
+    test('is refused when it breaks its shape, where a whole one is read', () {
+      String block(String payload) => '[{"type":"image","payload":$payload}]';
+      String boxed(String box) =>
+          block('{"media":"m1","width":4,"height":3,"boxes":[$box]}');
+      // Control: a whole block of each kind is read.
+      expect(
+        decodeContent(boxed('{"id":"1","x":0,"y":0,"w":1,"h":1}')),
+        hasLength(1),
+      );
+      expect(
+        decodeContent(block('{"media":"m1","width":4,"height":3,"boxes":[]}')),
+        hasLength(1),
+      );
+
+      for (final broken in [
+        block('{"width":4,"height":3,"boxes":[]}'),
+        block('{"media":"","width":4,"height":3,"boxes":[]}'),
+        block('{"media":"m1","width":0,"height":3,"boxes":[]}'),
+        block('{"media":"m1","width":4.5,"height":3,"boxes":[]}'),
+        block('{"media":"m1","width":4,"height":3}'),
+        boxed('{"x":0,"y":0,"w":1,"h":1}'),
+        boxed('{"id":"1","x":-0.1,"y":0,"w":0.5,"h":0.5}'),
+        boxed('{"id":"1","x":0,"y":0,"w":0,"h":0.5}'),
+        boxed('{"id":"1","x":0.6,"y":0,"w":0.5,"h":0.5}'),
+        boxed('{"id":"1","x":0,"y":0.6,"w":0.5,"h":0.5}'),
+        boxed('{"id":"1","x":0,"y":0,"w":0.5,"h":0.5,"answer":3}'),
+        boxed(
+          '{"id":"1","x":0,"y":0,"w":0.5,"h":0.5},'
+          '{"id":"1","x":0.5,"y":0.5,"w":0.5,"h":0.5}',
+        ),
+      ]) {
+        expect(
+          () => decodeContent(broken),
+          throwsFormatException,
+          reason: broken,
+        );
+      }
+    });
+
+    test('reads as its media id and then its answers, so two photos never '
+        'share a card key, and names its photo', () {
+      final image = decodeContent(stored).single as ImageContent;
+
+      expect(plainText([image]), 'm1\nParis');
+      expect(
+        plainText([
+          const ImageContent(media: MediaId('m2'), width: 1, height: 1),
+        ]),
+        'm2',
+      );
+      expect(mediaOf([const TextContent('a'), image]), {const MediaId('m1')});
     });
   });
 }
