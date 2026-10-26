@@ -27,7 +27,7 @@ The `media` domain: the user's images, kept on the device and in the private `me
 ### Store
 
 - `MediaStore.addImage` writes the file to the device under its id, whole or not at all, and queues it in `media_uploads` with its kind, MIME type, size, digest and creation time. It shows at once from the device.
-- `release` takes a file out of the upload queue and queues it in `media_deletions`. It writes only rows, so it joins its caller's transaction, a deck's write ([`deck.md`](deck.md)).
+- `release` takes a file out of the upload queue and queues it in `media_deletions`. It writes only rows, so it joins its caller's transaction, a deck's write, whose repository releases an id only once no other live deck or card on the device holds it ([`deck.md`](deck.md)).
 - `read` returns the file on the device, or else downloads it, keeps it on the device and returns it; it returns null when neither holds it or the server fails, and a later read tries again. Two reads of one id at once fetch it once.
 - `drain` uploads each queued file, then deletes each released one from the server and then the device, and says whether both queues are empty. A transfer that fails stays queued while the others run. A queued file no longer on the device is dropped from the queue, as there is nothing to upload.
 - `sync`'s controller runs `drain` after each successful run, and retries with its backoff while a queue is left ([`sync.md`](sync.md)). Sign-out clears both queues with the device's other rows.
@@ -38,7 +38,7 @@ The `media` domain: the user's images, kept on the device and in the private `me
 - `SupabaseMediaServer` acts as the signed-in user, whose id is the folder of each file, `{owner}/{media id}` ([`server.md`](server.md) §Media storage):
   - an upload inserts the `media` row, keeping the user's own row already there under the id, the table's key being `(user_id, id)`, then uploads the file without overwriting; a file Storage already holds counts as uploaded, so a retry after a lost answer succeeds;
   - a suspended user's upload is refused, and stays queued like any refusal;
-  - a download of a file Storage does not hold returns null;
+  - a download of a file Storage does not hold returns null; one of another user's files is read where the server lets any signed-in user read it, a public deck's image and the photos of its live cards, which a copy of the cards names ([ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md));
   - a delete removes the file, then the user's row under the id.
 - Each request is bounded by 20 seconds. A timeout, a refusal, an unreachable server or no signed-in user is `MediaTransferFailed`, which the store keeps queued.
 
@@ -57,7 +57,7 @@ The `media` domain: the user's images, kept on the device and in the private `me
 
 - [ADR 0107](adr/0107-store-media-in-a-private-supabase-storage-bucket-named-by-media-id-and-give-each-deck-an-image.md) records why media lives in a private Supabase Storage bucket named by id, the path scheme and the size limits, why an image is cropped to a centred square, and why the device stores first and uploads after.
 - Issue #383 records the owner's request and the PM's decision.
-- [ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md) records why a card's photo is kept whole at its aspect ratio, with its size, rather than cropped as a tile's is.
+- [ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md) records why a card's photo is kept whole at its aspect ratio, with its size, rather than cropped as a tile's is, why a release waits for the last card or deck holding the id, and why any signed-in user reads the photos of a public deck's live cards.
 
 ## Open questions
 
