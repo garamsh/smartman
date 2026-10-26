@@ -2,7 +2,6 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/content.dart' show encodeContent;
 import 'package:smartman/design/app_text_field.dart';
 
 import '../home/deck_screens.dart';
