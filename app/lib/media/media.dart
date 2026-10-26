@@ -16,6 +16,7 @@ export 'src/media_image.dart' show MediaImage;
 export 'src/media_store.dart' show MediaStore;
 export 'src/model.dart'
     show
+        FetchedMedia,
         ImageShape,
         MediaId,
         MediaUpload,

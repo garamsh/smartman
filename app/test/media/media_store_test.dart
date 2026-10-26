@@ -184,4 +184,76 @@ void main() {
     server.files[id] = image.bytes;
     expect(await store.read(id), image.bytes);
   });
+
+  group("another user's files (ADR 0113)", () {
+    const owner = '00000000-0000-4000-8000-00000000000b';
+    const photo = MediaId('00000000-0000-4000-8000-0000000000b1');
+    const recording = MediaId('00000000-0000-4000-8000-0000000000b2');
+    const picked = MediaId('00000000-0000-4000-8000-0000000000b3');
+    const unknown = MediaId('00000000-0000-4000-8000-0000000000b4');
+    final image = preparedImage(3);
+
+    setUp(() {
+      server.shared[(owner, photo)] = image.bytes;
+      server.shared[(owner, recording)] = mp4Bytes(1);
+      server.shared[(owner, picked)] = mp3Bytes(2);
+      server.shared[(owner, unknown)] = Uint8List.fromList([1, 2, 3, 4]);
+    });
+
+    test('are read from their owner\'s folder with the kind and type their bytes show, and nothing is written until one is added', () async {
+      final fetched = await store.fetchShared(owner, [
+        photo,
+        recording,
+        picked,
+        unknown,
+      ]);
+
+      expect(
+        {
+          for (final MapEntry(:key, :value) in fetched.entries)
+            key: (value.kind.key, value.mimeType),
+        },
+        {
+          photo: ('image', 'image/jpeg'),
+          recording: ('audio', 'audio/mp4'),
+          picked: ('audio', 'audio/mpeg'),
+        },
+        reason: 'bytes of no type the bucket takes are left out',
+      );
+      expect(await db.select(db.mediaUploads).get(), isEmpty);
+      expect(directory.listSync(), isEmpty);
+      // Control: the same id in the user's own folder is not the owner's.
+      expect(await store.read(photo), isNull);
+
+      final id = await store.addFetched(fetched[photo]!);
+      expect(id, isNot(photo));
+      expect(await store.read(id), image.bytes);
+      expect(await store.drain(), isTrue);
+      expect(
+        (server.rows[id]!.kind.key, server.rows[id]!.sha256),
+        ('image', image.sha256),
+      );
+      expect(server.files[id], image.bytes);
+    });
+
+    test('a file the network fails to bring twice is read on the third try, and one it fails three times is left out', () async {
+      server.failingDownloads[photo] = 2;
+      server.failingDownloads[recording] = 3;
+
+      final fetched = await store.fetchShared(owner, [photo, recording]);
+
+      expect(fetched.keys, [photo]);
+      expect(server.failingDownloads, {photo: 0, recording: 0});
+      expect(server.requests, 6);
+    });
+
+    test('a file the owner removed is left out without a retry', () async {
+      server.shared.remove((owner, photo));
+
+      final fetched = await store.fetchShared(owner, [photo, recording]);
+
+      expect(fetched.keys, [recording]);
+      expect(server.requests, 2);
+    });
+  });
 }

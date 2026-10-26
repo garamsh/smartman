@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
+
 /// A stored file's id, a UUID the device makes. Decks and cards name a file
 /// by it, never by a URL, so where the bytes live can change (ADR 0107).
 extension type const MediaId(String value) {}
@@ -97,3 +99,45 @@ const maxAudioDuration = Duration(seconds: 60);
 /// The most bytes a stored audio file may hold, below the bucket's 10 MiB
 /// ceiling.
 const maxAudioBytes = 5 * 1024 * 1024;
+
+/// A file read from another user's folder, ready to store as the user's
+/// own: its kind and type read from its first bytes, since the owner's row
+/// is not readable (ADR 0113).
+final class FetchedMedia {
+  const FetchedMedia._(this.kind, this.mimeType, this.bytes, this.sha256);
+
+  /// [bytes] as a JPEG image, an MPEG-4 sound or an MP3, the types the
+  /// bucket accepts; null for any other bytes.
+  static FetchedMedia? tryParse(Uint8List bytes) {
+    final type = switch (bytes) {
+      [0xFF, 0xD8, 0xFF, ...] => (MediaKind.image, 'image/jpeg'),
+      [_, _, _, _, 0x66, 0x74, 0x79, 0x70, ...] => (
+        MediaKind.audio,
+        'audio/mp4',
+      ),
+      [0x49, 0x44, 0x33, ...] => (MediaKind.audio, 'audio/mpeg'),
+      // An MP3 without a tag opens on a frame's sync bits.
+      [0xFF, final second, ...] when second & 0xE0 == 0xE0 => (
+        MediaKind.audio,
+        'audio/mpeg',
+      ),
+      _ => null,
+    };
+    if (type == null) return null;
+    return FetchedMedia._(
+      type.$1,
+      type.$2,
+      bytes,
+      crypto.sha256.convert(bytes).toString(),
+    );
+  }
+
+  final MediaKind kind;
+
+  /// `image/jpeg`, `audio/mp4` or `audio/mpeg`.
+  final String mimeType;
+  final Uint8List bytes;
+
+  /// [bytes]' SHA-256 digest, in lowercase hex.
+  final String sha256;
+}

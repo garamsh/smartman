@@ -8,7 +8,7 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 
 - The domain lives in `app/lib/media/`; its public surface is `app/lib/media/media.dart`, with internals under `app/lib/media/src/` ([ADR 0002](adr/0002-domain-public-surface-and-shared-database.md)).
 - The surface exports:
-  - the model: `MediaId`, a stored file's id, `PreparedImage`, an image made ready to store, `PreparedAudio`, a sound made ready to store, with `maxAudioDuration` and `maxAudioBytes`, its limits, and `MediaUpload`, a queued file with what its server row records;
+  - the model: `MediaId`, a stored file's id, `PreparedImage`, an image made ready to store, `PreparedAudio`, a sound made ready to store, with `maxAudioDuration` and `maxAudioBytes`, its limits, `MediaUpload`, a queued file with what its server row records, and `FetchedMedia`, another user's file read to copy it;
   - `MediaStore`, the files on the device and the two queues, and `mediaStoreProvider`, which the composition site overrides with the store it constructs;
   - `MediaImage`, the widget that draws an image by its id;
   - `ImagePick`, the seam through which the user picks an image, `ImageOrigin`, the camera or the album, and `imagePickProvider`, the device's camera and photo library unless a test replaces it;
@@ -37,6 +37,11 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 - `MediaStore.addImage` and `addAudio` write the file to the device under its id, whole or not at all, and queue it in `media_uploads` with its kind, `image` or `audio`, its MIME type, size, digest and creation time. It shows, or plays, at once from the device.
 - `release` takes a file out of the upload queue and queues it in `media_deletions`. It writes only rows, so it joins its caller's transaction, a deck's write, whose repository releases an id only once no other live deck or card on the device holds it ([`deck.md`](deck.md)).
 - `read` returns the file on the device, or else downloads it, keeps it on the device and returns it; it returns null when neither holds it or the server fails, and a later read tries again. Two reads of one id at once fetch it once. `fileOf` is `read` giving the kept file, which a player plays offline from then on.
+- `fetchShared` reads files of another user's folder, to copy a public deck's photos and sounds, and writes nothing ([ADR 0113](adr/0113-copy-a-public-deck-s-photos-and-sounds-into-the-copier-s-own-media-under-new-ids-when-the-deck-is-copied.md)):
+  - it reads up to 4 at once, and tries each up to 3 times while the network fails;
+  - it reads each file's kind and type from its first bytes, since the owner's row is not readable: JPEG as `image/jpeg`, an MPEG-4 `ftyp` box as `audio/mp4`, and an ID3 tag or an MPEG audio frame as `audio/mpeg`;
+  - it leaves out a file the server does not let the user read, one of no such type, and one the network failed on every try.
+- `addFetched` stores a fetched file under a new id as `addImage` stores an image, kept on the device and queued, its row joining its caller's transaction. `deck`'s copy calls it ([`deck.md`](deck.md)).
 - `drain` uploads each queued file, then deletes each released one from the server and then the device, and says whether both queues are empty. A transfer that fails stays queued while the others run. A queued file no longer on the device is dropped from the queue, as there is nothing to upload.
 - `sync`'s controller runs `drain` after each successful run, and retries with its backoff while a queue is left ([`sync.md`](sync.md)). Sign-out clears both queues with the device's other rows.
 - `media_uploads` and `media_deletions` are this domain's tables, in the shared database `app/lib/database/database.dart`, since schema v12.
@@ -46,7 +51,7 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 - `SupabaseMediaServer` acts as the signed-in user, whose id is the folder of each file, `{owner}/{media id}` ([`server.md`](server.md) §Media storage):
   - an upload inserts the `media` row, keeping the user's own row already there under the id, the table's key being `(user_id, id)`, then uploads the file without overwriting; a file Storage already holds counts as uploaded, so a retry after a lost answer succeeds;
   - a suspended user's upload is refused, and stays queued like any refusal;
-  - a download reads the signed-in user's own folder, and one of a file Storage does not hold returns null;
+  - a download reads the signed-in user's own folder, or the folder of the owner it is given, which the server lets the user read for a public deck's live cards ([`server.md`](server.md) §Media storage); one of a file Storage does not hold, or does not let the user read, returns null;
   - a delete removes the file, then the user's row under the id.
 - Each request is bounded by 20 seconds. A timeout, a refusal, an unreachable server or no signed-in user is `MediaTransferFailed`, which the store keeps queued.
 
@@ -58,9 +63,10 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 
 - `app/test/media/media_store_test.dart` — an added image read from the device before any upload, a drain uploading with its row and emptying the queue, a failed upload and deletion kept queued until a later drain, a released image never uploaded and deleted from the server and the device, a download kept on a second device, and a missing file read as null and tried again.
 - `app/test/media/media_store_test.dart` also holds a sound added and uploaded as `audio` of its own type, kept on a second device by its first `fileOf` and played from there offline, and a sound past 60 s or 5 MiB refused against one at both limits.
+- `app/test/media/media_store_test.dart` also holds another user's files: read from the owner's folder with the kind and type their bytes show, bytes of no accepted type left out, nothing written until one is added, against the same id absent from the user's own folder; a file failing twice read on its third try, against one failing three times left out; and a removed file left out without a retry.
 - `app/test/media/image_test.dart` — a wide image cropped to its centred square, a large one scaled to the bound, the digest, unreadable bytes refused against a readable image, a whole image keeping its aspect ratio and size against a square from the same source, and a box in fractions covering the same pixels of an image at its full and its stored size.
-- `app/test/media/supabase_media_server_test.dart` — `SupabaseMediaServer` over a substituted HTTP client: the row then the file at `{owner}/{media id}` without overwriting, a duplicate file counted as uploaded against another refusal failing, a missing download as null, a delete's two requests, and an unreachable server as `MediaTransferFailed`.
-- `app/test/media/fakes.dart` holds `FakeMediaServer`, the server in memory, `FakeImagePick`, a picker that records the origin and shape asked for, `FakeAudioRecording`, `FakeAudioPick` and `FakeAudioPlayback`, which record what they were asked, and the test images and sounds; the deck, study and sync tests use them.
+- `app/test/media/supabase_media_server_test.dart` — `SupabaseMediaServer` over a substituted HTTP client: the row then the file at `{owner}/{media id}` without overwriting, a duplicate file counted as uploaded against another refusal failing, a missing download as null, a download with an owner reading that owner's folder against one without reading the user's own, a delete's two requests, and an unreachable server as `MediaTransferFailed`.
+- `app/test/media/fakes.dart` holds `FakeMediaServer`, the server in memory, with other users' files and downloads set to fail, `FakeImagePick`, a picker that records the origin and shape asked for, `FakeAudioRecording`, `FakeAudioPick` and `FakeAudioPlayback`, which record what they were asked, and the test images and sounds, `mp4Bytes` and `mp3Bytes` among them; the deck, study, sync and sharing tests use them.
 
 ## Rationale
 
@@ -68,8 +74,8 @@ The `media` domain: the user's images and sounds, kept on the device and in the 
 - Issue #383 records the owner's request and the PM's decision.
 - [ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md) records a sound's formats and limits, why a picked file is not transcoded, and why a sound plays from the file kept on the device.
 - [ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md) records why a card's photo is kept whole at its aspect ratio, with its size, rather than cropped as a tile's is, why a release waits for the last card or deck holding the id, and why any signed-in user reads the photos of a public deck's live cards.
+- [ADR 0113](adr/0113-copy-a-public-deck-s-photos-and-sounds-into-the-copier-s-own-media-under-new-ids-when-the-deck-is-copied.md) records why a copy of a public deck stores the owner's files under new ids in the copier's own media, and why a fetched file's type is read from its bytes.
 
 ## Open questions
 
-- Whether a copied card's photo or sound can be read from its owner. The server lets any signed-in user read a public deck's image and the photos and sounds of its live cards ([ADR 0109](adr/0109-store-an-image-block-s-boxes-in-fractions-of-the-image-and-draw-them-with-the-image-s-one-transform.md), [ADR 0112](adr/0112-store-an-audio-block-by-media-id-and-length-up-to-60-seconds-and-play-the-front-s-sound-once-as-a-study-card-appears.md)), but `SupabaseMediaServer.download` reads only the signed-in user's folder, so a copier's app does not yet. [#428](https://github.com/garamsh/smartman/issues/428) owns the fix, which copies the files into the copier's own media when the deck is copied.
 - Whether files a deck deleted on another device left behind on this one should be swept. None is large yet.

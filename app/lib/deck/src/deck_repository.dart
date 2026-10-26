@@ -352,12 +352,56 @@ class DeckRepository {
   /// with a card already in the deck, or with one saved earlier in [cards],
   /// does what its [IncomingCard.onDuplicate] says; no card is overwritten or
   /// deleted.
+  ///
+  /// A copy's photos and sounds become the user's own: each file is read
+  /// from the owner's folder before the transaction, then stored under a new
+  /// id as its card is written, and its blocks name that id. A file that
+  /// could not be read leaves its block naming a new id no file holds
+  /// (ADR 0113).
   Future<CardsAdded> addCards(
     AddTarget target,
     List<IncomingCard> cards, {
     AddSource source = const FromPhoto(),
-  }) => _guard(
-    () => _db.transaction(() async {
+  }) => _guard(() async {
+    // Read before the transaction, which holds the database while it runs.
+    final fetched = switch ((source, _media)) {
+      (FromCopy(:final owner), final media?) => await media.fetchShared(owner, [
+        for (final card in cards)
+          for (final side in [card.front, card.back]) ...mediaOf(side),
+      ]),
+      _ => const <MediaId, FetchedMedia>{},
+    };
+    // One file of the owner's, held by several cards, is copied once.
+    final copies = <MediaId, MediaId>{};
+    Future<MediaId> copyOf(MediaId media) async =>
+        copies[media] ??= switch ((fetched[media], _media)) {
+          (final file?, final store?) => await store.addFetched(file),
+          _ => MediaId(_newId()),
+        };
+    Future<List<Content>> own(List<Content> side) async => switch (source) {
+      FromPhoto() => side,
+      FromCopy() => [
+        for (final block in side)
+          switch (block) {
+            ImageContent() => ImageContent(
+              media: await copyOf(block.media),
+              width: block.width,
+              height: block.height,
+              boxes: block.boxes,
+              rest: block.rest,
+              id: block.id,
+            ),
+            AudioContent() => AudioContent(
+              media: await copyOf(block.media),
+              duration: block.duration,
+              rest: block.rest,
+              id: block.id,
+            ),
+            _ => block,
+          },
+      ],
+    };
+    return _db.transaction(() async {
       final deck = switch (target) {
         AddToDeck(:final deck) => await getDeck(deck),
         AddToNewDeck(:final name) => await createDeck(name),
@@ -365,21 +409,25 @@ class DeckRepository {
       var added = 0;
       var merged = 0;
       for (final card in cards) {
-        final key = CardKey.fromFront(plainText(card.front));
+        // A copied front with a photo or sound names a new id, so its key
+        // matches no card already stored.
+        final front = await own(card.front);
+        final key = CardKey.fromFront(plainText(front));
         final existing = await _findByKey(deck.id, key);
         switch ((existing, card.onDuplicate)) {
           case (null, _) || (_, DuplicateChoice.addNew):
             final now = _clock();
+            final back = await own(card.back);
             await _db
                 .into(_db.cards)
                 .insert(
                   CardRow(
                     id: _newId(),
                     deckId: deck.id.value,
-                    front: encodeContent(_withIds(card.front, const [])),
-                    back: encodeContent(_withIds(card.back, const [])),
+                    front: encodeContent(_withIds(front, const [])),
+                    back: encodeContent(_withIds(back, const [])),
                     cardKey: key.value,
-                    template: derivedKind(card.front).template,
+                    template: derivedKind(front).template,
                     templateVersion: cardTemplateVersion,
                     source: switch (source) {
                       FromPhoto() => CardSource.import.name,
@@ -416,8 +464,8 @@ class DeckRepository {
         }
       }
       return CardsAdded(deck: deck, added: added, merged: merged);
-    }),
-  );
+    });
+  });
 
   /// The deck, unless it was deleted; then [DeckDeleted].
   Future<Deck> getDeck(DeckId id) => _guard(() async {

@@ -44,6 +44,50 @@ class MediaStore {
   Future<MediaId> addAudio(PreparedAudio audio) =>
       _add(MediaKind.audio, audio.mimeType, audio.bytes, audio.sha256);
 
+  /// How many times [fetchShared] asks for a file the network fails to
+  /// bring.
+  static const fetchAttempts = 3;
+
+  /// How many files [fetchShared] reads at once.
+  static const fetchesAtOnce = 4;
+
+  /// The files of [ids] in [owner]'s folder, read to copy them as the
+  /// user's own (ADR 0113). An id is absent when the server holds no file
+  /// the user may read, its bytes are of no type the bucket takes, or the
+  /// network fails [fetchAttempts] times. Nothing is written.
+  Future<Map<MediaId, FetchedMedia>> fetchShared(
+    String owner,
+    Iterable<MediaId> ids,
+  ) async {
+    final fetched = <MediaId, FetchedMedia>{};
+    final pending = ids.toSet().toList();
+    for (var start = 0; start < pending.length; start += fetchesAtOnce) {
+      await Future.wait([
+        for (final id in pending.skip(start).take(fetchesAtOnce))
+          _fetch(owner, id).then((file) {
+            if (file != null) fetched[id] = file;
+          }),
+      ]);
+    }
+    return fetched;
+  }
+
+  Future<FetchedMedia?> _fetch(String owner, MediaId id) async {
+    for (var attempt = 1; ; attempt++) {
+      try {
+        final bytes = await _server.download(id, owner: owner);
+        return bytes == null ? null : FetchedMedia.tryParse(bytes);
+      } on MediaFailure {
+        if (attempt == fetchAttempts) return null;
+      }
+    }
+  }
+
+  /// Keeps [file] on the device under a new id and queues it for upload, as
+  /// [addImage] does; returns its id. Its row joins a caller's transaction.
+  Future<MediaId> addFetched(FetchedMedia file) =>
+      _add(file.kind, file.mimeType, file.bytes, file.sha256);
+
   Future<MediaId> _add(
     MediaKind kind,
     String mimeType,
