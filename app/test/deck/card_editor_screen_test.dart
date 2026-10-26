@@ -152,7 +152,7 @@ void main() {
         expect(find.byType(CardEditorScreen), findsNothing);
 
         await screens.push((deck) => CardEditorScreen(deck: deck));
-        await screens.tap(find.text('Basic'));
+        await screens.tap(find.text('Front & back'));
         await screens.enter('Front', 'Chat');
         await screens.enter('Back', 'cat');
         await screens.tap(find.text('Save and next card'));

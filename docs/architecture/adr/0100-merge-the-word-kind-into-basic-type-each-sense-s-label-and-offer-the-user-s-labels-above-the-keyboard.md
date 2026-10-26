@@ -17,6 +17,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A "품사 표시" screen in settings adds, renames, reorders and removes them, starting from the current short forms.
   - Storage stays a senses block whose labels are text, with no migration, and the presets stay on the device, not synced.
   - The kind switch reads "기본", "빈칸" and "표".
+- **The owner's later decision on #376** (2026-10-26) shows the merged kind as "앞뒤", not "기본", so that each kind is named by its shape, as "빈칸" and "표" are. When a later issue stores a card's kind, its stored name is `flip`; storing it is out of scope here.
 - Alternatives considered:
   - **Keep the word kind beside basic, with typed labels.** The owner asked for one kind; a card with one meaning and a card with several differ only by "뜻 추가".
   - **Always save a basic back as senses.** Every plain basic card would change its stored shape on its next save, and the web, photo import and a merged back would read a senses block where they read text today. A back of one meaning with no label stays text.
@@ -25,7 +26,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 ## Decision
 
-- **Kinds.** `CardKind` is basic, cloze and table. A card is a cloze or a table when its front holds that block, and otherwise basic, its back of senses included. A device that stored the word kind for a deck opens that deck's next new card as basic. The switch reads "기본", "빈칸" and "표", in place of the cloze kind's "문장" of issue #313.
+- **Kinds.** `CardKind` is basic, cloze and table. A card is a cloze or a table when its front holds that block, and otherwise basic, its back of senses included. A device that stored the word kind for a deck opens that deck's next new card as basic. The switch reads "앞뒤", "빈칸" and "표", in place of "기본" and of the cloze kind's "문장" of issue #313. The kind keeps the name `basic` in the code and on the device under `deckCardKinds`; no kind is stored on a card.
 - **The basic form's back:**
   - By default, one meaning: a label field beside the field "뒷면".
   - "뜻 추가" adds a sense under the last, which makes the back a list of senses, each a label field beside its meaning, moved and deleted by its buttons. Deleted down to one, it is the back's one meaning again.

@@ -819,7 +819,7 @@ void main() {
       await reveal(label(1));
       await tester.enterText(label(1), '동');
       await fill(ko.senseHeading(2), '주다, 제시하다');
-      await reveal(find.text(ko.cardKindBasic));
+      await reveal(find.text(ko.cardKindFlip));
       await shot(tester, '05d-card-editor-senses');
       await reveal(find.text(ko.addSense));
       await shot(tester, '05e-card-editor-senses-buttons');
@@ -884,7 +884,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tap(tester, find.text(ko.cardKindBasic));
+        await tap(tester, find.text(ko.cardKindFlip));
         // A phone keyboard 336 points high, given in physical pixels.
         tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
         addTearDown(tester.view.resetViewInsets);

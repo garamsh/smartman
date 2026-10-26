@@ -19,7 +19,7 @@
   "blank": "blank",
   "wholeCard": "Card",
   "sensesEditNote": "Editing the front saves labels such as [명] as plain text.",
-  "cardKindBasic": "Basic",
+  "cardKindFlip": "Front & back",
   "cardKindCloze": "Cloze",
   "clozeWordsHint": "Tap the words to make blanks",
   "clozeWord": "{word}",

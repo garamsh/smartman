@@ -103,7 +103,11 @@ void main() {
       expect(card.back, [TextContent('Capitals\n${_capitals.filled}')]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      expect(find.text('Basic'), findsNothing, reason: 'no switch on edit');
+      expect(
+        find.text('Front & back'),
+        findsNothing,
+        reason: 'no switch on edit',
+      );
       expect(tester.widget<TextField>(_cell(3)).controller!.text, 'Paris');
       await save(screens);
       final saved = await _stored(screens);
@@ -260,7 +264,7 @@ void main() {
       // One segmented bar, the kind switch; the modes are chips.
       expect(find.byType(SegmentedButton<CardKind>), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNWidgets(2));
-      final kinds = {'Basic', 'Cloze', 'Table'};
+      final kinds = {'Front & back', 'Cloze', 'Table'};
       final modes = {'Type cells', 'Choose blanks'};
       for (final label in [...kinds, ...modes]) {
         expect(find.text(label), findsOneWidget, reason: label);

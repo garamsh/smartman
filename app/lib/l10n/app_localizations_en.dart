@@ -79,7 +79,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Editing the front saves labels such as [명] as plain text.';
 
   @override
-  String get cardKindBasic => 'Basic';
+  String get cardKindFlip => 'Front & back';
 
   @override
   String get cardKindCloze => 'Cloze';

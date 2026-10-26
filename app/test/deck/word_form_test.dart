@@ -66,10 +66,10 @@ void main() {
       .single;
 
   testWidgets(
-    'the kind switch reads Basic, Cloze and Table, and a card whose back holds senses opens as basic with its senses',
+    'the kind switch reads Front & back, Cloze and Table, and a card whose back holds senses opens as basic with its senses',
     (tester) async {
       final screens = await openNew(tester);
-      for (final kind in ['Basic', 'Cloze', 'Table']) {
+      for (final kind in ['Front & back', 'Cloze', 'Table']) {
         expect(find.text(kind), findsOneWidget, reason: kind);
       }
       expect(find.text('Word'), findsNothing, reason: 'no word kind');

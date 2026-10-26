@@ -212,11 +212,11 @@ abstract class AppLocalizations {
   /// **'앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
   String get sensesEditNote;
 
-  /// The card editor's kind switch: a card of a text front and a back of one meaning, or of senses each with a typed label.
+  /// The card editor's kind switch: a card of a front and a back, the back one meaning or senses each with a typed label; named by its shape, as the cloze and table kinds are.
   ///
   /// In ko, this message translates to:
-  /// **'기본'**
-  String get cardKindBasic;
+  /// **'앞뒤'**
+  String get cardKindFlip;
 
   /// The card editor's kind switch: a line with the words to recall as blanks.
   ///

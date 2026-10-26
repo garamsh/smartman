@@ -77,7 +77,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
 
   @override
-  String get cardKindBasic => '기본';
+  String get cardKindFlip => '앞뒤';
 
   @override
   String get cardKindCloze => '빈칸';

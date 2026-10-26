@@ -393,7 +393,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                           segments: [
                             ButtonSegment(
                               value: CardKind.basic,
-                              label: Text(l10n.cardKindBasic),
+                              label: Text(l10n.cardKindFlip),
                             ),
                             ButtonSegment(
                               value: CardKind.cloze,
