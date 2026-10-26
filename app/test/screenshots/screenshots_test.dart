@@ -995,7 +995,7 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.text(ko.cardKindTable));
       await tester.enterText(
-        find.widgetWithText(AppTextField, ko.cardFront),
+        find.widgetWithText(AppTextField, ko.tableNameLabel),
         '불규칙 동사',
       );
       // The table's fields follow the front's: its headers, then its cells.
