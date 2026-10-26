@@ -500,13 +500,13 @@ abstract class AppLocalizations {
   /// **'표시를 적어 주세요'**
   String get labelPresetRequired;
 
-  /// Heading of one sense in the word form, numbered from 1.
+  /// Label of a numbered sense's meaning field in the 앞뒤 form, numbered from 1.
   ///
   /// In ko, this message translates to:
   /// **'뜻 {number}'**
   String senseHeading(int number);
 
-  /// Label of a sense's examples field in the word form.
+  /// Label of the examples field of a sense stored with examples, in the 앞뒤 form.
   ///
   /// In ko, this message translates to:
   /// **'예문'**
@@ -518,19 +518,19 @@ abstract class AppLocalizations {
   /// **'한 줄에 하나씩, 없으면 비워 두세요'**
   String get senseExamplesHint;
 
-  /// Error under a sense whose meaning is empty when the word is saved.
+  /// Error under a numbered sense whose meaning is empty when the card is saved.
   ///
   /// In ko, this message translates to:
   /// **'뜻을 적어 주세요'**
   String get senseMeaningRequired;
 
-  /// Button under the senses of the word form that adds an empty sense.
+  /// Button under the back of the 앞뒤 form that adds a sense, making the back a list of senses.
   ///
   /// In ko, this message translates to:
   /// **'뜻 추가'**
   String get addSense;
 
-  /// Label of a field in the word form holding a text block of the back besides its senses, such as photo import's extras or a merged back.
+  /// Label of a field in the 앞뒤 form holding a text block a back of senses holds beside them, such as photo import's extras or a merged back.
   ///
   /// In ko, this message translates to:
   /// **'덧붙인 내용'**

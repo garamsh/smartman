@@ -32,9 +32,10 @@ Future<void> openPartOfSpeechPresets(BuildContext context) =>
 
 /// "품사 표시": the labels the card editor offers above the keyboard, in
 /// their order, each with its name. A tap on one edits it in place, its
-/// delete button removes it, "표시 추가" adds one, and each moves by a drag on its handle or
-/// by "위로" and "아래로" in the handle's menu. Every change is stored on the
-/// device at once (ADR 0100).
+/// delete button removes it, "표시 추가" adds one, and each moves by a drag
+/// on its handle or by "위로" and "아래로" in the handle's menu. While one is
+/// edited, no other moves or goes. Every change is stored on the device at
+/// once (ADR 0100).
 class PartOfSpeechPresetsScreen extends ConsumerStatefulWidget {
   const PartOfSpeechPresetsScreen({super.key});
 
@@ -114,14 +115,12 @@ class _PartOfSpeechPresetsScreenState
   }
 
   Future<void> _remove(int index) async {
-    if (_editing != null) _editing = null;
     await _store([..._presets]..removeAt(index));
   }
 
   Future<void> _move(int from, int to) async {
     final presets = [..._presets];
     presets.insert(to, presets.removeAt(from));
-    if (_editing != null) _editing = null;
     await _store(presets);
   }
 
@@ -157,6 +156,8 @@ class _PartOfSpeechPresetsScreenState
         ),
         itemCount: _presets.length,
         onReorderItem: _move,
+        // While a row is edited, the list holds what it does not store yet:
+        // no other row moves or goes until it is done.
         itemBuilder: (context, index) => _editing == index
             ? _EditingRow(
                 key: ValueKey(('editing', index)),
@@ -170,9 +171,11 @@ class _PartOfSpeechPresetsScreenState
                 index: index,
                 preset: _presets[index],
                 onEdit: _editing == null ? () => _edit(index) : null,
-                onRemove: () => _remove(index),
-                onUp: index == 0 ? null : () => _move(index, index - 1),
-                onDown: index == _presets.length - 1
+                onRemove: _editing == null ? () => _remove(index) : null,
+                onUp: _editing != null || index == 0
+                    ? null
+                    : () => _move(index, index - 1),
+                onDown: _editing != null || index == _presets.length - 1
                     ? null
                     : () => _move(index, index + 1),
               ),
@@ -201,7 +204,7 @@ class _PresetRow extends StatelessWidget {
   final int index;
   final LabelPreset preset;
   final VoidCallback? onEdit;
-  final VoidCallback onRemove;
+  final VoidCallback? onRemove;
   final VoidCallback? onUp;
   final VoidCallback? onDown;
 
@@ -214,7 +217,9 @@ class _PresetRow extends StatelessWidget {
         children: [
           ReorderableDragStartListener(
             index: index,
+            enabled: onRemove != null,
             child: PopupMenuButton<_Move>(
+              enabled: onRemove != null,
               tooltip: l10n.moveLabelPreset(preset.label),
               icon: Icon(LucideIcons.gripVertical, color: colors.muted),
               onSelected: (move) => switch (move) {

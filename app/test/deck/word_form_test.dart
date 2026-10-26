@@ -149,7 +149,7 @@ void main() {
   );
 
   testWidgets(
-    'a back of one meaning with no label is saved as text, as a basic card was, and a label or a second meaning makes it senses',
+    'a back of one meaning with no label is saved as text, as a basic card was, and a label, or a second meaning, makes it senses',
     (tester) async {
       final screens = await openNew(tester);
       await enter(tester, 'Front', 'cat');
@@ -166,6 +166,59 @@ void main() {
           CardSense(labels: [_noun], meaning: '고양이'),
         ]),
       ], reason: 'a label makes it senses');
+
+      // A second plain card: a second meaning makes it senses, no label.
+      await screens.push((deck) => CardEditorScreen(deck: deck));
+      await enter(tester, 'Front', 'dog');
+      await enter(tester, 'Back', '개');
+      await tap(screens, find.text('Add meaning'));
+      await enter(tester, 'Meaning 2', '견');
+      await tap(screens, find.text('Save'));
+      final dog = (await screens.cards()).singleWhere(
+        (card) => card.front.single == const TextContent('dog'),
+      );
+      expect(dog.back, [
+        const SensesContent([CardSense(meaning: '개'), CardSense(meaning: '견')]),
+      ], reason: 'a second meaning makes it senses');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a stored back of one plain sense, with its extras, stays senses when saved unchanged or edited, not text',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      const extras = TextContent('extras');
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [const TextContent('face')],
+          back: [
+            const SensesContent([CardSense(meaning: 'x')]),
+            extras,
+          ],
+        ),
+      );
+      final card = await _stored(screens);
+      expect(card.back, [
+        const SensesContent([CardSense(meaning: 'x')]),
+        extras,
+      ], reason: 'the setup stores the back asked');
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+      await tap(screens, find.text('Save'));
+      expect((await _stored(screens)).back, [
+        const SensesContent([CardSense(meaning: 'x')]),
+        extras,
+      ], reason: 'saved unchanged');
+
+      final saved = await _stored(screens);
+      await screens.push((deck) => CardEditorScreen(deck: deck, card: saved));
+      await enter(tester, 'Back', 'y');
+      await tap(screens, find.text('Save'));
+      expect((await _stored(screens)).back, [
+        const SensesContent([CardSense(meaning: 'y')]),
+        extras,
+      ], reason: 'edited, still senses with its extras');
       await screens.close();
     },
   );

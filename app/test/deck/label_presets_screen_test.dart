@@ -52,6 +52,14 @@ int _count(WidgetTester tester) => tester
     .widget<ReorderableListView>(find.byType(ReorderableListView))
     .itemCount;
 
+/// The screen's list, apart from any field's own scrolling.
+final _list = find
+    .descendant(
+      of: find.byType(ReorderableListView),
+      matching: find.byType(Scrollable),
+    )
+    .first;
+
 List<String> _stored(SharedPreferencesWithCache storage) => [
   for (final preset in labelPresets(storage, const []))
     '${preset.label}:${preset.name}',
@@ -163,6 +171,96 @@ void main() {
       await tester.tap(find.text('Move down'));
       await tester.pumpAndSettle();
       expect(_stored(storage).take(2), ['명:noun', '동:verb']);
+    },
+  );
+
+  testWidgets(
+    'a preset moves by a drag on its handle, and the order is stored',
+    (tester) async {
+      final storage = await _open(tester);
+      final handle = find.byTooltip('Move 동');
+      final gesture = await tester.startGesture(tester.getCenter(handle));
+      for (var step = 0; step < 6; step++) {
+        await gesture.moveBy(const Offset(0, -20));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(_stored(storage).take(2), ['동:verb', '명:noun']);
+    },
+  );
+
+  testWidgets(
+    'while a preset is added or edited, no other preset moves or goes, so nothing half-typed is stored',
+    (tester) async {
+      final storage = await _open(tester);
+      IconButton remove(String label) => tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byTooltip('Remove $label'),
+          matching: find.byType(IconButton),
+        ),
+      );
+      PopupMenuButton<Object?> handle(String label) => tester.widget(
+        find.ancestor(
+          of: find.byTooltip('Move $label'),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is PopupMenuButton,
+          ),
+        ),
+      );
+      expect(remove('명').onPressed, isNotNull, reason: 'control: idle');
+      expect(handle('명').enabled, isTrue, reason: 'control: idle');
+
+      await tester.scrollUntilVisible(
+        find.text('Add label'),
+        200,
+        scrollable: _list,
+      );
+      await tester.tap(find.text('Add label'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byTooltip('Remove 명'),
+        -200,
+        scrollable: _list,
+      );
+      expect(remove('명').onPressed, isNull);
+      expect(handle('명').enabled, isFalse);
+      // A drag on a handle moves nothing either.
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byTooltip('Move 동')),
+      );
+      for (var step = 0; step < 6; step++) {
+        await gesture.moveBy(const Offset(0, -20));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(_stored(storage), isEmpty, reason: 'nothing stored meanwhile');
+
+      await tester.scrollUntilVisible(
+        find.text('Done'),
+        200,
+        scrollable: _list,
+      );
+      await tester.enterText(find.widgetWithText(TextField, 'Label'), '숙어');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(_stored(storage).last, '숙어:');
+      expect(_stored(storage).take(2), [
+        '명:noun',
+        '동:verb',
+      ], reason: 'the drag moved nothing');
+      expect(
+        _stored(storage).where((preset) => preset.startsWith(':')),
+        isEmpty,
+        reason: 'no empty preset',
+      );
+      await tester.scrollUntilVisible(
+        find.byTooltip('Remove 명'),
+        -200,
+        scrollable: _list,
+      );
+      expect(remove('명').onPressed, isNotNull, reason: 'done, it can go');
     },
   );
 
