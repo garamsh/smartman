@@ -1020,6 +1020,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noDeckMatches => '찾는 덱이 없어요. 다른 단어로 검색해 보세요.';
 
   @override
+  String deckMastered(int cards, int mastered) {
+    return '$cards장 중 $mastered장 익힘';
+  }
+
+  @override
   String deckRowCards(int count) {
     return '$count장';
   }

@@ -86,15 +86,13 @@ class _DecksTabState extends ConsumerState<DecksTab> {
                 decks: DeckSelection(deck.id),
                 builder: (context, count) => TodayChip(count: count),
               ),
-              // A deck with no card has no share to draw.
-              progress: (widget.counts[deck.id] ?? 0) == 0
-                  ? null
-                  : ProgressCounter(
-                      decks: DeckSelection(deck.id),
-                      builder: (context, progress) => progress == null
-                          ? const SizedBox.shrink()
-                          : ProgressBar(progress: progress),
-                    ),
+              progress: ProgressCounter(
+                decks: DeckSelection(deck.id),
+                builder: (context, progress) => _DeckProgress(
+                  progress: progress,
+                  cardCount: widget.counts[deck.id] ?? 0,
+                ),
+              ),
             ),
           const SizedBox(height: AppSpace.s8),
           _ListEntry(
@@ -145,6 +143,37 @@ class TodayChip extends StatelessWidget {
       ),
       TodayCounted() || TodayPending() => const SizedBox.shrink(),
     };
+  }
+}
+
+/// A deck row's "n장 중 m장 익힘" over its progress bar, whose label carries
+/// the mastered, learning and new counts; "n장" alone while the progress is
+/// read, and for a deck with no card, which has nothing to draw.
+class _DeckProgress extends StatelessWidget {
+  const _DeckProgress({required this.progress, required this.cardCount});
+
+  final DeckProgress? progress;
+  final int cardCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final quiet = AppType.caption.copyWith(color: AppColors.of(context).muted);
+    final progress = this.progress;
+    if (progress == null || progress.total == 0) {
+      return Text(l10n.deckRowCards(cardCount), style: quiet);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: AppSpace.s4,
+      children: [
+        Text(
+          l10n.deckMastered(progress.total, progress.mastered),
+          style: quiet,
+        ),
+        ProgressBar(progress: progress),
+      ],
+    );
   }
 }
 

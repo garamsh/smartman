@@ -6,9 +6,9 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'model.dart';
 
-/// A deck on a row: its tile, its name and card count with "공개" when it is
-/// published and [today] beside them, and [progress] under them. A tap calls
-/// [onOpen].
+/// A deck on a row: its tile, its name with "공개" when it is published and
+/// [today] beside them, and [progress] under them, or its card count while
+/// [progress] is null. A tap calls [onOpen].
 class DeckRow extends StatelessWidget {
   const DeckRow({
     super.key,
@@ -59,32 +59,18 @@ class DeckRow extends StatelessWidget {
                       spacing: AppSpace.s8,
                       children: [
                         Expanded(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            spacing: AppSpace.s8,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  deck.name,
-                                  style: AppType.bodyStrong,
-                                ),
-                              ),
-                              Text(
-                                l10n.deckRowCards(cardCount),
-                                style: AppType.caption.copyWith(
-                                  color: colors.muted,
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: Text(deck.name, style: AppType.bodyStrong),
                         ),
                         if (deck.visibility is PublicDeck)
                           AppChip(label: l10n.publicChip),
                         ?today,
                       ],
                     ),
-                    ?progress,
+                    progress ??
+                        Text(
+                          l10n.cardCount(cardCount),
+                          style: AppType.caption.copyWith(color: colors.muted),
+                        ),
                   ],
                 ),
               ),

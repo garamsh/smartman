@@ -287,6 +287,7 @@
   "tabsLabel": "Tabs",
   "searchDecks": "Search decks",
   "noDeckMatches": "No deck matches. Try other words.",
+  "deckMastered": "{mastered} of {cards} mastered",
   "deckRowCards": "{count, plural, =1{1 card} other{{count} cards}}",
   "browsePublicDecksBody": "Copy decks other people made into yours",
   "createManuallyBody": "Name it and add cards one by one",
