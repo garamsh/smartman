@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
 import '../../design/theme.dart';
@@ -31,22 +30,12 @@ class SyncStatusView extends ConsumerWidget {
           text: l10n.syncSyncing,
           color: colors.muted,
         ),
-        Synced() => _StatusLine(
-          icon: Icon(LucideIcons.check, size: 18, color: colors.know),
-          text: l10n.syncSynced,
-          color: colors.muted,
-        ),
+        Synced() => _StatusLine(text: l10n.syncSynced, color: colors.muted),
         SyncInterrupted(failure: SyncOffline()) => _StatusLine(
-          icon: Icon(LucideIcons.cloudOff, size: 18, color: colors.muted),
           text: l10n.syncOffline,
           color: colors.muted,
         ),
         SyncInterrupted(failure: SyncRejected() || SyncFailed()) => _StatusLine(
-          icon: Icon(
-            LucideIcons.circleAlert,
-            size: 18,
-            color: colors.dontKnowText,
-          ),
           text: l10n.syncFailed,
           color: colors.dontKnowText,
           action: AppButton(
@@ -60,16 +49,17 @@ class SyncStatusView extends ConsumerWidget {
   }
 }
 
-/// An icon, a line of text read out as it changes, and an optional action.
+/// A line of text read out as it changes, after a progress [icon] while
+/// syncing, and an optional action. Every other state is said by its words.
 class _StatusLine extends StatelessWidget {
   const _StatusLine({
-    required this.icon,
+    this.icon,
     required this.text,
     required this.color,
     this.action,
   });
 
-  final Widget icon;
+  final Widget? icon;
   final String text;
   final Color color;
   final Widget? action;
@@ -79,7 +69,7 @@ class _StatusLine extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     spacing: AppSpace.s8,
     children: [
-      ExcludeSemantics(child: icon),
+      if (icon case final icon?) ExcludeSemantics(child: icon),
       Flexible(
         child: Semantics(
           liveRegion: true,

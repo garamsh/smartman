@@ -206,11 +206,6 @@ class PhotoImportBar extends StatelessWidget {
                         Row(
                           spacing: AppSpace.s8,
                           children: [
-                            Icon(
-                              LucideIcons.images,
-                              size: AppSize.smallIcon,
-                              color: colors.ink,
-                            ),
                             Expanded(
                               child: Text(
                                 label,

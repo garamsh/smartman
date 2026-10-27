@@ -1229,12 +1229,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get browsePublicDecksBody => '다른 사람이 만든 덱을 내 덱으로 가져와요';
-
-  @override
-  String get createManuallyBody => '이름을 정하고 카드를 하나씩 넣어요';
-
-  @override
   String progressSemantics(int mastered, int learning, int fresh) {
     return '익힘 $mastered장, 학습 중 $learning장, 새 카드 $fresh장';
   }
@@ -1542,9 +1536,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get masteredEmpty => '아직 익힌 카드가 없어요.';
-
-  @override
-  String get newDeckEntryBody => '새 덱을 시작할 방법을 골라요';
 
   @override
   String importTitleWords(int count) {

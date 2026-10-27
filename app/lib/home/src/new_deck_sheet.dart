@@ -36,7 +36,7 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
       (
         icon: LucideIcons.pencilLine,
         title: l10n.createManually,
-        body: l10n.createManuallyBody,
+        body: null,
         value: const _ByHand(),
       ),
       if (photoImport != null) ...[

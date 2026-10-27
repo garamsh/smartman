@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
+import '../../design/app_button.dart';
 import '../../design/app_chip.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
@@ -97,19 +98,17 @@ class _DecksTabState extends ConsumerState<DecksTab> {
               ),
             ),
           const SizedBox(height: AppSpace.s8),
-          _ListEntry(
-            icon: LucideIcons.plus,
-            title: l10n.newDeckTitle,
-            body: l10n.newDeckEntryBody,
-            onTap: () => showNewDeckSheet(context, ref),
+          AppButton(
+            label: l10n.newDeckTitle,
+            variant: AppButtonVariant.secondary,
+            onPressed: () => showNewDeckSheet(context, ref),
           ),
           if (sharing != null) ...[
             const SizedBox(height: AppSpace.s8),
-            _ListEntry(
-              icon: LucideIcons.compass,
-              title: l10n.browsePublicDecks,
-              body: l10n.browsePublicDecksBody,
-              onTap: () => Navigator.of(context).push(
+            AppButton(
+              label: l10n.browsePublicDecks,
+              variant: AppButtonVariant.text,
+              onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => sharing.browseScreen()),
               ),
             ),
@@ -175,65 +174,6 @@ class _DeckProgress extends StatelessWidget {
         ),
         ProgressBar(progress: progress),
       ],
-    );
-  }
-}
-
-/// A way onward under the deck rows, on an outline: making a deck, or other
-/// users' public decks.
-class _ListEntry extends StatelessWidget {
-  const _ListEntry({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final radius = BorderRadius.circular(AppRadius.row);
-    return MergeSemantics(
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(color: colors.outline, width: 1.5),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpace.s16),
-              child: Row(
-                spacing: AppSpace.s12,
-                children: [
-                  Icon(icon, color: colors.ink),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: AppType.bodyStrong),
-                        Text(
-                          body,
-                          style: AppType.caption.copyWith(color: colors.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(LucideIcons.chevronRight, color: colors.muted),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

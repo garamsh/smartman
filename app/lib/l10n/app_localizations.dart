@@ -2149,18 +2149,6 @@ abstract class AppLocalizations {
   /// **'{count}장'**
   String deckRowCards(int count);
 
-  /// Under 공개 덱 둘러보기 on the decks tab.
-  ///
-  /// In ko, this message translates to:
-  /// **'다른 사람이 만든 덱을 내 덱으로 가져와요'**
-  String get browsePublicDecksBody;
-
-  /// Under 직접 만들기 in the new-deck sheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'이름을 정하고 카드를 하나씩 넣어요'**
-  String get createManuallyBody;
-
   /// What a screen reader reads for a progress bar of mastered, learning and new cards.
   ///
   /// In ko, this message translates to:
@@ -2610,12 +2598,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'아직 익힌 카드가 없어요.'**
   String get masteredEmpty;
-
-  /// Under 새 덱 만들기 at the foot of the decks tab, which opens the new-deck sheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'새 덱을 시작할 방법을 골라요'**
-  String get newDeckEntryBody;
 
   /// Title of the photo import list when every card is a vocabulary entry: how many words were found.
   ///
