@@ -15,7 +15,6 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
-import 'package:smartman/deck/src/block_list.dart' show CardSide;
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/theme_choice.dart';
@@ -231,11 +230,13 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      // Types [text] into a new card's 글 on [side], the editor's only
+      // Types a new card's [front] and [back] into its two 글, the editor's only
       // fields: the front's first, then the back's.
-      Future<void> enterSide(CardSide side, String text) async {
-        await tester.enterText(find.byType(EditableText).at(side.index), text);
-        await tester.pumpAndSettle();
+      Future<void> enterSides(String front, String back) async {
+        for (final (index, text) in [front, back].indexed) {
+          await tester.enterText(find.byType(EditableText).at(index), text);
+          await tester.pumpAndSettle();
+        }
       }
 
       // The first-run home's one primary opens the new-deck sheet.
@@ -279,15 +280,13 @@ void main() {
         await tap(tester, find.text(ko.newCard));
         if (index == 0) await shot(tester, '04b-add-card-sheet');
         await tap(tester, find.text(ko.createManually));
-        await enterSide(CardSide.front, front);
-        await enterSide(CardSide.back, back);
+        await enterSides(front, back);
         if (index == 0) await shot(tester, '05-card-editor');
         await tap(tester, find.text(ko.save));
       }
       await tap(tester, find.text(ko.newCard));
       await tap(tester, find.text(ko.createManually));
-      await enterSide(CardSide.front, 'Ephemeral');
-      await enterSide(CardSide.back, '순간의');
+      await enterSides('Ephemeral', '순간의');
       await tap(tester, find.text(ko.save));
       await shot(tester, '06-duplicate-sheet');
       // Above a tall sheet, where the barrier's centre is not.
