@@ -6,23 +6,23 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
+import '../../design/app_list_row.dart';
 import '../../design/app_sheet.dart';
 import '../../design/app_text_field.dart';
 import '../../design/bottom_actions.dart';
 import '../../design/theme.dart';
 import 'hero.dart';
 import 'option_sheet.dart';
-import 'progress_bar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../photo_import/photo_import.dart';
 import '../../sharing/sharing.dart';
 import '../../study/study.dart';
 import '../../design/word_break.dart';
 
-/// A deck's page: its tile, name and card count, the white card that studies
-/// it, and its cards under a pinned row whose "뜻 보기" switch shows or hides
-/// every back, each back also toggled by a tap, searchable from the top
-/// bar; adds a card, opens one for editing, and the deck for renaming or
+/// A deck's page: its tile, name, card and mastered counts, the white card
+/// that studies it, and its cards as one group under a pinned row whose
+/// "뒷면 보기" switch shows or hides every back, searchable from the top bar;
+/// adds a card, opens one for editing on a tap, and the deck for renaming or
 /// deleting. While the deck holds no card, adding one is its one primary
 /// action and there is nothing to study.
 class DeckScreen extends ConsumerStatefulWidget {
@@ -47,11 +47,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   /// The card search, or null while it is closed.
   String? _query;
 
-  /// The "뜻 보기" switch, off each time the page opens.
+  /// The "뒷면 보기" switch, off each time the page opens.
   bool _showAll = false;
-
-  /// The cards a tap has set apart from the switch since it last changed.
-  final Set<CardId> _flipped = {};
 
   @override
   void initState() {
@@ -180,13 +177,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                                     style: AppType.title,
                                   ),
                                 ),
-                                Text(
-                                  public
-                                      ? l10n.deckSummaryPublic(value.length)
-                                      : l10n.deckSummary(value.length),
-                                  style: AppType.secondary.copyWith(
-                                    color: colors.muted,
-                                  ),
+                                _DeckSummary(
+                                  deck: widget.deck.id,
+                                  cards: value.length,
+                                  public: public,
                                 ),
                               ],
                             ),
@@ -248,11 +242,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     );
   }
 
-  /// The pinned "카드 n" row with its "뜻 보기" switch, then a row for each
-  /// card whose studied text holds the search, ignoring case, its back
-  /// shown as the switch and the card's own taps leave it. A card is
-  /// searched on the one face [oneFaceOf] gives it, and on its front and
-  /// back otherwise, so a back study never shows is not searched.
+  /// The pinned "카드" row with its "뒷면 보기" switch, then, as one group, a
+  /// row for each card whose studied text holds the search, ignoring case,
+  /// its back shown as the switch is. A card is searched on the one face
+  /// [oneFaceOf] gives it, and on its front and back otherwise, so a back
+  /// study never shows is not searched.
   List<Widget> _cardList(AppLocalizations l10n, List<Card> cards) {
     final query = (_query ?? '').trim().toLowerCase();
     final rows = [
@@ -269,12 +263,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     return [
       PinnedHeaderSliver(
         child: _CardListHeader(
-          count: rows.length,
           showAll: _showAll,
-          onShowAll: (show) => setState(() {
-            _showAll = show;
-            _flipped.clear();
-          }),
+          onShowAll: (show) => setState(() => _showAll = show),
         ),
       ),
       SliverPadding(
@@ -293,20 +283,15 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   ),
                 ),
               )
-            : SliverList.list(
+            : SliverAppGroup(
                 children: [
                   for (final card in rows)
                     CardBackRow(
                       key: ValueKey(card.id),
                       front: card.front,
                       back: card.back,
-                      shown: _showAll != _flipped.contains(card.id),
-                      onToggle: () => setState(() {
-                        if (!_flipped.remove(card.id)) {
-                          _flipped.add(card.id);
-                        }
-                      }),
-                      onEdit: () => _open(card),
+                      shown: _showAll,
+                      onOpen: () => _open(card),
                     ),
                 ],
               ),
@@ -430,16 +415,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   }
 }
 
-/// The row pinned above the card list: how many cards it lists, and the
-/// "뜻 보기" switch, whose label stays while the switch shows its state.
+/// The row pinned above the card list: the section label "카드", and the
+/// "뒷면 보기" switch, whose label stays while the switch shows its state.
 class _CardListHeader extends StatelessWidget {
-  const _CardListHeader({
-    required this.count,
-    required this.showAll,
-    required this.onShowAll,
-  });
+  const _CardListHeader({required this.showAll, required this.onShowAll});
 
-  final int count;
   final bool showAll;
   final ValueChanged<bool> onShowAll;
 
@@ -460,9 +440,15 @@ class _CardListHeader extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Semantics(
-                header: true,
-                child: Text(l10n.cardListTitle(count), style: AppType.label),
+              child: Padding(
+                padding: const EdgeInsets.only(left: AppSpace.s4),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.cardListTitle,
+                    style: AppType.section.copyWith(color: colors.muted),
+                  ),
+                ),
               ),
             ),
             MergeSemantics(
@@ -486,8 +472,40 @@ class _CardListHeader extends StatelessWidget {
   }
 }
 
-/// The deck's white card: today's count and its minutes, "n장 중 m장 익힘" over
-/// the progress bar, and the button that studies the deck.
+/// The line under the deck's name: its cards, the page's one count of them,
+/// then how many are mastered once read while it holds any, and "공개" while
+/// it is published.
+class _DeckSummary extends StatelessWidget {
+  const _DeckSummary({
+    required this.deck,
+    required this.cards,
+    required this.public,
+  });
+
+  final DeckId deck;
+  final int cards;
+  final bool public;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ProgressCounter(
+      decks: DeckSelection(deck),
+      builder: (context, progress) => Text(
+        [
+          l10n.deckSummary(cards),
+          if (progress != null && cards > 0)
+            l10n.deckMasteredCount(progress.mastered),
+          if (public) l10n.publicChip,
+        ].join(' · '),
+        style: AppType.secondary.copyWith(color: AppColors.of(context).muted),
+      ),
+    );
+  }
+}
+
+/// The deck's white card: "오늘 학습" with the minutes at its right, today's
+/// count large, and the button that studies the deck.
 class _DeckTodayCard extends StatelessWidget {
   const _DeckTodayCard({required this.deck, required this.onStudy});
 
@@ -499,71 +517,54 @@ class _DeckTodayCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final quiet = AppType.secondary.copyWith(color: colors.muted);
-    return Semantics(
-      container: true,
-      label: l10n.todayThisDeck,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          boxShadow: AppShadow.card(colors),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.s20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: AppSpace.s12,
-            children: [
-              TodayCounter(
-                decks: DeckSelection(deck),
-                builder: (context, count) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: AppSpace.s4,
-                  children: [
-                    Text(l10n.todayTitle, style: quiet),
-                    switch (count) {
-                      TodayCounted(:final total, :final minutes) => HeroCount(
-                        count: total,
-                        unit: l10n.todayCountMinutes(minutes),
-                        semantics: l10n.todayCards(total),
-                      ),
-                      TodayUnavailable(:final message) => Text(
-                        message,
-                        style: quiet,
-                      ),
-                      TodayPending() => const SizedBox(height: AppSpace.s40),
-                    },
-                    if (count case TodayCounted(backlog: true))
-                      Text(l10n.backlogPaused, style: quiet),
-                  ],
-                ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadow.card(colors),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpace.s20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSpace.s12,
+          children: [
+            TodayCounter(
+              decks: DeckSelection(deck),
+              builder: (context, count) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: AppSpace.s4,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text(l10n.deckTodayTitle, style: quiet)),
+                      if (count case TodayCounted(:final minutes))
+                        Text(l10n.todayAbout(minutes), style: quiet),
+                    ],
+                  ),
+                  switch (count) {
+                    TodayCounted(:final total) => HeroCount(
+                      count: total,
+                      unit: l10n.deckTodayUnit,
+                      semantics: l10n.todayCards(total),
+                    ),
+                    TodayUnavailable(:final message) => Text(
+                      message,
+                      style: quiet,
+                    ),
+                    TodayPending() => const SizedBox(height: AppSpace.s40),
+                  },
+                  if (count case TodayCounted(backlog: true))
+                    Text(l10n.backlogPaused, style: quiet),
+                ],
               ),
-              ProgressCounter(
-                decks: DeckSelection(deck),
-                builder: (context, progress) => progress == null
-                    ? const SizedBox(height: AppSpace.s28)
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: AppSpace.s8,
-                        children: [
-                          Text(
-                            l10n.deckMastered(
-                              progress.total,
-                              progress.mastered,
-                            ),
-                            style: quiet,
-                          ),
-                          ProgressBar(progress: progress, height: AppSpace.s8),
-                        ],
-                      ),
-              ),
-              AppButton(
-                label: l10n.studyDeck,
-                icon: LucideIcons.play,
-                onPressed: onStudy,
-              ),
-            ],
-          ),
+            ),
+            AppButton(
+              label: l10n.studyDeck,
+              icon: LucideIcons.play,
+              onPressed: onStudy,
+            ),
+          ],
         ),
       ),
     );

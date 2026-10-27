@@ -389,7 +389,7 @@ void main() {
         expect(import.bar, 'Review 4 cards');
 
         await import.reopen();
-        expect(_shown('Found 4 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         await import.tap(_shown('Cancel'));
         await import.tap(_shown('Discard'));
         expect(import.bar, isNull);
@@ -419,7 +419,7 @@ void main() {
         await next.answerCall(0, {'chien': 'dog'});
         await next.answerCall(1, {'oiseau': 'bird'});
         await tester.pumpAndSettle();
-        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(_shown('chat'), findsOneWidget, reason: 'read before the close');
         expect(next.client.calls, hasLength(2), reason: 'nothing resent');
         await next.close();
@@ -459,7 +459,7 @@ void main() {
         expect(next.bar, 'Review 2 cards');
         await next.reopen();
         expect(_shown('Resume'), findsNothing, reason: 'nothing to resume');
-        expect(_shown('Found 2 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(next.client.calls, isEmpty);
         await next.close();
       },
@@ -485,7 +485,7 @@ void main() {
         final next = await _Import.open(tester, restoring: first.store);
         expect(next.bar, 'Review 3 cards');
         await next.reopen();
-        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(next.client.calls, isEmpty, reason: 'nothing resent');
         await next.close();
       },
@@ -531,7 +531,7 @@ void main() {
         expect(_shown('Remove'), findsOneWidget);
         await import.answerCall(0, {'chat': 'cat'});
         await import.tap(_shown('Remove'));
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         await import.close();
       },
     );
@@ -554,7 +554,7 @@ void main() {
         expect(_shown('Remove'), findsOneWidget);
         await import.answerCall(0, {'chat': 'cat'});
         await import.tap(_shown('Remove'));
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         await import.close();
       },
     );
@@ -586,7 +586,7 @@ void main() {
           await import.answerCall(i, {'w$i': 'm$i'});
         }
         await tester.pumpAndSettle();
-        expect(_shown('Found 49 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         await toEnd();
         expect(_shown('Add more photos'), findsOneWidget, reason: 'under 50');
 
@@ -631,7 +631,7 @@ void main() {
         await import.answerCall(2, {'oiseau': 'bird'});
         await import.answerCall(3, {'cheval': 'horse'});
         await tester.pumpAndSettle();
-        expect(_shown('Found 4 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         await import.close();
       },
     );
@@ -698,7 +698,7 @@ void main() {
         expect(import.client.calls, hasLength(4));
         await import.answerCall(3, {'chat': 'cat'});
         await tester.pumpAndSettle();
-        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(find.bySemanticsLabel(RegExp('^Photo 1, ')), findsOne);
         await import.close();
       },
@@ -715,7 +715,7 @@ void main() {
 
         await tester.tap(_shown('Remove'));
         await tester.pumpAndSettle();
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(_shown('chien'), findsOneWidget);
         await import.close();
       },
@@ -865,7 +865,7 @@ void main() {
     ) async {
       final import = await _Import.open(tester);
       await import.extract({'chat': 'cat'});
-      final title = tester.widget<Text>(_shown('Found 1 word'));
+      final title = tester.widget<Text>(_shown('Words found'));
       expect(title.style?.fontSize, AppType.title.fontSize);
       expect(title.style?.height, AppType.title.height);
       await import.close();
@@ -1040,7 +1040,7 @@ void main() {
         expect(import.client.calls.single.photo.bytes, testPhoto.bytes);
         import.client.answer({'chien': 'dog'});
         await tester.pumpAndSettle();
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         await import.close();
       });
     }
@@ -1308,12 +1308,12 @@ void main() {
         final import = await _Import.open(tester);
         await import.extractCards(words);
 
-        expect(_shown('Found 3 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(_shown("Adds to the deck '"), findsOneWidget);
         expect(_shown('French'), findsOneWidget);
         expect(_shown('최빈출 단어 2'), findsOneWidget);
         expect(_shown('빈출 숙어 1'), findsOneWidget);
-        expect(_shown('Word → meaning'), findsNWidgets(2));
+        expect(_shown('Word on the front'), findsNWidgets(2));
         expect(_shown('face'), findsOneWidget);
         expect(_shown('[동]직면하다, 마주하다\n[명]표면, 겉면'), findsOneWidget);
         expect(_shown('~뿐만 아니라'), findsOneWidget, reason: 'no label');
@@ -1336,7 +1336,7 @@ void main() {
         expect(_shown('Made 3 cards'), findsOneWidget);
         expect(_shown('모음조화 2'), findsOneWidget);
         expect(_shown('Identify · 모음조화 1'), findsOneWidget);
-        expect(_shown('Front → back'), findsNWidgets(2));
+        expect(_shown('Question on the front'), findsNWidgets(2));
         expect(import.included('양성모음'), isTrue);
         expect(import.included("'아름다운 꽃'의 '아'"), isFalse);
         expect(_shown('Add 2 cards'), findsOneWidget);
@@ -1402,8 +1402,12 @@ void main() {
 
         await import.menu('빈출 숙어');
         expect(find.byType(MenuItemButton), findsNWidgets(6));
-        await import.pickItem('Meaning → word');
-        expect(_shown('Meaning → word'), findsOneWidget, reason: 'header');
+        await import.pickItem('Meaning on the front');
+        expect(
+          _shown('Meaning on the front'),
+          findsOneWidget,
+          reason: 'header',
+        );
         expect(_shown('Add 3 cards'), findsOneWidget);
 
         await import.menu('최빈출 단어');
@@ -1484,11 +1488,11 @@ void main() {
 
       await import.menu('모음조화');
       expect(
-        find.widgetWithText(MenuItemButton, 'Meaning → word'),
+        find.widgetWithText(MenuItemButton, 'Meaning on the front'),
         findsNothing,
       );
-      await import.pickItem('Swap sides');
-      expect(_shown('Back → front'), findsOneWidget);
+      await import.pickItem('Swap front and back');
+      expect(_shown('Answer on the front'), findsOneWidget);
 
       await import.tap(_shown('Add 2 cards'));
       expect(await import.cards(import.french), [
@@ -1535,7 +1539,10 @@ void main() {
         await tester.pumpAndSettle();
 
         await import.menu('대명사');
-        expect(find.widgetWithText(MenuItemButton, 'Swap sides'), findsNothing);
+        expect(
+          find.widgetWithText(MenuItemButton, 'Swap front and back'),
+          findsNothing,
+        );
         // Control: the menu is open, with its other item.
         expect(
           find.widgetWithText(MenuItemButton, 'Leave out this group'),
@@ -1645,6 +1652,10 @@ void main() {
       final import = await _Import.open(tester, deck: (_) => null);
       await import.extract({'chien': 'dog', 'chat': 'cat'});
       expect(_shown('New deck'), findsOneWidget);
+      // The line says a new deck, not a deck named "New deck", as it says
+      // a chosen deck's name in quotes.
+      expect(_shown('Adds to '), findsOneWidget);
+      expect(_shown("Adds to the deck '"), findsNothing);
       expect(await import.deckNames(), ['French', 'Spanish']);
 
       await import.tap(_shown('Add 2 cards'));
@@ -1695,12 +1706,12 @@ void main() {
         final import = await _Import.open(tester);
         await import.extractCards(words);
         await import.menu('빈출 숙어');
-        await import.pickItem('Meaning → word');
+        await import.pickItem('Meaning on the front');
         await import.tap(_shown('Add 3 cards'));
 
         await import.extractCards(words);
-        expect(_shown('Meaning → word'), findsOneWidget, reason: '빈출 숙어');
-        expect(_shown('Word → meaning'), findsOneWidget, reason: '최빈출 단어');
+        expect(_shown('Meaning on the front'), findsOneWidget, reason: '빈출 숙어');
+        expect(_shown('Word on the front'), findsOneWidget, reason: '최빈출 단어');
 
         // Saved into Spanish, a form is Spanish's alone.
         await import.menu('최빈출 단어');
@@ -1711,7 +1722,7 @@ void main() {
 
         await import.extractCards(words);
         expect(_shown('Both ways'), findsNothing, reason: "French's forms");
-        expect(_shown('Meaning → word'), findsOneWidget);
+        expect(_shown('Meaning on the front'), findsOneWidget);
         await import.tap(_shown('French'));
         await import.tap(_shown('Spanish'));
         expect(_shown('Both ways'), findsOneWidget, reason: "Spanish's forms");
@@ -1728,7 +1739,7 @@ void main() {
           word(front: 'Run', meaning: '경영하다', partOfSpeech: '[동]'),
         ]);
 
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(_shown('Page 1'), findsOneWidget);
         expect(_shown('[동]달리다\n[동]경영하다'), findsOneWidget);
         await import.close();
@@ -1759,7 +1770,7 @@ void main() {
 
         import.photos.cameraPhoto = null;
         await import.tap(_shown('Retake'));
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(import.included('a'), isFalse, reason: 'kept as it was');
         expect(import.client.calls, hasLength(1));
 
@@ -1767,7 +1778,7 @@ void main() {
         await import.retake();
         import.client.answer({'b': '2', 'c': '3'});
         await tester.pumpAndSettle();
-        expect(_shown('Found 2 words'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(_shown('a'), findsNothing);
         expect(await import.cards(import.french), isEmpty);
         await import.close();
@@ -1956,7 +1967,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(_shown('Found 1 word'), findsOneWidget);
+        expect(_shown('Words found'), findsOneWidget);
         expect(import.included('chat'), isTrue);
         await import.close();
       },
@@ -2234,7 +2245,7 @@ void main() {
       ),
       (
         const SignInRequired(),
-        'You need to sign in. Sign in again from the account screen.',
+        'You need to sign in. Sign in again from Settings.',
         false,
         false,
       ),

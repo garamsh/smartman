@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
@@ -52,26 +50,23 @@ class CardSplitRow extends StatelessWidget {
   }
 }
 
-/// A card's front on its row, with its back behind a bar unless
-/// [shown], or a whole card's front with its blanks empty unless [shown]; a
-/// tap calls [onToggle], whose owner decides what [shown] becomes. The pencil
-/// at its end opens the card with [onEdit], and so do a long-press and a
-/// screen reader's action on the row.
+/// A card's row: its front, and its back muted after it when [shown], or a
+/// whole card's front with its blanks empty unless [shown]. A tap opens the
+/// card with [onOpen], and a screen reader hears the row as one button.
+/// Inside an [AppGroup] it is one of the group's rows.
 class CardBackRow extends StatelessWidget {
   const CardBackRow({
     super.key,
     required this.front,
     required this.back,
     required this.shown,
-    required this.onToggle,
-    required this.onEdit,
+    required this.onOpen,
   });
 
   final List<Content> front;
   final List<Content> back;
   final bool shown;
-  final VoidCallback onToggle;
-  final VoidCallback onEdit;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -83,86 +78,55 @@ class CardBackRow extends StatelessWidget {
     final spokenBack = whole
         ? spokenContent(l10n, front, revealed: true)
         : describeContent(l10n, back);
-    final radius = Radius.circular(AppRadius.row);
-    return AppRowSurface(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: AppSize.cta + 4),
-        child: Row(
-          children: [
-            Expanded(
-              // The toggle is one node beside the pencil, which a screen
-              // reader reaches on its own.
-              child: Semantics(
-                container: true,
-                button: true,
-                label: shown
-                    ? l10n.cardBackShown(spokenFront, spokenBack)
-                    : l10n.cardBackHidden(spokenFront),
-                onTapHint: shown ? l10n.hideBack : l10n.showBack,
-                onTap: onToggle,
-                customSemanticsActions: {
-                  CustomSemanticsAction(label: l10n.editCard): onEdit,
-                },
-                excludeSemantics: true,
-                child: InkWell(
-                  borderRadius: BorderRadius.horizontal(left: radius),
-                  onTap: onToggle,
-                  onLongPress: onEdit,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpace.s16,
-                      AppSpace.s12,
-                      AppSpace.s4,
-                      AppSpace.s12,
-                    ),
-                    child: whole
-                        ? WholeCardView(
-                            front,
-                            revealed: shown,
+    return Semantics(
+      container: true,
+      button: true,
+      label: shown
+          ? l10n.cardBackShown(spokenFront, spokenBack)
+          : l10n.cardBackHidden(spokenFront),
+      onTapHint: l10n.editCard,
+      onTap: onOpen,
+      excludeSemantics: true,
+      child: AppRowSurface(
+        onTap: onOpen,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSize.cta),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.s16,
+              vertical: AppSpace.s12,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: whole
+                  ? WholeCardView(
+                      front,
+                      revealed: shown,
+                      style: AppType.bodyStrong,
+                    )
+                  : Row(
+                      spacing: AppSpace.s12,
+                      children: [
+                        Expanded(
+                          child: Text.rich(
+                            contentSpan(l10n, front),
                             style: AppType.bodyStrong,
-                          )
-                        : Row(
-                            spacing: AppSpace.s12,
-                            children: [
-                              Expanded(
-                                child: Text.rich(
-                                  contentSpan(l10n, front),
-                                  style: AppType.bodyStrong,
-                                ),
-                              ),
-                              if (shown)
-                                Expanded(
-                                  child: Text.rich(
-                                    contentSpan(l10n, back),
-                                    textAlign: TextAlign.end,
-                                    style: AppType.secondary.copyWith(
-                                      color: colors.ink2,
-                                    ),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  width: AppSize.cta * 2 - AppSpace.s16,
-                                  height: AppSpace.s24 - 2,
-                                  decoration: BoxDecoration(
-                                    color: colors.hairline,
-                                    borderRadius: BorderRadius.circular(
-                                      AppSpace.s8,
-                                    ),
-                                  ),
-                                ),
-                            ],
                           ),
-                  ),
-                ),
-              ),
+                        ),
+                        if (shown)
+                          Expanded(
+                            child: Text.rich(
+                              contentSpan(l10n, back),
+                              textAlign: TextAlign.end,
+                              style: AppType.secondary.copyWith(
+                                color: colors.muted,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
             ),
-            IconButton(
-              tooltip: l10n.editCard,
-              icon: Icon(LucideIcons.pencil, color: colors.ink2),
-              onPressed: onEdit,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -170,7 +134,7 @@ class CardBackRow extends StatelessWidget {
 }
 
 /// One line of text for a card side: a cloze or a table with its blanks
-/// filled, a photo as "사진", a sound as "음성", and a block this version
+/// filled, a photo as "사진", a sound as "소리", and a block this version
 /// cannot show named by its type.
 String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
     .map(

@@ -37,7 +37,6 @@ class _AutoplayAudioRowState extends ConsumerState<AutoplayAudioRow> {
     final l10n = AppLocalizations.of(context);
     return AppListRow(
       title: l10n.autoplayAudio,
-      subtitle: l10n.autoplayAudioDescription,
       trailing: Switch(value: _on, onChanged: _set),
       onTap: () => _set(!_on),
     );

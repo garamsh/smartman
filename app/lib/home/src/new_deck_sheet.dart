@@ -30,7 +30,7 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
   final photoImport = ref.read(photoImportProvider);
   final choice = await showOptionSheet<_NewDeck>(
     context,
-    title: l10n.newDeckTitle,
+    title: l10n.newDeck,
     options: [
       (title: l10n.createManually, body: null, value: const _ByHand()),
       if (photoImport != null) ...[

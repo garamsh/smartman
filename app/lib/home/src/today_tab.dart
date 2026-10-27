@@ -8,7 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../account/account.dart';
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
-import '../../design/mascot.dart';
+import 'mascot.dart';
 import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
@@ -197,7 +197,7 @@ class BrandTitle extends StatelessWidget {
   );
 }
 
-/// The account's avatar at the end of a top bar, which opens the account
+/// The account's avatar at the end of a top bar, which opens the settings
 /// screen.
 class AccountButton extends StatelessWidget {
   const AccountButton({super.key});
@@ -212,13 +212,11 @@ class AccountButton extends StatelessWidget {
         MaterialPageRoute<void>(
           builder: (_) => const AccountScreen(
             syncStatus: SyncStatusView(),
-            studySetting: Column(
-              children: [
-                DailyMinutesRow(),
-                AutoplayAudioRow(),
-                PartOfSpeechPresetsRow(),
-              ],
-            ),
+            studySettings: [
+              DailyMinutesRow(),
+              AutoplayAudioRow(),
+              PartOfSpeechPresetsRow(),
+            ],
           ),
         ),
       ),

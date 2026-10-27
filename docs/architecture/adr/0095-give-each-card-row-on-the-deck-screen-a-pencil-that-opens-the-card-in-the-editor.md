@@ -1,6 +1,6 @@
 # ADR 0095: Give each card row on the deck screen a pencil that opens the card in the editor
 
-> Status: accepted
+> Status: superseded by ADR-0118
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

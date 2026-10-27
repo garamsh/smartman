@@ -174,13 +174,13 @@ class _ImportListViewState extends State<ImportListView> {
                 header: true,
                 child: Text(
                   _list.allVocabulary
-                      ? l10n.importTitleWords(rows)
+                      ? l10n.importTitleWords
                       : l10n.importTitleCards(rows),
                   style: AppType.title.copyWith(color: colors.ink),
                 ),
               ),
               _DeckLine(
-                name: widget.target?.name ?? l10n.newDeck,
+                name: widget.target?.name,
                 onTap: () => _chooseTarget(context),
               ),
               if (_list.photoCount <= 1)
@@ -260,7 +260,7 @@ class _ImportListViewState extends State<ImportListView> {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     Widget check(bool chosen) => chosen
-        ? Icon(LucideIcons.check, color: colors.know)
+        ? Icon(LucideIcons.check, color: colors.ink)
         : const SizedBox.shrink();
     final target = widget.target;
     final chosen = await showAppSheet<_TargetChoice>(
@@ -300,11 +300,13 @@ final class _TargetChoice {
   final DeckId? deck;
 }
 
-/// "덱 '`name`'에 추가돼요", the name a button that opens the deck chooser.
+/// "덱 '`name`'에 추가돼요", or "새 덱에 추가돼요" while no deck is chosen, the
+/// name a button that opens the deck chooser.
 class _DeckLine extends StatelessWidget {
   const _DeckLine({required this.name, required this.onTap});
 
-  final String name;
+  /// The chosen deck's name, or null for a new deck made on saving.
+  final String? name;
   final VoidCallback onTap;
 
   @override
@@ -313,7 +315,12 @@ class _DeckLine extends StatelessWidget {
     final colors = AppColors.of(context);
     // The localized line, split around the name it holds.
     const marker = '\u0000';
-    final [before, after] = l10n.importDeck(marker).split(marker);
+    final name = this.name;
+    final [
+      before,
+      after,
+    ] = (name == null ? l10n.importNewDeck(marker) : l10n.importDeck(marker))
+        .split(marker);
     final style = AppType.label.copyWith(color: colors.muted);
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -331,7 +338,7 @@ class _DeckLine extends StatelessWidget {
               decoration: TextDecoration.underline,
             ),
           ),
-          child: Text(name),
+          child: Text(name ?? l10n.newDeck),
         ),
         if (after.isNotEmpty) Text(after, style: style),
       ],

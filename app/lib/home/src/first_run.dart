@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../design/mascot.dart';
+import 'mascot.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 

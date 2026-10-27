@@ -104,7 +104,7 @@ abstract class AppLocalizations {
   /// **'smartman'**
   String get appTitle;
 
-  /// Button and dialog title for creating a deck.
+  /// Title of the new-deck sheet and of the sheet that names a new deck, and the deck choosers' new deck.
   ///
   /// In ko, this message translates to:
   /// **'새 덱'**
@@ -209,7 +209,7 @@ abstract class AppLocalizations {
   /// Error shown when a deck name is empty.
   ///
   /// In ko, this message translates to:
-  /// **'이름을 입력하세요'**
+  /// **'이름을 입력해 주세요'**
   String get deckNameRequired;
 
   /// Shown when a deck has no card.
@@ -583,12 +583,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'앞면 소리 자동 재생'**
   String get autoplayAudio;
-
-  /// Line under the autoplay setting's title.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드가 나오면 앞면의 소리를 한 번 들려줘요'**
-  String get autoplayAudioDescription;
 
   /// Screen-reader name of a block's menu in the card editor, which moves it up or down or deletes it.
   ///
@@ -1114,7 +1108,7 @@ abstract class AppLocalizations {
   /// Shown when the daily study minutes could not be written to the local database.
   ///
   /// In ko, this message translates to:
-  /// **'공부 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.'**
+  /// **'학습 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.'**
   String get settingNotSaved;
 
   /// Heading of the completion card, shown in the current card's place once no card is left today.
@@ -1171,16 +1165,16 @@ abstract class AppLocalizations {
   /// **'이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.'**
   String get schedulingFailure;
 
-  /// Label of the home screen button that opens the account screen.
+  /// Label of the home screen's avatar button, which opens the settings screen.
   ///
   /// In ko, this message translates to:
-  /// **'계정'**
+  /// **'설정'**
   String get account;
 
-  /// Title of the account screen.
+  /// Title of the settings screen.
   ///
   /// In ko, this message translates to:
-  /// **'계정'**
+  /// **'설정'**
   String get accountTitle;
 
   /// Sign-in screen line under the logo, saying what the app does, in two lines.
@@ -1243,17 +1237,23 @@ abstract class AppLocalizations {
   /// **'Google 로그인이 거부됐어요. 다시 시도해 주세요.'**
   String get accountRejected;
 
-  /// Heading of the account screen section that holds sign-out.
+  /// Heading of the settings screen section that holds the account's email and sign-out.
   ///
   /// In ko, this message translates to:
   /// **'계정'**
   String get accountSection;
 
-  /// Heading of the account screen section that chooses the theme.
+  /// Heading of the settings screen section that holds the theme.
   ///
   /// In ko, this message translates to:
   /// **'화면'**
   String get displaySection;
+
+  /// The settings screen's theme row, with the current choice at its right, and the title of the sheet that chooses 시스템, 라이트 or 다크.
+  ///
+  /// In ko, this message translates to:
+  /// **'테마'**
+  String get themeTitle;
 
   /// Theme choice: follow the device light or dark setting.
   ///
@@ -1327,16 +1327,16 @@ abstract class AppLocalizations {
   /// **'이 카드의 학습 기록도 함께 삭제돼요.'**
   String get deleteCardBody;
 
-  /// Title of the sign-out warning shown when some changes could not reach the server.
+  /// Title of the sign-out confirmation shown when some changes could not reach the server: a question.
   ///
   /// In ko, this message translates to:
-  /// **'동기화되지 않은 변경이 있어요'**
+  /// **'동기화하지 않고 로그아웃할까요?'**
   String get unsyncedChangesTitle;
 
   /// Body of the sign-out warning: unsynced changes are lost when signing out.
   ///
   /// In ko, this message translates to:
-  /// **'동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.'**
+  /// **'동기화되지 않은 변경은 이 기기에서 삭제되고, 다른 기기에서도 볼 수 없어요.'**
   String get unsyncedChangesBody;
 
   /// Sign-out warning action that signs out despite unsynced changes.
@@ -1348,20 +1348,14 @@ abstract class AppLocalizations {
   /// Shown when sign-out could not clear the device's data.
   ///
   /// In ko, this message translates to:
-  /// **'이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.'**
+  /// **'이 기기의 데이터를 삭제하지 못했어요. 다른 계정으로 로그인하면 삭제돼요.'**
   String get dataNotCleared;
 
-  /// Account screen row that deletes the account.
+  /// The settings screen's last row, in red, which deletes the account.
   ///
   /// In ko, this message translates to:
   /// **'계정 삭제'**
   String get deleteAccount;
-
-  /// Line under the delete-account row: what deletion removes, and that it cannot be undone.
-  ///
-  /// In ko, this message translates to:
-  /// **'계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.'**
-  String get deleteAccountNote;
 
   /// Title of the account deletion confirmation.
   ///
@@ -1372,7 +1366,7 @@ abstract class AppLocalizations {
   /// Body of the account deletion confirmation: what is removed, and what stays.
   ///
   /// In ko, this message translates to:
-  /// **'서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.'**
+  /// **'서버와 이 기기의 덱, 카드, 학습 기록이 모두 삭제되고, 다른 사람이 가져간 덱과 Google 계정은 남아요.'**
   String get deleteAccountBody;
 
   /// Accessible label of the progress indicator while deleting the account.
@@ -1639,12 +1633,6 @@ abstract class AppLocalizations {
   /// **'다른 사진 고르기'**
   String get pickAnother;
 
-  /// First-run home's one primary button, which opens the new-deck sheet.
-  ///
-  /// In ko, this message translates to:
-  /// **'덱 만들기'**
-  String get makeDeck;
-
   /// Line under '사진 찍기' on the new-deck and add-card sheets.
   ///
   /// In ko, this message translates to:
@@ -1708,7 +1696,7 @@ abstract class AppLocalizations {
   /// Photo import failure: no session, or one the server refused.
   ///
   /// In ko, this message translates to:
-  /// **'로그인이 필요해요. 계정 화면에서 다시 로그인해 주세요.'**
+  /// **'로그인이 필요해요. 설정에서 다시 로그인해 주세요.'**
   String get signInRequired;
 
   /// Photo import failure: the server answered unexpectedly.
@@ -1744,7 +1732,7 @@ abstract class AppLocalizations {
   /// Deck menu item that publishes the deck.
   ///
   /// In ko, this message translates to:
-  /// **'공개하기'**
+  /// **'덱 공개'**
   String get publish;
 
   /// Deck menu item that makes a public deck private.
@@ -1822,7 +1810,7 @@ abstract class AppLocalizations {
   /// Sharing failure: the server refused the session or the request.
   ///
   /// In ko, this message translates to:
-  /// **'요청이 거절됐어요. 계정 화면에서 다시 로그인한 뒤 시도해 주세요.'**
+  /// **'요청이 거절됐어요. 설정에서 다시 로그인한 뒤 시도해 주세요.'**
   String get sharingRejected;
 
   /// Sharing failure: the server answered unexpectedly.
@@ -1849,11 +1837,17 @@ abstract class AppLocalizations {
   /// **'카드 {total}장 중 처음 {shown}장'**
   String previewFirstCards(int shown, int total);
 
-  /// Menu item and dialog button that report a public deck.
+  /// Public deck menu item that opens the report sheet.
   ///
   /// In ko, this message translates to:
-  /// **'신고하기'**
+  /// **'덱 신고'**
   String get reportDeck;
+
+  /// The report sheet's final button, which sends the report.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고'**
+  String get reportConfirm;
 
   /// Menu item that blocks a public deck's owner.
   ///
@@ -1912,7 +1906,7 @@ abstract class AppLocalizations {
   /// Body of the block confirmation.
   ///
   /// In ko, this message translates to:
-  /// **'이 사용자의 덱이 둘러보기에 더 이상 나오지 않아요.'**
+  /// **'이 사용자의 덱이 공개 덱에 더 이상 나오지 않아요.'**
   String get blockBody;
 
   /// Confirms blocking a user.
@@ -1972,7 +1966,7 @@ abstract class AppLocalizations {
   /// Title of the publish sheet.
   ///
   /// In ko, this message translates to:
-  /// **'\"{name}\" 공개하기'**
+  /// **'\"{name}\" 공개'**
   String publishTitle(String name);
 
   /// Label of the display name field.
@@ -1990,7 +1984,7 @@ abstract class AppLocalizations {
   /// Error for a display name of the wrong length.
   ///
   /// In ko, this message translates to:
-  /// **'2~20자로 입력하세요'**
+  /// **'2~20자로 입력해 주세요'**
   String get displayNameLength;
 
   /// Label of the description field when publishing.
@@ -2002,7 +1996,7 @@ abstract class AppLocalizations {
   /// Error for a description that is too long.
   ///
   /// In ko, this message translates to:
-  /// **'{max}자 이내로 입력하세요'**
+  /// **'{max}자 이내로 입력해 주세요'**
   String deckDescriptionTooLong(int max);
 
   /// Agreement checkbox the publish button requires.
@@ -2044,7 +2038,7 @@ abstract class AppLocalizations {
   /// 오늘 tab line under the no-cards heading.
   ///
   /// In ko, this message translates to:
-  /// **'덱에 카드를 추가해 시작해요'**
+  /// **'덱에 카드를 추가해 시작해요.'**
   String get noCardsBody;
 
   /// Quiet button on the 오늘 tab's no-cards state that opens the user's one deck.
@@ -2056,7 +2050,7 @@ abstract class AppLocalizations {
   /// Button on the 오늘 tab's no-cards state, with several decks, that shows the 덱 tab.
   ///
   /// In ko, this message translates to:
-  /// **'덱에서 카드 추가하기'**
+  /// **'덱에서 카드 추가'**
   String get addCardsInDecks;
 
   /// Home screen heading before the user has any deck.
@@ -2071,10 +2065,10 @@ abstract class AppLocalizations {
   /// **'단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.'**
   String get emptyHomeBody;
 
-  /// Empty home screen button that opens the new-deck sheet.
+  /// The new-deck and add-card sheets' row that starts by typing: a deck named by hand, or a card in the editor.
   ///
   /// In ko, this message translates to:
-  /// **'직접 만들기'**
+  /// **'직접 입력'**
   String get createManually;
 
   /// Empty home screen button that opens the public decks.
@@ -2083,7 +2077,7 @@ abstract class AppLocalizations {
   /// **'공개 덱 둘러보기'**
   String get browsePublicDecks;
 
-  /// Title of the sheet that names a new deck.
+  /// The entry that opens the new-deck sheet: the 덱 tab's button under the rows and the first-run home's primary.
   ///
   /// In ko, this message translates to:
   /// **'새 덱 만들기'**
@@ -2191,29 +2185,29 @@ abstract class AppLocalizations {
   /// **'익힘 {mastered}장, 학습 중 {learning}장, 새 카드 {fresh}장'**
   String progressSemantics(int mastered, int learning, int fresh);
 
-  /// Under the deck's name on its page: how many cards it holds.
+  /// Under the deck's name on its page: how many cards it holds, the page's one count of them.
   ///
   /// In ko, this message translates to:
   /// **'카드 {count}장'**
   String deckSummary(int count);
 
-  /// Under a published deck's name on its page.
+  /// After the card count under the deck's name on its page, joined by ' · ': how many of its cards are mastered.
   ///
   /// In ko, this message translates to:
-  /// **'카드 {count}장 · 공개'**
-  String deckSummaryPublic(int count);
+  /// **'익힌 카드 {count}장'**
+  String deckMasteredCount(int count);
 
-  /// What a screen reader calls the deck page's today card.
+  /// The caption of the deck page's white card that studies the deck, with the minutes at its right.
   ///
   /// In ko, this message translates to:
-  /// **'오늘 이 덱'**
-  String get todayThisDeck;
+  /// **'오늘 학습'**
+  String get deckTodayTitle;
 
-  /// After the large count on the deck page's today card: the unit and the minutes the cards take.
+  /// The unit after the large count on the deck page's white card, drawn smaller and muted; it follows the number directly, so a space it needs is part of it.
   ///
   /// In ko, this message translates to:
-  /// **'장 · 약 {minutes}분'**
-  String todayCountMinutes(int minutes);
+  /// **'장'**
+  String get deckTodayUnit;
 
   /// The deck page's button that studies the deck.
   ///
@@ -2239,16 +2233,16 @@ abstract class AppLocalizations {
   /// **'앞면과 뒷면을 하나씩 적어요'**
   String get addCardManuallyBody;
 
-  /// The deck page's row pinned above its card list: how many cards the list shows.
+  /// The deck page's section label pinned above its card list.
   ///
   /// In ko, this message translates to:
-  /// **'카드 {count}'**
-  String cardListTitle(int count);
+  /// **'카드'**
+  String get cardListTitle;
 
-  /// The label of the deck page's switch that shows or hides every card's back; it stays the same while the switch shows its state.
+  /// The label of the deck page's switch that shows or hides every card's back after its front; it stays the same while the switch shows its state.
   ///
   /// In ko, this message translates to:
-  /// **'뜻 보기'**
+  /// **'뒷면 보기'**
   String get showMeanings;
 
   /// What a screen reader reads for a card row whose back is hidden.
@@ -2635,11 +2629,11 @@ abstract class AppLocalizations {
   /// **'아직 익힌 카드가 없어요.'**
   String get masteredEmpty;
 
-  /// Title of the photo import list when every card is a vocabulary entry: how many words were found.
+  /// Title of the photo import list when every card is a vocabulary entry; the add button below counts the cards.
   ///
   /// In ko, this message translates to:
-  /// **'단어 {count}개를 찾았어요'**
-  String importTitleWords(int count);
+  /// **'단어를 찾았어요'**
+  String get importTitleWords;
 
   /// Title of the photo import list for a notes page: how many cards were made.
   ///
@@ -2652,6 +2646,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'덱 \'{name}\'에 추가돼요'**
   String importDeck(String name);
+
+  /// Line under the import list title while no deck is chosen: the cards go into a deck made on saving; name is newDeck, and opens the deck chooser.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}에 추가돼요'**
+  String importNewDeck(String name);
 
   /// The import list button that saves the cards, counting each form.
   ///
@@ -2671,28 +2671,28 @@ abstract class AppLocalizations {
   /// **'판별 · {topic}'**
   String importIdentifySection(String topic);
 
-  /// Section form: cards from word to meaning.
+  /// Vocabulary section form: the word on the front, its meaning on the back.
   ///
   /// In ko, this message translates to:
-  /// **'단어 → 뜻'**
+  /// **'앞면에 단어'**
   String get importForward;
 
-  /// Section form: cards from meaning to word.
+  /// Vocabulary section form: the meaning on the front, the word on the back.
   ///
   /// In ko, this message translates to:
-  /// **'뜻 → 단어'**
+  /// **'앞면에 뜻'**
   String get importBackward;
 
-  /// Menu item: make a card each way.
+  /// Vocabulary section menu item: a card with the word on the front and one with the meaning on the front.
   ///
   /// In ko, this message translates to:
-  /// **'양쪽 다 만들기'**
+  /// **'양쪽 방향 모두'**
   String get importBoth;
 
-  /// Section header form when cards go both ways.
+  /// Vocabulary section header's form when cards go both ways.
   ///
   /// In ko, this message translates to:
-  /// **'양쪽 다'**
+  /// **'양쪽 방향'**
   String get importBothShort;
 
   /// Menu item: keep only the first meaning on each card.
@@ -2719,22 +2719,22 @@ abstract class AppLocalizations {
   /// **'유의어 등 표시'**
   String get importShowExtras;
 
-  /// Note section form: front and back as made.
+  /// Note section form: the question on the front, as made.
   ///
   /// In ko, this message translates to:
-  /// **'앞 → 뒤'**
+  /// **'앞면에 질문'**
   String get importNoteForward;
 
-  /// Note section form: front and back swapped.
+  /// Note section form: the answer on the front, the question on the back.
   ///
   /// In ko, this message translates to:
-  /// **'뒤 → 앞'**
+  /// **'앞면에 답'**
   String get importNoteSwapped;
 
-  /// Menu item: swap the front and back of a note section's cards.
+  /// Note section menu item: swap the front and back of the section's cards.
   ///
   /// In ko, this message translates to:
-  /// **'앞뒤 바꾸기'**
+  /// **'앞면과 뒷면 바꾸기'**
   String get importSwap;
 
   /// Menu item: leave out every card of the section.
@@ -2758,7 +2758,7 @@ abstract class AppLocalizations {
   /// Screen reader label of an import row.
   ///
   /// In ko, this message translates to:
-  /// **'{front}, {back}. 눌러서 고쳐요'**
+  /// **'{front}, {back}. 눌러서 편집해요'**
   String importRow(String front, String back);
 
   /// Screen reader label of a row's check.
@@ -2782,7 +2782,7 @@ abstract class AppLocalizations {
   /// Title of the sheet that edits one card.
   ///
   /// In ko, this message translates to:
-  /// **'카드 고치기'**
+  /// **'카드 편집'**
   String get editTitle;
 
   /// Field label: the front of a card.
@@ -2854,13 +2854,13 @@ abstract class AppLocalizations {
   /// The title of the sheet that changes the daily study minutes, and the account screen's row.
   ///
   /// In ko, this message translates to:
-  /// **'하루 공부 시간'**
+  /// **'하루 학습 시간'**
   String get dailyMinutesTitle;
 
   /// The title of the daily study minutes sheet when it shows once as a first-run step.
   ///
   /// In ko, this message translates to:
-  /// **'하루 몇 분 공부할까요?'**
+  /// **'하루 몇 분 학습할까요?'**
   String get dailyMinutesFirstTitle;
 
   /// The daily study minutes sheet's one sentence: how the minutes are used.
@@ -2905,10 +2905,10 @@ abstract class AppLocalizations {
   /// **'건너뛰기'**
   String get dailyMinutesSkip;
 
-  /// The account screen's section label over the daily study minutes.
+  /// The settings screen's section label over the daily study minutes, the front sound's autoplay and the labels.
   ///
   /// In ko, this message translates to:
-  /// **'공부'**
+  /// **'학습'**
   String get settingsStudy;
 
   /// The study top bar's count of the cards studied past the day's plan, beside the day's count.
@@ -2920,7 +2920,7 @@ abstract class AppLocalizations {
   /// What a screen reader reads for the top bar's count of cards past the day's plan.
   ///
   /// In ko, this message translates to:
-  /// **'오늘 계획 밖으로 {count}장 더 공부함'**
+  /// **'오늘 계획 밖으로 {count}장 더 학습함'**
   String studyExtraSemantics(int count);
 
   /// On the 오늘 tab: how many cards were studied past the day's plan, never in its goal.
@@ -2938,7 +2938,7 @@ abstract class AppLocalizations {
   /// The last seven days' chart as one sentence for a screen reader.
   ///
   /// In ko, this message translates to:
-  /// **'지난 7일 동안 {cards}장을 {minutes}분 공부했어요'**
+  /// **'지난 7일 동안 {cards}장을 {minutes}분 학습했어요'**
   String weekSemantics(int cards, int minutes);
 
   /// What a tap on the last seven days does, as a screen reader hears it.
@@ -2962,13 +2962,13 @@ abstract class AppLocalizations {
   /// The label a screen reader reads for the number while it is typed.
   ///
   /// In ko, this message translates to:
-  /// **'하루 공부 시간(분)'**
+  /// **'하루 학습 시간(분)'**
   String get dailyMinutesInput;
 
   /// Under the typed number when it is outside 5 to 180; saving waits until it is fixed.
   ///
   /// In ko, this message translates to:
-  /// **'5분에서 180분 사이로 적어 주세요'**
+  /// **'5분에서 180분 사이로 입력해 주세요'**
   String get dailyMinutesOutOfRange;
 
   /// The first tile's label: today's new cards at the chosen minutes.

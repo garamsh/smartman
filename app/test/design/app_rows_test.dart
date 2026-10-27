@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_section_label.dart';
+import 'package:smartman/design/theme.dart';
 
 import '../contrast.dart';
 import '../word_breaks.dart';
@@ -149,6 +150,80 @@ void main() {
       await meetsGuidelines(tester);
       expectScreenTextReadable(tester);
     });
+  }
+
+  for (final (name, group) in [
+    (
+      'a group',
+      (List<Widget> rows) =>
+          SingleChildScrollView(child: AppGroup(children: rows)),
+    ),
+    (
+      'a sliver group',
+      (List<Widget> rows) =>
+          CustomScrollView(slivers: [SliverAppGroup(children: rows)]),
+    ),
+  ]) {
+    testWidgets(
+      'in $name the rows share one surface rounded at its ends, with no surface or gap of their own, split by a hairline under all but the first, where a row alone keeps its own',
+      (tester) async {
+        final colors = themeModes[ThemeMode.light]!;
+        // Control: a row alone is its own rounded surface over the row gap.
+        await pumpComponent(tester, AppListRow(title: 'Alone', onTap: () {}));
+        final alone = tester.widget<Material>(
+          find
+              .ancestor(of: find.text('Alone'), matching: find.byType(Material))
+              .first,
+        );
+        expect(alone.color, colors.surface);
+        expect(alone.borderRadius, BorderRadius.circular(AppRadius.row));
+
+        await pumpComponent(
+          tester,
+          group([
+            AppListRow(title: 'First', onTap: () {}),
+            AppListRow(title: 'Second', onTap: () {}),
+            const AppRowSurface(child: Text('Third')),
+          ]),
+        );
+        for (final (index, row) in ['First', 'Second', 'Third'].indexed) {
+          final materials = tester
+              .widgetList<Material>(
+                find.ancestor(
+                  of: find.text(row),
+                  matching: find.byType(Material),
+                ),
+              )
+              .toList();
+          // The row's own is see-through; the group's share is the surface.
+          expect(materials[0].type, MaterialType.transparency, reason: row);
+          expect(materials[1].color, colors.surface, reason: row);
+          expect(
+            materials[1].borderRadius,
+            BorderRadius.vertical(
+              top: index == 0
+                  ? const Radius.circular(AppRadius.group)
+                  : Radius.zero,
+              bottom: index == 2
+                  ? const Radius.circular(AppRadius.group)
+                  : Radius.zero,
+            ),
+            reason: row,
+          );
+        }
+        final dividers = tester.widgetList<Divider>(find.byType(Divider));
+        expect(dividers, hasLength(2));
+        expect({for (final line in dividers) line.color}, {colors.hairline});
+        final lines = [
+          for (final element in find.byType(Divider).evaluate())
+            tester.getRect(find.byWidget(element.widget)).center.dy,
+        ];
+        double top(String row) => tester.getRect(find.text(row)).top;
+        double bottom(String row) => tester.getRect(find.text(row)).bottom;
+        expect(lines[0], inExclusiveRange(bottom('First'), top('Second')));
+        expect(lines[1], inExclusiveRange(bottom('Second'), top('Third')));
+      },
+    );
   }
 
   testWidgets(

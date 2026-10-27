@@ -173,8 +173,8 @@ void main() {
   /// Creates the deck "French" from the first-run home, which opens it, and
   /// goes back to the tabs.
   Future<void> createDeck(WidgetTester tester) async {
-    await tapAndSettle(tester, find.text('Make a deck'));
-    await tapAndSettle(tester, find.text('Create by hand'));
+    await tapAndSettle(tester, find.text('Create a deck'));
+    await tapAndSettle(tester, find.text('Enter by hand'));
     await tester.enterText(
       find.widgetWithText(AppTextField, 'Deck name'),
       'French',
@@ -260,7 +260,7 @@ void main() {
     );
     await pumpApp(tester, account);
 
-    await tapAndSettle(tester, find.byTooltip('Account'));
+    await tapAndSettle(tester, find.byTooltip('Settings'));
     await tapAndSettle(tester, find.text('Sign out'));
 
     expect(account.state, isA<SignedOut>());
@@ -283,7 +283,7 @@ void main() {
       // The setup put a deck on the device.
       expect(await deviceRows(tester), greaterThan(0));
 
-      await tapAndSettle(tester, find.byTooltip('Account'));
+      await tapAndSettle(tester, find.byTooltip('Settings'));
       await tapAndSettle(tester, find.text('Sign out'));
 
       expect(find.byType(SignInScreen), findsOneWidget);
@@ -303,7 +303,7 @@ void main() {
       await createDeck(tester);
       expect(await deviceRows(tester), greaterThan(0));
 
-      await tapAndSettle(tester, find.byTooltip('Account'));
+      await tapAndSettle(tester, find.byTooltip('Settings'));
       await tapAndSettle(tester, find.text('Delete account'));
       await tapAndSettle(tester, find.text('Delete'));
 
@@ -324,7 +324,7 @@ void main() {
       'card editor': (tester) async {
         await tapAndSettle(tester, find.text('French'));
         await tapAndSettle(tester, find.text('Add card'));
-        await tapAndSettle(tester, find.text('Create by hand'));
+        await tapAndSettle(tester, find.text('Enter by hand'));
       },
       'study': (tester) async {
         await tapAndSettle(tester, find.text('French'));
@@ -335,7 +335,7 @@ void main() {
       },
       'account': (tester) async {
         await tapAndSettle(tester, find.text('Today'));
-        await tapAndSettle(tester, find.byTooltip('Account'));
+        await tapAndSettle(tester, find.byTooltip('Settings'));
       },
     };
     for (final MapEntry(key: name, value: open) in routes.entries) {
@@ -346,8 +346,8 @@ void main() {
           const SignedIn(userId: _ada, email: 'ada@example.com'),
         );
         await pumpApp(tester, account);
-        await tapAndSettle(tester, find.text('Make a deck'));
-        await tapAndSettle(tester, find.text('Create by hand'));
+        await tapAndSettle(tester, find.text('Create a deck'));
+        await tapAndSettle(tester, find.text('Enter by hand'));
         await tester.enterText(
           find.widgetWithText(AppTextField, 'Deck name'),
           'French',
@@ -357,7 +357,7 @@ void main() {
         await tapAndSettle(tester, find.text('Save'));
         await tapAndSettle(tester, find.text('Add card'));
         // With photo import, Add card asks how.
-        await tapAndSettle(tester, find.text('Create by hand'));
+        await tapAndSettle(tester, find.text('Enter by hand'));
         // A new card's two Text blocks, the front's and the back's.
         await tester.enterText(find.byType(TextField).at(0), 'Chat');
         await tester.enterText(find.byType(TextField).at(1), 'cat');

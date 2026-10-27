@@ -304,10 +304,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoplayAudio => 'Play front sound automatically';
 
   @override
-  String get autoplayAudioDescription =>
-      'Plays the front\'s sound once when a card appears';
-
-  @override
   String blockMenu(String side, int number) {
     return '$side block $number menu';
   }
@@ -684,10 +680,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t work out this card\'s next review. Its schedule did not change.';
 
   @override
-  String get account => 'Account';
+  String get account => 'Settings';
 
   @override
-  String get accountTitle => 'Account';
+  String get accountTitle => 'Settings';
 
   @override
   String get welcomeBody =>
@@ -727,6 +723,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySection => 'Display';
+
+  @override
+  String get themeTitle => 'Theme';
 
   @override
   String get themeSystem => 'System';
@@ -778,32 +777,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteCardBody => 'Its study history is deleted with it.';
 
   @override
-  String get unsyncedChangesTitle => 'Some changes aren\'t synced';
+  String get unsyncedChangesTitle => 'Sign out without syncing?';
 
   @override
   String get unsyncedChangesBody =>
-      'Changes that aren\'t synced are removed from this device when you sign out, and your other devices won\'t have them either.';
+      'Changes that aren\'t synced are deleted from this device, and your other devices won\'t have them either.';
 
   @override
   String get signOutAnyway => 'Sign out anyway';
 
   @override
   String get dataNotCleared =>
-      'Couldn\'t remove this device\'s data. It\'s removed when another account signs in.';
+      'Couldn\'t delete this device\'s data. It\'s deleted when another account signs in.';
 
   @override
   String get deleteAccount => 'Delete account';
-
-  @override
-  String get deleteAccountNote =>
-      'Deleting your account removes your cards and history from the server and this device. You can\'t undo this.';
 
   @override
   String get deleteAccountTitle => 'Delete your account?';
 
   @override
   String get deleteAccountBody =>
-      'Your decks, cards and study history are removed from the server and this device, while decks others copied and your Google account stay.';
+      'Your decks, cards and study history are deleted from the server and this device, while decks others copied and your Google account stay.';
 
   @override
   String get deletingAccount => 'Deleting account';
@@ -1004,9 +999,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pickAnother => 'Pick another photo';
 
   @override
-  String get makeDeck => 'Make a deck';
-
-  @override
   String get photoCameraBody =>
       'Take a photo of a vocabulary page and we\'ll find the cards';
 
@@ -1048,7 +1040,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInRequired =>
-      'You need to sign in. Sign in again from the account screen.';
+      'You need to sign in. Sign in again from Settings.';
 
   @override
   String get serviceFailed =>
@@ -1126,7 +1118,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sharingRejected =>
-      'The request was refused. Sign in again from the account screen and try again.';
+      'The request was refused. Sign in again from Settings and try again.';
 
   @override
   String get sharingFailed =>
@@ -1144,7 +1136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get reportDeck => 'Report';
+  String get reportDeck => 'Report deck';
+
+  @override
+  String get reportConfirm => 'Report';
 
   @override
   String get blockUser => 'Block this user';
@@ -1176,7 +1171,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get blockBody => 'Their decks will no longer appear when you browse.';
+  String get blockBody => 'Their decks will no longer appear in public decks.';
 
   @override
   String get block => 'Block';
@@ -1261,7 +1256,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noCardsTitle => 'Make your first card?';
 
   @override
-  String get noCardsBody => 'Add cards to a deck to start';
+  String get noCardsBody => 'Add cards to a deck to start.';
 
   @override
   String get openDeck => 'Open deck';
@@ -1277,7 +1272,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Take a photo of a vocabulary page and we\'ll make the cards for you. You can also type them in.';
 
   @override
-  String get createManually => 'Create by hand';
+  String get createManually => 'Enter by hand';
 
   @override
   String get browsePublicDecks => 'Browse public decks';
@@ -1364,23 +1359,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String deckSummaryPublic(int count) {
+  String deckMasteredCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count cards',
-      one: '1 card',
+      other: '$count mastered',
+      one: '1 mastered',
     );
-    return '$_temp0 · Public';
+    return '$_temp0';
   }
 
   @override
-  String get todayThisDeck => 'This deck today';
+  String get deckTodayTitle => 'Study today';
 
   @override
-  String todayCountMinutes(int minutes) {
-    return 'cards · about $minutes min';
-  }
+  String get deckTodayUnit => ' cards';
 
   @override
   String get studyDeck => 'Study';
@@ -1395,12 +1388,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addCardManuallyBody => 'Write the front and the back';
 
   @override
-  String cardListTitle(int count) {
-    return 'Cards $count';
-  }
+  String get cardListTitle => 'Cards';
 
   @override
-  String get showMeanings => 'Show meanings';
+  String get showMeanings => 'Show backs';
 
   @override
   String cardBackHidden(String front) {
@@ -1675,15 +1666,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get masteredEmpty => 'No card mastered yet.';
 
   @override
-  String importTitleWords(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Found $count words',
-      one: 'Found 1 word',
-    );
-    return '$_temp0';
-  }
+  String get importTitleWords => 'Words found';
 
   @override
   String importTitleCards(int count) {
@@ -1699,6 +1682,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String importDeck(String name) {
     return 'Adds to the deck \'$name\'';
+  }
+
+  @override
+  String importNewDeck(String name) {
+    return 'Adds to $name';
   }
 
   @override
@@ -1723,10 +1711,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get importForward => 'Word → meaning';
+  String get importForward => 'Word on the front';
 
   @override
-  String get importBackward => 'Meaning → word';
+  String get importBackward => 'Meaning on the front';
 
   @override
   String get importBoth => 'Both ways';
@@ -1747,13 +1735,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importShowExtras => 'Show synonyms and more';
 
   @override
-  String get importNoteForward => 'Front → back';
+  String get importNoteForward => 'Question on the front';
 
   @override
-  String get importNoteSwapped => 'Back → front';
+  String get importNoteSwapped => 'Answer on the front';
 
   @override
-  String get importSwap => 'Swap sides';
+  String get importSwap => 'Swap front and back';
 
   @override
   String get importDropSection => 'Leave out this group';

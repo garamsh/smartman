@@ -240,7 +240,7 @@ void main() {
       }
 
       // The first-run home's one primary opens the new-deck sheet.
-      await tap(tester, find.text(ko.makeDeck));
+      await tap(tester, find.text(ko.newDeckTitle));
       await shot(tester, '03b-new-deck-options');
       await tap(tester, find.text(ko.createManually));
       await shot(tester, '03-new-deck-sheet');
@@ -296,8 +296,6 @@ void main() {
       await tap(tester, find.byTooltip(ko.close));
       await tap(tester, find.text(ko.discardCard));
       await shot(tester, '07-card-list');
-      await tap(tester, find.text('ubiquitous'));
-      await shot(tester, '07b-card-answer-shown');
       await tap(tester, find.byTooltip(ko.searchCardsAction));
       await tester.enterText(find.byType(EditableText), 'ent');
       await tester.pumpAndSettle();
@@ -316,8 +314,7 @@ void main() {
       await shot(tester, '09-delete-deck-confirm');
       await tap(tester, find.text(ko.cancel));
 
-      await tester.longPress(find.text('meticulous'));
-      await tester.pumpAndSettle();
+      await tap(tester, find.text('meticulous'));
       await shot(tester, '10-card-editor-existing');
       await tester.ensureVisible(find.text(ko.deleteCard));
       await tester.pumpAndSettle();
@@ -443,7 +440,10 @@ void main() {
 
       await tap(tester, find.byTooltip(ko.account));
       await shot(tester, '18-account');
-      // Its 하루 공부 시간 row opens the minutes picker as a screen; + moves
+      await tap(tester, find.text(ko.themeTitle));
+      await shot(tester, '18e-theme-sheet');
+      await dismissSheet(tester);
+      // Its 하루 학습 시간 row opens the minutes picker as a screen; + moves
       // the number and the tiles follow.
       await tap(tester, find.text(ko.dailyMinutesTitle));
       await waitForPicker(tester, more: ko.dailyMinutesMore);
@@ -1638,7 +1638,7 @@ void main() {
 
       // A deck, so the bar shows above the tab bar.
       await dismissSheet(tester);
-      await tap(tester, find.text(ko.makeDeck));
+      await tap(tester, find.text(ko.newDeckTitle));
       await tap(tester, find.text(ko.createManually));
       await tester.enterText(find.byType(EditableText), '영단어 기본');
       await tap(tester, find.text(ko.create));
