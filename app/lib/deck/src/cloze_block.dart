@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'content.dart';
 
@@ -280,11 +281,13 @@ class ClozeProblemText extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final problem = showError ? draft.problem : null;
     if (problem == null) return const SizedBox.shrink();
+    final message = switch (problem) {
+      ClozeProblem.noBlank => l10n.clozeBlankRequired,
+      ClozeProblem.blankMarker => l10n.clozeBlankMarker,
+    };
     return Text(
-      switch (problem) {
-        ClozeProblem.noBlank => l10n.clozeBlankRequired,
-        ClozeProblem.blankMarker => l10n.clozeBlankMarker,
-      },
+      keepWords(message),
+      semanticsLabel: message,
       style: AppType.caption.copyWith(
         color: AppColors.of(context).dontKnowText,
       ),

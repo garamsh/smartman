@@ -6,6 +6,7 @@ import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/design/word_break.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
@@ -306,13 +307,19 @@ void main() {
       final screens = await openCloze(tester);
       await typeLine(tester, 'The cat sat');
       await save(screens);
-      expect(find.text('Insert at least one blank'), findsOneWidget);
+      expect(shownText('Insert at least one blank'), findsOneWidget);
+      // Broken only between words, and read as written.
+      final message = tester.widget<Text>(
+        shownText('Insert at least one blank'),
+      );
+      expect(message.data, keepWords('Insert at least one blank'));
+      expect(message.semanticsLabel, 'Insert at least one blank');
       expect(find.byType(SnackBar), findsNothing);
       expect(await screens.cards(), isEmpty);
 
       await select(tester, 8, 11);
       await insertBlank(screens);
-      expect(find.text('Insert at least one blank'), findsNothing);
+      expect(shownText('Insert at least one blank'), findsNothing);
       await save(screens);
       expect((await _stored(screens)).front, [
         const ClozeContent('The cat ___', ['sat']),
@@ -404,7 +411,7 @@ void main() {
         }
         await save(screens);
         expect(
-          find.text('Remove ___ from the line'),
+          shownText('Remove ___ from the line'),
           findsOneWidget,
           reason: line,
         );
@@ -437,7 +444,7 @@ void main() {
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       await typeLine(tester, 'a x b ___ c');
       await save(screens);
-      expect(find.text('Remove ___ from the line'), findsOneWidget);
+      expect(shownText('Remove ___ from the line'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       expect((await _stored(screens)).front, [cloze]);
 

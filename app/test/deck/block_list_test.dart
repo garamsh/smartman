@@ -205,7 +205,7 @@ void main() {
       await actOnBlock(screens, CardSide.front, 1, 'Delete');
       await actOnBlock(screens, CardSide.back, 1, 'Delete');
       await tapVisible(screens, find.text('Save'));
-      expect(find.text('Add at least one block'), findsNWidgets(2));
+      expect(shownText('Add at least one block'), findsNWidgets(2));
       expect(await screens.cards(), isEmpty);
 
       // A cloze on the front: studied on one face, so no back is needed.

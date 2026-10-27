@@ -262,7 +262,7 @@ void main() {
       final screens = await openTable(tester);
       await typeCapitals(screens);
       await save(screens);
-      expect(find.text('Choose at least one cell as a blank'), findsOneWidget);
+      expect(shownText('Choose at least one cell as a blank'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       expect(await screens.cards(), isEmpty);
 
@@ -270,8 +270,8 @@ void main() {
       await toggleBlank(screens);
       await enter(tester, _cell(3), '  ');
       await save(screens);
-      expect(find.text('Fill in each cell chosen as a blank'), findsOneWidget);
-      expect(find.text('Choose at least one cell as a blank'), findsNothing);
+      expect(shownText('Fill in each cell chosen as a blank'), findsOneWidget);
+      expect(shownText('Choose at least one cell as a blank'), findsNothing);
       expect(await screens.cards(), isEmpty);
 
       await enter(tester, _cell(3), 'Paris');
@@ -659,7 +659,7 @@ void main() {
         await enter(tester, _cell(3), '');
         await save(screens);
         expect(
-          find.text('Fill in each cell chosen as a blank'),
+          shownText('Fill in each cell chosen as a blank'),
           findsOneWidget,
         );
         await meetsGuidelines();

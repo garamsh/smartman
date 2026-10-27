@@ -373,7 +373,8 @@ class BlockList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
             child: Text(
-              emptyError,
+              keepWords(emptyError),
+              semanticsLabel: emptyError,
               style: AppType.caption.copyWith(color: colors.dontKnowText),
             ),
           ),

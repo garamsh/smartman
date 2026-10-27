@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'cloze_block.dart';
 import 'content.dart';
@@ -440,10 +441,17 @@ class _TableFieldsState extends State<TableFields> {
           ),
         ),
         if (problem != null)
-          Text(switch (problem) {
-            TableProblem.noBlank => l10n.tableBlankRequired,
-            TableProblem.emptyBlank => l10n.tableBlankEmpty,
-          }, style: AppType.caption.copyWith(color: colors.dontKnowText)),
+          Text(
+            keepWords(switch (problem) {
+              TableProblem.noBlank => l10n.tableBlankRequired,
+              TableProblem.emptyBlank => l10n.tableBlankEmpty,
+            }),
+            semanticsLabel: switch (problem) {
+              TableProblem.noBlank => l10n.tableBlankRequired,
+              TableProblem.emptyBlank => l10n.tableBlankEmpty,
+            },
+            style: AppType.caption.copyWith(color: colors.dontKnowText),
+          ),
       ],
     );
   }
