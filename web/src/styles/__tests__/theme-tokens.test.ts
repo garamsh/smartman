@@ -166,6 +166,7 @@ describe("the web theme's radius tokens", () => {
       "button",
       "card",
       "field",
+      "group",
       "panel",
       "previous",
       "row",

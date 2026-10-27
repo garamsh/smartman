@@ -53,7 +53,7 @@ describe("saving the daily study minutes", () => {
     for (const minutes of [4, 181, 12.5, Number.NaN]) {
       expect(await saveDailyMinutes(minutes)).toEqual({
         saved: false,
-        message: "공부 시간은 5분에서 180분 사이로 골라 주세요.",
+        message: "학습 시간은 5분에서 180분 사이로 골라 주세요.",
       });
     }
     expect(postgrest.requests).toEqual([]);

@@ -108,7 +108,7 @@ describe("the controls' pointer, hover and pressed states", () => {
     expect(pressable(screen.getByRole("link", { name: "모두 학습" }))).toBe(true);
     expect(pressable(screen.getByRole("link", { name: /^French/ }))).toBe(true);
     expect(pressable(screen.getByRole("button", { name: "chat, 뒷면 가려짐" }))).toBe(true);
-    expect(pressable(screen.getByRole("switch", { name: "뜻 보기" }))).toBe(true);
+    expect(pressable(screen.getByRole("switch", { name: "뒷면 보기" }))).toBe(true);
     // Control: the card search, a field, takes no button state.
     expect(pressable(screen.getByRole("searchbox", { name: "카드 검색" }))).toBe(false);
   });

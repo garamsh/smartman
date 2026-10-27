@@ -421,7 +421,7 @@ export function describeContent(blocks: Content[]): string {
         case "image":
           return "사진";
         case "audio":
-          return "음성";
+          return "소리";
         case "unsupported":
           return `[이 버전에서 표시할 수 없는 내용: ${block.type}]`;
       }

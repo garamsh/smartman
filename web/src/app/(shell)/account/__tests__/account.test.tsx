@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EmptyHome } from "@/features/decks";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
@@ -15,20 +16,52 @@ import AccountPage from "../page";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 
+/** The mascot's drawing, as `Mascot` draws it from the brand's symbol. */
+const mascot = 'img[src*="smartman-symbol"]';
+
 describe("the account page", () => {
   beforeEach(async () => {
     setRequestCookies(await signedInCookies());
-    // The rows its 공부 section reads.
+    // The rows its 학습 section reads.
     server.use(...new FakePostgrest().handlers);
   });
 
   it("reads the session on the server and shows who is signed in, with sign-out", async () => {
     await render(Profile, {});
 
-    expect(screen.getByRole("region", { name: "프로필" })).toHaveTextContent(
-      `${testUser.email.charAt(0).toLocaleUpperCase()}${testUser.email}`,
+    // The email alone, with no avatar beside it, then 로그아웃, in the one group of 계정.
+    expect(screen.getByRole("region", { name: "계정" })).toHaveTextContent(
+      new RegExp(`^계정${testUser.email}로그아웃$`),
     );
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeEnabled();
+  });
+
+  it("draws 계정, 학습 and 화면 in that order, each one group of hairline rows, its rows words alone", async () => {
+    await render(Profile, {});
+
+    const sections = screen.getAllByRole("region");
+    expect(sections.map((section) => section.getAttribute("aria-labelledby"))).toEqual([
+      "account-section",
+      "study-section",
+      "display-section",
+    ]);
+    expect(sections.map((section) => section.querySelector("h2")?.textContent)).toEqual([
+      "계정",
+      "학습",
+      "화면",
+    ]);
+    for (const section of sections) {
+      // The outermost element of the group's radius is the group, on the surface.
+      const group = section.querySelector(".rounded-group");
+      expect(group).toHaveClass("bg-surface");
+      // No row in a group draws a surface or a shadow of its own.
+      expect(group?.querySelector('[class*="bg-surface"], [class*="shadow"]')).toBeNull();
+    }
+    // 로그아웃 and 하루 학습 시간 are their words, the latter with its minutes and chevron alone.
+    expect(screen.getByRole("button", { name: "로그아웃" }).querySelector("svg")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /^하루 학습 시간/ }).querySelectorAll("svg"),
+    ).toHaveLength(1);
   });
 
   it("says the server cannot be reached when Supabase does not answer", async () => {
@@ -52,8 +85,15 @@ describe("the account page", () => {
     expect(await redirectTarget(render(Profile, {}))).toBe("/login");
   });
 
-  it("links to the terms and the privacy policy at its foot", async () => {
-    await render(AccountPage, {});
+  it("is titled 설정, with no mascot, and links to the terms and the privacy policy at its foot", async () => {
+    const { container } = await render(AccountPage, {});
+
+    expect(screen.getByRole("heading", { level: 1, name: "설정" })).toBeInTheDocument();
+    expect(container.querySelector(mascot)).toBeNull();
+    // Control: the selector finds the mascot where the first-run home draws it.
+    const firstRun = await render(EmptyHome, {});
+    expect(firstRun.container.querySelector(mascot)).not.toBeNull();
+    firstRun.unmount();
 
     const links = within(screen.getByRole("navigation", { name: "약관" }));
     expect(links.getByRole("link", { name: "이용약관" })).toHaveAttribute("href", "/terms");
@@ -72,17 +112,17 @@ describe("the shell's account link", () => {
   it("is the signed-in account's initial, and opens the account page", async () => {
     await render(AccountLink, {});
 
-    const link = screen.getByRole("link", { name: "계정과 설정" });
+    const link = screen.getByRole("link", { name: "설정" });
     expect(link).toHaveAttribute("href", "/account");
     expect(link).toHaveTextContent(testUser.email.charAt(0).toLocaleUpperCase());
   });
 
-  it("in the side menu, names 계정과 설정 beside the initial", async () => {
+  it("in the side menu, names 설정 beside the initial", async () => {
     await render(AccountLink, { labelled: true });
 
-    const link = screen.getByRole("link", { name: /계정과 설정$/ });
+    const link = screen.getByRole("link", { name: /설정$/ });
     expect(link).toHaveAttribute("href", "/account");
-    expect(link).toHaveTextContent(`${testUser.email.charAt(0).toLocaleUpperCase()}계정과 설정`);
+    expect(link).toHaveTextContent(`${testUser.email.charAt(0).toLocaleUpperCase()}설정`);
   });
 
   it("redirects to /login without a session", async () => {

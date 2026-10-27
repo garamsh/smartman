@@ -10,11 +10,12 @@ import { EmptyDeck } from "./empty-home";
 import { WholeCard } from "./whole-card";
 
 /**
- * A deck's cards in a grid under a search that keeps the cards whose front or back holds it,
- * ignoring case. Each card hides its answer until it is clicked; "뜻 보기", in a row pinned
- * above the grid, shows or hides every answer, starting off each time the page opens. A click
- * after the switch sets that card alone apart until the switch next changes. A whole card shows
- * its front with its blanks empty, filled in place where its answer shows.
+ * A deck's cards as one group of rows under a search that keeps the cards whose front or back
+ * holds it, ignoring case (ADR 0118). Each row shows its front, and its back muted after it once
+ * shown; nothing stands for a hidden back. "뒷면 보기", in a row pinned above the group under the
+ * section label "카드", shows or hides every back, starting off each time the page opens. A click
+ * on a row sets that card alone apart until the switch next changes. A whole card shows its front
+ * with its blanks empty, filled in place where its back shows.
  */
 export function CardGrid({ cards }: { cards: Card[] }) {
   const [search, setSearch] = useState("");
@@ -60,10 +61,10 @@ export function CardGrid({ cards }: { cards: Card[] }) {
         />
       </div>
       <div className="sticky top-0 z-[1] flex min-h-tap-target items-center justify-between bg-ground">
-        <h2 className="text-label">카드 {shown.length}</h2>
+        <h2 className="px-1 text-section text-muted">카드</h2>
         <span className="flex items-center gap-3">
-          <span id={label} className="text-secondary font-semibold">
-            뜻 보기
+          <span id={label} className="text-secondary text-ink-2">
+            뒷면 보기
           </span>
           <button
             type="button"
@@ -88,7 +89,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
           찾는 카드가 없어요. 다른 단어로 검색해 보세요.
         </p>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-2.5">
+        <ul className="flex flex-col divide-y divide-hairline overflow-hidden rounded-group bg-surface">
           {shown.map((row) => {
             const open = all !== apart.has(row.id);
             return (
@@ -107,21 +108,19 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                     else next.add(row.id);
                     setApart(next);
                   }}
-                  className="pressable flex min-h-23 w-full flex-col gap-2 rounded-row bg-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  className="pressable flex min-h-cta w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
                 >
                   {isWholeCard(row.blocks) ? (
-                    <WholeCard blocks={row.blocks} revealed={open} className="text-headline" />
+                    <WholeCard blocks={row.blocks} revealed={open} inRow />
                   ) : (
                     <>
-                      <span className="text-headline break-words">
+                      <span className="min-w-0 flex-1 text-body-strong break-words">
                         <SideText blocks={row.blocks} />
                       </span>
-                      {open ? (
-                        <span className="text-secondary break-words text-ink-2">
+                      {open && (
+                        <span className="min-w-0 flex-1 text-right text-secondary break-words text-muted">
                           <SideText blocks={row.backBlocks} />
                         </span>
-                      ) : (
-                        <span aria-hidden className="h-4.5 w-3/5 rounded-md bg-hairline" />
                       )}
                     </>
                   )}

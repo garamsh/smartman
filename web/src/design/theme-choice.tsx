@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 
 import {
@@ -35,8 +36,8 @@ function drawn(): Choice {
 }
 
 /**
- * The account page's "화면" choice: 시스템, 라이트 or 다크, as radios labelled by the section's
- * heading [labelledBy]. A choice applies at once and is then kept on this browser; when it cannot
+ * The settings page's "화면" choice: 시스템, 라이트 or 다크, as radios labelled by the section's
+ * heading [labelledBy], drawn as one group of three rows with a check on the chosen one. A choice applies at once and is then kept on this browser; when it cannot
  * be kept, the reason is shown beneath.
  */
 export function ThemeChoice({ labelledBy }: { labelledBy: string }) {
@@ -50,30 +51,34 @@ export function ThemeChoice({ labelledBy }: { labelledBy: string }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-row bg-surface p-1.5">
-        <div
-          role="radiogroup"
-          aria-labelledby={labelledBy}
-          className="grid grid-cols-3 gap-1 rounded-field bg-ground p-1"
-        >
-          {choices.map(({ value, label }) => (
-            <label key={value} className="flex">
-              <input
-                type="radio"
-                name="theme"
-                value={value}
-                checked={current === value}
-                onChange={() => {
-                  choose(value);
-                }}
-                className="peer sr-only"
-              />
-              <span className="flex min-h-tap-target flex-1 cursor-pointer items-center justify-center rounded-button text-secondary font-semibold text-ink-2 peer-checked:bg-raised peer-checked:font-bold peer-checked:text-ink peer-checked:shadow-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
-                {label}
-              </span>
-            </label>
-          ))}
-        </div>
+      <div
+        role="radiogroup"
+        aria-labelledby={labelledBy}
+        className="flex flex-col divide-y divide-hairline rounded-group bg-surface"
+      >
+        {choices.map(({ value, label }) => (
+          <label
+            key={value}
+            className="pressable flex min-h-button cursor-pointer items-center justify-between gap-3 px-4 first:rounded-t-group last:rounded-b-group py-3 text-body text-ink has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-ink"
+          >
+            <input
+              type="radio"
+              name="theme"
+              value={value}
+              checked={current === value}
+              onChange={() => {
+                choose(value);
+              }}
+              className="peer sr-only"
+            />
+            {label}
+            <Check
+              aria-hidden
+              className="invisible size-5 shrink-0 peer-checked:visible"
+              strokeWidth={2}
+            />
+          </label>
+        ))}
       </div>
       {failure && (
         <p role="alert" className="text-secondary text-dont-know-text">

@@ -48,8 +48,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 
 - Every study button on the 오늘 tab is inside the card it acts on, and the tab states each figure once.
 - A user in a backlog no longer sees the session's full size on its button; the card's sentence and the chart's first bar still say it.
-- `study`'s `TodayStatus` has no caller on the phone. The web's today page still draws its line, until the web follows #454 (#446), and the type stays in `study` until then.
-- The web's `/record` keeps "4주 +n장" and "%p" until #446 brings it to these words.
+- `study`'s `TodayStatus` has no caller on the phone. The web's today page still draws its line after #460 brought the web to #454, so the type stays in `study` until the web follows this ADR in an issue of its own.
+- The web's `/record` keeps "4주 +n장", "%p", "지금 기억하고 있을 확률" and "단단함" until that issue brings it to these words.
 - The photo import list's top bar matches every other pushed screen's; its retake is one tap further.
 
 ## Signs the decision was wrong
