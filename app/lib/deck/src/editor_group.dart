@@ -9,6 +9,16 @@ const _focusRing = 1.5;
 /// The radius of a label chip, smaller than a field's (#454).
 const labelChipRadius = 6.0;
 
+/// The space around a label chip's text, as the "라벨" screen draws it.
+const _labelChipPadding = EdgeInsets.symmetric(
+  horizontal: AppSpace.s8,
+  vertical: AppSpace.s4,
+);
+
+/// A label chip's height at text scale 1: a line of body text, 24, and its
+/// padding.
+const labelChipHeight = 24 + 2 * AppSpace.s4;
+
 /// The space between a group's edge and the fields in its rows, so a focused
 /// field's outline stays inside the group's corners.
 const groupInset = AppSpace.s4;
@@ -72,8 +82,9 @@ InputDecorationTheme groupFieldTheme(AppColors colors) {
   );
 }
 
-/// A label typed before a meaning, drawn as a small chip on `brandTint` with
-/// the label chip's radius; the 1.5 px ink outline while it has the focus.
+/// A label typed before a meaning, drawn as a small chip a line of body text
+/// high on `brandTint` with the label chip's radius; the 1.5 px ink outline
+/// while it has the focus.
 InputDecoration labelChipDecoration(AppColors colors, String hint) {
   OutlineInputBorder border(BorderSide side) => OutlineInputBorder(
     borderRadius: BorderRadius.circular(labelChipRadius),
@@ -82,14 +93,12 @@ InputDecoration labelChipDecoration(AppColors colors, String hint) {
   return InputDecoration(
     hintText: hint,
     hintStyle: AppType.body.copyWith(color: colors.ink2),
+    // As wide as the label typed, not as its hint once it has one.
+    maintainHintSize: false,
     filled: true,
     fillColor: colors.brandTint,
     isDense: true,
-    // A line of body text in it, a tap target high.
-    contentPadding: const EdgeInsets.symmetric(
-      horizontal: AppSpace.s8,
-      vertical: AppSpace.s12,
-    ),
+    contentPadding: _labelChipPadding,
     border: border(BorderSide.none),
     enabledBorder: border(BorderSide.none),
     focusedBorder: border(BorderSide(color: colors.ink, width: _focusRing)),

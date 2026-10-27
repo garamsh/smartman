@@ -8,9 +8,13 @@ import 'content.dart';
 import 'editor_group.dart';
 import 'label_presets.dart';
 
-/// The width of a sense's label chip, which holds a short form such as
-/// `조동`.
-const _labelWidth = 64.0;
+/// The least width of a sense's label chip, which is otherwise as wide as
+/// its text.
+const _labelMinWidth = 40.0;
+
+/// The space above and below a label chip that a tap on it takes too, so its
+/// target is [kMinInteractiveDimension] high though the chip is a line high.
+const _labelTapInset = (kMinInteractiveDimension - labelChipHeight) / 2;
 
 /// One sense of a 뜻 목록 block as the editor edits it: its labels as
 /// typed, its meaning, and its examples, one per line (ADR 0100).
@@ -136,9 +140,10 @@ class SenseFields extends StatelessWidget {
   }
 }
 
-/// One sense: its label chip beside its meaning, and its examples when it
-/// has any. [number] is null while it is the block's one meaning, whose field
-/// is hinted "뜻" and which has no menu.
+/// One sense: its label chip inline before its meaning, on its baseline, and
+/// its examples under the meaning when it has any. [number] is null while it
+/// is the block's one meaning, whose field is hinted "뜻" and which has no
+/// menu.
 class _SenseRow extends StatelessWidget {
   const _SenseRow({
     super.key,
@@ -174,34 +179,62 @@ class _SenseRow extends StatelessWidget {
         groupInset,
         groupInset,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          Row(
-            children: [
-              SizedBox(
-                width: _labelWidth,
-                child: MergeSemantics(
-                  child: Semantics(
-                    label: number == null
-                        ? l10n.senseLabelHint
-                        : l10n.senseLabelField(number),
-                    child: TextField(
-                      controller: sense.label,
-                      focusNode: sense.labelFocus,
-                      textAlign: TextAlign.center,
-                      style: AppType.bodyStrong.copyWith(color: colors.ink),
-                      onChanged: (_) => onChanged(),
-                      decoration: labelChipDecoration(
-                        colors,
-                        l10n.senseLabelHint,
+          MergeSemantics(
+            child: Semantics(
+              label: number == null
+                  ? l10n.senseLabelHint
+                  : l10n.senseLabelField(number),
+              // The chip is a line high; the space around it takes a tap too,
+              // so the target is a tap target square.
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: sense.labelFocus.requestFocus,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: kMinInteractiveDimension,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: _labelTapInset,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: _labelMinWidth,
+                        ),
+                        child: IntrinsicWidth(
+                          child: TextField(
+                            controller: sense.label,
+                            focusNode: sense.labelFocus,
+                            textAlign: TextAlign.center,
+                            style: AppType.bodyStrong.copyWith(
+                              color: colors.ink,
+                            ),
+                            onChanged: (_) => onChanged(),
+                            decoration: labelChipDecoration(
+                              colors,
+                              l10n.senseLabelHint,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              Expanded(
-                child: Semantics(
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
                   label: meaning,
                   child: AppTextField(
                     hint: meaning,
@@ -215,30 +248,27 @@ class _SenseRow extends StatelessWidget {
                     onChanged: (_) => onChanged(),
                   ),
                 ),
-              ),
-              if (number != null)
-                RowMenu(
-                  label: l10n.senseMenu(number),
-                  upLabel: l10n.moveUp,
-                  downLabel: l10n.moveDown,
-                  deleteLabel: l10n.deleteBlock,
-                  canMoveUp: canMoveUp,
-                  canMoveDown: canMoveDown,
-                  onAction: onAction,
-                ),
-            ],
+                if (sense.hasExamples)
+                  AppTextField(
+                    label: l10n.senseExamples,
+                    hint: l10n.senseExamplesHint,
+                    controller: sense.examples,
+                    minLines: 1,
+                    maxLines: null,
+                    onChanged: (_) => onChanged(),
+                  ),
+              ],
+            ),
           ),
-          if (sense.hasExamples)
-            Padding(
-              padding: const EdgeInsets.only(left: _labelWidth),
-              child: AppTextField(
-                label: l10n.senseExamples,
-                hint: l10n.senseExamplesHint,
-                controller: sense.examples,
-                minLines: 1,
-                maxLines: null,
-                onChanged: (_) => onChanged(),
-              ),
+          if (number != null)
+            RowMenu(
+              label: l10n.senseMenu(number),
+              upLabel: l10n.moveUp,
+              downLabel: l10n.moveDown,
+              deleteLabel: l10n.deleteBlock,
+              canMoveUp: canMoveUp,
+              canMoveDown: canMoveDown,
+              onAction: onAction,
             ),
         ],
       ),

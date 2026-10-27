@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
+import 'package:smartman/deck/src/editor_group.dart';
 import 'package:smartman/deck/src/label_presets.dart';
 import 'package:smartman/deck/src/senses_block.dart';
+import 'package:smartman/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
@@ -209,6 +211,67 @@ void main() {
           CardSense(labels: [_noun], meaning: '얼굴'),
         ]),
       ], reason: 'retyped, the short form');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a sense\'s label is a chip a line high, as wide as its text, on its meaning\'s baseline, and a tap beside it still edits it',
+    (tester) async {
+      final screens = await DeckScreens.open(tester);
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [const TextContent('present')],
+          back: [
+            const SensesContent([
+              CardSense(labels: [_noun], meaning: '선물'),
+              CardSense(
+                labels: [
+                  PartOfSpeechLabel(PartOfSpeech.verb, '동'),
+                  OtherLabel('격식'),
+                ],
+                meaning: '주다',
+              ),
+            ]),
+          ],
+        ),
+      );
+      await openCard(screens, await _stored(screens));
+      final short = tester.getRect(_labelField());
+      final long = tester.getRect(_labelField(1));
+      expect(short.height, labelChipHeight, reason: 'a line of body text');
+      expect(short.height, lessThan(AppSize.tapTarget));
+      expect(
+        long.width,
+        greaterThan(short.width + 20),
+        reason: 'as wide as its text, not one width for every label',
+      );
+      expect(short.width, lessThan(64));
+
+      // The chip's text and its meaning's sit on one baseline: both are lines
+      // of 16/24 text, so their lines start level.
+      double line(Finder field) => tester
+          .getTopLeft(
+            find.descendant(of: field, matching: find.byType(EditableText)),
+          )
+          .dy;
+      expect(line(_labelField()), closeTo(line(_back('Meaning 1')), 0.5));
+
+      // Its tap target is a target square, though the chip is smaller.
+      final handle = tester.ensureSemantics();
+      final target = tester.getSemantics(_labelField()).rect;
+      expect(target.height, greaterThanOrEqualTo(kMinInteractiveDimension));
+      expect(target.width, greaterThanOrEqualTo(kMinInteractiveDimension));
+      handle.dispose();
+      await tester.tapAt(short.topCenter - const Offset(0, 6));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(_labelField()).focusNode!.hasFocus,
+        isTrue,
+        reason: 'a tap just above the chip focuses it',
+      );
+      expect(find.byType(LabelPresetStrip), findsOneWidget);
       await screens.close();
     },
   );
