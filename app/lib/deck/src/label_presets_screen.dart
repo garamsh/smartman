@@ -6,7 +6,6 @@ import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'card_kind.dart';
 import 'failure_message.dart';
 import 'label_presets.dart';
 

@@ -224,7 +224,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -395,6 +395,18 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(schema.decks, schema.decks.imageMediaId);
         await m.createTable(schema.mediaUploads);
         await m.createTable(schema.mediaDeletions);
+      },
+      // Every live card of a template earlier builds wrote becomes a 자유
+      // card at version 1 (ADR 0114). Its content, edit time and dirty flag
+      // are kept: the server migrates its own rows, so a synced card takes
+      // the server's copy on the tie and an unsynced edit still wins it. A
+      // template, or a version, this build does not know is left as it is.
+      from12To13: (m, schema) async {
+        await m.database.customStatement(
+          "UPDATE cards SET template = 'free', template_version = 1 "
+          'WHERE deleted_at IS NULL AND (template IS NULL OR '
+          "(template IN ('flip', 'cloze', 'table') AND template_version = 1))",
+        );
       },
     ),
     // SQLite leaves foreign keys off per connection; deck deletion cascades only with them on.

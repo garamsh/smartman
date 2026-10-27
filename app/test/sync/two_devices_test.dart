@@ -191,7 +191,7 @@ void main() {
       for (final row in await b.db.select(b.db.cards).get())
         row.template: (row.templateVersion, jsonDecode(row.front)),
     };
-    expect(onB['cloze']?.$1, 1);
+    expect(onB['free']?.$1, 1);
     expect(onB['image_occlusion']?.$1, 2);
     expect(onB['image_occlusion']?.$2, front, reason: 'kept as written');
   }, skip: skip);

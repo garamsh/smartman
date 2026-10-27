@@ -266,37 +266,19 @@ abstract class AppLocalizations {
   /// **'카드'**
   String get wholeCard;
 
-  /// In the card editor under the front of a card whose front holds senses, such as a reversed vocabulary card: editing that front saves it as text.
-  ///
-  /// In ko, this message translates to:
-  /// **'앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.'**
-  String get sensesEditNote;
-
-  /// The card editor's kind switch: a card of a front and a back, the back one meaning or senses each with a typed label; named by its shape, as the cloze and table kinds are.
-  ///
-  /// In ko, this message translates to:
-  /// **'앞뒤'**
-  String get cardKindFlip;
-
-  /// The card editor's kind switch: a line with the words to recall as blanks.
-  ///
-  /// In ko, this message translates to:
-  /// **'빈칸'**
-  String get cardKindCloze;
-
-  /// The cloze form's one action, above the keyboard: makes the selected characters a blank, or inserts an empty blank at the cursor.
+  /// A 빈칸 문장 block's one action, above the keyboard: makes the selected characters a blank, or inserts an empty blank at the cursor.
   ///
   /// In ko, this message translates to:
   /// **'빈칸 넣기'**
   String get clozeInsertBlank;
 
-  /// The cloze form's one action while the caret or the selection is inside a blank: turns that blank back into text.
+  /// A 빈칸 문장 block's one action while the caret or the selection is inside a blank: turns that blank back into text.
   ///
   /// In ko, this message translates to:
   /// **'빈칸 풀기'**
   String get clozeUndoBlank;
 
-  /// Screen-reader name of the cloze form's action while the caret is inside a blank, naming the blank it turns back into text.
+  /// Screen-reader name of a 빈칸 문장 block's action while the caret is inside a blank, naming the blank it turns back into text.
   ///
   /// In ko, this message translates to:
   /// **'빈칸 풀기, {answer}'**
@@ -314,23 +296,11 @@ abstract class AppLocalizations {
   /// **'빈칸을 하나 이상 넣어 주세요'**
   String get clozeBlankRequired;
 
-  /// Error under the cloze form's words when the line holds underscores that would read as a blank of its own.
+  /// Error under a 빈칸 문장 block's line when the line holds underscores that would read as a blank of its own.
   ///
   /// In ko, this message translates to:
   /// **'___는 빈칸 표시라 줄에 쓸 수 없어요'**
   String get clozeBlankMarker;
-
-  /// The table kind's segment in the card editor's kind switch.
-  ///
-  /// In ko, this message translates to:
-  /// **'표'**
-  String get cardKindTable;
-
-  /// The card editor's kind switch: a card whose sides are each a list of blocks of any type (ADR 0108).
-  ///
-  /// In ko, this message translates to:
-  /// **'자유'**
-  String get cardKindFree;
 
   /// The card editor's button under the front's blocks, and the title of the sheet of block types it opens.
   ///
@@ -626,19 +596,7 @@ abstract class AppLocalizations {
   /// **'블록을 하나 이상 넣어 주세요'**
   String get sideBlockRequired;
 
-  /// Hint in the front field of the table form, where the table's name is written.
-  ///
-  /// In ko, this message translates to:
-  /// **'표의 이름'**
-  String get tableNameHint;
-
-  /// Label of the front field in the table form, where the table's name is written; it stays the front by the Terms rule.
-  ///
-  /// In ko, this message translates to:
-  /// **'앞면 · 표 이름'**
-  String get tableNameLabel;
-
-  /// What a screen reader reads for the table form's toolbar over the table.
+  /// What a screen reader reads for a 표 block's toolbar over the table.
   ///
   /// In ko, this message translates to:
   /// **'표 도구'**
@@ -656,67 +614,67 @@ abstract class AppLocalizations {
   /// **'지우기'**
   String get tableRemove;
 
-  /// Question asked before removing a row of the table form that holds text.
+  /// Question asked before removing a row of a 표 block that holds text.
   ///
   /// In ko, this message translates to:
   /// **'{row}행을 지울까요?'**
   String tableRemoveRowTitle(int row);
 
-  /// Question asked before removing a column of the table form that holds text.
+  /// Question asked before removing a column of a 표 block that holds text.
   ///
   /// In ko, this message translates to:
   /// **'{column}열을 지울까요?'**
   String tableRemoveColumnTitle(int column);
 
-  /// The one sentence of the question asked before removing a row or column of the table form that holds text.
+  /// The one sentence of the question asked before removing a row or column of a 표 block that holds text.
   ///
   /// In ko, this message translates to:
   /// **'그 줄에 적은 내용도 함께 지워져요.'**
   String get tableRemoveBody;
 
-  /// What a screen reader reads for a column's header field in the table form.
+  /// What a screen reader reads for a column's header field in a 표 block.
   ///
   /// In ko, this message translates to:
   /// **'{column}열 머리글'**
   String tableHeaderCell(int column);
 
-  /// A cell's place in the table form, as a screen reader reads it; rows count the table's body from 1.
+  /// A cell's place in a 표 block, as a screen reader reads it; rows count the table's body from 1.
   ///
   /// In ko, this message translates to:
   /// **'{row}행 {column}열'**
   String tableCell(int row, int column);
 
-  /// Button under the table form's grid that adds a row.
+  /// Button under a 표 block's grid that adds a row.
   ///
   /// In ko, this message translates to:
   /// **'행 추가'**
   String get addRow;
 
-  /// Button under the table form's grid that adds a column.
+  /// Button under a 표 block's grid that adds a column.
   ///
   /// In ko, this message translates to:
   /// **'열 추가'**
   String get addColumn;
 
-  /// Screen-reader name of the button after a row of the table form that removes it; a table keeps at least one row.
+  /// Screen-reader name of the button after a row of a 표 block that removes it; a table keeps at least one row.
   ///
   /// In ko, this message translates to:
   /// **'{row}행 지우기'**
   String deleteRow(int row);
 
-  /// Screen-reader name of the button over a column of the table form that removes it; a table keeps at least one column.
+  /// Screen-reader name of the button over a column of a 표 block that removes it; a table keeps at least one column.
   ///
   /// In ko, this message translates to:
   /// **'{column}열 지우기'**
   String deleteColumn(int column);
 
-  /// Error under the table form's grid when a table is saved with no blank.
+  /// Error under a 표 block's grid when a table is saved with no blank.
   ///
   /// In ko, this message translates to:
   /// **'빈칸으로 할 칸을 하나 이상 골라 주세요'**
   String get tableBlankRequired;
 
-  /// Error under the table form's grid when a cell chosen as a blank holds no text.
+  /// Error under a 표 block's grid when a cell chosen as a blank holds no text.
   ///
   /// In ko, this message translates to:
   /// **'빈칸으로 고른 칸에 내용을 적어 주세요'**
@@ -728,25 +686,19 @@ abstract class AppLocalizations {
   /// **'새 버전의 앱에서 만든 카드라 이 버전에서는 고칠 수 없어요. 앱을 업데이트해 주세요.'**
   String get cardNeedsUpdate;
 
-  /// What a screen reader reads for the card editor's kind switch.
-  ///
-  /// In ko, this message translates to:
-  /// **'카드 종류'**
-  String get cardKindLabel;
-
   /// What a screen reader reads for the deck name at the top of the card editor.
   ///
   /// In ko, this message translates to:
   /// **'{deck} 덱'**
   String cardDeck(String deck);
 
-  /// Hint inside a sense's label field in the basic form, and what a screen reader reads for it while the back is one meaning.
+  /// Hint inside a sense's label field in a 뜻 목록 block, and what a screen reader reads for it while the block is one meaning.
   ///
   /// In ko, this message translates to:
   /// **'품사'**
   String get senseLabelHint;
 
-  /// What a screen reader reads for the label field of a numbered sense in the basic form.
+  /// What a screen reader reads for the label field of a numbered sense in a 뜻 목록 block.
   ///
   /// In ko, this message translates to:
   /// **'뜻 {number} 품사'**
@@ -830,13 +782,13 @@ abstract class AppLocalizations {
   /// **'표시를 적어 주세요'**
   String get labelPresetRequired;
 
-  /// Label of a numbered sense's meaning field in the 앞뒤 form, numbered from 1.
+  /// Label of a numbered sense's meaning field in a 뜻 목록 block, numbered from 1.
   ///
   /// In ko, this message translates to:
   /// **'뜻 {number}'**
   String senseHeading(int number);
 
-  /// Label of the examples field of a sense stored with examples, in the 앞뒤 form.
+  /// Label of the examples field of a sense stored with examples, in a 뜻 목록 block.
   ///
   /// In ko, this message translates to:
   /// **'예문'**
@@ -854,17 +806,11 @@ abstract class AppLocalizations {
   /// **'뜻을 적어 주세요'**
   String get senseMeaningRequired;
 
-  /// Button under the back of the 앞뒤 form that adds a sense, making the back a list of senses.
+  /// Button under a 뜻 목록 block's senses that adds a sense.
   ///
   /// In ko, this message translates to:
   /// **'뜻 추가'**
   String get addSense;
-
-  /// Label of a field in the 앞뒤 form holding a text block a back of senses holds beside them, such as photo import's extras or a merged back.
-  ///
-  /// In ko, this message translates to:
-  /// **'덧붙인 내용'**
-  String get wordExtra;
 
   /// Screen-reader name of the button that moves a sense up one place.
   ///

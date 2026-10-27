@@ -134,15 +134,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get wholeCard => '카드';
 
   @override
-  String get sensesEditNote => '앞면을 고치면 [명] 같은 표시도 글자로 저장돼요.';
-
-  @override
-  String get cardKindFlip => '앞뒤';
-
-  @override
-  String get cardKindCloze => '빈칸';
-
-  @override
   String get clozeInsertBlank => '빈칸 넣기';
 
   @override
@@ -161,12 +152,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
-
-  @override
-  String get cardKindTable => '표';
-
-  @override
-  String get cardKindFree => '자유';
 
   @override
   String get addToFront => '앞면에 추가';
@@ -324,12 +309,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sideBlockRequired => '블록을 하나 이상 넣어 주세요';
 
   @override
-  String get tableNameHint => '표의 이름';
-
-  @override
-  String get tableNameLabel => '앞면 · 표 이름';
-
-  @override
   String get tableToolbar => '표 도구';
 
   @override
@@ -386,9 +365,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get cardNeedsUpdate =>
       '새 버전의 앱에서 만든 카드라 이 버전에서는 고칠 수 없어요. 앱을 업데이트해 주세요.';
-
-  @override
-  String get cardKindLabel => '카드 종류';
 
   @override
   String cardDeck(String deck) {
@@ -464,9 +440,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get addSense => '뜻 추가';
-
-  @override
-  String get wordExtra => '덧붙인 내용';
 
   @override
   String moveSenseUp(int number) {
