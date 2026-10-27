@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview_screen.dart';
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/word_break.dart';
@@ -42,7 +43,7 @@ List<String> _blocks(WidgetTester tester) {
 }
 
 /// The bar's one action while it reads [label].
-Finder _action(String label) => find.widgetWithText(ActionChip, label);
+Finder _action(String label) => find.widgetWithText(AppChip, label);
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;

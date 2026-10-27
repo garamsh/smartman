@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../deck/deck.dart'
     show DeckFailure, DeckSelection, deckRepositoryProvider, describeFailure;
+import '../../design/app_chip.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
@@ -333,7 +334,7 @@ class _RetentionCard extends StatelessWidget {
                       ),
                       Text(
                         l10n.retentionPercent(target),
-                        style: AppType.headline.copyWith(color: colors.ink2),
+                        style: AppType.bodyStrong.copyWith(color: colors.ink2),
                       ),
                     ],
                   ),
@@ -342,28 +343,13 @@ class _RetentionCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpace.s8),
-              child: DecoratedBox(
-                decoration: ShapeDecoration(
-                  color: gap < 0 ? colors.tintAmber : colors.brandTint,
-                  shape: const StadiumBorder(),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpace.s8,
-                    vertical: AppSpace.s4,
-                  ),
-                  child: Text(
-                    gap < 0
-                        ? l10n.retentionBelow(-gap)
-                        : gap > 0
-                        ? l10n.retentionAbove(gap)
-                        : l10n.retentionOnTarget,
-                    style: AppType.micro.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+              child: AppChip(
+                tone: gap < 0 ? AppChipTone.amber : AppChipTone.brand,
+                label: gap < 0
+                    ? l10n.retentionBelow(-gap)
+                    : gap > 0
+                    ? l10n.retentionAbove(gap)
+                    : l10n.retentionOnTarget,
               ),
             ),
           ],

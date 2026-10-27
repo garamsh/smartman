@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/app_chip.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
@@ -348,16 +349,12 @@ class _TableFieldsState extends State<TableFields> {
             runSpacing: AppSpace.s4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              ActionChip(
-                label: Text(l10n.addRow),
-                labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
-                materialTapTargetSize: MaterialTapTargetSize.padded,
+              AppChip.action(
+                label: l10n.addRow,
                 onPressed: () => _change(_draft.addRow),
               ),
-              ActionChip(
-                label: Text(l10n.addColumn),
-                labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
-                materialTapTargetSize: MaterialTapTargetSize.padded,
+              AppChip.action(
+                label: l10n.addColumn,
                 onPressed: () => _change(_draft.addColumn),
               ),
               _BlankToggle(
@@ -543,17 +540,12 @@ class _BlankToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
     final field = this.field;
     final onToggle = this.onToggle;
-    Widget chip(TextSelection selection) => FilterChip(
-      label: Text(l10n.tableBlankToggle),
-      showCheckmark: false,
-      materialTapTargetSize: MaterialTapTargetSize.padded,
+    Widget chip(TextSelection selection) => AppChip.action(
+      label: l10n.tableBlankToggle,
       selected: field != null && selected(selection),
-      selectedColor: colors.brandTint,
-      labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
-      onSelected: onToggle == null ? null : (_) => onToggle(selection),
+      onPressed: onToggle == null ? null : () => onToggle(selection),
     );
     if (field == null) return chip(const TextSelection.collapsed(offset: -1));
     return ListenableBuilder(

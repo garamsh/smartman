@@ -266,23 +266,112 @@ void main() {
       await tester.tap(find.text('confirm'));
     }
 
-    testWidgets(
-      'on iOS a filled button gives a light haptic, and an outlined one does not',
-      (tester) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+      testWidgets('on ${platform.name} no button gives a haptic of its own, '
+          'only the action it starts', (tester) async {
+        debugDefaultTargetPlatformOverride = platform;
         await pressBoth(tester);
-        debugDefaultTargetPlatformOverride = null;
+        expect(haptics, isEmpty);
 
+        // Control: a press whose action gives one is heard.
+        await pumpComponent(
+          tester,
+          AppButton(label: 'save', onPressed: HapticFeedback.lightImpact),
+        );
+        await tester.tap(find.text('save'));
+        debugDefaultTargetPlatformOverride = null;
         expect(haptics, ['HapticFeedbackType.lightImpact']);
-      },
+      });
+    }
+  });
+
+  group('press', () {
+    /// The ink layer of the button labelled [label].
+    RenderObject ink(WidgetTester tester, String label) => tester.renderObject(
+      find
+          .ancestor(
+            of: find.text(label),
+            matching: find.byWidgetPredicate(
+              (widget) => widget.runtimeType.toString() == '_InkFeatures',
+            ),
+          )
+          .first,
     );
 
-    testWidgets('on Android no button gives a haptic', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      await pressBoth(tester);
-      debugDefaultTargetPlatformOverride = null;
+    for (final MapEntry(key: mode, value: colors) in themeModes.entries) {
+      testWidgets('in ${mode.name} a pressed button dims under its label\'s '
+          'colour, with no splash and no change of size', (tester) async {
+        await pumpComponent(
+          tester,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppButton(label: 'Save', onPressed: () {}),
+              AppButton(
+                label: 'Later',
+                variant: AppButtonVariant.secondary,
+                onPressed: () {},
+              ),
+            ],
+          ),
+          themeMode: mode,
+        );
+        for (final (label, onFill) in [
+          ('Save', colors.onPrimary),
+          ('Later', colors.ink),
+        ]) {
+          final rest = tester.getRect(
+            find.byType(AppButton).at(label == 'Save' ? 0 : 1),
+          );
+          final gesture = await tester.startGesture(
+            tester.getCenter(find.text(label)),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(
+            ink(tester, label),
+            // The highlight paints its colour at an 8-bit alpha.
+            paints..rect(color: onFill.withAlpha((0.1 * 255).round())),
+            reason: label,
+          );
+          expect(
+            ink(tester, label),
+            paintsExactlyCountTimes(#drawCircle, 0),
+            reason: '$label: no splash',
+          );
+          expect(
+            tester.getRect(find.byType(AppButton).at(label == 'Save' ? 0 : 1)),
+            rest,
+            reason: '$label: no scale',
+          );
+          await gesture.up();
+          await tester.pumpAndSettle();
+        }
+      });
+    }
 
-      expect(haptics, isEmpty);
+    testWidgets('a splash, were the theme to draw one, is seen', (
+      tester,
+    ) async {
+      // Control for the test above: the same press under a splashing theme
+      // draws a circle, so its absence there is the theme's doing.
+      await pumpComponent(
+        tester,
+        Builder(
+          builder: (context) => Theme(
+            data: Theme.of(context)
+                .copyWith(splashFactory: InkRipple.splashFactory),
+            child: AppButton(label: 'Save', onPressed: () {}),
+          ),
+        ),
+      );
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('Save')),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(ink(tester, 'Save'), paints..circle());
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
   });
 }

@@ -145,6 +145,31 @@ void main() {
     expect(() => expectScreenTextReadable(tester), _fails);
   });
 
+  testWidgets('a fully transparent span, an empty blank, is a mask and left '
+      'out, and the same span faintly drawn fails', (tester) async {
+    Widget line(Color colour) => Text.rich(
+      TextSpan(
+        style: const TextStyle(color: _ink),
+        children: [
+          const TextSpan(text: 'Capital: '),
+          TextSpan(
+            text: ' Paris ',
+            style: TextStyle(
+              color: colour,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ],
+      ),
+    );
+    await _pump(tester, line(_tint.withValues(alpha: 0)), ground: _surface);
+    expectScreenTextReadable(tester);
+
+    // Control: the same span at a faint alpha is text, and unreadable.
+    await _pump(tester, line(_tint.withValues(alpha: 0.3)), ground: _surface);
+    expect(() => expectScreenTextReadable(tester), _fails);
+  });
+
   testWidgets('a known failure must still fail, and the rest are still '
       'checked', (tester) async {
     Widget texts(Color second) => Column(

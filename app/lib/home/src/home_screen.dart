@@ -201,15 +201,20 @@ class _TabBar extends StatelessWidget {
                                   ? colors.ink
                                   : colors.muted,
                             ),
-                            Text(
-                              tab.label,
-                              style: AppType.micro.copyWith(
-                                color: index == selected
-                                    ? colors.ink
-                                    : colors.muted,
-                                fontWeight: index == selected
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
+                            // One line, shrunk to the tab only where a large
+                            // text size is wider than it.
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                tab.label,
+                                style: AppType.micro.copyWith(
+                                  color: index == selected
+                                      ? colors.ink
+                                      : colors.muted,
+                                  fontWeight: index == selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],

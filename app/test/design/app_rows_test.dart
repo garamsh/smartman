@@ -101,54 +101,157 @@ void main() {
       },
     );
 
-    testWidgets('in ${mode.name} a chip is fully rounded, in its tone', (
+    testWidgets('in ${mode.name} every chip is one style: radius 6, the '
+        'section type, in its tone, a selected one in the brand tint', (
       tester,
     ) async {
       await pumpComponent(
         tester,
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        Wrap(
           children: [
             const AppChip(label: 'Today 3', tone: AppChipTone.brand),
             const AppChip(label: 'Public'),
+            const AppChip(label: 'Below', tone: AppChipTone.amber),
+            const AppChip(label: 'Know', tone: AppChipTone.know),
+            const AppChip(label: "Don't know", tone: AppChipTone.dontKnow),
+            AppChip.action(label: 'Add row', onPressed: () {}),
+            AppChip.action(label: 'Blank', selected: true, onPressed: () {}),
+            AppChip.action(label: 'Noun', selected: false, onPressed: () {}),
           ],
         ),
         themeMode: mode,
       );
 
-      final label = tester.widget<DecoratedBox>(
-        find
-            .ancestor(
-              of: find.text('Today 3'),
-              matching: find.byType(DecoratedBox),
-            )
-            .first,
+      /// The fill and shape [label]'s chip is drawn with.
+      (Color?, ShapeBorder?) drawn(String label) {
+        final box = find.ancestor(
+          of: find.text(label),
+          matching: find.byType(DecoratedBox),
+        );
+        if (box.evaluate().isNotEmpty) {
+          final decoration =
+              tester.widget<DecoratedBox>(box.first).decoration
+                  as ShapeDecoration;
+          return (decoration.color, decoration.shape);
+        }
+        final material = tester.widget<Material>(
+          find
+              .ancestor(of: find.text(label), matching: find.byType(Material))
+              .first,
+        );
+        return (material.color, material.shape);
+      }
+
+      RoundedRectangleBorder shape(Color side) => RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: side),
       );
+      for (final (label, fill) in [
+        ('Today 3', colors.brandTint),
+        ('Public', colors.surface),
+        ('Below', colors.tintAmber),
+        ('Know', colors.know),
+        ("Don't know", colors.dontKnowText),
+        ('Add row', colors.surface),
+        ('Blank', colors.brandTint),
+        ('Noun', colors.surface),
+      ]) {
+        final outline = fill == colors.surface ? colors.outline : fill;
+        expect(drawn(label), (fill, shape(outline)), reason: label);
+        expect(
+          tester.widget<Text>(find.text(label)).style?.fontSize,
+          AppType.section.fontSize,
+          reason: label,
+        );
+      }
       expect(
-        label.decoration,
-        ShapeDecoration(
-          color: colors.brandTint,
-          shape: StadiumBorder(side: BorderSide(color: colors.brandTint)),
-        ),
-      );
-      expect(
-        tester
-            .widget<DecoratedBox>(
-              find
-                  .ancestor(
-                    of: find.text('Public'),
-                    matching: find.byType(DecoratedBox),
-                  )
-                  .first,
-            )
-            .decoration,
-        ShapeDecoration(
-          color: colors.surface,
-          shape: StadiumBorder(side: BorderSide(color: colors.outline)),
+        tester.getSemantics(find.text('Blank')),
+        matchesSemantics(
+          label: 'Blank',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasSelectedState: true,
+          isSelected: true,
+          hasTapAction: true,
+          isFocusable: true,
+          hasFocusAction: true,
         ),
       );
       await meetsGuidelines(tester);
       expectScreenTextReadable(tester);
+    });
+  }
+
+  testWidgets('an action chip acts on a tap on it and in the space that makes '
+      'up its tap target, and a disabled one is muted and does nothing', (
+    tester,
+  ) async {
+    var presses = 0;
+    await pumpComponent(
+      tester,
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppChip.action(label: 'Add row', onPressed: () => presses++),
+          const AppChip.action(label: 'Blank', onPressed: null),
+        ],
+      ),
+    );
+    final target = tester.getRect(find.byType(AppChip).first);
+    final face = tester.getRect(
+      find
+          .ancestor(of: find.text('Add row'), matching: find.byType(Material))
+          .first,
+    );
+    expect(target.height, greaterThanOrEqualTo(kMinInteractiveDimension));
+    expect(face.height, lessThan(target.height), reason: 'a small chip');
+
+    await tester.tap(find.text('Add row'));
+    await tester.tapAt(Offset(face.center.dx, (target.top + face.top) / 2));
+    expect(presses, 2);
+
+    await tester.tap(find.text('Blank'));
+    expect(presses, 2);
+    expect(
+      tester.widget<Text>(find.text('Blank')).style?.color,
+      AppColors.light.muted,
+    );
+  });
+
+  for (final MapEntry(key: mode, value: colors) in themeModes.entries) {
+    testWidgets('in ${mode.name} a pressed row dims under the ink, with no '
+        'splash', (tester) async {
+      await pumpComponent(
+        tester,
+        AppGroup(
+          children: [AppListRow(title: 'Theme', onTap: () {})],
+        ),
+        themeMode: mode,
+      );
+      final ink = tester.renderObject(
+        find
+            .ancestor(
+              of: find.text('Theme'),
+              matching: find.byWidgetPredicate(
+                (widget) => widget.runtimeType.toString() == '_InkFeatures',
+              ),
+            )
+            .first,
+      );
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('Theme')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      // The highlight paints its colour at an 8-bit alpha.
+      expect(
+        ink,
+        paints..rect(color: colors.ink.withAlpha((0.1 * 255).round())),
+      );
+      expect(ink, paintsExactlyCountTimes(#drawCircle, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
   }
 

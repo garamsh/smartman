@@ -5,6 +5,7 @@ import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/deck/src/table_block.dart';
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/theme.dart';
 
 import '../contrast.dart';
@@ -82,12 +83,12 @@ void main() {
       tap(screens, _cell(index));
 
   /// The toolbar's "빈칸" chip.
-  FilterChip blankChip(WidgetTester tester) =>
-      tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Blank'));
+  AppChip blankChip(WidgetTester tester) =>
+      tester.widget<AppChip>(find.widgetWithText(AppChip, 'Blank'));
 
   /// Toggles the selected cell as a blank.
   Future<void> toggleBlank(DeckScreens screens) =>
-      tap(screens, find.widgetWithText(FilterChip, 'Blank'));
+      tap(screens, find.widgetWithText(AppChip, 'Blank'));
 
   /// Removes the selected cell's row or column through "삭제", read as
   /// [item] in its menu.
@@ -296,7 +297,7 @@ void main() {
     'a screen reader reads each cell with its place and whether it is a blank, and the toolbar\'s Blank with its state, offered on a body cell alone',
     (tester) async {
       final screens = await openTable(tester);
-      expect(blankChip(tester).onSelected, isNull, reason: 'nothing selected');
+      expect(blankChip(tester).onPressed, isNull, reason: 'nothing selected');
       await typeCapitals(screens);
       final handle = tester.ensureSemantics();
       expect(find.bySemanticsLabel('Row 1, column 2'), findsOneWidget);
@@ -312,7 +313,7 @@ void main() {
       );
 
       await select(screens, 0);
-      expect(blankChip(tester).onSelected, isNull, reason: 'a heading');
+      expect(blankChip(tester).onPressed, isNull, reason: 'a heading');
       await select(screens, 3);
       expect(blankChip(tester).selected, isFalse);
       await toggleBlank(screens);

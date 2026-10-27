@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
@@ -372,6 +373,38 @@ void main() {
 
     expect(find.text('Write something'), findsOneWidget);
     expect(await _stored(screens), isEmpty);
+    await screens.close();
+  });
+
+  testWidgets('a saved card gives one light haptic, and a refused save none', (
+    tester,
+  ) async {
+    final haptics = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'HapticFeedback.vibrate') {
+          haptics.add(call.arguments as String);
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final screens = await openNew(tester);
+    await typeBlock(tester, CardSide.front, 'Chat');
+    await screens.tap(find.text('Save and next card'));
+    expect(find.text('Write something'), findsOneWidget);
+    expect(haptics, isEmpty, reason: 'refused');
+
+    await typeBlock(tester, CardSide.back, 'cat');
+    await screens.tap(find.text('Save and next card'));
+    expect(await _stored(screens), [('Chat', 'cat')]);
+    expect(haptics, ['HapticFeedbackType.lightImpact']);
     await screens.close();
   });
 

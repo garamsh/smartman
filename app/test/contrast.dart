@@ -37,10 +37,11 @@ Iterable<({String text, Color colour, Color? fill})> _runs(
 
 /// Each part of [span] under 4.5:1 on what it is drawn on: its own fill over
 /// the opaque [ground], or [ground]. A part drawn in the colour of its own
-/// fill is a mask, such as an unrevealed blank, and not text.
+/// fill, or fully transparent, is a mask, such as an unrevealed blank, and
+/// not text.
 List<String> _unreadable(InlineSpan span, Color ground) => [
   for (final (:text, :colour, :fill) in _runs(span, null, null))
-    if (fill != colour)
+    if (fill != colour && colour.a > 0)
       if (fill == null ? ground : over(fill, ground) case final under)
         if (contrast(over(colour, under), under) < 4.5)
           '"$text" of "${span.toPlainText()}" in $colour on $under',

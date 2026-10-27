@@ -394,7 +394,7 @@ class _TypeList extends StatelessWidget {
     final colors = AppColors.of(context);
     return Material(
       color: colors.ground,
-      borderRadius: BorderRadius.circular(AppRadius.field),
+      borderRadius: BorderRadius.circular(AppRadius.group),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

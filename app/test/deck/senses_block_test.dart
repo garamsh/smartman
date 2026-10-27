@@ -9,6 +9,7 @@ import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/editor_group.dart';
 import 'package:smartman/deck/src/label_presets.dart';
 import 'package:smartman/deck/src/senses_block.dart';
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/theme.dart';
 
 import '../contrast.dart';
@@ -296,12 +297,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(LabelPresetStrip), findsOneWidget);
       final chips = tester
-          .widgetList<ChoiceChip>(find.byType(ChoiceChip))
-          .map((chip) => (chip.label as Text).data)
+          .widgetList<AppChip>(find.byType(AppChip))
+          .map((chip) => chip.label)
           .toList();
       expect(chips, ['숙어', '명'], reason: "in the user's order");
 
-      await tester.tap(find.widgetWithText(ChoiceChip, '숙어'));
+      await tester.tap(find.widgetWithText(AppChip, '숙어'));
       await tester.pumpAndSettle();
       final label = tester.widget<TextField>(_labelField());
       expect(label.controller!.text, '숙어');
@@ -311,9 +312,7 @@ void main() {
         reason: 'the field keeps focus',
       );
       expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '숙어'))
-            .selected,
+        tester.widget<AppChip>(find.widgetWithText(AppChip, '숙어')).selected,
         isTrue,
       );
 

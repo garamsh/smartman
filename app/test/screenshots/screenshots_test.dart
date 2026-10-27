@@ -15,6 +15,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/theme_choice.dart';
@@ -100,6 +101,92 @@ String _flutterRoot() {
   throw StateError('no Flutter SDK above ${Platform.resolvedExecutable}');
 }
 
+/// The widgets whose text a screen's three sizes leave out: a card's own
+/// content on the study and preview cards, which `design.md` §Details leaves
+/// out, and Google's button, drawn to Google's guidelines.
+const _uncounted = {
+  'CardText',
+  'CardPreview',
+  'PreviousCardView',
+  'EarlierCardView',
+  'PreviousCardDemo',
+  '_CardFace',
+  '_Face',
+  'GoogleSignInButton',
+};
+
+/// Whether [element] draws text at the large figure's size: a figure's
+/// paragraph, or the field it is typed in.
+bool _isFigure(Element element) => switch (element.widget) {
+  RichText(:final text) => text.style?.fontSize == AppType.figure.fontSize,
+  EditableText(:final style) => style.fontSize == AppType.figure.fontSize,
+  _ => false,
+};
+
+/// Whether the paragraph [element] is a figure's unit: in the row the figure
+/// is drawn in, the nearest row or column above it being that row.
+bool _isFigureUnit(Element element) {
+  Element? flex;
+  element.visitAncestorElements((ancestor) {
+    if (ancestor.widget is Flex) flex = ancestor;
+    return flex == null;
+  });
+  final row = flex;
+  if (row == null || (row.widget as Flex).direction != Axis.horizontal) {
+    return false;
+  }
+  var found = false;
+  void visit(Element child) {
+    if (found) return;
+    if (child != element && _isFigure(child)) {
+      found = true;
+      return;
+    }
+    child.visitChildElements(visit);
+  }
+
+  row.visitChildElements(visit);
+  return found;
+}
+
+/// The font sizes of the text the current route draws, a sheet's alone while
+/// one is open, leaving out a card's own content on the study and preview
+/// cards and a large figure with its unit, as `design.md` §Details counts a
+/// screen's three sizes.
+List<double> _chromeSizes(WidgetTester tester) {
+  final sizes = <double>{};
+  for (final element in find.byType(RichText).evaluate()) {
+    if (!(ModalRoute.of(element)?.isCurrent ?? true)) continue;
+    var onCard = false;
+    element.visitAncestorElements((ancestor) {
+      onCard = _uncounted.contains(ancestor.widget.runtimeType.toString());
+      return !onCard;
+    });
+    if (onCard || _isFigure(element) || _isFigureUnit(element)) continue;
+    final own = <double>{};
+    void walk(InlineSpan span, double? size, String? family) {
+      final ownSize = span.style?.fontSize ?? size;
+      final ownFamily = span.style?.fontFamily ?? family;
+      if (span is! TextSpan) return;
+      // Icons are glyphs of their own font, not text.
+      if (ownSize != null &&
+          ownFamily == appFontFamily &&
+          (span.text ?? '').trim().isNotEmpty) {
+        own.add(ownSize);
+      }
+      for (final child in span.children ?? const <InlineSpan>[]) {
+        walk(child, ownSize, ownFamily);
+      }
+    }
+
+    walk((element.widget as RichText).text, null, null);
+    // A figure's unit is drawn beside it in the same paragraph.
+    if (own.contains(AppType.figure.fontSize)) continue;
+    sizes.addAll(own);
+  }
+  return sizes.toList()..sort();
+}
+
 void main() {
   late Scheduler scheduler;
   setUpAll(() async {
@@ -107,6 +194,11 @@ void main() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     await _loadFonts();
     scheduler = await Scheduler.load();
+    for (final mode in ['light', 'dark']) {
+      File('build/screenshots/$mode/type-sizes.txt')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('');
+    }
   });
 
   final ko = lookupAppLocalizations(const Locale('ko'));
@@ -128,6 +220,12 @@ void main() {
         find.byType(MaterialApp).first,
         matchesGoldenFile('../../build/screenshots/$mode/$name.png'),
       );
+      final sizes = _chromeSizes(tester);
+      File('build/screenshots/$mode/type-sizes.txt').writeAsStringSync(
+        '$name: ${sizes.join(', ')}\n',
+        mode: FileMode.append,
+      );
+      expect(sizes.length, lessThanOrEqualTo(3), reason: '$name: $sizes');
     }
 
     void phone(WidgetTester tester) {
@@ -840,7 +938,7 @@ void main() {
       tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
       addTearDown(tester.view.resetViewInsets);
       await tester.pumpAndSettle();
-      await tap(tester, find.widgetWithText(ChoiceChip, '명'));
+      await tap(tester, find.widgetWithText(AppChip, '명'));
       await shot(tester, '05c-card-editor-label-presets');
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
@@ -1196,7 +1294,7 @@ void main() {
         await tester.ensureVisible(cell(index));
         await tester.pumpAndSettle();
         await tap(tester, cell(index));
-        await tap(tester, find.widgetWithText(FilterChip, ko.tableBlankToggle));
+        await tap(tester, find.widgetWithText(AppChip, ko.tableBlankToggle));
       }
       await tester.ensureVisible(find.text('영단어 기본'));
       await tester.pumpAndSettle();

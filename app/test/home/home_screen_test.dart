@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/home/src/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
@@ -1276,6 +1277,9 @@ void main() {
     Finder rowOf(String text) =>
         find.ancestor(of: find.text(text), matching: find.byType(Row)).first;
 
+    Finder chipOf(String text) =>
+        find.ancestor(of: find.text(text), matching: find.byType(AppChip));
+
     testWidgets(
       'the new-deck sheet\'s rows draw no icon, and by hand has no second line while each photo row keeps its own',
       (tester) async {
@@ -1331,9 +1335,9 @@ void main() {
         );
 
         for (final chip in ['Goal of 30 reached', '5 more cards today']) {
-          expect(rowOf(chip), findsOneWidget);
+          expect(chipOf(chip), findsOneWidget);
           expect(
-            find.descendant(of: rowOf(chip), matching: find.byType(Icon)),
+            find.descendant(of: chipOf(chip), matching: find.byType(Icon)),
             findsNothing,
             reason: chip,
           );
@@ -1341,7 +1345,7 @@ void main() {
         // Control: the chip finder reaches a chip's leading mark.
         expect(
           find.descendant(
-            of: rowOf('1-day streak'),
+            of: chipOf('1-day streak'),
             matching: find.byType(StreakFlame),
           ),
           findsOneWidget,

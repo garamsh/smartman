@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../account/account.dart';
 import '../../deck/deck.dart';
 import '../../design/app_button.dart';
+import '../../design/app_chip.dart';
 import 'mascot.dart';
 import '../../design/streak_flame.dart';
 import '../../design/theme.dart';
@@ -276,7 +277,7 @@ class _TodayCard extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(l10n.todayTitle, style: quiet),
-            if (streak > 0) _StreakChip(days: streak, onHero: true),
+            if (streak > 0) _StreakChip(days: streak),
           ],
         ),
         Wrap(
@@ -334,8 +335,7 @@ class _TodayCard extends StatelessWidget {
               }),
               style: quiet,
             ),
-            if (overview.extra > 0)
-              _ExtraPill(count: overview.extra, onHero: true),
+            if (overview.extra > 0) _ExtraPill(count: overview.extra),
           ],
         ),
         AppButton(
@@ -389,7 +389,7 @@ class _BacklogCard extends StatelessWidget {
         if (overview.streak > 0)
           Align(
             alignment: Alignment.centerLeft,
-            child: _StreakChip(days: overview.streak, onHero: true),
+            child: _StreakChip(days: overview.streak),
           ),
         AppButton(
           label: l10n.backlogStudy(count.total, count.minutes),
@@ -403,15 +403,13 @@ class _BacklogCard extends StatelessWidget {
 
 /// "n일 연속" after a flame, on the white card or on the done card.
 class _StreakChip extends StatelessWidget {
-  const _StreakChip({required this.days, required this.onHero});
+  const _StreakChip({required this.days});
 
   final int days;
-  final bool onHero;
 
   @override
-  Widget build(BuildContext context) => _Pill(
-    onHero: onHero,
-    icon: StreakFlame(days: days, size: AppSpace.s16),
+  Widget build(BuildContext context) => AppChip(
+    leading: StreakFlame(days: days, size: AppSpace.s16),
     label: AppLocalizations.of(context).streakDays(days),
   );
 }
@@ -419,64 +417,13 @@ class _StreakChip extends StatelessWidget {
 /// "오늘 n장 더 했어요": the cards studied past the day's plan, which its goal
 /// never counts.
 class _ExtraPill extends StatelessWidget {
-  const _ExtraPill({required this.count, required this.onHero});
+  const _ExtraPill({required this.count});
 
   final int count;
-  final bool onHero;
 
   @override
-  Widget build(BuildContext context) => _Pill(
-    onHero: onHero,
-    label: AppLocalizations.of(context).todayExtra(count),
-  );
-}
-
-/// A small rounded label, after the streak's flame alone: on the white card an
-/// outline, on the done card the surface.
-class _Pill extends StatelessWidget {
-  const _Pill({required this.onHero, this.icon, required this.label});
-
-  final bool onHero;
-  final Widget? icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        // On the white card the pill is an outline, so it shows on the white.
-        color: onHero ? null : colors.surface,
-        shape: StadiumBorder(
-          side: onHero ? BorderSide(color: colors.outline) : BorderSide.none,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s12,
-          vertical: AppSpace.s4,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: AppSpace.s4,
-          children: [
-            ?icon,
-            // Wrapped where the line has no room for it, as at a large text
-            // size.
-            Flexible(
-              child: Text(
-                label,
-                style: AppType.caption.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colors.ink,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppChip(label: AppLocalizations.of(context).todayExtra(count));
 }
 
 /// Once today's cards are done: the mascot, that the day is done, the
@@ -535,15 +482,10 @@ class _DoneCard extends StatelessWidget {
               alignment: WrapAlignment.center,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (overview.streak > 0)
-                  _StreakChip(days: overview.streak, onHero: false),
+                if (overview.streak > 0) _StreakChip(days: overview.streak),
                 if (overview.goal.reached)
-                  _Pill(
-                    onHero: false,
-                    label: l10n.goalReached(overview.goal.goal),
-                  ),
-                if (overview.extra > 0)
-                  _ExtraPill(count: overview.extra, onHero: false),
+                  AppChip(label: l10n.goalReached(overview.goal.goal)),
+                if (overview.extra > 0) _ExtraPill(count: overview.extra),
               ],
             ),
           ],

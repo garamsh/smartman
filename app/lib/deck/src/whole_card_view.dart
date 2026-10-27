@@ -52,7 +52,7 @@ class WholeCardView extends StatelessWidget {
             TextContent(:final text) => Text(
               text,
               textAlign: TextAlign.center,
-              style: AppType.headline.copyWith(color: style.color),
+              style: _titleStyle,
             ),
             ClozeContent() => _cloze(context, block),
             TableContent() => _table(context, block),
@@ -94,6 +94,14 @@ class WholeCardView extends StatelessWidget {
             ),
     );
   }
+
+  /// A text block's style: the headline on a card, or, in a style smaller
+  /// than it such as a list row's, that style in bold, so a row keeps its
+  /// screen's sizes (#454).
+  TextStyle get _titleStyle =>
+      (style.fontSize ?? 0) < (AppType.headline.fontSize ?? 0)
+      ? style.copyWith(fontWeight: FontWeight.w700)
+      : AppType.headline.copyWith(color: style.color);
 
   Widget _cloze(BuildContext context, ClozeContent cloze) {
     final parts = cloze.text.split(clozeBlank);
@@ -167,15 +175,20 @@ class WholeCardView extends StatelessWidget {
     );
   }
 
-  /// A blank of [answer]: drawn in the hairline colour on the hairline fill,
-  /// so it does not show, or filled on the brand tint.
+  /// A blank of [answer]: an empty gap of the answer's width over a muted
+  /// underline, so hidden content shows as nothing (#454), or filled on the
+  /// brand tint.
   TextSpan _blank(BuildContext context, String answer) {
     final colors = AppColors.of(context);
     return TextSpan(
       text: ' $answer ',
       style: revealed
           ? TextStyle(backgroundColor: colors.brandTint)
-          : TextStyle(color: colors.hairline, backgroundColor: colors.hairline),
+          : TextStyle(
+              color: colors.muted.withValues(alpha: 0),
+              decoration: TextDecoration.underline,
+              decorationColor: colors.muted,
+            ),
     );
   }
 }

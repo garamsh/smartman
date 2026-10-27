@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/app_button.dart';
+import '../../design/app_chip.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -322,16 +323,11 @@ class LabelPresetStrip extends StatelessWidget {
                     spacing: AppSpace.s8,
                     children: [
                       for (final preset in presets)
-                        ChoiceChip(
-                          label: Text(preset.label),
+                        AppChip.action(
+                          label: preset.label,
                           tooltip: preset.name.isEmpty ? null : preset.name,
-                          showCheckmark: false,
-                          labelStyle: AppType.bodyStrong.copyWith(
-                            color: colors.ink,
-                          ),
-                          selectedColor: colors.brandTint,
                           selected: preset.label == current.trim(),
-                          onSelected: (_) => onPick(preset.label),
+                          onPressed: () => onPick(preset.label),
                         ),
                     ],
                   ),

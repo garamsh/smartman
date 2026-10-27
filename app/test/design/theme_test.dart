@@ -156,6 +156,82 @@ void main() {
     ], isEmpty);
   });
 
+  test('no screen draws a Material chip, so every chip is AppChip', () {
+    final materialChip = RegExp(
+      r'(?<![\w.])(Chip|ActionChip|FilterChip|ChoiceChip|InputChip|RawChip)\(',
+    );
+    // Controls: the expression finds each Material chip and not AppChip.
+    for (final planted in ['Chip(', 'ActionChip(', 'FilterChip(']) {
+      expect(materialChip.hasMatch('child: $planted'), isTrue, reason: planted);
+    }
+    expect(
+      materialChip.hasMatch('AppChip(label: a) AppChip.action(label: b)'),
+      isFalse,
+    );
+
+    expect([
+      for (final MapEntry(key: path, value: source) in _appSources().entries)
+        if (materialChip.hasMatch(source)) path,
+    ], isEmpty);
+  });
+
+  test('the radii are one scale: group 14, button 12, chip and label 6, '
+      'sheet 22, and the theme draws buttons and sheets in them', () {
+    expect(AppRadius.group, 14);
+    expect(AppRadius.button, 12);
+    expect(AppRadius.chip, 6);
+    expect(AppRadius.sheet, 22);
+    for (final theme in [lightTheme, darkTheme]) {
+      expect(
+        theme.bottomSheetTheme.shape,
+        const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+      );
+      for (final style in [
+        theme.filledButtonTheme.style,
+        theme.outlinedButtonTheme.style,
+        theme.textButtonTheme.style,
+      ]) {
+        expect(
+          style?.shape?.resolve({}),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        );
+      }
+    }
+  });
+
+  test('the type scale gives a screen three sizes: a title, the body and a '
+      'caption, a button in the body size', () {
+    final body = [
+      AppType.body,
+      AppType.bodyStrong,
+      AppType.label,
+    ].map((style) => style.fontSize).toSet();
+    final caption = [
+      AppType.secondary,
+      AppType.caption,
+      AppType.section,
+      AppType.micro,
+    ].map((style) => style.fontSize).toSet();
+    expect(body, {16});
+    expect(caption, {13});
+    expect(AppType.label.fontSize, AppType.body.fontSize, reason: 'a button');
+    // Material's text theme draws in the same three below the titles.
+    for (final style in [
+      AppType.textTheme.titleMedium,
+      AppType.textTheme.titleSmall,
+      AppType.textTheme.bodyLarge,
+      AppType.textTheme.bodyMedium,
+      AppType.textTheme.bodySmall,
+      AppType.textTheme.labelLarge,
+      AppType.textTheme.labelMedium,
+      AppType.textTheme.labelSmall,
+    ]) {
+      expect([16.0, 13.0], contains(style?.fontSize));
+    }
+  });
+
   /// The WCAG 2.1 contrast ratio of two opaque colours.
   double contrast(Color a, Color b) {
     final (lighter, darker) = a.computeLuminance() > b.computeLuminance()

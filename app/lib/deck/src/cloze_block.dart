@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design/app_chip.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
@@ -319,14 +320,9 @@ class ClozeAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
     final blank = this.blank;
-    Widget chip(String label, VoidCallback onPressed) => ActionChip(
-      label: Text(label),
-      labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
-      materialTapTargetSize: MaterialTapTargetSize.padded,
-      onPressed: onPressed,
-    );
+    Widget chip(String label, VoidCallback onPressed) =>
+        AppChip.action(label: label, onPressed: onPressed);
     return Align(
       alignment: Alignment.centerLeft,
       child: blank == null
