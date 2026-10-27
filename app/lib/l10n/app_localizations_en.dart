@@ -135,16 +135,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wholeCard => 'Card';
 
   @override
-  String get sensesEditNote =>
-      'Editing the front saves labels such as [명] as plain text.';
-
-  @override
-  String get cardKindFlip => 'Front & back';
-
-  @override
-  String get cardKindCloze => 'Cloze';
-
-  @override
   String get clozeInsertBlank => 'Insert blank';
 
   @override
@@ -164,12 +154,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clozeBlankMarker =>
       '___ marks a blank, so the line can\'t contain it';
-
-  @override
-  String get cardKindTable => 'Table';
-
-  @override
-  String get cardKindFree => 'Free';
 
   @override
   String get addToFront => 'Add to front';
@@ -330,12 +314,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideBlockRequired => 'Add at least one block';
 
   @override
-  String get tableNameHint => 'The table\'s name';
-
-  @override
-  String get tableNameLabel => 'Front · table name';
-
-  @override
   String get tableToolbar => 'Table tools';
 
   @override
@@ -392,9 +370,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cardNeedsUpdate =>
       'This card was made in a newer version of the app, so this version can\'t edit it. Update the app.';
-
-  @override
-  String get cardKindLabel => 'Card kind';
 
   @override
   String cardDeck(String deck) {
@@ -471,9 +446,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addSense => 'Add meaning';
-
-  @override
-  String get wordExtra => 'More on the back';
 
   @override
   String moveSenseUp(int number) {

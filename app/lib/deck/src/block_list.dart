@@ -9,11 +9,11 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
 import 'audio_block.dart';
-import 'cloze_form.dart';
+import 'cloze_block.dart';
 import 'content.dart';
 import 'image_block.dart';
-import 'table_form.dart';
-import 'word_form.dart';
+import 'senses_block.dart';
+import 'table_block.dart';
 
 /// A side of a card, which a block list adds to.
 enum CardSide { front, back }
@@ -103,17 +103,27 @@ final class TextBlockDraft extends BlockDraft {
 
   final TextEditingController text;
 
+  /// The field's focus, which a new card's first block takes.
+  final focus = FocusNode();
+
   @override
   BlockType get type => BlockType.text;
 
   @override
   Content get content => TextContent(text.text);
 
-  @override
-  bool get isComplete => text.text.trim().isNotEmpty;
+  /// Whether nothing but spaces is typed, so the editor saves no block for
+  /// it.
+  bool get isEmpty => text.text.trim().isEmpty;
 
   @override
-  void dispose() => text.dispose();
+  bool get isComplete => true;
+
+  @override
+  void dispose() {
+    text.dispose();
+    focus.dispose();
+  }
 }
 
 /// A 뜻 목록 block: its senses, one empty meaning when new.
@@ -275,8 +285,9 @@ enum _BlockAction { up, down, delete }
 /// moves it up or down or deletes it, a non-drag way to reorder (WCAG 2.2
 /// dragging), and under them "+ 앞면에 추가" or "+ 뒷면에 추가", which
 /// opens a sheet of the types to add (ADR 0108). With [showErrors], what
-/// keeps a block from being saved shows under it, and [emptyError], when
-/// given, under the side while it holds no block.
+/// keeps a block from being saved shows under it. [emptyError], given while
+/// the side must hold a block and holds none to save, shows under the side
+/// when it holds no block, and each empty 글 then asks for its text.
 class BlockList extends StatelessWidget {
   const BlockList({
     super.key,
@@ -376,6 +387,7 @@ class BlockList extends StatelessWidget {
             sideName: sideName,
             menuLabel: l10n.blockMenu(sideName, index + 1),
             showErrors: showErrors,
+            sideRequired: emptyError != null,
             onChanged: onChanged,
             onMediaStored: onMediaStored,
             onAction: (action) => _act(index, action),
@@ -406,6 +418,7 @@ class _Block extends StatelessWidget {
     required this.sideName,
     required this.menuLabel,
     required this.showErrors,
+    required this.sideRequired,
     required this.onChanged,
     required this.onMediaStored,
     required this.onAction,
@@ -420,6 +433,10 @@ class _Block extends StatelessWidget {
   final String sideName;
   final String menuLabel;
   final bool showErrors;
+
+  /// Whether the side must hold a block and holds none to save, so an empty
+  /// 글 asks for its text.
+  final bool sideRequired;
   final VoidCallback onChanged;
   final ValueChanged<_BlockAction> onAction;
   final bool canMoveUp;
@@ -481,10 +498,11 @@ class _Block extends StatelessWidget {
         switch (block) {
           final TextBlockDraft draft => AppTextField(
             controller: draft.text,
+            focusNode: draft.focus,
             hint: l10n.blockTextDescription,
             minLines: 2,
             maxLines: null,
-            errorText: showErrors && !draft.isComplete
+            errorText: sideRequired && draft.isEmpty
                 ? l10n.cardSideRequired
                 : null,
             onChanged: (_) => onChanged(),

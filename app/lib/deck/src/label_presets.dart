@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -24,6 +25,18 @@ final class LabelPreset {
 }
 
 const labelPresetsKey = 'labelPresets';
+
+/// The keys [deckStorageProvider] must be opened to cache.
+const deckStorageKeys = {labelPresetsKey};
+
+/// The device storage the card editor keeps the label presets in. The
+/// composition site overrides it with the storage it opens, which caches
+/// [deckStorageKeys].
+final deckStorageProvider = Provider<SharedPreferencesWithCache>(
+  (ref) => throw UnimplementedError(
+    'deckStorageProvider is overridden at the composition site',
+  ),
+);
 
 /// The presets a device starts from: the fourteen short forms of ADR 0075,
 /// each named.

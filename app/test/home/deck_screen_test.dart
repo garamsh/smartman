@@ -462,6 +462,85 @@ void main() {
     await screens.close();
   });
 
+  for (final (name, back) in [
+    ('a new cloze card, with no back,', const <Content>[]),
+    (
+      'a former cloze card whose stored back no longer matches its front',
+      const [TextContent('The capital of France is Lyon')],
+    ),
+  ]) {
+    testWidgets(
+      '$name is read on its row as its front filled once shown, never its stored back',
+      (tester) async {
+        const cloze = ClozeContent('The capital of France is ___', ['Paris']);
+        final screens = await DeckScreens.open(tester);
+        await tester.runAsync(
+          () => screens.repository.addCard(
+            screens.deck.id,
+            front: [cloze],
+            back: back,
+          ),
+        );
+        // The setup stored the card with the back asked for.
+        expect((await screens.cards()).single.back, back);
+        await screens.push((deck) => DeckScreen(deck: deck));
+        final row = find.byWidgetPredicate(
+          (widget) => widget is CardBackRow && widget.front.first == cloze,
+        );
+        expect(
+          find.bySemanticsLabel('The capital of France is blank, back hidden'),
+          findsOneWidget,
+        );
+
+        await screens.tap(row);
+        expect(
+          find.bySemanticsLabel(
+            'The capital of France is blank, back The capital of France is Paris',
+          ),
+          findsOneWidget,
+        );
+        await screens.close();
+      },
+    );
+  }
+
+  testWidgets(
+    'search reads only the face a card with a blank in its front is studied on, so a former cloze card\'s stale back is not found',
+    (tester) async {
+      const cloze = ClozeContent('The capital of France is ___', ['Paris']);
+      final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
+      // A 빈칸 card whose derived back was written before its front changed.
+      await tester.runAsync(
+        () => screens.repository.addCard(
+          screens.deck.id,
+          front: [cloze],
+          back: [const TextContent('The capital of Italy is Rome')],
+        ),
+      );
+      await screens.push((deck) => DeckScreen(deck: deck));
+      expect(find.text('Cards 2'), findsOneWidget);
+
+      await screens.tap(find.byTooltip('Search cards'));
+      await screens.enter('Search', 'rome');
+      expect(find.text('Cards 0'), findsOneWidget);
+      expect(find.byType(CardBackRow), findsNothing);
+
+      // Controls: the cloze card's face is searched, its answer included,
+      // and a split card's back still is.
+      await screens.enter('Search', 'paris');
+      expect(find.text('Cards 1'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is CardBackRow && widget.front.first == cloze,
+        ),
+        findsOneWidget,
+      );
+      await screens.enter('Search', 'cat');
+      expect(_rowFronts(tester), ['Chat']);
+      await screens.close();
+    },
+  );
+
   testWidgets(
     'the switch is read as Show meanings with its state, and stays pinned while the list scrolls',
     (tester) async {

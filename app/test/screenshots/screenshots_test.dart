@@ -230,6 +230,15 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      // Types a new card's [front] and [back] into its two 글, the editor's only
+      // fields: the front's first, then the back's.
+      Future<void> enterSides(String front, String back) async {
+        for (final (index, text) in [front, back].indexed) {
+          await tester.enterText(find.byType(EditableText).at(index), text);
+          await tester.pumpAndSettle();
+        }
+      }
+
       // The first-run home's one primary opens the new-deck sheet.
       await tap(tester, find.text(ko.makeDeck));
       await shot(tester, '03b-new-deck-options');
@@ -271,15 +280,13 @@ void main() {
         await tap(tester, find.text(ko.newCard));
         if (index == 0) await shot(tester, '04b-add-card-sheet');
         await tap(tester, find.text(ko.createManually));
-        await enter(ko.cardFront, front);
-        await enter(ko.cardBack, back);
+        await enterSides(front, back);
         if (index == 0) await shot(tester, '05-card-editor');
         await tap(tester, find.text(ko.save));
       }
       await tap(tester, find.text(ko.newCard));
       await tap(tester, find.text(ko.createManually));
-      await enter(ko.cardFront, 'Ephemeral');
-      await enter(ko.cardBack, '순간의');
+      await enterSides('Ephemeral', '순간의');
       await tap(tester, find.text(ko.save));
       await shot(tester, '06-duplicate-sheet');
       // Above a tall sheet, where the barrier's centre is not.
@@ -758,7 +765,7 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('the basic form in $mode', skip: !_capture, (tester) async {
+    testWidgets('the senses block in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -812,8 +819,17 @@ void main() {
 
       await tap(tester, find.text(ko.save));
       await shot(tester, '05b-card-editor-basic-errors');
+      // The back's Text block, made a Meanings block.
+      await reveal(find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
+      await tap(tester, find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
+      await tap(tester, find.text(ko.deleteBlock).last);
+      await reveal(find.text(ko.addToBack));
+      await tap(tester, find.text(ko.addToBack));
+      await tap(tester, find.text(ko.blockSenses).last);
 
-      await fill(ko.cardFront, 'present');
+      await reveal(find.byType(TextField).first);
+      await tester.enterText(find.byType(TextField).first, 'present');
+      await tester.pumpAndSettle();
       // A phone keyboard 336 points high, given in physical pixels, under
       // the presets a label field shows.
       await reveal(label());
@@ -832,7 +848,7 @@ void main() {
       await reveal(label(1));
       await tester.enterText(label(1), '동');
       await fill(ko.senseHeading(2), '주다, 제시하다');
-      await reveal(find.text(ko.cardKindFlip));
+      await reveal(find.text('영단어 기본'));
       await shot(tester, '05d-card-editor-senses');
       await reveal(find.text(ko.addSense));
       await shot(tester, '05e-card-editor-senses-buttons');
@@ -897,14 +913,10 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tap(tester, find.text(ko.cardKindFlip));
         // A phone keyboard 336 points high, given in physical pixels.
         tester.view.viewInsets = const FakeViewPadding(bottom: 336 * _density);
         addTearDown(tester.view.resetViewInsets);
-        await tester.enterText(
-          find.widgetWithText(AppTextField, ko.cardFront),
-          'ephemeral',
-        );
+        await tester.enterText(find.byType(TextField).first, 'ephemeral');
         await tester.pumpAndSettle();
         await shot(tester, '05k-card-editor-keyboard');
         tester.view.resetViewInsets();
@@ -964,13 +976,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text(ko.wordExtra));
+      await tester.ensureVisible(find.text('유의어 gift'));
       await tester.pumpAndSettle();
       await shot(tester, '05n-card-editor-senses-extras');
       await unmount(tester);
     });
 
-    testWidgets('the free template in $mode', skip: !_capture, (tester) async {
+    testWidgets('the block editor in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -1002,7 +1014,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tap(tester, find.text(ko.cardKindFree));
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), '이 근처에 약국이 있나요?');
       await tester.enterText(fields.at(1), 'Is there a pharmacy near here?');
@@ -1019,7 +1030,9 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('the cloze form in $mode', skip: !_capture, (tester) async {
+    testWidgets('the cloze sentence block in $mode', skip: !_capture, (
+      tester,
+    ) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -1051,21 +1064,25 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tap(tester, find.text(ko.cardKindCloze));
-      await tester.enterText(
-        find.widgetWithText(AppTextField, ko.cardFront),
-        'She gave me a present for my birthday',
-      );
+      // A front of one Cloze sentence block, and a back of none.
+      for (final side in [ko.cardFront, ko.cardBack]) {
+        await tester.ensureVisible(find.byTooltip(ko.blockMenu(side, 1)));
+        await tester.pumpAndSettle();
+        await tap(tester, find.byTooltip(ko.blockMenu(side, 1)));
+        await tap(tester, find.text(ko.deleteBlock).last);
+      }
+      await tester.ensureVisible(find.text(ko.addToFront));
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.addToFront));
+      await tap(tester, find.text(ko.blockCloze).last);
+      final line = find.byType(TextField).first;
+      await tester.enterText(line, 'She gave me a present for my birthday');
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text(ko.save));
       await tap(tester, find.text(ko.save));
       await shot(tester, '05f-card-editor-cloze-error');
-      final line = find.widgetWithText(AppTextField, ko.cardFront);
-      final controller = tester
-          .widget<TextField>(
-            find.descendant(of: line, matching: find.byType(TextField)),
-          )
-          .controller!;
+      await tester.showKeyboard(line);
+      final controller = tester.widget<TextField>(line).controller!;
       // "a" and "present", each selected and made a blank.
       for (final (start, end) in [(12, 13), (14, 21)]) {
         controller.selection = TextSelection(
@@ -1075,7 +1092,7 @@ void main() {
         await tester.pump();
         await tap(tester, find.text(ko.clozeInsertBlank));
       }
-      await tester.ensureVisible(find.text(ko.cardKindCloze));
+      await tester.ensureVisible(find.text('영단어 기본'));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
       // The caret in "present": the one action turns it back into text.
@@ -1093,7 +1110,7 @@ void main() {
       await unmount(tester);
     });
 
-    testWidgets('the table form in $mode', skip: !_capture, (tester) async {
+    testWidgets('the table block in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -1125,12 +1142,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tap(tester, find.text(ko.cardKindTable));
-      await tester.enterText(
-        find.widgetWithText(AppTextField, ko.tableNameLabel),
-        '불규칙 동사',
-      );
-      // The table's fields follow the front's: its headers, then its cells.
+      // A front of a Text block, the table's name, and a Table block, and a
+      // back of none.
+      await tester.ensureVisible(find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
+      await tester.pumpAndSettle();
+      await tap(tester, find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
+      await tap(tester, find.text(ko.deleteBlock).last);
+      await tester.ensureVisible(find.text(ko.addToFront));
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.addToFront));
+      await tap(tester, find.text(ko.blockTable).last);
+      await tester.enterText(find.byType(TextField).first, '불규칙 동사');
+      // The table's fields follow the name's: its headers, then its cells.
       Finder cell(int index) => find.byType(TextField).at(index + 1);
       for (final (index, text) in [
         '원형',
@@ -1154,7 +1177,7 @@ void main() {
         await tap(tester, cell(index));
         await tap(tester, find.widgetWithText(FilterChip, ko.tableBlankToggle));
       }
-      await tester.ensureVisible(find.text(ko.cardKindTable));
+      await tester.ensureVisible(find.text('영단어 기본'));
       await tester.pumpAndSettle();
       await shot(tester, '05i-card-editor-table-blanks');
       await unmount(tester);

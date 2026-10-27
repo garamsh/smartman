@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -9,14 +8,13 @@ import '../../design/app_button.dart';
 import '../../design/app_section_label.dart';
 import '../../design/bottom_actions.dart';
 import '../../design/app_sheet.dart';
-import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
 import 'block_list.dart';
-import 'card_kind.dart';
 import 'card_preview.dart';
-import 'cloze_form.dart';
+import 'card_template.dart';
+import 'cloze_block.dart';
 import 'content.dart';
 import 'deck_repository.dart';
 import 'failure_message.dart';
@@ -24,17 +22,13 @@ import 'label_presets.dart';
 import 'label_presets_screen.dart';
 import 'model.dart';
 import 'providers.dart';
-import 'table_form.dart';
-import 'word_form.dart';
+import 'senses_block.dart';
 
 /// Adds a card to [deck], or edits [card] when one is given, above a preview
-/// of the card as the study screen shows it, in the form of its kind: a text
-/// front and a back of one meaning or of senses, a line with blanks, or a
-/// table with blanks under its name, or, in 자유, each side a list of blocks.
-/// Under every kind's form, each side lists the blocks added to it, with
-/// "+ 앞면에 추가" and "+ 뒷면에 추가" (ADR 0108). A new card starts in the
-/// kind the deck's last new card was added in, and a switch at the top
-/// changes it; a card being edited keeps its kind (ADR 0083, ADR 0100).
+/// of the card as the study screen shows it. Each side is a list of blocks,
+/// with "+ 앞면에 추가" and "+ 뒷면에 추가" under it; a new card opens with
+/// one empty 글 on each side, and every card, of whichever template it was
+/// made in, opens with all its blocks in order (ADR 0108, ADR 0114).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -51,133 +45,51 @@ enum _DuplicateChoice { saveAnyway, openExisting }
 /// Where the editor goes once a card is saved.
 enum _AfterSave { close, next }
 
-/// The blocks a block list edits on each side.
-typedef _Sides = ({List<BlockDraft> front, List<BlockDraft> back});
-
-/// The kind [card] opens in: its own, or basic for one this build cannot
-/// edit, which opens read-only.
-CardKind _openingKind(Card card) => kindOf(card) ?? CardKind.basic;
-
 class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
-  /// The front's text; a table card's is its name, the table being the
-  /// table form's. A cloze's blanks are drawn in it as blocks.
-  late final ClozeLineController _front = ClozeLineController(
-    text: plainText([..._storedFront.where((block) => block is! TableContent)]),
-    blanks: () => _kind == CardKind.cloze && _cloze.line == _front.text
-        ? _cloze.blanks
-        : const [],
-  );
-  final _frontFocus = FocusNode();
+  /// The card's blocks on each side, or one empty 글 on each of a new card.
+  late final _front = switch (widget.card) {
+    final card? => [for (final block in card.front) BlockDraft.of(block)],
+    null => <BlockDraft>[TextBlockDraft()],
+  };
+  late final _back = switch (widget.card) {
+    final card? => [for (final block in card.back) BlockDraft.of(block)],
+    null => <BlockDraft>[TextBlockDraft()],
+  };
+
   bool _showRequired = false;
 
-  /// The kind the card is written in; a card being edited keeps its own.
-  late CardKind _kind = switch (widget.card) {
-    final card? => _openingKind(card),
-    null => rememberedKind(ref.read(deckStorageProvider), widget.deck.id),
-  };
-
-  /// The card's leading blocks of each side its kind's form edits; the rest
-  /// are listed under the form, as blocks added to it are (ADR 0108).
-  late final List<Content> _storedFront = switch (widget.card) {
-    final card? => card.front.take(_formLength(card, CardSide.front)).toList(),
-    null => const [],
-  };
-  late final List<Content> _storedBack = switch (widget.card) {
-    final card? => card.back.take(_formLength(card, CardSide.back)).toList(),
-    null => const [],
-  };
-
-  /// The blocks listed under the form of a kind other than 자유: those of
-  /// the card past what its form edits, and those added since.
-  late final _Sides _added = switch (widget.card) {
-    final card? when _openingKind(card) != CardKind.free => _listedOf(card),
-    _ => (front: [], back: []),
-  };
-
-  /// A 자유 card's sides: the card's own, or one empty 글 on each side.
-  late final _Sides _free = switch (widget.card) {
-    final card? when _openingKind(card) == CardKind.free => _listedOf(card),
-    _ => (front: [TextBlockDraft()], back: [TextBlockDraft()]),
-  };
-
-  /// The block lists the editor shows for its kind.
-  _Sides get _lists => _kind == CardKind.free ? _free : _added;
-
-  /// Whether the card records a template this build does not know, so the
-  /// editor shows it read-only and never writes it (ADR 0106).
+  /// Whether the card records a template, or a template version, this build
+  /// does not know, so the editor shows it read-only and never writes it
+  /// (ADR 0106).
   late final bool _readOnly = switch (widget.card) {
-    final card? => kindOf(card) == null,
+    final card? => !canEdit(card),
     null => false,
   };
-
-  /// Whether the card's back held senses when the editor opened, so it is
-  /// saved as senses whatever they become.
-  late final bool _backHadSenses = _storedBack.any(
-    (block) => block is SensesContent,
-  );
-
-  /// The back's senses: those of the card's back, or one sense of its text,
-  /// which a plain back is.
-  late final List<SenseDraft> _senses = _draftsOf(_storedBack);
-
-  /// A field for each text block of a back of senses, by its place there: a
-  /// word's extras or a merged back, edited beside its senses (issue #312).
-  late final Map<int, TextEditingController> _extras = {
-    if (_backHadSenses)
-      for (final (index, block) in _storedBack.indexed)
-        if (block is TextContent)
-          index: TextEditingController(text: block.text),
-  };
-
-  /// The cloze form's blanks: the card's own, or none.
-  late ClozeDraft _cloze = switch (_storedFront
-      .whereType<ClozeContent>()
-      .firstOrNull) {
-    final cloze? => ClozeDraft.of(cloze),
-    null => ClozeDraft(),
-  };
-
-  /// The table form's table: the card's own, or two empty rows of two cells.
-  late TableDraft _table = switch (_storedFront
-      .whereType<TableContent>()
-      .firstOrNull) {
-    final table? => TableDraft.of(table),
-    null => TableDraft(),
-  };
-
-  /// Whether the cloze's line or blanks were changed; until then, an existing
-  /// cloze card keeps its own blocks, a blank inside a word included.
-  bool _clozeEdited = false;
 
   bool get _isNew => widget.card == null;
 
   /// Whether anything was typed or chosen since the editor opened or last
-  /// saved; leaving then asks first (issue #309). Switching the kind alone
-  /// is no change.
+  /// saved; leaving then asks first (issue #309).
   bool _edited = false;
 
   @override
   void initState() {
     super.initState();
-    // The presets show while a label field has focus.
+    // The presets show while a label field has focus, and a 빈칸 문장's
+    // action while its line has.
     FocusManager.instance.addListener(_focusChanged);
-    _front.addListener(_lineChanged);
+    if (_isNew) _focusFront();
   }
 
   void _focusChanged() => setState(() {});
 
-  /// Keeps the cloze's blanks on the line as it is typed, and ends the blank
-  /// "빈칸 넣기" opened once the cursor leaves it.
-  void _lineChanged() => setState(() {
-    _cloze
-      ..update(_front.text)
-      ..track(_front.selection);
-  });
-
-  /// "빈칸 넣기": the selected characters, or an empty blank at the cursor.
-  void _insertBlank() => _change(() {
-    _cloze.insert(_front.selection);
-    _clozeEdited = true;
+  /// Puts the focus in the front's first block once it is built, where a new
+  /// card is typed first, while that block is a 글.
+  void _focusFront() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!mounted) return;
+    if (_front.firstOrNull case final TextBlockDraft first) {
+      first.focus.requestFocus();
+    }
   });
 
   /// Marks the card changed and redraws.
@@ -204,23 +116,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_focusChanged);
-    _front
-      ..removeListener(_lineChanged)
-      ..dispose();
-    _frontFocus.dispose();
-    for (final sense in _senses) {
-      sense.dispose();
-    }
-    for (final extra in _extras.values) {
-      extra.dispose();
-    }
-    _table.dispose();
-    for (final block in [
-      ..._added.front,
-      ..._added.back,
-      ..._free.front,
-      ..._free.back,
-    ]) {
+    for (final block in [..._front, ..._back]) {
       block.dispose();
     }
     // Photos and sounds stored here that no saved card holds, the card left
@@ -254,128 +150,42 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     _picked.clear();
   }
 
-  /// Whether every field the kind requires is filled, and every listed block
-  /// can be saved.
+  /// Whether each side holds what it must, and every block can be saved.
   bool get _isComplete =>
-      switch (_kind) {
-        CardKind.basic =>
-          _front.text.trim().isNotEmpty &&
-              !_senses.any((sense) => sense.isBlank),
-        CardKind.cloze =>
-          _front.text.trim().isNotEmpty && _cloze.content != null,
-        CardKind.table =>
-          _front.text.trim().isNotEmpty && _table.problem == null,
-        CardKind.free =>
-          _sideRequired(CardSide.front) == null &&
-              _sideRequired(CardSide.back) == null,
-      } &&
-      [..._lists.front, ..._lists.back].every((block) => block.isComplete);
+      _sideRequired(CardSide.front) == null &&
+      _sideRequired(CardSide.back) == null &&
+      [..._saved(_front), ..._saved(_back)].every((block) => block.isComplete);
 
-  /// Why a 자유 card's [side] cannot be saved: it holds no block, the front
-  /// always and the back unless the card is studied on one face; null once
-  /// it can.
+  /// Why [side] cannot be saved: it holds no block to save, the front always
+  /// and the back unless the card is studied on one face; null once it can.
   String? _sideRequired(CardSide side) {
     final l10n = AppLocalizations.of(context);
     return switch (side) {
-      CardSide.front when _free.front.isEmpty => l10n.sideBlockRequired,
+      CardSide.front when _saved(_front).isEmpty => l10n.sideBlockRequired,
       CardSide.back
-          when _free.back.isEmpty &&
+          when _saved(_back).isEmpty &&
               oneFaceOf(_frontBlocks, _backBlocks) == null =>
         l10n.sideBlockRequired,
       _ => null,
     };
   }
 
-  /// The card's own front and back while its cloze is left as it was.
-  bool get _keepsCloze => widget.card != null && !_clozeEdited;
+  /// The blocks of [side] that are saved: all but a 글 left empty, which
+  /// is dropped, so a new card's untouched back holds nothing.
+  List<BlockDraft> _saved(List<BlockDraft> side) => [
+    for (final block in side)
+      if (block is! TextBlockDraft || !block.isEmpty) block,
+  ];
 
-  /// The card's own back while its name and table are saved as they were,
-  /// whatever shape that back has, such as a copy's or the table alone.
-  bool get _keepsTable =>
-      widget.card != null && listEquals(_formFront, _storedFront);
-
-  /// The front as saved: what the form makes of it, then its listed blocks.
+  /// The front as saved: each block as its type writes it.
   List<Content> get _frontBlocks => [
-    ..._formFront,
-    for (final block in _lists.front) block.content,
+    for (final block in _saved(_front)) block.content,
   ];
 
-  /// The back as saved: what the form makes of it, then its listed blocks.
+  /// The back as saved: each block as its type writes it.
   List<Content> get _backBlocks => [
-    ..._formBack,
-    for (final block in _lists.back) block.content,
+    for (final block in _saved(_back)) block.content,
   ];
-
-  /// The front as the form saves it: the text typed, or the card's own blocks
-  /// while their text is left as it was; nothing in 자유.
-  List<Content> get _formFront => switch (_kind) {
-    CardKind.free => const [],
-    CardKind.cloze when _keepsCloze => _storedFront,
-    // While it cannot be saved, the line as the preview draws it, whole as
-    // the card will be, not on both halves (issue #313); the form refuses
-    // the save.
-    CardKind.cloze => [_cloze.content ?? _cloze.preview],
-    CardKind.table => [TextContent(_front.text), _table.table],
-    CardKind.basic => _replaceText(_storedFront, _front.text),
-  };
-
-  /// Whether the back is saved as its one meaning's text: a back that held
-  /// no senses, still of one sense with no label and no example.
-  bool get _savesText =>
-      !_backHadSenses && _senses.length == 1 && _senses.single.isPlain;
-
-  /// The front as the preview draws it: as saved, but a cloze's every blank
-  /// in place, an empty one included (ADR 0101), and each listed block as it
-  /// is so far.
-  List<Content> get _previewFront => [
-    ...(_kind == CardKind.cloze && !_keepsCloze
-        ? [_cloze.preview]
-        : _formFront),
-    for (final block in _lists.front) block.preview,
-  ];
-
-  /// The back as the preview draws it: each listed block as it is so far.
-  List<Content> get _previewBack => [
-    ..._formBack,
-    for (final block in _lists.back) block.preview,
-  ];
-
-  /// The back's block at [index] as a back of senses saves it beside them: a
-  /// text block as its field holds it, or none once the field is cleared or
-  /// when the back held no senses, its text being the first meaning; any
-  /// other block but the senses as it is.
-  Content? _besideSenses(int index, Content block) => switch (_extras[index]) {
-    final extra? => extra.text.trim().isEmpty ? null : TextContent(extra.text),
-    null => block is SensesContent || block is TextContent ? null : block,
-  };
-
-  /// The back as the form saves it: its one meaning's text, as [_formFront];
-  /// or its senses, then any other block the card's back holds, such as its
-  /// extras; nothing in 자유.
-  List<Content> get _formBack => switch (_kind) {
-    CardKind.free => const [],
-    CardKind.basic when _savesText => _replaceText(
-      _storedBack,
-      _senses.single.meaning.text,
-    ),
-    CardKind.basic => [
-      SensesContent([for (final sense in _senses) sense.sense]),
-      for (final (index, block) in _storedBack.indexed)
-        ?_besideSenses(index, block),
-    ],
-    CardKind.cloze when _keepsCloze => _storedBack,
-    // The line with its blanks filled, as photo import writes a cloze's back.
-    CardKind.cloze => [TextContent(_cloze.content?.filled ?? _front.text)],
-    CardKind.table when _keepsTable => _storedBack,
-    // The name, then the table with every cell shown: the front's text, as
-    // photo import writes a table card's back.
-    CardKind.table => [TextContent(plainText(_formFront))],
-  };
-
-  void _chooseKind(CardKind kind) => setState(() {
-    _kind = kind;
-    _showRequired = false;
-  });
 
   Future<void> _save(_AfterSave after, {bool allowDuplicate = false}) async {
     if (!_isComplete) {
@@ -383,8 +193,6 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       return;
     }
     final repository = ref.read(deckRepositoryProvider);
-    final storage = ref.read(deckStorageProvider);
-    final kind = _kind;
     final card = widget.card;
     final front = _frontBlocks;
     final back = _backBlocks;
@@ -394,14 +202,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               widget.deck.id,
               front: front,
               back: back,
-              kind: kind,
               allowDuplicate: allowDuplicate,
             )
           : await repository.editCard(
               card,
               front: front,
               back: back,
-              kind: kind,
               allowDuplicate: allowDuplicate,
             );
       if (result is CardSaved) {
@@ -413,40 +219,20 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
           Navigator.of(context).pop();
         case (CardSaved(), _AfterSave.next):
           setState(() {
-            _front.clear();
-            for (final sense in _senses) {
-              sense.dispose();
-            }
-            _senses
-              ..clear()
-              ..add(SenseDraft());
-            _cloze = ClozeDraft();
-            _table.dispose();
-            _table = TableDraft();
-            for (final side in [
-              _added.front,
-              _added.back,
-              _free.front,
-              _free.back,
-            ]) {
+            for (final side in [_front, _back]) {
               for (final block in side) {
                 block.dispose();
               }
-              side.clear();
+              side
+                ..clear()
+                ..add(TextBlockDraft());
             }
-            _free.front.add(TextBlockDraft());
-            _free.back.add(TextBlockDraft());
             _showRequired = false;
             _edited = false;
           });
-          _frontFocus.requestFocus();
+          _focusFront();
         case (DuplicateFront(:final existing), _):
           await _resolveDuplicate(existing, after);
-      }
-      // The deck's next new card opens in the kind of the last one added,
-      // not of the last switch tapped (issue #311).
-      if (card == null && result is CardSaved) {
-        await rememberKind(storage, widget.deck.id, kind);
       }
     });
   }
@@ -488,80 +274,42 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     });
   }
 
-  /// The sense whose label field has focus: the basic form's, while it
-  /// shows, or a listed 뜻 목록's.
+  /// The 뜻 목록 sense whose label field has focus.
   SenseDraft? _focusedSense() => [
-    if (_kind == CardKind.basic) ..._senses,
-    for (final block in [..._lists.front, ..._lists.back])
+    for (final block in [..._front, ..._back])
       if (block case SensesBlockDraft(:final senses)) ...senses,
   ].where((sense) => sense.labelFocus.hasFocus).firstOrNull;
 
-  /// The listed 빈칸 문장 whose line has focus.
-  ClozeBlockDraft? _focusedCloze() => [..._lists.front, ..._lists.back]
+  /// The 빈칸 문장 whose line has focus.
+  ClozeBlockDraft? _focusedCloze() => [..._front, ..._back]
       .whereType<ClozeBlockDraft>()
       .where((block) => block.focus.hasFocus)
       .firstOrNull;
 
-  /// The listed blocks of [side], with "+ 앞면에 추가" or "+ 뒷면에 추가".
+  /// The blocks of [side], with "+ 앞면에 추가" or "+ 뒷면에 추가".
   Widget _blockList(CardSide side) => BlockList(
     side: side,
     blocks: switch (side) {
-      CardSide.front => _lists.front,
-      CardSide.back => _lists.back,
+      CardSide.front => _front,
+      CardSide.back => _back,
     },
     showErrors: _showRequired,
-    emptyError: _kind == CardKind.free && _showRequired
-        ? _sideRequired(side)
-        : null,
+    emptyError: _showRequired ? _sideRequired(side) : null,
     onChanged: _change,
     onMediaStored: _mediaStored,
   );
 
-  String? _requiredError(AppLocalizations l10n, TextEditingController side) =>
-      _showRequired && side.text.trim().isEmpty ? l10n.cardSideRequired : null;
-
   /// The card as study will draw it: on one face when it holds a blank
   /// anywhere, the face [oneFaceOf] gives, and front then back otherwise.
   Widget _preview() {
-    final front = _previewFront;
-    final back = _previewBack;
+    final front = [for (final block in _front) block.preview];
+    final back = [for (final block in _back) block.preview];
     final face = oneFaceOf(front, back);
     return CardPreview(
       front: face ?? front,
       back: face == null ? back : const [],
     );
   }
-
-  /// The form of a kind other than 자유: the basic back's senses and extras,
-  /// what keeps a cloze from being saved, or a table's grid.
-  Widget _form(AppLocalizations l10n) => switch (_kind) {
-    CardKind.basic => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s16,
-      children: [
-        SenseFields(
-          senses: _senses,
-          showErrors: _showRequired,
-          onChanged: _change,
-        ),
-        for (final extra in _extras.values)
-          AppTextField(
-            label: l10n.wordExtra,
-            controller: extra,
-            minLines: 2,
-            maxLines: null,
-            onChanged: (_) => _change(),
-          ),
-      ],
-    ),
-    CardKind.cloze => ClozeProblemText(draft: _cloze, showError: _showRequired),
-    CardKind.table => TableFields(
-      draft: _table,
-      showErrors: _showRequired,
-      onChanged: _change,
-    ),
-    CardKind.free => const SizedBox.shrink(),
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -596,8 +344,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
         body: Column(
           children: [
             Expanded(
-              // A column, not a lazy list, so every field of a long word is built and
-              // its error shows wherever it scrolls.
+              // A column, not a lazy list, so every block is built and its
+              // error shows wherever it scrolls.
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpace.gutter),
                 child: Column(
@@ -630,92 +378,13 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpace.s16),
-                    if (_isNew) ...[
-                      Semantics(
-                        label: l10n.cardKindLabel,
-                        child: SegmentedButton<CardKind>(
-                          showSelectedIcon: false,
-                          segments: [
-                            ButtonSegment(
-                              value: CardKind.basic,
-                              label: Text(l10n.cardKindFlip),
-                            ),
-                            ButtonSegment(
-                              value: CardKind.cloze,
-                              label: Text(l10n.cardKindCloze),
-                            ),
-                            ButtonSegment(
-                              value: CardKind.table,
-                              label: Text(l10n.cardKindTable),
-                            ),
-                            ButtonSegment(
-                              value: CardKind.free,
-                              label: Text(l10n.cardKindFree),
-                            ),
-                          ],
-                          selected: {_kind},
-                          onSelectionChanged: (kinds) =>
-                              _chooseKind(kinds.single),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpace.s24),
-                    ],
                     _preview(),
                     const SizedBox(height: AppSpace.s24),
-                    if (_kind == CardKind.free) ...[
-                      AppSectionLabel(l10n.cardFront),
-                      _blockList(CardSide.front),
-                      const SizedBox(height: AppSpace.s24),
-                      AppSectionLabel(l10n.cardBack),
-                      _blockList(CardSide.back),
-                    ] else ...[
-                      AppTextField(
-                        // A table's front is its name, and says so while
-                        // typed (issue #313).
-                        label: _kind == CardKind.table
-                            ? l10n.tableNameLabel
-                            : l10n.cardFront,
-                        controller: _front,
-                        hint: _kind == CardKind.table
-                            ? l10n.tableNameHint
-                            : null,
-                        focusNode: _frontFocus,
-                        autofocus: _isNew,
-                        minLines: 2,
-                        maxLines: null,
-                        errorText: _requiredError(l10n, _front),
-                        onChanged: (text) => _change(() {
-                          _cloze.update(text);
-                          _clozeEdited = true;
-                        }),
-                      ),
-                      if (_storedFront.any(
-                        (block) => block is SensesContent,
-                      )) ...[
-                        const SizedBox(height: AppSpace.s8),
-                        Text(
-                          l10n.sensesEditNote,
-                          style: AppType.secondary.copyWith(
-                            color: AppColors.of(context).muted,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpace.s16),
-                      // The basic form is the back, so the front's blocks
-                      // come before it; a cloze's and a table's form is the
-                      // front's own.
-                      if (_kind != CardKind.basic) ...[
-                        _form(l10n),
-                        const SizedBox(height: AppSpace.s16),
-                      ],
-                      _blockList(CardSide.front),
-                      const SizedBox(height: AppSpace.s16),
-                      if (_kind == CardKind.basic) ...[
-                        _form(l10n),
-                        const SizedBox(height: AppSpace.s16),
-                      ],
-                      _blockList(CardSide.back),
-                    ],
+                    AppSectionLabel(l10n.cardFront),
+                    _blockList(CardSide.front),
+                    const SizedBox(height: AppSpace.s24),
+                    AppSectionLabel(l10n.cardBack),
+                    _blockList(CardSide.back),
                   ],
                 ),
               ),
@@ -758,16 +427,6 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                     block.edited = true;
                   }),
                 ),
-              )
-            else if (_kind == CardKind.cloze)
-              ClozeToolbar(
-                draft: _cloze,
-                blank: _cloze.blankAt(_front.selection),
-                onInsert: _insertBlank,
-                onUndo: (blank) => _change(() {
-                  _cloze.remove(blank);
-                  _clozeEdited = true;
-                }),
               ),
             if (_focusedSense() case final sense?)
               LabelPresetStrip(
@@ -867,77 +526,4 @@ class _DuplicateSheet extends StatelessWidget {
       ],
     );
   }
-}
-
-/// How many of [card]'s leading blocks on [side] the form of the kind it
-/// opens in edits: none in 자유; on the front, a basic card's first text or
-/// senses block, and a cloze's or a table's blocks up to its first cloze or
-/// table; on the back, a basic card's first text block, or its first senses
-/// block and the text blocks and unreadable blocks right after it, which
-/// the form keeps beside the senses, and a cloze's or a table's
-/// first text block. Each kind writes its sides in that shape, so a card
-/// opens in its form as it did before blocks could be added, and every
-/// block after them is listed (ADR 0108).
-int _formLength(Card card, CardSide side) {
-  final blocks = switch (side) {
-    CardSide.front => card.front,
-    CardSide.back => card.back,
-  };
-  final first = blocks.firstOrNull;
-  return switch ((_openingKind(card), side, first)) {
-    (CardKind.free, _, _) => 0,
-    (CardKind.basic, CardSide.front, TextContent() || SensesContent()) => 1,
-    (CardKind.cloze, CardSide.front, _) =>
-      blocks.indexWhere((block) => block is ClozeContent) + 1,
-    (CardKind.table, CardSide.front, _) =>
-      blocks.indexWhere((block) => block is TableContent) + 1,
-    (CardKind.basic, CardSide.back, SensesContent()) =>
-      1 +
-          blocks
-              .skip(1)
-              .takeWhile(
-                (block) => block is TextContent || block is UnsupportedContent,
-              )
-              .length,
-    (_, CardSide.back, TextContent()) => 1,
-    _ => 0,
-  };
-}
-
-/// One draft for each of [card]'s blocks past what its form edits.
-_Sides _listedOf(Card card) => (
-  front: [
-    for (final block in card.front.skip(_formLength(card, CardSide.front)))
-      BlockDraft.of(block),
-  ],
-  back: [
-    for (final block in card.back.skip(_formLength(card, CardSide.back)))
-      BlockDraft.of(block),
-  ],
-);
-
-/// [blocks] while [text] is still their text, so a side the user left as it
-/// was keeps its blocks, a senses block included; otherwise [text] as a text
-/// block, with blocks of other types kept. An edited senses front, a reversed
-/// word's, so becomes text, its labels as typed.
-List<Content> _replaceText(List<Content> blocks, String text) =>
-    text == plainText(blocks)
-    ? blocks
-    : [
-        TextContent(text),
-        ...blocks.where(
-          (block) => block is! TextContent && block is! SensesContent,
-        ),
-      ];
-
-/// One draft per sense of [back]'s senses block, or, when it holds none, one
-/// draft whose meaning is [back]'s text.
-List<SenseDraft> _draftsOf(List<Content>? back) {
-  final senses = [
-    for (final block in back ?? const <Content>[])
-      if (block is SensesContent) ...block.senses,
-  ];
-  return senses.isEmpty
-      ? [SenseDraft(CardSense(meaning: plainText(back ?? const [])))]
-      : [for (final sense in senses) SenseDraft(sense)];
 }

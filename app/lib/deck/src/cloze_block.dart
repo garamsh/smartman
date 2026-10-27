@@ -12,7 +12,7 @@ typedef Span = ({int start, int end});
 /// anything is typed into it.
 const _emptyAnswer = '  ';
 
-/// A cloze as the cloze form edits it: the line, and its blanks, each a span
+/// A cloze as a 빈칸 문장 block edits it: the line, and its blanks, each a span
 /// of the line's characters (ADR 0092, ADR 0101).
 class ClozeDraft {
   ClozeDraft._(this._line, this._blanks);
@@ -293,7 +293,7 @@ class ClozeProblemText extends StatelessWidget {
   }
 }
 
-/// The cloze form's one action, in a bar right above the keyboard. With the
+/// A 빈칸 문장's one action, in a bar right above the keyboard. With the
 /// caret or the selection inside [blank], it reads "빈칸 풀기", is named for a
 /// screen reader with the blank's answer, and turns that blank back into
 /// text; elsewhere it reads "빈칸 넣기" (ADR 0101).

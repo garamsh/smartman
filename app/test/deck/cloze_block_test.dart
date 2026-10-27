@@ -2,26 +2,25 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview.dart';
 import 'package:smartman/design/app_button.dart';
-import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
+import 'editor.dart';
 
 /// The stored card, front and back.
 Future<Card> _stored(DeckScreens screens) async =>
     (await screens.cards()).single;
 
-final _line = find.widgetWithText(AppTextField, 'Front');
+/// The line: the first field of the front's blocks.
+final _line = blockField(CardSide.front);
 
 /// The line field's controller.
-TextEditingController _controller(WidgetTester tester) => tester
-    .widget<TextField>(
-      find.descendant(of: _line, matching: find.byType(TextField)),
-    )
-    .controller!;
+TextEditingController _controller(WidgetTester tester) =>
+    tester.widget<TextField>(_line).controller!;
 
 /// The blanks the line draws as blocks, in order: the spans of its text on
 /// `brandTint`.
@@ -46,10 +45,13 @@ Finder _action(String label) => find.widgetWithText(AppButton, label);
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
+  /// A new card's editor whose front is one Cloze sentence block and whose
+  /// back holds none, as a cloze studied on one face needs.
   Future<DeckScreens> openCloze(WidgetTester tester, {DeckScreens? on}) async {
     final screens = on ?? await DeckScreens.open(tester);
     await screens.push((deck) => CardEditorScreen(deck: deck));
-    await screens.tap(find.text('Cloze'));
+    await replaceFirstBlock(screens, CardSide.front, 'Cloze sentence');
+    await actOnBlock(screens, CardSide.back, 1, 'Delete');
     return screens;
   }
 
@@ -59,8 +61,10 @@ void main() {
     await tester.pump();
   }
 
-  /// Selects [start] to [end] of the line, or puts the cursor at [start].
+  /// Selects [start] to [end] of the line, or puts the cursor at [start],
+  /// the line focused, as a tap into it leaves it.
   Future<void> select(WidgetTester tester, int start, [int? end]) async {
+    await tester.showKeyboard(_line);
     _controller(tester).selection = TextSelection(
       baseOffset: start,
       extentOffset: end ?? start,
@@ -101,7 +105,7 @@ void main() {
       expect(card.front, [
         const ClozeContent('___예요', ['H₂O']),
       ]);
-      expect(card.back, [const TextContent('H₂O예요')]);
+      expect(card.back, isEmpty, reason: 'a back is the blocks listed on it');
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       expect(_blocks(tester), ['H₂O'], reason: 'opens with its blank');
@@ -440,7 +444,7 @@ void main() {
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
-      'in the ${mode.name} theme the cloze form meets the tap target, label and contrast guidelines',
+      'in the ${mode.name} theme a Cloze sentence block meets the tap target, label and contrast guidelines',
       (tester) async {
         final screens = await DeckScreens.open(tester, themeMode: mode);
         await openCloze(tester, on: screens);
