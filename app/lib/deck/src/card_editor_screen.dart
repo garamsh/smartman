@@ -154,26 +154,38 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   bool get _isComplete =>
       _sideRequired(CardSide.front) == null &&
       _sideRequired(CardSide.back) == null &&
-      [..._front, ..._back].every((block) => block.isComplete);
+      [..._saved(_front), ..._saved(_back)].every((block) => block.isComplete);
 
-  /// Why [side] cannot be saved: it holds no block, the front always and the
-  /// back unless the card is studied on one face; null once it can.
+  /// Why [side] cannot be saved: it holds no block to save, the front always
+  /// and the back unless the card is studied on one face; null once it can.
   String? _sideRequired(CardSide side) {
     final l10n = AppLocalizations.of(context);
     return switch (side) {
-      CardSide.front when _front.isEmpty => l10n.sideBlockRequired,
+      CardSide.front when _saved(_front).isEmpty => l10n.sideBlockRequired,
       CardSide.back
-          when _back.isEmpty && oneFaceOf(_frontBlocks, _backBlocks) == null =>
+          when _saved(_back).isEmpty &&
+              oneFaceOf(_frontBlocks, _backBlocks) == null =>
         l10n.sideBlockRequired,
       _ => null,
     };
   }
 
+  /// The blocks of [side] that are saved: all but a 글 left empty, which
+  /// is dropped, so a new card's untouched back holds nothing.
+  List<BlockDraft> _saved(List<BlockDraft> side) => [
+    for (final block in side)
+      if (block is! TextBlockDraft || !block.isEmpty) block,
+  ];
+
   /// The front as saved: each block as its type writes it.
-  List<Content> get _frontBlocks => [for (final block in _front) block.content];
+  List<Content> get _frontBlocks => [
+    for (final block in _saved(_front)) block.content,
+  ];
 
   /// The back as saved: each block as its type writes it.
-  List<Content> get _backBlocks => [for (final block in _back) block.content];
+  List<Content> get _backBlocks => [
+    for (final block in _saved(_back)) block.content,
+  ];
 
   Future<void> _save(_AfterSave after, {bool allowDuplicate = false}) async {
     if (!_isComplete) {

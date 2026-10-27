@@ -198,6 +198,49 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a new cloze card saves with its back\'s untouched Text block, which is not stored, while a split card\'s empty back is still refused',
+    (tester) async {
+      final screens = await openNew(tester);
+      // Control: with no blank, the card is split and its empty back refused.
+      await typeBlock(tester, CardSide.front, 'Chat');
+      await tapVisible(screens, find.text('Save'));
+      expect(find.text('Enter some text'), findsOneWidget);
+      expect(await screens.cards(), isEmpty);
+
+      await replaceFirstBlock(screens, CardSide.front, 'Cloze sentence');
+      final line = blockField(CardSide.front);
+      await typeInto(tester, line, 'I like tea');
+      await tester.tap(line);
+      await tester.pump();
+      tester.widget<TextField>(line).controller!.selection =
+          const TextSelection(baseOffset: 7, extentOffset: 10);
+      await tester.pump();
+      await screens.tap(find.text('Insert blank'));
+      // The back still holds the new card's empty Text block.
+      expect(
+        find.descendant(
+          of: blockList(CardSide.back),
+          matching: find.byType(TextField),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<TextField>(blockField(CardSide.back)).controller!.text,
+        '',
+      );
+
+      await tapVisible(screens, find.text('Save'));
+      expect(find.text('Enter some text'), findsNothing);
+      final card = await _stored(screens);
+      expect(card.front, const [
+        ClozeContent('I like ___', ['tea']),
+      ]);
+      expect(card.back, isEmpty);
+      await screens.close();
+    },
+  );
+
   testWidgets('a one-meaning Meanings block names its field by its side', (
     tester,
   ) async {

@@ -603,6 +603,29 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a table whose name is left empty saves its Table block alone, its empty Text dropped',
+    (tester) async {
+      final screens = await openTable(tester);
+      await typeCapitals(screens);
+      await enter(tester, _name, '');
+      await select(screens, 3);
+      await toggleBlank(screens);
+      await save(screens);
+      expect(find.text('Enter some text'), findsNothing);
+      final card = await _stored(screens);
+      expect(card.front, [
+        TableContent(
+          columns: _capitals.columns,
+          rows: _capitals.rows,
+          blanks: const [(row: 0, column: 1)],
+        ),
+      ]);
+      expect(card.back, isEmpty);
+      await screens.close();
+    },
+  );
+
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
       'in the ${mode.name} theme a Table block meets the tap target, label and contrast guidelines, a blank selected and the save refused',
@@ -625,9 +648,12 @@ void main() {
         await meetsGuidelines();
         await select(screens, 3);
         await toggleBlank(screens);
-        await enter(tester, _name, '');
+        await enter(tester, _cell(3), '');
         await save(screens);
-        expect(find.text('Enter some text'), findsOneWidget);
+        expect(
+          find.text('Fill in each cell chosen as a blank'),
+          findsOneWidget,
+        );
         await meetsGuidelines();
         handle.dispose();
         await screens.close();
