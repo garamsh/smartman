@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
@@ -24,7 +25,7 @@ List<String> _rowFronts(WidgetTester tester) => [
     plainText(row.front),
 ];
 
-/// The deck page's "뜻 보기" switch.
+/// The deck page's "뒷면 보기" switch.
 Switch _switch(WidgetTester tester) =>
     tester.widget<Switch>(find.byType(Switch));
 
@@ -61,26 +62,24 @@ void main() {
   );
 
   testWidgets(
-    'a deck with no card shows no today card of zeros, where a deck with one shows its count, mastered line and bar',
+    'a deck with no card shows no today card of zeros and only its count of none, where a deck with one shows its counts and today card',
     (tester) async {
-      // Control: a deck with a card has its today card.
+      // Control: a deck with a card has its today card and its mastered count.
       var screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(find.text("Today's cards"), findsOneWidget);
-      expect(find.text('0 of 1 mastered'), findsOneWidget);
-      expect(find.byType(ProgressBar), findsOneWidget);
+      expect(find.text('Study today'), findsOneWidget);
+      expect(find.text('1 card · 0 mastered'), findsOneWidget);
       await screens.close();
 
       screens = await DeckScreens.open(tester);
       await screens.push((deck) => DeckScreen(deck: deck));
       expect(shownText('No cards yet. Add a card to start.'), findsOneWidget);
-      expect(find.text("Today's cards"), findsNothing);
+      expect(find.text('Study today'), findsNothing);
+      expect(find.text('0 cards'), findsOneWidget);
       expect(find.textContaining('mastered'), findsNothing);
-      expect(find.byType(ProgressBar), findsNothing);
       await screens.close();
     },
   );
-
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
     testWidgets(
       'in the ${mode.name} theme the deck\'s today card is white with an ink Study button, and meets the contrast guideline',
@@ -114,10 +113,8 @@ void main() {
           tester.widget<AppButton>(study).variant,
           AppButtonVariant.primary,
         );
-        expect(
-          find.descendant(of: card, matching: find.byType(ProgressBar)),
-          findsOneWidget,
-        );
+        // The card holds no progress bar: the counts are in the line above.
+        expect(find.byType(ProgressBar), findsNothing);
         expectTextReadable(tester, card, colors.surface);
         await expectLater(tester, meetsGuideline(textContrastGuideline));
         expectScreenTextReadable(tester);
@@ -139,10 +136,15 @@ void main() {
 
       await screens.tap(find.byTooltip('Deck actions'));
       await screens.tap(find.text('Customize deck'));
+      // The sheet's option, apart from the card list's label "Cards".
+      Finder sheetOption(String name) => find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.bySemanticsLabel(name),
+      );
       // The deck's own default pair is selected, and every option is a
       // labelled button with a selected state, at least 48 square.
       expect(
-        tester.getSemantics(find.bySemanticsLabel('Cards')),
+        tester.getSemantics(sheetOption('Cards')),
         isSemantics(isButton: true, hasSelectedState: true, isSelected: true),
       );
       expect(
@@ -150,7 +152,7 @@ void main() {
         isSemantics(isButton: true, hasSelectedState: true, isSelected: false),
       );
       for (final option in ['Cards', 'Star', 'Blue', 'Slate']) {
-        final size = tester.getSize(find.bySemanticsLabel(option));
+        final size = tester.getSize(sheetOption(option));
         expect(size.width, greaterThanOrEqualTo(48), reason: option);
         expect(size.height, greaterThanOrEqualTo(48), reason: option);
       }
@@ -202,7 +204,7 @@ void main() {
   });
 
   testWidgets(
-    "the header names the deck, counts its cards and today's, and Study opens a session over it",
+    "the header names the deck and counts its cards once, with those mastered; the today card counts today's in large figures beside its minutes; and Study opens a session over it",
     (tester) async {
       final screens = await DeckScreens.open(
         tester,
@@ -212,16 +214,38 @@ void main() {
       await screens.push((deck) => DeckScreen(deck: deck));
 
       expect(find.text('French'), findsOneWidget);
-      expect(find.text('3 cards'), findsOneWidget);
-      expect(find.bySemanticsLabel('3 cards for today'), findsOneWidget);
       // Chat was reviewed after a day's interval, so it is learning.
-      expect(find.text('0 of 3 mastered'), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('0 mastered, 1 learning, 2 new'),
-        findsOneWidget,
-      );
-      // The learning count is the bar's label alone, with no line of it.
+      expect(find.text('3 cards · 0 mastered'), findsOneWidget);
+      // The card count is on the screen once: no "Cards 3" over the list.
+      expect(find.textContaining(RegExp(r'Cards \d')), findsNothing);
       expect(find.textContaining('learning'), findsNothing);
+      expect(find.text('Study today'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^About \d+ min$')), findsOneWidget);
+      final count = find.bySemanticsLabel('3 cards for today');
+      expect(count, findsOneWidget);
+      // The figure is large and tabular, its unit right after it, smaller
+      // and muted.
+      final drawn = tester.widget<RichText>(
+        find.descendant(of: count, matching: find.byType(RichText)),
+      );
+      // Text.rich wraps the count's span in one carrying the default style.
+      final spans = ((drawn.text as TextSpan).children!.single as TextSpan)
+          .children!
+          .cast<TextSpan>();
+      expect([for (final span in spans) span.text], ['3', ' cards']);
+      expect(spans.first.style?.fontSize, AppType.figure.fontSize);
+      expect(
+        spans.first.style?.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
+      expect(
+        spans.last.style!.fontSize,
+        lessThan(spans.first.style!.fontSize!),
+      );
+      expect(
+        spans.last.style?.color,
+        AppColors.of(tester.element(count)).muted,
+      );
 
       await screens.tap(find.text('Study'));
 
@@ -229,7 +253,6 @@ void main() {
       await screens.close();
     },
   );
-
   testWidgets(
     'a first session asks for the daily study minutes once, before it opens',
     (tester) async {
@@ -344,29 +367,36 @@ void main() {
   );
 
   testWidgets(
-    'each card shows its front with the back hidden, a tap shows it and a second hides it',
+    'the cards are one group of rows, each its front alone with nothing drawn for its hidden back, and a tap on a row opens that card in the editor',
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
       expect(_rowFronts(tester), ['Chat', 'Chien', 'Hund']);
       expect(find.text('dog'), findsNothing);
       expect(find.bySemanticsLabel('Chien, back hidden'), findsOneWidget);
+      // One group holds every row, and no row draws a bar or a pencil.
+      expect(find.byType(SliverAppGroup), findsOneWidget);
+      for (final row in tester.widgetList(find.byType(CardBackRow))) {
+        final drawn = find.descendant(
+          of: find.byWidget(row),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Container ||
+                widget is DecoratedBox ||
+                widget is IconButton,
+          ),
+        );
+        expect(drawn, findsNothing);
+      }
 
       await screens.tap(find.text('Chien'));
-      expect(find.text('dog'), findsOneWidget);
-      expect(find.bySemanticsLabel('Chien, back dog'), findsOneWidget);
-      // Control: the other cards keep their answers hidden.
-      expect(find.text('cat'), findsNothing);
 
-      await screens.tap(find.text('Chien'));
-      expect(find.text('dog'), findsNothing);
-      expect(find.byType(CardEditorScreen), findsNothing);
+      expect(find.widgetWithText(TextField, 'Chien'), findsOneWidget);
       await screens.close();
     },
   );
-
   testWidgets(
-    'a cloze card shows its front with its blank empty in place of the bar over the back, and a tap fills it in place',
+    'a cloze card shows its front with its blank empty and nothing for its back, and the switch fills it in place',
     (tester) async {
       const cloze = ClozeContent('The capital of France is ___', ['Paris']);
       final screens = await DeckScreens.open(tester, cards: {'Chat': 'cat'});
@@ -389,7 +419,7 @@ void main() {
       expect(blanksUnder(row), {'Paris': false});
       expect(find.text('The capital of France is Paris'), findsNothing);
 
-      await screens.tap(row);
+      await screens.tap(find.byType(Switch));
       expect(blanksUnder(row), {'Paris': true});
       expect(
         find.bySemanticsLabel(
@@ -397,24 +427,36 @@ void main() {
         ),
         findsOneWidget,
       );
-      // Control: the split card keeps its back hidden.
-      expect(find.text('cat'), findsNothing);
+      // The stored back is never drawn beside the whole card.
+      expect(find.text('The capital of France is Paris'), findsNothing);
       await screens.close();
     },
   );
-
   testWidgets(
-    'the Show meanings switch is off on opening, on shows every back and off hides them',
+    'the Show backs switch is off on opening, on shows every back muted after its front and off hides them',
     (tester) async {
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(find.text('Cards 3'), findsOneWidget);
+      expect(find.text('Cards'), findsOneWidget);
       expect(_switch(tester).value, isFalse);
       expect(_answers(tester), isEmpty);
 
       await screens.tap(find.byType(Switch));
       expect(_switch(tester).value, isTrue);
       expect(_answers(tester), ['cat', 'dog', 'DOG']);
+      final colors = AppColors.of(tester.element(find.byType(DeckScreen)));
+      final back = tester.getRect(find.text('dog'));
+      final front = tester.getRect(find.text('Chien'));
+      expect(back.left, greaterThan(front.right), reason: 'after the front');
+      expect(back.center.dy, moreOrLessEquals(front.center.dy, epsilon: 2));
+      RichText drawn(String text) => tester.widget<RichText>(
+        find
+            .descendant(of: find.text(text), matching: find.byType(RichText))
+            .first,
+      );
+      expect(drawn('dog').text.style?.color, colors.muted);
+      // Control: the front is drawn in ink.
+      expect(drawn('Chien').text.style?.color, isNot(colors.muted));
 
       await screens.tap(find.byType(Switch));
       expect(_switch(tester).value, isFalse);
@@ -422,30 +464,6 @@ void main() {
       await screens.close();
     },
   );
-
-  testWidgets(
-    'a tap after the switch flips only that card, and the switch then sets every card to its state',
-    (tester) async {
-      final screens = await DeckScreens.open(tester, cards: cards);
-      await screens.push((deck) => DeckScreen(deck: deck));
-
-      await screens.tap(find.byType(Switch));
-      await screens.tap(find.text('Chien'));
-      expect(_answers(tester), ['cat', 'DOG']);
-
-      // Off hides every answer, the one the tap hid included.
-      await screens.tap(find.byType(Switch));
-      expect(_answers(tester), isEmpty);
-      await screens.tap(find.text('Hund'));
-      expect(_answers(tester), ['DOG']);
-
-      // On shows every answer, the one the tap showed included.
-      await screens.tap(find.byType(Switch));
-      expect(_answers(tester), ['cat', 'dog', 'DOG']);
-      await screens.close();
-    },
-  );
-
   testWidgets('search results follow the switch', (tester) async {
     final screens = await DeckScreens.open(tester, cards: cards);
     await screens.push((deck) => DeckScreen(deck: deck));
@@ -454,7 +472,6 @@ void main() {
     await screens.tap(find.byTooltip('Search cards'));
     await screens.enter('Search', 'ch');
     expect(_rowFronts(tester), ['Chat', 'Chien']);
-    expect(find.text('Cards 2'), findsOneWidget);
     expect(_answers(tester), ['cat', 'dog']);
 
     await screens.tap(find.byType(Switch));
@@ -492,13 +509,14 @@ void main() {
           findsOneWidget,
         );
 
-        await screens.tap(row);
+        await screens.tap(find.byType(Switch));
         expect(
           find.bySemanticsLabel(
             'The capital of France is blank, back The capital of France is Paris',
           ),
           findsOneWidget,
         );
+        expect(row, findsOneWidget);
         await screens.close();
       },
     );
@@ -518,17 +536,16 @@ void main() {
         ),
       );
       await screens.push((deck) => DeckScreen(deck: deck));
-      expect(find.text('Cards 2'), findsOneWidget);
+      expect(find.byType(CardBackRow), findsNWidgets(2));
 
       await screens.tap(find.byTooltip('Search cards'));
       await screens.enter('Search', 'rome');
-      expect(find.text('Cards 0'), findsOneWidget);
       expect(find.byType(CardBackRow), findsNothing);
 
       // Controls: the cloze card's face is searched, its answer included,
       // and a split card's back still is.
       await screens.enter('Search', 'paris');
-      expect(find.text('Cards 1'), findsOneWidget);
+      expect(find.byType(CardBackRow), findsOneWidget);
       expect(
         find.byWidgetPredicate(
           (widget) => widget is CardBackRow && widget.front.first == cloze,
@@ -542,7 +559,7 @@ void main() {
   );
 
   testWidgets(
-    'the switch is read as Show meanings with its state, and stays pinned while the list scrolls',
+    'the switch is read as Show backs with its state, and stays pinned under the section label Cards while the list scrolls',
     (tester) async {
       final semantics = tester.ensureSemantics();
       final screens = await DeckScreens.open(
@@ -554,7 +571,7 @@ void main() {
       expect(
         tester.getSemantics(find.byType(Switch)),
         isSemantics(
-          label: 'Show meanings',
+          label: 'Show backs',
           hasToggledState: true,
           isToggled: false,
         ),
@@ -563,22 +580,22 @@ void main() {
       expect(
         tester.getSemantics(find.byType(Switch)),
         isSemantics(
-          label: 'Show meanings',
+          label: 'Show backs',
           hasToggledState: true,
           isToggled: true,
         ),
       );
 
-      final top = tester.getTopLeft(find.text('Cards 30')).dy;
+      final top = tester.getTopLeft(find.text('Cards')).dy;
       expect(find.text('word 0'), findsOneWidget);
       await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
       await tester.pumpAndSettle();
       // The list scrolled past its first card and the today card.
       expect(find.text('word 0'), findsNothing);
       expect(find.text('Study'), findsNothing);
-      expect(tester.getTopLeft(find.text('Cards 30')).dy, lessThan(top));
+      expect(tester.getTopLeft(find.text('Cards')).dy, lessThan(top));
       expect(
-        tester.getTopLeft(find.text('Cards 30')).dy,
+        tester.getTopLeft(find.text('Cards')).dy,
         greaterThanOrEqualTo(tester.getBottomLeft(find.byType(AppBar)).dy),
       );
       await screens.tap(find.byType(Switch));
@@ -589,69 +606,33 @@ void main() {
   );
 
   testWidgets(
-    'a long-press, or a screen reader\'s action, opens a card to edit',
+    'a screen reader hears each card row as one button whose tap, hinted Edit card, opens that card',
     (tester) async {
+      final semantics = tester.ensureSemantics();
       final screens = await DeckScreens.open(tester, cards: cards);
       await screens.push((deck) => DeckScreen(deck: deck));
 
-      await tester.longPress(find.text('Chien'));
-      await tester.pumpAndSettle();
-      expect(find.text('Edit card'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'Chien'), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-
-      final semantics = tester.ensureSemantics();
-      // The row's toggle, the node beside its pencil.
-      final node = tester.getSemantics(
-        find
-            .descendant(
-              of: find.byType(CardBackRow).first,
-              matching: find.byType(InkWell),
-            )
-            .first,
+      final row = find.byType(CardBackRow).at(1);
+      expect(
+        tester.getSemantics(row),
+        isSemantics(
+          label: 'Chien, back hidden',
+          isButton: true,
+          hasTapAction: true,
+          onTapHint: 'Edit card',
+        ),
       );
-      final edit = CustomSemanticsAction.getIdentifier(
-        const CustomSemanticsAction(label: 'Edit card'),
-      );
-      expect(node.getSemanticsData().customSemanticsActionIds, contains(edit));
       tester
-          .renderObject(find.byType(CardBackRow).first)
+          .renderObject(row)
           .owner!
           .semanticsOwner!
-          .performAction(node.id, SemanticsAction.customAction, edit);
+          .performAction(tester.getSemantics(row).id, SemanticsAction.tap);
       await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
-      semantics.dispose();
-      await screens.close();
-    },
-  );
-
-  testWidgets(
-    "each card row's pencil, a button a screen reader hears as Edit card, opens that card, while a tap on the row still shows its back",
-    (tester) async {
-      final semantics = tester.ensureSemantics();
-      final screens = await DeckScreens.open(tester, cards: cards);
-      await screens.push((deck) => DeckScreen(deck: deck));
-      final pencils = find.byTooltip('Edit card');
-      expect(pencils, findsNWidgets(3), reason: 'one on each row');
-      expect(
-        tester.getSemantics(pencils.at(1)),
-        isSemantics(tooltip: 'Edit card', isButton: true, hasTapAction: true),
-      );
-
-      // Control: a tap on the row shows its back and opens nothing.
-      await screens.tap(find.text('Chien'));
-      expect(_answers(tester), ['dog']);
-      expect(find.byType(TextField), findsNothing);
-
-      await screens.tap(pencils.at(1));
       expect(find.widgetWithText(TextField, 'Chien'), findsOneWidget);
       semantics.dispose();
       await screens.close();
     },
   );
-
   testWidgets(
     'search keeps the cards whose front or back holds the text, ignoring case',
     (tester) async {
@@ -685,7 +666,7 @@ void main() {
       await screens.push((deck) => DeckScreen(deck: deck));
       // Control: before the search, the deck's header and today card are up.
       expect(find.byType(DeckTile), findsOneWidget);
-      expect(find.text("Today's cards"), findsOneWidget);
+      expect(find.text('Study today'), findsOneWidget);
 
       await screens.tap(find.byTooltip('Search cards'));
       tester.view.viewInsets = const FakeViewPadding(bottom: 336);
@@ -699,7 +680,7 @@ void main() {
       expect(first.bottom, lessThanOrEqualTo(844 - 336));
       expect(first.top - topBar.bottom, lessThan(AppSize.tapTarget * 2));
       expect(find.byType(DeckTile), findsNothing);
-      expect(find.text("Today's cards"), findsNothing);
+      expect(find.text('Study today'), findsNothing);
       await screens.close();
     },
   );
@@ -769,7 +750,7 @@ void main() {
         ('Choose from album', PhotoOrigin.album),
       ]) {
         await screens.tap(find.text('Add card'));
-        expect(find.text('Create by hand'), findsOneWidget);
+        expect(find.text('Enter by hand'), findsOneWidget);
         expect(find.text('Take photo'), findsOneWidget);
         expect(find.text('Choose from album'), findsOneWidget);
         await screens.tap(find.text(row));
@@ -780,7 +761,7 @@ void main() {
       }
       // By hand opens the editor.
       await screens.tap(find.text('Add card'));
-      await screens.tap(find.text('Create by hand'));
+      await screens.tap(find.text('Enter by hand'));
       expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
       await screens.close();
     },

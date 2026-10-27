@@ -156,10 +156,10 @@ void main() {
     },
   );
 
-  testWidgets('in Korean the row reads 하루 공부 시간 and 20분', (tester) async {
+  testWidgets('in Korean the row reads 하루 학습 시간 and 20분', (tester) async {
     await _pumpRow(tester, locale: const Locale('ko'));
 
-    expect(find.text('하루 공부 시간'), findsOneWidget);
+    expect(find.text('하루 학습 시간'), findsOneWidget);
     expect(find.text('20분'), findsOneWidget);
   });
 

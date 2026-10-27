@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_list_row.dart';
 import '../../design/app_section_label.dart';
 import '../../design/app_sheet.dart';
-import '../../design/mascot.dart';
 import '../../design/theme.dart';
 import '../../design/theme_choice.dart';
 import '../../l10n/app_localizations.dart';
-import 'account_avatar.dart';
 import 'account_data.dart';
 import 'account_service.dart';
 import 'account_state.dart';
@@ -17,20 +16,21 @@ import 'failure_message.dart';
 import 'legal.dart';
 import 'providers.dart';
 
-/// Shows the signed-in account with [syncStatus] under its email, signs it
-/// out and deletes it; and the theme the app is drawn in.
+/// The settings screen: the signed-in account with [syncStatus] under its
+/// email and sign-out, the study settings, the theme the app is drawn in,
+/// and, last, deleting the account.
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({
     super.key,
     required this.syncStatus,
-    required this.studySetting,
+    required this.studySettings,
   });
 
   /// Where sync stands, as its caller draws it.
   final Widget syncStatus;
 
-  /// The daily study minutes' row, as its caller draws it, under "공부".
-  final Widget studySetting;
+  /// The study settings' rows, as their callers draw them, under "학습".
+  final List<Widget> studySettings;
 
   @override
   ConsumerState<AccountScreen> createState() => _AccountScreenState();
@@ -46,6 +46,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(accountStateProvider);
+    final idle = _busy == null && state is SignedIn;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTitle)),
       body: ListView(
@@ -56,35 +57,41 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppSpace.s24,
         ),
         children: [
-          // The gate leaves this screen once no account is signed in.
-          if (state case SignedIn(:final email)) ...[
-            _ProfileCard(email: email, syncStatus: widget.syncStatus),
-            const SizedBox(height: AppSpace.sectionGap),
-          ],
+          AppSectionLabel(l10n.accountSection),
+          AppGroup(
+            children: [
+              // The gate leaves this screen once no account is signed in.
+              if (state case SignedIn(:final email))
+                _EmailRow(email: email, syncStatus: widget.syncStatus),
+              AppListRow(
+                title: l10n.signOut,
+                trailing: _busy == _Action.signingOut
+                    ? _Progress(l10n.signingOut)
+                    : null,
+                onTap: idle ? _signOut : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpace.sectionGap),
           AppSectionLabel(l10n.settingsStudy),
-          widget.studySetting,
+          AppGroup(children: widget.studySettings),
           const SizedBox(height: AppSpace.sectionGap),
           AppSectionLabel(l10n.displaySection),
-          const _ThemeRow(),
+          const AppGroup(children: [_ThemeRow()]),
           const SizedBox(height: AppSpace.sectionGap),
-          AppSectionLabel(l10n.accountSection),
-          AppListRow(
-            title: l10n.signOut,
-            trailing: _busy == _Action.signingOut
-                ? _Progress(l10n.signingOut)
-                : null,
-            onTap: _busy != null || state is! SignedIn ? null : _signOut,
+          AppGroup(
+            children: [
+              AppListRow(
+                title: l10n.deleteAccount,
+                destructive: true,
+                trailing: _busy == _Action.deleting
+                    ? _Progress(l10n.deletingAccount)
+                    : null,
+                onTap: idle ? _deleteAccount : null,
+              ),
+            ],
           ),
-          AppListRow(
-            title: l10n.deleteAccount,
-            subtitle: l10n.deleteAccountNote,
-            destructive: true,
-            trailing: _busy == _Action.deleting
-                ? _Progress(l10n.deletingAccount)
-                : null,
-            onTap: _busy != null || state is! SignedIn ? null : _deleteAccount,
-          ),
-          const SizedBox(height: AppSpace.s40),
+          const SizedBox(height: AppSpace.s32),
           const _Footer(),
         ],
       ),
@@ -191,94 +198,137 @@ class _Progress extends StatelessWidget {
   );
 }
 
-/// The signed-in account on a card: an avatar with the email's initial, the
-/// email, and where sync stands.
-class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.email, required this.syncStatus});
+/// The signed-in account's row: the email, and where sync stands under it.
+class _EmailRow extends StatelessWidget {
+  const _EmailRow({required this.email, required this.syncStatus});
 
   final String? email;
   final Widget syncStatus;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = AppColors.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.s20),
-        child: Row(
-          spacing: AppSpace.s16,
-          children: [
-            const AccountAvatar(size: AppSize.avatar),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: AppSpace.s4,
-                children: [
-                  Text(email ?? l10n.signedIn, style: AppType.bodyStrong),
-                  syncStatus,
-                ],
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      AppSpace.s16,
+      AppSpace.s12,
+      AppSpace.s12,
+      AppSpace.s12,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          email ?? AppLocalizations.of(context).signedIn,
+          style: AppType.bodyStrong,
         ),
-      ),
-    );
-  }
+        syncStatus,
+      ],
+    ),
+  );
 }
 
-/// The screen's foot: the mascot, faint, the app's version, and the links to
-/// the terms and the privacy policy.
+/// The screen's foot, centred and muted on one line: the app's version, and
+/// the links to the terms and the privacy policy.
 class _Footer extends ConsumerWidget {
   const _Footer();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Column(
-      spacing: AppSpace.s8,
-      children: [
-        const Opacity(opacity: 0.5, child: Mascot(size: AppSize.mascotSmall)),
-        Text(
-          l10n.appVersion(ref.watch(appVersionProvider)),
-          style: AppType.caption.copyWith(color: AppColors.of(context).muted),
+    final colors = AppColors.of(context);
+    final quiet = AppType.caption.copyWith(color: colors.muted);
+    final dot = ExcludeSemantics(child: Text('·', style: quiet));
+    Widget link(String title, Uri uri) => TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: colors.muted,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
+        minimumSize: const Size(0, AppSize.tapTarget),
+        textStyle: AppType.caption.copyWith(
+          decoration: TextDecoration.underline,
         ),
-        const LegalLinksRow(),
+      ),
+      onPressed: () => openLegalLink(context, ref, uri),
+      child: Text(title),
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpace.s4,
+      children: [
+        Text(l10n.appVersion(ref.watch(appVersionProvider)), style: quiet),
+        dot,
+        link(l10n.termsOfService, termsOfServiceUrl),
+        dot,
+        link(l10n.privacyPolicy, privacyPolicyUrl),
       ],
     );
   }
 }
 
-/// The theme the app is drawn in, on a row: following the system, light or
-/// dark, applied at once.
+/// The theme row: "테마" with the current choice, which opens a sheet that
+/// chooses following the system, light or dark, applied at once.
 class _ThemeRow extends ConsumerWidget {
   const _ThemeRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return AppRowSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.s12),
-        child: SegmentedButton<ThemeMode>(
-          segments: [
-            ButtonSegment(
-              value: ThemeMode.system,
-              label: Text(l10n.themeSystem),
-            ),
-            ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeLight)),
-            ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeDark)),
+    final colors = AppColors.of(context);
+    final current = ref.watch(themeModeProvider);
+    return AppListRow(
+      title: l10n.themeTitle,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: AppSpace.s4,
+        children: [
+          Text(
+            _themeName(l10n, current),
+            style: AppType.secondary.copyWith(color: colors.ink2),
+          ),
+          const Icon(LucideIcons.chevronRight),
+        ],
+      ),
+      onTap: () => _choose(context, ref, current),
+    );
+  }
+
+  Future<void> _choose(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode current,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
+    final chosen = await showAppSheet<ThemeMode>(
+      context,
+      builder: (context) => AppSheet(
+        title: l10n.themeTitle,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final mode in [
+              ThemeMode.system,
+              ThemeMode.light,
+              ThemeMode.dark,
+            ])
+              AppListRow(
+                title: _themeName(l10n, mode),
+                onSheet: true,
+                selected: mode == current,
+                trailing: mode == current
+                    ? Icon(LucideIcons.check, color: colors.ink)
+                    : null,
+                onTap: () => Navigator.of(context).pop(mode),
+              ),
           ],
-          selected: {ref.watch(themeModeProvider)},
-          showSelectedIcon: false,
-          onSelectionChanged: (choice) =>
-              ref.read(themeModeProvider.notifier).choose(choice.single),
         ),
       ),
     );
+    if (chosen != null) ref.read(themeModeProvider.notifier).choose(chosen);
   }
 }
+
+String _themeName(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
+  ThemeMode.system => l10n.themeSystem,
+  ThemeMode.light => l10n.themeLight,
+  ThemeMode.dark => l10n.themeDark,
+};

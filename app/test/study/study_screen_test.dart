@@ -13,7 +13,7 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_section_label.dart';
-import 'package:smartman/design/mascot.dart';
+import 'package:smartman/home/src/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';

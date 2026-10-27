@@ -244,7 +244,7 @@ class _EmptyHome extends StatelessWidget {
       body: l10n.emptyHomeBody,
       actions: [
         AppButton(
-          label: l10n.makeDeck,
+          label: l10n.newDeckTitle,
           icon: LucideIcons.plus,
           size: AppButtonSize.cta,
           onPressed: onCreate,

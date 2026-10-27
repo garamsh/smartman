@@ -75,7 +75,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: const AccountScreen(
             syncStatus: SyncStatusView(),
-            studySetting: SizedBox.shrink(),
+            studySettings: [],
           ),
         ),
       ),

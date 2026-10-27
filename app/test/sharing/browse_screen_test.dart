@@ -71,7 +71,7 @@ void main() {
       await app.tapText('Create a deck');
       // The new-deck sheet offers no second way to public decks: the row is
       // the one.
-      expect(find.text('Create by hand'), findsOneWidget);
+      expect(find.text('Enter by hand'), findsOneWidget);
       expect(find.text('Copy a public deck'), findsNothing);
       await app.close();
     },

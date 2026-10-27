@@ -199,7 +199,7 @@ void main() {
   ) async {
     final app = await _openSpanish(tester);
 
-    await app.deckMenu('Report');
+    await app.deckMenu('Report deck');
     final report = find.widgetWithText(FilledButton, 'Report');
     expect(tester.widget<FilledButton>(report).onPressed, isNull);
     // The sheet is dismissed by a drag or the scrim, so it offers no cancel.
@@ -220,7 +220,7 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    await app.deckMenu('Report');
+    await app.deckMenu('Report deck');
     await app.tapText('Other');
     await app.tap(find.widgetWithText(FilledButton, 'Report'));
     expect(find.text("You've already reported this deck."), findsOneWidget);
@@ -274,7 +274,7 @@ void main() {
         await app.meetsGuidelines();
         await tester.tapAt(const Offset(10, 10));
         await tester.pumpAndSettle();
-        await app.deckMenu('Report');
+        await app.deckMenu('Report deck');
         await app.meetsGuidelines();
         await app.close();
       },

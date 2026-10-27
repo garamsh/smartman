@@ -272,7 +272,7 @@ class _ReportSheetState extends State<_ReportSheet> {
       ),
       actions: [
         AppButton(
-          label: l10n.reportDeck,
+          label: l10n.reportConfirm,
           size: AppButtonSize.cta,
           onPressed: reason == null
               ? null

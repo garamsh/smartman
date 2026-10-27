@@ -11,7 +11,7 @@ import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_list_row.dart';
-import 'package:smartman/design/mascot.dart';
+import 'package:smartman/home/src/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
@@ -360,7 +360,7 @@ void main() {
         final list = await _open(tester, decks: ['Alpha']);
 
         expect(shownText('Make your first card?'), findsOneWidget);
-        expect(shownText('Add cards to a deck to start'), findsOneWidget);
+        expect(shownText('Add cards to a deck to start.'), findsOneWidget);
         expect(find.text("You've done today's cards"), findsNothing);
         AppButton button(String label) =>
             tester.widget<AppButton>(find.widgetWithText(AppButton, label));
@@ -1106,12 +1106,13 @@ void main() {
         await list.decks();
 
         await list.newDeck();
-        // The sheet's title over the entry that opened it.
-        expect(shownText('Create a deck'), findsNWidgets(2));
-        expect(find.text('Create by hand'), findsOneWidget);
+        // The sheet is titled by what it makes, over the entry that opened it.
+        expect(shownText('New deck'), findsOneWidget);
+        expect(shownText('Create a deck'), findsOneWidget);
+        expect(find.text('Enter by hand'), findsOneWidget);
         expect(find.text('Take photo'), findsNothing);
         expect(find.text('Choose from album'), findsNothing);
-        await list.tap('Create by hand');
+        await list.tap('Enter by hand');
         // The name sheet is "New deck", as photo import's is.
         expect(shownText('New deck'), findsOneWidget);
         await tester.enterText(find.byType(EditableText).last, 'Delta');
@@ -1163,7 +1164,7 @@ void main() {
 
         for (final row in ['Take photo', 'Choose from album']) {
           await list.newDeck();
-          expect(find.text('Create by hand'), findsOneWidget);
+          expect(find.text('Enter by hand'), findsOneWidget);
           await list.tap(row);
           expect(find.text('photo import'), findsOneWidget);
           await list.tap('photo import');
@@ -1293,7 +1294,7 @@ void main() {
         );
         AppListRow row(String title) =>
             tester.widget<AppListRow>(find.widgetWithText(AppListRow, title));
-        expect(row('Create by hand').subtitle, isNull);
+        expect(row('Enter by hand').subtitle, isNull);
         expect(row('Take photo').subtitle, isNotNull);
         expect(row('Choose from album').subtitle, isNotNull);
         await list.close();

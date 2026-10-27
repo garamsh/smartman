@@ -31,7 +31,7 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
   final photoImport = ref.read(photoImportProvider);
   final choice = await showOptionSheet<_NewDeck>(
     context,
-    title: l10n.newDeckTitle,
+    title: l10n.newDeck,
     options: [
       (
         icon: LucideIcons.pencilLine,
