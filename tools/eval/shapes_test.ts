@@ -11,9 +11,10 @@ import {
   shapesFor,
 } from "./shapes.ts";
 
-const line = (id: string, text: string) => ({
+const line = (id: string, text: string, role = "fact") => ({
   id,
   text,
+  role,
   marks: [],
   key_terms: [],
 });
@@ -70,8 +71,8 @@ function reply(shape: Shape): Record<string, unknown> {
       return {
         kind: shape,
         blanks: [
-          { line_id: "a", start: 0, end: 7 },
-          { line_id: "b", start: 7, end: 10 },
+          { line_id: "a", text: "5부족 연맹체" },
+          { line_id: "b", text: "사출도" },
         ],
       };
     case "qa":
@@ -178,16 +179,16 @@ Deno.test("a shape breaking what its section allows is refused", () => {
     }],
     ["table_cells", LIST, () => {}], // a list has no table
     ["table_spans", TABLE, (value) => {
-      value.blanks = [{ line_id: "a", start: 0, end: 8 }]; // past the line
+      value.blanks = [{ line_id: "a", text: "5부족 연맹체들" }]; // not in the line
     }],
     ["table_spans", TABLE, (value) => {
       value.blanks = [
-        { line_id: "a", start: 0, end: 4 },
-        { line_id: "a", start: 3, end: 7 },
+        { line_id: "a", text: "5부족" },
+        { line_id: "a", text: "족 연맹" },
       ];
     }],
     ["table_spans", TABLE, (value) => {
-      value.blanks = [{ line_id: "e", start: 0, end: 2 }]; // another section's line
+      value.blanks = [{ line_id: "e", text: "동예" }]; // another section's line
     }],
     ["qa", TABLE, (value) => {
       (value.cards as unknown[]).pop(); // a cell holding lines left unasked
@@ -270,6 +271,53 @@ Deno.test("cloze blanks are the texts they hide, found in the sentence in order,
     null,
     "blanks out of the sentence's order are refused",
   );
+});
+
+Deno.test("a cloze asks each fact line once and no example or heading line, and an example line goes to the card of the fact before it", () => {
+  const [section] = parseSectionTree([{
+    title: "3. 축약",
+    language: "ko",
+    content_type: "rule_list",
+    lines: [
+      line("h", "국어 문법", "heading"),
+      line("f", "ㅗ+ㅏ -> ㅘ"),
+      line("x", "예) 보+아라 -> 봐라", "example"),
+    ],
+    table: null,
+  }]) ?? [];
+  assert.ok(section !== undefined);
+  const value = {
+    kind: "cloze",
+    items: [{
+      line_id: "f",
+      sentence: "축약에서 ㅗ+ㅏ는 ㅘ가 된다",
+      blanks: ["ㅘ"],
+      composed: true,
+    }],
+  };
+  const output = parseShape("cloze", value, section);
+  assert.ok(output !== null, "the fact line alone is asked");
+  assert.deepEqual(cardsOf(output, section), [{
+    type: "cloze",
+    front: "축약에서 ㅗ+ㅏ는 ___가 된다",
+    answer: "ㅘ",
+    cloze: { answers: ["ㅘ"] },
+    examples: ["예) 보+아라 -> 봐라"],
+  }]);
+  for (const id of ["x", "h"]) {
+    const extra = structuredClone(value);
+    extra.items.push({
+      line_id: id,
+      sentence: "보+아라는 봐라가 된다",
+      blanks: ["봐라"],
+      composed: true,
+    });
+    assert.equal(
+      parseShape("cloze", extra, section),
+      null,
+      `a sentence for the line ${id} is refused`,
+    );
+  }
 });
 
 Deno.test("table shapes make one table card with the row headers as its first column; questions answer with their cell's lines", () => {

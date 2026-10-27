@@ -123,14 +123,25 @@ const STAGE1 = {
       line: ReturnType<typeof truthLine>,
       row: number,
       column: number,
-    ) => ({
-      id: line.id,
-      text: line.text,
-      row,
-      column,
-      marks: line.marks,
-      key_terms: line.blanks.map((blank) => ({ ...blank, source: "mark" })),
-    });
+    ) => {
+      const covered = ({ start, end }: { start: number; end: number }) =>
+        [...line.text].slice(start, end).join("");
+      return {
+        id: line.id,
+        text: line.text,
+        role: "fact",
+        row,
+        column,
+        marks: line.marks.map(({ start, end, ...mark }) => ({
+          text: covered({ start, end }),
+          ...mark,
+        })),
+        key_terms: line.blanks.map((blank) => ({
+          text: covered(blank),
+          source: "mark",
+        })),
+      };
+    };
     return {
       title: section.title,
       language: section.language,
@@ -180,7 +191,7 @@ const SHAPE_REPLIES: Record<string, unknown> = {
   table_cells: { kind: "table_cells", blanks: [{ row: 0, column: 0 }] },
   table_spans: {
     kind: "table_spans",
-    blanks: [{ line_id: "s1-r1-c1-l1", start: 0, end: 7 }],
+    blanks: [{ line_id: "s1-r1-c1-l1", text: "5부족 연맹체" }],
   },
   qa: {
     kind: "qa",
@@ -342,6 +353,7 @@ function io(w: World): Io {
                 lines: [{
                   id: "w1",
                   text: "apple 사과",
+                  role: "fact",
                   row: -1,
                   column: -1,
                   marks: [],

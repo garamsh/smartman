@@ -37,6 +37,12 @@ export const SPAN_MARKS: readonly MarkKind[] = [
 ];
 export const INKS = ["print", "pen"] as const;
 export const KEY_TERM_SOURCES = ["mark", "model"] as const;
+/**
+ * What a line is to a card: a fact to recall, an example of the fact before it, or a heading that
+ * only names what follows.
+ */
+export const LINE_ROLES = ["fact", "example", "heading"] as const;
+export type LineRole = (typeof LINE_ROLES)[number];
 
 export const MAX_SECTIONS = 20;
 export const MAX_SECTION_LINES = 60;
@@ -57,6 +63,7 @@ export type KeyTerm = Span & {
 export type Line = {
   readonly id: string;
   readonly text: string;
+  readonly role: LineRole;
   readonly marks: readonly Mark[];
   readonly key_terms: readonly KeyTerm[];
 };
@@ -101,13 +108,25 @@ export function spanText(text: string, span: Span): string {
   return [...text].slice(span.start, span.end).join("");
 }
 
+/**
+ * The span of [text] that first holds [covered] at or after code point [from], or null when
+ * none does or [covered] is empty.
+ */
+export function spanOf(text: string, covered: string, from = 0): Span | null {
+  const chars = [...text];
+  const want = [...covered];
+  if (want.length === 0) return null;
+  for (let start = from; start + want.length <= chars.length; start += 1) {
+    if (want.every((char, i) => chars[start + i] === char)) {
+      return { start, end: start + want.length };
+    }
+  }
+  return null;
+}
+
 // The schema states no length or count: strict structured outputs do not support those
 // constraints, and the parsers below enforce them.
 const field = { type: "string" } as const;
-const span = {
-  start: { type: "integer" },
-  end: { type: "integer" },
-} as const;
 
 /** The row and column stage 1 gives a line outside a table. */
 export const NO_CELL = -1;
@@ -115,7 +134,8 @@ export const NO_CELL = -1;
 /**
  * Stage 1's reply, `{kind: "sections", sections}`, as strict structured outputs state it. A table
  * is flat: its columns and row headers as text, and each line names its cell by row and column,
- * which keeps the schema shallow and states a line once.
+ * which keeps the schema shallow and states a line once. A mark or key term gives the text it
+ * covers, which `parseSections` finds in its line.
  */
 export const sectionsSchema = {
   type: "object",
@@ -138,6 +158,7 @@ export const sectionsSchema = {
               properties: {
                 id: field,
                 text: field,
+                role: { type: "string", enum: [...LINE_ROLES] },
                 row: { type: "integer" },
                 column: { type: "integer" },
                 marks: {
@@ -145,11 +166,11 @@ export const sectionsSchema = {
                   items: {
                     type: "object",
                     properties: {
-                      ...span,
+                      text: field,
                       kind: { type: "string", enum: [...MARK_KINDS] },
                       ink: { type: "string", enum: [...INKS] },
                     },
-                    required: ["start", "end", "kind", "ink"],
+                    required: ["text", "kind", "ink"],
                     additionalProperties: false,
                   },
                 },
@@ -158,15 +179,23 @@ export const sectionsSchema = {
                   items: {
                     type: "object",
                     properties: {
-                      ...span,
+                      text: field,
                       source: { type: "string", enum: [...KEY_TERM_SOURCES] },
                     },
-                    required: ["start", "end", "source"],
+                    required: ["text", "source"],
                     additionalProperties: false,
                   },
                 },
               },
-              required: ["id", "text", "row", "column", "marks", "key_terms"],
+              required: [
+                "id",
+                "text",
+                "role",
+                "row",
+                "column",
+                "marks",
+                "key_terms",
+              ],
               additionalProperties: false,
             },
           },
@@ -200,7 +229,8 @@ const FLAT_KEYS = [
  * Stage 1's sections, or null when [value] is not `{kind: "sections", sections}` of the schema's
  * shape once each text is trimmed, or breaks a rule the schema cannot state: a table section
  * without columns or rows, another section with either or with no line, a table line outside its
- * table, a list line given a cell, a line id given twice on the page, or a span outside its line.
+ * table, a list line given a cell, a line id given twice on the page, or a mark or key term whose
+ * text its line does not hold. A star covers its whole line, whatever text it gives.
  */
 export function parseSections(value: unknown): Section[] | null {
   if (!isRecord(value) || !hasOnlyKeys(value, ["kind", "sections"])) {
@@ -223,8 +253,10 @@ function treeOf(value: unknown): Record<string, unknown> | null {
     MAX_TABLE_ROWS * MAX_TABLE_COLUMNS * MAX_CELL_LINES,
     (line) => {
       if (!isRecord(line)) return null;
-      const { row, column, ...printed } = line;
-      return typeof row === "number" && typeof column === "number"
+      const { row, column, ...flat } = line;
+      const printed = spannedOf(flat);
+      return typeof row === "number" && typeof column === "number" &&
+          printed !== null
         ? { row, column, line: printed }
         : null;
     },
@@ -258,15 +290,50 @@ function treeOf(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-/** [section] in the flat shape stage 1 writes, the shape stage 2 is given it in. */
+/**
+ * A flat line with each mark and key term turned from the text it covers into that text's first
+ * span in the line, a star into the whole line; null when the line does not hold such a text.
+ * Everything else about the line is left for `parseLine` to check.
+ */
+function spannedOf(
+  line: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const printed = text(line.text);
+  if (printed === null) return line;
+  const spanned = (value: unknown) =>
+    list(value, MAX_LINE_SPANS, (item) => {
+      if (!isRecord(item) || typeof item.text !== "string") return null;
+      const { text: covered, ...rest } = item;
+      const at = rest.kind === "star"
+        ? { start: 0, end: [...printed].length }
+        : spanOf(printed, covered.trim());
+      return at === null ? null : { ...at, ...rest };
+    });
+  const marks = spanned(line.marks);
+  const keyTerms = spanned(line.key_terms);
+  return marks === null || keyTerms === null
+    ? null
+    : { ...line, marks, key_terms: keyTerms };
+}
+
+/**
+ * [section] in the flat shape stage 1 writes, the shape stage 2 is given it in: each mark and key
+ * term as the text it covers.
+ */
 export function flatOf(section: Section): Record<string, unknown> {
+  const covered =
+    (line: Line) => <T extends Span>({ start, end, ...rest }: T) => ({
+      text: spanText(line.text, { start, end }),
+      ...rest,
+    });
   const flat = (line: Line, row: number, column: number) => ({
     id: line.id,
     text: line.text,
+    role: line.role,
     row,
     column,
-    marks: line.marks,
-    key_terms: line.key_terms,
+    marks: line.marks.map(covered(line)),
+    key_terms: line.key_terms.map(covered(line)),
   });
   const { table } = section;
   return {
@@ -377,11 +444,12 @@ function parseTable<L>(
 function parseLine(value: unknown): Line | null {
   if (
     !isRecord(value) ||
-    !hasOnlyKeys(value, ["id", "text", "marks", "key_terms"])
+    !hasOnlyKeys(value, ["id", "text", "role", "marks", "key_terms"])
   ) return null;
   const id = text(value.id);
   const printed = text(value.text);
-  if (id === null || printed === null) return null;
+  const role = LINE_ROLES.find((known) => known === value.role);
+  if (id === null || printed === null || role === undefined) return null;
   const length = [...printed].length;
   const marks = list(
     value.marks,
@@ -398,7 +466,7 @@ function parseLine(value: unknown): Line | null {
   });
   return marks === null || keyTerms === null
     ? null
-    : { id, text: printed, marks, key_terms: keyTerms };
+    : { id, text: printed, role, marks, key_terms: keyTerms };
 }
 
 function parseTruthLine(value: unknown): TruthLine | null {
