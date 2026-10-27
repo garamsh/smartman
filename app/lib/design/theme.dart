@@ -41,8 +41,11 @@ abstract final class AppRadius {
   /// A previous card in the study stack.
   static const previous = 20.0;
 
-  /// A row in a list, and a group of rows.
+  /// A row in a list that stands alone on the ground.
   static const row = 18.0;
+
+  /// A group of rows split by hairlines: a settings section, a deck's cards.
+  static const group = 14.0;
 
   /// A button.
   static const button = 16.0;
@@ -119,7 +122,8 @@ abstract final class AppSize {
   /// The mascot on the 오늘 tab's backlog card.
   static const mascotGuide = 64.0;
 
-  /// The mascot in the account screen's footer.
+  /// A small mascot. No app screen draws it; the web's sizes mirror this
+  /// set.
   static const mascotSmall = 28.0;
 
   /// The symbol in the today card's corner.
@@ -128,6 +132,10 @@ abstract final class AppSize {
   /// The study progress bar's thickness.
   static const progress = 8.0;
 }
+
+/// Digits of one width, so a figure keeps its place as it changes. Kept out
+/// of [AppType]'s styles, which the web's token test reads.
+const _tabularDigits = [FontFeature.tabularFigures()];
 
 /// The app's type scale, all Pretendard, with explicit line heights.
 /// A style without a colour takes the text colour of where it is drawn.
@@ -159,13 +167,15 @@ abstract final class AppType {
     letterSpacing: -0.6,
   );
 
-  /// The today card's count: 36/44, extra bold.
+  /// A large figure, such as the today card's count: 36/44, extra bold,
+  /// tracked in about 2%, its digits tabular.
   static const figure = TextStyle(
     fontFamily: appFontFamily,
     fontSize: 36,
     height: 44 / 36,
     fontWeight: FontWeight.w800,
     letterSpacing: -0.8,
+    fontFeatures: _tabularDigits,
   );
 
   /// A sheet's title: 18/26, bold.

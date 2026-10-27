@@ -74,8 +74,7 @@ void main() {
           front: const [TextContent('apple')],
           back: const [_senses],
           shown: true,
-          onToggle: () {},
-          onEdit: () {},
+          onOpen: () {},
         ),
       );
 

@@ -104,7 +104,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckName => '덱 이름';
 
   @override
-  String get deckNameRequired => '이름을 입력하세요';
+  String get deckNameRequired => '이름을 입력해 주세요';
 
   @override
   String get noCards => '아직 카드가 없어요. 카드를 추가해 시작해 보세요.';
@@ -293,9 +293,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoplayAudio => '앞면 소리 자동 재생';
-
-  @override
-  String get autoplayAudioDescription => '카드가 나오면 앞면의 소리를 한 번 들려줘요';
 
   @override
   String blockMenu(String side, int number) {
@@ -619,7 +616,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get answerNotSaved => '응답을 기기에 저장하지 못했어요. 이 카드의 일정은 그대로예요.';
 
   @override
-  String get settingNotSaved => '공부 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.';
+  String get settingNotSaved => '학습 시간을 기기에 저장하지 못했어요. 다시 시도해 주세요.';
 
   @override
   String get studyComplete => '오늘 학습 완료';
@@ -655,10 +652,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get schedulingFailure => '이 카드의 다음 복습 일정을 계산하지 못했어요. 일정은 그대로예요.';
 
   @override
-  String get account => '계정';
+  String get account => '설정';
 
   @override
-  String get accountTitle => '계정';
+  String get accountTitle => '설정';
 
   @override
   String get welcomeBody => '밀어서 응답하고,\n잊을 때쯤 다시 만나는 암기 카드';
@@ -695,6 +692,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get displaySection => '화면';
+
+  @override
+  String get themeTitle => '테마';
 
   @override
   String get themeSystem => '시스템';
@@ -739,31 +739,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteCardBody => '이 카드의 학습 기록도 함께 삭제돼요.';
 
   @override
-  String get unsyncedChangesTitle => '동기화되지 않은 변경이 있어요';
+  String get unsyncedChangesTitle => '동기화하지 않고 로그아웃할까요?';
 
   @override
   String get unsyncedChangesBody =>
-      '동기화되지 않은 변경은 로그아웃하면 이 기기에서 지워지고, 다른 기기에서도 볼 수 없어요.';
+      '동기화되지 않은 변경은 이 기기에서 삭제되고, 다른 기기에서도 볼 수 없어요.';
 
   @override
   String get signOutAnyway => '그래도 로그아웃';
 
   @override
-  String get dataNotCleared => '이 기기의 데이터를 지우지 못했어요. 다른 계정으로 로그인하면 지워져요.';
+  String get dataNotCleared => '이 기기의 데이터를 삭제하지 못했어요. 다른 계정으로 로그인하면 삭제돼요.';
 
   @override
   String get deleteAccount => '계정 삭제';
-
-  @override
-  String get deleteAccountNote =>
-      '계정을 삭제하면 서버와 이 기기에 있는 카드와 기록이 모두 지워져요. 되돌릴 수 없어요.';
 
   @override
   String get deleteAccountTitle => '계정을 삭제할까요?';
 
   @override
   String get deleteAccountBody =>
-      '서버와 이 기기의 덱, 카드, 학습 기록이 모두 지워지고, 다른 사람이 복사한 덱과 Google 계정은 남아요.';
+      '서버와 이 기기의 덱, 카드, 학습 기록이 모두 삭제되고, 다른 사람이 가져간 덱과 Google 계정은 남아요.';
 
   @override
   String get deletingAccount => '계정 삭제 중';
@@ -922,9 +918,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pickAnother => '다른 사진 고르기';
 
   @override
-  String get makeDeck => '덱 만들기';
-
-  @override
   String get photoCameraBody => '단어장을 찍으면 카드를 찾아 드려요';
 
   @override
@@ -959,7 +952,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get modelFailed => '카드를 읽지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   @override
-  String get signInRequired => '로그인이 필요해요. 계정 화면에서 다시 로그인해 주세요.';
+  String get signInRequired => '로그인이 필요해요. 설정에서 다시 로그인해 주세요.';
 
   @override
   String get serviceFailed => '지금은 사진으로 카드를 만들 수 없어요. 잠시 후 다시 시도해 주세요.';
@@ -977,7 +970,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get browse => '공개 덱';
 
   @override
-  String get publish => '공개하기';
+  String get publish => '덱 공개';
 
   @override
   String get unpublish => '비공개로 전환';
@@ -1018,7 +1011,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sharingOffline => '인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.';
 
   @override
-  String get sharingRejected => '요청이 거절됐어요. 계정 화면에서 다시 로그인한 뒤 시도해 주세요.';
+  String get sharingRejected => '요청이 거절됐어요. 설정에서 다시 로그인한 뒤 시도해 주세요.';
 
   @override
   String get sharingFailed => '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
@@ -1035,7 +1028,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get reportDeck => '신고하기';
+  String get reportDeck => '덱 신고';
+
+  @override
+  String get reportConfirm => '신고';
 
   @override
   String get blockUser => '이 사용자 차단';
@@ -1067,7 +1063,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get blockBody => '이 사용자의 덱이 둘러보기에 더 이상 나오지 않아요.';
+  String get blockBody => '이 사용자의 덱이 공개 덱에 더 이상 나오지 않아요.';
 
   @override
   String get block => '차단';
@@ -1110,7 +1106,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String publishTitle(String name) {
-    return '\"$name\" 공개하기';
+    return '\"$name\" 공개';
   }
 
   @override
@@ -1120,14 +1116,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get displayNameHelp => '공개한 덱에 이 이름이 표시돼요. 이메일은 표시되지 않아요.';
 
   @override
-  String get displayNameLength => '2~20자로 입력하세요';
+  String get displayNameLength => '2~20자로 입력해 주세요';
 
   @override
   String get deckDescription => '설명 (선택)';
 
   @override
   String deckDescriptionTooLong(int max) {
-    return '$max자 이내로 입력하세요';
+    return '$max자 이내로 입력해 주세요';
   }
 
   @override
@@ -1149,13 +1145,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noCardsTitle => '첫 카드를 만들어 볼까요?';
 
   @override
-  String get noCardsBody => '덱에 카드를 추가해 시작해요';
+  String get noCardsBody => '덱에 카드를 추가해 시작해요.';
 
   @override
   String get openDeck => '덱 열기';
 
   @override
-  String get addCardsInDecks => '덱에서 카드 추가하기';
+  String get addCardsInDecks => '덱에서 카드 추가';
 
   @override
   String get emptyHomeTitle => '첫 덱을 만들어 볼까요?';
@@ -1164,7 +1160,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get emptyHomeBody => '단어장 사진을 찍으면 카드를 바로 만들어 드려요. 직접 입력해도 돼요.';
 
   @override
-  String get createManually => '직접 만들기';
+  String get createManually => '직접 입력';
 
   @override
   String get browsePublicDecks => '공개 덱 둘러보기';
@@ -1239,17 +1235,15 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String deckSummaryPublic(int count) {
-    return '카드 $count장 · 공개';
+  String deckMasteredCount(int count) {
+    return '익힌 카드 $count장';
   }
 
   @override
-  String get todayThisDeck => '오늘 이 덱';
+  String get deckTodayTitle => '오늘 학습';
 
   @override
-  String todayCountMinutes(int minutes) {
-    return '장 · 약 $minutes분';
-  }
+  String get deckTodayUnit => '장';
 
   @override
   String get studyDeck => '학습하기';
@@ -1264,12 +1258,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addCardManuallyBody => '앞면과 뒷면을 하나씩 적어요';
 
   @override
-  String cardListTitle(int count) {
-    return '카드 $count';
-  }
+  String get cardListTitle => '카드';
 
   @override
-  String get showMeanings => '뜻 보기';
+  String get showMeanings => '뒷면 보기';
 
   @override
   String cardBackHidden(String front) {
@@ -1538,9 +1530,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get masteredEmpty => '아직 익힌 카드가 없어요.';
 
   @override
-  String importTitleWords(int count) {
-    return '단어 $count개를 찾았어요';
-  }
+  String get importTitleWords => '단어를 찾았어요';
 
   @override
   String importTitleCards(int count) {
@@ -1550,6 +1540,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String importDeck(String name) {
     return '덱 \'$name\'에 추가돼요';
+  }
+
+  @override
+  String importNewDeck(String name) {
+    return '$name에 추가돼요';
   }
 
   @override
@@ -1568,16 +1563,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get importForward => '단어 → 뜻';
+  String get importForward => '앞면에 단어';
 
   @override
-  String get importBackward => '뜻 → 단어';
+  String get importBackward => '앞면에 뜻';
 
   @override
-  String get importBoth => '양쪽 다 만들기';
+  String get importBoth => '양쪽 방향 모두';
 
   @override
-  String get importBothShort => '양쪽 다';
+  String get importBothShort => '양쪽 방향';
 
   @override
   String get importFirstSense => '첫 뜻만';
@@ -1592,13 +1587,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get importShowExtras => '유의어 등 표시';
 
   @override
-  String get importNoteForward => '앞 → 뒤';
+  String get importNoteForward => '앞면에 질문';
 
   @override
-  String get importNoteSwapped => '뒤 → 앞';
+  String get importNoteSwapped => '앞면에 답';
 
   @override
-  String get importSwap => '앞뒤 바꾸기';
+  String get importSwap => '앞면과 뒷면 바꾸기';
 
   @override
   String get importDropSection => '이 묶음 빼기';
@@ -1613,7 +1608,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String importRow(String front, String back) {
-    return '$front, $back. 눌러서 고쳐요';
+    return '$front, $back. 눌러서 편집해요';
   }
 
   @override
@@ -1628,7 +1623,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get importInDeck => '이미 덱에 있어요';
 
   @override
-  String get editTitle => '카드 고치기';
+  String get editTitle => '카드 편집';
 
   @override
   String get editFront => '앞면';
@@ -1672,10 +1667,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get coachStart => '시작하기';
 
   @override
-  String get dailyMinutesTitle => '하루 공부 시간';
+  String get dailyMinutesTitle => '하루 학습 시간';
 
   @override
-  String get dailyMinutesFirstTitle => '하루 몇 분 공부할까요?';
+  String get dailyMinutesFirstTitle => '하루 몇 분 학습할까요?';
 
   @override
   String get dailyMinutesBody => '복습을 먼저 하고, 남는 시간에 새 카드를 시작해요.';
@@ -1701,7 +1696,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dailyMinutesSkip => '건너뛰기';
 
   @override
-  String get settingsStudy => '공부';
+  String get settingsStudy => '학습';
 
   @override
   String studyExtra(int count) {
@@ -1710,7 +1705,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String studyExtraSemantics(int count) {
-    return '오늘 계획 밖으로 $count장 더 공부함';
+    return '오늘 계획 밖으로 $count장 더 학습함';
   }
 
   @override
@@ -1723,7 +1718,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String weekSemantics(int cards, int minutes) {
-    return '지난 7일 동안 $cards장을 $minutes분 공부했어요';
+    return '지난 7일 동안 $cards장을 $minutes분 학습했어요';
   }
 
   @override
@@ -1738,10 +1733,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dailyMinutesInput => '하루 공부 시간(분)';
+  String get dailyMinutesInput => '하루 학습 시간(분)';
 
   @override
-  String get dailyMinutesOutOfRange => '5분에서 180분 사이로 적어 주세요';
+  String get dailyMinutesOutOfRange => '5분에서 180분 사이로 입력해 주세요';
 
   @override
   String get dailyMinutesFreshTitle => '하루 새 카드';
