@@ -1916,11 +1916,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekTitle => 'Last 7 days';
 
   @override
-  String weekSummary(int cards, int minutes) {
-    return 'This week $cards · $minutes min';
-  }
-
-  @override
   String weekSemantics(int cards, int minutes) {
     String _temp0 = intl.Intl.pluralLogic(
       cards,

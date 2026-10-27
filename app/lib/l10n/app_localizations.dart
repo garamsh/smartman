@@ -2971,12 +2971,6 @@ abstract class AppLocalizations {
   /// **'지난 7일'**
   String get weekTitle;
 
-  /// Beside the last seven days' heading: the cards answered and the minutes they took.
-  ///
-  /// In ko, this message translates to:
-  /// **'이번 주 {cards}장 · {minutes}분'**
-  String weekSummary(int cards, int minutes);
-
   /// The last seven days' chart as one sentence for a screen reader.
   ///
   /// In ko, this message translates to:

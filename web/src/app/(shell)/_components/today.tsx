@@ -127,7 +127,6 @@ export async function Today() {
         todayStart: day.start,
         timeZone,
       })}
-      streak={streak}
       timeZone={timeZone}
     />
   );
@@ -361,18 +360,9 @@ function CatchUp({
 
 /**
  * The last seven study days as bars of the cards answered on each, today's in ink and last, under
- * the week's cards and minutes and the streak; the whole card links to 기록, which reads it as one
- * sentence and each day's count.
+ * the heading; the whole card links to 기록, which reads it as one sentence and each day's count.
  */
-function LastWeek({
-  week,
-  streak,
-  timeZone,
-}: {
-  week: WeekDay[];
-  streak: number;
-  timeZone: string;
-}) {
+function LastWeek({ week, timeZone }: { week: WeekDay[]; timeZone: string }) {
   const short = new Intl.DateTimeFormat("ko-KR", { weekday: "short", timeZone });
   const long = new Intl.DateTimeFormat("ko-KR", { weekday: "long", timeZone });
   const labels = week.map((day, index) =>
@@ -396,17 +386,6 @@ function LastWeek({
         기록 열기
       </span>
       <span className="text-body-strong">지난 7일</span>
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-ink-2">
-        <span>
-          이번 주 {cards}장 · {minutes}분
-        </span>
-        {streak > 0 && (
-          <span className="flex items-center gap-1 font-bold">
-            <Flame aria-hidden className="size-4 text-streak" strokeWidth={2} />
-            {streak}일 연속
-          </span>
-        )}
-      </span>
       <span aria-hidden className="grid h-28 grid-cols-7 gap-2.5">
         {week.map((day, index) => (
           <span key={day.start} className="flex flex-col items-center justify-end gap-1">

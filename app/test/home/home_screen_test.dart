@@ -516,8 +516,8 @@ void main() {
         expect(shownText("Waiting for today's first card"), findsOneWidget);
         // The pace's answers were given the day before, which starts the
         // streak.
-        // The today card's chip and the last seven days' line.
-        expect(find.text('1-day streak'), findsNWidgets(2));
+        // The today card's chip alone: the last seven days' card has no line.
+        expect(find.text('1-day streak'), findsOneWidget);
         // The chip's flame burns at the streak's stage.
         final chip = find.ancestor(
           of: find.text('1-day streak').first,
@@ -621,8 +621,8 @@ void main() {
         // Two cards left: almost there.
         expect(shownText('Almost there'), findsOneWidget);
         // Answered today: the streak counts today.
-        // The today card's chip and the last seven days' line.
-        expect(find.text('1-day streak'), findsNWidgets(2));
+        // The today card's chip alone: the last seven days' card has no line.
+        expect(find.text('1-day streak'), findsOneWidget);
         await list.close();
       },
     );
@@ -648,8 +648,11 @@ void main() {
           ),
           findsOneWidget,
         );
-        // 506 s, rounded up.
-        expect(find.text('This week 3 · 9 min'), findsOneWidget);
+        // The card is its heading and its bars: no summary line.
+        expect(find.text('Last 7 days'), findsOneWidget);
+        expect(find.textContaining('This week'), findsNothing);
+        // The streak is on the today card's chip alone.
+        expect(find.text('2-day streak'), findsOneWidget);
         expect(find.text('Next 7 days'), findsNothing);
 
         await tester.ensureVisible(find.text('Last 7 days'));
@@ -702,10 +705,9 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Goal of 2 reached'), findsOneWidget);
-        // The today card's chip and the last seven days' line.
-        expect(find.text('1-day streak'), findsNWidgets(2));
-        // The last seven days hold today's two answers, 6 s rounded up.
-        expect(find.text('This week 2 · 1 min'), findsOneWidget);
+        // The today card's chip alone: the last seven days' card has no line.
+        expect(find.text('1-day streak'), findsOneWidget);
+        expect(find.textContaining('This week'), findsNothing);
 
         await list.tap('Study');
 

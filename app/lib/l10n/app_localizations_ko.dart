@@ -1758,11 +1758,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get weekTitle => '지난 7일';
 
   @override
-  String weekSummary(int cards, int minutes) {
-    return '이번 주 $cards장 · $minutes분';
-  }
-
-  @override
   String weekSemantics(int cards, int minutes) {
     return '지난 7일 동안 $cards장을 $minutes분 공부했어요';
   }
