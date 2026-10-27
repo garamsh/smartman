@@ -166,9 +166,9 @@ describe("the 오늘 and 덱 pages", () => {
     expectTextReadable(backlog);
     // The mascot with no badge: the card's one icon is play, on its button (ADR 0116).
     expect(backlog.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
-    expect(
-      [...backlog.querySelectorAll("svg")].map((icon) => icon.closest("a") !== null),
-    ).toEqual([true]);
+    expect([...backlog.querySelectorAll("svg")].map((icon) => icon.closest("a") !== null)).toEqual([
+      true,
+    ]);
     // The minutes are set in 설정 alone.
     expect(card.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
     expect(

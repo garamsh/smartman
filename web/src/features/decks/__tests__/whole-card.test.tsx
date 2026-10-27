@@ -155,7 +155,9 @@ describe("a blank on a whole card", () => {
 
     const empty = classes(false);
     // The answer keeps the gap's width but is not drawn, over the underline in `muted`.
-    expect(empty).toEqual(expect.arrayContaining(["text-transparent", "underline", "decoration-muted"]));
+    expect(empty).toEqual(
+      expect.arrayContaining(["text-transparent", "underline", "decoration-muted"]),
+    );
     // Nothing fills it: no grey bar that reads as loading.
     expect(empty.filter((name) => name.startsWith("bg-"))).toEqual([]);
     // Control: the filled blank is drawn on the brand tint, its answer in the text's colour.

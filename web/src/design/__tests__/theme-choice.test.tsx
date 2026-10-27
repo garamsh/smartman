@@ -42,17 +42,17 @@ describe("the theme choice", () => {
     expect(group).toHaveClass("rounded-group", "bg-surface", "divide-y", "divide-hairline");
     expect(group.querySelector('[class*="shadow"]')).toBeNull();
     // Each row ends with a check that shows once its radio is checked, the selection's check.
-    expect(
-      screen.getAllByRole("radio").map((radio) => {
-        const check = radio.closest("label")?.querySelector("svg");
-        return [radio.matches(":checked"), check?.getAttribute("class")?.split(" ")];
-      }),
-    ).toEqual(
-      ["시스템", "라이트", "다크"].map((name) => [
-        name === "라이트",
+    expect(screen.getAllByRole("radio").map((radio) => radio.matches(":checked"))).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    for (const radio of screen.getAllByRole("radio")) {
+      const check = radio.closest("label")?.querySelector("svg");
+      expect(check?.getAttribute("class")?.split(" ")).toEqual(
         expect.arrayContaining(["invisible", "peer-checked:visible"]),
-      ]),
-    );
+      );
+    }
   });
 
   it("checks the theme the page was first drawn in", () => {

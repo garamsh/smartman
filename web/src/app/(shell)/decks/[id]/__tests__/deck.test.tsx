@@ -213,7 +213,12 @@ describe("the deck page", () => {
     // One card past 21 days between its last review and its due day: mastered.
     postgrest.seed(
       "card_states",
-      stateRow("c-chat", { stability: 40, difficulty: 5, lastReview: start, due: start + 30 * day }),
+      stateRow("c-chat", {
+        stability: 40,
+        difficulty: 5,
+        lastReview: start,
+        due: start + 30 * day,
+      }),
     );
     await open("d-fr");
     expect(screen.getByText("카드 3장 · 익힌 카드 1장")).toBeInTheDocument();

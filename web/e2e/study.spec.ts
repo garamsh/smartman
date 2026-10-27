@@ -458,9 +458,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "01e-today-backlog");
 
   await page.goto("/account");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "설정", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "설정", exact: true })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
   await shot(page, "07-account");
@@ -593,8 +591,8 @@ test("each page that waits on the server shows its skeleton, still under reduced
     {
       path: "/account",
       name: "account",
-      status: "계정을 불러오는 중이에요.",
-      content: '[aria-label="프로필"]',
+      status: "설정을 불러오는 중이에요.",
+      content: '[aria-labelledby="account-section"]',
       held: 0,
     },
   ];
@@ -634,7 +632,7 @@ test("each page that waits on the server shows its skeleton, still under reduced
   await still.close();
 });
 
-test("the account avatar stays a 56 px circle beside an email too long for one line", async ({
+test("the settings page wraps an email too long for one line inside its group", async ({
   page,
   context,
   baseURL,
@@ -644,22 +642,19 @@ test("the account avatar stays a 56 px circle beside an email too long for one l
   await signUpInBrowser(context, baseURL, email, "web-avatar-pw");
 
   await page.goto("/account");
-  const card = page.getByRole("region", { name: "프로필", exact: true });
-  const shown = card.getByText(email, { exact: true });
+  const section = page.getByRole("region", { name: "계정", exact: true });
+  const shown = section.getByText(email, { exact: true });
   await expect(shown).toBeVisible();
   await shot(page, "11-account-long-email");
-  const avatar = card.locator('[aria-hidden="true"]');
-  const cardBox = await card.boundingBox();
+  const group = shown.locator("..");
+  const groupBox = await group.boundingBox();
   const emailBox = await shown.boundingBox();
   const lineHeight = await shown.evaluate((node) => parseFloat(getComputedStyle(node).lineHeight));
-  // The email wraps, so it is long enough to squeeze the avatar if the avatar could shrink.
+  // The email wraps, so it is long enough to overflow the group if it could not.
   expect(emailBox?.height).toBeGreaterThan(lineHeight);
-  expect(await avatar.boundingBox()).toMatchObject({ width: 56, height: 56 });
-  const radius = await avatar.evaluate((node) => parseFloat(getComputedStyle(node).borderRadius));
-  expect(radius).toBeGreaterThanOrEqual(28);
-  // The email stays inside the card.
-  if (!cardBox || !emailBox) throw new Error("the card and the email are visible above");
-  expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+  // The email stays inside the group.
+  if (!groupBox || !emailBox) throw new Error("the group and the email are visible above");
+  expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(groupBox.x + groupBox.width);
 });
 
 test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
