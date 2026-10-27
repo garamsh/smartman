@@ -2333,6 +2333,43 @@ void main() {
       },
     );
 
+    for (final (name, back) in [
+      ('a new cloze card, with no back,', const <Content>[]),
+      (
+        'a former cloze card whose stored back no longer matches its front',
+        const [TextContent('The capital of France is Lyon')],
+      ),
+    ]) {
+      testWidgets(
+        '$name is read on the previous card as its one face, filled, never its stored back',
+        (tester) async {
+          final study = await _open(
+            tester,
+            ['whole', 'next'],
+            sides: {'whole': (cloze, back)},
+          );
+          // The setup stored the card with the back asked for.
+          expect(tester.widget<CurrentCard>(_currentCard).card.back, back);
+          await study.know();
+          expect(
+            _label(tester, _previous('The capital of France is blank')),
+            'Front: The capital of France is blank. '
+            'Back: The capital of France is Paris. Response: Know',
+          );
+
+          // Reopened, it is the day's last card from an earlier session.
+          await study.reopen();
+          expect(
+            find.bySemanticsLabel(
+              '$_earlier. Front: The capital of France is blank. '
+              'Back: The capital of France is Paris. Response: Know',
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+    }
+
     testWidgets(
       'a table card shows the whole table with its headers and its cells to recall empty, and once answered, as one card, fills every one in place',
       (tester) async {

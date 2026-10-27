@@ -103,11 +103,12 @@ class _PreviousCardViewState extends State<PreviousCardView>
     final l10n = AppLocalizations.of(context);
     final card = widget.card;
     final other = _other(card.answer);
+    final (:front, :back) = _spokenSides(l10n, card.card);
     return Semantics(
       container: true,
       label: l10n.previousCardSemantics(
-        spokenContent(l10n, card.card.front, revealed: false),
-        describeContent(l10n, card.card.back),
+        front,
+        back,
         _answerName(l10n, card.answer),
         card.changed ? 'yes' : 'no',
       ),
@@ -160,6 +161,21 @@ class _PreviousCardViewState extends State<PreviousCardView>
   }
 }
 
+/// [card] as a screen reader reads it where it is drawn as studied: a card
+/// on one face reads that face with its blanks, then filled, since its
+/// stored back is never drawn; any other its front, then its back.
+({String front, String back}) _spokenSides(AppLocalizations l10n, Card card) =>
+    switch (oneFaceOf(card.front, card.back)) {
+      final face? => (
+        front: spokenContent(l10n, face, revealed: false),
+        back: spokenContent(l10n, face, revealed: true),
+      ),
+      null => (
+        front: spokenContent(l10n, card.front, revealed: false),
+        back: describeContent(l10n, card.back),
+      ),
+    };
+
 /// The sound a screen reader plays from a card shown with its back: the
 /// back's first, which the answer just showed, or else the front's.
 AudioContent? _soundOf(Card card) =>
@@ -178,13 +194,14 @@ class EarlierCardView extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final card = earlier.card;
+    final (:front, :back) = _spokenSides(l10n, card);
     return Semantics(
       container: true,
       label: [
         l10n.earlierCard,
         l10n.previousCardSemantics(
-          spokenContent(l10n, card.front, revealed: false),
-          describeContent(l10n, card.back),
+          front,
+          back,
           _answerName(l10n, earlier.answer),
           'no',
         ),

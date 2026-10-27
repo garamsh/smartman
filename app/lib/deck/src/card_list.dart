@@ -77,8 +77,12 @@ class CardBackRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
+    final whole = isWholeCard(front);
     final spokenFront = spokenContent(l10n, front, revealed: false);
-    final spokenBack = describeContent(l10n, back);
+    // A whole card's back is never drawn: its front, filled, is read instead.
+    final spokenBack = whole
+        ? spokenContent(l10n, front, revealed: true)
+        : describeContent(l10n, back);
     final radius = Radius.circular(AppRadius.row);
     return AppRowSurface(
       child: ConstrainedBox(
@@ -111,7 +115,7 @@ class CardBackRow extends StatelessWidget {
                       AppSpace.s4,
                       AppSpace.s12,
                     ),
-                    child: isWholeCard(front)
+                    child: whole
                         ? WholeCardView(
                             front,
                             revealed: shown,
