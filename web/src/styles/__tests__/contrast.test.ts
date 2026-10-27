@@ -18,8 +18,8 @@ const pairs: [string, string, string][] = [
   ["the legal links on the surface", "ink-2", "surface"],
   ["a sign-in error on the surface", "dont-know-text", "surface"],
   ["Google's label on its fill", "google-label", "google-fill"],
-  ["an unchecked theme on its track", "ink-2", "ground"],
-  ["the checked theme on its segment", "ink", "raised"],
+  ["a theme's row and its check on the group", "ink", "surface"],
+  ["a settings section's label on the ground", "muted", "ground"],
   ["the empty home's sentence on the ground", "muted", "ground"],
   ["the empty home's title on the ground", "ink", "ground"],
   ["the side menu's other pages on the surface", "ink-2", "surface"],
@@ -81,8 +81,6 @@ const studyMarks: [string, string, string][] = [
   ["the streak's flame on the completion card and the 오늘 page's cards", "streak", "surface"],
   ["the today card's bar on its hairline track", "ink", "hairline"],
   ["the catch-up's amber bars on the surface", "streak", "surface"],
-  ["the goal reached check on the done card's pill", "know", "surface"],
-  ["the backlog card's check on its amber disc", "ink", "tint-amber"],
 ];
 
 describe("the study screen's grades, answer buttons and streak", () => {

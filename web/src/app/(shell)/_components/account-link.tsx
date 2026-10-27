@@ -5,7 +5,7 @@ import { AccountAvatar, getSession } from "@/features/account";
 
 /**
  * The signed-in account's avatar, which opens the account page; [labelled], as the side menu
- * shows it, with "계정과 설정" beside it.
+ * shows it, with "설정" beside it.
  */
 export async function AccountLink({ labelled = false }: { labelled?: boolean }) {
   const session = await getSession();
@@ -20,14 +20,14 @@ export async function AccountLink({ labelled = false }: { labelled?: boolean }) 
         className="pressable flex min-h-13 items-center gap-2.5 rounded-field px-2.5 text-secondary font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       >
         {avatar}
-        계정과 설정
+        설정
       </Link>
     );
   }
   return (
     <Link
       href="/account"
-      aria-label="계정과 설정"
+      aria-label="설정"
       className="pressable flex size-tap-target items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       {avatar}

@@ -11,7 +11,7 @@ import { dailyMinuteStep, maxDailyMinutes, minDailyMinutes } from "../queue";
 import { type MinutesPlan, minutesPreview } from "../study-time";
 
 /**
- * The daily study minutes as the account page's row, "하루 공부 시간" with the minutes and a chevron,
+ * The daily study minutes as the account page's row, "하루 학습 시간" with the minutes and a chevron,
  * which opens the dialog that changes them: the minutes as one large number between − and +, typed
  * in place when the number is pressed, two tiles of what they mean for the new cards by [plan], and
  * "저장", after which the page is read again.
@@ -24,14 +24,14 @@ export function DailyMinutes({ minutes, plan }: { minutes: number; plan: Minutes
       <button
         ref={trigger}
         type="button"
-        aria-label={`하루 공부 시간 ${String(minutes)}분`}
+        aria-label={`하루 학습 시간 ${String(minutes)}분`}
         aria-haspopup="dialog"
         onClick={() => {
           setOpen(true);
         }}
-        className="pressable flex min-h-button items-center justify-between gap-3 rounded-row bg-surface px-4 py-3 text-left text-body-strong text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        className="pressable flex min-h-button items-center justify-between gap-3 rounded-group px-4 py-3 text-left text-body-strong text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
       >
-        하루 공부 시간
+        하루 학습 시간
         <span className="flex items-center gap-1 text-secondary font-normal text-ink-2">
           {minutes}분
           <ChevronRight aria-hidden className="size-5" strokeWidth={2} />
@@ -154,7 +154,7 @@ function MinutesDialog({
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h2 id="daily-minutes-title" className="text-headline">
-              하루 공부 시간
+              하루 학습 시간
             </h2>
             <p id="daily-minutes-body" className="text-secondary text-muted">
               복습을 먼저 하고, 남는 시간에 새 카드를 시작해요.
@@ -203,7 +203,7 @@ function MinutesDialog({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={3}
-                aria-label="하루 공부 시간(분)"
+                aria-label="하루 학습 시간(분)"
                 aria-invalid={outOfRange}
                 aria-describedby={outOfRange ? "daily-minutes-range" : undefined}
                 value={typed}
@@ -240,7 +240,7 @@ function MinutesDialog({
         </div>
         {outOfRange && (
           <p id="daily-minutes-range" className="text-center text-caption text-dont-know-text">
-            5분에서 180분 사이로 적어 주세요
+            5분에서 180분 사이로 입력해 주세요
           </p>
         )}
         <div role="status" aria-live="polite" aria-atomic="true">

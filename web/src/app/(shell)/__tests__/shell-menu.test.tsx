@@ -28,7 +28,7 @@ describe("the shell's menus", () => {
     path = at;
     render(
       <>
-        <SideMenu account={<a href="/account">계정과 설정</a>} />
+        <SideMenu account={<a href="/account">설정</a>} />
         <TabBar />
       </>,
     );
@@ -40,7 +40,7 @@ describe("the shell's menus", () => {
     expect(links(side ?? document.body)).toEqual([
       "smartman, 오늘 → /",
       ...pages,
-      "계정과 설정 → /account",
+      "설정 → /account",
     ]);
     expect(links(tabs ?? document.body)).toEqual(pages);
   });

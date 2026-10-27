@@ -23,8 +23,10 @@ import { EnterLink } from "../../../_components/enter-link";
 import { readDeck } from "./read-deck";
 
 /**
- * The deck [params] names, read on the server; a deck that does not exist, or an id that names
- * none, is not found.
+ * The deck [params] names, read on the server, as the phone's deck screen draws it (ADR 0118):
+ * the way back, its tile and name over the page's one count of its cards, the white card "오늘
+ * 학습" while it holds any, and its cards. A deck that does not exist, or an id that names none,
+ * is not found.
  */
 export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   const deckId = parseDeckId((await params).id);
@@ -41,88 +43,62 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
   if ("failure" in engine) return <Failure failure={engine.failure} />;
   const today = countDay(dayPlanOf(cards, states, day, answers), states);
   const total = today.review + today.fresh;
-  const progress = deckProgress(cards, states);
-  const share = (part: number) => (part / cards.length) * 100;
+  const { mastered } = deckProgress(cards, states);
   return (
     <>
       <nav aria-label="위치" className="text-secondary">
-        <ol className="flex items-center gap-2">
-          <li>
-            <BackToDecks />
-          </li>
-          <li aria-hidden className="text-muted">
-            /
-          </li>
-          <li>
-            <span aria-current="page" className="font-semibold">
-              {deck.name}
-            </span>
-          </li>
-        </ol>
+        <BackToDecks />
       </nav>
       <header className="flex items-center gap-3.5">
         <DeckTile deck={deck} size="size-13 lg:rounded-button" />
         <div className="flex min-w-0 flex-col">
           <h1 className="text-deck-title break-words lg:text-display">{deck.name}</h1>
+          {/* The page's one count of its cards. */}
           <p className="text-secondary text-muted">
-            카드 {cards.length}장{deck.public ? " · 공개" : ""}
+            {[
+              `카드 ${String(cards.length)}장`,
+              ...(cards.length > 0 ? [`익힌 카드 ${String(mastered)}장`] : []),
+              ...(deck.public ? ["공개"] : []),
+            ].join(" · ")}
           </p>
         </div>
       </header>
-      <section
-        aria-label="오늘 이 덱"
-        className="flex flex-wrap items-center gap-6 rounded-card bg-surface px-6 py-6 text-ink shadow-card lg:px-7"
-      >
-        <div className="flex flex-[0_1_220px] flex-col gap-1.5">
-          <p className="text-secondary text-muted">오늘 할 카드</p>
-          <p
-            aria-label={`오늘 할 카드 ${String(total)}장, 약 ${String(sessionMinutes(today.review, today.fresh, pace))}분`}
-          >
-            <span className="text-figure">{total}</span>{" "}
-            <span className="text-headline text-muted">
-              장 · 약 {sessionMinutes(today.review, today.fresh, pace)}분
-            </span>
-          </p>
-          {today.backlog && (
-            <p className="text-secondary text-muted">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
-          )}
-        </div>
-        {/* "n장 중 m장 익힘" over the bar, as the deck's row says it; "0장" and no bar for a
-            deck with no card (ADR 0096). */}
-        <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-2">
-          <p className="text-secondary text-muted">
-            {cards.length > 0
-              ? `${String(cards.length)}장 중 ${String(progress.mastered)}장 익힘`
-              : "0장"}
-          </p>
-          {cards.length > 0 && (
-            <div
-              role="img"
-              aria-label={`익힘 ${String(progress.mastered)}장, 학습 중 ${String(progress.learning)}장, 새 카드 ${String(progress.fresh)}장`}
-              className="flex h-2.5 overflow-hidden rounded-full bg-hairline"
-            >
-              <span className="bg-ink" style={{ width: `${String(share(progress.mastered))}%` }} />
-              <span
-                className="bg-ink/45"
-                style={{ width: `${String(share(progress.learning))}%` }}
-              />
+      {/* A deck with no card has nothing to study, and no count of zeros above its empty line. */}
+      {cards.length > 0 && (
+        <section
+          aria-labelledby="deck-today-title"
+          className="flex flex-col gap-4 rounded-card bg-surface p-5 text-ink shadow-card lg:p-6"
+        >
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between gap-3 text-secondary text-muted">
+              <h2 id="deck-today-title">오늘 학습</h2>
+              <span>약 {sessionMinutes(today.review, today.fresh, pace)}분</span>
             </div>
-          )}
-        </div>
-        {/* A deck with no card has nothing to study. */}
-        {cards.length > 0 && <EnterLink href={studyHref([deck.id], "deck")} label="학습하기" />}
-      </section>
+            <p aria-label={`오늘 할 카드 ${String(total)}장`}>
+              <span className="text-figure tabular-nums">{total}</span>
+              <span className="text-headline text-muted">장</span>
+            </p>
+            {today.backlog && (
+              <p className="text-secondary text-muted">밀린 복습을 마칠 때까지 새 카드는 쉬어요.</p>
+            )}
+          </div>
+          {/* A row, so the link keeps its row sizes inside the card's column. */}
+          <div className="flex flex-wrap">
+            <EnterLink href={studyHref([deck.id], "deck")} label="학습하기" />
+          </div>
+        </section>
+      )}
       <CardGrid cards={cards} />
     </>
   );
 }
 
-/** The breadcrumb's way back to the deck list. */
+/** The way back to the deck list. */
 function BackToDecks() {
   return (
     <Link
       href="/decks"
-      className="flex min-h-tap-target min-w-tap-target items-center gap-1 rounded-md pr-2 text-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="flex min-h-tap-target min-w-tap-target items-center w-fit gap-1 rounded-md pr-2 text-muted underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <ChevronLeft aria-hidden className="size-5" strokeWidth={2} />덱
     </Link>

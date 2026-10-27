@@ -1,4 +1,4 @@
-import { Check, Flame, Play, Plus } from "lucide-react";
+import { Flame, Play } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -141,7 +141,6 @@ export async function Today() {
   const extraPill = (border: string) =>
     plan.extra.size > 0 && (
       <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${border}`}>
-        <Plus aria-hidden className="size-4" strokeWidth={2} />
         오늘 {plan.extra.size}장 더 했어요
       </span>
     );
@@ -170,15 +169,7 @@ export async function Today() {
             aria-labelledby="today-title"
             className="flex flex-col items-center gap-2 rounded-card bg-brand-tint p-6 text-center text-ink lg:col-span-2"
           >
-            <span className="relative">
-              <Mascot className="size-mascot-medium bg-surface" />
-              <span
-                aria-hidden
-                className="absolute -top-1 -right-4 text-label font-bold text-ink-2 italic"
-              >
-                z<sup>z</sup>
-              </span>
-            </span>
+            <Mascot className="size-mascot-medium bg-surface" />
             <h2 id="today-title" className="mt-1 text-title">
               오늘 할 카드를 다 했어요
             </h2>
@@ -191,7 +182,6 @@ export async function Today() {
               {streakChip("bg-surface")}
               {goal.goal > 0 && (
                 <span className="flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-bold">
-                  <Check aria-hidden className="size-4 text-know" strokeWidth={2} />
                   목표 {goal.goal}장 달성
                 </span>
               )}
@@ -217,15 +207,7 @@ export async function Today() {
             className="flex flex-col gap-4 rounded-card bg-surface p-6 text-ink shadow-card lg:col-span-2 lg:p-7"
           >
             <div className="flex items-center gap-4">
-              <span className="relative shrink-0">
-                <Mascot className="size-16 bg-brand-tint" />
-                <span
-                  aria-hidden
-                  className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-tint-amber text-ink"
-                >
-                  <Check className="size-4" strokeWidth={2.5} />
-                </span>
-              </span>
+              <Mascot className="size-16 shrink-0 bg-brand-tint" />
               <div className="flex min-w-0 flex-col gap-1">
                 <h2 id="today-title" className="text-headline">
                   다시 시작하면 돼요
@@ -371,7 +353,7 @@ function LastWeek({ week, timeZone }: { week: WeekDay[]; timeZone: string }) {
   const cards = week.reduce((sum, day) => sum + day.cards, 0);
   const minutes = Math.ceil(week.reduce((sum, day) => sum + day.ms, 0) / 60_000);
   const highest = Math.max(1, ...week.map((day) => day.cards));
-  const summary = `지난 7일 동안 ${String(cards)}장을 ${String(minutes)}분 공부했어요`;
+  const summary = `지난 7일 동안 ${String(cards)}장을 ${String(minutes)}분 학습했어요`;
   return (
     <Link
       href="/record"

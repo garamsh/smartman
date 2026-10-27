@@ -117,6 +117,9 @@ describe("the record page", () => {
     expect(retention.getByRole("heading", { name: "복습에서 맞힌 비율" }).parentElement).toBe(
       choice.parentElement,
     );
+    // Nothing in it floats, so the chosen period draws no shadow, only the raised fill.
+    expect(choice.querySelector('[class*="shadow"]')).toBeNull();
+    expect(choice.querySelector('[class*="peer-checked:bg-raised"]')).not.toBeNull();
     // Another period changes the retention, and no other card.
     const mastered = screen.getByRole("region", { name: "익힌 카드" }).textContent;
     const days = screen.getByRole("region", { name: "학습한 날" }).textContent;

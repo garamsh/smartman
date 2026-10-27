@@ -23,10 +23,10 @@ describe("the daily minutes dialog", () => {
       </>,
     );
     const user = userEvent.setup();
-    const trigger = screen.getByRole("button", { name: "하루 공부 시간 20분" });
+    const trigger = screen.getByRole("button", { name: "하루 학습 시간 20분" });
     await user.click(trigger);
 
-    const dialog = screen.getByRole("dialog", { name: "하루 공부 시간" });
+    const dialog = screen.getByRole("dialog", { name: "하루 학습 시간" });
     const controls = within(dialog).getAllByRole("button");
     const [first] = controls;
     const last = controls.at(-1);

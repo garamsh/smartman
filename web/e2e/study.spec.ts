@@ -142,8 +142,8 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "오늘 할 카드", exact: true })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "2장 중 0장", exact: true })).toBeVisible();
-  // The minutes are set in 계정과 설정 alone.
-  await expect(page.getByRole("button", { name: /하루 공부 시간/ })).toHaveCount(0);
+  // The minutes are set in 설정 alone.
+  await expect(page.getByRole("button", { name: /하루 학습 시간/ })).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "French, 오늘 2장 학습", exact: true }),
   ).toHaveAttribute("href", `/study?decks=${deckId}`);
@@ -151,20 +151,20 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(page.getByText(email)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "로그아웃" })).toHaveCount(0);
   await shot(page, "01-today");
-  // The account page's 하루 공부 시간 row opens the daily study minutes' dialog, which saves on
+  // The account page's 하루 학습 시간 row opens the daily study minutes' dialog, which saves on
   // the server.
   await page.goto("/account");
-  await page.getByRole("button", { name: "하루 공부 시간 20분", exact: true }).click();
-  const minutes = page.getByRole("dialog", { name: "하루 공부 시간" });
+  await page.getByRole("button", { name: "하루 학습 시간 20분", exact: true }).click();
+  const minutes = page.getByRole("dialog", { name: "하루 학습 시간" });
   // The tiles' region holds both tiles, so each value is matched as part of it.
   await expect(minutes.getByRole("status")).toContainText("약 2장");
   await shot(page, "01c-daily-minutes");
   // The number is typed in place; a number outside 5 to 180 holds 저장 until it is fixed.
   await minutes.getByRole("button", { name: "하루 20분, 눌러서 직접 입력", exact: true }).click();
-  const typed = minutes.getByRole("textbox", { name: "하루 공부 시간(분)", exact: true });
+  const typed = minutes.getByRole("textbox", { name: "하루 학습 시간(분)", exact: true });
   await typed.fill("200");
   await expect(
-    minutes.getByText("5분에서 180분 사이로 적어 주세요", { exact: true }),
+    minutes.getByText("5분에서 180분 사이로 입력해 주세요", { exact: true }),
   ).toBeVisible();
   await expect(minutes.getByRole("button", { name: "저장", exact: true })).toBeDisabled();
   await shot(page, "01c-daily-minutes-typed");
@@ -177,11 +177,11 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await expect(minutes.getByRole("status")).toContainText("오늘");
   await minutes.getByRole("button", { name: "저장", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "하루 공부 시간 30분", exact: true }),
+    page.getByRole("button", { name: "하루 학습 시간 30분", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "하루 공부 시간 30분", exact: true }),
+    page.getByRole("button", { name: "하루 학습 시간 30분", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "주 메뉴" })
@@ -195,12 +195,12 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "01b-decks");
   await deckRow.click();
   await expect(page.getByRole("heading", { name: "French", exact: true })).toBeVisible();
-  // Every answer hidden until it is asked for: one click shows that card's, 뜻 보기 them all.
+  // Every answer hidden until it is asked for: one click shows that card's, 뒷면 보기 them all.
   await expect(page.getByRole("button", { name: "chat, 뒷면 가려짐", exact: true })).toBeVisible();
   await shot(page, "02-deck");
   const backsShown = page.getByRole("button", { name: "chat, 뒷면 cat", exact: true });
   await untilReacted(
-    () => page.getByRole("switch", { name: "뜻 보기" }).click(),
+    () => page.getByRole("switch", { name: "뒷면 보기" }).click(),
     async () => (await backsShown.count()) > 0,
   );
   await expect(page.getByRole("button", { name: "chien, 뒷면 dog", exact: true })).toBeVisible();
@@ -331,7 +331,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   const writeFailure = page.getByRole("alert").filter({ hasText: "응답을 저장하지 못했어요" });
   await expect(writeFailure).toBeVisible();
   await page.keyboard.press("Escape");
-  const leave = page.getByRole("dialog", { name: "저장하지 못한 응답이 있어요", exact: true });
+  const leave = page.getByRole("dialog", { name: "저장하지 않고 나갈까요?", exact: true });
   await expect(leave).toContainText("지금 나가면 저장하지 못한 응답 1개가 사라져요.");
   await expect(leave.getByRole("button", { name: "취소", exact: true })).toBeFocused();
   await shot(page, "06b-study-leave-unsaved");
@@ -458,9 +458,7 @@ test("a signed-in user studies two cards, and the server holds their reviews and
   await shot(page, "01e-today-backlog");
 
   await page.goto("/account");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "계정과 설정", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "설정", exact: true })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
   await shot(page, "07-account");
@@ -593,8 +591,8 @@ test("each page that waits on the server shows its skeleton, still under reduced
     {
       path: "/account",
       name: "account",
-      status: "계정을 불러오는 중이에요.",
-      content: '[aria-label="프로필"]',
+      status: "설정을 불러오는 중이에요.",
+      content: '[aria-labelledby="account-section"]',
       held: 0,
     },
   ];
@@ -634,7 +632,7 @@ test("each page that waits on the server shows its skeleton, still under reduced
   await still.close();
 });
 
-test("the account avatar stays a 56 px circle beside an email too long for one line", async ({
+test("the settings page wraps an email too long for one line inside its group", async ({
   page,
   context,
   baseURL,
@@ -644,22 +642,19 @@ test("the account avatar stays a 56 px circle beside an email too long for one l
   await signUpInBrowser(context, baseURL, email, "web-avatar-pw");
 
   await page.goto("/account");
-  const card = page.getByRole("region", { name: "프로필", exact: true });
-  const shown = card.getByText(email, { exact: true });
+  const section = page.getByRole("region", { name: "계정", exact: true });
+  const shown = section.getByText(email, { exact: true });
   await expect(shown).toBeVisible();
   await shot(page, "11-account-long-email");
-  const avatar = card.locator('[aria-hidden="true"]');
-  const cardBox = await card.boundingBox();
+  const group = shown.locator("..");
+  const groupBox = await group.boundingBox();
   const emailBox = await shown.boundingBox();
   const lineHeight = await shown.evaluate((node) => parseFloat(getComputedStyle(node).lineHeight));
-  // The email wraps, so it is long enough to squeeze the avatar if the avatar could shrink.
+  // The email wraps, so it is long enough to overflow the group if it could not.
   expect(emailBox?.height).toBeGreaterThan(lineHeight);
-  expect(await avatar.boundingBox()).toMatchObject({ width: 56, height: 56 });
-  const radius = await avatar.evaluate((node) => parseFloat(getComputedStyle(node).borderRadius));
-  expect(radius).toBeGreaterThanOrEqual(28);
-  // The email stays inside the card.
-  if (!cardBox || !emailBox) throw new Error("the card and the email are visible above");
-  expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+  // The email stays inside the group.
+  if (!groupBox || !emailBox) throw new Error("the group and the email are visible above");
+  expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(groupBox.x + groupBox.width);
 });
 
 test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {

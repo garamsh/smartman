@@ -83,7 +83,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 
 ### Copy
 
-One term per concept and one sentence form per role, in every string on the phone ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md), issue #454). The card editor, its block-add sheet and the label presets keep their own until #445, #447 and #450; the web follows in its own issue.
+One term per concept and one sentence form per role, in every string on the phone and the web (#446) ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md), issue #454). The card editor, its block-add sheet and the label presets keep their own until #445, #447 and #450.
 
 - **Terms.**
 
@@ -214,7 +214,7 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 
 ### Details
 
-What keeps a screen calm rather than decorated ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md), issue #454). A screen redesigned from now on follows every item; one not yet redesigned is brought to them when it is. The settings screen and the deck screen follow them today, and every screen draws the radius scale, the one chip, the three sizes, the press and the haptics through the shared layer ([ADR 0119](adr/0119-draw-every-screen-from-one-radius-scale-one-chip-three-type-sizes-a-press-dim-and-three-haptics-and-a-hidden-blank-as-an-empty-underlined-gap.md)).
+What keeps a screen calm rather than decorated ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md), issue #454). A screen redesigned from now on follows every item; one not yet redesigned is brought to them when it is. The settings screen and the deck screen follow them today, on the phone and as the web's settings and deck pages ([`web.md`](web.md)), and every screen draws the radius scale, the one chip, the three sizes, the press and the haptics through the shared layer ([ADR 0119](adr/0119-draw-every-screen-from-one-radius-scale-one-chip-three-type-sizes-a-press-dim-and-three-haptics-and-a-hidden-blank-as-an-empty-underlined-gap.md)).
 
 - **Structure.**
   - One white group per meaning: a side of a card, a settings section, a list. Inside a group a hairline separates the rows, never a border on each field; a field in a group has no border until it is focused, then a 1.5 px ink outline and no shadow; `AppTextField` draws its 2 px ring until the card editor's redesign brings it to that.
