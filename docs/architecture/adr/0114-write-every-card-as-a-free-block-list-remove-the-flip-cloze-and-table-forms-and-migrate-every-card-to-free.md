@@ -1,6 +1,6 @@
 # ADR 0114: Write every card as a 자유 block list, remove the 앞뒤, 빈칸 and 표 forms, and migrate every card to `free`
 
-> Status: accepted
+> Status: accepted; its editor layout refined by ADR-0117, which draws each side as one group and the preview on a screen of its own
 > Date: 2026-10-27
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

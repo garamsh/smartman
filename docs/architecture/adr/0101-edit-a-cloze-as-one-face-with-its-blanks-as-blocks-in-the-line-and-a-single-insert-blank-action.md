@@ -1,6 +1,6 @@
 # ADR 0101: Edit a cloze as one face, with its blanks as blocks in the line and a single insert-blank action
 
-> Status: accepted
+> Status: accepted; its action bar above the keyboard refined by ADR-0117, which draws the one action as a chip under the line
 > Date: 2026-10-26
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
