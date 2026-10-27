@@ -3,12 +3,13 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/theme.dart';
 
 import '../contrast.dart';
 import '../home/deck_screens.dart';
+import '../word_breaks.dart';
 import 'editor.dart';
 
 /// The stored card, front and back.
@@ -40,7 +41,7 @@ List<String> _blocks(WidgetTester tester) {
 }
 
 /// The bar's one action while it reads [label].
-Finder _action(String label) => find.widgetWithText(AppButton, label);
+Finder _action(String label) => find.widgetWithText(ActionChip, label);
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -231,7 +232,12 @@ void main() {
         final screens = await DeckScreens.open(tester, themeMode: mode);
         await openCloze(tester, on: screens);
         await typeLine(tester, 'The cat sat');
-        final preview = find.byType(CardPreview);
+        await select(tester, 4, 7);
+        await insertBlank(screens);
+        await select(tester, 11);
+        await insertBlank(screens);
+        await screens.tap(find.text('Preview'));
+        final preview = find.byType(CardPreviewScreen);
         expect(
           find.descendant(of: preview, matching: find.byType(WholeCardView)),
           findsOneWidget,
@@ -241,25 +247,30 @@ void main() {
           findsNothing,
           reason: 'one face, no split card',
         );
-
-        await select(tester, 4, 7);
-        await insertBlank(screens);
-        await select(tester, 11);
-        await insertBlank(screens);
-        final colors = AppColors.of(tester.element(preview));
-        final blocks = <String>[];
-        for (final paragraph in tester.widgetList<RichText>(
-          find.descendant(of: preview, matching: find.byType(RichText)),
-        )) {
-          paragraph.text.visitChildren((span) {
-            if (span is TextSpan &&
-                span.style?.backgroundColor == colors.brandTint) {
-              blocks.add(span.text!);
-            }
-            return true;
-          });
+        expect(find.text('Front'), findsNothing, reason: 'one face: no side');
+        // The blanks as blocks of their answers on brandTint.
+        List<String> blocks() {
+          final colors = AppColors.of(tester.element(preview));
+          final blocks = <String>[];
+          for (final paragraph in tester.widgetList<RichText>(
+            find.descendant(of: preview, matching: find.byType(RichText)),
+          )) {
+            paragraph.text.visitChildren((span) {
+              if (span is TextSpan &&
+                  span.style?.backgroundColor == colors.brandTint) {
+                blocks.add(span.text!.trim());
+              }
+              return true;
+            });
+          }
+          return blocks;
         }
-        expect(blocks.map((block) => block.trim()), ['cat', '']);
+
+        expect(blocks(), isEmpty, reason: 'the blanks empty, as study asks');
+        expect(shownText('Tap the card to fill in its blanks'), findsOneWidget);
+        await screens.tap(preview);
+        expect(blocks(), ['cat', '']);
+        expect(shownText('Tap again to empty its blanks'), findsOneWidget);
         await screens.close();
       },
     );
@@ -393,7 +404,7 @@ void main() {
         }
         await save(screens);
         expect(
-          find.text("___ marks a blank, so the line can't contain it"),
+          find.text('Remove ___ from the line'),
           findsOneWidget,
           reason: line,
         );
@@ -426,10 +437,7 @@ void main() {
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
       await typeLine(tester, 'a x b ___ c');
       await save(screens);
-      expect(
-        find.text("___ marks a blank, so the line can't contain it"),
-        findsOneWidget,
-      );
+      expect(find.text('Remove ___ from the line'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       expect((await _stored(screens)).front, [cloze]);
 
@@ -438,6 +446,67 @@ void main() {
       expect((await _stored(screens)).front, [
         const ClozeContent('a ___ b c', ['x']),
       ], reason: 'control: without the underscores, the edit saves');
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'while the line has focus its action is an outlined chip under it, so the editor shows one primary fill, inside a blank and outside one',
+    (tester) async {
+      final screens = await openCloze(tester);
+      await typeLine(tester, 'The cat sat');
+      Iterable<AppButton> primaries() => tester
+          .widgetList<AppButton>(find.byType(AppButton))
+          .where((button) => button.variant == AppButtonVariant.primary);
+      for (final (start, end, action) in [
+        (4, 7, 'Insert blank'),
+        (5, 5, 'Undo blank'),
+      ]) {
+        await select(tester, start, end);
+        if (action == 'Undo blank') {
+          // Inside the blank "cat", made by the first round.
+          expect(_blocks(tester), ['cat'], reason: 'the setup: a blank');
+        }
+        // Control: the action is on screen.
+        expect(_action(action), findsOneWidget, reason: action);
+        expect(
+          [for (final button in primaries()) button.label],
+          ['Save and next card'],
+          reason: action,
+        );
+        // Right under the line, not in a bar over the keyboard.
+        expect(
+          tester.getTopLeft(_action(action)).dy,
+          greaterThan(tester.getBottomLeft(_line).dy - 1),
+          reason: action,
+        );
+        if (action == 'Insert blank') await insertBlank(screens);
+      }
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'a card with a cloze and nothing on its back says the back may stay empty, and says nothing once the back holds text',
+    (tester) async {
+      const hint =
+          'A card with blanks is answered on its front. Its back can stay empty.';
+      // Control: a card of two sides with its back empty is not told so.
+      final screens = await DeckScreens.open(tester);
+      await screens.push((deck) => CardEditorScreen(deck: deck));
+      await typeBlock(tester, CardSide.front, 'Chat');
+      expect(shownText(hint), findsNothing, reason: 'control: no cloze');
+      await screens.tap(find.byTooltip('Close'));
+      await screens.tap(find.text('Discard'));
+
+      await openCloze(tester, on: screens);
+      await typeLine(tester, 'The cat sat');
+      await select(tester, 4, 7);
+      await insertBlank(screens);
+      expect(shownText(hint), findsOneWidget);
+      await addBlock(screens, CardSide.back, 'Text');
+      await typeBlock(tester, CardSide.back, 'A cat sat');
+      expect(shownText(hint), findsNothing);
       await screens.close();
     },
   );

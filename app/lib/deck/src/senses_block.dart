@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
 import '../../design/app_text_field.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'content.dart';
+import 'editor_group.dart';
 import 'label_presets.dart';
 
-/// The width of a sense's label field, which holds a short form such as
+/// The width of a sense's label chip, which holds a short form such as
 /// `조동`.
-const _labelWidth = 72.0;
+const _labelWidth = 64.0;
 
 /// One sense of a 뜻 목록 block as the editor edits it: its labels as
 /// typed, its meaning, and its examples, one per line (ADR 0100).
@@ -69,18 +69,17 @@ class SenseDraft {
       labels.map((label) => label.shown).join(' ');
 }
 
-/// A 뜻 목록 block's fields: one meaning, or its senses, each with a label
-/// typed beside its meaning, and under them "뜻 추가". With more than one sense,
-/// each moves up or down, or is deleted, by its buttons, which a screen
-/// reader reaches by name. With [showErrors], an empty meaning says so under
-/// it.
+/// A 뜻 목록 block's fields inside its side's group: each sense a row of its
+/// label chip, its meaning and, with more than one sense, a ⋯ menu that
+/// moves it up or down or deletes it, the rows separated by a hairline; then
+/// "+ 뜻 추가". No field is named by its side, which the group's label names
+/// already (#449). With [showErrors], an empty meaning says so under it.
 class SenseFields extends StatelessWidget {
   const SenseFields({
     super.key,
     required this.senses,
     required this.showErrors,
     required this.onChanged,
-    required this.meaningLabel,
   });
 
   final List<SenseDraft> senses;
@@ -89,12 +88,15 @@ class SenseFields extends StatelessWidget {
   /// Called after every change to [senses], which this widget makes in place.
   final VoidCallback onChanged;
 
-  /// The label of the one meaning's field while there is one sense: the
-  /// side's name.
-  final String meaningLabel;
-
-  void _move(int from, int to) {
-    senses.insert(to, senses.removeAt(from));
+  void _act(int index, RowAction action) {
+    switch (action) {
+      case RowAction.up:
+        senses.insert(index - 1, senses.removeAt(index));
+      case RowAction.down:
+        senses.insert(index + 1, senses.removeAt(index));
+      case RowAction.delete:
+        senses.removeAt(index).dispose();
+    }
     onChanged();
   }
 
@@ -104,180 +106,149 @@ class SenseFields extends StatelessWidget {
     final single = senses.length == 1;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s16,
       children: [
-        for (final (index, sense) in senses.indexed)
+        for (final (index, sense) in senses.indexed) ...[
+          if (index > 0) const Divider(height: 1, thickness: 1),
           _SenseRow(
             // Keyed by the draft, so a moved sense keeps its fields' focus and
             // text.
             key: ObjectKey(sense),
             sense: sense,
             number: single ? null : index + 1,
-            meaningLabel: meaningLabel,
             showError: showErrors && sense.isBlank,
-            onUp: index == 0 ? null : () => _move(index, index - 1),
-            onDown: index == senses.length - 1
-                ? null
-                : () => _move(index, index + 1),
-            onDelete: () {
-              senses.removeAt(index).dispose();
-              onChanged();
-            },
+            canMoveUp: index > 0,
+            canMoveDown: index < senses.length - 1,
+            onAction: (action) => _act(index, action),
             onChanged: onChanged,
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: AppButton(
-            label: l10n.addSense,
-            icon: LucideIcons.plus,
-            variant: AppButtonVariant.secondary,
-            onPressed: () {
-              senses.add(SenseDraft());
-              onChanged();
-            },
-          ),
+        ],
+        GroupAddRow(
+          label: l10n.addSense,
+          semanticsLabel: l10n.addSense,
+          color: AppColors.of(context).ink2,
+          onPressed: () {
+            senses.add(SenseDraft());
+            onChanged();
+          },
         ),
       ],
     );
   }
 }
 
-/// One sense: its label field beside its meaning, and its examples when it
-/// has any. [number] is null while it is the block's one meaning, which
-/// reads as its side and has no buttons.
+/// One sense: its label chip beside its meaning, and its examples when it
+/// has any. [number] is null while it is the block's one meaning, whose field
+/// is hinted "뜻" and which has no menu.
 class _SenseRow extends StatelessWidget {
   const _SenseRow({
     super.key,
     required this.sense,
     required this.number,
     required this.showError,
-    required this.onUp,
-    required this.onDown,
-    required this.onDelete,
+    required this.canMoveUp,
+    required this.canMoveDown,
+    required this.onAction,
     required this.onChanged,
-    required this.meaningLabel,
   });
 
   final SenseDraft sense;
   final int? number;
   final bool showError;
-  final VoidCallback? onUp;
-  final VoidCallback? onDown;
-  final VoidCallback onDelete;
+  final bool canMoveUp;
+  final bool canMoveDown;
+  final ValueChanged<RowAction> onAction;
   final VoidCallback onChanged;
-  final String meaningLabel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final number = this.number;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpace.s8,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: AppSpace.s8,
-          children: [
-            SizedBox(
-              width: _labelWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: AppSpace.s8,
-                children: [
-                  // The meaning's label line, so both fields start level.
-                  ExcludeSemantics(
-                    child: Text(
-                      ' ',
-                      style: AppType.section.copyWith(color: colors.ink2),
-                    ),
-                  ),
-                  MergeSemantics(
-                    child: Semantics(
-                      label: number == null
-                          ? l10n.senseLabelHint
-                          : l10n.senseLabelField(number),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minHeight: AppSize.field,
-                        ),
-                        child: TextField(
-                          controller: sense.label,
-                          focusNode: sense.labelFocus,
-                          textAlign: TextAlign.center,
-                          style: AppType.bodyStrong,
-                          onChanged: (_) => onChanged(),
-                          decoration: InputDecoration(
-                            hintText: l10n.senseLabelHint,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpace.s8,
-                              vertical: AppSpace.s12,
-                            ),
-                          ),
-                        ),
+    final meaning = number == null
+        ? l10n.senseMeaning
+        : l10n.senseHeading(number);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.s16,
+        groupInset,
+        groupInset,
+        groupInset,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: _labelWidth,
+                child: MergeSemantics(
+                  child: Semantics(
+                    label: number == null
+                        ? l10n.senseLabelHint
+                        : l10n.senseLabelField(number),
+                    child: TextField(
+                      controller: sense.label,
+                      focusNode: sense.labelFocus,
+                      textAlign: TextAlign.center,
+                      style: AppType.bodyStrong.copyWith(color: colors.ink),
+                      onChanged: (_) => onChanged(),
+                      decoration: labelChipDecoration(
+                        colors,
+                        l10n.senseLabelHint,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-            Expanded(
+              Expanded(
+                child: Semantics(
+                  label: meaning,
+                  child: AppTextField(
+                    hint: meaning,
+                    controller: sense.meaning,
+                    maxLines: null,
+                    errorText: !showError
+                        ? null
+                        : number == null
+                        ? l10n.cardSideRequired
+                        : l10n.senseMeaningRequired,
+                    onChanged: (_) => onChanged(),
+                  ),
+                ),
+              ),
+              if (number != null)
+                RowMenu(
+                  label: l10n.senseMenu(number),
+                  upLabel: l10n.moveUp,
+                  downLabel: l10n.moveDown,
+                  deleteLabel: l10n.deleteBlock,
+                  canMoveUp: canMoveUp,
+                  canMoveDown: canMoveDown,
+                  onAction: onAction,
+                ),
+            ],
+          ),
+          if (sense.hasExamples)
+            Padding(
+              padding: const EdgeInsets.only(left: _labelWidth),
               child: AppTextField(
-                label: number == null
-                    ? meaningLabel
-                    : l10n.senseHeading(number),
-                controller: sense.meaning,
-                minLines: number == null ? 2 : 1,
+                label: l10n.senseExamples,
+                hint: l10n.senseExamplesHint,
+                controller: sense.examples,
+                minLines: 1,
                 maxLines: null,
-                errorText: !showError
-                    ? null
-                    : number == null
-                    ? l10n.cardSideRequired
-                    : l10n.senseMeaningRequired,
                 onChanged: (_) => onChanged(),
               ),
             ),
-          ],
-        ),
-        if (sense.hasExamples)
-          AppTextField(
-            label: l10n.senseExamples,
-            hint: l10n.senseExamplesHint,
-            controller: sense.examples,
-            minLines: 1,
-            maxLines: null,
-            onChanged: (_) => onChanged(),
-          ),
-        if (number != null)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                tooltip: l10n.moveSenseUp(number),
-                icon: const Icon(LucideIcons.arrowUp),
-                onPressed: onUp,
-              ),
-              IconButton(
-                tooltip: l10n.moveSenseDown(number),
-                icon: const Icon(LucideIcons.arrowDown),
-                onPressed: onDown,
-              ),
-              IconButton(
-                tooltip: l10n.deleteSense(number),
-                icon: const Icon(LucideIcons.trash2),
-                onPressed: onDelete,
-              ),
-            ],
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 /// The user's labels in a strip above the keyboard while a sense's label
 /// field has focus: a tap on one fills that field with it, and "관리" opens
-/// the "품사 표시" screen.
+/// the "라벨" screen.
 class LabelPresetStrip extends StatelessWidget {
   const LabelPresetStrip({
     super.key,

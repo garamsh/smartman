@@ -374,7 +374,6 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
               Expanded(
                 child: AppButton(
                   label: l10n.imageFromAlbum,
-                  icon: LucideIcons.image,
                   variant: AppButtonVariant.secondary,
                   onPressed: _busy ? null : () => _pick(ImageOrigin.album),
                 ),
@@ -382,7 +381,6 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
               Expanded(
                 child: AppButton(
                   label: l10n.imageFromCamera,
-                  icon: LucideIcons.camera,
                   variant: AppButtonVariant.secondary,
                   onPressed: _busy ? null : () => _pick(ImageOrigin.camera),
                 ),
@@ -421,7 +419,6 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
         ),
         AppButton(
           label: l10n.imageAddBox,
-          icon: LucideIcons.plus,
           variant: AppButtonVariant.secondary,
           onPressed: () => _change(
             () => _draft.add(
@@ -699,7 +696,6 @@ class _ImageBlockFieldsState extends ConsumerState<ImageBlockFields> {
         ),
         AppButton(
           label: l10n.imageBoxDelete,
-          icon: LucideIcons.trash2,
           variant: AppButtonVariant.secondary,
           onPressed: () => _change(() => _draft.remove(index)),
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/label_presets.dart';
@@ -11,7 +12,7 @@ import 'package:smartman/l10n/app_localizations.dart';
 import '../contrast.dart';
 import '../study/study_storage.dart';
 
-/// The 품사 표시 row on a settings screen of its own, over device storage in
+/// The 라벨 row on a settings screen of its own, over device storage in
 /// memory.
 Future<SharedPreferencesWithCache> _open(
   WidgetTester tester, {
@@ -61,6 +62,17 @@ final _list = find
     )
     .first;
 
+/// The drag handle of the [index]th preset.
+Finder _handle(int index) => find.byIcon(LucideIcons.gripVertical).at(index);
+
+/// Chooses [action] in the menu of the preset [label].
+Future<void> _act(WidgetTester tester, String label, String action) async {
+  await tester.tap(find.byTooltip('$label menu'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(action).last);
+  await tester.pumpAndSettle();
+}
+
 List<String> _stored(SharedPreferencesWithCache storage) => [
   for (final preset in labelPresets(storage, const []))
     '${preset.label}:${preset.name}',
@@ -85,8 +97,8 @@ void main() {
       final storage = await _open(tester);
       expect(_stored(storage), isEmpty, reason: 'nothing stored yet');
 
-      await tester.scrollUntilVisible(find.text('Add label'), 200);
-      await tester.tap(find.text('Add label'));
+      await tester.scrollUntilVisible(find.bySemanticsLabel('Add label'), 200);
+      await tester.tap(find.bySemanticsLabel('Add label'));
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, 'Label'), '숙어');
       await tester.enterText(
@@ -109,8 +121,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_stored(storage).last, '관용:idiom');
 
-      await tester.tap(find.byTooltip('Remove 관용'));
-      await tester.pumpAndSettle();
+      await _act(tester, '관용', 'Delete');
       expect(_stored(storage).length, 14);
       expect(_stored(storage), isNot(contains('관용:idiom')));
     },
@@ -133,8 +144,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Write a label'), findsNothing, reason: 'control');
 
-      await tester.scrollUntilVisible(find.text('Add label'), 200);
-      await tester.tap(find.text('Add label'));
+      await tester.scrollUntilVisible(find.bySemanticsLabel('Add label'), 200);
+      await tester.tap(find.bySemanticsLabel('Add label'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
@@ -144,17 +155,14 @@ void main() {
   );
 
   testWidgets(
-    'a preset moves up or down through its handle\'s menu, without a drag, and the order is stored',
+    'a preset moves up or down through its menu, without a drag, and the order is stored',
     (tester) async {
       final storage = await _open(tester);
-      await tester.tap(find.byTooltip('Move 동'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Move up'));
-      await tester.pumpAndSettle();
+      await _act(tester, '동', 'Move up');
       expect(_shown(tester).take(2), ['Edit 동 verb', 'Edit 명 noun']);
       expect(_stored(storage).take(2), ['동:verb', '명:noun']);
 
-      await tester.tap(find.byTooltip('Move 동'));
+      await tester.tap(find.byTooltip('동 menu'));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -179,7 +187,7 @@ void main() {
     'a preset moves by a drag on its handle, and the order is stored',
     (tester) async {
       final storage = await _open(tester);
-      final handle = find.byTooltip('Move 동');
+      final handle = _handle(1);
       final gesture = await tester.startGesture(tester.getCenter(handle));
       for (var step = 0; step < 6; step++) {
         await gesture.moveBy(const Offset(0, -20));
@@ -195,41 +203,31 @@ void main() {
     'while a preset is added or edited, no other preset moves or goes, so nothing half-typed is stored',
     (tester) async {
       final storage = await _open(tester);
-      IconButton remove(String label) => tester.widget<IconButton>(
+      PopupMenuButton<Object?> menu(String label) => tester.widget(
         find.ancestor(
-          of: find.byTooltip('Remove $label'),
-          matching: find.byType(IconButton),
-        ),
-      );
-      PopupMenuButton<Object?> handle(String label) => tester.widget(
-        find.ancestor(
-          of: find.byTooltip('Move $label'),
+          of: find.byTooltip('$label menu'),
           matching: find.byWidgetPredicate(
             (widget) => widget is PopupMenuButton,
           ),
         ),
       );
-      expect(remove('명').onPressed, isNotNull, reason: 'control: idle');
-      expect(handle('명').enabled, isTrue, reason: 'control: idle');
+      expect(menu('명').enabled, isTrue, reason: 'control: idle');
 
       await tester.scrollUntilVisible(
-        find.text('Add label'),
+        find.bySemanticsLabel('Add label'),
         200,
         scrollable: _list,
       );
-      await tester.tap(find.text('Add label'));
+      await tester.tap(find.bySemanticsLabel('Add label'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.byTooltip('Remove 명'),
+        find.byTooltip('명 menu'),
         -200,
         scrollable: _list,
       );
-      expect(remove('명').onPressed, isNull);
-      expect(handle('명').enabled, isFalse);
+      expect(menu('명').enabled, isFalse);
       // A drag on a handle moves nothing either.
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.byTooltip('Move 동')),
-      );
+      final gesture = await tester.startGesture(tester.getCenter(_handle(1)));
       for (var step = 0; step < 6; step++) {
         await gesture.moveBy(const Offset(0, -20));
         await tester.pump(const Duration(milliseconds: 50));
@@ -257,11 +255,11 @@ void main() {
         reason: 'no empty preset',
       );
       await tester.scrollUntilVisible(
-        find.byTooltip('Remove 명'),
+        find.byTooltip('명 menu'),
         -200,
         scrollable: _list,
       );
-      expect(remove('명').onPressed, isNotNull, reason: 'done, it can go');
+      expect(menu('명').enabled, isTrue, reason: 'done, it can go');
     },
   );
 

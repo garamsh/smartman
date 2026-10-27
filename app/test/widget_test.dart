@@ -387,9 +387,9 @@ void main() {
 
     await addCard(tester, 'Chat', '');
 
-    expect(find.text('Enter some text'), findsOneWidget);
+    expect(find.text('Write something'), findsOneWidget);
     expect(find.text('Edit card'), findsNothing);
-    expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -409,9 +409,9 @@ void main() {
     /// Adds a Meanings block to the back, whose one meaning has a label
     /// field.
     Future<void> addMeanings(WidgetTester tester) async {
-      await tester.ensureVisible(find.text('Add to back'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add to back'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add to back'));
+      await tester.tap(find.bySemanticsLabel('Add to back'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Meanings').last);
       await tester.pumpAndSettle();
@@ -450,7 +450,7 @@ void main() {
         );
         expect(tester.testTextInput.isVisible, isTrue);
 
-        await tester.tap(find.text('Add to back'));
+        await tester.tap(find.bySemanticsLabel('Add to back'));
         await tester.pumpAndSettle();
         expect(find.text('Meanings'), findsOneWidget, reason: 'its sheet');
         await tester.tap(find.text('Meanings'));
@@ -486,6 +486,19 @@ void main() {
         expect(tester.testTextInput.isVisible, isTrue);
 
         // From the Meanings block's heading, which handles no drag.
+        // The keyboard's 336 over the form, which then holds more than fits.
+        tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+        final form = tester.state<ScrollableState>(
+          find
+              .ancestor(
+                of: find.text('Meanings'),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(form.position.maxScrollExtent, greaterThan(0), reason: 'setup');
         await tester.drag(find.text('Meanings'), const Offset(0, 200));
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isFalse);
@@ -905,7 +918,11 @@ void main() {
         await tester.longPress(find.text('Chat'));
         await tester.pumpAndSettle();
         await meetsGuidelines();
-        await tester.tap(find.byTooltip('Delete card'));
+        // Red text at the end of the form.
+        await tester.ensureVisible(find.text('Delete card'));
+        await tester.pumpAndSettle();
+        await meetsGuidelines();
+        await tester.tap(find.text('Delete card'));
         await tester.pumpAndSettle();
         expect(shownText('Delete this card?'), findsOneWidget);
         await meetsGuidelines();

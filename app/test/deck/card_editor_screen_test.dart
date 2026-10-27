@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/word_break.dart';
 
@@ -11,17 +12,16 @@ import '../home/deck_screens.dart';
 import '../word_breaks.dart';
 import 'editor.dart';
 
-/// The text of the preview's two halves, front then back, its word joiners
-/// left out.
-List<String?> _preview(WidgetTester tester) => [
+/// The text the preview screen's card shows, its word joiners left out.
+List<String> _previewText(WidgetTester tester) => [
   for (final text in tester.widgetList<Text>(
     find.descendant(
-      of: find.byType(CardPreview).first,
+      of: find.byType(CardPreviewScreen),
       matching: find.byType(Text),
     ),
   ))
-    (text.data ?? text.textSpan?.toPlainText())?.replaceAll('\u2060', ''),
-];
+    ?(text.data ?? text.textSpan?.toPlainText())?.replaceAll('\u2060', ''),
+]..remove('Preview');
 
 /// The text of every stored card, front and back.
 Future<List<(String, String)>> _stored(DeckScreens screens) async => [
@@ -53,18 +53,83 @@ void main() {
   }
 
   testWidgets(
-    'the preview shows the card as it is typed, front left and back right',
+    'the editor shows no preview of its own: Preview opens the card full screen, its front, a tap turns it to its back and another back to its front',
     (tester) async {
       final screens = await openNew(tester);
-      expect(find.text('Add card'), findsOneWidget);
+      expect(find.text('New card'), findsOneWidget);
       expect(find.text('French'), findsOneWidget);
-      expect(_preview(tester), ['', '']);
-
+      expect(find.byType(CardPreview), findsNothing);
       await typeBlock(tester, CardSide.front, 'Chat');
-      expect(_preview(tester), ['Chat', '']);
-
       await typeBlock(tester, CardSide.back, 'cat');
-      expect(_preview(tester), ['Chat', 'cat']);
+
+      await screens.tap(find.text('Preview'));
+      expect(find.byType(CardPreviewScreen), findsOneWidget);
+      expect(_previewText(tester), [
+        'Front',
+        'Chat',
+        'Tap the card to see its back',
+      ]);
+      await screens.tap(find.byType(CardPreviewScreen));
+      expect(_previewText(tester), [
+        'Back',
+        'cat',
+        'Tap again to go back to the front',
+      ]);
+      await screens.tap(find.byType(CardPreviewScreen));
+      expect(_previewText(tester).take(2), ['Front', 'Chat']);
+
+      await screens.tap(find.byTooltip('Close'));
+      expect(find.byType(CardPreviewScreen), findsNothing);
+      expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'the preview turns the card over in 3D, part way through after 100 ms, and at once when the system asks to reduce motion',
+    (tester) async {
+      final screens = await openNew(tester);
+      await typeBlock(tester, CardSide.front, 'Chat');
+      await typeBlock(tester, CardSide.back, 'cat');
+      await screens.tap(find.text('Preview'));
+      // The card's turn about its vertical axis, from its transform.
+      double turn() {
+        final transform = tester
+            .widgetList<Transform>(
+              find.descendant(
+                of: find.byType(CardPreviewScreen),
+                matching: find.byType(Transform),
+              ),
+            )
+            .first
+            .transform;
+        return transform.entry(0, 0);
+      }
+
+      expect(turn(), closeTo(1, 1e-9), reason: 'the setup: the card faces up');
+      await tester.tap(find.byType(CardPreviewScreen));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(turn(), lessThan(0.9), reason: 'turning');
+      await tester.pumpAndSettle();
+      expect(
+        turn(),
+        closeTo(1, 1e-9),
+        reason: 'turned over, its back faces up',
+      );
+      await screens.tap(find.byTooltip('Close'));
+
+      // Reduce motion: the next frame already shows the other side, unturned.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await screens.tap(find.text('Preview'));
+      await tester.tap(find.byType(CardPreviewScreen));
+      await tester.pump();
+      expect(turn(), closeTo(1, 1e-9));
+      expect(_previewText(tester).take(2), ['Back', 'cat']);
       await screens.close();
     },
   );
@@ -191,7 +256,7 @@ void main() {
         );
         final card = (await screens.cards()).single;
         for (final (title, editor) in [
-          ('Add card', CardEditorScreen(deck: deck)),
+          ('New card', CardEditorScreen(deck: deck)),
           ('Edit card', CardEditorScreen(deck: deck, card: card)),
         ]) {
           await screens.push((_) => editor);
@@ -235,7 +300,6 @@ void main() {
       expect(await _stored(screens), [('Chat', 'cat')]);
       expect(find.widgetWithText(TextField, 'Chat'), findsNothing);
       expect(find.widgetWithText(TextField, 'cat'), findsNothing);
-      expect(_preview(tester), ['', '']);
       expect(_focused(tester, CardSide.front), isTrue);
 
       await typeBlock(tester, CardSide.front, 'Chien');
@@ -254,7 +318,7 @@ void main() {
 
     await screens.tap(find.text('Save and next card'));
 
-    expect(find.text('Enter some text'), findsOneWidget);
+    expect(find.text('Write something'), findsOneWidget);
     expect(await _stored(screens), isEmpty);
     await screens.close();
   });
@@ -287,13 +351,17 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(labelledField(CardSide.front, 'Front'), findsOneWidget);
+      expect(labelledField(CardSide.front, 'Meaning'), findsOneWidget);
       // Control: saved as it was, the front keeps its senses block.
       await tapVisible(screens, find.text('Save'));
       expect((await stored()).front, [senses]);
 
       await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
-      await typeInto(tester, labelledField(CardSide.front, 'Front'), '사과, 능금');
+      await typeInto(
+        tester,
+        labelledField(CardSide.front, 'Meaning'),
+        '사과, 능금',
+      );
       await tapVisible(screens, find.text('Save'));
       expect((await stored()).front, const [
         SensesContent([
@@ -314,9 +382,10 @@ void main() {
       final unknown = decodeContent(
         '[{"type":"mindmap","v":1,"id":"m","payload":{"nodes":[1,2]}}]',
       ).single;
-      // Each earlier template's card as its form wrote it, the block types
-      // its sides show in order, and whether study draws it whole, on the
-      // face that holds its blank.
+      // Each earlier template's card as its form wrote it, the blocks its
+      // sides show in order, each by its type's name or, for a 글, which
+      // shows none, as "Text:" and its text, and whether study draws it
+      // whole, on the face that holds its blank.
       final cards = [
         (
           'flip',
@@ -332,9 +401,13 @@ void main() {
             const TextContent('a fruit'),
             unknown,
           ],
-          ['Text'],
+          ['Text:apple'],
           false,
-          ['Meanings', 'Text', '[Content this version cannot show: mindmap]'],
+          [
+            'Meanings',
+            'Text:a fruit',
+            '[Content this version cannot show: mindmap]',
+          ],
         ),
         (
           'cloze',
@@ -344,7 +417,7 @@ void main() {
           <Content>[const TextContent('The apple is red')],
           ['Cloze sentence'],
           true,
-          ['Text'],
+          ['Text:The apple is red'],
         ),
         (
           'table',
@@ -361,9 +434,9 @@ void main() {
           <Content>[
             const TextContent('Capitals\nCountry Capital\nFrance Paris'),
           ],
-          ['Text', 'Table'],
+          ['Text:Capitals', 'Table'],
           true,
-          ['Text'],
+          ['Text:Capitals\nCountry Capital\nFrance Paris'],
         ),
       ];
       for (final (template, front, back, frontTypes, whole, backTypes)
@@ -390,14 +463,16 @@ void main() {
           templateVersion: 1,
         );
         await screens.push((deck) => CardEditorScreen(deck: deck, card: card));
+        await screens.tap(find.text('Preview'));
         expect(
           find.descendant(
-            of: find.byType(CardPreview),
+            of: find.byType(CardPreviewScreen),
             matching: find.byType(WholeCardView),
           ),
           whole ? findsOneWidget : findsNothing,
           reason: '$template: the preview draws it as study does',
         );
+        await screens.tap(find.byTooltip('Close'));
         for (final (side, types) in [
           (CardSide.front, frontTypes),
           (CardSide.back, backTypes),
@@ -423,7 +498,12 @@ void main() {
                     find
                         .descendant(
                           of: blockList(side),
-                          matching: find.text(type),
+                          matching: type.startsWith('Text:')
+                              ? find.widgetWithText(
+                                  TextField,
+                                  type.substring(5),
+                                )
+                              : find.text(type),
                         )
                         .first,
                   )
@@ -460,8 +540,23 @@ void main() {
     expect(find.text('Edit card'), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
     expect(find.text('Save and next card'), findsNothing);
+    // Deleting is red text at the end of the form, not an icon in the bar.
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byType(IconButton),
+      ),
+      findsOneWidget,
+      reason: 'the bar holds Close alone',
+    );
+    expect(
+      tester
+          .widget<AppButton>(find.widgetWithText(AppButton, 'Delete card'))
+          .variant,
+      AppButtonVariant.destructive,
+    );
 
-    await screens.tap(find.byTooltip('Delete card'));
+    await tapVisible(screens, find.text('Delete card'));
     expect(shownText('Delete this card?'), findsOneWidget);
     // The confirmation keeps its cancel, and the delete comes last, below it.
     expect(
@@ -532,7 +627,7 @@ void main() {
         expect(await _stored(screens), [('Chat', 'cat')]);
 
         await screens.tap(find.byTooltip('Close'));
-        expect(find.text('Add card'), findsOneWidget);
+        expect(find.text('New card'), findsOneWidget);
         expect(find.widgetWithText(TextField, 'chat (talk)'), findsOneWidget);
         await screens.close();
       },
@@ -560,7 +655,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(BottomSheet), findsNothing);
-        expect(find.text('Add card'), findsOneWidget);
+        expect(find.text('New card'), findsOneWidget);
         expect(find.widgetWithText(TextField, 'chat (talk)'), findsOneWidget);
         expect(await _stored(screens), [('Chat', 'cat')]);
         await screens.close();
@@ -597,7 +692,7 @@ void main() {
       expect(find.byType(TextField), findsNothing, reason: 'nothing to edit');
       expect(find.text('Save'), findsNothing);
 
-      await screens.tap(find.byTooltip('Delete card'));
+      await tapVisible(screens, find.text('Delete card'));
       await screens.tap(find.text('Delete'));
       expect(await screens.cards(), isEmpty, reason: 'it still deletes');
       await screens.close();

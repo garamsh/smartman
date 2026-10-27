@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../design/app_button.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'content.dart';
@@ -293,12 +292,13 @@ class ClozeProblemText extends StatelessWidget {
   }
 }
 
-/// A 빈칸 문장's one action, in a bar right above the keyboard. With the
-/// caret or the selection inside [blank], it reads "빈칸 풀기", is named for a
-/// screen reader with the blank's answer, and turns that blank back into
-/// text; elsewhere it reads "빈칸 넣기" (ADR 0101).
-class ClozeToolbar extends StatelessWidget {
-  const ClozeToolbar({
+/// A 빈칸 문장's one action, a small outlined chip right under its line. With
+/// the caret or the selection inside [blank], it reads "빈칸 풀기", is named
+/// for a screen reader with the blank's answer, and turns that blank back
+/// into text; elsewhere it reads "빈칸 넣기" (ADR 0101). It is never a
+/// primary fill, which the bottom bar holds (ADR 0117).
+class ClozeAction extends StatelessWidget {
+  const ClozeAction({
     super.key,
     required this.draft,
     required this.blank,
@@ -318,35 +318,27 @@ class ClozeToolbar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
     final blank = this.blank;
-    final button = blank == null
-        ? AppButton(label: l10n.clozeInsertBlank, onPressed: onInsert)
-        : Semantics(
-            label: l10n.clozeRemoveBlank(
-              blank.start == blank.end
-                  ? l10n.clozeEmptyBlank
-                  : draft.textOf(blank),
+    Widget chip(String label, VoidCallback onPressed) => ActionChip(
+      label: Text(label),
+      labelStyle: AppType.bodyStrong.copyWith(color: colors.ink),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      onPressed: onPressed,
+    );
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: blank == null
+          ? chip(l10n.clozeInsertBlank, onInsert)
+          : Semantics(
+              label: l10n.clozeRemoveBlank(
+                blank.start == blank.end
+                    ? l10n.clozeEmptyBlank
+                    : draft.textOf(blank),
+              ),
+              button: true,
+              excludeSemantics: true,
+              onTap: () => onUndo(blank),
+              child: chip(l10n.clozeUndoBlank, () => onUndo(blank)),
             ),
-            button: true,
-            excludeSemantics: true,
-            onTap: () => onUndo(blank),
-            child: AppButton(
-              label: l10n.clozeUndoBlank,
-              variant: AppButtonVariant.secondary,
-              onPressed: () => onUndo(blank),
-            ),
-          );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(top: BorderSide(color: colors.outline)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpace.s12,
-          vertical: AppSpace.s8,
-        ),
-        child: Align(alignment: Alignment.centerLeft, child: button),
-      ),
     );
   }
 }

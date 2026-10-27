@@ -235,11 +235,11 @@ List<TableCellDraft> _cells(int count) => [
 /// column.
 typedef _Cell = ({int row, int column});
 
-/// What "지우기" removes: the selected cell's row or its column.
+/// What "삭제" removes: the selected cell's row or its column.
 enum _Remove { row, column }
 
 /// A 표 block's fields: a toolbar over the table, "행 추가", "열 추가", "빈칸" and
-/// "지우기", which act on the selected cell, and the table in a grid that
+/// "삭제", which act on the selected cell, and the table in a grid that
 /// scrolls sideways, each header and cell edited in place, a whole blank
 /// tinted `brandTint` and a span a block on it in its cell's text. A tap on a
 /// cell selects it and edits it; the keyboard's next moves to the next cell.

@@ -94,7 +94,7 @@ void main() {
     (tester) async {
       final screens = await openNew(tester);
       await typeBlock(tester, CardSide.front, 'cat');
-      await typeInto(tester, _back('Back'), '고양이');
+      await typeInto(tester, _back('Meaning'), '고양이');
       await tapVisible(screens, find.text('Save'));
       expect((await _stored(screens)).back, [
         const SensesContent([CardSense(meaning: '고양이')]),
@@ -141,7 +141,7 @@ void main() {
       ], reason: 'saved unchanged');
 
       await openCard(screens, await _stored(screens));
-      await typeInto(tester, _back('Back'), 'y');
+      await typeInto(tester, _back('Meaning'), 'y');
       await tapVisible(screens, find.text('Save'));
       expect((await _stored(screens)).back, [
         const SensesContent([CardSense(meaning: 'y')]),
@@ -157,8 +157,8 @@ void main() {
       final screens = await openNew(tester);
       await typeBlock(tester, CardSide.front, 'present');
       await typeInto(tester, _labelField(), '[명]');
-      await typeInto(tester, _back('Back'), '선물');
-      await tapVisible(screens, find.text('Add meaning'));
+      await typeInto(tester, _back('Meaning'), '선물');
+      await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       await typeInto(tester, _labelField(1), '고어 object');
       await typeInto(tester, _back('Meaning 2'), '주다');
       await tapVisible(screens, find.text('Save'));
@@ -283,7 +283,7 @@ void main() {
         ),
       );
       await openCard(screens, await _stored(screens));
-      await typeInto(tester, _back('Back'), '얼굴, 표면');
+      await typeInto(tester, _back('Meaning'), '얼굴, 표면');
       await tapVisible(screens, find.text('Save'));
       expect((await _stored(screens)).back, [
         const SensesContent([
@@ -318,14 +318,26 @@ void main() {
       );
       final card = await _stored(screens);
       await openCard(screens, card);
+      // Each text a Text block's field of its own, beside the senses' block.
+      for (final text in ['유의어 confront', 'a merged line']) {
+        expect(
+          find.descendant(
+            of: blockList(CardSide.back),
+            matching: find.widgetWithText(TextField, text),
+          ),
+          findsOneWidget,
+          reason: text,
+        );
+      }
+      expect(find.byTooltip('Back block 4 menu'), findsOneWidget);
       expect(
         find.descendant(
           of: blockList(CardSide.back),
-          matching: find.text('Text'),
+          matching: find.text('Examples'),
         ),
-        findsNWidgets(2),
+        findsOneWidget,
+        reason: 'it has examples',
       );
-      expect(_back('Examples'), findsOneWidget, reason: 'it has examples');
       expect(find.widgetWithText(TextField, '유의어 confront'), findsOneWidget);
 
       await tapVisible(screens, find.text('Save'));
@@ -359,11 +371,11 @@ void main() {
     'a sense without a meaning and an empty front are refused, each with a message on its field',
     (tester) async {
       final screens = await openNew(tester);
-      await typeInto(tester, _back('Back'), '사과');
-      await tapVisible(screens, find.text('Add meaning'));
+      await typeInto(tester, _back('Meaning'), '사과');
+      await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       await tapVisible(screens, find.text('Save'));
       expect(find.text('Enter the meaning'), findsOneWidget);
-      expect(find.text('Enter some text'), findsOneWidget);
+      expect(find.text('Write something'), findsOneWidget);
       expect(await screens.cards(), isEmpty);
 
       // The front alone filled: the block refuses the empty meaning itself,
@@ -371,7 +383,7 @@ void main() {
       await typeBlock(tester, CardSide.front, 'apple');
       await tapVisible(screens, find.text('Save'));
       expect(find.text('Enter the meaning'), findsOneWidget);
-      expect(find.text('Enter some text'), findsNothing);
+      expect(find.text('Write something'), findsNothing);
       expect(find.byType(SnackBar), findsNothing);
       expect(await screens.cards(), isEmpty);
 
@@ -388,22 +400,27 @@ void main() {
   );
 
   testWidgets(
-    'senses move by their buttons and are deleted by theirs, and the one left is named by its side again',
+    'senses move and are deleted through each one\'s menu, which a block of one meaning has none of, and the one left is hinted Meaning again',
     (tester) async {
       final screens = await openNew(tester);
       await typeBlock(tester, CardSide.front, 'apple');
-      await typeInto(tester, _back('Back'), 'first');
-      await tapVisible(screens, find.text('Add meaning'));
+      await typeInto(tester, _back('Meaning'), 'first');
+      await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       await typeInto(tester, _back('Meaning 2'), 'second');
-      await tapVisible(screens, find.text('Add meaning'));
+      await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       await typeInto(tester, _back('Meaning 3'), 'third');
       await typeInto(tester, _labelField(2), '명');
 
       // [first, second, third [명]] becomes [first, third [명], second], then
       // [third [명], first, second]; then the third sense goes.
-      await tapVisible(screens, find.byTooltip('Move meaning 3 up'));
-      await tapVisible(screens, find.byTooltip('Move meaning 1 down'));
-      await tapVisible(screens, find.byTooltip('Delete meaning 3'));
+      Future<void> act(int number, String action) async {
+        await tapVisible(screens, find.byTooltip('Meaning $number menu'));
+        await screens.tap(find.text(action).last);
+      }
+
+      await act(3, 'Move up');
+      await act(1, 'Move down');
+      await act(3, 'Delete');
       await tapVisible(screens, find.text('Save'));
       expect((await _stored(screens)).back, [
         const SensesContent([
@@ -412,18 +429,18 @@ void main() {
         ]),
       ]);
 
-      // A new block starts as one meaning, with no buttons to move or delete.
+      // A new block starts as one meaning, with no menu to move or delete it.
       await screens.push((deck) => CardEditorScreen(deck: deck));
       await replaceFirstBlock(screens, CardSide.back, 'Meanings');
-      expect(find.byTooltip('Delete meaning 1'), findsNothing);
-      await tapVisible(screens, find.text('Add meaning'));
+      expect(find.byTooltip('Meaning 1 menu'), findsNothing);
+      await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
       expect(
-        find.byTooltip('Delete meaning 1'),
+        find.byTooltip('Meaning 1 menu'),
         findsOneWidget,
         reason: 'control: with two, either can go',
       );
-      await tapVisible(screens, find.byTooltip('Delete meaning 2'));
-      expect(_back('Back'), findsOneWidget, reason: 'one meaning: the side');
+      await act(2, 'Delete');
+      expect(_back('Meaning'), findsOneWidget, reason: 'one meaning again');
       await screens.close();
     },
   );
@@ -436,7 +453,7 @@ void main() {
       await replaceFirstBlock(screens, CardSide.back, 'Meanings');
       await typeBlock(tester, CardSide.front, ' Apple ');
       await typeInto(tester, _labelField(), '명');
-      await typeInto(tester, _back('Back'), '능금');
+      await typeInto(tester, _back('Meaning'), '능금');
       await tapVisible(screens, find.text('Save'));
       expect(find.text('Add anyway'), findsOneWidget);
       expect((await screens.cards()).length, 1);
@@ -451,7 +468,7 @@ void main() {
         final screens = await DeckScreens.open(tester, themeMode: mode);
         await screens.push((deck) => CardEditorScreen(deck: deck));
         await replaceFirstBlock(screens, CardSide.back, 'Meanings');
-        await tapVisible(screens, find.text('Add meaning'));
+        await tapVisible(screens, find.bySemanticsLabel('Add meaning'));
         await tester.tap(_labelField());
         await tester.pumpAndSettle();
         expect(find.byType(LabelPresetStrip), findsOneWidget);

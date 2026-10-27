@@ -319,7 +319,9 @@ void main() {
       await tester.longPress(find.text('meticulous'));
       await tester.pumpAndSettle();
       await shot(tester, '10-card-editor-existing');
-      await tap(tester, find.byTooltip(ko.deleteCard));
+      await tester.ensureVisible(find.text(ko.deleteCard));
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.deleteCard));
       await shot(tester, '11-delete-card-confirm');
       await tap(tester, find.text(ko.cancel));
       await tap(tester, find.byTooltip(ko.close));
@@ -823,8 +825,8 @@ void main() {
       await reveal(find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
       await tap(tester, find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
       await tap(tester, find.text(ko.deleteBlock).last);
-      await reveal(find.text(ko.addToBack));
-      await tap(tester, find.text(ko.addToBack));
+      await reveal(find.bySemanticsLabel(ko.addToBack));
+      await tap(tester, find.bySemanticsLabel(ko.addToBack));
       await tap(tester, find.text(ko.blockSenses).last);
 
       await reveal(find.byType(TextField).first);
@@ -842,16 +844,19 @@ void main() {
       await shot(tester, '05c-card-editor-label-presets');
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
-      await fill(ko.cardBack, '선물');
-      await reveal(find.text(ko.addSense));
-      await tap(tester, find.text(ko.addSense));
+      await fill(ko.senseMeaning, '선물');
+      await reveal(find.bySemanticsLabel(ko.addSense));
+      await tap(tester, find.bySemanticsLabel(ko.addSense));
       await reveal(label(1));
       await tester.enterText(label(1), '동');
       await fill(ko.senseHeading(2), '주다, 제시하다');
       await reveal(find.text('영단어 기본'));
       await shot(tester, '05d-card-editor-senses');
-      await reveal(find.text(ko.addSense));
+      // The second sense's menu: up, down and delete.
+      await reveal(find.byTooltip(ko.senseMenu(2)));
+      await tap(tester, find.byTooltip(ko.senseMenu(2)));
       await shot(tester, '05e-card-editor-senses-buttons');
+      await dismissSheet(tester);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -1019,12 +1024,19 @@ void main() {
       await tester.enterText(fields.at(1), 'Is there a pharmacy near here?');
       await tester.pumpAndSettle();
       await shot(tester, '05r-card-editor-free');
-      await tester.ensureVisible(find.text(ko.addToBack));
+      // The card as study draws it, its front, then its back after a tap.
+      await tap(tester, find.text(ko.previewCard));
+      await shot(tester, '05v-card-preview-front');
+      // The card fills the screen's middle.
+      await tap(tester, find.byType(Scaffold).last);
+      await shot(tester, '05w-card-preview-back');
+      await tap(tester, find.byTooltip(ko.close));
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addToBack));
       await tester.pumpAndSettle();
-      await tap(tester, find.text(ko.addToBack));
+      await tap(tester, find.bySemanticsLabel(ko.addToBack));
       await shot(tester, '05s-card-editor-add-sheet');
       await tap(tester, find.text(ko.blockSenses).last);
-      await tester.ensureVisible(find.text(ko.addToBack));
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addToBack));
       await tester.pumpAndSettle();
       await shot(tester, '05t-card-editor-free-senses');
       await unmount(tester);
@@ -1071,9 +1083,9 @@ void main() {
         await tap(tester, find.byTooltip(ko.blockMenu(side, 1)));
         await tap(tester, find.text(ko.deleteBlock).last);
       }
-      await tester.ensureVisible(find.text(ko.addToFront));
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addToFront));
       await tester.pumpAndSettle();
-      await tap(tester, find.text(ko.addToFront));
+      await tap(tester, find.bySemanticsLabel(ko.addToFront));
       await tap(tester, find.text(ko.blockCloze).last);
       final line = find.byType(TextField).first;
       await tester.enterText(line, 'She gave me a present for my birthday');
@@ -1095,6 +1107,10 @@ void main() {
       await tester.ensureVisible(find.text('영단어 기본'));
       await tester.pumpAndSettle();
       await shot(tester, '05g-card-editor-cloze');
+      // The back left empty, as a card with blanks allows.
+      await tester.ensureVisible(shownText(ko.clozeBackHint));
+      await tester.pumpAndSettle();
+      await shot(tester, '05u-card-editor-cloze-hint');
       // The caret in "present": the one action turns it back into text.
       controller.selection = const TextSelection.collapsed(offset: 17);
       await tester.pumpAndSettle();
@@ -1107,6 +1123,11 @@ void main() {
       addTearDown(tester.view.resetViewInsets);
       await tester.pumpAndSettle();
       await shot(tester, '05m-card-editor-cloze-insert');
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      // The card on its one face, its blanks empty until a tap.
+      await tap(tester, find.text(ko.previewCard));
+      await shot(tester, '05x-card-preview-cloze');
       await unmount(tester);
     });
 
@@ -1148,9 +1169,9 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, find.byTooltip(ko.blockMenu(ko.cardBack, 1)));
       await tap(tester, find.text(ko.deleteBlock).last);
-      await tester.ensureVisible(find.text(ko.addToFront));
+      await tester.ensureVisible(find.bySemanticsLabel(ko.addToFront));
       await tester.pumpAndSettle();
-      await tap(tester, find.text(ko.addToFront));
+      await tap(tester, find.bySemanticsLabel(ko.addToFront));
       await tap(tester, find.text(ko.blockTable).last);
       await tester.enterText(find.byType(TextField).first, '불규칙 동사');
       // The table's fields follow the name's: its headers, then its cells.

@@ -6,10 +6,11 @@ import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'editor_group.dart';
 import 'failure_message.dart';
 import 'label_presets.dart';
 
-/// The settings row "품사 표시", which opens [PartOfSpeechPresetsScreen].
+/// The settings row "라벨", which opens [PartOfSpeechPresetsScreen].
 class PartOfSpeechPresetsRow extends StatelessWidget {
   const PartOfSpeechPresetsRow({super.key});
 
@@ -21,7 +22,7 @@ class PartOfSpeechPresetsRow extends StatelessWidget {
   );
 }
 
-/// Pushes the "품사 표시" screen.
+/// Pushes the "라벨" screen.
 Future<void> openPartOfSpeechPresets(BuildContext context) =>
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -29,12 +30,13 @@ Future<void> openPartOfSpeechPresets(BuildContext context) =>
       ),
     );
 
-/// "품사 표시": the labels the card editor offers above the keyboard, in
-/// their order, each with its name. A tap on one edits it in place, its
-/// delete button removes it, "표시 추가" adds one, and each moves by a drag
-/// on its handle or by "위로" and "아래로" in the handle's menu. While one is
-/// edited, no other moves or goes. Every change is stored on the device at
-/// once (ADR 0100).
+/// "라벨": the labels the card editor offers above the keyboard, in their
+/// order, each with its name, in one white group whose rows a hairline
+/// separates. A tap on one edits it in place, "+ 라벨 추가" at the group's end
+/// adds one, and each moves by a drag on its handle or by "위로" and "아래로"
+/// in its ⋯ menu, which also deletes it. While one is edited, no other moves
+/// or goes. Every change is stored on the device at once (ADR 0100,
+/// ADR 0117).
 class PartOfSpeechPresetsScreen extends ConsumerStatefulWidget {
   const PartOfSpeechPresetsScreen({super.key});
 
@@ -113,9 +115,11 @@ class _PartOfSpeechPresetsScreenState
     );
   }
 
-  Future<void> _remove(int index) async {
-    await _store([..._presets]..removeAt(index));
-  }
+  Future<void> _act(int index, RowAction action) => switch (action) {
+    RowAction.up => _move(index, index - 1),
+    RowAction.down => _move(index, index + 1),
+    RowAction.delete => _store([..._presets]..removeAt(index)),
+  };
 
   Future<void> _move(int from, int to) async {
     final presets = [..._presets];
@@ -127,164 +131,213 @@ class _PartOfSpeechPresetsScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
+    final idle = _editing == null;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.labelPresetsTitle)),
-      body: ReorderableListView.builder(
-        buildDefaultDragHandles: false,
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.gutter,
-          AppSpace.s8,
-          AppSpace.gutter,
-          AppSpace.s24,
-        ),
-        header: Padding(
-          padding: const EdgeInsets.only(bottom: AppSpace.s16),
-          child: Text(
-            l10n.labelPresetsBody,
-            style: AppType.secondary.copyWith(color: colors.muted),
+      body: Theme(
+        data: Theme.of(context)
+            .copyWith(inputDecorationTheme: groupFieldTheme(colors)),
+        child: ReorderableListView.builder(
+          buildDefaultDragHandles: false,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.gutter,
+            AppSpace.s8,
+            AppSpace.gutter,
+            AppSpace.s24,
+          ),
+          header: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.s4,
+              0,
+              AppSpace.s4,
+              AppSpace.s16,
+            ),
+            child: Text(
+              l10n.labelPresetsBody,
+              style: AppType.caption.copyWith(color: colors.muted),
+            ),
+          ),
+          footer: _GroupPart(
+            first: _presets.isEmpty,
+            last: true,
+            child: GroupAddRow(
+              label: l10n.addLabelPreset,
+              semanticsLabel: l10n.addLabelPreset,
+              color: colors.ink2,
+              onPressed: idle ? _add : null,
+            ),
+          ),
+          itemCount: _presets.length,
+          onReorderItem: _move,
+          // While a row is edited, the list holds what it does not store yet:
+          // no other row moves or goes until it is done.
+          itemBuilder: (context, index) => _GroupPart(
+            key: _editing == index
+                ? ValueKey(('editing', index))
+                : ValueKey((_presets[index], index)),
+            first: index == 0,
+            last: false,
+            child: _editing == index
+                ? _EditingRow(
+                    label: _label,
+                    name: _name,
+                    showLabelError: _showLabelError,
+                    onDone: _done,
+                  )
+                : _PresetRow(
+                    index: index,
+                    preset: _presets[index],
+                    idle: idle,
+                    canMoveUp: index > 0,
+                    canMoveDown: index < _presets.length - 1,
+                    onEdit: () => _edit(index),
+                    onAction: (action) => _act(index, action),
+                  ),
           ),
         ),
-        footer: Align(
-          alignment: Alignment.centerLeft,
-          child: AppButton(
-            label: l10n.addLabelPreset,
-            icon: LucideIcons.plus,
-            variant: AppButtonVariant.text,
-            onPressed: _editing == null ? _add : null,
-          ),
-        ),
-        itemCount: _presets.length,
-        onReorderItem: _move,
-        // While a row is edited, the list holds what it does not store yet:
-        // no other row moves or goes until it is done.
-        itemBuilder: (context, index) => _editing == index
-            ? _EditingRow(
-                key: ValueKey(('editing', index)),
-                label: _label,
-                name: _name,
-                showLabelError: _showLabelError,
-                onDone: _done,
-              )
-            : _PresetRow(
-                key: ValueKey((_presets[index], index)),
-                index: index,
-                preset: _presets[index],
-                onEdit: _editing == null ? () => _edit(index) : null,
-                onRemove: _editing == null ? () => _remove(index) : null,
-                onUp: _editing != null || index == 0
-                    ? null
-                    : () => _move(index, index - 1),
-                onDown: _editing != null || index == _presets.length - 1
-                    ? null
-                    : () => _move(index, index + 1),
-              ),
       ),
     );
   }
 }
 
-/// What a preset's handle menu offers.
-enum _Move { up, down }
+/// A row of the presets' one group: the group's surface, its top corners
+/// rounded on the [first] row and its bottom corners on the [last], and a
+/// hairline above every row but the first.
+class _GroupPart extends StatelessWidget {
+  const _GroupPart({
+    super.key,
+    required this.first,
+    required this.last,
+    required this.child,
+  });
 
-/// A preset as it is listed: its handle, which drags it or opens a menu of
-/// "위로" and "아래로", its label and name, which a tap edits, and its delete
-/// button.
+  final bool first;
+  final bool last;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    const radius = Radius.circular(AppRadius.field);
+    return Material(
+      color: AppColors.of(context).surface,
+      clipBehavior: Clip.antiAlias,
+      borderRadius: BorderRadius.vertical(
+        top: first ? radius : Radius.zero,
+        bottom: last ? radius : Radius.zero,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [if (!first) const Divider(height: 1, thickness: 1), child],
+      ),
+    );
+  }
+}
+
+/// A preset as it is listed: its handle, which a drag moves, its label chip
+/// and name, which a tap edits, and its ⋯ menu of "위로", "아래로" and
+/// "삭제", so no move needs a drag. While another is edited, [idle] is false
+/// and none of them acts.
 class _PresetRow extends StatelessWidget {
   const _PresetRow({
-    super.key,
     required this.index,
     required this.preset,
+    required this.idle,
+    required this.canMoveUp,
+    required this.canMoveDown,
     required this.onEdit,
-    required this.onRemove,
-    required this.onUp,
-    required this.onDown,
+    required this.onAction,
   });
 
   final int index;
   final LabelPreset preset;
-  final VoidCallback? onEdit;
-  final VoidCallback? onRemove;
-  final VoidCallback? onUp;
-  final VoidCallback? onDown;
+  final bool idle;
+  final bool canMoveUp;
+  final bool canMoveDown;
+  final VoidCallback onEdit;
+  final ValueChanged<RowAction> onAction;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    return AppRowSurface(
-      child: Row(
-        children: [
-          ReorderableDragStartListener(
+    return Row(
+      children: [
+        // The menu moves it without a drag, so a screen reader skips this.
+        ExcludeSemantics(
+          child: ReorderableDragStartListener(
             index: index,
-            enabled: onRemove != null,
-            child: PopupMenuButton<_Move>(
-              enabled: onRemove != null,
-              tooltip: l10n.moveLabelPreset(preset.label),
-              icon: Icon(LucideIcons.gripVertical, color: colors.muted),
-              onSelected: (move) => switch (move) {
-                _Move.up => onUp?.call(),
-                _Move.down => onDown?.call(),
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: _Move.up,
-                  enabled: onUp != null,
-                  child: Text(l10n.moveUp),
-                ),
-                PopupMenuItem(
-                  value: _Move.down,
-                  enabled: onDown != null,
-                  child: Text(l10n.moveDown),
-                ),
-              ],
+            enabled: idle,
+            child: SizedBox.square(
+              dimension: AppSize.tapTarget,
+              child: Icon(LucideIcons.gripVertical, color: colors.muted),
             ),
           ),
-          Expanded(
-            child: Semantics(
-              button: true,
-              label: l10n.editLabelPreset(preset.label, preset.name),
-              excludeSemantics: true,
-              child: InkWell(
-                onTap: onEdit,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: AppSize.tapTarget,
-                  ),
-                  child: Row(
-                    spacing: AppSpace.s12,
-                    children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: colors.ground,
-                          borderRadius: BorderRadius.circular(AppRadius.field),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpace.s12,
-                            vertical: AppSpace.s4,
+        ),
+        Expanded(
+          child: Semantics(
+            button: true,
+            label: l10n.editLabelPreset(preset.label, preset.name),
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: idle ? onEdit : null,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: AppSize.tapTarget),
+                child: Row(
+                  spacing: AppSpace.s12,
+                  children: [
+                    ConstrainedBox(
+                      // The names start level while a label is short.
+                      constraints: const BoxConstraints(
+                        minWidth: _labelFieldWidth,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: 1,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: colors.brandTint,
+                            borderRadius: BorderRadius.circular(
+                              labelChipRadius,
+                            ),
                           ),
-                          child: Text(preset.label, style: AppType.bodyStrong),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpace.s8,
+                              vertical: AppSpace.s4,
+                            ),
+                            child: Text(
+                              preset.label,
+                              style: AppType.bodyStrong.copyWith(
+                                color: colors.ink,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      Expanded(
-                        child: Text(
-                          preset.name,
-                          style: AppType.body.copyWith(color: colors.ink2),
-                        ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        preset.name,
+                        style: AppType.body.copyWith(color: colors.ink2),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          IconButton(
-            tooltip: l10n.removeLabelPreset(preset.label),
-            icon: const Icon(LucideIcons.trash2),
-            onPressed: onRemove,
-          ),
-        ],
-      ),
+        ),
+        RowMenu(
+          label: l10n.labelPresetMenu(preset.label),
+          upLabel: l10n.moveUp,
+          downLabel: l10n.moveDown,
+          deleteLabel: l10n.deleteBlock,
+          canMoveUp: canMoveUp,
+          canMoveDown: canMoveDown,
+          enabled: idle,
+          onAction: onAction,
+        ),
+      ],
     );
   }
 }
@@ -293,7 +346,6 @@ class _PresetRow extends StatelessWidget {
 /// label says so under it.
 class _EditingRow extends StatelessWidget {
   const _EditingRow({
-    super.key,
     required this.label,
     required this.name,
     required this.showLabelError,
@@ -308,42 +360,44 @@ class _EditingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AppRowSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.s12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: AppSpace.s8,
-          children: [
-            SizedBox(
-              width: 96,
-              child: TextField(
-                controller: label,
-                autofocus: true,
-                textAlign: TextAlign.center,
-                style: AppType.bodyStrong,
-                decoration: InputDecoration(
-                  labelText: l10n.labelPresetLabel,
-                  errorText: showLabelError ? l10n.labelPresetRequired : null,
-                ),
+    return Padding(
+      padding: const EdgeInsets.all(groupInset),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: AppSpace.s4,
+        children: [
+          SizedBox(
+            width: _labelFieldWidth,
+            child: TextField(
+              controller: label,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              style: AppType.bodyStrong,
+              decoration: InputDecoration(
+                labelText: l10n.labelPresetLabel,
+                errorText: showLabelError ? l10n.labelPresetRequired : null,
               ),
             ),
-            Expanded(
-              child: TextField(
-                controller: name,
-                style: AppType.body,
-                decoration: InputDecoration(labelText: l10n.labelPresetName),
-                onSubmitted: (_) => onDone(),
-              ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: name,
+              style: AppType.body,
+              decoration: InputDecoration(labelText: l10n.labelPresetName),
+              onSubmitted: (_) => onDone(),
             ),
-            AppButton(
-              label: l10n.labelPresetDone,
-              variant: AppButtonVariant.text,
-              onPressed: onDone,
-            ),
-          ],
-        ),
+          ),
+          AppButton(
+            label: l10n.labelPresetDone,
+            variant: AppButtonVariant.text,
+            onPressed: onDone,
+          ),
+        ],
       ),
     );
   }
 }
+
+/// The width of a preset's label field while it is edited, and the least
+/// width its chip's column takes.
+const _labelFieldWidth = 64.0;

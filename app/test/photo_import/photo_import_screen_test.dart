@@ -1433,7 +1433,7 @@ void main() {
         await import.pickItem('First meaning only');
         expect(_shown('[동]직면하다, 마주하다'), findsOneWidget);
         await import.menu('최빈출 단어');
-        await import.pickItem('Show part of speech');
+        await import.pickItem('Show labels');
         expect(_shown('직면하다, 마주하다'), findsOneWidget);
         expect(_shown('[동]직면하다, 마주하다'), findsNothing);
 
@@ -1979,9 +1979,9 @@ void main() {
         );
         // Control: a choice is read with its state.
         expect(
-          tester.getSemantics(_shown('Show part of speech')),
+          tester.getSemantics(_shown('Show labels')),
           isSemantics(
-            label: 'Show part of speech',
+            label: 'Show labels',
             hasTapAction: true,
             hasCheckedState: true,
             isChecked: true,

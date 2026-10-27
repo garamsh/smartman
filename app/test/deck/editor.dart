@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/design/app_text_field.dart';
 
 import '../home/deck_screens.dart';
 
@@ -13,13 +12,22 @@ Finder blockField(CardSide side, [int index = 0]) => find
     .descendant(of: blockList(side), matching: find.byType(TextField))
     .at(index);
 
-/// The text field labelled [label] inside [side]'s block list.
+/// The text field labelled or hinted [label] inside [side]'s block list,
+/// found by its decoration, so it is found once it holds text too.
 Finder labelledField(CardSide side, String label) => find.descendant(
-  of: find.descendant(
-    of: blockList(side),
-    matching: find.widgetWithText(AppTextField, label),
+  of: blockList(side),
+  matching: find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField &&
+        (widget.decoration?.labelText == label ||
+            widget.decoration?.hintText == label),
   ),
-  matching: find.byType(TextField),
+);
+
+/// The "+ 추가" row at the end of [side]'s group, found by what a screen
+/// reader reads for it.
+Finder addRow(CardSide side) => find.bySemanticsLabel(
+  side == CardSide.front ? 'Add to front' : 'Add to back',
 );
 
 /// Brings [finder] into view and taps it.
@@ -46,10 +54,7 @@ Future<void> typeBlock(
 
 /// Adds a block of [type] to [side] through its button and sheet.
 Future<void> addBlock(DeckScreens screens, CardSide side, String type) async {
-  await tapVisible(
-    screens,
-    find.text(side == CardSide.front ? 'Add to front' : 'Add to back'),
-  );
+  await tapVisible(screens, addRow(side));
   await screens.tap(find.text(type).last);
 }
 
