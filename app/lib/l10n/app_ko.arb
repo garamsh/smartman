@@ -1051,8 +1051,6 @@
   "@todayExtra": {"description": "On the 오늘 tab: how many cards were studied past the day's plan, never in its goal.", "placeholders": {"count": {"type": "int"}}},
   "weekTitle": "지난 7일",
   "@weekTitle": {"description": "The heading of the 오늘 tab's chart of the last seven study days."},
-  "weekSummary": "이번 주 {cards}장 · {minutes}분",
-  "@weekSummary": {"description": "Beside the last seven days' heading: the cards answered and the minutes they took.", "placeholders": {"cards": {"type": "int"}, "minutes": {"type": "int"}}},
   "weekSemantics": "지난 7일 동안 {cards}장을 {minutes}분 공부했어요",
   "@weekSemantics": {"description": "The last seven days' chart as one sentence for a screen reader.", "placeholders": {"cards": {"type": "int"}, "minutes": {"type": "int"}}},
   "weekOpenRecord": "기록 열기",

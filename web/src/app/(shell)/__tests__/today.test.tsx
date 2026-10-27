@@ -591,8 +591,8 @@ describe("the 오늘 and 덱 pages", () => {
     // No goal ring and no minutes control.
     expect(screen.queryByRole("img", { name: /^하루 목표/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
-    // The today card's chip and the last seven days' line.
-    expect(screen.getAllByText("1일 연속")).toHaveLength(2);
+    // The today card's chip alone; the last seven days' card has no streak line.
+    expect(screen.getAllByText("1일 연속")).toHaveLength(1);
     expect(screen.getByText("좋은 출발이에요")).toBeInTheDocument();
     cleanup();
 
@@ -605,7 +605,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.getByRole("progressbar", { name: "4장 중 0장" })).toBeInTheDocument();
     // Before any card is done the minutes are the day's, not those left.
     expect(todayLine()).toBe("0 / 4장 · 약 1분");
-    expect(screen.getAllByText("2일 연속")).toHaveLength(2);
+    expect(screen.getAllByText("2일 연속")).toHaveLength(1);
     expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
   });
 
@@ -707,7 +707,10 @@ describe("the 오늘 and 덱 pages", () => {
     );
     expect(week).toHaveAccessibleDescription("기록 열기");
     expect(week).toHaveAttribute("href", "/record");
-    expect(within(week).getByText("이번 주 10장 · 4분")).toBeInTheDocument();
+    // Its title and bars alone: no summary line and no streak line.
+    expect(within(week).getByText("지난 7일")).toBeInTheDocument();
+    expect(within(week).queryByText(/이번 주/)).not.toBeInTheDocument();
+    expect(within(week).queryByText(/일 연속/)).not.toBeInTheDocument();
     // The forward forecast is gone.
     expect(screen.queryByText("앞으로 7일")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "오늘" })).toBeInTheDocument();

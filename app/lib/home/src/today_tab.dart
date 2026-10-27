@@ -650,8 +650,8 @@ List<String> _dayLabels(BuildContext context, TodayOverview overview) {
 }
 
 /// The last seven study days on a card: the cards answered on each as a bar,
-/// today's in ink and last, with the week's cards and minutes and the streak
-/// beside the heading; a tap opens 기록 through [onOpen].
+/// today's in ink and last, under the heading; a tap opens 기록 through
+/// [onOpen].
 class _LastWeek extends StatelessWidget {
   const _LastWeek({required this.overview, required this.onOpen});
 
@@ -692,50 +692,12 @@ class _LastWeek extends StatelessWidget {
           onTap: onOpen,
           child: _ChartCard(
             title: l10n.weekTitle,
-            chart: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: AppSpace.s12,
-              children: [
-                Wrap(
-                  spacing: AppSpace.s8,
-                  runSpacing: AppSpace.s4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      l10n.weekSummary(cards, minutes),
-                      style: AppType.caption.copyWith(color: colors.ink2),
-                    ),
-                    if (overview.streak > 0)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: AppSpace.s4,
-                        children: [
-                          Icon(
-                            LucideIcons.flame,
-                            size: AppSize.smallIcon,
-                            color: colors.streak,
-                          ),
-                          Flexible(
-                            child: Text(
-                              l10n.streakDays(overview.streak),
-                              style: AppType.caption.copyWith(
-                                color: colors.ink2,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                _DayBars(
-                  counts: [for (final day in week) day.cards],
-                  labels: labels,
-                  emphasised: week.length - 1,
-                  ink: colors.ink,
-                  semantics: summary,
-                ),
-              ],
+            chart: _DayBars(
+              counts: [for (final day in week) day.cards],
+              labels: labels,
+              emphasised: week.length - 1,
+              ink: colors.ink,
+              semantics: summary,
             ),
           ),
         ),

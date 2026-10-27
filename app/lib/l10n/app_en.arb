@@ -469,7 +469,6 @@
   "studyExtraSemantics": "{count, plural, =1{1 more card studied past today's plan} other{{count} more cards studied past today's plan}}",
   "todayExtra": "{count, plural, =1{1 more card today} other{{count} more cards today}}",
   "weekTitle": "Last 7 days",
-  "weekSummary": "This week {cards} · {minutes} min",
   "weekSemantics": "{cards, plural, =1{Studied 1 card in {minutes} min over the last 7 days} other{Studied {cards} cards in {minutes} min over the last 7 days}}",
   "weekOpenRecord": "open Record",
   "dailyMinutesUnit": "min",
