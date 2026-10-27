@@ -8,10 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_list_row.dart';
+import 'package:smartman/design/app_sheet.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
 import 'package:smartman/photo_import/src/photo_viewer.dart' show PhotoViewer;
+import 'package:smartman/photo_import/src/round_check.dart';
 
 import '../contrast.dart';
 import '../home/home_data.dart';
@@ -208,14 +210,21 @@ class _Import {
     await _pumpPast(_shown('open'));
   }
 
-  /// Taps the retake, named [label], confirms discarding the list's cards
-  /// where it asks, and takes the next photo at once, as [shoot] does.
+  /// Taps the retake, named [label], from the list's ⋯ where it waits there,
+  /// confirms discarding the list's cards where it asks, and takes the next
+  /// photo at once, as [shoot] does.
   Future<void> retake([String label = 'Retake']) async {
+    if (find.byTooltip('Photo actions').evaluate().isNotEmpty) {
+      await openActions();
+    }
     await _pumpPast(_shown(label));
     if (_shown('Discard').evaluate().isNotEmpty) {
       await _pumpPast(_shown('Discard'));
     }
   }
+
+  /// Opens the ⋯ menu in the list's top bar, which holds the retake.
+  Future<void> openActions() => tap(find.byTooltip('Photo actions'));
 
   /// Lets every write [store] holds land, the newest first each time, so
   /// writes under way at once would land oldest last.
@@ -390,7 +399,7 @@ void main() {
 
         await import.reopen();
         expect(_shown('Words found'), findsOneWidget);
-        await import.tap(_shown('Cancel'));
+        await import.tap(find.byTooltip('Close'));
         await import.tap(_shown('Discard'));
         expect(import.bar, isNull);
         await import.close();
@@ -649,6 +658,10 @@ void main() {
         expect(find.bySemanticsLabel(RegExp(r'^Photo 1\n1 card')), findsOne);
         expect(find.bySemanticsLabel(RegExp(r'^Photo 4\nReading')), findsOne);
         expect(find.bySemanticsLabel('Read 1 of 4 photos'), findsOneWidget);
+        // A photo read is ink, not the green that means 안다 alone (#454).
+        final read = tester.widget<Icon>(find.byIcon(LucideIcons.check));
+        expect(read.color, AppColors.light.ink);
+        expect(read.color, isNot(AppColors.light.know));
         await import.close();
       },
     );
@@ -691,7 +704,7 @@ void main() {
         await import.answerCall(1, {'chien': 'dog'});
         await import.answerCall(2, {'oiseau': 'bird'});
         expect(find.bySemanticsLabel("Couldn't read 1 photo"), findsOneWidget);
-        expect(find.textContaining("Couldn't read the cards"), findsOneWidget);
+        expect(_shownContaining("Couldn't read the cards"), findsOneWidget);
 
         await tester.tap(_shown('Try again'));
         await import.frames();
@@ -817,7 +830,7 @@ void main() {
             );
         await import.frames();
         expect(
-          find.textContaining("You've used today's 30 photos."),
+          _shownContaining("You've used today's 30 photos."),
           findsOneWidget,
         );
         expect(_shown('Try again'), findsNothing, reason: 'no retry past it');
@@ -877,7 +890,14 @@ void main() {
         final import = await _Import.open(tester);
         await import.extract({'chat': 'cat'});
         expect(_shown('Photo 1'), findsNothing);
+        // The top bar holds × and ⋯, no words; the retake is in ⋯.
+        expect(_shown('Cancel'), findsNothing);
+        expect(_shown('Retake'), findsNothing);
+        expect(find.byTooltip('Close'), findsOneWidget);
+        await import.openActions();
         expect(_shown('Retake'), findsOneWidget);
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
         expect(_shown('Add more photos'), findsOneWidget);
         await import.close();
       },
@@ -902,7 +922,7 @@ void main() {
         expect(_shown('Photo 2'), findsOneWidget);
         expect(_shown('oiseau'), findsOneWidget);
         expect(import.included('chien'), isFalse);
-        expect(_shown('Retake'), findsNothing);
+        expect(find.byTooltip('Photo actions'), findsNothing);
         await import.close();
       },
     );
@@ -1164,6 +1184,7 @@ void main() {
         expect(import.client.calls.single.photo.bytes, testPhoto.bytes);
         import.client.answer({'a': '1'});
         await tester.pumpAndSettle();
+        await import.openActions();
         expect(_shown('Pick another photo'), findsOneWidget);
         await import.close();
       },
@@ -1769,6 +1790,7 @@ void main() {
         await import.tap(import.check('a'));
 
         import.photos.cameraPhoto = null;
+        await import.openActions();
         await import.tap(_shown('Retake'));
         expect(_shown('Words found'), findsOneWidget);
         expect(import.included('a'), isFalse, reason: 'kept as it was');
@@ -1819,14 +1841,14 @@ void main() {
         (tester) async {
           final import = await edited(tester);
 
-          await import.tap(_shown('Cancel'));
+          await import.tap(find.byTooltip('Close'));
           expect(_shown(prompt), findsOneWidget);
           expect(_shown(consequence), findsOneWidget);
           await import.tap(_shown('Cancel').last);
           await expectKept(import);
           expect(import.client.calls, hasLength(1));
 
-          await import.tap(_shown('Cancel'));
+          await import.tap(find.byTooltip('Close'));
           await import.tap(_shown('Discard'));
           expect(import.hasPopped, isTrue);
           expect(import.popped, isNull);
@@ -1858,6 +1880,7 @@ void main() {
         (tester) async {
           final import = await edited(tester);
 
+          await import.openActions();
           await import.tap(_shown('Retake'));
           expect(_shown(prompt), findsOneWidget);
           await import.tap(_shown('Cancel').last);
@@ -1877,7 +1900,7 @@ void main() {
           final import = await _Import.open(tester);
           await import.extract({'chat': 'cat'});
           await import.tap(import.check('chat'));
-          await import.tap(_shown('Cancel'));
+          await import.tap(find.byTooltip('Close'));
           expect(_shown(prompt), findsNothing);
           expect(import.hasPopped, isTrue);
           await import.close();
@@ -1940,7 +1963,7 @@ void main() {
         final import = await _Import.open(tester, deck: (_) => null);
         await import.extract({'a': '1'});
 
-        await import.tap(_shown('Cancel'));
+        await import.tap(find.byTooltip('Close'));
         await import.tap(_shown('Discard'));
 
         expect(import.hasPopped, isTrue);
@@ -2107,20 +2130,29 @@ void main() {
         await import.extractCards(face);
 
         await import.tap(_shown('face'));
-        await import.tap(find.byType(Checkbox).at(1));
+        // One selection control: the list's round check, no square box.
+        expect(find.byType(Checkbox), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(AppSheet),
+            matching: find.byType(RoundCheck),
+          ),
+          findsNWidgets(3),
+        );
+        await import.tap(find.bySemanticsLabel('Include meaning 2'));
         await import.tap(_shown('Done'));
         expect(_shown('[동]직면하다\n[명]얼굴'), findsOneWidget);
 
         await import.tap(_shown('face'));
-        for (final i in [0, 2]) {
-          await import.tap(find.byType(Checkbox).at(i));
+        for (final i in [1, 3]) {
+          await import.tap(find.bySemanticsLabel('Include meaning $i'));
         }
         final done = tester.widget<FilledButton>(
           find.widgetWithText(FilledButton, 'Done'),
         );
         expect(done.onPressed, isNull);
         // Control: one sense kept again.
-        await import.tap(find.byType(Checkbox).at(2));
+        await import.tap(find.bySemanticsLabel('Include meaning 3'));
         expect(
           tester
               .widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'))
@@ -2131,16 +2163,30 @@ void main() {
       },
     );
 
-    testWidgets('a sense dragged by its handle moves, and the card follows', (
-      tester,
-    ) async {
+    testWidgets('a sense moved up through its ⋯ menu moves, and the card '
+        'follows; nothing is dragged', (tester) async {
       final import = await _Import.open(tester);
       await import.extractCards(face);
 
       await import.tap(_shown('face'));
-      final handle = find.bySemanticsLabel('Move meaning 3');
-      await tester.drag(handle, const Offset(0, -300));
+      expect(find.byType(ReorderableDragStartListener), findsNothing);
+      expect(find.byIcon(LucideIcons.gripVertical), findsNothing);
+      // The first meaning cannot move up; the last cannot move down.
+      await import.tap(find.byTooltip('Meaning 1 menu'));
+      expect(
+        tester
+            .widget<PopupMenuItem<int>>(
+              find.widgetWithText(PopupMenuItem<int>, 'Move up'),
+            )
+            .enabled,
+        isFalse,
+      );
+      await tester.tapAt(Offset.zero);
       await tester.pumpAndSettle();
+      for (final number in [3, 2]) {
+        await import.tap(find.byTooltip('Meaning $number menu'));
+        await import.tap(_shown('Move up'));
+      }
       await import.tap(_shown('Done'));
 
       expect(_shown('[명]얼굴\n[동]직면하다\n[명]표면'), findsOneWidget);
@@ -2489,4 +2535,15 @@ Finder _shown(String text) => find.byWidgetPredicate(
             '',
           ) ==
           text,
+);
+
+/// The text on screen that holds [part] once the word joiners `keepWords`
+/// sets are left out.
+Finder _shownContaining(String part) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Text &&
+      ((widget.data ?? widget.textSpan?.toPlainText())
+              ?.replaceAll('\u2060', '')
+              .contains(part) ??
+          false),
 );

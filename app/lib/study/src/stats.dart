@@ -227,10 +227,11 @@ List<int> masteredByWeek(
   ];
 }
 
-/// How many more cards are mastered at the end of this week than four weeks
-/// before, from [weeks] as [masteredByWeek] gives them; null unless more are.
+/// How many more cards are mastered at the end of this week than at the end
+/// of the first of [weeks], as [masteredByWeek] gives them, the span the
+/// chart draws; null unless more are.
 int? masteredGain(List<int> weeks) {
-  final gain = weeks.last - weeks[weeks.length - 5];
+  final gain = weeks.last - weeks.first;
   return gain > 0 ? gain : null;
 }
 

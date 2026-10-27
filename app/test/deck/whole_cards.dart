@@ -12,15 +12,19 @@ Map<String, bool> blanksUnder(Finder of) {
       final style = span.style;
       if (span is! TextSpan || span.text == null || style == null) return true;
       if (style.backgroundColor != null) {
-        blanks[span.text!.trim()] = style.color != style.backgroundColor;
+        blanks[blankAnswer(span.text!)] = style.color != style.backgroundColor;
       } else if (isEmptyBlank(style)) {
-        blanks[span.text!.trim()] = false;
+        blanks[blankAnswer(span.text!)] = false;
       }
       return true;
     });
   }
   return blanks;
 }
+
+/// A blank's answer as written: its padding and the word joiners `keepWords`
+/// sets between its characters left out.
+String blankAnswer(String text) => text.replaceAll('⁠', '').trim();
 
 /// Whether [style] draws an empty blank: its text invisible over an
 /// underline, with no fill.

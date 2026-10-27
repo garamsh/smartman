@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'덱 작업'**
   String get deckActions;
 
+  /// Screen-reader name of the ⋯ menu in the photo import list's top bar, which holds the retake.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 작업'**
+  String get importActions;
+
   /// Menu item and dialog title for renaming a deck.
   ///
   /// In ko, this message translates to:
@@ -2281,36 +2287,6 @@ abstract class AppLocalizations {
   /// **'{goal}장 중 {done}장'**
   String todayProgress(int goal, int done);
 
-  /// On the today card, where the user stands: nothing studied today yet, on a streak of this many days.
-  ///
-  /// In ko, this message translates to:
-  /// **'{days}일째 이어 가는 중이에요'**
-  String statusStreak(int days);
-
-  /// On the today card, where the user stands: nothing studied today yet.
-  ///
-  /// In ko, this message translates to:
-  /// **'오늘의 첫 카드를 기다리고 있어요'**
-  String get statusWaiting;
-
-  /// On the today card, where the user stands: three cards or fewer left today.
-  ///
-  /// In ko, this message translates to:
-  /// **'거의 다 왔어요'**
-  String get statusAlmostDone;
-
-  /// On the today card, where the user stands: half of today's goal or more done.
-  ///
-  /// In ko, this message translates to:
-  /// **'절반을 넘었어요'**
-  String get statusPastHalf;
-
-  /// On the today card, where the user stands: some of today's cards done, under half.
-  ///
-  /// In ko, this message translates to:
-  /// **'좋은 출발이에요'**
-  String get statusStarted;
-
   /// On the done card: the day's goal was reached.
   ///
   /// In ko, this message translates to:
@@ -2383,23 +2359,11 @@ abstract class AppLocalizations {
   /// **'밀린 복습 {count}장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.'**
   String backlogBody(int count);
 
-  /// The backlog card's button: how many cards and their minutes.
-  ///
-  /// In ko, this message translates to:
-  /// **'{count}장 학습 · 약 {minutes}분'**
-  String backlogStudy(int count, int minutes);
-
   /// Heading of the backlog's catch-up chart: the daily pace and the days it takes.
   ///
   /// In ko, this message translates to:
   /// **'하루 {perDay}장씩 하면 {days}일이면 따라잡아요'**
   String catchUpTitle(int perDay, int days);
-
-  /// Under the catch-up chart: what its bars show.
-  ///
-  /// In ko, this message translates to:
-  /// **'하루 {perDay}장씩 했을 때 남는 밀린 복습이에요'**
-  String catchUpNote(int perDay);
 
   /// What a screen reader reads for the catch-up chart, before each day and its count.
   ///
@@ -2443,22 +2407,16 @@ abstract class AppLocalizations {
   /// **'{percent}%'**
   String retentionPercent(int percent);
 
-  /// Over the target retention beside the figure.
-  ///
-  /// In ko, this message translates to:
-  /// **'목표'**
-  String get retentionTarget;
-
   /// The chip when retention is below the target, by whole percentage points.
   ///
   /// In ko, this message translates to:
-  /// **'목표보다 {points}%p 낮아요'**
+  /// **'목표보다 {points}% 낮아요'**
   String retentionBelow(int points);
 
   /// The chip when retention is above the target, by whole percentage points.
   ///
   /// In ko, this message translates to:
-  /// **'목표보다 {points}%p 높아요'**
+  /// **'목표보다 {points}% 높아요'**
   String retentionAbove(int points);
 
   /// The chip when retention equals the target.
@@ -2503,10 +2461,10 @@ abstract class AppLocalizations {
   /// **'{date} {percent}%'**
   String retentionDay(String date, int percent);
 
-  /// Heading of the recall bands.
+  /// Heading of the recall bands: how well the cards are remembered now.
   ///
   /// In ko, this message translates to:
-  /// **'지금 기억하고 있을 확률'**
+  /// **'기억 상태'**
   String get recallTitle;
 
   /// Beside the recall heading: the mean probability of recall.
@@ -2518,7 +2476,7 @@ abstract class AppLocalizations {
   /// The band of cards recalled with at least 95% probability.
   ///
   /// In ko, this message translates to:
-  /// **'단단함'**
+  /// **'좋음'**
   String get recallStrong;
 
   /// The band of cards recalled with 80% up to 95% probability.
@@ -2542,7 +2500,7 @@ abstract class AppLocalizations {
   /// What a screen reader reads for the recall bar.
   ///
   /// In ko, this message translates to:
-  /// **'{total}장 중 단단함 {strong}장, 보통 {fair}장, 곧 잊음 {fading}장, 평균 {mean}%'**
+  /// **'{total}장 중 좋음 {strong}장, 보통 {fair}장, 곧 잊음 {fading}장, 평균 {mean}%'**
   String recallSemantics(int total, int strong, int fair, int fading, int mean);
 
   /// The recall card before any card has a stored review.
@@ -2557,11 +2515,11 @@ abstract class AppLocalizations {
   /// **'익힌 카드'**
   String get masteredTitle;
 
-  /// Beside the mastered heading: how many more cards are mastered than four weeks ago.
+  /// Beside the mastered heading: how many more cards are mastered than at the end of the chart's first week, as many weeks ago as its first label says.
   ///
   /// In ko, this message translates to:
-  /// **'4주 +{count}장'**
-  String masteredGain(int count);
+  /// **'{weeks}주 전보다 +{count}장'**
+  String masteredGain(int weeks, int count);
 
   /// What a screen reader reads for the mastered bars, before each week's count.
   ///
@@ -2815,10 +2773,10 @@ abstract class AppLocalizations {
   /// **'{number}번째 뜻 넣기'**
   String editKeepSense(int number);
 
-  /// Screen reader label of a meaning's drag handle.
+  /// Screen-reader name of a meaning's ⋯ menu in the edit sheet, which moves it up or down.
   ///
   /// In ko, this message translates to:
-  /// **'{number}번째 뜻 옮기기'**
+  /// **'{number}번째 뜻 메뉴'**
   String editMoveSense(int number);
 
   /// The edit sheet button that applies the edits.

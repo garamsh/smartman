@@ -116,6 +116,7 @@ Future<void> _pump(
   (AppDatabase, DeckRepository, DeckId) seed, {
   ThemeData? theme,
   Scheduler? scheduler,
+  Locale locale = const Locale('en'),
 }) async {
   final (db, cards, deck) = seed;
   tester.view
@@ -135,7 +136,7 @@ Future<void> _pump(
       ],
       child: MaterialApp(
         theme: theme ?? lightTheme,
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -181,15 +182,41 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
   testWidgets(
+    'in Korean the record speaks plainly: the gap in %, "기억 상태" and its bands, the gain over the chart\'s weeks, and the target named once (#458)',
+    (tester) async {
+      await _pump(
+        tester,
+        await _seed(_history, recall: _recall),
+        locale: const Locale('ko'),
+      );
+
+      expect(find.text('목표보다 23% 낮아요'), findsOneWidget);
+      expect(find.textContaining('%p'), findsNothing);
+      // The target is named on the chart alone.
+      expect(find.textContaining('90%'), findsOneWidget);
+      expect(find.text('목표 90%'), findsOneWidget);
+      expect(find.text('기억 상태'), findsOneWidget);
+      expect(find.text('지금 기억하고 있을 확률'), findsNothing);
+      expect(find.text('좋음'), findsOneWidget);
+      expect(find.text('단단함'), findsNothing);
+      expect(find.text('7주 전'), findsOneWidget);
+      expect(find.text('7주 전보다 +3장'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'the retention shows its value, its gap to the 90% target and each day in its label, over 30 days by default, then 7 days and every day',
     (tester) async {
       await _pump(tester, await _seed(_history, recall: _recall));
 
       // 30 days: a's "Know" on 1 and 14 October, b's "Don't know" on 13.
       expect(find.text('67%'), findsOneWidget);
-      expect(find.text('23 pt below target'), findsOneWidget);
+      expect(find.text('23% below target'), findsOneWidget);
       expect(find.text('30 days ago'), findsOneWidget);
+      // The target is named once, on the chart's line, not beside the figure.
       expect(find.text('Target 90%'), findsOneWidget);
+      expect(find.text('90%'), findsNothing);
+      expect(find.text('Target'), findsNothing);
       expect(
         _label(tester, 'Correct in reviews, target'),
         'Correct in reviews, target 90%: Oct 1 100%, Oct 13 0%, Oct 14 100%',
@@ -198,7 +225,7 @@ void main() {
       await tester.tap(find.text('7 days'));
       await tester.pumpAndSettle();
       expect(find.text('50%'), findsOneWidget);
-      expect(find.text('40 pt below target'), findsOneWidget);
+      expect(find.text('40% below target'), findsOneWidget);
       expect(find.text('7 days ago'), findsOneWidget);
       expect(
         _label(tester, 'Correct in reviews, target'),
@@ -209,7 +236,7 @@ void main() {
       await tester.tap(find.text('All'));
       await tester.pumpAndSettle();
       expect(find.text('75%'), findsOneWidget);
-      expect(find.text('15 pt below target'), findsOneWidget);
+      expect(find.text('15% below target'), findsOneWidget);
       expect(find.text('Sep 10'), findsOneWidget);
     },
   );
@@ -250,7 +277,7 @@ void main() {
       );
       // The figure, and the scale's top.
       expect(find.text('100%'), findsNWidgets(2));
-      expect(find.text('10 pt above target'), findsOneWidget);
+      expect(find.text('10% above target'), findsOneWidget);
 
       await tester.tap(find.text('7 days'));
       await tester.pumpAndSettle();
@@ -275,7 +302,7 @@ void main() {
       expect(find.text('Average 87%'), findsOneWidget);
       expect(
         _label(tester, 'Of '),
-        'Of 4 cards: solid 2, fair 1, fading soon 1, average 87%',
+        'Of 4 cards: good 2, fair 1, fading soon 1, average 87%',
       );
       expect(find.text('2 cards'), findsOneWidget);
       expect(find.text('1 card'), findsNWidgets(2));
@@ -330,7 +357,7 @@ void main() {
   );
 
   testWidgets(
-    'the mastered weeks show the cards mastered now as the figure and name the first and the last week under the bars, reading each week\'s count, with the gain over four weeks beside the heading',
+    'the mastered weeks show the cards mastered now as the figure and name the first and the last week under the bars, reading each week\'s count, with the gain since the first of them beside the heading',
     (tester) async {
       await _pump(tester, await _seed(_history, recall: _recall));
 
@@ -359,7 +386,8 @@ void main() {
         'Mastered cards by week, from 7 weeks ago to this week: '
         '0 cards, 2 cards, 2 cards, 2 cards, 2 cards, 2 cards, 3 cards, 3 cards',
       );
-      expect(find.text('+1 in 4 weeks'), findsOneWidget);
+      // The gain spans the chart, from its first week, 0, to this week's 3.
+      expect(find.text('+3 since 7 weeks ago'), findsOneWidget);
     },
   );
 
@@ -457,7 +485,7 @@ void main() {
 
       expect(shownText('No reviews in this period.'), findsOneWidget);
       expect(shownText('No card reviewed yet.'), findsOneWidget);
-      expect(find.textContaining('in 4 weeks'), findsNothing);
+      expect(find.textContaining('since'), findsNothing);
       expect(shownText('No card mastered yet.'), findsOneWidget);
       expect(
         find.bySemanticsLabel('No study days in the last 12 weeks'),
