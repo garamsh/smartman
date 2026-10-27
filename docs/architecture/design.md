@@ -13,20 +13,20 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Card editor: "저장하고 다음 카드" is the filled button in the bottom bar, "저장" outlined beside it; editing an existing card offers "저장" alone.
    - Card editor: one block list, with no kind to choose ([ADR 0114](adr/0114-write-every-card-as-a-free-block-list-remove-the-flip-cloze-and-table-forms-and-migrate-every-card-to-free.md)); "뜻 추가" is outlined; a 표 block has no mode: its toolbar of chips over the table acts on the selected cell, never a second segmented bar ([ADR 0102](adr/0102-edit-a-table-in-its-cells-with-a-toolbar-over-it-and-no-mode-switch.md)); a cloze's one action follows the caret, "빈칸 넣기" or, inside a blank, "빈칸 풀기", with no second row repeating the blanks; and a cloze blank in its line and a chosen table cell are drawn in `brandTint`, as every blank is (issue #313, [ADR 0101](adr/0101-edit-a-cloze-as-one-face-with-its-blanks-as-blocks-in-the-line-and-a-single-insert-blank-action.md)). "+ 앞면에 추가" and "+ 뒷면에 추가" are outlined, full width under each side's blocks ([ADR 0108](adr/0108-add-a-free-template-and-an-add-control-that-puts-any-block-on-either-side-of-every-template.md)); their sheet lists the block types as `AppListRow`s, each an icon on a `brandTint` tile, its name and one line; each listed block is its type's icon and name in `muted` over its fields, with a menu at the end of that row. While a sense's label field has focus, the user's labels sit in a strip right above the keyboard, the field's own tinted `brandTint`.
    - 오늘 tab: "모두 학습" on the today card, the backlog card's "n장 학습", or on the done card "학습하기", as the one navy fill.
-   - 덱 tab: "새 덱 만들기", an outlined button under the rows, before the text button "공개 덱 둘러보기" ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)), its ways in a sheet that also holds the photo's source; first-run home: "덱 만들기", which opens the same sheet; and nothing in the top bar but the title; deck screen: "학습하기" on the deck's today card and "카드 추가" in the bottom bar, or, while the deck holds no card, "카드 추가" alone as the primary ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), `BottomActions`; rename and delete sit in the deck screen's menu.
+   - 덱 tab: "새 덱 만들기", an outlined button under the rows, before the text button "공개 덱 둘러보기" ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)), its ways in a sheet that also holds the photo's source; first-run home: "새 덱 만들기", which opens the same sheet; and nothing in the top bar but the title; deck screen: "학습하기" on the deck's "오늘 학습" card and "카드 추가" in the bottom bar, or, while the deck holds no card, "카드 추가" alone as the primary ([ADR 0066](adr/0066-open-a-deck-made-by-hand-and-lead-an-empty-deck-and-a-cardless-today-tab-to-adding-cards.md)), `BottomActions`; rename and delete sit in the deck screen's menu.
    - Every sheet: `AppSheet` pins its actions at the bottom, full width, with the primary one last; "새 덱" and "이름 바꾸기" have one field and one primary, "만들기" or "저장".
    - Daily study minutes: the first-run sheet's one primary is "저장", with its quiet "건너뛰기" above it, and the settings screen's "저장" is pinned at its foot ([ADR 0091](adr/0091-draw-the-today-card-as-a-progress-bar-and-change-the-daily-study-minutes-only-in-settings.md)); the minutes are one large number in the figure style between a − and a +, typed in place on the number keypad, with no choice to pick from ([ADR 0090](adr/0090-pick-the-daily-study-minutes-as-one-large-number-between-minus-and-plus-typed-in-place-with-two-tiles-of-what-they-mean.md), [ADR 0086](adr/0086-show-and-change-the-daily-study-minutes-on-the-today-card-the-completion-card-a-one-time-first-run-step-the-account-screen-and-the-web-s-today-page.md)).
    - Sign-in: the stacked logo and its two lines sit on the ground's panel in the upper part, and Google's button, with the quieter Apple slot and the terms below it, at the bottom.
    - Every screen: `AppButton`'s variants rank the actions, one primary fill per screen or sheet.
 2. **Content over chrome.** No label, hint or heading restates what the screen already shows. Remove before adding.
    - Study: no deck name and no hint text, but for the empty previous card's place's one line, "응답한 카드가 여기에 쌓여요", the 3 s notice that a resumed day goes on, and the first-use coach, which teaches on the cards themselves and is replayed only on request ([ADR 0064](adr/0064-teach-study-with-a-first-use-finger-coach-and-show-the-day-s-last-card-and-a-brief-notice-when-a-day-resumes.md)); the completion card carries no sentence beyond its heading and one line of counts, and "더 학습할 카드가 없어요" in place of "학습하기" where no new card is left; studying past today's cards is not marked apart ([ADR 0049](adr/0049-study-in-one-flow-that-goes-on-past-today-s-cards-as-recorded-study-with-the-current-card-showing-its-front-alone.md)).
-   - Deck screen: each row shows the front, its back hidden until a tap or the "뜻 보기" switch; the deck name is the only title, and the row above the cards a quiet "카드 n".
+   - Deck screen: each row shows its front alone, and its back muted after it while the "뒷면 보기" switch is on, with nothing drawn for a hidden back; the deck name is the only title, the muted line under it the screen's one count of its cards, and the row above the cards the section label "카드" ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md)).
    - Tabs: no line explains a long-press or a tab; 기록 has no explanatory paragraph, only each chart's heading, its figures and a line beside the heading.
    - Every sheet: `AppSheet` has a title and at most one or two sentences of body; `AppTextField` shows its label once, above the field.
-   - Daily study minutes: the account row says only "하루 공부 시간" and the minutes, and the picker one sentence, with its two tiles saying what the choice means rather than how it is computed.
+   - Daily study minutes: the settings row says only "하루 학습 시간" and the minutes, and the picker one sentence, with its two tiles saying what the choice means rather than how it is computed.
 3. **Direct manipulation where it is natural.** Swipe to answer, tap to toggle. Every gesture has an accessible alternative: a semantics action or a visible control.
    - Study: on the phone a horizontal swipe answers, with the custom actions "안다" and "모른다" for a screen reader and no answer button ([ADR 0099](adr/0099-answer-study-cards-by-swipe-alone-and-grade-the-previous-card-by-its-colour-alone-on-the-phone.md)), and on the web a touch swipe answers the same, with the buttons and the arrow keys ([ADR 0084](adr/0084-answer-the-web-s-current-study-card-by-a-touch-swipe-as-the-phone-does.md)); a horizontal drag on the previous card changes its answer, with the custom action "안다로 바꾸기" or "모른다로 바꾸기", and a tap on it opens the whole card; a drag on either card moves that card alone.
-   - Deck screen: each card row's pencil, a button named "카드 편집", opens the card; a long-press and the row's "카드 편집" action are shortcuts to the same ([ADR 0095](adr/0095-give-each-card-row-on-the-deck-screen-a-pencil-that-opens-the-card-in-the-editor.md)).
+   - Deck screen: a tap on a card row opens the card in the editor, and a screen reader hears the row as one button with the hint "카드 편집" ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md)).
    - Card editor: a listed block moves and is deleted through its menu, "위로", "아래로" and "지우기", not a drag, the menu named for a screen reader by its side and place ([ADR 0108](adr/0108-add-a-free-template-and-an-add-control-that-puts-any-block-on-either-side-of-every-template.md)).
   - Card editor: a 뜻 목록's senses move and are deleted by their own buttons, not a drag, and a label is typed in its own field; each button is named for a screen reader ([ADR 0083](adr/0083-write-every-card-kind-by-hand-in-a-form-of-its-own-chosen-by-a-kind-switch-each-deck-remembers.md), [ADR 0100](adr/0100-merge-the-word-kind-into-basic-type-each-sense-s-label-and-offer-the-user-s-labels-above-the-keyboard.md)).
    - 품사 표시: a preset moves by a drag on its handle or, without one, by its handle's menu of "위로" and "아래로", and is edited in place by a tap; each control is named for a screen reader ([ADR 0100](adr/0100-merge-the-word-kind-into-basic-type-each-sense-s-label-and-offer-the-user-s-labels-above-the-keyboard.md)).
@@ -39,10 +39,10 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
    - Photo import: the photos go on being read while the user leaves the screen; a bar above the tab bar, one button a screen reader hears as it changes, states "사진 읽는 중 k/n" over a bar of the k photos read, then "카드 n장 확인하기", and leads back to the import; a closed app's import is offered again on the next open, and its photos already read are not read again ([ADR 0094](adr/0094-read-a-photo-import-of-up-to-fifty-photos-three-at-a-time-as-an-app-level-job-kept-on-the-device-and-offered-again-after-a-restart.md)).
    - Photo import: a photo's thumbnail opens it full screen, a button named "사진 i 크게 보기"; the viewer's swipes across, swipe down and pinch have its close, the system back and the thumbnails' order as alternatives.
    - Photo import list of several photos: each photo's group is headed by its thumbnail, "사진 i" and its row count, read as a heading and a button whose state is expanded or collapsed, at least a tap target high; a tap collapses or expands it.
-   - Account: a theme choice applies at once and is stored after.
+   - Settings: a theme choice applies at once and is stored after.
    - Daily study minutes: "저장" stores them on the device, sync pushes them after, and the counts behind the sheet are read again as it closes; the preview moves with each choice before anything is stored.
    - Photo import: a swipe removes or puts back a card at once, and a topic's switch drops or keeps its cards at once; nothing is written until the cards are added.
-   - Account and photo import: `AppButton`'s loading state shows progress in the button the user pressed, and the button cannot be pressed twice.
+   - Settings and photo import: `AppButton`'s loading state shows progress in the button the user pressed, and the button cannot be pressed twice.
 5. **Correct, don't confirm.** Prefer undo or a toggle to a confirmation sheet. Confirm only what cannot be undone: deleting a deck, a card with its study history, or the account, and discarding a photo import that holds cards, whose photos cost today's limit again to read.
    - Study: any answer of the session is corrected by a drag on the centred card, or its action, with no confirmation.
    - Card editor: a duplicate front opens a sheet that offers to add anyway or open the existing card, and is dismissed to do neither; nothing is overwritten.
@@ -75,9 +75,51 @@ Every screen is designed to be simple, intuitive and easy to use. A new screen o
 
 Every string is written as one writer would write it ([ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)).
 
-- Korean, in `app/lib/l10n/app_ko.arb`, is 해요체 throughout: plain, short, and consistent in its sentence endings ("아직 덱이 없어요.", "카드 3개를 찾았어요"). No sentence ends in 합쇼체 ("…ㅂ니다", "…ㅂ니까"). A label or a button names its action ("로그아웃", "그래도 추가").
+- Korean, in `app/lib/l10n/app_ko.arb`, is 해요체 throughout: plain, short, and consistent in its sentence endings ("아직 덱이 없어요.", "카드 3장을 만들었어요"). No sentence ends in 합쇼체 ("…ㅂ니다", "…ㅂ니까"). A label or a button names its action ("로그아웃", "그래도 추가").
 - English, in `app_en.arb`, matches it in tone: plain, second person, no exclamation marks.
-- **Terms** (#243, [ADR 0079](adr/0079-name-a-card-s-sides-front-and-back-and-its-grade-the-response-on-the-phone-the-web-and-in-the-docs.md)). A card's two sides are 앞면 and 뒷면, in English Front and Back, in every string, label and screen-reader text on the phone and the web, and in the docs; 문제 and 답 name no side. The grade a card is given, 안다 or 모른다, is 응답, in English Response, and answering it is 응답하다, to respond: "앞면: … 뒷면: … 응답: 안다". In code, `Answer` stays the grade, and a side is `front` or `back`, the type scale's `front` and `back` among them.
+- Which word names a concept, and which form a string of each role takes, is §Copy.
+
+### Copy
+
+One term per concept and one sentence form per role, in every string on the phone ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md), issue #454). The card editor, its block-add sheet and the label presets keep their own until #445, #447 and #450; the web follows in its own issue.
+
+- **Terms.**
+
+  | Concept | Term | Not |
+  |---|---|---|
+  | The entry that makes a deck | 새 덱 만들기 | 덱 만들기 |
+  | Writing by hand, a deck's name or a card | 직접 입력 | 직접 만들기 |
+  | The new card editor's title | 새 카드 | 카드 추가, as a title |
+  | Editing | 편집 | 고치기 |
+  | Removing something stored | 삭제 | 지우기 |
+  | Leaving something out of a selection | 빼기, in the import lists alone | |
+  | Discarding an unsaved draft | 버리기 | |
+  | Studying | 학습 | 공부 |
+  | A card's two sides | 앞면 and 뒷면; in English Front and Back | 단어 and 뜻, 앞 and 뒤, 문제 and 답, for a side |
+  | A card's grade, 안다 or 모른다 | 응답, answering it 응답하다; in English Response | |
+  | The mark before a meaning | 라벨 (#447) | 품사, 품사 표시 |
+  | The sound block | 소리 | 음성 |
+  | The settings screen | 설정, its first section 계정 | 계정, as its title |
+  | Public decks, and copying one | 공개 덱, 가져오기 | 둘러보기 or 복사, in a sentence |
+  | Counting cards and photos | 장 | 개 |
+
+  - The sides' and the grade's terms hold in every string, label and screen-reader text on the phone and the web, and in the docs: "앞면: … 뒷면: … 응답: 안다" ([ADR 0079](adr/0079-name-a-card-s-sides-front-and-back-and-its-grade-the-response-on-the-phone-the-web-and-in-the-docs.md), #243). A photo import section names its form by what goes on the front: "앞면에 단어", "앞면에 뜻", "양쪽 방향 모두", "앞면에 질문", "앞면에 답".
+  - In code, `Answer` stays the grade, and a side is `front` or `back`, the type scale's `front` and `back` among them.
+- **Forms.**
+
+  | Role | Form | For example |
+  |---|---|---|
+  | A sheet's final button | an action noun with no 하기; a native verb keeps -기 | 저장 · 삭제 · 공개 · 신고 · 만들기 |
+  | An entry button or a menu item | object and action | 새 덱 만들기 · 카드 추가 · 이름 바꾸기 · 덱 공개 · 덱 신고 |
+  | A sheet's title, choosing or making | a noun phrase | 새 덱 · 테마 · 추가할 덱 · 신고 이유 |
+  | A sheet's title, confirming | a question in -할까요? | 동기화하지 않고 로그아웃할까요? |
+  | A row's second line | one 해요체 sentence of the result, no period; none where the title says enough | 단어장을 찍으면 카드를 찾아 드려요 |
+  | An empty state | what is true, then what to do | 아직 카드가 없어요. 카드를 추가해 시작해 보세요. |
+  | A field's error | …해 주세요, no period | 이름을 입력해 주세요 |
+  | A screen's error | what failed, then what to do | 사진을 불러오지 못했어요. 다시 시도해 주세요. |
+  | A section label | a noun | 계정 · 학습 · 화면 · 카드 |
+
+  The study buttons keep "학습하기" and "모두 학습", and "n장 학습 · 약 m분" in a backlog, each where it is.
 
 ### Where it lives
 
@@ -101,17 +143,17 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
 - Google sign-in is Google's own button, drawn to its Sign in with Google branding guidelines (developers.google.com/identity/branding-guidelines, read 2026-10-15) rather than to the tokens: `GoogleButtonStyle` in `app/lib/account/src/google_button.dart` holds its light and dark fill, stroke and label colours, its 14/20 medium label, its 20 px mark, and its spacing per platform ([ADR 0024](adr/0024-one-voice-and-a-sheet-action-rule.md)).
   - The "G" mark under `app/assets/google/` is cropped, unscaled and unrecoloured, from the icon-only "Square" Android and Web PNGs of the light and dark themes, at 1x to 4x, in Google's asset bundle `https://developers.google.com/static/identity/images/signin-assets.zip` (SHA-256 `ba884069e12093b06bcfd776915081254a7c95094b80d50be2c5dc6bac1c1da1`, downloaded 2026-10-15).
   - The bundle carries no licence file. Its use is governed by the branding guidelines, which require the standard-colour mark and forbid its modification, and by Google's Guidelines for Third Party Use of Google Brand Features, which the guidelines name for any use they do not cover; the guidelines page's own text is under CC BY 4.0.
-- The user picks 시스템 (the default), 라이트 or 다크 in the account screen's "화면" section. The choice is stored on the device with `shared_preferences`, read before the first frame, and applied at once.
+- The user picks 시스템 (the default), 라이트 or 다크 from the settings screen's "화면" section, whose "테마" row shows the choice and opens a sheet of the three. The choice is stored on the device with `shared_preferences`, read before the first frame, and applied at once.
 
 ### Brand
 
 - The marks are the owner's ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)): the symbol (the mascot, a rounded-stroke drawing), the horizontal lockup and the stacked lockup, each navy for a light ground and white for a dark one. `app/assets/brand/` holds them as PNGs at 1x to 3x, scaled from the owner's 4x files, and `AppBrand` in `app/lib/design/theme.dart` names each theme's file; `web/public/brand/` holds the owner's SVGs.
-- Where they appear: the horizontal lockup, 30 high, heading the 오늘 tab and the first-run home; the stacked lockup, 200 wide, on the sign-in screen; and the mascot, through the component `Mascot`, in a 128 px white circle on the first-run home, a 96 px white circle on the 오늘 tab's done card, a 64 px brand-tint circle on its backlog card, and alone at 28 px and half opacity at the foot of the account screen. It carries no badge, and no other empty state and not the study completion card draws it ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)).
+- Where they appear: the horizontal lockup, 30 high, heading the 오늘 tab and the first-run home; the stacked lockup, 200 wide, on the sign-in screen; and the mascot, through `home/`'s `Mascot`, since only the shell's screens draw it ([`home.md`](home.md)), in a 128 px white circle on the first-run home, a 96 px white circle on the 오늘 tab's done card, and a 64 px brand-tint circle on its backlog card ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md)). It carries no badge, and no other empty state and not the study completion card draws it ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)).
 - Icons are Lucide's, a 2 px stroke with rounded caps and joins: `lucide_icons_flutter` in the app, with the theme's back and close buttons drawn from it, and `lucide-react` on the web.
 - An icon is drawn only where it carries meaning the words beside it do not, or where it is the platform's convention ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)):
   - it stays on the bottom tabs; back, close and search; play on a study button; the streak's flame; each deck's own icon; the swipe hints' check and cross; a drag handle; the ⋯ menu; a chevron that leads on; a selection's check; and a progress indicator while work runs;
   - otherwise a control or a row is its words alone: no icon in a tinted square at the start of an option row, no icon inside a status chip but the flame, no badge on the mascot, no icon next to a settings row's title, and none beside a status its words already name, such as "동기화됨";
-  - an option row's second line stays only where its title alone does not say what happens: "사진 찍기" and "앨범에서 고르기" keep theirs, and "직접 만들기" has none;
+  - an option row's second line stays only where its title alone does not say what happens: "사진 찍기" and "앨범에서 고르기" keep theirs, and "직접 입력" and "앞면 소리 자동 재생" have none;
   - the card editor's block-add sheet still draws its tinted squares until #445.
 - The launcher icons are generated from `app/assets/brand/icon/app-icon-light-1024.png` by `flutter_launcher_icons`, with `app-icon-dark-1024.png` as iOS 18's dark icon; the native splash, from `app/assets/brand/splash/`, by `flutter_native_splash`: the navy symbol on `#F4F6FA`, the white one on `#0E1424` in dark mode, Android 12's splash icon included. Both are pinned exactly in `app/pubspec.yaml`, which holds their configuration. To regenerate, run `dart run flutter_launcher_icons` and `dart run flutter_native_splash:create` in `app/`, then revert the two edits they make beyond their output: `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` in `ios/Runner.xcodeproj/project.pbxproj` and the rewrite of `ios/Runner/Info.plist`.
 
@@ -126,7 +168,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   | display | 28 / 36 / 800, −0.8 | Material's display styles; no screen draws it since the lockup heads the 오늘 tab |
   | title | 22 / 30 / 800, −0.4 | a pushed screen's title, the photo import list's title, the deck name on its screen, the first-run heading, the completion and done cards' headings |
   | deckTitle | 26 / 34 / 800, −0.6 | the 덱 and 기록 tabs' titles |
-  | figure | 36 / 44 / 800, −0.8 | the today cards' count |
+  | figure | 36 / 44 / 800, −0.8, tabular digits | the today cards' count, the deck page's count |
   | headline | 18 / 26 / 700 | a sheet's title |
   | body | 16 / 24 / 500 | running text, field text |
   | bodyStrong | 16 / 24 / 700 | a row's title |
@@ -139,7 +181,7 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   | back | 20 / 28 / 600 | a study card's back |
 
 - **Spacing**, `AppSpace`: 4, 8, 12, 16, 20, 24, 28, 32, 40. The screen gutter is 20, the gap between rows 8, and the gap between sections 28.
-- **Radii**, `AppRadius`: panel 40, sheet 28, card 24, previous card 20, row 18, button 16, field 14, menu 13; a chip is fully rounded.
+- **Radii**, `AppRadius`: panel 40, sheet 28, card 24, previous card 20, row 18, button 16, field 14, group 14, menu 13; a chip is fully rounded.
 - **Heights**, `AppSize`: a call to action 56, a button 52, a field 52, a search field 48, a tap target at least 44; and the brand's sizes: the lockup 30 high, the stacked lockup 200 wide, the mascot's circles 128 and 84 and the backlog card's mascot 64, the avatars 56 and 32, a deck tile 44; a round check's tick 14; a coach's finger 34 with a shadow blurred 6, and its step dots 6, the current one 16 long; and a pull-down menu's elevation 12.
 - **Shadows**, `AppShadow`: card, for a surface resting on the ground, and raised, a close layer under a wide soft one, for the current study card and the completion card.
 
@@ -158,15 +200,39 @@ Every string is written as one writer would write it ([ADR 0024](adr/0024-one-vo
   - a confirmation of an action that cannot be undone keeps an explicit cancel, and puts its destructive button last, at the bottom;
   - actions are always full width, with the primary one last.
 - **`showAppConfirm`** — every irreversible action: a sheet that states the consequence in one sentence, with a cancel, "취소" unless the caller names it, and, last, a red final button. It is the one sheet with a cancel.
-- **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the option sheets' rows, the browse rows, the photo import source sheet and deck chooser, and the account screen's sign-out and deletion, each of these its words alone; the card editor's block-add sheet alone still passes a leading widget. A destructive row, the deletion, draws its title, and any leading icon, in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows, the skeleton rows and the account screen's theme control. On a sheet a row takes the ground colour.
-- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "화면", "계정", the import sheet's duplicate options, and the front and the back in the whole-card sheet.
+- **`AppListRow`** — a row with a title, an optional second line and optional leading and trailing widgets, read as one node: the option sheets' rows, the browse rows, the photo import source sheet and deck chooser, and the settings screen's rows, each of these its words alone; the card editor's block-add sheet alone still passes a leading widget. A destructive row, the deletion, draws its title, and any leading icon, in the red text colour ([ADR 0026](adr/0026-delete-the-account-through-an-edge-function.md)). **`AppRowSurface`** is its rounded surface alone, for rows with their own layout: the card rows and the skeleton rows. On a sheet a row takes the ground colour.
+- **`AppGroup`** and **`SliverAppGroup`** — rows as one group: one `surface` with the `group` radius, its rows split by a `hairline` indented by 16, and no shadow. A row inside, an `AppListRow` or an `AppRowSurface`, draws no surface and no gap of its own. The settings screen's sections and the deck screen's cards, the latter as a sliver that builds its rows as they scroll in ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md)).
+- **`AppSectionLabel`** — a label over a group of rows, read as a heading: "계정", "학습", "화면", the import sheet's duplicate options, and the front and the back in the whole-card sheet.
 - **`BottomActions`** — a screen's bottom bar: a secondary action, and a primary one beside it when the screen offers one: the deck screen and the card editor.
 - **`AppChip`** — a fully rounded label in a tone, neutral (the surface inside an outline) or brand (the brand tint): the brand-tint "오늘 n" chip and the "공개" chip. `app/test/design/app_rows_test.dart` checks both tones.
-- **`Mascot`** — the brand's symbol in its theme's colour, alone or centred in a circle, hidden from screen readers.
 - **`StreakFlame`** — a streak's flame, drawn by hand, burning at one of five stages by the streak's days: 1–2 an outline in `flameOutline`, 3–6 a light fill, 7–13 a fuller fill, 14–29 solid with a `flameCore` core and a faint `flameGlow` glow, and from 30 the brightest, its glow full. At every stage it moves as a small fire does, flicker, sway and a shifting tip, livelier and faster as the stage grows. It holds one still frame of its stage under reduce motion, stops while the app is not in the foreground or a `TickerMode` above it is off, repaints its own layer from one animation controller, and is hidden from screen readers. The 오늘 tab's streak chip and the completion card draw it ([ADR 0104](adr/0104-draw-the-streak-flame-in-five-stages-by-the-streak-s-days-burning-at-every-stage.md)).
 - **`CardText`**, in `deck` since it serves `deck` alone ([`deck.md`](deck.md)) — a card side's text, centred, scaled down from its style's size to a floor (front 30 to 18, back 20 to 15) until its widest word fits the half, so lines break only between words; only a word wider than the half at the floor breaks inside itself. The current card and the card preview draw their text through it ([ADR 0027](adr/0027-draw-both-clients-in-the-smartman-brand-and-the-v2-screens.md)); the previous card's sides, run together as one paragraph, are scaled the same way and then further, as far as the floor, until they fit their half's height, and cut there ([ADR 0042](adr/0042-show-only-the-previous-and-the-current-study-card-at-one-size-re-decide-the-previous-card-by-a-swipe-and-open-it-on-a-tap.md)). A whole card's sentence is drawn through it as a span, at the size its filled text fits ([ADR 0068](adr/0068-store-a-table-or-cloze-card-as-typed-content-blocks-and-draw-it-whole-its-blanks-filled-in-place-once-answered.md)).
 
 Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton`, `MenuAnchor` (the photo import list's form menus), `SegmentedButton`, `Checkbox` (the publish sheet's `CheckboxListTile` and the photo import edit sheet's senses), `Switch`, `LinearProgressIndicator` — are themed in `app/lib/design/theme.dart`. The public-deck import sheet also uses `DropdownMenu`, for its deck, and `RadioListTile` in a `RadioGroup`, for its duplicate options; they have no theme of their own and take the theme's colour scheme. A `MenuAnchor` menu is drawn as an iOS pull-down menu ([ADR 0065](adr/0065-import-a-photo-s-cards-from-one-list-of-sections-each-with-its-form-menu-row-checks-and-an-edit-sheet.md)): on the raised surface with the `menu` radius and a soft shadow, its items body text at least a tap target high; the screen draws the leading checks and the heavier separator between groups. The switch, on the deck screen, is the ink track under an `onPrimary` thumb when on, and the surface track inside a muted outline under a muted thumb when off; `app/test/design/theme_test.dart` checks its outline on the ground and its thumb on its track at 3:1 in both themes.
+
+### Details
+
+What keeps a screen calm rather than decorated ([ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md), issue #454). A screen redesigned from now on follows every item; one not yet redesigned is brought to them when it is. The settings screen and the deck screen follow them today.
+
+- **Structure.**
+  - One white group per meaning: a side of a card, a settings section, a list. Inside a group a hairline separates the rows, never a border on each field; a field in a group has no border until it is focused, then a 1.5 px ink outline and no shadow; `AppTextField` draws its 2 px ring until the card editor's redesign brings it to that.
+  - One primary, the navy fill, per screen, always in the same place: the bottom bar, or inside the card it acts on. A secondary action is outlined; a tertiary one is plain text in `ink2`, such as "+ 추가".
+  - A destructive action is red text at the end of a screen or inside ⋯, never a red fill outside a confirmation.
+- **Shape and depth.**
+  - One radius scale: group 14, button 12, chip and label 6, sheet 22. Today `AppRadius.group` alone holds its value; the button, chip and sheet radii move to theirs as the screens that draw them are redesigned.
+  - A shadow only on what floats: the study card, the preview card and the sheets; never on a group or a row.
+- **Type.**
+  - Pretendard, at most three sizes per screen: a title, the body and a caption.
+  - A large figure in `figure`, about −2% tracking and tabular digits, its unit, such as 장 or 분, right after it, smaller and muted.
+  - Korean breaks only between words everywhere, through `keepWords` in `design/word_break.dart`.
+- **Colour.**
+  - Navy is the only accent. Green and red mean 안다 and 모른다 alone; a selection, sync and a photo read take navy or the word alone, as the photo import deck chooser's check does.
+  - Hidden content shows as nothing, never as a grey bar that reads as loading.
+- **Motion and touch**, each skipped when the system asks to reduce motion.
+  - The preview and study cards flip in 3D in 200 to 250 ms. A pressed row or button dims a little, with no scale bounce.
+  - A light haptic on answering a card, on saving a card, and on a menu's destructive confirmation alone.
+- **Icons** are §Brand's rule ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)).
+- **Never:** a gradient, glass blur, or an emoji or illustration as decoration; an icon in a tinted square; a second chip style; everything centred; the same text in two places on one screen.
 
 ### Checks
 
@@ -176,13 +242,15 @@ Material widgets a screen still uses directly — `IconButton`, `PopupMenuButton
 - `app/test/l10n/voice_test.dart` fails on a Korean string ending a sentence in 합쇼체 and on an English string with an exclamation mark, with controls that the check finds each ending and passes 해요체.
 - The sheet rule is checked where each sheet is tested: the duplicate sheet in `app/test/deck/card_editor_screen_test.dart` and the report sheet in `app/test/sharing/public_deck_screen_test.dart` have no cancel; the card delete confirmation in the former, the account deletion confirmation in `app/test/account/account_screen_test.dart`, and `showAppConfirm` in `app/test/design/app_sheet_test.dart`, put cancel above delete.
 - `app/test/design/app_sheet_test.dart` lays out a Korean sheet title and body on a 390 wide phone and fails on a line that ends inside a word or on text a screen reader would not read as written, with a control of one word wider than the line that still wraps.
+- `app/test/design/app_rows_test.dart` fails when a row inside an `AppGroup` or a `SliverAppGroup` draws a surface of its own, or when the group's rows are not split by a hairline under all but the first, against a row alone that keeps its surface.
 - `app/test/design/app_rows_test.dart` lays out an `AppListRow`'s Korean subtitle and `app/test/home/deck_screen_test.dart` the empty deck's line, each on a 390 wide phone at text scale 1.0 and 2.0, and fail on a line that ends inside a word or on text a screen reader would not read as written; the row's test has a control of one word wider than the line that still wraps. Every test reading such text finds it through `shownText` in `app/test/word_breaks.dart`, which ignores the word joiners.
 - `app/test/launcher_assets_test.dart` fails when a launcher icon or a splash image is missing, is not the size its catalogue names, or does not draw its source scaled to that size, and when a splash ground is not its colour; a control tells the light icon from the dark one.
-- The rule on icons is checked where each screen is tested: the new-deck sheet's rows, "새 덱 만들기", the done card's chips and mascot, the backlog card's mascot and the cardless 오늘 tab in `app/test/home/home_screen_test.dart`, the deck chooser, the "사진 더 추가" sheet and the photo import bar in `app/test/photo_import/photo_import_screen_test.dart`, the completion card in `app/test/study/study_screen_test.dart`, the account rows in `app/test/account/account_screen_test.dart` and the sync status in `app/test/sync/sync_status_test.dart`; each fails when an icon or the mascot it names is drawn, and the chips' and the bar's checks find the flame and the chevron they keep.
+- The rule on icons is checked where each screen is tested: the new-deck sheet's rows, "새 덱 만들기", the done card's chips and mascot, the backlog card's mascot and the cardless 오늘 tab in `app/test/home/home_screen_test.dart`, the deck chooser, the "사진 더 추가" sheet and the photo import bar in `app/test/photo_import/photo_import_screen_test.dart`, the completion card in `app/test/study/study_screen_test.dart`, the settings rows in `app/test/account/account_screen_test.dart` and the sync status in `app/test/sync/sync_status_test.dart`; each fails when an icon or the mascot it names is drawn, and the chips' and the bar's checks find the flame and the chevron they keep.
 - `app/test/screenshots/screenshots_test.dart` draws every screen and sheet in both themes, in Korean at a phone's size, when run with `--update-goldens --dart-define=SCREENSHOTS=true`; it writes them to `app/build/screenshots/` and is skipped otherwise.
 
 ## Rationale
 
+- [ADR 0118](adr/0118-name-each-concept-once-write-each-role-in-one-form-hold-every-screen-to-one-set-of-visual-details-and-redraw-settings-and-the-deck-screen-by-them.md) records why every string takes one term per concept and one form per role, the visual details every redesigned screen follows, and the settings and deck screens drawn by them; issue #454 records the owner's approval, and #452's decisions 학습 and 설정.
 - [ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md) records where an icon is drawn and where words alone, why the completion card and the cardless 오늘 tab lost the mascot, and why the photo rows keep their second line.
 - [ADR 0007](adr/0007-study-swipe-screen-and-session-toggle.md) records the study screen these principles generalize.
 - [ADR 0108](adr/0108-add-a-free-template-and-an-add-control-that-puts-any-block-on-either-side-of-every-template.md) records why a block reorders through a menu rather than a drag.

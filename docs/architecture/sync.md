@@ -14,7 +14,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - the failures: `SyncFailure`, `SyncOffline`, `SyncRejected`, `SyncFailed`, and `MissingServerParent`, the cause of a `SyncFailed` refusing a row whose parent the server does not hold;
   - `SyncStatusView`.
 - The domain reads and writes the shared database directly. It uses `account`'s surface for the session (`AccountService`, `SignedIn`'s `UserId`, and the `SupabaseClient` of `AccountConnection`), `study`'s for the fold (`Scheduler.fold`), and `media`'s for the media queues (`MediaStore.drain`, [`media.md`](media.md)).
-- `deck`, `study` and `media` do not import `sync`. `account` reaches it through `accountDataProvider`, which the composition site overrides with the `SyncController` ([`account.md`](account.md)). `home/` passes `SyncStatusView` to the account screen as the status it shows ([`home.md`](home.md)).
+- `deck`, `study` and `media` do not import `sync`. `account` reaches it through `accountDataProvider`, which the composition site overrides with the `SyncController` ([`account.md`](account.md)). `home/` passes `SyncStatusView` to the settings screen as the status it shows ([`home.md`](home.md)).
 - With `account` and `sharing`, it is one of the domains that import `supabase_flutter`, for PostgREST only ([ADR 0015](adr/0015-sync-protocol-and-conflict-policy.md), [ADR 0020](adr/0020-public-decks-in-a-sharing-domain.md)).
 
 ### Local schema
@@ -99,7 +99,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 
 ### Sign-out
 
-- `SyncController` is `account`'s `AccountData`. Sign-out first runs sync and reports whether nothing is left unsynced, a file waiting in either media queue included; the account screen then warns "동기화되지 않은 변경이 있어요" and lets the user cancel or sign out anyway.
+- `SyncController` is `account`'s `AccountData`. Sign-out first runs sync and reports whether nothing is left unsynced, a file waiting in either media queue included; the settings screen then asks "동기화하지 않고 로그아웃할까요?" and lets the user cancel or sign out anyway.
 - After signing out, the controller waits for the run under way, then deletes every synced row, the study settings, both media queues, the owner and the cursors, so the next account starts empty and pulls its own rows.
 
 ### Failures and status
@@ -108,7 +108,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - `SyncOffline` — no connection, no answer within 20 seconds, or a server or gateway error;
   - `SyncRejected` — the session or a row-level security policy refused the request;
   - `SyncFailed` — the server answered with a row sync cannot read or a constraint it refused, or the local database failed.
-- A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the account screen shows while signed in, one line read out as it changes, its words alone after a spinner while syncing ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)): "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
+- A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the settings screen shows while signed in, one line read out as it changes, its words alone after a spinner while syncing ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)): "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
 - `SupabaseSyncServer` maps PostgREST's error codes: `42501`, `PGRST301`, `PGRST302`, 401 and 403 to `SyncRejected`; `PGRST000` to `PGRST002` and 500, 502, 503 and 504 to `SyncOffline`; `23503` to `SyncFailed` with `MissingServerParent`; any other to `SyncFailed`.
 
 ### The web app as a writer
@@ -127,7 +127,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - `app/test/sync/synchronizer_test.dart` also covers the study settings: set on one device and read on the other against a fresh device's default, the later edit winning both ways, a setting changed during its push left unsynced, and the setting cleared by another account's claim and by sign-out.
 - `app/test/sync/sync_controller_test.dart` — when runs start, retry, `push` and `clear`, and a deck's image uploaded after its deck, deleted with it, and retried while the media server does not take it.
 - `app/test/sync/answer_path_test.dart` — the composed app answers and advances while a run never finishes, and pushes a change of the daily study minutes after the edit delay.
-- `app/test/sync/sync_status_test.dart` — each status on the account screen, the retry, and the tap target and contrast guidelines in both themes.
+- `app/test/sync/sync_status_test.dart` — each status on the settings screen, the retry, and the tap target and contrast guidelines in both themes.
 - `app/test/sharing/sharing_server_test.dart`, run by the same script, checks that a run never pulls another account's public deck, and that a publish reaches the owner's other device.
 - `app/test/sync/two_devices_test.dart` — two in-memory databases syncing through `SupabaseSyncServer` as one new account against a local stack, and an answer and its toggle written as the web app writes them, which both devices merge with an offline answer into the fold of the union. A device left below the horizon by the server's purge, which the test runs in the stack's database container, rebuilds: a card deleted elsewhere and purged leaves it, and a studied one stays, stripped, with its review. `make test` runs it through `supabase/test-sync.sh`, which starts a throwaway stack with Postgres, Auth, PostgREST and the gateway, under its own project id and reserved database and API ports, as [ADR 0014](adr/0014-database-tests-on-a-stack-of-their-own.md) does for the database tests, and stops it on every exit. Without Docker the script prints the skip and why; the plain `flutter test` run skips the file with its reason. Each step the file takes on the stack is bounded by `SupabaseSyncServer`'s 20-second request timeout, the bound past which the app counts the server as offline: every sync request, and the sign-up and the sign-in, which retry within that bound while Auth answers that the request may be retried. The file sets no bound over a whole test, whose duration is the sum of its steps and grows with the host's load (issue #47). The same file sets the daily study minutes on both devices and finds the later edit on both, against an older one that changes neither. It also carries a deck's image id from one device to the other, and its removal.
 
@@ -141,7 +141,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - [ADR 0041](adr/0041-raise-each-pull-cursor-to-a-watermark-read-under-the-user-s-lock-and-strip-local-tombstones-in-place.md) records why a completed pull raises the cursor to the watermark, and why the device strips its tombstones rather than delete them; issue #106 records their implementation.
 - [ADR 0077](adr/0077-drop-the-review-and-card-state-tombstones-that-nothing-writes.md) records why reviews and card states have no tombstone, and schema v7.
 - [ADR 0114](adr/0114-write-every-card-as-a-free-block-list-remove-the-flip-cloze-and-table-forms-and-migrate-every-card-to-free.md) records schema v13, why it rewrites only a card's template, and why the server's migration and each device's step meet through sync without losing an edit not yet pushed.
-- [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` hands the status view to the account screen.
+- [ADR 0039](adr/0039-name-every-top-level-folder-by-its-responsibility-compose-across-domains-in-a-home-shell-and-keep-seams-off-screens.md) records why `home/` hands the status view to the settings screen.
 - Issue #24 records the decisions made by the PM, issue #29 the synced deck and card columns of schema v5, and issue #45 those for the web app as a writer.
 
 ## Open questions
