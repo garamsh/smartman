@@ -9,12 +9,13 @@ import '../../design/app_section_label.dart';
 import '../../design/bottom_actions.dart';
 import '../../design/app_sheet.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/media.dart';
 import 'block_list.dart';
 import 'card_preview.dart';
+import 'card_preview_screen.dart';
 import 'card_template.dart';
-import 'cloze_block.dart';
 import 'content.dart';
 import 'deck_repository.dart';
 import 'failure_message.dart';
@@ -24,11 +25,11 @@ import 'model.dart';
 import 'providers.dart';
 import 'senses_block.dart';
 
-/// Adds a card to [deck], or edits [card] when one is given, above a preview
-/// of the card as the study screen shows it. Each side is a list of blocks,
-/// with "+ 앞면에 추가" and "+ 뒷면에 추가" under it; a new card opens with
-/// one empty 글 on each side, and every card, of whichever template it was
-/// made in, opens with all its blocks in order (ADR 0108, ADR 0114).
+/// Adds a card to [deck], or edits [card] when one is given. Each side is a
+/// group of blocks under its name, ending in "+ 추가"; "미리보기" opens the
+/// card as study draws it. A new card opens with one empty 글 on each side,
+/// and every card, of whichever template it was made in, opens with all its
+/// blocks in order (ADR 0108, ADR 0114, ADR 0117).
 class CardEditorScreen extends ConsumerStatefulWidget {
   const CardEditorScreen({super.key, required this.deck, this.card});
 
@@ -127,7 +128,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     super.dispose();
   }
 
-  /// The photos 사진 blocks and the sounds 음성 blocks stored since the card
+  /// The photos 사진 blocks and the sounds 소리 blocks stored since the card
   /// was last saved; those the saved card does not hold are let go
   /// (ADR 0109, ADR 0112).
   final _picked = <MediaId>{};
@@ -280,13 +281,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
       if (block case SensesBlockDraft(:final senses)) ...senses,
   ].where((sense) => sense.labelFocus.hasFocus).firstOrNull;
 
-  /// The 빈칸 문장 whose line has focus.
-  ClozeBlockDraft? _focusedCloze() => [..._front, ..._back]
-      .whereType<ClozeBlockDraft>()
-      .where((block) => block.focus.hasFocus)
-      .firstOrNull;
-
-  /// The blocks of [side], with "+ 앞면에 추가" or "+ 뒷면에 추가".
+  /// The blocks of [side] in its group, ending in "+ 추가".
   Widget _blockList(CardSide side) => BlockList(
     side: side,
     blocks: switch (side) {
@@ -299,21 +294,35 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     onMediaStored: _mediaStored,
   );
 
-  /// The card as study will draw it: on one face when it holds a blank
-  /// anywhere, the face [oneFaceOf] gives, and front then back otherwise.
-  Widget _preview() {
-    final front = [for (final block in _front) block.preview];
-    final back = [for (final block in _back) block.preview];
-    final face = oneFaceOf(front, back);
-    return CardPreview(
-      front: face ?? front,
-      back: face == null ? back : const [],
+  /// Each side as study will draw it, empty blanks and incomplete blocks
+  /// included.
+  List<Content> get _frontPreview => [
+    for (final block in _front) block.preview,
+  ];
+  List<Content> get _backPreview => [for (final block in _back) block.preview];
+
+  /// Whether the back holds nothing to save while the card holds a blank,
+  /// so the card is answered on its front and the back may stay empty.
+  bool get _backMayStayEmpty =>
+      _saved(_back).isEmpty && oneFaceOf(_frontPreview, _backPreview) != null;
+
+  /// Opens the card as study draws it.
+  void _openPreview() {
+    final front = _frontPreview;
+    final back = _backPreview;
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => CardPreviewScreen(front: front, back: back),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = AppColors.of(context);
     final card = widget.card;
     if (card != null && _readOnly) {
       return _ReadOnlyCard(card: card, onDelete: _delete);
@@ -328,14 +337,13 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             icon: const Icon(LucideIcons.x),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
-          title: Text(_isNew ? l10n.newCard : l10n.editCard),
+          title: Text(_isNew ? l10n.newCardTitle : l10n.editCard),
           actions: [
-            if (card != null)
-              IconButton(
-                tooltip: l10n.deleteCard,
-                icon: const Icon(LucideIcons.trash2),
-                onPressed: () => _delete(card),
-              ),
+            AppButton(
+              label: l10n.previewCard,
+              variant: AppButtonVariant.text,
+              onPressed: _openPreview,
+            ),
             const SizedBox(width: AppSpace.s8),
           ],
         ),
@@ -353,38 +361,49 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                   children: [
                     // The deck, in the form rather than the top bar, where a
                     // long name pushed the title out (issue #310).
-                    Semantics(
-                      label: l10n.cardDeck(widget.deck.name),
-                      excludeSemantics: true,
-                      child: Row(
-                        spacing: AppSpace.s8,
-                        children: [
-                          Icon(
-                            LucideIcons.layers,
-                            size: AppSize.smallIcon,
-                            color: AppColors.of(context).muted,
-                          ),
-                          Expanded(
-                            child: Text(
-                              widget.deck.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppType.secondary.copyWith(
-                                color: AppColors.of(context).muted,
-                              ),
-                            ),
-                          ),
-                        ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpace.s4,
+                      ),
+                      child: Text(
+                        widget.deck.name,
+                        semanticsLabel: l10n.cardDeck(widget.deck.name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppType.caption.copyWith(color: colors.muted),
                       ),
                     ),
-                    const SizedBox(height: AppSpace.s16),
-                    _preview(),
-                    const SizedBox(height: AppSpace.s24),
+                    const SizedBox(height: AppSpace.s20),
                     AppSectionLabel(l10n.cardFront),
                     _blockList(CardSide.front),
-                    const SizedBox(height: AppSpace.s24),
+                    const SizedBox(height: AppSpace.sectionGap),
                     AppSectionLabel(l10n.cardBack),
                     _blockList(CardSide.back),
+                    if (_backMayStayEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpace.s4,
+                          AppSpace.s8,
+                          AppSpace.s4,
+                          0,
+                        ),
+                        child: Text(
+                          keepWords(l10n.clozeBackHint),
+                          semanticsLabel: l10n.clozeBackHint,
+                          style: AppType.caption.copyWith(color: colors.muted),
+                        ),
+                      ),
+                    if (card != null) ...[
+                      const SizedBox(height: AppSpace.sectionGap),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: AppButton(
+                          label: l10n.deleteCard,
+                          variant: AppButtonVariant.destructive,
+                          onPressed: () => _delete(card),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -412,22 +431,6 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 ),
               ),
             // Last, so it sits right above the keyboard.
-            if (_focusedCloze() case final block?)
-              ListenableBuilder(
-                listenable: block.line,
-                builder: (context, _) => ClozeToolbar(
-                  draft: block.cloze,
-                  blank: block.cloze.blankAt(block.line.selection),
-                  onInsert: () => _change(() {
-                    block.cloze.insert(block.line.selection);
-                    block.edited = true;
-                  }),
-                  onUndo: (blank) => _change(() {
-                    block.cloze.remove(blank);
-                    block.edited = true;
-                  }),
-                ),
-              ),
             if (_focusedSense() case final sense?)
               LabelPresetStrip(
                 presets: labelPresets(
@@ -452,7 +455,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
 
 /// A card whose template this build does not know: shown as it is, with a
 /// line saying the app needs an update to edit it, and nothing to save; it
-/// can still be deleted (ADR 0106).
+/// can still be deleted, by the red "카드 삭제" at the end (ADR 0106).
 class _ReadOnlyCard extends StatelessWidget {
   const _ReadOnlyCard({required this.card, required this.onDelete});
 
@@ -470,14 +473,6 @@ class _ReadOnlyCard extends StatelessWidget {
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(l10n.editCard),
-        actions: [
-          IconButton(
-            tooltip: l10n.deleteCard,
-            icon: const Icon(LucideIcons.trash2),
-            onPressed: () => onDelete(card),
-          ),
-          const SizedBox(width: AppSpace.s8),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpace.gutter),
@@ -487,6 +482,15 @@ class _ReadOnlyCard extends StatelessWidget {
           Text(
             l10n.cardNeedsUpdate,
             style: AppType.body.copyWith(color: AppColors.of(context).ink2),
+          ),
+          const SizedBox(height: AppSpace.sectionGap),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppButton(
+              label: l10n.deleteCard,
+              variant: AppButtonVariant.destructive,
+              onPressed: () => onDelete(card),
+            ),
           ),
         ],
       ),

@@ -113,6 +113,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get newCard => '카드 추가';
 
   @override
+  String get newCardTitle => '새 카드';
+
+  @override
   String get editCard => '카드 편집';
 
   @override
@@ -125,7 +128,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cardBack => '뒷면';
 
   @override
-  String get cardSideRequired => '내용을 입력하세요';
+  String get cardSideRequired => '내용을 적어 주세요';
 
   @override
   String get blank => '빈칸';
@@ -151,13 +154,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get clozeBlankRequired => '빈칸을 하나 이상 넣어 주세요';
 
   @override
-  String get clozeBlankMarker => '___는 빈칸 표시라 줄에 쓸 수 없어요';
+  String get clozeBlankMarker => '줄에서 ___를 빼 주세요';
 
   @override
   String get addToFront => '앞면에 추가';
 
   @override
   String get addToBack => '뒷면에 추가';
+
+  @override
+  String get addBlock => '추가';
 
   @override
   String get blockText => '글';
@@ -169,25 +175,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get blockSenses => '뜻 목록';
 
   @override
-  String get blockSensesDescription => '품사 표시와 뜻 여러 개';
+  String get blockSensesDescription => '라벨과 뜻을 여러 개 적어요';
 
   @override
   String get blockTable => '표';
 
   @override
-  String get blockTableDescription => '칸을 빈칸으로 바꿀 수 있어요';
+  String get blockTableDescription => '칸을 골라 가려요';
 
   @override
   String get blockCloze => '빈칸 문장';
 
   @override
-  String get blockClozeDescription => '문장 속 단어를 가리기';
+  String get blockClozeDescription => '문장 속 단어를 가려요';
 
   @override
   String get blockImage => '사진';
 
   @override
-  String get blockImageDescription => '사진 위에 빈칸 상자를 그려요';
+  String get blockImageDescription => '사진 위에 가릴 곳을 그려요';
 
   @override
   String get imageFromAlbum => '앨범에서 고르기';
@@ -240,13 +246,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get imageBoxShorter => '세로 줄이기';
 
   @override
-  String get imageBoxDelete => '빈칸 지우기';
+  String get imageBoxDelete => '빈칸 삭제';
 
   @override
-  String get blockAudio => '음성';
+  String get blockAudio => '소리';
 
   @override
-  String get blockAudioDescription => '녹음하거나 소리 파일을 넣어요';
+  String get blockAudioDescription => '녹음하거나 파일을 넣어요';
 
   @override
   String get playAudio => '소리 듣기';
@@ -279,7 +285,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String audioTooLarge(int seconds) {
-    return '$seconds초, 5MB까지 넣을 수 있어요';
+    return '$seconds초, 5MB까지인 파일을 골라 주세요';
   }
 
   @override
@@ -300,7 +306,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get deleteBlock => '지우기';
+  String get deleteBlock => '삭제';
 
   @override
   String get sideBlockRequired => '블록을 하나 이상 넣어 주세요';
@@ -312,20 +318,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tableBlankToggle => '빈칸';
 
   @override
-  String get tableRemove => '지우기';
+  String get tableRemove => '삭제';
 
   @override
   String tableRemoveRowTitle(int row) {
-    return '$row행을 지울까요?';
+    return '$row행을 삭제할까요?';
   }
 
   @override
   String tableRemoveColumnTitle(int column) {
-    return '$column열을 지울까요?';
+    return '$column열을 삭제할까요?';
   }
 
   @override
-  String get tableRemoveBody => '그 줄에 적은 내용도 함께 지워져요.';
+  String get tableRemoveBody => '그 줄에 적은 내용도 함께 삭제돼요.';
 
   @override
   String tableHeaderCell(int column) {
@@ -345,12 +351,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String deleteRow(int row) {
-    return '$row행 지우기';
+    return '$row행 삭제';
   }
 
   @override
   String deleteColumn(int column) {
-    return '$column열 지우기';
+    return '$column열 삭제';
   }
 
   @override
@@ -361,7 +367,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get cardNeedsUpdate =>
-      '새 버전의 앱에서 만든 카드라 이 버전에서는 고칠 수 없어요. 앱을 업데이트해 주세요.';
+      '새 버전의 앱에서 만든 카드라 이 버전에서는 편집할 수 없어요. 앱을 업데이트해 주세요.';
 
   @override
   String cardDeck(String deck) {
@@ -369,15 +375,33 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get senseLabelHint => '품사';
+  String get previewCard => '미리보기';
+
+  @override
+  String get previewTapToBack => '카드를 탭하면 뒷면이 보여요';
+
+  @override
+  String get previewTapToFront => '다시 탭하면 앞면으로 돌아가요';
+
+  @override
+  String get previewTapToReveal => '카드를 탭하면 빈칸이 채워져요';
+
+  @override
+  String get previewTapToHide => '다시 탭하면 빈칸으로 돌아가요';
+
+  @override
+  String get clozeBackHint => '빈칸 카드는 앞면에서 바로 답을 맞혀요. 뒷면은 비워 둬도 돼요.';
+
+  @override
+  String get senseLabelHint => '라벨';
 
   @override
   String senseLabelField(int number) {
-    return '뜻 $number 품사';
+    return '뜻 $number 라벨';
   }
 
   @override
-  String get labelPresetsTitle => '품사 표시';
+  String get labelPresetsTitle => '라벨';
 
   @override
   String get labelPresetsBody => '카드를 만들 때 키보드 위에 이 순서로 나와요.';
@@ -386,12 +410,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get manageLabelPresets => '관리';
 
   @override
-  String get addLabelPreset => '표시 추가';
-
-  @override
-  String moveLabelPreset(String label) {
-    return '$label 순서 옮기기';
-  }
+  String get addLabelPreset => '라벨 추가';
 
   @override
   String get moveUp => '위로';
@@ -401,16 +420,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String editLabelPreset(String label, String name) {
-    return '$label $name 고치기';
+    return '$label $name 편집';
   }
 
   @override
-  String removeLabelPreset(String label) {
-    return '$label 지우기';
+  String labelPresetMenu(String label) {
+    return '$label 메뉴';
   }
 
   @override
-  String get labelPresetLabel => '표시';
+  String get labelPresetLabel => '라벨';
 
   @override
   String get labelPresetName => '이름 (선택)';
@@ -419,11 +438,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get labelPresetDone => '완료';
 
   @override
-  String get labelPresetRequired => '표시를 적어 주세요';
+  String get labelPresetRequired => '라벨을 적어 주세요';
 
   @override
   String senseHeading(int number) {
     return '뜻 $number';
+  }
+
+  @override
+  String get senseMeaning => '뜻';
+
+  @override
+  String senseMenu(int number) {
+    return '$number번째 뜻 메뉴';
   }
 
   @override
@@ -437,21 +464,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get addSense => '뜻 추가';
-
-  @override
-  String moveSenseUp(int number) {
-    return '$number번째 뜻을 위로';
-  }
-
-  @override
-  String moveSenseDown(int number) {
-    return '$number번째 뜻을 아래로';
-  }
-
-  @override
-  String deleteSense(int number) {
-    return '$number번째 뜻 지우기';
-  }
 
   @override
   String partOfSpeechName(String category) {
@@ -1578,7 +1590,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get importFirstSense => '첫 뜻만';
 
   @override
-  String get importShowPos => '품사 표시';
+  String get importShowPos => '라벨 표시';
 
   @override
   String get importShowPronunciation => '발음 표시';

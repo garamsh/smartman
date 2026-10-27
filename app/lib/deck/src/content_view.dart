@@ -123,7 +123,7 @@ String _same(String text) => text;
 
 /// [blocks] run together as one paragraph, a line apart: a text block as
 /// written, a cloze or a table filled, a senses block as [sensesSpan] draws
-/// it, a photo as "사진", a sound as "음성", and a block this version cannot
+/// it, a photo as "사진", a sound as "소리", and a block this version cannot
 /// show named by its type. [wrap] is
 /// applied to each piece of text, such as a list's line-breaking rule.
 InlineSpan contentSpan(

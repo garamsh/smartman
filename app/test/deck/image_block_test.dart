@@ -361,8 +361,8 @@ void main() {
       );
       await screens.push((deck) => CardEditorScreen(deck: deck));
       await fillText(tester);
-      await tester.ensureVisible(find.text('Add to front'));
-      await screens.tap(find.text('Add to front'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
+      await screens.tap(find.bySemanticsLabel('Add to front'));
       await screens.tap(find.text('Photo').last);
       await tester.ensureVisible(find.text('Choose from album'));
       await tester.tap(find.text('Choose from album'));
@@ -550,8 +550,8 @@ void main() {
       for (final (index, text) in ['front', 'back'].indexed) {
         await tester.enterText(find.byType(TextField).at(index), text);
       }
-      await tester.ensureVisible(find.text('Add to front'));
-      await screens.tap(find.text('Add to front'));
+      await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
+      await screens.tap(find.bySemanticsLabel('Add to front'));
       await screens.tap(find.text('Photo').last);
       expect(find.text('Choose a photo'), findsNothing);
       await tapVisible(tester, find.text('Save'));
@@ -576,8 +576,8 @@ void main() {
         );
         await screens.push((deck) => CardEditorScreen(deck: deck));
         await fillText(tester);
-        await tester.ensureVisible(find.text('Add to front'));
-        await screens.tap(find.text('Add to front'));
+        await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
+        await screens.tap(find.bySemanticsLabel('Add to front'));
         await screens.tap(find.text('Photo').last);
         await tapVisible(tester, find.text('Choose from album'));
         await chosen(tester);
@@ -601,8 +601,8 @@ void main() {
         );
         await screens.push((deck) => CardEditorScreen(deck: deck));
         await fillText(tester);
-        await tester.ensureVisible(find.text('Add to front'));
-        await screens.tap(find.text('Add to front'));
+        await tester.ensureVisible(find.bySemanticsLabel('Add to front'));
+        await screens.tap(find.bySemanticsLabel('Add to front'));
         await screens.tap(find.text('Photo').last);
         final hold = pick.hold = Completer<void>();
         await tapVisible(tester, find.text('Choose from album'));

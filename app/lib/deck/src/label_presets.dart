@@ -8,7 +8,7 @@ import 'content.dart';
 import 'failure.dart';
 
 /// A label the card editor offers above the keyboard while a sense's label
-/// is typed: the [label] it fills in, and an optional [name] the "품사 표시"
+/// is typed: the [label] it fills in, and an optional [name] the "라벨"
 /// screen shows beside it (ADR 0100).
 final class LabelPreset {
   const LabelPreset(this.label, [this.name = '']);

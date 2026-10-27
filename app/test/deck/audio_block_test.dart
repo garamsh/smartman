@@ -190,7 +190,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(index), text);
       }
       await tester.pump();
-      await tapVisible(tester, find.text('Add to front'));
+      await tapVisible(tester, find.bySemanticsLabel('Add to front'));
       await tapVisible(tester, find.text('Sound').last);
       return screens;
     }
@@ -269,7 +269,7 @@ void main() {
         pick.failure = const MediaTooLarge('70 s');
         await tapVisible(tester, find.text('Choose a file'));
         expect(
-          find.text('A sound can be up to 60 seconds and 5 MB'),
+          find.text('Choose a file of up to 60 seconds and 5 MB'),
           findsOneWidget,
         );
 
@@ -298,7 +298,7 @@ void main() {
       'while one sound block records, Record is off in every other block, and on again once it has stopped',
       (tester) async {
         await openWithSoundBlock(tester);
-        await tapVisible(tester, find.text('Add to front'));
+        await tapVisible(tester, find.bySemanticsLabel('Add to front'));
         await tapVisible(tester, find.text('Sound').last);
         final record = find.widgetWithText(AppButton, 'Record');
         bool enabled(int at) =>

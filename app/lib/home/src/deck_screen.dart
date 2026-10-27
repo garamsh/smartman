@@ -308,23 +308,16 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       title: l10n.newCard,
       options: [
         (
-          icon: LucideIcons.pencilLine,
           title: l10n.createManually,
           body: l10n.addCardManuallyBody,
           value: _Add.byHand,
         ),
         (
-          icon: LucideIcons.camera,
           title: l10n.photoCamera,
           body: l10n.photoCameraBody,
           value: _Add.camera,
         ),
-        (
-          icon: LucideIcons.images,
-          title: l10n.photoAlbum,
-          body: l10n.photoAlbumBody,
-          value: _Add.album,
-        ),
+        (title: l10n.photoAlbum, body: l10n.photoAlbumBody, value: _Add.album),
       ],
     );
     if (!mounted) return;

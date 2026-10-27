@@ -735,7 +735,7 @@ void main() {
     await screens.tap(find.text('Add card'));
 
     expect(find.text('Take photo'), findsNothing);
-    expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
     await screens.close();
   });
 
@@ -762,7 +762,7 @@ void main() {
       // By hand opens the editor.
       await screens.tap(find.text('Add card'));
       await screens.tap(find.text('Enter by hand'));
-      expect(find.widgetWithText(AppBar, 'Add card'), findsOneWidget);
+      expect(find.widgetWithText(AppBar, 'New card'), findsOneWidget);
       await screens.close();
     },
   );

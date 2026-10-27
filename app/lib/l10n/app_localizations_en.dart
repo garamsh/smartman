@@ -114,6 +114,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newCard => 'Add card';
 
   @override
+  String get newCardTitle => 'New card';
+
+  @override
   String get editCard => 'Edit card';
 
   @override
@@ -126,7 +129,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardBack => 'Back';
 
   @override
-  String get cardSideRequired => 'Enter some text';
+  String get cardSideRequired => 'Write something';
 
   @override
   String get blank => 'blank';
@@ -152,14 +155,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clozeBlankRequired => 'Insert at least one blank';
 
   @override
-  String get clozeBlankMarker =>
-      '___ marks a blank, so the line can\'t contain it';
+  String get clozeBlankMarker => 'Remove ___ from the line';
 
   @override
   String get addToFront => 'Add to front';
 
   @override
   String get addToBack => 'Add to back';
+
+  @override
+  String get addBlock => 'Add';
 
   @override
   String get blockText => 'Text';
@@ -171,13 +176,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockSenses => 'Meanings';
 
   @override
-  String get blockSensesDescription => 'Labels and one or more meanings';
+  String get blockSensesDescription => 'Write labels and one or more meanings';
 
   @override
   String get blockTable => 'Table';
 
   @override
-  String get blockTableDescription => 'Cells can be made blanks';
+  String get blockTableDescription => 'Choose cells to hide';
 
   @override
   String get blockCloze => 'Cloze sentence';
@@ -189,7 +194,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockImage => 'Photo';
 
   @override
-  String get blockImageDescription => 'Draw blank boxes over a photo';
+  String get blockImageDescription => 'Draw what to hide over a photo';
 
   @override
   String get imageFromAlbum => 'Choose from album';
@@ -249,7 +254,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockAudio => 'Sound';
 
   @override
-  String get blockAudioDescription => 'Record or add a sound file';
+  String get blockAudioDescription => 'Record or add a file';
 
   @override
   String get playAudio => 'Play sound';
@@ -282,7 +287,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String audioTooLarge(int seconds) {
-    return 'A sound can be up to $seconds seconds and 5 MB';
+    return 'Choose a file of up to $seconds seconds and 5 MB';
   }
 
   @override
@@ -316,20 +321,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tableBlankToggle => 'Blank';
 
   @override
-  String get tableRemove => 'Remove';
+  String get tableRemove => 'Delete';
 
   @override
   String tableRemoveRowTitle(int row) {
-    return 'Remove row $row?';
+    return 'Delete row $row?';
   }
 
   @override
   String tableRemoveColumnTitle(int column) {
-    return 'Remove column $column?';
+    return 'Delete column $column?';
   }
 
   @override
-  String get tableRemoveBody => 'What is written in it goes too.';
+  String get tableRemoveBody => 'What is written in it is deleted too.';
 
   @override
   String tableHeaderCell(int column) {
@@ -373,6 +378,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get previewCard => 'Preview';
+
+  @override
+  String get previewTapToBack => 'Tap the card to see its back';
+
+  @override
+  String get previewTapToFront => 'Tap again to go back to the front';
+
+  @override
+  String get previewTapToReveal => 'Tap the card to fill in its blanks';
+
+  @override
+  String get previewTapToHide => 'Tap again to empty its blanks';
+
+  @override
+  String get clozeBackHint =>
+      'A card with blanks is answered on its front. Its back can stay empty.';
+
+  @override
   String get senseLabelHint => 'Label';
 
   @override
@@ -394,11 +418,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addLabelPreset => 'Add label';
 
   @override
-  String moveLabelPreset(String label) {
-    return 'Move $label';
-  }
-
-  @override
   String get moveUp => 'Move up';
 
   @override
@@ -410,8 +429,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String removeLabelPreset(String label) {
-    return 'Remove $label';
+  String labelPresetMenu(String label) {
+    return '$label menu';
   }
 
   @override
@@ -432,6 +451,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get senseMeaning => 'Meaning';
+
+  @override
+  String senseMenu(int number) {
+    return 'Meaning $number menu';
+  }
+
+  @override
   String get senseExamples => 'Examples';
 
   @override
@@ -442,21 +469,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addSense => 'Add meaning';
-
-  @override
-  String moveSenseUp(int number) {
-    return 'Move meaning $number up';
-  }
-
-  @override
-  String moveSenseDown(int number) {
-    return 'Move meaning $number down';
-  }
-
-  @override
-  String deleteSense(int number) {
-    return 'Delete meaning $number';
-  }
 
   @override
   String partOfSpeechName(String category) {
@@ -1714,7 +1726,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importFirstSense => 'First meaning only';
 
   @override
-  String get importShowPos => 'Show part of speech';
+  String get importShowPos => 'Show labels';
 
   @override
   String get importShowPronunciation => 'Show pronunciation';

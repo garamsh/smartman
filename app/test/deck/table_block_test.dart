@@ -3,7 +3,7 @@ import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/deck/src/block_list.dart';
-import 'package:smartman/deck/src/card_preview.dart';
+import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/deck/src/table_block.dart';
 import 'package:smartman/design/theme.dart';
 
@@ -89,11 +89,21 @@ void main() {
   Future<void> toggleBlank(DeckScreens screens) =>
       tap(screens, find.widgetWithText(FilterChip, 'Blank'));
 
-  /// Removes the selected cell's row or column through "지우기", read as
+  /// Removes the selected cell's row or column through "삭제", read as
   /// [item] in its menu.
   Future<void> remove(DeckScreens screens, String item) async {
-    await tap(screens, find.byTooltip('Remove'));
+    await tap(screens, find.byTooltip('Delete'));
     await screens.tap(find.text(item));
+  }
+
+  /// The blanks the preview screen draws once a tap turns its card to show
+  /// them; then back to the editor.
+  Future<Map<String, bool>> previewedBlanks(DeckScreens screens) async {
+    await screens.tap(find.text('Preview'));
+    await screens.tap(find.byType(CardPreviewScreen));
+    final blanks = blanksUnder(find.byType(CardPreviewScreen));
+    await screens.tap(find.byTooltip('Close'));
+    return blanks;
   }
 
   testWidgets(
@@ -108,7 +118,7 @@ void main() {
       await toggleBlank(screens);
       await select(screens, 5);
       await toggleBlank(screens);
-      expect(blanksUnder(find.byType(CardPreview)), {
+      expect(await previewedBlanks(screens), {
         'Paris': true,
         'Tokyo': true,
       }, reason: 'the preview draws the table whole, filled');
@@ -194,14 +204,14 @@ void main() {
       // Row 1 holds text: it asks first, and cancelling keeps it.
       await select(screens, 3);
       await remove(screens, 'Delete row 1');
-      expect(shownText('Remove row 1?'), findsOneWidget);
+      expect(shownText('Delete row 1?'), findsOneWidget);
       await screens.tap(find.text('Cancel'));
       expect(tester.widget<TextField>(_cell(3)).controller!.text, 'France');
       await remove(screens, 'Delete row 1');
-      await screens.tap(find.text('Remove').last);
+      await screens.tap(find.text('Delete').last);
       await select(screens, 0);
       await remove(screens, 'Delete column 1');
-      await screens.tap(find.text('Remove').last);
+      await screens.tap(find.text('Delete').last);
       await save(screens);
       expect(
         (await _stored(screens)).front.last,
@@ -219,12 +229,12 @@ void main() {
       await openTable(tester, on: screens);
       await select(screens, 5);
       await remove(screens, 'Delete row 2');
-      expect(shownText('Remove row 2?'), findsNothing, reason: 'it was empty');
+      expect(shownText('Delete row 2?'), findsNothing, reason: 'it was empty');
       await select(screens, 3);
       await remove(screens, 'Delete column 2');
       // One heading and one cell are left.
       await select(screens, 1);
-      await tap(screens, find.byTooltip('Remove'));
+      await tap(screens, find.byTooltip('Delete'));
       PopupMenuItem<Object?> item(String text) => tester.widget(
         find.ancestor(
           of: find.text(text),
@@ -236,7 +246,7 @@ void main() {
       await tester.tapAt(Offset.zero);
       await tester.pumpAndSettle();
       await tap(screens, find.text('Add row'));
-      await tap(screens, find.byTooltip('Remove'));
+      await tap(screens, find.byTooltip('Delete'));
       expect(
         item('Delete row 1').enabled,
         isTrue,
@@ -252,7 +262,7 @@ void main() {
       final screens = await openTable(tester);
       await typeCapitals(screens);
       await save(screens);
-      expect(find.text('Choose at least one cell as a blank'), findsOneWidget);
+      expect(shownText('Choose at least one cell as a blank'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       expect(await screens.cards(), isEmpty);
 
@@ -260,8 +270,8 @@ void main() {
       await toggleBlank(screens);
       await enter(tester, _cell(3), '  ');
       await save(screens);
-      expect(find.text('Fill in each cell chosen as a blank'), findsOneWidget);
-      expect(find.text('Choose at least one cell as a blank'), findsNothing);
+      expect(shownText('Fill in each cell chosen as a blank'), findsOneWidget);
+      expect(shownText('Choose at least one cell as a blank'), findsNothing);
       expect(await screens.cards(), isEmpty);
 
       await enter(tester, _cell(3), 'Paris');
@@ -348,12 +358,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(blanksUnder(find.byType(CardPreview)), {
-        'Paris': true,
-        'Tokyo': true,
-      });
-      await screens.tap(find.byTooltip('Delete card'));
-      await screens.tap(find.text('Delete'));
+      expect(await previewedBlanks(screens), {'Paris': true, 'Tokyo': true});
+      await tap(screens, find.text('Delete card'));
+      // The confirmation's final button, over the table toolbar's Delete.
+      await screens.tap(find.text('Delete').last);
       expect(await screens.cards(), isEmpty);
       await screens.close();
     },
@@ -510,7 +518,7 @@ void main() {
         colors.brandTint,
       );
       expect(spansDrawnIn(tester, 5), isEmpty, reason: 'whole, not a span');
-      expect(blanksUnder(find.byType(CardPreview)), {
+      expect(await previewedBlanks(screens), {
         'France': true,
         'Tokyo': true,
       }, reason: 'the preview draws the span in its cell, filled');
@@ -612,7 +620,7 @@ void main() {
       await select(screens, 3);
       await toggleBlank(screens);
       await save(screens);
-      expect(find.text('Enter some text'), findsNothing);
+      expect(find.text('Write something'), findsNothing);
       final card = await _stored(screens);
       expect(card.front, [
         TableContent(
@@ -636,7 +644,7 @@ void main() {
         final handle = tester.ensureSemantics();
         Future<void> meetsGuidelines() async {
           // From the top, so no control is cut by the screen's edge.
-          await tester.ensureVisible(find.byType(CardPreview));
+          await tester.ensureVisible(find.text('Front'));
           await tester.pumpAndSettle();
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
@@ -651,7 +659,7 @@ void main() {
         await enter(tester, _cell(3), '');
         await save(screens);
         expect(
-          find.text('Fill in each cell chosen as a blank'),
+          shownText('Fill in each cell chosen as a blank'),
           findsOneWidget,
         );
         await meetsGuidelines();

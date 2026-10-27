@@ -273,7 +273,8 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
           ),
           AppButton(
             label: l10n.audioStopRecording,
-            icon: LucideIcons.square,
+            // Outlined: the bottom bar holds the screen's one primary fill.
+            variant: AppButtonVariant.secondary,
             onPressed: _stopRecording,
           ),
         ] else if (audio != null) ...[
@@ -284,7 +285,6 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
               Expanded(
                 child: AppButton(
                   label: l10n.audioRecordAgain,
-                  icon: LucideIcons.mic,
                   variant: AppButtonVariant.secondary,
                   onPressed: _busy || recorderTaken ? null : _record,
                 ),
@@ -292,7 +292,6 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
               Expanded(
                 child: AppButton(
                   label: l10n.audioPickAnother,
-                  icon: LucideIcons.fileAudio,
                   variant: AppButtonVariant.secondary,
                   onPressed: _busy ? null : _pick,
                 ),
@@ -301,7 +300,6 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
           ),
           AppButton(
             label: l10n.audioRemove,
-            icon: LucideIcons.trash2,
             variant: AppButtonVariant.secondary,
             onPressed: _busy ? null : _remove,
           ),
@@ -312,7 +310,6 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
               Expanded(
                 child: AppButton(
                   label: l10n.audioRecord,
-                  icon: LucideIcons.mic,
                   variant: AppButtonVariant.secondary,
                   onPressed: _busy || recorderTaken ? null : _record,
                 ),
@@ -320,7 +317,6 @@ class _AudioBlockFieldsState extends ConsumerState<AudioBlockFields> {
               Expanded(
                 child: AppButton(
                   label: l10n.audioPick,
-                  icon: LucideIcons.fileAudio,
                   variant: AppButtonVariant.secondary,
                   onPressed: _busy ? null : _pick,
                 ),
