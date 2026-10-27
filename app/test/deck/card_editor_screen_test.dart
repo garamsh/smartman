@@ -6,6 +6,7 @@ import 'package:smartman/deck/src/block_list.dart';
 import 'package:smartman/deck/src/card_preview.dart';
 import 'package:smartman/deck/src/card_preview_screen.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/theme.dart';
 import 'package:smartman/design/word_break.dart';
 
 import '../home/deck_screens.dart';
@@ -81,6 +82,57 @@ void main() {
       await screens.tap(find.byTooltip('Close'));
       expect(find.byType(CardPreviewScreen), findsNothing);
       expect(find.widgetWithText(TextField, 'Chat'), findsOneWidget);
+      await screens.close();
+    },
+  );
+
+  testWidgets(
+    'the preview draws the card at study\'s current card\'s size, centred, with its side above it and its hint below',
+    (tester) async {
+      final screens = await openNew(tester);
+      await typeBlock(tester, CardSide.front, 'Chat');
+      await typeBlock(tester, CardSide.back, 'cat');
+      await screens.tap(find.text('Preview'));
+      final card = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(CardPreviewScreen),
+              matching: find.byType(Transform),
+            )
+            .first,
+      );
+      // Study's current card on this 390 by 844 screen: its width less the
+      // margins, and half the height under the top bar less study's gaps
+      // and its guide's row (study_screen_test's `_cardHeight`).
+      expect(card.width, 390 - 2 * AppSpace.gutter);
+      expect(card.height, closeTo((844 - 56 - 120) / 2, 0.01));
+
+      final side = tester.getRect(find.text('Front'));
+      final hint = tester.getRect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data?.replaceAll('\u2060', '') ==
+                  'Tap the card to see its back',
+        ),
+      );
+      expect(side.bottom, lessThanOrEqualTo(card.top));
+      expect(hint.top, greaterThan(card.bottom));
+      // The screen under the top bar.
+      final top = tester
+          .getRect(
+            find.descendant(
+              of: find.byType(CardPreviewScreen),
+              matching: find.byType(AppBar),
+            ),
+          )
+          .bottom;
+      final body = Rect.fromLTRB(0, top, 390, 844);
+      expect(
+        side.top - body.top,
+        closeTo(body.bottom - hint.bottom, 1),
+        reason: 'centred on the screen',
+      );
       await screens.close();
     },
   );

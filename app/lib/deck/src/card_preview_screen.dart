@@ -1,4 +1,4 @@
-import 'dart:math' show pi;
+import 'dart:math' show max, pi;
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -14,8 +14,19 @@ import 'whole_card_view.dart';
 /// How long the card takes to turn over (#454).
 const previewFlipDuration = Duration(milliseconds: 220);
 
-/// The card as study draws it, full screen, from the card editor's
-/// "미리보기" (ADR 0117): one study card on the surface, its front alone and,
+/// What study's screen keeps of its body's height besides its two cards,
+/// each of which takes half the rest: the gaps above, between and under them
+/// and the guide's row (`StudyStyle`, which `deck` cannot import). The
+/// preview's card takes that half too, so it is study's card's size.
+const _studyGaps =
+    AppSpace.s20 +
+    AppSpace.s16 +
+    AppSpace.s20 +
+    kMinInteractiveDimension +
+    AppSpace.s16;
+
+/// The card as study draws it, from the card editor's "미리보기" (ADR 0117):
+/// one card of study's current card's size, centred on the screen, its front alone and,
 /// after a tap, its back, or, for a card studied on one face, that face
 /// with its blanks empty and, after a tap, filled. Each tap turns the card
 /// over in 3D, or switches it at once when the system asks to reduce
@@ -81,58 +92,60 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
         title: Text(l10n.previewCard),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpace.gutter,
-            AppSpace.s8,
-            AppSpace.gutter,
-            AppSpace.gutter,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (face == null)
-                AppSectionLabel(_turned ? l10n.cardBack : l10n.cardFront),
-              Expanded(
-                child: Semantics(
-                  button: true,
-                  onTapHint: hint,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _flip,
-                    child: AnimatedBuilder(
-                      animation: _turn,
-                      builder: (context, _) {
-                        final angle = _turn.value * pi;
-                        final back = _turn.value >= 0.5;
-                        return Transform(
-                          alignment: Alignment.center,
-                          // Perspective, then the turn; the far side is turned
-                          // once more so it does not read mirrored.
-                          transform: Matrix4.identity()
-                            ..setEntry(3, 2, 0.001)
-                            ..rotateY(back ? angle - pi : angle),
-                          child: _Face(
-                            face: face,
-                            front: widget.front,
-                            back: widget.back,
-                            turned: back,
-                          ),
-                        );
-                      },
+        child: LayoutBuilder(
+          builder: (context, constraints) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.gutter),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (face == null)
+                  AppSectionLabel(_turned ? l10n.cardBack : l10n.cardFront),
+                // Study's card height, kept below what the screen leaves it.
+                Flexible(
+                  child: SizedBox(
+                    height: max(0, (constraints.maxHeight - _studyGaps) / 2),
+                    child: Semantics(
+                      button: true,
+                      onTapHint: hint,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _flip,
+                        child: AnimatedBuilder(
+                          animation: _turn,
+                          builder: (context, _) {
+                            final angle = _turn.value * pi;
+                            final back = _turn.value >= 0.5;
+                            return Transform(
+                              alignment: Alignment.center,
+                              // Perspective, then the turn; the far side is
+                              // turned once more so it does not read mirrored.
+                              transform: Matrix4.identity()
+                                ..setEntry(3, 2, 0.001)
+                                ..rotateY(back ? angle - pi : angle),
+                              child: _Face(
+                                face: face,
+                                front: widget.front,
+                                back: widget.back,
+                                turned: back,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpace.s16),
-              ExcludeSemantics(
-                child: Text(
-                  keepWords(hint),
-                  textAlign: TextAlign.center,
-                  style: AppType.caption.copyWith(color: colors.muted),
+                const SizedBox(height: AppSpace.s16),
+                ExcludeSemantics(
+                  child: Text(
+                    keepWords(hint),
+                    textAlign: TextAlign.center,
+                    style: AppType.caption.copyWith(color: colors.muted),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
