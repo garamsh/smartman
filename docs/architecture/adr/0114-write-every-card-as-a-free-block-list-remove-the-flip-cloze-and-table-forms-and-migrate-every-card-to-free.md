@@ -37,6 +37,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - A text block beside a back's senses is a 글 block of its own. A front that holds senses opens as a 뜻 목록.
   - A back is the blocks listed on it. Nothing writes a cloze's or a table's back for it. A new one has no back block, since a blank makes it a card of one face. A stored back stays a 글 block and is not rewritten when the front is edited.
   - A 빈칸 문장's action shows while its line has focus. A table's name is a 글 before the 표, and a 표 needs no name.
+  - A 글 left empty is not saved and keeps no side from saving, so a new cloze or table card saves with its back's untouched 글. A side is then required by its own rule alone: the front always, the back unless the card is studied on one face. While a required side holds nothing to save, its empty 글 asks for text.
 - **What the forms did that the block editor drops,** accepted by the PM on issue #438, 2026-10-27, each for its reason:
   - A back no longer turns from text into senses once a label is typed; the 글 is swapped for a 뜻 목록, two taps more. A back that changes its own type as it is typed is the form-specific behaviour the owner asked to remove, and a plain back stays text, as ADR 0100 requires.
   - The 빈칸 action bar shows only while its line has focus. The form held one line, so its bar always had a line to act on; a side may now hold several 빈칸 문장 blocks, and the focus says which one the action blanks.
@@ -45,6 +46,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
   - "덧붙인 내용" fields become 글 blocks. They were 글 blocks in storage already; the editor now shows them as such.
   - The kind each deck remembered goes, since there is one kind to remember.
 - **Search.** The deck screen's search reads what study draws: the one face `oneFaceOf` gives a card with a blank, and its front and back otherwise. A former 빈칸 or 표 card's stored back is not searched, and no migration rewrites it.
+- **Screen-reader labels.** A card studied on one face is read as that face, with its blanks and then filled, on its deck row, the previous card and the day's last card from an earlier session, as search reads it. Its stored back is not read.
 - **File names.** `word_form.dart`, `cloze_form.dart` and `table_form.dart` become `senses_block.dart`, `cloze_block.dart` and `table_block.dart`, with their tests, since no form remains and each holds one block's editor. The PM accepted the renames on issue #438, 2026-10-27.
 - **The template.** Every card the app writes, by the editor, photo import, a copy or a merged back, records `free` at version 1.
   - A template an earlier build wrote (`flip`, `cloze`, `table` or `free` at version 1), or no template, opens in the editor (`canEdit`).
@@ -66,6 +68,8 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - A cloze or table card made now has no back block, and an edited one keeps its old back. Study draws its one face, so neither shows there, and the deck screen's search does not read it.
 - The device storage under `deckCardKinds` stays on devices that wrote it, read by nothing.
 - The server migration draws a new revision for every live card, so every device pulls every card once.
+- The server migration runs in one transaction, and the revision trigger takes a transaction-level advisory lock per user, so it holds one lock for every user with a live card until it commits. A user count large enough to exhaust the lock table would fail the migration and roll it back whole.
+- Known limit: `editCard` records `free` without re-reading whether the stored row is still one `canEdit` accepts. A card a later build rewrote, pulled while this build's editor had it open, would be overwritten by the save. The build before this change had the same gap.
 
 ## Signs the decision was wrong
 
