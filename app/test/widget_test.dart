@@ -13,6 +13,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 import 'package:smartman/account/account.dart';
 import 'package:smartman/deck/deck.dart'
     show deckRepositoryProvider, deckStorageKeys;
+import 'package:smartman/design/app_chip.dart';
 import 'package:smartman/design/app_text_field.dart';
 import 'package:smartman/design/theme_choice.dart';
 import 'package:smartman/home/home.dart';
@@ -475,7 +476,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isTrue);
         final strip = find.ancestor(
-          of: find.widgetWithText(ChoiceChip, '명'),
+          of: find.widgetWithText(AppChip, '명'),
           matching: find.byType(Scrollable),
         );
 

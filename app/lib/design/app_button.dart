@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'theme.dart';
 
@@ -39,9 +37,9 @@ enum AppButtonSize {
   cta,
 }
 
-/// The app's button. A filled one gives a light haptic on iOS when pressed;
-/// while [loading] it shows progress in place of its label and cannot be
-/// pressed again.
+/// The app's button. Pressed, it dims under its label's colour, with no
+/// splash and no haptic of its own; while [loading] it shows progress in
+/// place of its label and cannot be pressed again.
 class AppButton extends StatelessWidget {
   const AppButton({
     super.key,
@@ -69,16 +67,6 @@ class AppButton extends StatelessWidget {
   /// What the progress is read as while [loading]; the [label] when null.
   final String? loadingLabel;
 
-  bool get _filled => switch (variant) {
-    AppButtonVariant.primary ||
-    AppButtonVariant.onHero ||
-    AppButtonVariant.destructiveFinal => true,
-    AppButtonVariant.secondary ||
-    AppButtonVariant.destructive ||
-    AppButtonVariant.text ||
-    AppButtonVariant.onHeroText => false,
-  };
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -94,15 +82,7 @@ class AppButton extends StatelessWidget {
       (_, AppButtonSize.regular) => AppSize.button,
     };
     final minimumSize = Size(AppSize.tapTarget, height);
-    final onPressed = this.onPressed;
-    final pressed = loading || onPressed == null
-        ? null
-        : () {
-            if (_filled && defaultTargetPlatform == TargetPlatform.iOS) {
-              HapticFeedback.lightImpact();
-            }
-            onPressed();
-          };
+    final pressed = loading ? null : onPressed;
     final (fill, onFill) = switch (variant) {
       AppButtonVariant.primary => (colors.ink, colors.onPrimary),
       AppButtonVariant.onHero => (colors.onHero, colors.brand),

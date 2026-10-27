@@ -27,13 +27,14 @@ abstract final class AppSpace {
   static const sectionGap = s28;
 }
 
-/// The corner radii of the app's rounded surfaces. A chip is fully rounded.
+/// The corner radii of the app's rounded surfaces, on one scale: group 14,
+/// button 12, chip and label 6, sheet 22 (#454).
 abstract final class AppRadius {
   /// The bottom corners of the sign-in screen's brand panel.
   static const panel = 40.0;
 
   /// A sheet's top corners.
-  static const sheet = 28.0;
+  static const sheet = 22.0;
 
   /// A card: a study card, the today card, or a card preview.
   static const card = 24.0;
@@ -48,7 +49,10 @@ abstract final class AppRadius {
   static const group = 14.0;
 
   /// A button.
-  static const button = 16.0;
+  static const button = 12.0;
+
+  /// A chip, and a label before a meaning.
+  static const chip = 6.0;
 
   /// A field.
   static const field = 14.0;
@@ -202,19 +206,20 @@ abstract final class AppType {
     fontWeight: FontWeight.w700,
   );
 
-  /// A button's label: 15/20, bold.
+  /// A button's label: the body size, 16/24, bold.
   static const label = TextStyle(
     fontFamily: appFontFamily,
-    fontSize: 15,
-    height: 20 / 15,
+    fontSize: 16,
+    height: 24 / 16,
     fontWeight: FontWeight.w700,
   );
 
-  /// Secondary text, such as a sheet's body or a row's second line: 14/20.
+  /// Secondary text, such as a sheet's body or a line under a title: the
+  /// caption size, 13/18.
   static const secondary = TextStyle(
     fontFamily: appFontFamily,
-    fontSize: 14,
-    height: 20 / 14,
+    fontSize: 13,
+    height: 18 / 13,
     fontWeight: FontWeight.w400,
   );
 
@@ -234,11 +239,11 @@ abstract final class AppType {
     fontWeight: FontWeight.w600,
   );
 
-  /// Chips and notes: 12/16.
+  /// Chips and notes: the caption size, 13/18.
   static const micro = TextStyle(
     fontFamily: appFontFamily,
-    fontSize: 12,
-    height: 16 / 12,
+    fontSize: 13,
+    height: 18 / 13,
     fontWeight: FontWeight.w400,
   );
 
@@ -528,6 +533,11 @@ final class AppColors extends ThemeExtension<AppColors> {
   /// The streak flame's body, on the 오늘 tab and the completion card.
   final Color streak;
 
+  /// What a pressed row draws over itself: [ink] at the 10% a pressed
+  /// button's label colour is drawn at, so a press dims either alike.
+  /// Derived, so the web's token set needs no colour of its own.
+  Color get pressed => ink.withValues(alpha: 0.1);
+
   /// The streak flame's line at its first stage, before it takes [streak].
   Color get flameOutline => muted;
 
@@ -720,6 +730,10 @@ ThemeData _theme(Brightness brightness, AppColors colors) {
     textTheme: textTheme,
     scaffoldBackgroundColor: colors.ground,
     extensions: [colors],
+    // A pressed row or button dims under its text's colour, at once, with
+    // no splash spreading from the finger (#454).
+    splashFactory: NoSplash.splashFactory,
+    highlightColor: colors.pressed,
     // Stroke icons in place of Material's back and close glyphs.
     actionIconTheme: ActionIconThemeData(
       backButtonIconBuilder: (_) => const Icon(LucideIcons.chevronLeft),

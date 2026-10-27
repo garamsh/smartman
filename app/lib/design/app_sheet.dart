@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import 'app_button.dart';
@@ -121,7 +122,8 @@ class AppSheet extends StatelessWidget {
 /// Asks before an action that cannot be undone: a sheet titled [title] that
 /// states its [consequence] in one sentence, with a cancel, named
 /// [cancelLabel] or "취소", and, last at the bottom, a red [confirmLabel]
-/// button. Resolves to whether the user confirmed.
+/// button, which gives a light haptic. Resolves to whether the user
+/// confirmed.
 Future<bool> showAppConfirm(
   BuildContext context, {
   required String title,
@@ -145,7 +147,10 @@ Future<bool> showAppConfirm(
             label: confirmLabel,
             variant: AppButtonVariant.destructiveFinal,
             size: AppButtonSize.cta,
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop(true);
+            },
           ),
         ],
       ),

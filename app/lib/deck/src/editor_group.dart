@@ -6,9 +6,6 @@ import '../../design/theme.dart';
 /// The width of a focused field's ink outline inside a group (#454).
 const _focusRing = 1.5;
 
-/// The radius of a label chip, smaller than a field's (#454).
-const labelChipRadius = 6.0;
-
 /// The space around a label chip's text, as the "라벨" screen draws it.
 const _labelChipPadding = EdgeInsets.symmetric(
   horizontal: AppSpace.s8,
@@ -40,7 +37,7 @@ class EditorGroup extends StatelessWidget {
       data: theme.copyWith(inputDecorationTheme: groupFieldTheme(colors)),
       child: Material(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.field),
+        borderRadius: BorderRadius.circular(AppRadius.group),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,7 +58,7 @@ class EditorGroup extends StatelessWidget {
 /// while it shows an error.
 InputDecorationTheme groupFieldTheme(AppColors colors) {
   OutlineInputBorder ring(Color color) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(AppRadius.field - groupInset),
+    borderRadius: BorderRadius.circular(AppRadius.group - groupInset),
     borderSide: BorderSide(color: color, width: _focusRing),
   );
   const none = OutlineInputBorder(borderSide: BorderSide.none);
@@ -87,7 +84,7 @@ InputDecorationTheme groupFieldTheme(AppColors colors) {
 /// while it has the focus.
 InputDecoration labelChipDecoration(AppColors colors, String hint) {
   OutlineInputBorder border(BorderSide side) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(labelChipRadius),
+    borderRadius: BorderRadius.circular(AppRadius.chip),
     borderSide: side,
   );
   return InputDecoration(

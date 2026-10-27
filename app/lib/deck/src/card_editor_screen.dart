@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart' hide Card;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -212,6 +213,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
               allowDuplicate: allowDuplicate,
             );
       if (result is CardSaved) {
+        HapticFeedback.lightImpact();
         await _releaseUnsaved(mediaOf([...front, ...back]));
       }
       if (!mounted) return;

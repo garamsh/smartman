@@ -217,7 +217,7 @@ class _GroupPart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = Radius.circular(AppRadius.field);
+    const radius = Radius.circular(AppRadius.group);
     return Material(
       color: AppColors.of(context).surface,
       clipBehavior: Clip.antiAlias,
@@ -296,9 +296,7 @@ class _PresetRow extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: colors.brandTint,
-                            borderRadius: BorderRadius.circular(
-                              labelChipRadius,
-                            ),
+                            borderRadius: BorderRadius.circular(AppRadius.chip),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(

@@ -773,7 +773,7 @@ class _PhotoHeader extends StatelessWidget {
                   children: [
                     Text(
                       l10n.photoNumber(number),
-                      style: AppType.headline.copyWith(color: colors.ink),
+                      style: AppType.bodyStrong.copyWith(color: colors.ink),
                     ),
                     Text(
                       l10n.cardCount(rows),

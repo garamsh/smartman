@@ -349,8 +349,14 @@ void main() {
           await openWithSoundBlock(tester, themeMode: mode);
           await tapVisible(tester, find.text('Choose a file'));
           await stored(tester);
-          await tester.ensureVisible(find.text('Remove sound'));
+          // The form from its top, where the whole side fits, so no control
+          // is left half under the edge of the scroll view.
+          tester
+              .state<ScrollableState>(find.byType(Scrollable).first)
+              .position
+              .jumpTo(0);
           await tester.pumpAndSettle();
+          expect(find.text('Remove sound').hitTestable(), findsOneWidget);
           final handle = tester.ensureSemantics();
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));

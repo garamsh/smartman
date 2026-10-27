@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import 'study_coach.dart';
+import '../../design/app_chip.dart';
 import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'rust/api/engine.dart';
@@ -339,19 +340,12 @@ class _DragFeedback extends StatelessWidget {
     if (offset.abs() < StudyStyle.dragFeedbackDistance) return child;
     final l10n = AppLocalizations.of(context);
     final colors = AppColors.of(context);
-    final (label, tint, chip, onChip, alignment) = offset > 0
-        ? (
-            l10n.know,
-            colors.know,
-            colors.know,
-            colors.onKnow,
-            Alignment.topLeft,
-          )
+    final (label, tint, tone, alignment) = offset > 0
+        ? (l10n.know, colors.know, AppChipTone.know, Alignment.topLeft)
         : (
             l10n.dontKnow,
             colors.dontKnow,
-            colors.dontKnowText,
-            colors.onDontKnowText,
+            AppChipTone.dontKnow,
             Alignment.topRight,
           );
     final strength =
@@ -378,12 +372,7 @@ class _DragFeedback extends StatelessWidget {
             alignment: alignment,
             child: Padding(
               padding: const EdgeInsets.all(StudyStyle.cardPadding),
-              child: Chip(
-                label: Text(label),
-                labelStyle: TextStyle(color: onChip),
-                backgroundColor: chip,
-                side: BorderSide.none,
-              ),
+              child: AppChip(label: label, tone: tone),
             ),
           ),
         ),
