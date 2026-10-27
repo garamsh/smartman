@@ -254,7 +254,14 @@ class _Footer extends ConsumerWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: AppSpace.s4,
       children: [
-        Text(l10n.appVersion(ref.watch(appVersionProvider)), style: quiet),
+        // Padded as each link's button is, so the dots sit evenly.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.s4),
+          child: Text(
+            l10n.appVersion(ref.watch(appVersionProvider)),
+            style: quiet,
+          ),
+        ),
         dot,
         link(l10n.termsOfService, termsOfServiceUrl),
         dot,

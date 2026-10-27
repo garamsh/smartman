@@ -571,8 +571,16 @@ void main() {
           reason: '$link on the version\'s line',
         );
       }
+      // The line's ends: the version's padding and the last link's button.
       final line = tester
-          .getRect(find.text('Version 1.0.0'))
+          .getRect(
+            find
+                .ancestor(
+                  of: find.text('Version 1.0.0'),
+                  matching: find.byType(Padding),
+                )
+                .first,
+          )
           .expandToInclude(
             tester.getRect(
               find.ancestor(
