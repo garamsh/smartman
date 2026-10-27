@@ -10,6 +10,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:smartman/database/database.dart' hide DeckRow;
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
+import 'package:smartman/design/app_list_row.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/home/src/deck_screen.dart';
@@ -1261,6 +1263,123 @@ void main() {
         );
         // Control: without sharing there is no way to public decks beside it.
         expect(find.text('Browse public decks'), findsNothing);
+        await list.close();
+      },
+    );
+  });
+
+  group('icons', () {
+    /// The nearest row around [text]: a chip's, or the row a card leads with.
+    Finder rowOf(String text) =>
+        find.ancestor(of: find.text(text), matching: find.byType(Row)).first;
+
+    testWidgets(
+      'the new-deck sheet\'s rows draw no icon, and by hand has no second line while each photo row keeps its own',
+      (tester) async {
+        final list = await _open(
+          tester,
+          photoImport: (deck, origin) => const SizedBox(),
+        );
+        await list.decks();
+        await list.newDeck();
+
+        final rows = find.byType(AppListRow);
+        expect(rows, findsNWidgets(3));
+        expect(
+          find.descendant(of: rows, matching: find.byType(Icon)),
+          findsNothing,
+        );
+        AppListRow row(String title) =>
+            tester.widget<AppListRow>(find.widgetWithText(AppListRow, title));
+        expect(row('Create by hand').subtitle, isNull);
+        expect(row('Take photo').subtitle, isNotNull);
+        expect(row('Choose from album').subtitle, isNotNull);
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'Create a deck under the deck rows is an outlined button of its words alone',
+      (tester) async {
+        final list = await _open(tester);
+        await list.decks();
+
+        final button = find.widgetWithText(AppButton, 'Create a deck');
+        expect(
+          tester.widget<AppButton>(button).variant,
+          AppButtonVariant.secondary,
+        );
+        expect(
+          find.descendant(of: button, matching: find.byType(Icon)),
+          findsNothing,
+        );
+        await list.close();
+      },
+    );
+
+    testWidgets(
+      'the done card\'s goal and more-today chips are words alone, its streak chip keeps the flame, and its mascot has no z\'s',
+      (tester) async {
+        final list = await _open(
+          tester,
+          decks: ['Alpha'],
+          answeredToday: {'Alpha': 35},
+          dailyMinutes: 5,
+        );
+
+        for (final chip in ['Goal of 30 reached', '5 more cards today']) {
+          expect(rowOf(chip), findsOneWidget);
+          expect(
+            find.descendant(of: rowOf(chip), matching: find.byType(Icon)),
+            findsNothing,
+            reason: chip,
+          );
+        }
+        // Control: the chip finder reaches a chip's leading mark.
+        expect(
+          find.descendant(
+            of: rowOf('1-day streak'),
+            matching: find.byType(StreakFlame),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byType(Mascot), findsOneWidget);
+        expect(find.text('z'), findsNothing);
+        await list.close();
+      },
+    );
+
+    testWidgets('the backlog card\'s mascot carries no badge', (tester) async {
+      final list = await _open(
+        tester,
+        fresh: {'Gamma': 1},
+        due: {'Alpha': 4, 'Beta': 3},
+        dueDays: 30,
+      );
+
+      final lead = rowOf('Pick up where you left off');
+      expect(
+        find.descendant(of: lead, matching: find.byType(Mascot)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: lead, matching: find.byType(Icon)),
+        findsNothing,
+      );
+      await list.close();
+    });
+
+    testWidgets(
+      'a 오늘 tab with no card says how to start without the mascot, which the first-run home keeps',
+      (tester) async {
+        var list = await _open(tester, decks: ['Alpha']);
+        expect(shownText('Make your first card?'), findsOneWidget);
+        expect(find.byType(Mascot), findsNothing);
+        await list.close();
+
+        list = await _open(tester, decks: []);
+        expect(shownText('Shall we make your first deck?'), findsOneWidget);
+        expect(find.byType(Mascot), findsOneWidget);
         await list.close();
       },
     );

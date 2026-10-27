@@ -1336,12 +1336,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get browsePublicDecksBody => 'Copy decks other people made into yours';
-
-  @override
-  String get createManuallyBody => 'Name it and add cards one by one';
-
-  @override
   String progressSemantics(int mastered, int learning, int fresh) {
     return '$mastered mastered, $learning learning, $fresh new';
   }
@@ -1667,9 +1661,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get masteredEmpty => 'No card mastered yet.';
-
-  @override
-  String get newDeckEntryBody => 'Choose how to start a new deck';
 
   @override
   String importTitleWords(int count) {

@@ -13,6 +13,7 @@ import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_button.dart';
 import 'package:smartman/design/app_section_label.dart';
+import 'package:smartman/design/mascot.dart';
 import 'package:smartman/design/streak_flame.dart';
 import 'package:smartman/study/src/completion_card.dart';
 import 'package:smartman/study/src/study_coach.dart';
@@ -1446,6 +1447,14 @@ void main() {
 
       expect(find.text('Done for today'), findsOneWidget);
       expect(_currentCard, findsNothing);
+      // The heading leads the card, with no mascot over it.
+      expect(
+        find.descendant(
+          of: find.byType(CompletionCard),
+          matching: find.byType(Mascot),
+        ),
+        findsNothing,
+      );
       expect(
         find.bySemanticsLabel("Know 2, don't know 1, 2 min, 1-day streak"),
         findsOneWidget,

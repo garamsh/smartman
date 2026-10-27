@@ -126,6 +126,18 @@ void main() {
         find.ancestor(of: signOut, matching: find.byType(AppListRow)),
         findsOneWidget,
       );
+      // Sign-out and deletion are their words alone.
+      for (final row in ['로그아웃', '계정 삭제']) {
+        expect(find.widgetWithText(AppListRow, row), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.widgetWithText(AppListRow, row),
+            matching: find.byType(Icon),
+          ),
+          findsNothing,
+          reason: row,
+        );
+      }
     },
   );
 

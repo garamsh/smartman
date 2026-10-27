@@ -280,7 +280,6 @@ class _ImportListViewState extends State<ImportListView> {
               ),
             AppListRow(
               title: l10n.newDeck,
-              leading: const Icon(LucideIcons.plus),
               onSheet: true,
               selected: target == null,
               trailing: check(target == null),

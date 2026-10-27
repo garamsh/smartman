@@ -108,7 +108,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
   - `SyncOffline` — no connection, no answer within 20 seconds, or a server or gateway error;
   - `SyncRejected` — the session or a row-level security policy refused the request;
   - `SyncFailed` — the server answered with a row sync cannot read or a constraint it refused, or the local database failed.
-- A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the account screen shows while signed in, one line read out as it changes: "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
+- A failure is never shown as a blocking error. It becomes the status `SyncInterrupted`, which the account screen shows while signed in, one line read out as it changes, its words alone after a spinner while syncing ([ADR 0116](adr/0116-draw-an-icon-only-where-it-says-what-the-words-beside-it-do-not-or-follows-the-platform.md)): "동기화 중", "동기화됨", "오프라인 · 연결되면 동기화해요", or "동기화하지 못했어요" with "다시 시도".
 - `SupabaseSyncServer` maps PostgREST's error codes: `42501`, `PGRST301`, `PGRST302`, 401 and 403 to `SyncRejected`; `PGRST000` to `PGRST002` and 500, 502, 503 and 504 to `SyncOffline`; `23503` to `SyncFailed` with `MissingServerParent`; any other to `SyncFailed`.
 
 ### The web app as a writer

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_list_row.dart';
 import '../../design/app_section_label.dart';
@@ -71,7 +70,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppSectionLabel(l10n.accountSection),
           AppListRow(
             title: l10n.signOut,
-            leading: const Icon(LucideIcons.logOut),
             trailing: _busy == _Action.signingOut
                 ? _Progress(l10n.signingOut)
                 : null,
@@ -80,7 +78,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           AppListRow(
             title: l10n.deleteAccount,
             subtitle: l10n.deleteAccountNote,
-            leading: const Icon(LucideIcons.trash2),
             destructive: true,
             trailing: _busy == _Action.deleting
                 ? _Progress(l10n.deletingAccount)

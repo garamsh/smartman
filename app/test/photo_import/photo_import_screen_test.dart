@@ -3,9 +3,11 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
+import 'package:smartman/design/app_list_row.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -373,6 +375,13 @@ void main() {
         await import.back();
 
         expect(import.bar, 'Reading photos 0/3');
+        // Its words lead, and its one icon is the chevron at its end.
+        final icons = find.descendant(
+          of: find.byType(PhotoImportBar),
+          matching: find.byType(Icon),
+        );
+        expect(icons, findsOneWidget);
+        expect(tester.widget<Icon>(icons).icon, LucideIcons.chevronRight);
         await import.answerCall(0, {'chat': 'cat'});
         expect(import.bar, 'Reading photos 1/3');
         await import.answerCall(1, {'chien': 'dog'});
@@ -583,6 +592,15 @@ void main() {
 
         import.photos.libraryPhotos = [Future.value(testPhoto)];
         await import.tap(_shown('Add more photos'));
+        // The sources are their words alone.
+        expect(find.byType(AppListRow), findsNWidgets(2));
+        expect(
+          find.descendant(
+            of: find.byType(AppListRow),
+            matching: find.byType(Icon),
+          ),
+          findsNothing,
+        );
         await tester.tap(_shown('Choose from album'));
         await import.frames();
         expect(import.photos.libraryLimits, [50, 1]);
@@ -1589,6 +1607,22 @@ void main() {
 
         await import.tap(_shown('French'));
         expect(_shown('Add to'), findsOneWidget);
+        // Each row is a name alone; the one icon is the chosen deck's check.
+        expect(
+          find.descendant(
+            of: find.byType(AppListRow),
+            matching: find.byType(Icon),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.widgetWithText(AppListRow, 'French'),
+            matching: find.byType(Icon),
+          ),
+          findsOneWidget,
+        );
+        expect(find.widgetWithText(AppListRow, 'New deck'), findsOneWidget);
         await import.tap(_shown('Spanish'));
         expect(import.included('chat'), isTrue);
         expect(_shown('Already in the deck'), findsNothing);

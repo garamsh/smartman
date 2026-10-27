@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../design/app_list_row.dart';
@@ -408,13 +407,12 @@ class _PhotoImportScreenState extends ConsumerState<PhotoImportScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final (origin, label, icon) in [
-              (PhotoOrigin.camera, l10n.photoCamera, LucideIcons.camera),
-              (PhotoOrigin.album, l10n.photoAlbum, LucideIcons.images),
+            for (final (origin, label) in [
+              (PhotoOrigin.camera, l10n.photoCamera),
+              (PhotoOrigin.album, l10n.photoAlbum),
             ])
               AppListRow(
                 title: label,
-                leading: Icon(icon),
                 onSheet: true,
                 onTap: () => Navigator.of(context).pop(origin),
               ),

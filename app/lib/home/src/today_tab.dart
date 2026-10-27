@@ -147,6 +147,7 @@ class _NoCards extends StatelessWidget {
       ),
     );
     return FirstRun(
+      mascot: false,
       title: l10n.noCardsTitle,
       body: l10n.noCardsBody,
       actions: switch (decks) {
@@ -349,7 +350,7 @@ class _TodayCard extends StatelessWidget {
   }
 }
 
-/// In a backlog of reviews, on the white card: the mascot cheering, that the
+/// In a backlog of reviews, on the white card: the mascot, that the
 /// user can pick up again, how many reviews are overdue and that new cards
 /// pause, and the button that studies them, with their minutes.
 class _BacklogCard extends StatelessWidget {
@@ -368,34 +369,7 @@ class _BacklogCard extends StatelessWidget {
         Row(
           spacing: AppSpace.s16,
           children: [
-            ExcludeSemantics(
-              child: SizedBox.square(
-                dimension: AppSize.mascotGuide,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Mascot(size: AppSize.mascotGuide, fill: colors.brandTint),
-                    Positioned(
-                      right: -AppSpace.s4,
-                      bottom: -AppSpace.s4,
-                      child: Container(
-                        width: AppSpace.s24,
-                        height: AppSpace.s24,
-                        decoration: ShapeDecoration(
-                          color: colors.tintAmber,
-                          shape: const CircleBorder(),
-                        ),
-                        child: Icon(
-                          LucideIcons.check,
-                          size: AppSpace.s16,
-                          color: colors.ink,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            Mascot(size: AppSize.mascotGuide, fill: colors.brandTint),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,8 +418,8 @@ class _StreakChip extends StatelessWidget {
   );
 }
 
-/// "오늘 n장 더 했어요" after a plus: the cards studied past the day's plan,
-/// which its goal never counts.
+/// "오늘 n장 더 했어요": the cards studied past the day's plan, which its goal
+/// never counts.
 class _ExtraPill extends StatelessWidget {
   const _ExtraPill({required this.count, required this.onHero});
 
@@ -453,23 +427,19 @@ class _ExtraPill extends StatelessWidget {
   final bool onHero;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return _Pill(
-      onHero: onHero,
-      icon: Icon(LucideIcons.plus, size: AppSpace.s16, color: colors.ink),
-      label: AppLocalizations.of(context).todayExtra(count),
-    );
-  }
+  Widget build(BuildContext context) => _Pill(
+    onHero: onHero,
+    label: AppLocalizations.of(context).todayExtra(count),
+  );
 }
 
-/// A small rounded label after an icon: on the white card an outline, on the
-/// done card the surface.
+/// A small rounded label, after the streak's flame alone: on the white card an
+/// outline, on the done card the surface.
 class _Pill extends StatelessWidget {
-  const _Pill({required this.onHero, required this.icon, required this.label});
+  const _Pill({required this.onHero, this.icon, required this.label});
 
   final bool onHero;
-  final Widget icon;
+  final Widget? icon;
   final String label;
 
   @override
@@ -492,7 +462,7 @@ class _Pill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: AppSpace.s4,
           children: [
-            icon,
+            ?icon,
             // Wrapped where the line has no room for it, as at a large text
             // size.
             Flexible(
@@ -511,7 +481,7 @@ class _Pill extends StatelessWidget {
   }
 }
 
-/// Once today's cards are done: the mascot resting, that the day is done, the
+/// Once today's cards are done: the mascot, that the day is done, the
 /// next review, the streak and the goal reached.
 class _DoneCard extends StatelessWidget {
   const _DoneCard({required this.overview});
@@ -534,7 +504,10 @@ class _DoneCard extends StatelessWidget {
         child: Column(
           spacing: AppSpace.s8,
           children: [
-            const _RestingMascot(),
+            Mascot(
+              size: AppSize.mascotMedium + AppSpace.s12,
+              fill: colors.surface,
+            ),
             const SizedBox(height: AppSpace.s4),
             Semantics(
               header: true,
@@ -569,64 +542,11 @@ class _DoneCard extends StatelessWidget {
                 if (overview.goal.reached)
                   _Pill(
                     onHero: false,
-                    icon: Icon(
-                      LucideIcons.check,
-                      size: AppSpace.s16,
-                      color: colors.know,
-                    ),
                     label: l10n.goalReached(overview.goal.goal),
                   ),
                 if (overview.extra > 0)
                   _ExtraPill(count: overview.extra, onHero: false),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The mascot in a white circle, resting, with three z's over its shoulder.
-class _RestingMascot extends StatelessWidget {
-  const _RestingMascot();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    const size = AppSize.mascotMedium + AppSpace.s12;
-    return ExcludeSemantics(
-      child: SizedBox.square(
-        dimension: size,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Mascot(size: size, fill: colors.surface),
-            Positioned(
-              right: -AppSpace.s12,
-              top: -AppSpace.s4,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (final (index, style) in [
-                    AppType.headline,
-                    AppType.label,
-                    AppType.micro,
-                  ].indexed)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: AppSpace.s8 * index),
-                      child: Text(
-                        'z',
-                        style: style.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: colors.ink.withValues(
-                            alpha: 0.5 - 0.12 * index,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
             ),
           ],
         ),

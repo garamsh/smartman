@@ -96,6 +96,13 @@ void main() {
     await tester.pump();
 
     expect(find.text('Syncing'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SyncStatusView),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a finished run shows synced, in Korean', (tester) async {
@@ -108,6 +115,14 @@ void main() {
     await runSync(tester, controller);
 
     expect(find.text('동기화됨'), findsOneWidget);
+    // The word says the state; no mark beside it.
+    expect(
+      find.descendant(
+        of: find.byType(SyncStatusView),
+        matching: find.byType(Icon),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('an offline run shows offline, with no retry button', (
@@ -120,6 +135,13 @@ void main() {
 
     expect(find.text('Offline · syncs when connected'), findsOneWidget);
     expect(find.text('Try again'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(SyncStatusView),
+        matching: find.byType(Icon),
+      ),
+      findsNothing,
+    );
   });
 
   for (final failure in [
@@ -133,6 +155,13 @@ void main() {
       server.failure = failure;
       await runSync(tester, controller);
       expect(find.text("Couldn't sync"), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SyncStatusView),
+          matching: find.byType(Icon),
+        ),
+        findsNothing,
+      );
 
       server.failure = null;
       await tester.tap(find.text('Try again'));
