@@ -134,7 +134,7 @@ class CardBackRow extends StatelessWidget {
 }
 
 /// One line of text for a card side: a cloze or a table with its blanks
-/// filled, a photo as "사진", a sound as "음성", and a block this version
+/// filled, a photo as "사진", a sound as "소리", and a block this version
 /// cannot show named by its type.
 String describeContent(AppLocalizations l10n, List<Content> blocks) => blocks
     .map(

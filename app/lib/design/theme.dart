@@ -122,12 +122,20 @@ abstract final class AppSize {
   /// The mascot on the 오늘 tab's backlog card.
   static const mascotGuide = 64.0;
 
+  /// A small mascot. No app screen draws it; the web's sizes mirror this
+  /// set.
+  static const mascotSmall = 28.0;
+
   /// The symbol in the today card's corner.
   static const heroSymbol = 120.0;
 
   /// The study progress bar's thickness.
   static const progress = 8.0;
 }
+
+/// Digits of one width, so a figure keeps its place as it changes. Kept out
+/// of [AppType]'s styles, which the web's token test reads.
+const _tabularDigits = [FontFeature.tabularFigures()];
 
 /// The app's type scale, all Pretendard, with explicit line heights.
 /// A style without a colour takes the text colour of where it is drawn.
@@ -167,7 +175,7 @@ abstract final class AppType {
     height: 44 / 36,
     fontWeight: FontWeight.w800,
     letterSpacing: -0.8,
-    fontFeatures: [FontFeature.tabularFigures()],
+    fontFeatures: _tabularDigits,
   );
 
   /// A sheet's title: 18/26, bold.
