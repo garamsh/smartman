@@ -2,9 +2,9 @@
 -- `table` at version 1, or of no template, becomes `free` at version 1; a card already `free`, one of
 -- a template or a version no app knows, and a deleted card are left alone; no front, back, card key,
 -- edit time, review or card state changes, while each changed card's revision does; and a second run
--- changes nothing.
+-- changes nothing; neither anon nor authenticated can run it.
 begin;
-select plan(8);
+select plan(10);
 
 insert into auth.users (id, email) values ('00000000-0000-4000-8000-00000000000a', 'a@example.com');
 insert into public.decks (id, user_id, name, created_at, updated_at)
@@ -78,6 +78,11 @@ select results_eq($$ select * from public.card_states $$, $$ select * from state
   'no card state changes');
 
 select is(private.migrate_card_template_free(), 0, 'a second run changes nothing');
+
+select function_privs_are('private', 'migrate_card_template_free', '{}', 'authenticated', '{}',
+  'authenticated cannot run the migration');
+select function_privs_are('private', 'migrate_card_template_free', '{}', 'anon', '{}',
+  'anon cannot run the migration');
 
 select * from finish();
 rollback;
