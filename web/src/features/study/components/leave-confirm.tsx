@@ -39,7 +39,7 @@ export function LeaveConfirm({
         className="flex w-full max-w-sm flex-col gap-4 rounded-sheet bg-surface p-6 text-ink"
       >
         <h2 id="leave-confirm-title" className="text-headline">
-          저장하지 못한 응답이 있어요
+          저장하지 않고 나갈까요?
         </h2>
         <p id="leave-confirm-body" className="text-secondary text-ink-2">
           지금 나가면 저장하지 못한 응답 {count}개가 사라져요.

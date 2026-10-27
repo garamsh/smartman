@@ -164,8 +164,13 @@ describe("the 오늘 and 덱 pages", () => {
     expect(backlog).toHaveClass("bg-surface", "shadow-card");
     expect(card.getByRole("link", { name: /3장 학습/ })).toHaveClass("bg-ink", "text-on-primary");
     expectTextReadable(backlog);
-    // The minutes are set in 계정과 설정 alone.
-    expect(card.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
+    // The mascot with no badge: the card's one icon is play, on its button (ADR 0116).
+    expect(backlog.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+    expect(
+      [...backlog.querySelectorAll("svg")].map((icon) => icon.closest("a") !== null),
+    ).toEqual([true]);
+    // The minutes are set in 설정 alone.
+    expect(card.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
     expect(
       card.getByText("밀린 복습 3장을 급한 것부터 해요. 새 카드는 잠시 쉬어요."),
     ).toBeInTheDocument();
@@ -557,11 +562,17 @@ describe("the 오늘 and 덱 pages", () => {
     expect(card()).toHaveClass("bg-brand-tint");
     expect(within(card()).getByText("목표 1장 달성")).toBeInTheDocument();
     expect(within(card()).getAllByText("1일 연속")).toHaveLength(1);
+    // The mascot with no z's beside it, the goal's chip its words, and the streak's chip its
+    // flame, the one icon a chip keeps (ADR 0116).
+    expect(card().querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
+    expect(card().textContent).not.toMatch(/z/);
+    expect(within(card()).getByText("목표 1장 달성").querySelector("svg")).toBeNull();
+    expect(within(card()).getByText("1일 연속").querySelector("svg")).not.toBeNull();
     const study = screen.getByRole("link", { name: "학습하기" });
     expect(study).toHaveClass("bg-ink");
     expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
   });
 
   it("shows the cards done over the day's cards as a count and a bar, the minutes, the streak and where the user stands, from the shared definitions", async () => {
@@ -590,7 +601,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(document.getElementById("today-count")).toHaveAttribute("aria-hidden", "true");
     // No goal ring and no minutes control.
     expect(screen.queryByRole("img", { name: /^하루 목표/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /하루 공부 시간/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
     // The today card's chip alone; the last seven days' card has no streak line.
     expect(screen.getAllByText("1일 연속")).toHaveLength(1);
     expect(screen.getByText("좋은 출발이에요")).toBeInTheDocument();
@@ -702,7 +713,7 @@ describe("the 오늘 and 덱 pages", () => {
 
     const week = screen.getByRole("link", { name: /^지난 7일 동안/ });
     expect(week).toHaveAccessibleName(
-      "지난 7일 동안 10장을 4분 공부했어요, 목요일 2장, 금요일 1장, 토요일 2장, 일요일 1장, " +
+      "지난 7일 동안 10장을 4분 학습했어요, 목요일 2장, 금요일 1장, 토요일 2장, 일요일 1장, " +
         "월요일 2장, 화요일 0장, 수요일 2장",
     );
     expect(week).toHaveAccessibleDescription("기록 열기");
@@ -829,6 +840,8 @@ describe("the 오늘 and 덱 pages", () => {
 
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
       expect(screen.getByText(pointer)).toBeInTheDocument();
+      // The first-run home is the one empty state the mascot heads (ADR 0116).
+      expect(document.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
       expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "덱 목록" })).not.toBeInTheDocument();
       // The web creates nothing and has no public-deck browsing, so the invitation offers no
@@ -851,6 +864,8 @@ describe("the 오늘 and 덱 pages", () => {
     expect(
       screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
     ).not.toBeInTheDocument();
+    // No mascot: it heads the first-run home alone (ADR 0116).
+    expect(document.querySelector('img[src*="smartman-symbol"]')).toBeNull();
     // The web adds no card, so it offers no action.
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     cleanup();
@@ -903,6 +918,9 @@ describe("the 오늘 and 덱 pages", () => {
       expect(screen.getByRole("heading", { name: "오늘 할 카드를 다 했어요" })).toBeInTheDocument();
       expect(screen.getByText("목표 30장 달성")).toBeInTheDocument();
       expect(screen.getByText("오늘 10장 더 했어요")).toBeInTheDocument();
+      // Both chips are their words alone (ADR 0116).
+      expect(screen.getByText("목표 30장 달성").querySelector("svg")).toBeNull();
+      expect(screen.getByText("오늘 10장 더 했어요").querySelector("svg")).toBeNull();
     });
 
     it("control: before the day is done, a planned card answered 모른다 stays left", async () => {

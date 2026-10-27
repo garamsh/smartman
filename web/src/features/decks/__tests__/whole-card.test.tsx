@@ -141,9 +141,34 @@ describe("a table on a whole card", () => {
   });
 });
 
+// A cloze's blank, as the app's `whole_card_view_test.dart` checks it (ADR 0119).
+describe("a blank on a whole card", () => {
+  const cloze: Content = { kind: "cloze", text: "Le ___ dort", answers: ["chat"] };
+
+  it("is an empty gap over a muted underline with no fill while hidden, and its answer on the brand tint once filled", () => {
+    const classes = (revealed: boolean) => {
+      const { container, unmount } = render(<WholeCard blocks={[cloze]} revealed={revealed} />);
+      const names = container.querySelector("[data-blank]")?.className.split(" ") ?? [];
+      unmount();
+      return names;
+    };
+
+    const empty = classes(false);
+    // The answer keeps the gap's width but is not drawn, over the underline in `muted`.
+    expect(empty).toEqual(expect.arrayContaining(["text-transparent", "underline", "decoration-muted"]));
+    // Nothing fills it: no grey bar that reads as loading.
+    expect(empty.filter((name) => name.startsWith("bg-"))).toEqual([]);
+    // Control: the filled blank is drawn on the brand tint, its answer in the text's colour.
+    const filled = classes(true);
+    expect(filled).toContain("bg-brand-tint");
+    expect(filled).not.toContain("text-transparent");
+    expect(filled).not.toContain("underline");
+  });
+});
+
 // A cloze card with a sound beside its sentence (ADR 0112).
 describe("a sound on a whole card", () => {
-  it("is named 음성 with its length, with no control inside the card, which a button holds", () => {
+  it("is named 소리 with its length, with no control inside the card, which a button holds", () => {
     const { container } = render(
       <WholeCard
         blocks={[
@@ -154,10 +179,10 @@ describe("a sound on a whole card", () => {
       />,
     );
 
-    expect(container.querySelector("[data-audio=m1]")?.textContent).toBe("음성 0:02");
+    expect(container.querySelector("[data-audio=m1]")?.textContent).toBe("소리 0:02");
     expect(container.querySelector("button")).toBeNull();
     expect(container.querySelector("[role=group]")?.getAttribute("aria-label")).toBe(
-      "빈칸 says meow. 음성",
+      "빈칸 says meow. 소리",
     );
   });
 });

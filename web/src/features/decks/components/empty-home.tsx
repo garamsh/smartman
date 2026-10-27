@@ -1,10 +1,23 @@
 import { Mascot } from "@/design/brand";
 
-/** The first run's layout: the mascot, the invitation [title] as a heading, and one [body] line. */
-function FirstRun({ id, title, body }: { id: string; title: string; body: string }) {
+/**
+ * The first run's layout: the invitation [title] as a heading and one [body] line, under the
+ * mascot on the first-run home alone (ADR 0116).
+ */
+function FirstRun({
+  id,
+  title,
+  body,
+  mascot = false,
+}: {
+  id: string;
+  title: string;
+  body: string;
+  mascot?: boolean;
+}) {
   return (
     <section aria-labelledby={id} className="flex flex-col items-center gap-2 pt-10 text-center">
-      <Mascot className="mb-4 size-mascot-large bg-surface shadow-card" />
+      {mascot && <Mascot className="mb-4 size-mascot-large bg-surface" />}
       <h2 id={id} className="text-title">
         {title}
       </h2>
@@ -23,13 +36,14 @@ export function EmptyHome() {
       id="empty-home-title"
       title="첫 덱을 만들어 볼까요?"
       body="덱은 휴대폰 앱에서 만들어요. 단어장 사진을 찍거나 직접 입력하면 여기에도 보여요."
+      mascot
     />
   );
 }
 
 /**
- * A deck's page while the deck holds no card, in the first run's layout with the phone's words
- * for an empty deck, and where cards are added, since the web adds none.
+ * A deck's page while the deck holds no card, in the first run's layout without the mascot, with
+ * the phone's words for an empty deck, and where cards are added, since the web adds none.
  */
 export function EmptyDeck() {
   return (
@@ -42,8 +56,9 @@ export function EmptyDeck() {
 }
 
 /**
- * The 오늘 page of a user whose decks hold no card, as the phone's 오늘 tab draws it: how to
- * start rather than a finished day, and where cards are added, since the web adds none.
+ * The 오늘 page of a user whose decks hold no card, as the phone's 오늘 tab draws it, without the
+ * mascot: how to start rather than a finished day, and where cards are added, since the web adds
+ * none.
  */
 export function NoCardsHome() {
   return (

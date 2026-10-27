@@ -4,13 +4,10 @@ import { Flame } from "lucide-react";
 import Link from "next/link";
 import { type MouseEvent, useEffect, useRef } from "react";
 
-import { Mascot } from "@/design/brand";
-
 import type { Completion } from "../session";
 
 /**
- * The completion card in the current card's place once no card is left today: the mascot, the
- * heading, today's answers, time and streak, and the choice to go on with the new cards past
+ * The completion card in the current card's place once no card is left today: the heading, today's answers, time and streak, and the choice to go on with the new cards past
  * today's, through [onStudyOn], or to stop, through [onStop] before the link is followed; with
  * none left, a line saying so in place of going on. It takes the focus to its first choice when it appears, so a keyboard reaches it at once.
  */
@@ -39,7 +36,6 @@ export function CompletionCard({
       aria-labelledby="completion-title"
       className="flex flex-col items-center gap-3 rounded-card bg-surface px-5 pt-7 pb-5 text-center shadow-raised"
     >
-      <Mascot className="size-mascot-medium bg-brand-tint" />
       <h2 id="completion-title" className="text-title">
         오늘 학습 완료
       </h2>

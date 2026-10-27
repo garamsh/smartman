@@ -12,33 +12,34 @@ import { SensesText } from "./side-text";
  * A whole card's front, its blocks in order: a text block as its title, a cloze as its sentence,
  * a table as its table and a photo as its frame with its boxes, with each blank empty, or filled
  * in place when [revealed] (ADR 0068, ADR 0109), a table's span inside its cell's text
- * (ADR 0110), and a sound as "음성" and its length, which the study page's controls play
+ * (ADR 0110), and a sound as "소리" and its length, which the study page's controls play
  * (ADR 0112). The web reads no photo from the bucket yet, so
  * the frame is drawn on the ground at the photo's aspect ratio. An empty blank keeps its
  * answer's width, so filling it moves nothing. It reads as
  * `spokenContent` says, blanks as "빈칸" until revealed. It is spans throughout, so a button can
- * hold it.
+ * hold it. Centred, its text block in the headline, as a card draws it; [inRow], from the start,
+ * in a list row's style in bold (ADR 0119).
  */
 export function WholeCard({
   blocks,
   revealed,
-  className = "",
+  inRow = false,
 }: {
   blocks: Content[];
   revealed: boolean;
-  className?: string;
+  inRow?: boolean;
 }) {
   return (
     <span
       role="group"
       aria-label={spokenContent(blocks, revealed)}
-      className={`flex w-full flex-col gap-3 text-center break-words whitespace-pre-wrap ${className}`}
+      className={`flex w-full flex-col gap-3 break-words whitespace-pre-wrap ${inRow ? "text-left text-body-strong" : "text-center"}`}
     >
       {blocks.map((block, index) => {
         switch (block.kind) {
           case "text":
             return (
-              <span key={index} aria-hidden className="text-headline">
+              <span key={index} aria-hidden className={inRow ? "" : "text-headline"}>
                 {block.text}
               </span>
             );
@@ -121,7 +122,7 @@ export function WholeCard({
                 data-audio={block.media}
                 className="text-body text-muted"
               >
-                음성 {audioLength(block.durationMs)}
+                소리 {audioLength(block.durationMs)}
               </span>
             );
           case "unsupported":
@@ -174,12 +175,15 @@ function ImageBoxMark({ box, revealed }: { box: ImageBox; revealed: boolean }) {
   );
 }
 
-/** A blank: its answer in no colour on the hairline, or filled on the brand tint. */
+/**
+ * A blank: an empty gap of its answer's width over a muted underline, its answer not drawn, so
+ * hidden content shows as nothing (ADR 0119); or its answer filled on the brand tint.
+ */
 function Blank({ answer, revealed }: { answer: string; revealed: boolean }) {
   return (
     <span
       data-blank={revealed ? "filled" : "empty"}
-      className={`rounded-sm px-1 ${revealed ? "bg-brand-tint" : "bg-hairline text-transparent"}`}
+      className={`rounded-sm px-1 ${revealed ? "bg-brand-tint" : "text-transparent underline decoration-muted"}`}
     >
       {answer}
     </span>

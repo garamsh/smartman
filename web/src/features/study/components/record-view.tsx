@@ -108,7 +108,7 @@ function PeriodChoice({
             }}
             className="peer sr-only"
           />
-          <span className="flex min-h-tap-target min-w-16 flex-1 cursor-pointer items-center justify-center rounded-button px-3 text-secondary font-semibold text-ink-2 peer-checked:bg-raised peer-checked:font-bold peer-checked:text-ink peer-checked:shadow-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
+          <span className="flex min-h-tap-target min-w-16 flex-1 cursor-pointer items-center justify-center rounded-button px-3 text-secondary font-semibold text-ink-2 peer-checked:bg-raised peer-checked:font-bold peer-checked:text-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
             {name}
           </span>
         </label>

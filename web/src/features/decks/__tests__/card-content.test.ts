@@ -348,15 +348,15 @@ describe("an audio block", () => {
     expect(parseContent([audio({ media: "m1", duration_ms: 1 })])).not.toBeNull();
   });
 
-  it("reads as 음성, makes no whole card, and is found among a side's blocks with its length rounded up", () => {
+  it("reads as 소리, makes no whole card, and is found among a side's blocks with its length rounded up", () => {
     const side =
       parseContent([
         { type: "text", payload: { text: "cat" } },
         audio({ media: "m1", duration_ms: 1250 }),
       ]) ?? [];
 
-    expect(describeContent(side)).toBe("cat 음성");
-    expect(spokenContent(side, false)).toBe("cat. 음성");
+    expect(describeContent(side)).toBe("cat 소리");
+    expect(spokenContent(side, false)).toBe("cat. 소리");
     expect(isWholeCard(side)).toBe(false);
     expect(audioOf(side)).toEqual([{ kind: "audio", media: "m1", durationMs: 1250 }]);
     expect(audioLength(1250)).toBe("0:02");

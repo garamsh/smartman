@@ -41,14 +41,14 @@ describe("the daily study minutes", () => {
     );
   };
   const control = (minutes: number) =>
-    screen.getByRole("button", { name: `하루 공부 시간 ${String(minutes)}분` });
+    screen.getByRole("button", { name: `하루 학습 시간 ${String(minutes)}분` });
 
-  it("show under 공부 as a row reading 하루 공부 시간 and the minutes, which opens a dialog", async () => {
+  it("show under 학습 as a row reading 하루 학습 시간 and the minutes, which opens a dialog", async () => {
     seedNew(3);
     await render(Profile, {});
 
-    const study = screen.getByRole("region", { name: "공부" });
-    expect(within(study).getByRole("button", { name: "하루 공부 시간 20분" })).toHaveAttribute(
+    const study = screen.getByRole("region", { name: "학습" });
+    expect(within(study).getByRole("button", { name: "하루 학습 시간 20분" })).toHaveAttribute(
       "aria-haspopup",
       "dialog",
     );
@@ -60,13 +60,13 @@ describe("the daily study minutes", () => {
   /** The dialog the control opened, its tiles, and its number as a button. */
   const openDialog = async (user: ReturnType<typeof userEvent.setup>, minutes = 20) => {
     await user.click(control(minutes));
-    const dialog = within(screen.getByRole("dialog", { name: "하루 공부 시간" }));
+    const dialog = within(screen.getByRole("dialog", { name: "하루 학습 시간" }));
     return {
       dialog,
       tiles: dialog.getByRole("status"),
       number: (value: number) =>
         dialog.getByRole("button", { name: `하루 ${String(value)}분, 눌러서 직접 입력` }),
-      input: () => dialog.getByRole("textbox", { name: "하루 공부 시간(분)" }),
+      input: () => dialog.getByRole("textbox", { name: "하루 학습 시간(분)" }),
     };
   };
 
@@ -98,7 +98,7 @@ describe("the daily study minutes", () => {
 
     await user.clear(input());
     await user.type(input(), "200");
-    expect(dialog.getByText("5분에서 180분 사이로 적어 주세요")).toBeInTheDocument();
+    expect(dialog.getByText("5분에서 180분 사이로 입력해 주세요")).toBeInTheDocument();
     expect(input()).toHaveAttribute("aria-invalid", "true");
     expect(dialog.getByRole("button", { name: "저장" })).toBeDisabled();
     // Enter keeps a number out of the bounds in the field until it is fixed.
@@ -111,7 +111,7 @@ describe("the daily study minutes", () => {
     await user.clear(input());
     await user.keyboard("{Enter}");
     expect(number(20)).toHaveFocus();
-    expect(dialog.queryByText("5분에서 180분 사이로 적어 주세요")).not.toBeInTheDocument();
+    expect(dialog.queryByText("5분에서 180분 사이로 입력해 주세요")).not.toBeInTheDocument();
     // Nothing is stored until 저장.
     expect(postgrest.studySettings.has(testUser.id)).toBe(false);
 

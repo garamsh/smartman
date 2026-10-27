@@ -247,7 +247,7 @@ describe("the study page", () => {
         await userEvent.setup().click(within(completion).getByRole("link", { name: "그만하기" }));
       },
     };
-    const confirm = () => screen.queryByRole("dialog", { name: "저장하지 못한 응답이 있어요" });
+    const confirm = () => screen.queryByRole("dialog", { name: "저장하지 않고 나갈까요?" });
     /** The top bar's close, the 그만하기 that Esc follows. */
     const closeLink = () => {
       const link = screen
@@ -270,7 +270,7 @@ describe("the study page", () => {
 
         await exits[way]();
 
-        const dialog = await screen.findByRole("dialog", { name: "저장하지 못한 응답이 있어요" });
+        const dialog = await screen.findByRole("dialog", { name: "저장하지 않고 나갈까요?" });
         expect(dialog).toHaveTextContent("지금 나가면 저장하지 못한 응답 1개가 사라져요.");
         // The dialog takes the focus once it has mounted.
         await waitFor(() => {
@@ -288,7 +288,7 @@ describe("the study page", () => {
           .setup()
           .click(
             within(
-              await screen.findByRole("dialog", { name: "저장하지 못한 응답이 있어요" }),
+              await screen.findByRole("dialog", { name: "저장하지 않고 나갈까요?" }),
             ).getByRole("button", { name: "나가기" }),
           );
         expect(testRouter.push).toHaveBeenCalledExactlyOnceWith("/");
@@ -459,6 +459,11 @@ describe("the study page", () => {
       // This morning's 모른다 and the session's three 안다; 90 s and the session's time, rounded
       // up; yesterday and today in a row.
       expect(completionLine()).toBe("3 안다1 모른다2분연속 2일");
+      // No mascot, and the flame its one icon (ADR 0116).
+      expect(completion.querySelector('img[src*="smartman-symbol"]')).toBeNull();
+      expect(
+        [...completion.querySelectorAll("svg")].map((icon) => icon.getAttribute("class")),
+      ).toEqual([expect.stringContaining("lucide-flame")]);
       // No new card is left past today's, so the card says so and 그만하기 takes the focus.
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "학습하기" })).not.toBeInTheDocument();
@@ -510,7 +515,7 @@ describe("the study page", () => {
         `${String(todayNewCards)}장 중 ${String(todayNewCards)}장 끝냄`,
       );
       expect(screen.getByText("추가 2장")).toBeInTheDocument();
-      expect(screen.getByText("오늘 계획 밖으로 2장 더 공부함")).toHaveClass("sr-only");
+      expect(screen.getByText("오늘 계획 밖으로 2장 더 학습함")).toHaveClass("sr-only");
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       await waitFor(() => {
         expect(postgrest.rows.reviews).toHaveLength(todayNewCards + 2);
@@ -1215,6 +1220,14 @@ describe("the study page", () => {
         그만하기: "Escape",
         단축키: "?",
       });
+      // An answer button is its word and its key, with no arrow icon repeating the key (ADR 0116).
+      for (const name of ["안다", "모른다"]) {
+        const answer = screen.getByRole("button", { name });
+        expect(answer.querySelector("svg"), name).toBeNull();
+        expect(answer.textContent, name).toBe(name === "안다" ? "안다 →" : "모른다 ←");
+      }
+      // Control: the close keeps its icon.
+      expect(screen.getByRole("link", { name: "그만하기" }).querySelector("svg")).not.toBeNull();
     });
   });
 

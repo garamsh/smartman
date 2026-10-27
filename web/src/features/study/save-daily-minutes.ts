@@ -12,10 +12,10 @@ import { maxDailyMinutes, minDailyMinutes } from "./queue";
 export type SaveMinutesResult = { saved: true } | { saved: false; message: string };
 
 const failureMessages: Record<ServerFailure | "malformed", string> = {
-  unreachable: "공부 시간을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
-  rejected: "로그인이 끝나 공부 시간을 저장하지 못했어요. 다시 로그인해 주세요.",
-  failed: "공부 시간을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
-  malformed: "공부 시간은 5분에서 180분 사이로 골라 주세요.",
+  unreachable: "학습 시간을 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+  rejected: "로그인이 끝나 학습 시간을 저장하지 못했어요. 다시 로그인해 주세요.",
+  failed: "학습 시간을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  malformed: "학습 시간은 5분에서 180분 사이로 골라 주세요.",
 };
 
 /**

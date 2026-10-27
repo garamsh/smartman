@@ -34,6 +34,27 @@ describe("the theme choice", () => {
     expect(screen.getByRole("radio", { name: "시스템" })).toBeChecked();
   });
 
+  it("draws the three as one group of hairline rows, the chosen one's check shown, and no shadow", () => {
+    document.documentElement.dataset.theme = "light";
+    renderChoice();
+
+    const group = screen.getByRole("radiogroup", { name: "화면" });
+    expect(group).toHaveClass("rounded-group", "bg-surface", "divide-y", "divide-hairline");
+    expect(group.querySelector('[class*="shadow"]')).toBeNull();
+    // Each row ends with a check that shows once its radio is checked, the selection's check.
+    expect(
+      screen.getAllByRole("radio").map((radio) => {
+        const check = radio.closest("label")?.querySelector("svg");
+        return [radio.matches(":checked"), check?.getAttribute("class")?.split(" ")];
+      }),
+    ).toEqual(
+      ["시스템", "라이트", "다크"].map((name) => [
+        name === "라이트",
+        expect.arrayContaining(["invisible", "peer-checked:visible"]),
+      ]),
+    );
+  });
+
   it("checks the theme the page was first drawn in", () => {
     document.documentElement.dataset.theme = "dark";
 

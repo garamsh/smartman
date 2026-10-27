@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -432,7 +432,7 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
               {view.extra > 0 && (
                 <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-micro font-bold whitespace-nowrap text-ink">
                   <span aria-hidden>추가 {view.extra}장</span>
-                  <span className="sr-only">오늘 계획 밖으로 {view.extra}장 더 공부함</span>
+                  <span className="sr-only">오늘 계획 밖으로 {view.extra}장 더 학습함</span>
                 </span>
               )}
             </>
@@ -657,7 +657,6 @@ function AnswerButtons({
         aria-keyshortcuts="ArrowLeft"
         className={`${answerButton} bg-tint-red text-on-dont-know-tint`}
       >
-        <ChevronLeft aria-hidden className="size-small-icon" strokeWidth={2.4} />
         모른다 <Hint>←</Hint>
       </button>
       <button
@@ -676,7 +675,6 @@ function AnswerButtons({
         className={`${answerButton} bg-tint-green text-on-know-tint`}
       >
         안다 <Hint>→</Hint>
-        <ChevronRight aria-hidden className="size-small-icon" strokeWidth={2.4} />
       </button>
     </div>
   );

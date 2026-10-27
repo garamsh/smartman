@@ -37,21 +37,26 @@ export async function readStudySetting(): Promise<
   };
 }
 
-/** "공부": the daily study minutes' row, the one place they are changed, or why they cannot be read. */
+/**
+ * "학습": the daily study minutes' row, in a group of its own, the one place they are changed, or
+ * why they cannot be read.
+ */
 export function StudySetting({
   setting,
 }: {
   setting: Awaited<ReturnType<typeof readStudySetting>>;
 }) {
   return (
-    <section aria-labelledby="study-section" className="flex flex-col gap-3">
-      <h2 id="study-section" className="text-section text-ink-2">
-        공부
+    <section aria-labelledby="study-section" className="flex flex-col gap-2">
+      <h2 id="study-section" className="px-1 text-section text-muted">
+        학습
       </h2>
       {"failure" in setting ? (
         <ReadFailure failure={setting.failure} />
       ) : (
-        <DailyMinutes minutes={setting.minutes} plan={setting.plan} />
+        <div className="flex flex-col rounded-group bg-surface">
+          <DailyMinutes minutes={setting.minutes} plan={setting.plan} />
+        </div>
       )}
     </section>
   );
