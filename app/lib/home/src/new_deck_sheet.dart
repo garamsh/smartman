@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../deck/deck.dart';
 import '../../l10n/app_localizations.dart';
@@ -33,21 +32,14 @@ Future<void> showNewDeckSheet(BuildContext context, WidgetRef ref) async {
     context,
     title: l10n.newDeckTitle,
     options: [
-      (
-        icon: LucideIcons.pencilLine,
-        title: l10n.createManually,
-        body: null,
-        value: const _ByHand(),
-      ),
+      (title: l10n.createManually, body: null, value: const _ByHand()),
       if (photoImport != null) ...[
         (
-          icon: LucideIcons.camera,
           title: l10n.photoCamera,
           body: l10n.photoCameraBody,
           value: const _FromPhoto(PhotoOrigin.camera),
         ),
         (
-          icon: LucideIcons.images,
           title: l10n.photoAlbum,
           body: l10n.photoAlbumBody,
           value: const _FromPhoto(PhotoOrigin.album),
