@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { chipTone } from "@/testing/chip";
 import { otherUser } from "@/testing/mocks/handlers";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
@@ -9,6 +10,7 @@ import { cardRow, day, deckRow, reviewRow, start, stateRow } from "@/testing/lib
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { typeSizesOf } from "@/testing/type-sizes";
 
 import { RecordContent } from "../_components/record";
 
@@ -91,7 +93,7 @@ describe("the record page", () => {
     // 30 days: a's "안다" 20 days back, and a's and the deleted card's "안다" and b's "모른다" 3 days back.
     expect(screen.getByRole("radio", { name: "30일" })).toBeChecked();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByText("목표보다 15%p 낮아요")).toBeInTheDocument();
+    expect(chipTone(screen.getByText("목표보다 15%p 낮아요"))).toBe("tint-amber");
     expect(label("복습에서 맞힌 비율")).toBe(
       "복습에서 맞힌 비율, 목표 90%: 12월 26일 100%, 1월 12일 67%",
     );
@@ -104,6 +106,16 @@ describe("the record page", () => {
     await userEvent.click(screen.getByRole("radio", { name: "전체" }));
     expect(screen.getByText("60%")).toBeInTheDocument();
     expect(screen.getByText("목표보다 30%p 낮아요")).toBeInTheDocument();
+  });
+
+  it("draws its charts below the page's title in two sizes, the body and the caption, the figures apart", async () => {
+    seedHistory();
+    await render(RecordContent, {});
+
+    // The state it asked for: the retention with its target, which drew a fourth size.
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("90%")).toBeInTheDocument();
+    expect(typeSizesOf(document.body)).toEqual([13, 16]);
   });
 
   it("puts the period selector in the retention card beside its heading, which alone follows it", async () => {

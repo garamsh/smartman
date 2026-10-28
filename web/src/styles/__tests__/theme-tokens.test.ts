@@ -165,6 +165,7 @@ describe("the web theme's radius tokens", () => {
     expect([...radii.keys()].sort()).toEqual([
       "button",
       "card",
+      "chip",
       "field",
       "group",
       "panel",

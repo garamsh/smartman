@@ -4,6 +4,8 @@ import { ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { Chip } from "@/design/chip";
+
 import type { Deck } from "../library";
 import { DeckTile } from "./deck-tile";
 
@@ -88,11 +90,7 @@ export function DeckList({ rows }: { rows: DeckRow[] }) {
                   )}
                 </span>
                 {deck.public && <PublicChip />}
-                {today > 0 && (
-                  <span className="shrink-0 rounded-full bg-brand-tint px-3 py-1 text-micro font-semibold text-ink">
-                    오늘 {today}
-                  </span>
-                )}
+                {today > 0 && <Chip tone="brand">오늘 {today}</Chip>}
                 <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" strokeWidth={2} />
               </Link>
             </li>
@@ -110,9 +108,5 @@ function share(part: number, whole: number): number {
 
 /** The chip beside a deck its owner published, as the phone draws it. */
 export function PublicChip() {
-  return (
-    <span className="shrink-0 rounded-full border border-outline bg-surface px-3 py-1 text-micro font-semibold text-ink">
-      공개
-    </span>
-  );
+  return <Chip>공개</Chip>;
 }

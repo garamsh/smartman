@@ -49,6 +49,7 @@
   --radius-row: 18px;
   --radius-group: 14px;
   --radius-button: 12px;
+  --radius-chip: 6px;
   --radius-field: 14px;
   --radius-panel: 40px;
 
@@ -383,11 +384,11 @@
 }
 
 /* Every button and row's hover and pressed state, as the phone's AppButton shows pressed
-   feedback (design.md §Principles 7): a layer of the control's own text colour at 4% over its
-   fill, and, under motion-safe, a slight press. */
+   feedback (design.md §Details): a dim, a layer of the control's own text colour at 4% over its
+   fill, with no change of size. */
 @layer components {
   .pressable {
     --state-layer: color-mix(in srgb, currentColor 4%, transparent);
-    @apply not-disabled:hover:bg-[linear-gradient(var(--state-layer),var(--state-layer))] not-disabled:active:bg-[linear-gradient(var(--state-layer),var(--state-layer))] motion-safe:transition-transform motion-safe:not-disabled:active:scale-98;
+    @apply not-disabled:hover:bg-[linear-gradient(var(--state-layer),var(--state-layer))] not-disabled:active:bg-[linear-gradient(var(--state-layer),var(--state-layer))];
   }
 }
