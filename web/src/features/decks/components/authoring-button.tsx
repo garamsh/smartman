@@ -9,10 +9,20 @@ import type { Deck } from "../library";
 import { AuthoringSheet } from "./authoring-sheet";
 import { CardFields } from "./card-fields";
 import { PhotoImport } from "./photo-import";
+import { SpreadsheetImport } from "./spreadsheet-import";
 
-/** A creation entry opens the phone's three choices without leaving the current page. */
+const choices = [
+  { choice: "직접 입력", line: "", open: "manual" },
+  { choice: "사진 찍기", line: "단어장을 찍으면 카드를 찾아 드려요", open: "camera" },
+  { choice: "앨범에서 고르기", line: "사진에서 카드를 찾아 드려요", open: "album" },
+  { choice: "파일에서 고르기", line: "엑셀이나 CSV 파일의 행을 카드로 만들어요", open: "file" },
+] as const;
+
+/** A creation entry opens the phone's three choices and a spreadsheet file without leaving the page. */
 export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Deck[] }) {
-  const [screen, setScreen] = useState<"options" | "name" | "manual" | "photo" | null>(null);
+  const [screen, setScreen] = useState<"options" | "name" | "manual" | "photo" | "file" | null>(
+    null,
+  );
   const [camera, setCamera] = useState(false);
   const label = deck ? "카드 추가" : "새 덱 만들기";
   return (
@@ -34,28 +44,23 @@ export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Dec
           }}
         >
           <div className="divide-y divide-hairline overflow-hidden rounded-group bg-surface">
-            {["직접 입력", "사진 찍기", "앨범에서 고르기"].map((choice, index) => (
+            {choices.map(({ choice, line, open }) => (
               <button
                 type="button"
                 key={choice}
                 aria-label={choice}
                 className="pressable flex min-h-button w-full flex-col items-start px-4 py-4 text-left text-body"
                 onClick={() => {
-                  if (index === 0) setScreen(deck ? "manual" : "name");
+                  if (open === "manual") setScreen(deck ? "manual" : "name");
+                  else if (open === "file") setScreen("file");
                   else {
-                    setCamera(index === 1);
+                    setCamera(open === "camera");
                     setScreen("photo");
                   }
                 }}
               >
                 {choice}
-                {index !== 0 && (
-                  <span className="text-caption text-muted">
-                    {index === 1
-                      ? "단어장을 찍으면 카드를 찾아 드려요"
-                      : "사진에서 카드를 찾아 드려요"}
-                  </span>
-                )}
+                {line && <span className="text-caption text-muted">{line}</span>}
               </button>
             ))}
           </div>
@@ -71,6 +76,15 @@ export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Dec
       {screen === "manual" && deck && (
         <ManualEntry
           deck={deck}
+          close={() => {
+            setScreen(null);
+          }}
+        />
+      )}
+      {screen === "file" && (
+        <SpreadsheetImport
+          deck={deck}
+          decks={decks}
           close={() => {
             setScreen(null);
           }}
