@@ -11,6 +11,7 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { expectTextReadable } from "@/testing/contrast";
 import { render } from "@/testing/render";
 import { signedInCookies } from "@/testing/session";
+import { typeSizesOf } from "@/testing/type-sizes";
 import { sensesUnder } from "@/testing/senses";
 import { blanksUnder } from "@/testing/whole-cards";
 
@@ -193,6 +194,21 @@ describe("the deck page", () => {
     cleanup();
     await open("d-fr");
     expect(screen.queryByRole("region", { name: "아직 카드가 없어요" })).not.toBeInTheDocument();
+  });
+
+  it("draws in three sizes, the title, the body and the caption, with its backs hidden or shown and with no card", async () => {
+    await open("d-fr");
+    expect(typeSizesOf(document.body)).toEqual([13, 16, 26]);
+    await userEvent.setup().click(screen.getByRole("switch", { name: "뒷면 보기" }));
+    // The state it asked for: every back shown.
+    expect(rows()).toContain("Chat, 뒷면 Chat back");
+    expect(typeSizesOf(document.body)).toEqual([13, 16, 26]);
+    cleanup();
+
+    postgrest.seed("decks", deckRow("d-empty", "Empty"));
+    await open("d-empty");
+    expect(screen.getByRole("region", { name: "아직 카드가 없어요" })).toBeInTheDocument();
+    expect(typeSizesOf(document.body)).toEqual([13, 16, 26]);
   });
 
   it("keeps the way back to 덱 and a heading above a failed read, with 다시 시도", async () => {

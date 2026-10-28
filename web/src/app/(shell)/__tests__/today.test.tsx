@@ -9,8 +9,10 @@ import { server } from "@/testing/mocks/server";
 import { cardRow, day, deckRow, reviewRow, start, stateRow, uuidOf } from "@/testing/library";
 import { setRequestCookies } from "@/testing/next-headers";
 import { render } from "@/testing/render";
+import { chipTone } from "@/testing/chip";
 import { expectTextReadable } from "@/testing/contrast";
 import { signedInCookies } from "@/testing/session";
+import { typeSizesOf } from "@/testing/type-sizes";
 
 import { Study } from "../../study/_components/study";
 import { Today } from "../_components/today";
@@ -568,6 +570,9 @@ describe("the 오늘 and 덱 pages", () => {
     expect(card().textContent).not.toMatch(/z/);
     expect(within(card()).getByText("목표 1장 달성").querySelector("svg")).toBeNull();
     expect(within(card()).getByText("1일 연속").querySelector("svg")).not.toBeNull();
+    // Both in the one chip, its neutral tone (ADR 0119).
+    expect(chipTone(within(card()).getByText("목표 1장 달성"))).toBe("surface");
+    expect(chipTone(within(card()).getByText("1일 연속"))).toBe("surface");
     const study = screen.getByRole("link", { name: "학습하기" });
     expect(study).toHaveClass("bg-ink");
     expect(study).toHaveAttribute("aria-keyshortcuts", "Enter");
@@ -876,6 +881,64 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.queryByRole("heading", { name: title })).not.toBeInTheDocument();
   });
 
+  it("draws 오늘 and 덱 in three sizes, the title, the body and the caption, in every state", async () => {
+    const overdue = {
+      stability: 30,
+      difficulty: 5,
+      lastReview: start - 31 * day,
+      due: start - day,
+    };
+    const states: [string, () => void][] = [
+      ["첫 덱을 만들어 볼까요?", () => undefined],
+      ["첫 카드를 만들어 볼까요?", () => postgrest.seed("decks", deckRow("d-fr", "French"))],
+      [
+        "오늘 할 카드",
+        () => {
+          postgrest.seed("decks", deckRow("d-fr", "French"));
+          postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
+        },
+      ],
+      [
+        "오늘 할 카드를 다 했어요",
+        () => {
+          postgrest.seed("decks", deckRow("d-fr", "French"));
+          postgrest.seed("cards", cardRow("c-chat", "d-fr", "chat"));
+          postgrest.seed("card_states", stateRow("c-chat", notDue));
+        },
+      ],
+      [
+        "다시 시작하면 돼요",
+        () => {
+          postgrest.seed("decks", deckRow("d-fr", "French"));
+          postgrest.seed(
+            "cards",
+            ...["a", "b", "c"].map((name) => cardRow(`c-${name}`, "d-fr", name)),
+          );
+          postgrest.seed(
+            "card_states",
+            ...["a", "b", "c"].map((name) => stateRow(`c-${name}`, overdue)),
+          );
+        },
+      ],
+    ];
+    for (const [state, seed] of states) {
+      postgrest = new FakePostgrest();
+      server.use(...postgrest.handlers);
+      seed();
+      for (const page of [Today, Decks]) {
+        await render(page, {});
+        // The state the seed asked for, read on 오늘.
+        if (page === Today)
+          expect(screen.getByRole("heading", { name: state })).toBeInTheDocument();
+        expect({ state, sizes: typeSizesOf(document.body) }).toEqual({
+          state,
+          sizes: [13, 16, 28],
+        });
+        cleanup();
+      }
+    }
+  });
+
   describe("study past the day's plan", () => {
     const names = Array.from({ length: 45 }, (_, index) => `c${String(index).padStart(2, "0")}`);
     /**
@@ -921,6 +984,7 @@ describe("the 오늘 and 덱 pages", () => {
       // Both chips are their words alone (ADR 0116).
       expect(screen.getByText("목표 30장 달성").querySelector("svg")).toBeNull();
       expect(screen.getByText("오늘 10장 더 했어요").querySelector("svg")).toBeNull();
+      expect(chipTone(screen.getByText("오늘 10장 더 했어요"))).toBe("surface");
     });
 
     it("control: before the day is done, a planned card answered 모른다 stays left", async () => {
