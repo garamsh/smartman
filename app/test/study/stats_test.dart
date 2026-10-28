@@ -169,10 +169,13 @@ void main() {
   });
 
   group('mastered gain', () {
-    test('is this week\'s count less the count four weeks before, and none unless more', () {
-      expect(masteredGain([0, 1, 2, 3, 5, 6, 7, 9]), 6);
-      expect(masteredGain([0, 0, 0, 4, 4, 4, 4, 4]), isNull);
-      expect(masteredGain([0, 0, 0, 5, 4, 4, 4, 4]), isNull);
+    test('is this week\'s count less the count at the end of the first week the chart draws, and none unless more', () {
+      expect(masteredGain([0, 1, 2, 3, 5, 6, 7, 9]), 9);
+      // Four weeks back the count was already 4: the chart's span still
+      // gains them.
+      expect(masteredGain([0, 0, 0, 4, 4, 4, 4, 4]), 4);
+      expect(masteredGain([4, 4, 4, 4, 4, 4, 4, 4]), isNull);
+      expect(masteredGain([5, 0, 0, 0, 4, 4, 4, 4]), isNull);
     });
   });
 

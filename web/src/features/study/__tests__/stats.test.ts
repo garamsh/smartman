@@ -145,10 +145,11 @@ describe("the mastered weeks", () => {
     expect(weeks).toEqual([0, 0, 0, 1, 1, 1, 2, 2]);
   });
 
-  it("gain this week's count less the count four weeks before, and none unless more", () => {
-    expect(masteredGain([0, 1, 2, 3, 5, 6, 7, 9])).toBe(6);
-    expect(masteredGain([0, 0, 0, 4, 4, 4, 4, 4])).toBeNull();
-    expect(masteredGain([0, 0, 0, 5, 4, 4, 4, 4])).toBeNull();
+  it("gain this week's count less the first week in the chart, and none unless more", () => {
+    expect(masteredGain([0, 1, 2, 3, 5, 6, 7, 9])).toBe(9);
+    expect(masteredGain([0, 0, 0, 4, 4, 4, 4, 4])).toBe(4);
+    expect(masteredGain([4, 4, 4, 4, 4, 4, 4, 4])).toBeNull();
+    expect(masteredGain([5, 0, 0, 0, 4, 4, 4, 4])).toBeNull();
   });
 });
 

@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { render } from "@/testing/render";
+import { typeSizesOf } from "@/testing/type-sizes";
 
 import PrivacyPage from "../(legal)/privacy/page";
 import TermsPage from "../(legal)/terms/page";
@@ -64,6 +65,13 @@ describe.each(documents)("$name", ({ page, title, effectiveDate, effectiveSenten
       expect(link).toHaveAttribute("href", "mailto:sauce@garam.sh");
     }
     expect(screen.getAllByRole("link", { name: "sauce@garam.sh" }).length).toBeGreaterThan(0);
+  });
+
+  it("draws in three sizes, the title, the body and the caption, its section headings in the body's", async () => {
+    await render(page, {});
+
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
+    expect(typeSizesOf(document.body)).toEqual([13, 16, 22]);
   });
 
   it("carries every required section, each a heading its table of contents links to", async () => {

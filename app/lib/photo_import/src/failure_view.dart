@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/app_button.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -54,8 +55,10 @@ class FailureView extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpace.s24),
           child: Semantics(
             liveRegion: true,
+            // Korean breaks only between words (#454).
             child: Text(
-              describePhotoImportFailure(l10n, failure),
+              keepWords(describePhotoImportFailure(l10n, failure)),
+              semanticsLabel: describePhotoImportFailure(l10n, failure),
               textAlign: TextAlign.center,
               style: AppType.bodyStrong,
             ),

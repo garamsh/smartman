@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import 'card_edit_sheet.dart';
 import 'import_list.dart';
 import 'photo_viewer.dart';
+import 'round_check.dart';
 
 /// The cards made from the photo, as one list in sections by topic: each row
 /// included or left out by its check or a swipe left, and edited in a sheet
@@ -138,25 +139,23 @@ class _ImportListViewState extends State<ImportListView> {
     final count = _list.cardCount;
     final rows = _list.rows.length;
     return Scaffold(
+      // × closes, as every other screen's top bar does; the retake waits in
+      // ⋯, so the bar holds no words.
       appBar: AppBar(
-        leadingWidth: AppSize.tapTarget * 2,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: AppSpace.s4),
-          child: AppButton(
-            label: l10n.cancel,
-            variant: AppButtonVariant.text,
-            onPressed: widget.onCancel,
-          ),
+        leading: IconButton(
+          tooltip: l10n.close,
+          icon: const Icon(LucideIcons.x),
+          onPressed: widget.onCancel,
         ),
         actions: [
           if (widget.onRetake case final onRetake?)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpace.s4),
-              child: AppButton(
-                label: widget.retakeLabel,
-                variant: AppButtonVariant.text,
-                onPressed: onRetake,
-              ),
+            PopupMenuButton<VoidCallback>(
+              tooltip: l10n.importActions,
+              icon: const Icon(LucideIcons.ellipsisVertical),
+              onSelected: (action) => action(),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: onRetake, child: Text(widget.retakeLabel)),
+              ],
             ),
         ],
       ),
@@ -587,7 +586,7 @@ class _RowTile extends StatelessWidget {
               child: SizedBox(
                 width: AppSize.tapTarget + AppSpace.s4,
                 height: AppSize.tapTarget + AppSpace.s4,
-                child: Center(child: _Check(on: included)),
+                child: Center(child: RoundCheck(on: included)),
               ),
             ),
           ),
@@ -697,34 +696,6 @@ class _RowTile extends StatelessWidget {
         ),
       ),
       child: Material(type: MaterialType.transparency, child: tile),
-    );
-  }
-}
-
-/// A round check, filled in ink with a tick when on, outlined when off.
-class _Check extends StatelessWidget {
-  const _Check({required this.on});
-
-  final bool on;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Container(
-      width: AppSpace.s20 + AppSpace.s4,
-      height: AppSpace.s20 + AppSpace.s4,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: on ? colors.ink : null,
-        border: on ? null : Border.all(color: colors.muted, width: 1.5),
-      ),
-      child: on
-          ? Icon(
-              LucideIcons.check,
-              size: AppSize.checkIcon,
-              color: colors.onPrimary,
-            )
-          : null,
     );
   }
 }

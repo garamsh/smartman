@@ -23,7 +23,7 @@ The two checks this section serves are `review.md` §Submitting a review, "Confi
 1. Read the head: `gh pr view <n> --json headRefOid,headRefName`.
 2. List the runs on the branch with the commit each ran on: `gh run list --branch <headRefName> --json databaseId,headSha,conclusion,event`. Take the run whose `headSha` equals `headRefOid`; a run on any other commit is not a run on the head.
 3. Count the steps that ran: `gh run view <databaseId> --json jobs --jq '.jobs[] | {name, conclusion, steps: [.steps[] | {name, conclusion}]}'`.
-4. Read what the steps selected: `gh run view <databaseId> --log`. In this repository the `make ci` step runs `make lint`, whose scripts each print a `checked <count> ... selected by: <command>` line; the counts are the work selected.
+4. Read what the steps selected: `gh run view <databaseId> --log`. In this repository each job runs `make` targets, and the lines in which a check names what it was `selected by` give the count it selected; the counts are the work selected.
 
 ## Posting the verdict
 
