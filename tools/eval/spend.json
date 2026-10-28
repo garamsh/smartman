@@ -105,6 +105,11 @@
       "date": "2026-10-26",
       "spentUsd": 0.661814,
       "note": "two-stage eval (#414)"
+    },
+    {
+      "date": "2026-10-28",
+      "spentUsd": 0.309944,
+      "note": "prompt version 3"
     }
   ]
 }
