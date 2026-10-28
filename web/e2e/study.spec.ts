@@ -657,6 +657,106 @@ test("the settings page wraps an email too long for one line inside its group", 
   expect(emailBox.x + emailBox.width).toBeLessThanOrEqual(groupBox.x + groupBox.width);
 });
 
+/** A Korean paragraph of at least [length] characters, ending at a word. */
+function longKorean(length: number) {
+  const text =
+    "광합성은 식물이 빛 에너지를 이용해 이산화탄소와 물로부터 포도당을 만드는 과정이다. " +
+    "엽록체의 틸라코이드 막에서 일어나는 명반응은 빛을 흡수해 물을 분해하고 산소를 내보내며 " +
+    "ATP와 NADPH를 만든다. 스트로마에서 일어나는 캘빈 회로는 이 에너지를 써서 이산화탄소를 " +
+    "고정하고 포도당을 합성한다. 빛의 세기, 이산화탄소 농도, 온도는 광합성 속도를 결정하는 " +
+    "주요 요인이며, 이 중 가장 부족한 요인이 전체 속도를 제한한다. 이를 최소량의 법칙이라고 " +
+    "부른다. 따라서 온실에서 작물을 키울 때는 빛을 충분히 비추는 것만으로는 부족하고, " +
+    "이산화탄소를 공급하고 온도를 알맞게 유지해야 수확량이 늘어난다. 또한 식물은 낮에 만든 " +
+    "포도당을 녹말로 바꾸어 저장하고, 밤에는 이를 다시 분해해 호흡에 쓴다. " +
+    "잎의 기공은 이산화탄소를 들이고 수증기를 내보내는 통로인데, 날이 가물면 기공이 닫혀 " +
+    "광합성이 줄어든다.";
+  const end = text.indexOf(" ", length);
+  return end < 0 ? text : text.slice(0, end);
+}
+
+test("a card of 100, 200 and 400 characters, and one of several senses, are studied whole", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!supabaseUrl || !supabaseKey || !baseURL) throw new Error("skipped above");
+  const email = `web-long-${randomUUID()}@example.com`;
+  const password = "web-long-password";
+  await page.goto("/login");
+  const userId = await signUpInBrowser(context, baseURL, email, password);
+  const phone = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  expect((await phone.auth.signInWithPassword({ email, password })).error).toBeNull();
+  const deckId = randomUUID();
+  const now = new Date().toISOString();
+  const text = (value: string) => ({ type: "text", payload: { text: value } });
+  const verb = { kind: "part_of_speech", category: "verb", text: "동" };
+  const senses = {
+    type: "senses",
+    payload: {
+      senses: [
+        { labels: [verb], meaning: "달리다, 뛰다", examples: ["She runs every morning."] },
+        { labels: [verb], meaning: "운영하다, 경영하다", examples: ["They run a bakery."] },
+        { labels: [verb], meaning: "(기계가) 작동하다, 돌아가다", examples: [] },
+        {
+          labels: [{ kind: "part_of_speech", category: "noun", text: "명" }],
+          meaning: "달리기, 뛰기; 연속, 연이은 기간",
+          examples: ["a run of bad luck"],
+        },
+      ],
+    },
+  };
+  expect(
+    (
+      await phone.from("decks").insert({
+        id: deckId,
+        user_id: userId,
+        name: "생명과학",
+        created_at: now,
+        updated_at: now,
+      })
+    ).error,
+  ).toBeNull();
+  const cards = [
+    { front: [text(longKorean(100))], back: [text("광합성")], key: "100" },
+    { front: [text(longKorean(200))], back: [text(longKorean(100))], key: "200" },
+    { front: [text(longKorean(400))], back: [text(longKorean(200))], key: "400" },
+    { front: [text("run")], back: [senses], key: "run" },
+  ];
+  expect(
+    (
+      await phone.from("cards").insert(
+        cards.map(({ front, back, key }) => ({
+          id: randomUUID(),
+          user_id: userId,
+          deck_id: deckId,
+          front,
+          back,
+          card_key: key,
+          source: "manual",
+          created_at: now,
+          updated_at: now,
+        })),
+      )
+    ).error,
+  ).toBeNull();
+  await page.addInitScript(() => {
+    window.localStorage.setItem("studyCoachShown", "true");
+  });
+
+  await page.goto(`/study?decks=${deckId}`);
+  const front = page.getByRole("group", { name: "앞면", exact: true });
+  await expect(front).toBeVisible();
+  for (const step of [1, 2, 3, 4]) {
+    await shot(page, `07-long-study-${String(step)}`);
+    const shown = (await front.textContent()) ?? "";
+    await page.keyboard.press("ArrowRight");
+    await expect
+      .poll(async () => ((await front.count()) === 0 ? "" : await front.textContent()))
+      .not.toBe(shown);
+  }
+  await shot(page, "07-long-study-done");
+});
+
 test.describe("in UTC, where a study day runs from 04:00 to 04:00 UTC", () => {
   test.use({ timezoneId: "UTC" });
 
