@@ -38,6 +38,7 @@ Each line names a file and what it covers; the file holds the cases.
 - `web/src/app/(shell)/admin/__tests__/prompts.test.tsx` — the prompts pages with `extract-cards` substituted and the browser's downscale passed through: saving, the diff, the labels, the trial and their refusals.
 - `web/src/features/admin/__tests__/usage.test.ts` — the usage the overview charts; `usage-charts.test.tsx` — the charts, given a size as jsdom lays nothing out, with their named image and patterns.
 - `web/src/features/admin/__tests__/prompt-diff.test.ts` — the line diff.
+- `web/src/features/admin/__tests__/client-boundary.test.ts` — every module of the area without `"use client"` imports only components from a client module, since on the server a client module's export can be rendered but not called (#473).
 
 ## Rationale
 
