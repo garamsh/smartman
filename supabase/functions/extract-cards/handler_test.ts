@@ -1,6 +1,7 @@
 // The handler end to end, with Supabase and OpenRouter replaced by a recording fake fetch.
 // The suite runs without write or network permission, so a write anywhere fails the run.
 import assert from "node:assert/strict";
+import { composeInstructions } from "./cards.ts";
 import { readConfig } from "./config.ts";
 import { createHandler, type LogEntry } from "./handler.ts";
 import { OPENROUTER_URL } from "./openrouter.ts";
@@ -387,6 +388,41 @@ Deno.test("a reply with a malformed table is invalid output, answered 502 after 
     }])],
   });
   assert.equal(even.status, 200);
+});
+
+Deno.test("a reply whose cards break a rule keeps the valid cards, drops the broken ones and logs how many", async () => {
+  // A vocabulary card with an answer, and a cloze whose front has fewer blanks than answers.
+  const broken = [{ ...twoCards[0], answer: "사과" }, {
+    ...twoCards[2],
+    type: "cloze",
+    front: "3인칭 재귀칭: ___",
+    answer: null,
+    examples: [],
+    cloze: { answers: ["자기", "저"] },
+  }];
+  const mixed = await run({
+    replies: [cardsReply([broken[0], ...twoCards, broken[1]])],
+  });
+  assert.equal(mixed.status, 200);
+  assert.deepEqual(mixed.body, { cards: twoAnswered });
+  assert.equal(mixed.logs[0].dropped_cards, 2);
+  assert.equal(mixed.logs[0].outcome, "ok");
+
+  // Every card broken saves none, as invalid output, and logs the count too.
+  const none = await run({ replies: [cardsReply(broken)] });
+  assert.equal(none.status, 502);
+  assert.deepEqual(none.body, { error: "model_error" });
+  assert.equal(none.logs[0].dropped_cards, 2);
+
+  // A reply that is not the schema at all logs no count.
+  const notSchema = await run({ replies: [{ content: "{" }] });
+  assert.equal(notSchema.status, 502);
+  assert.equal(notSchema.logs[0].dropped_cards, null);
+
+  // Control: the valid cards alone drop none.
+  const valid = await run({ replies: [cardsReply(twoCards)] });
+  assert.deepEqual(valid.body, { cards: twoAnswered });
+  assert.equal(valid.logs[0].dropped_cards, 0);
 });
 
 Deno.test("a request without a signed-in user is refused with 401 before any usage or model call", async () => {
@@ -877,6 +913,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     assert.equal(r.logs.length, 1);
     assert.deepEqual(Object.keys(r.logs[0]).sort(), [
       "completion_tokens",
+      "dropped_cards",
       "latency_ms",
       "model",
       "outcome",
@@ -913,6 +950,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     latency_ms: 0,
     prompt_tokens: 1200,
     completion_tokens: 80,
+    dropped_cards: 0,
     outcome: "ok",
   });
   assert.equal(outcomes[1].logs[0].prompt_tokens, 1200, "one call's tokens");
@@ -935,11 +973,17 @@ Deno.test("the model is instructed with the prompt version the server serves the
     prompt: { prompt_version_id: 7, prompt: "Saved instructions." },
   });
   assert.equal(served.status, 200);
-  assert.equal(served.modelCalls[0].messages[0].content, "Saved instructions.");
+  assert.equal(
+    served.modelCalls[0].messages[0].content,
+    composeInstructions("Saved instructions."),
+  );
   assert.equal(served.logs[0].prompt_version, 7);
   // Control: the seed's version is served by default, and its text is prompt v8's.
   const seeded = await run({ replies: [cardsReply(twoCards)] });
-  assert.equal(seeded.modelCalls[0].messages[0].content, SYSTEM_PROMPT);
+  assert.equal(
+    seeded.modelCalls[0].messages[0].content,
+    composeInstructions(SYSTEM_PROMPT),
+  );
   assert.equal(seeded.logs[0].prompt_version, 1);
 });
 

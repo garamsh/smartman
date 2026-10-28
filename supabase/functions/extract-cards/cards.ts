@@ -152,12 +152,13 @@ const MODEL_KEYS = [
 ] as const;
 
 /**
- * The structured-output schema sent to the model; `parseCards` enforces the same limits and,
+ * The structured-output schema sent to the model; `parseCard` enforces the same limits and,
  * beyond what a schema can say, which fields each kind fills: a vocabulary card has senses and
  * no answer, and a note an answer and no senses, extras or pronunciation; a table card its
  * `table`, a cloze card its `cloze`, and neither an answer. Strict structured outputs require every
  * key, so an absent answer, pronunciation, table or cloze is `null` and absent lists are empty.
- * Which cells a table holds, and where its blanks are, the parser checks.
+ * Which cells a table holds, and where its blanks are, the parser checks. `OUTPUT_CONTRACT` states
+ * every one of those rules to the model.
  */
 export const cardsSchema = {
   type: "object",
@@ -281,6 +282,120 @@ export const cardsSchema = {
   additionalProperties: false,
 } as const;
 
+/**
+ * What each field of `cardsSchema` holds, as the output contract states it to the model. It names
+ * the material, never a photo, so any source the instructions describe can reuse it (ADR 0124).
+ */
+const FIELD_MEANINGS: Readonly<Record<(typeof MODEL_KEYS)[number], string>> = {
+  kind:
+    `"vocabulary" for an entry of a vocabulary list, glossary, bilingual table or dictionary: a word or phrase to learn and its meanings. "note" for any other point to learn.`,
+  type:
+    `what the card asks. "concept": the front names a term, concept, rule or exception, and the answer states it. "cloze": the front is a line or sentence of the material with each part to recall written "${CLOZE_BLANK}", and "cloze" holds what fills each blank. "identify": the front is an example the material gives, with the item to judge in single quotes, and the answer is its category and the reason. "table": a whole table of the material on one card, in "table", with the cells to recall as blanks.`,
+  front:
+    `what the learner sees first. On a vocabulary card, the word or phrase being learned, exactly as written; on a "concept" note, the name of what it states; on a "cloze" or "identify" card, its line or sentence; on a "table" card, the table's name.`,
+  answer:
+    `what the learner recalls on a "concept" or "identify" note: the definition, rule, exception or judgment, in a sentence or a few, in the material's language. Every other card's answer is composed from its "senses", "cloze" or "table", so it is null there.`,
+  topic:
+    `the name of the section of the material the card comes from: its heading without numbering, or the material's title where it has no headings. Cards of one section share one topic, written the same way.`,
+  senses:
+    `a vocabulary card's meanings, in the material's order, one per part of speech or numbered meaning, each {"labels": [...], "meaning": "...", "examples": [...]}. "labels" are the labels the material gives that meaning, in its order, as written and never inferred, and [] when it gives none: a part of speech is {"kind": "part_of_speech", "category": <its category>, "text": <as written>}, and any other label, such as a register or a semantic class, {"kind": "other", "category": null, "text": <as written>}, its text without the brackets around it. "meaning" is the translation or definition as written, without its labels or its number. "examples" are the sentences the material gives under that meaning.`,
+  extras:
+    `anything else the material gives for a vocabulary entry as a whole, such as a synonym, an antonym, a gender or a plural, each {"label": <the material's own label>, "text": <as written>}.`,
+  pronunciation:
+    `the pronunciation, transcription or reading the material gives a vocabulary entry, as written, or null.`,
+  examples:
+    `the example sentences, phrases or worked examples the material itself gives for the card, each copied exactly. An example under one of a vocabulary entry's meanings goes in that sense's "examples" instead.`,
+  table:
+    `a "table" card's table as the material gives it, {"columns": [...], "rows": [[...], ...], "blanks": [{"row": r, "column": c}, ...]}: "columns" its column headers left to right, the top-left corner included; "rows" its rows top to bottom, each its cells left to right, starting with the row's header; "blanks" the cells to recall, counted from 0 within "rows". A header or cell the material leaves empty is "". It is null on every other card.`,
+  cloze:
+    `a "cloze" card's blanks, {"answers": [...]}: what fills each "${CLOZE_BLANK}" of its front, in order. It is null on every other card.`,
+};
+
+/**
+ * Every rule `parseCard` checks a card against, each the sentence the output contract states it
+ * in. A refusal names its rule, so a check the contract does not state cannot be written.
+ */
+export const CARD_RULES = {
+  fields:
+    `A card holds exactly the eleven fields above, each once, and no other; a field a card does not use is null or [] as stated.`,
+  kind: `"kind" is "vocabulary" or "note".`,
+  type: `"type" is "concept", "cloze", "identify" or "table".`,
+  front: `"front" is 1 to ${MAX_FIELD_CHARS} characters.`,
+  answer: `"answer" is null or 1 to ${MAX_ANSWER_CHARS} characters.`,
+  topic: `"topic" is 1 to ${MAX_TOPIC_CHARS} characters.`,
+  pronunciation:
+    `"pronunciation" is null or 1 to ${MAX_FIELD_CHARS} characters.`,
+  examples:
+    `"examples" holds 0 to ${MAX_EXAMPLES} examples, each 1 to ${MAX_FIELD_CHARS} characters.`,
+  senses:
+    `"senses" holds 0 to ${MAX_SENSES} senses, each exactly "labels", "meaning" and "examples".`,
+  sense_meaning: `A sense's "meaning" is 1 to ${MAX_FIELD_CHARS} characters.`,
+  sense_examples:
+    `A sense's "examples" holds 0 to ${MAX_EXAMPLES}, each 1 to ${MAX_FIELD_CHARS} characters.`,
+  sense_labels:
+    `A sense's "labels" holds 0 to ${MAX_SENSE_LABELS} labels, each exactly "kind", "category" and "text".`,
+  label_text:
+    `A label's "text" is 1 to ${MAX_FIELD_CHARS} characters once the brackets around it are left out.`,
+  label_kind: `A label's "kind" is "part_of_speech", its "category" one of ${
+    PARTS_OF_SPEECH.map((category) => `"${category}"`).join(", ")
+  }, or "other", its "category" null.`,
+  extras:
+    `"extras" holds 0 to ${MAX_EXTRAS}, each exactly "label" and "text", each 1 to ${MAX_FIELD_CHARS} characters.`,
+  table_fields: `"table" is null or exactly "columns", "rows" and "blanks".`,
+  table_columns: `A table has 1 to ${MAX_TABLE_COLUMNS} columns.`,
+  table_rows:
+    `A table has 1 to ${MAX_TABLE_ROWS} rows, each exactly as many cells as there are columns.`,
+  table_cells:
+    `Every column header and cell is text of at most ${MAX_FIELD_CHARS} characters, "" where the material leaves it empty.`,
+  table_blanks:
+    `A table has 1 or more blanks, each exactly "row" and "column", whole numbers from 0.`,
+  table_blank_cells:
+    `Each blank names a cell of "rows" that holds text, and no cell is named twice.`,
+  cloze_fields:
+    `"cloze" is null or exactly "answers": 1 to ${MAX_CLOZE_BLANKS} answers, each 1 to ${MAX_FIELD_CHARS} characters.`,
+  note_fields:
+    `A "note" card's "senses" and "extras" are [] and its "pronunciation" is null.`,
+  vocabulary_senses: `A "vocabulary" card has 1 or more senses.`,
+  vocabulary_answer: `A "vocabulary" card's "answer" is null.`,
+  vocabulary_type:
+    `A "vocabulary" card's "type" is "concept" or "identify", and its "table" and "cloze" are null.`,
+  table_card:
+    `A "table" card has its "table", and its "answer" and "cloze" are null.`,
+  cloze_card:
+    `A "cloze" card has its "cloze", and its "answer" and "table" are null.`,
+  cloze_blanks:
+    `A "cloze" card's front holds exactly one "${CLOZE_BLANK}" for each of its answers.`,
+  concept_card:
+    `A "concept" or "identify" note has its "answer", and its "table" and "cloze" are null.`,
+} as const;
+
+/** A rule of `CARD_RULES`, which a refused card breaks. */
+export type CardRule = keyof typeof CARD_RULES;
+
+/**
+ * The output contract, fixed in the function and sent after whichever prompt version is served,
+ * so that no editable prompt leaves a rule of the parser unstated (ADR 0124).
+ */
+export const OUTPUT_CONTRACT = [
+  "# Output contract",
+  "",
+  `This contract is fixed and comes with every version of the instructions above; where they differ, it decides the form of the output. Answer with JSON only, {"cards": [...]}, at most ${MAX_CARDS} cards, and an empty list when the material holds nothing to learn. A card that breaks a rule below is discarded.`,
+  "",
+  "## Fields",
+  "",
+  "Every card has these fields:",
+  ...MODEL_KEYS.map((key) => `- "${key}": ${FIELD_MEANINGS[key]}`),
+  "",
+  "## Rules",
+  "",
+  ...Object.values(CARD_RULES).map((rule) => `- ${rule}`),
+].join("\n");
+
+/** The model's instructions: the served prompt version's text, then the output contract. */
+export function composeInstructions(prompt: string): string {
+  return `${prompt}\n\n${OUTPUT_CONTRACT}`;
+}
+
 /** A sense's labels as printed, each in brackets, or undefined when it has none: `[명] [사물]`. */
 function composeLabels(sense: Sense): string | undefined {
   return sense.labels.length === 0
@@ -316,12 +431,23 @@ export function composeTableAnswer(table: Table): string {
     .join("\n");
 }
 
+/** Why `parseCard` refused a card: the rule of `CARD_RULES` it breaks. */
+export class Refusal {
+  constructor(readonly rule: CardRule) {}
+}
+
+/** A reply's cards that keep every rule, and the rule each dropped card broke, in reply order. */
+export type ParsedReply = {
+  readonly cards: readonly Card[];
+  readonly dropped: readonly CardRule[];
+};
+
 /**
- * Parses a model's reply into cards, or returns null when it is not JSON matching
- * `cardsSchema` once each field is trimmed, or breaks a rule the schema cannot state. Lengths
- * count code points, as JSON Schema does.
+ * Parses a model's reply, keeping each card that keeps every rule and dropping the rest, or
+ * returns null when the reply is not the schema's envelope: JSON of exactly `{cards}`, a list of
+ * at most `MAX_CARDS`. Lengths count code points, as JSON Schema does.
  */
-export function parseCards(reply: string): Card[] | null {
+export function parseReply(reply: string): ParsedReply | null {
   let value: unknown;
   try {
     value = JSON.parse(reply);
@@ -332,71 +458,97 @@ export function parseCards(reply: string): Card[] | null {
   const items = value.cards;
   if (!Array.isArray(items) || items.length > MAX_CARDS) return null;
   const cards: Card[] = [];
+  const dropped: CardRule[] = [];
   for (const item of items) {
     const card = parseCard(item);
-    if (card === null) return null;
-    cards.push(card);
+    if (card instanceof Refusal) dropped.push(card.rule);
+    else cards.push(card);
   }
-  return cards;
+  return { cards, dropped };
 }
 
-function parseCard(item: unknown): Card | null {
-  if (!isRecord(item) || !hasOnlyKeys(item, MODEL_KEYS)) return null;
+/**
+ * A reply's cards, or null when it is not the schema's or any card breaks a rule: the strict
+ * reading, for a caller that takes a reply whole or not at all.
+ */
+export function parseCards(reply: string): Card[] | null {
+  const parsed = parseReply(reply);
+  return parsed === null || parsed.dropped.length > 0
+    ? null
+    : [...parsed.cards];
+}
+
+/** One card of a reply, each text field trimmed, or the rule it breaks. */
+export function parseCard(item: unknown): Card | Refusal {
+  if (!isRecord(item) || !hasOnlyKeys(item, MODEL_KEYS)) {
+    return new Refusal("fields");
+  }
   const kind = KINDS.find((known) => known === item.kind);
+  if (kind === undefined) return new Refusal("kind");
   const type = TYPES.find((known) => known === item.type);
+  if (type === undefined) return new Refusal("type");
   const front = text(item.front, MAX_FIELD_CHARS);
+  if (front === null) return new Refusal("front");
   const answer = nullable(item.answer, MAX_ANSWER_CHARS);
+  if (answer === undefined) return new Refusal("answer");
   const topic = text(item.topic, MAX_TOPIC_CHARS);
+  if (topic === null) return new Refusal("topic");
   const pronunciation = nullable(item.pronunciation, MAX_FIELD_CHARS);
-  const senses = list(item.senses, MAX_SENSES, parseSense);
-  const extras = list(item.extras, MAX_EXTRAS, parseExtra);
+  if (pronunciation === undefined) return new Refusal("pronunciation");
+  const senses = list(item.senses, MAX_SENSES, "senses", readSense);
+  if (senses instanceof Refusal) return senses;
+  const extras = list(item.extras, MAX_EXTRAS, "extras", parseExtra);
+  if (extras instanceof Refusal) return extras;
   const examples = list(
     item.examples,
     MAX_EXAMPLES,
+    "examples",
     (example) => text(example, MAX_FIELD_CHARS),
   );
+  if (examples instanceof Refusal) return examples;
   const table = item.table === null ? null : parseTable(item.table);
+  if (table instanceof Refusal) return table;
   const cloze = item.cloze === null ? null : parseCloze(item.cloze);
-  if (
-    kind === undefined || type === undefined || front === null ||
-    answer === undefined ||
-    topic === null || pronunciation === undefined || senses === null ||
-    extras === null ||
-    examples === null || table === undefined || cloze === undefined
-  ) return null;
+  if (cloze instanceof Refusal) return cloze;
   const shared = {
     front,
     topic,
     ...(examples.length === 0 ? {} : { examples }),
   };
   if (kind === "note") {
-    // A note carries no senses, extras or pronunciation.
     if (senses.length > 0 || extras.length > 0 || pronunciation !== null) {
-      return null;
+      return new Refusal("note_fields");
     }
     if (type === "table") {
       // A table card's answer is its table, composed.
-      if (table === null || cloze !== null || answer !== null) return null;
+      if (table === null || cloze !== null || answer !== null) {
+        return new Refusal("table_card");
+      }
       const composed = composeTableAnswer(table);
       return { ...shared, kind, type, answer: composed, table };
     }
     if (type === "cloze") {
       // A cloze card's answer is what fills its blanks, one for each "___" of its front.
-      if (
-        cloze === null || table !== null || answer !== null ||
-        front.split(CLOZE_BLANK).length - 1 !== cloze.answers.length
-      ) return null;
+      if (cloze === null || table !== null || answer !== null) {
+        return new Refusal("cloze_card");
+      }
+      if (front.split(CLOZE_BLANK).length - 1 !== cloze.answers.length) {
+        return new Refusal("cloze_blanks");
+      }
       const composed = composeClozeAnswer(cloze);
       return { ...shared, kind, type, answer: composed, cloze };
     }
-    if (answer === null || table !== null || cloze !== null) return null;
+    if (answer === null || table !== null || cloze !== null) {
+      return new Refusal("concept_card");
+    }
     return { ...shared, kind, type, answer };
   }
   // A vocabulary entry's answer is composed from its senses; it is never a table or a cloze.
+  if (senses.length === 0) return new Refusal("vocabulary_senses");
+  if (answer !== null) return new Refusal("vocabulary_answer");
   if (
-    answer !== null || senses.length === 0 || table !== null ||
-    cloze !== null || type === "table" || type === "cloze"
-  ) return null;
+    table !== null || cloze !== null || type === "table" || type === "cloze"
+  ) return new Refusal("vocabulary_type");
   return {
     ...shared,
     kind,
@@ -409,37 +561,49 @@ function parseCard(item: unknown): Card | null {
 }
 
 /**
- * A table as the page prints it, or undefined when it is not one: 1 to 8 columns, 1 to 20 rows of
- * exactly that many cells each, and 1 or more distinct blanks, each a cell inside the table that
- * holds text.
+ * A table as the page prints it, or the rule it breaks: 1 to 8 columns, 1 to 20 rows of exactly
+ * that many cells each, and 1 or more distinct blanks, each a cell inside the table that holds
+ * text.
  */
-function parseTable(value: unknown): Table | undefined {
+function parseTable(value: unknown): Table | Refusal {
   if (!isRecord(value) || !hasOnlyKeys(value, ["columns", "rows", "blanks"])) {
-    return undefined;
+    return new Refusal("table_fields");
   }
-  const columns = list(value.columns, MAX_TABLE_COLUMNS, cellText);
-  const rows = list(
-    value.rows,
-    MAX_TABLE_ROWS,
-    (row) => list(row, MAX_TABLE_COLUMNS, cellText),
-  );
+  if (
+    !Array.isArray(value.columns) || value.columns.length === 0 ||
+    value.columns.length > MAX_TABLE_COLUMNS
+  ) return new Refusal("table_columns");
+  if (
+    !Array.isArray(value.rows) || value.rows.length === 0 ||
+    value.rows.length > MAX_TABLE_ROWS
+  ) return new Refusal("table_rows");
+  const width = value.columns.length;
+  if (
+    value.rows.some((row) => !Array.isArray(row) || row.length !== width)
+  ) return new Refusal("table_rows");
+  const columns = list(value.columns, width, "table_cells", cellText);
+  if (columns instanceof Refusal) return columns;
+  const rows: string[][] = [];
+  for (const row of value.rows) {
+    const cells = list(row, width, "table_cells", cellText);
+    if (cells instanceof Refusal) return cells;
+    rows.push(cells);
+  }
   const blanks = list(
     value.blanks,
     MAX_TABLE_COLUMNS * MAX_TABLE_ROWS,
+    "table_blanks",
     parseTableBlank,
   );
-  if (
-    columns === null || columns.length === 0 || rows === null ||
-    rows.length === 0 || blanks === null || blanks.length === 0
-  ) return undefined;
-  if (rows.some((row) => row.length !== columns.length)) return undefined;
+  if (blanks instanceof Refusal) return blanks;
+  if (blanks.length === 0) return new Refusal("table_blanks");
   const seen = new Set<string>();
   for (const { row, column } of blanks) {
     const at = `${row},${column}`;
     if (
       row >= rows.length || column >= columns.length || seen.has(at) ||
       rows[row][column] === ""
-    ) return undefined;
+    ) return new Refusal("table_blank_cells");
     seen.add(at);
   }
   return { columns, rows, blanks };
@@ -454,15 +618,19 @@ function parseTableBlank(value: unknown): TableBlank | null {
     : null;
 }
 
-/** A cloze's 1 to 10 answers, or undefined when it is not one. */
-function parseCloze(value: unknown): Cloze | undefined {
-  if (!isRecord(value) || !hasOnlyKeys(value, ["answers"])) return undefined;
+/** A cloze's 1 to 10 answers, or the rule it breaks. */
+function parseCloze(value: unknown): Cloze | Refusal {
+  if (!isRecord(value) || !hasOnlyKeys(value, ["answers"])) {
+    return new Refusal("cloze_fields");
+  }
   const answers = list(
     value.answers,
     MAX_CLOZE_BLANKS,
+    "cloze_fields",
     (answer) => text(answer, MAX_FIELD_CHARS),
   );
-  return answers === null || answers.length === 0 ? undefined : { answers };
+  if (answers instanceof Refusal) return answers;
+  return answers.length === 0 ? new Refusal("cloze_fields") : { answers };
 }
 
 /**
@@ -471,19 +639,31 @@ function parseCloze(value: unknown): Cloze | undefined {
  * meaning or example empty or over its limit. The eval reads its ground truth through it too.
  */
 export function parseSense(value: unknown): Sense | null {
+  const sense = readSense(value);
+  return sense instanceof Refusal ? null : sense;
+}
+
+function readSense(value: unknown): Sense | Refusal {
   if (
     !isRecord(value) || !hasOnlyKeys(value, ["labels", "meaning", "examples"])
-  ) return null;
-  const labels = list(value.labels, MAX_SENSE_LABELS, parseLabel);
+  ) return new Refusal("senses");
+  const labels = list(
+    value.labels,
+    MAX_SENSE_LABELS,
+    "sense_labels",
+    parseLabel,
+  );
+  if (labels instanceof Refusal) return labels;
   const meaning = text(value.meaning, MAX_FIELD_CHARS);
+  if (meaning === null) return new Refusal("sense_meaning");
   const examples = list(
     value.examples,
     MAX_EXAMPLES,
+    "sense_examples",
     (example) => text(example, MAX_FIELD_CHARS),
   );
-  return labels === null || meaning === null || examples === null
-    ? null
-    : { labels, meaning, examples };
+  if (examples instanceof Refusal) return examples;
+  return { labels, meaning, examples };
 }
 
 /** The bracket pairs a page may enclose a label in, which its `text` leaves out. */
@@ -499,12 +679,12 @@ const LABEL_BRACKETS = [
   "〔〕",
 ];
 
-function parseLabel(value: unknown): SenseLabel | null {
+function parseLabel(value: unknown): SenseLabel | Refusal {
   if (!isRecord(value) || !hasOnlyKeys(value, ["kind", "category", "text"])) {
-    return null;
+    return new Refusal("sense_labels");
   }
   const printed = text(value.text, MAX_FIELD_CHARS);
-  if (printed === null) return null;
+  if (printed === null) return new Refusal("label_text");
   // A label written with its brackets keeps only what they enclose.
   const brackets = LABEL_BRACKETS.find(([open, close]) =>
     printed.startsWith(open) && printed.endsWith(close)
@@ -512,14 +692,14 @@ function parseLabel(value: unknown): SenseLabel | null {
   const labelText = brackets === undefined
     ? printed
     : text(printed.slice(1, -1), MAX_FIELD_CHARS);
-  if (labelText === null) return null;
+  if (labelText === null) return new Refusal("label_text");
   if (value.kind === "other" && value.category === null) {
     return { kind: "other", category: null, text: labelText };
   }
   const category = PARTS_OF_SPEECH.find((known) => known === value.category);
   return value.kind === "part_of_speech" && category !== undefined
     ? { kind: "part_of_speech", category, text: labelText }
-    : null;
+    : new Refusal("label_kind");
 }
 
 export function parseExtra(value: unknown): Extra | null {
@@ -529,17 +709,22 @@ export function parseExtra(value: unknown): Extra | null {
   return label === null || extra === null ? null : { label, text: extra };
 }
 
-/** Each element of [value] parsed, or null when it is not a list of at most [max] valid ones. */
+/**
+ * Each element of [value] parsed, or the rule it breaks: [rule] when it is not a list of at most
+ * [max] or an element is null, or the element's own refusal.
+ */
 function list<T>(
   value: unknown,
   max: number,
-  parse: (element: unknown) => T | null,
-): T[] | null {
-  if (!Array.isArray(value) || value.length > max) return null;
+  rule: CardRule,
+  parse: (element: unknown) => T | Refusal | null,
+): T[] | Refusal {
+  if (!Array.isArray(value) || value.length > max) return new Refusal(rule);
   const parsed: T[] = [];
   for (const element of value) {
     const one = parse(element);
-    if (one === null) return null;
+    if (one === null) return new Refusal(rule);
+    if (one instanceof Refusal) return one;
     parsed.push(one);
   }
   return parsed;

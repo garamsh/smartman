@@ -3,9 +3,10 @@
  *
  *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
- *     tools/eval/run.ts [--dry-run] [--prompt-version <id>]
+ *     tools/eval/run.ts [--dry-run] [--prompts <file>,<file>... | --prompt-version <id>]
  *
- * It runs prompt v9, the newest prompt file, unless
+ * It runs prompt v10, the newest prompt file, unless `--prompts` names prompt files, such as
+ * `--prompts v9,v10`, each run on every configuration as a row of its own, or
  * `--prompt-version` names a version saved in the admin area (ADR 0073), which it reads through
  * `public.prompt_version` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; that run also needs
  * both names in `--allow-env` and the project's host in `--allow-net`.
@@ -13,10 +14,12 @@
  * It resolves `candidates.json` against OpenRouter's model list, estimates the run's cost,
  * and refuses to start one the remaining budget in `spend.json` cannot cover. `--dry-run`
  * stops after the estimate and calls no model. Every reply is kept in a folder of
- * `tools/eval/replies/` named for the run's start, which git ignores.
+ * `tools/eval/replies/` named for the run's start, which git ignores. Each call is instructed as
+ * the function instructs it: the prompt, then the output contract (ADR 0124).
  */
 
 import {
+  type CardRule,
   type Extra,
   parseExtra,
   parseSense,
@@ -28,10 +31,8 @@ import {
   MAX_OUTPUT_TOKENS,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import {
-  PROMPT_VERSION,
-  SYSTEM_PROMPT,
-} from "../../supabase/functions/extract-cards/prompt_v9.ts";
+import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
+import * as v10 from "../../supabase/functions/extract-cards/prompt_v10.ts";
 import type {
   Image,
   LanguageHints,
@@ -133,16 +134,46 @@ export type Io = {
 /** The instructions a run gives the model, and how the ledger and the report name them. */
 export type EvalPrompt = { readonly label: string; readonly text: string };
 
+/** The prompt files `--prompts` may name, by their version. */
+export const PROMPT_FILES: readonly EvalPrompt[] = [v9, v10].map((file) => ({
+  label: file.PROMPT_VERSION,
+  text: file.SYSTEM_PROMPT,
+}));
+
 /**
- * The prompt `--prompt-version <id>` names, read from the database, or prompt v9 without it; a
- * sentence saying why when the flag or the read fails.
+ * The prompts a run gives the model: the files `--prompts` names, the version `--prompt-version
+ * <id>` names, read from the database, or prompt v10 without either; a sentence saying why when a
+ * flag or the read fails.
  */
-export async function readPrompt(
+export async function readPrompts(
   args: readonly string[],
   io: Pick<Io, "env" | "fetch">,
-): Promise<EvalPrompt | { readonly error: string }> {
+): Promise<readonly EvalPrompt[] | { readonly error: string }> {
+  const files = args.indexOf("--prompts");
   const at = args.indexOf("--prompt-version");
-  if (at === -1) return { label: PROMPT_VERSION, text: SYSTEM_PROMPT };
+  if (files !== -1 && at !== -1) {
+    return { error: "--prompts and --prompt-version cannot be given together" };
+  }
+  if (files !== -1) {
+    const names = (args[files + 1] ?? "").split(",");
+    const prompts = names.map((name) =>
+      PROMPT_FILES.find((file) => file.label === name)
+    );
+    if (
+      prompts.some((prompt) => prompt === undefined) ||
+      new Set(names).size !== names.length
+    ) {
+      return {
+        error: `--prompts takes distinct prompt files among ${
+          PROMPT_FILES.map((file) => file.label).join(", ")
+        }, separated by commas`,
+      };
+    }
+    return prompts.filter((prompt) => prompt !== undefined);
+  }
+  if (at === -1) {
+    return [{ label: v10.PROMPT_VERSION, text: v10.SYSTEM_PROMPT }];
+  }
   const id = args[at + 1];
   if (id === undefined || !/^[1-9]\d{0,15}$/.test(id)) {
     return {
@@ -178,17 +209,18 @@ export async function readPrompt(
   if (typeof text !== "string" || text.trim() === "") {
     return { error: "prompt_version answered a row it should not" };
   }
-  return { label: `version ${id}`, text };
+  return [{ label: `version ${id}`, text }];
 }
 
 /** Runs the eval and returns the process exit code. */
 export async function main(args: readonly string[], io: Io): Promise<number> {
   const dryRun = args.includes("--dry-run");
-  const prompt = await readPrompt(args, io);
-  if ("error" in prompt) {
-    io.print(prompt.error);
+  const prompts = await readPrompts(args, io);
+  if ("error" in prompts) {
+    io.print(prompts.error);
     return 1;
   }
+  const promptLabel = prompts.map((prompt) => prompt.label).join(" and ");
   const selectors = parseSelectors(
     JSON.parse(await io.readText(PATHS.candidates)),
   );
@@ -219,13 +251,14 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.print(`${candidate.label}: ${describe(candidate)}`);
   }
 
-  const estimate = estimateUsd(candidates, samples.map(sizeOf));
+  const estimate = estimateUsd(candidates, samples.map(sizeOf)) *
+    prompts.length;
   const notes = samples.filter((sample) => sample.kind === "notes").length;
   const left = remaining(ledger);
   io.print(
     `${samples.length} samples (${
       samples.length - notes
-    } vocabulary, ${notes} notes) x ${candidates.length} configurations: estimated ${
+    } vocabulary, ${notes} notes) x ${candidates.length} configurations x prompt ${promptLabel}: estimated ${
       usd(estimate)
     }, ` +
       `${usd(left)} of the ${usd(ledger.budgetUsd)} budget remaining`,
@@ -247,9 +280,8 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.startedAt().replace(/\.\d+/, "").replaceAll(":", "-")
   }`;
   io.print(`keeping every reply in ${replies}/`);
-  const run = await runEval(candidates, samples, ledger, {
+  const run = await runPrompts(prompts, candidates, samples, ledger, {
     apiKey,
-    prompt,
     fetch: io.fetch,
     now: io.now,
     print: io.print,
@@ -266,7 +298,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
       spentUsd: round(run.spentUsd),
       note: run.stopped
         ? "stopped before exceeding the budget"
-        : `prompt ${prompt.label}`,
+        : `prompt ${promptLabel}`,
     }],
   };
   io.print(
@@ -288,7 +320,8 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
           updated,
           io.today(),
           { replies, halted: run.halted },
-          prompt.label,
+          promptLabel,
+          run.outcomes,
         ),
       );
       io.print(`wrote ${PATHS.report}`);
@@ -305,6 +338,66 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
   return 0;
 }
 
+/** What a run returns: its rows, its spend, whether it stopped, its halts and its outcomes. */
+export type RunResult = {
+  rows: Row[];
+  spentUsd: number;
+  stopped: boolean;
+  halted: Halt[];
+  outcomes: Outcomes[];
+};
+
+/**
+ * `runEval` once per prompt, each configuration labelled with its prompt when there are several,
+ * so the rows of one model compare the prompts; a prompt's budget is what the earlier left.
+ */
+export async function runPrompts(
+  prompts: readonly EvalPrompt[],
+  candidates: readonly Candidate[],
+  samples: readonly Sample[],
+  ledger: Ledger,
+  deps: Omit<RunDeps, "prompt">,
+): Promise<RunResult> {
+  const total: RunResult = {
+    rows: [],
+    spentUsd: 0,
+    stopped: false,
+    halted: [],
+    outcomes: [],
+  };
+  for (const prompt of prompts) {
+    const labelled = prompts.length === 1 ? candidates : candidates.map((
+      candidate,
+    ) => ({
+      ...candidate,
+      label: `${candidate.label}, prompt ${prompt.label}`,
+    }));
+    const run = await runEval(labelled, samples, {
+      ...ledger,
+      budgetUsd: ledger.budgetUsd - total.spentUsd,
+    }, { ...deps, prompt });
+    total.rows.push(...run.rows);
+    total.spentUsd += run.spentUsd;
+    total.halted.push(...run.halted);
+    total.outcomes.push(...run.outcomes);
+    if (run.stopped) return { ...total, stopped: true };
+  }
+  return total;
+}
+
+/**
+ * How one configuration's replies ended: the images whose reply saved no card as invalid output,
+ * those whose call failed, and the cards the replies returned that broke a rule of the output
+ * contract and were dropped, counted by rule.
+ */
+export type Outcomes = {
+  readonly label: string;
+  readonly images: number;
+  readonly invalidOutputs: number;
+  readonly modelErrors: number;
+  readonly dropped: ReadonlyMap<CardRule, number>;
+};
+
 /** One OpenRouter call as it answered: its HTTP status and body, or the error that ended it. */
 export type Call =
   | { readonly status: number; readonly body: unknown }
@@ -316,6 +409,8 @@ export type Reply = {
   readonly sample: string;
   readonly outcome: Extraction["kind"];
   readonly cards: readonly unknown[];
+  /** The rule each dropped card broke, in reply order. */
+  readonly dropped: readonly CardRule[];
   readonly calls: readonly ({ readonly model: string } & Call)[];
 };
 
@@ -344,11 +439,10 @@ export async function runEval(
   samples: readonly Sample[],
   ledger: Ledger,
   deps: RunDeps,
-): Promise<
-  { rows: Row[]; spentUsd: number; stopped: boolean; halted: Halt[] }
-> {
+): Promise<RunResult> {
   const rows: Row[] = [];
   const halted: Halt[] = [];
+  const outcomes: Outcomes[] = [];
   let spentUsd = 0;
   for (const candidate of candidates) {
     const pricing = new Map<string, Model>([[
@@ -356,6 +450,14 @@ export async function runEval(
       candidate.primary,
     ]]);
     const results: ImageResult[] = [];
+    const tally = {
+      label: candidate.label,
+      images: 0,
+      invalidOutputs: 0,
+      modelErrors: 0,
+      dropped: new Map<CardRule, number>(),
+    };
+    outcomes.push(tally);
     let errorsInRow = 0;
     for (const sample of samples) {
       if (errorsInRow === MODEL_ERRORS_TO_STOP) {
@@ -367,7 +469,7 @@ export async function runEval(
       }
       const worst = worstCallUsd(candidate.primary.pricing);
       if (spentUsd + worst > remaining(ledger)) {
-        return { rows, spentUsd, stopped: true, halted };
+        return { rows, spentUsd, stopped: true, halted, outcomes };
       }
       const calls: Call[] = [];
       const extraction = await extractCards(
@@ -394,11 +496,22 @@ export async function runEval(
       }
       spentUsd += costUsd;
       const cards = extraction.kind === "cards" ? extraction.cards : [];
+      const dropped = extraction.kind === "cards" ||
+          extraction.kind === "invalid_output"
+        ? extraction.dropped
+        : [];
+      tally.images += 1;
+      if (extraction.kind === "invalid_output") tally.invalidOutputs += 1;
+      if (extraction.kind === "model_error") tally.modelErrors += 1;
+      for (const rule of dropped) {
+        tally.dropped.set(rule, (tally.dropped.get(rule) ?? 0) + 1);
+      }
       await deps.keep(`${slug(candidate.label)}/${sample.name}.json`, {
         candidate: candidate.label,
         sample: sample.name,
         outcome: extraction.kind,
         cards,
+        dropped,
         calls: extraction.attempts.map((attempt, i) => ({
           model: attempt.model,
           ...(calls[i] ?? { error: "no answer was recorded" }),
@@ -415,14 +528,14 @@ export async function runEval(
         completionTokens,
       });
       deps.print(
-        `${candidate.label} ${sample.name}: ${extraction.kind}, ${
-          usd(costUsd)
-        }`,
+        `${candidate.label} ${sample.name}: ${extraction.kind}${
+          dropped.length === 0 ? "" : `, ${dropped.length} cards dropped`
+        }, ${usd(costUsd)}`,
       );
     }
     rows.push(summarize(candidate.label, results));
   }
-  return { rows, spentUsd, stopped: false, halted };
+  return { rows, spentUsd, stopped: false, halted, outcomes };
 }
 
 /** [send], recording each OpenRouter call's status and body, or its error, into [calls]. */
@@ -622,6 +735,7 @@ export function report(
   date: string,
   kept: { readonly replies: string; readonly halted: readonly Halt[] },
   promptLabel: string,
+  outcomes: readonly Outcomes[],
 ): string {
   const pick = recommend(rows);
   const pct = (value: number) => (value * 100).toFixed(1);
@@ -639,6 +753,7 @@ export function report(
     `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards; a table card's answer, its whole table, is not counted. Bare exceptions is the share of returned cards whose answer names an exception (${
       EXCEPTION_WORDS.map((word) => `"${word}"`).join(" or ")
     }) yet covers no fact, which prompt v7 asks every exception card to avoid by stating what the exception does. Table blanks is the share of the pages' cells to memorise that a table card asks as a blank, one blank holding each of the cell's terms, and cloze blanks the same for the words a cloze card should ask, pooled over the pages that hold any; a dash means no page held any.`,
+    "- Replies: each call is instructed with the prompt and then the output contract, as the function instructs it. Invalid outputs are the images whose reply was not the schema's or kept no card, so the photo saves none; model errors are the images whose call failed; dropped cards are the cards a reply returned that broke a rule of the output contract (`CARD_RULES` in `supabase/functions/extract-cards/cards.ts`) and were left out, by the rule each broke.",
     "- Latency is per image, one call each; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -650,6 +765,22 @@ export function report(
     ...candidates.map((candidate) =>
       `- ${candidate.label}: ${describe(candidate)}`
     ),
+    "",
+    "## Replies",
+    "",
+    "| Configuration | Images | Invalid outputs | Model errors | Dropped cards | Dropped by rule |",
+    "|---|---|---|---|---|---|",
+    ...outcomes.map((outcome) => {
+      const byRule = [...outcome.dropped].sort(([a, x], [b, y]) =>
+        y - x || a.localeCompare(b)
+      );
+      const total = byRule.reduce((sum, [, count]) => sum + count, 0);
+      return `| ${outcome.label} | ${outcome.images} | ${outcome.invalidOutputs} | ${outcome.modelErrors} | ${total} | ${
+        byRule.length === 0
+          ? "—"
+          : byRule.map(([rule, count]) => `\`${rule}\` ${count}`).join(", ")
+      } |`;
+    }),
     "",
     "## Vocabulary pages",
     "",

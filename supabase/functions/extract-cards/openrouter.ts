@@ -1,6 +1,12 @@
 /** Extracts cards from an image through one OpenRouter chat completion. */
 
-import { type Card, cardsSchema, parseCards } from "./cards.ts";
+import {
+  type Card,
+  type CardRule,
+  cardsSchema,
+  composeInstructions,
+  parseReply,
+} from "./cards.ts";
 import { userPrompt } from "./prompt_v8.ts";
 import type { Image, LanguageHints } from "./request.ts";
 
@@ -32,14 +38,23 @@ export type Attempt = {
   readonly usage: Usage | null;
 };
 
+/**
+ * How a call ended. `dropped` names the rule each dropped card broke: on `cards`, the cards the
+ * reply returned beside those kept; on `invalid_output`, every card of a reply that kept none.
+ */
 export type Extraction =
   | {
     readonly kind: "cards";
     readonly cards: readonly Card[];
+    readonly dropped: readonly CardRule[];
     readonly attempts: readonly Attempt[];
   }
   | { readonly kind: "no_cards"; readonly attempts: readonly Attempt[] }
-  | { readonly kind: "invalid_output"; readonly attempts: readonly Attempt[] }
+  | {
+    readonly kind: "invalid_output";
+    readonly dropped: readonly CardRule[];
+    readonly attempts: readonly Attempt[];
+  }
   | { readonly kind: "model_error"; readonly attempts: readonly Attempt[] };
 
 export type ExtractDeps = {
@@ -50,24 +65,35 @@ export type ExtractDeps = {
 };
 
 /**
- * One call to [model] with [instructions] as the system prompt; output that is not the schema's
- * is `invalid_output`, with no second call.
+ * One call to [model] with [prompt] and then the output contract as the system prompt. A card that
+ * breaks a rule is dropped; output that is not the schema's, or whose every card is dropped, is
+ * `invalid_output`, with no second call.
  */
 export async function extractCards(
   image: Image,
   languages: LanguageHints,
   model: ModelId,
-  instructions: string,
+  prompt: string,
   deps: ExtractDeps,
 ): Promise<Extraction> {
-  const call = await callModel(model, instructions, image, languages, deps);
+  const call = await callModel(
+    model,
+    composeInstructions(prompt),
+    image,
+    languages,
+    deps,
+  );
   const attempts = [call.attempt];
   if (call.reply === null) return { kind: "model_error", attempts };
-  const cards = parseCards(call.reply);
-  if (cards === null) return { kind: "invalid_output", attempts };
-  return cards.length === 0
+  const parsed = parseReply(call.reply);
+  if (parsed === null) {
+    return { kind: "invalid_output", dropped: [], attempts };
+  }
+  const { cards, dropped } = parsed;
+  if (cards.length > 0) return { kind: "cards", cards, dropped, attempts };
+  return dropped.length === 0
     ? { kind: "no_cards", attempts }
-    : { kind: "cards", cards, attempts };
+    : { kind: "invalid_output", dropped, attempts };
 }
 
 type Call = { readonly attempt: Attempt; readonly reply: string | null };
