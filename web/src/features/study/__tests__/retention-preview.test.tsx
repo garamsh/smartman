@@ -22,7 +22,7 @@ describe("the 오늘 page's retention card", () => {
         timeZone="Asia/Seoul"
       />,
     );
-    expect(chipTone(screen.getByText("목표보다 40%p 낮아요"))).toBe("tint-amber");
+    expect(chipTone(screen.getByText("목표보다 40% 낮아요"))).toBe("tint-amber");
     unmount();
 
     // Control: a share above the target takes the brand's tone, in the same chip.
@@ -32,6 +32,6 @@ describe("the 오늘 page's retention card", () => {
         timeZone="Asia/Seoul"
       />,
     );
-    expect(chipTone(screen.getByText("목표보다 10%p 높아요"))).toBe("brand-tint");
+    expect(chipTone(screen.getByText("목표보다 10% 높아요"))).toBe("brand-tint");
   });
 });

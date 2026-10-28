@@ -24,9 +24,7 @@ import {
   readyServerEngine,
   RetentionPreview,
   sessionMinutes,
-  statusLine,
   studyHref,
-  todayStatus,
   type WeekDay,
 } from "@/features/study";
 
@@ -177,9 +175,9 @@ export async function Today() {
               {goal.goal > 0 && <Chip>목표 {goal.goal}장 달성</Chip>}
               {extraChip}
             </p>
+            <EnterLink href={href} label="학습하기" />
           </section>
           {week}
-          <EnterLink href={href} label="학습하기" onGround />
           <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
         </div>
       </>
@@ -212,7 +210,7 @@ export async function Today() {
             )}
             {/* A row, so the link keeps its row sizes inside the card's column. */}
             <div className="flex flex-wrap">
-              <EnterLink href={href} label={`${String(total)}장 학습 · 약 ${String(minutes)}분`} />
+              <EnterLink href={href} label="모두 학습" />
             </div>
           </section>
           <CatchUp backlog={total} perDay={load} start={day.start} timeZone={timeZone} />
@@ -259,10 +257,9 @@ export async function Today() {
               style={{ width: `${String(goal.goal === 0 ? 0 : (goal.done / goal.goal) * 100)}%` }}
             />
           </div>
-          <p className="flex flex-wrap items-center gap-2 text-secondary">
-            <span className="break-keep text-muted">{statusLine(todayStatus(goal, streak))}</span>
-            {extraChip}
-          </p>
+          {extraChip && (
+            <p className="flex flex-wrap items-center gap-2 text-secondary">{extraChip}</p>
+          )}
           {/* A row, so the link keeps its row sizes inside the card's column. */}
           <div className="flex flex-wrap">
             <EnterLink href={href} label="모두 학습" />
@@ -323,7 +320,6 @@ function CatchUp({
           </div>
         ))}
       </div>
-      <p className="text-caption text-muted">하루 {perDay}장씩 했을 때 남는 밀린 복습이에요</p>
     </section>
   );
 }

@@ -148,9 +148,9 @@ export function masteredByWeek(
   );
 }
 
-/** How many more cards are mastered this week than four weeks before; null unless more are. */
+/** How many more cards are mastered this week than at the first week of the chart; null unless more are. */
 export function masteredGain(weeks: readonly number[]): number | null {
-  const gain = (weeks[weeks.length - 1] ?? 0) - (weeks[weeks.length - 5] ?? 0);
+  const gain = (weeks[weeks.length - 1] ?? 0) - (weeks[0] ?? 0);
   return gain > 0 ? gain : null;
 }
 

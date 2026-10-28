@@ -12,8 +12,6 @@ import {
   chartDays,
   masteredIntervalDays,
   progressOf,
-  statusLine,
-  todayStatus,
   nextReviewOf,
 } from "../overview";
 import { studyDay } from "../queue";
@@ -100,27 +98,6 @@ describe("the catch-up", () => {
     expect(catchUp(84, 30)).toEqual([84, 54, 24, 0, 0, 0, 0]);
     // Control: a pace of one keeps a backlog of seven on every day.
     expect(catchUp(7, 1)).toEqual([7, 6, 5, 4, 3, 2, 1]);
-  });
-});
-
-describe("today's status", () => {
-  const status = (done: number, goal: number, streak = 0) =>
-    statusLine(todayStatus({ done, goal }, streak));
-
-  it("states a streak of two days or more with nothing done, and otherwise waits", () => {
-    expect(status(0, 10, 2)).toBe("2일째 이어 가는 중이에요");
-    expect(status(0, 10, 1)).toBe("오늘의 첫 카드를 기다리고 있어요");
-    expect(status(0, 3, 1)).toBe("오늘의 첫 카드를 기다리고 있어요");
-  });
-
-  it("is almost done with three cards or fewer left, not with four", () => {
-    expect(status(7, 10)).toBe("거의 다 왔어요");
-    expect(status(6, 10)).toBe("절반을 넘었어요");
-  });
-
-  it("is past half at exactly half, and a good start one short of it", () => {
-    expect(status(10, 20)).toBe("절반을 넘었어요");
-    expect(status(9, 20)).toBe("좋은 출발이에요");
   });
 });
 

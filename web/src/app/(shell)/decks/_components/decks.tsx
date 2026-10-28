@@ -1,4 +1,5 @@
 import {
+  AuthoringButton,
   DeckList,
   EmptyHome,
   type LibraryFailure,
@@ -45,6 +46,7 @@ export async function Decks() {
     <>
       {heading}
       <DeckList rows={rows} />
+      <AuthoringButton decks={decks} />
     </>
   );
 }

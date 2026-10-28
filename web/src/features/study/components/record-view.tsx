@@ -200,17 +200,13 @@ function RetentionCard({
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="flex items-end gap-4">
           <p className="text-figure text-ink">{value}%</p>
-          <p className="flex flex-col pb-1">
-            <span className="text-section text-ink-2">목표</span>
-            <span className="text-body-strong text-ink-2">{target}%</span>
-          </p>
         </div>
         <p className="mb-2">
           <Chip tone={gap < 0 ? "amber" : "brand"}>
             {gap < 0
-              ? `목표보다 ${String(-gap)}%p 낮아요`
+              ? `목표보다 ${String(-gap)}% 낮아요`
               : gap > 0
-                ? `목표보다 ${String(gap)}%p 높아요`
+                ? `목표보다 ${String(gap)}% 높아요`
                 : "목표만큼 맞혔어요"}
           </Chip>
         </p>
@@ -336,7 +332,7 @@ function RetentionChart({
 function RecallCard({ bands }: { bands: RecallBands }) {
   if (bands.mean === null) {
     return (
-      <Card title="지금 기억하고 있을 확률">
+      <Card title="기억 상태">
         <Empty>아직 복습한 카드가 없어요.</Empty>
       </Card>
     );
@@ -344,15 +340,15 @@ function RecallCard({ bands }: { bands: RecallBands }) {
   const total = bands.strong + bands.fair + bands.fading;
   const mean = percent(bands.mean);
   const shares = [
-    { name: "단단함", count: bands.strong, shade: bandShades.strong },
+    { name: "좋음", count: bands.strong, shade: bandShades.strong },
     { name: "보통", count: bands.fair, shade: bandShades.fair },
     { name: "곧 잊음", count: bands.fading, shade: bandShades.fading },
   ];
   return (
-    <Card title="지금 기억하고 있을 확률" trailing={`평균 ${String(mean)}%`}>
+    <Card title="기억 상태" trailing={`평균 ${String(mean)}%`}>
       <div
         role="img"
-        aria-label={`${String(total)}장 중 단단함 ${String(bands.strong)}장, 보통 ${String(bands.fair)}장, 곧 잊음 ${String(bands.fading)}장, 평균 ${String(mean)}%`}
+        aria-label={`${String(total)}장 중 좋음 ${String(bands.strong)}장, 보통 ${String(bands.fair)}장, 곧 잊음 ${String(bands.fading)}장, 평균 ${String(mean)}%`}
         className="flex h-3.5 gap-0.5 overflow-hidden rounded-full"
       >
         {shares.map(
@@ -392,7 +388,10 @@ function MasteredCard({ weeks }: { weeks: number[] }) {
   }
   const gain = masteredGain(weeks);
   return (
-    <Card title="익힌 카드" trailing={gain === null ? null : `4주 +${String(gain)}장`}>
+    <Card
+      title="익힌 카드"
+      trailing={gain === null ? null : `${String(weeks.length - 1)}주 전보다 +${String(gain)}장`}
+    >
       <p className="text-figure text-ink">{weeks[weeks.length - 1] ?? 0}장</p>
       <div
         role="img"
