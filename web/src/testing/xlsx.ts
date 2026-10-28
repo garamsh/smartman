@@ -23,7 +23,7 @@ const escape = (text: string) =>
 export function xlsxOf(
   sheets: { name: string; rows: TestCell[][]; hidden?: boolean }[],
   options: { date1904?: boolean } = {},
-): Uint8Array {
+): Uint8Array<ArrayBuffer> {
   const strings: string[] = [];
   const formats: (string | number)[] = [];
   const stringAt = (text: string) => {
@@ -110,5 +110,5 @@ export function xlsxOf(
   files["[Content_Types].xml"] = strToU8(
     `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`,
   );
-  return zipSync(files);
+  return new Uint8Array(zipSync(files));
 }

@@ -228,7 +228,6 @@ function readSheet(
     });
   const rows: ((Cell | undefined)[] | undefined)[] = [];
   let next = 0;
-  let held = 0;
   for (const row of elements(sheet, "row")) {
     const number = Number(row.getAttribute("r") ?? next + 1);
     if (!Number.isInteger(number) || number < 1) throw new Error("row number");
@@ -242,8 +241,6 @@ function readSheet(
       column += 1;
     }
     if (cells.some((cell) => cell && cell.text.trim() !== "")) {
-      if (!rows[number - 1]) held += 1;
-      if (held > rowLimit) return tooManyRows;
       rows[number - 1] = cells;
     }
   }

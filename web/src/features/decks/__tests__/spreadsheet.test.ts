@@ -11,7 +11,7 @@ import {
 } from "../spreadsheet";
 import { cardsOfRows, cellLimit, headerByDefault } from "../spreadsheet-cards";
 
-const fileOf = (bytes: Uint8Array | string, name: string) =>
+const fileOf = (bytes: Uint8Array<ArrayBuffer> | string, name: string) =>
   new File([typeof bytes === "string" ? new TextEncoder().encode(bytes) : bytes], name);
 
 async function opened(file: File): Promise<Spreadsheet> {
@@ -154,6 +154,12 @@ describe("a cell's shown text", () => {
       ["사과", "과일, 빨간"],
       ["줄\n바꿈", '따옴표 "안"'],
     ]);
+    const quotedFirst = new TextEncoder().encode('"앞,면",뒷면');
+    expect(
+      texts(
+        rowsOf((await opened(fileOf(new Uint8Array([...bom, ...quotedFirst]), "q.csv"))).read(0)),
+      ),
+    ).toEqual([["앞,면", "뒷면"]]);
   });
 
   it("lists the visible sheets and reads the one chosen", async () => {
