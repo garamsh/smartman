@@ -1,0 +1,864 @@
+{
+  "image": "89-structure-ko-early-states-print-harsh.jpg",
+  "kind": "notes",
+  "layout": "structure",
+  "languages": {
+    "front": "ko",
+    "back": "ko"
+  },
+  "hand": "print",
+  "distortion": "harsh",
+  "fonts": [
+    "NanumGothic-Regular.ttf"
+  ],
+  "facts": [
+    {
+      "id": "s1-r1-c1-l1",
+      "step": 1,
+      "terms": [
+        "5부족 연맹체"
+      ]
+    },
+    {
+      "id": "s1-r1-c1-l2",
+      "step": 1,
+      "terms": [
+        "사출도"
+      ]
+    },
+    {
+      "id": "s1-r1-c2-l1",
+      "step": 2,
+      "terms": [
+        "5부 연맹"
+      ]
+    },
+    {
+      "id": "s1-r1-c2-l2",
+      "step": 1,
+      "terms": [
+        "제가 회의"
+      ]
+    },
+    {
+      "id": "s1-r1-c3-l1",
+      "step": 2,
+      "terms": [
+        "군장"
+      ]
+    },
+    {
+      "id": "s1-r1-c4-l1",
+      "step": 1,
+      "terms": [
+        "읍군, 삼로"
+      ]
+    },
+    {
+      "id": "s1-r1-c5-l1",
+      "step": 1,
+      "terms": [
+        "신지, 읍차"
+      ]
+    },
+    {
+      "id": "s1-r1-c5-l2",
+      "step": 1,
+      "terms": [
+        "소도"
+      ]
+    },
+    {
+      "id": "s1-r2-c1-l1",
+      "step": 2,
+      "terms": [
+        "반농반목"
+      ]
+    },
+    {
+      "id": "s1-r2-c1-l2",
+      "step": 1,
+      "terms": [
+        "말, 주옥, 모피"
+      ]
+    },
+    {
+      "id": "s1-r2-c2-l1",
+      "step": 2,
+      "terms": [
+        "약탈 경제"
+      ]
+    },
+    {
+      "id": "s1-r2-c2-l2",
+      "step": 1,
+      "terms": [
+        "부경"
+      ]
+    },
+    {
+      "id": "s1-r2-c3-l1",
+      "step": 2,
+      "terms": [
+        "어물, 소금"
+      ]
+    },
+    {
+      "id": "s1-r2-c4-l1",
+      "step": 1,
+      "terms": [
+        "단궁",
+        "과하마",
+        "반어피"
+      ]
+    },
+    {
+      "id": "s1-r2-c5-l1",
+      "step": 2,
+      "terms": [
+        "벼농사"
+      ]
+    },
+    {
+      "id": "s1-r2-c5-l2",
+      "step": 1,
+      "terms": [
+        "철"
+      ]
+    },
+    {
+      "id": "s1-r3-c1-l1",
+      "step": 1,
+      "terms": [
+        "1책 12법"
+      ]
+    },
+    {
+      "id": "s1-r3-c1-l2",
+      "step": 2,
+      "terms": [
+        "순장"
+      ]
+    },
+    {
+      "id": "s1-r3-c2-l1",
+      "step": 1,
+      "terms": [
+        "서옥제"
+      ]
+    },
+    {
+      "id": "s1-r3-c3-l1",
+      "step": 1,
+      "terms": [
+        "민며느리제"
+      ]
+    },
+    {
+      "id": "s1-r3-c3-l2",
+      "step": 2,
+      "terms": [
+        "가족 공동 무덤"
+      ]
+    },
+    {
+      "id": "s1-r3-c4-l1",
+      "step": 2,
+      "terms": [
+        "족외혼"
+      ]
+    },
+    {
+      "id": "s1-r3-c4-l2",
+      "step": 1,
+      "terms": [
+        "책화"
+      ]
+    },
+    {
+      "id": "s1-r3-c5-l1",
+      "step": 2,
+      "terms": [
+        "두레"
+      ]
+    },
+    {
+      "id": "s1-r4-c1-l1",
+      "step": 1,
+      "terms": [
+        "영고"
+      ]
+    },
+    {
+      "id": "s1-r4-c2-l1",
+      "step": 1,
+      "terms": [
+        "동맹"
+      ]
+    },
+    {
+      "id": "s1-r4-c3-l1",
+      "step": 2,
+      "terms": [
+        "기록 없음"
+      ]
+    },
+    {
+      "id": "s1-r4-c4-l1",
+      "step": 1,
+      "terms": [
+        "무천"
+      ]
+    },
+    {
+      "id": "s1-r4-c5-l1",
+      "step": 1,
+      "terms": [
+        "수릿날",
+        "계절제"
+      ]
+    }
+  ],
+  "lines": [
+    "초기 국가",
+    "여러 나라의 성장",
+    "부여",
+    "고구려",
+    "옥저",
+    "동예",
+    "삼한",
+    "정치",
+    "5부족 연맹체",
+    "마가, 우가 등이 사출도 다스림",
+    "5부 연맹",
+    "제가 회의에서 중대사 결정",
+    "왕 없이 군장이 다스림",
+    "읍군, 삼로가 다스림",
+    "신지, 읍차 등 군장",
+    "천군이 소도 관리",
+    "경제",
+    "반농반목",
+    "말, 주옥, 모피",
+    "약탈 경제",
+    "부경 (창고)",
+    "어물, 소금 풍부",
+    "단궁, 과하마, 반어피",
+    "벼농사 발달",
+    "변한은 철 수출",
+    "풍습",
+    "1책 12법",
+    "순장",
+    "서옥제",
+    "민며느리제",
+    "가족 공동 무덤",
+    "족외혼",
+    "책화",
+    "두레 조직",
+    "제천 행사",
+    "영고 (12월)",
+    "동맹 (10월)",
+    "기록 없음",
+    "무천 (10월)",
+    "수릿날, 계절제",
+    "시험 빈출!",
+    "부여, 고구려 = 형사취수제 (둘 다)",
+    "삼한 = 마한, 진한, 변한"
+  ],
+  "sections": [
+    {
+      "title": "여러 나라의 성장",
+      "language": "ko",
+      "content_type": "comparison_table",
+      "lines": [],
+      "table": {
+        "columns": [
+          "부여",
+          "고구려",
+          "옥저",
+          "동예",
+          "삼한"
+        ],
+        "rows": [
+          {
+            "header": "정치",
+            "cells": [
+              {
+                "lines": [
+                  {
+                    "id": "s1-r1-c1-l1",
+                    "text": "5부족 연맹체",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 7,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 7
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r1-c1-l2",
+                    "text": "마가, 우가 등이 사출도 다스림",
+                    "marks": [
+                      {
+                        "start": 10,
+                        "end": 13,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 10,
+                        "end": 13
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r1-c2-l1",
+                    "text": "5부 연맹",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 5
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r1-c2-l2",
+                    "text": "제가 회의에서 중대사 결정",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 5,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 5
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r1-c3-l1",
+                    "text": "왕 없이 군장이 다스림",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 5,
+                        "end": 7
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r1-c4-l1",
+                    "text": "읍군, 삼로가 다스림",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 6,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 6
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r1-c5-l1",
+                    "text": "신지, 읍차 등 군장",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 6,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 6
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r1-c5-l2",
+                    "text": "천군이 소도 관리",
+                    "marks": [
+                      {
+                        "start": 4,
+                        "end": 6,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 4,
+                        "end": 6
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "header": "경제",
+            "cells": [
+              {
+                "lines": [
+                  {
+                    "id": "s1-r2-c1-l1",
+                    "text": "반농반목",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 4
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r2-c1-l2",
+                    "text": "말, 주옥, 모피",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 9,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 9
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r2-c2-l1",
+                    "text": "약탈 경제",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 5
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r2-c2-l2",
+                    "text": "부경 (창고)",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 2,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r2-c3-l1",
+                    "text": "어물, 소금 풍부",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 6
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r2-c4-l1",
+                    "text": "단궁, 과하마, 반어피",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 2,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      },
+                      {
+                        "start": 4,
+                        "end": 7
+                      },
+                      {
+                        "start": 9,
+                        "end": 12
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r2-c5-l1",
+                    "text": "벼농사 발달",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 3
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r2-c5-l2",
+                    "text": "변한은 철 수출",
+                    "marks": [
+                      {
+                        "start": 4,
+                        "end": 5,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 4,
+                        "end": 5
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "header": "풍습",
+            "cells": [
+              {
+                "lines": [
+                  {
+                    "id": "s1-r3-c1-l1",
+                    "text": "1책 12법",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 6,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 6
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r3-c1-l2",
+                    "text": "순장",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r3-c2-l1",
+                    "text": "서옥제",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 3,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 3
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r3-c3-l1",
+                    "text": "민며느리제",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 5,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 5
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r3-c3-l2",
+                    "text": "가족 공동 무덤",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 8
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r3-c4-l1",
+                    "text": "족외혼",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 3
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s1-r3-c4-l2",
+                    "text": "책화",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 2,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r3-c5-l1",
+                    "text": "두레 조직",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "header": "제천 행사",
+            "cells": [
+              {
+                "lines": [
+                  {
+                    "id": "s1-r4-c1-l1",
+                    "text": "영고 (12월)",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 2,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r4-c2-l1",
+                    "text": "동맹 (10월)",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 2,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r4-c3-l1",
+                    "text": "기록 없음",
+                    "marks": [],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 5
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r4-c4-l1",
+                    "text": "무천 (10월)",
+                    "marks": [
+                      {
+                        "start": 0,
+                        "end": 2,
+                        "kind": "circle",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "lines": [
+                  {
+                    "id": "s1-r4-c5-l1",
+                    "text": "수릿날, 계절제",
+                    "marks": [
+                      {
+                        "start": 5,
+                        "end": 8,
+                        "kind": "underline",
+                        "ink": "pen"
+                      }
+                    ],
+                    "blanks": [
+                      {
+                        "start": 0,
+                        "end": 3
+                      },
+                      {
+                        "start": 5,
+                        "end": 8
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "annotations": [
+    {
+      "id": "s1-a1",
+      "terms": [
+        "빈출"
+      ]
+    },
+    {
+      "id": "s1-a2",
+      "terms": [
+        "형사취수제"
+      ]
+    },
+    {
+      "id": "s1-a3",
+      "terms": [
+        "마한",
+        "진한"
+      ]
+    }
+  ]
+}

@@ -301,6 +301,15 @@ export type Fact = {
 export type Blank = { readonly id: string; readonly terms: readonly string[] };
 
 /**
+ * A learner's mark on the page that holds text, such as a note in the margin, which is not the
+ * page's content and so no card's (#474): the terms of its own that a card holding them took from it.
+ */
+export type Annotation = {
+  readonly id: string;
+  readonly terms: readonly string[];
+};
+
+/**
  * A notes page's ground truth: its rules and exceptions, every line it prints, and, on a page
  * with a table to memorise or lines recalled in context, the cells a table card should blank and
  * the words a cloze card should.
@@ -311,6 +320,7 @@ export type NotesTruth = {
   readonly lines: readonly string[];
   readonly tableBlanks?: readonly Blank[];
   readonly clozeBlanks?: readonly Blank[];
+  readonly annotations?: readonly Annotation[];
 };
 
 /** The fields of a returned card the notes metrics read; a test may leave out its type. */
@@ -338,7 +348,7 @@ export function listedItems(answer: string): number {
  * more than `MAX_LISTED_ITEMS` items, the examples returned and those the page does not print,
  * and those that only call themselves an exception (`isBareException`). Then the page's table
  * blanks and those some table card blanks, and its cloze blanks and those some cloze card blanks
- * (`blankCovered`).
+ * (`blankCovered`). Then the learner's annotations it holds, and those some card covers.
  */
 export type NotesScore = {
   readonly coverage: number;
@@ -352,6 +362,8 @@ export type NotesScore = {
   readonly tableBlanksCovered: number;
   readonly clozeBlanks: number;
   readonly clozeBlanksCovered: number;
+  readonly annotations: number;
+  readonly annotationsCarded: number;
 };
 
 /** The words that mark a card's answer as an exception's, in the samples' two languages. */
@@ -401,10 +413,11 @@ export function blankCovered(
 }
 
 /**
- * Whether [card] covers [fact]: its front and answer hold every one of the fact's terms. A
- * card's examples do not count, since another rule's worked example can hold a rule's terms.
+ * Whether [card] covers [fact], or an annotation: its front and answer hold every one of its
+ * terms. A card's examples do not count, since another rule's worked example can hold a rule's
+ * terms.
  */
-export function covers(card: NoteCandidate, fact: Fact): boolean {
+export function covers(card: NoteCandidate, fact: Fact | Annotation): boolean {
   const text = normalize(`${card.front} ${card.answer}`);
   return fact.terms.every((term) => text.includes(normalize(term)));
 }
@@ -430,6 +443,7 @@ export function scoreNotes(
     ).length;
   const tableBlanks = truth.tableBlanks ?? [];
   const clozeBlanks = truth.clozeBlanks ?? [];
+  const annotations = truth.annotations ?? [];
   const printed = truth.facts.flatMap((fact) => fact.examples).map(normalize);
   const lines = truth.lines.map(normalize);
   const returned = candidates.flatMap((card) => card.examples ?? []);
@@ -460,6 +474,12 @@ export function scoreNotes(
     clozeBlanksCovered:
       clozeBlanks.filter((blank) => blankCovered(candidates, "cloze", blank))
         .length,
+    annotations: annotations.length,
+    annotationsCarded:
+      annotations.filter((note) =>
+        candidates.some((card) => covers(card, note))
+      )
+        .length,
   };
 }
 
@@ -487,6 +507,11 @@ export type NotesRow = {
    */
   readonly tableBlankCoverage: number | null;
   readonly clozeBlankCoverage: number | null;
+  /**
+   * Over every notes image, the share of the learner's annotations some card covers, which prompt
+   * v10 asks to be 0; null when no page holds any.
+   */
+  readonly annotationRate: number | null;
   /** Each notes image's coverage and the completion tokens its calls used, in the order run. */
   readonly pages: readonly {
     readonly name: string;
@@ -660,6 +685,10 @@ function summarizeNotes(
     clozeBlankCoverage: share(
       total((s) => s.clozeBlanksCovered),
       total((s) => s.clozeBlanks),
+    ),
+    annotationRate: share(
+      total((s) => s.annotationsCarded),
+      total((s) => s.annotations),
     ),
     pages: images.map((image) => ({
       name: image.name,

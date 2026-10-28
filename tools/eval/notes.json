@@ -804,25 +804,6 @@
         ]
       },
       {
-        "id": "always-auxiliary",
-        "step": 2,
-        "terms": [
-          "싶다",
-          "듯하다",
-          "척하다",
-          "만하다"
-        ]
-      },
-      {
-        "id": "spacing-rule",
-        "step": 1,
-        "terms": [
-          "원칙",
-          "허용",
-          "붙여"
-        ]
-      },
-      {
         "id": "spacing-default",
         "step": 2,
         "terms": [
@@ -839,10 +820,28 @@
           "조사",
           "붙여 쓰지 않는다"
         ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "always-auxiliary",
+        "terms": [
+          "싶다",
+          "듯하다",
+          "척하다",
+          "만하다"
+        ]
+      },
+      {
+        "id": "spacing-rule",
+        "terms": [
+          "원칙",
+          "허용",
+          "붙여"
+        ]
       },
       {
         "id": "judgment",
-        "step": 1,
         "terms": [
           "본용언만",
           "끼어들"
@@ -1012,10 +1011,11 @@
         "examples": [
           "삼 년, 삼이 넷"
         ]
-      },
+      }
+    ],
+    "annotations": [
       {
         "id": "native-change",
-        "step": 3,
         "terms": [
           "하나",
           "넷",
@@ -1024,7 +1024,6 @@
       },
       {
         "id": "twenty-change",
-        "step": 3,
         "terms": [
           "스물",
           "스무"
@@ -1035,7 +1034,6 @@
       },
       {
         "id": "trap",
-        "step": 4,
         "terms": [
           "셋 중",
           "수사"
@@ -1168,25 +1166,6 @@
           "께서",
           "께"
         ]
-      },
-      {
-        "id": "indirect",
-        "step": 4,
-        "terms": [
-          "있으시다",
-          "간접"
-        ],
-        "examples": [
-          "할머니께서는 걱정이 있으시다"
-        ]
-      },
-      {
-        "id": "trap",
-        "step": 4,
-        "terms": [
-          "계시다",
-          "직접"
-        ]
       }
     ],
     "tableBlanks": [
@@ -1227,6 +1206,25 @@
         "id": "listener-target",
         "terms": [
           "듣는 사람"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "indirect",
+        "terms": [
+          "있으시다",
+          "간접"
+        ],
+        "examples": [
+          "할머니께서는 걱정이 있으시다"
+        ]
+      },
+      {
+        "id": "trap",
+        "terms": [
+          "계시다",
+          "직접"
         ]
       }
     ]
@@ -1335,18 +1333,6 @@
         "examples": [
           "새 옷을 입었다, 빨리 달렸다"
         ]
-      },
-      {
-        "id": "adverb-exception",
-        "step": 4,
-        "terms": [
-          "예외",
-          "부사어",
-          "체언"
-        ],
-        "examples": [
-          "바로 앞, 겨우 하나"
-        ]
       }
     ],
     "clozeBlanks": [
@@ -1390,6 +1376,19 @@
         "id": "independent",
         "terms": [
           "독립어"
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "adverb-exception",
+        "terms": [
+          "예외",
+          "부사어",
+          "체언"
+        ],
+        "examples": [
+          "바로 앞, 겨우 하나"
         ]
       }
     ]

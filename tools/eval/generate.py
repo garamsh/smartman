@@ -16,7 +16,8 @@ with the labels and examples it prints, are written beside its image as the grou
 page's truth is the rules and exceptions it teaches, each with its step, the terms that cover it
 and the worked examples the page prints for it, and every line it prints, from tools/eval/notes.json.
 A page for the two-stage eval adds its sections, each line with its marks and the spans to blank,
-from tools/eval/structure.json.
+from tools/eval/structure.json. A page the writer annotated by hand adds its annotations, the notes
+in pen that are not the page's content, each with the terms a card made from it would hold.
 """
 
 import json
@@ -363,6 +364,10 @@ LABEL_PAGES = [
 # prompt v8: sections of a comparison table or a table whose cells hold bullet lines, and a list,
 # with the writer's pen underlines, circles, highlights and stars on their lines.
 STRUCTURE_DOCUMENTS = ["ko-states", "ko-respiration", "en-markets", "ko-sentences", "en-organelles"]
+# The structure pages after those, each in every hand and distortion, for prompt v10 (#474): the
+# owner's style of page from #412, a printed comparison table of five states marked in red pen, with
+# red notes in pen beside its heading and under its table, which are no card's content.
+ANNOTATED_DOCUMENTS = ["ko-early-states"]
 TABLE_CONTENT = {"comparison_table", "table"}
 # The marks that cover a span of a line, and so a word to blank; a star marks the whole line.
 SPAN_MARKS = {"underline", "circle", "highlight"}
@@ -448,6 +453,13 @@ def truth_line(line_id: str, spec: dict) -> dict:
     return {"id": line_id, "text": text, "marks": marks, "blanks": sorted(blanks, key=lambda b: b["start"])}
 
 
+def truth_annotations(doc: dict) -> list[dict]:
+    """A structure document's notes in pen as their truth: each one's id and the terms of its own."""
+    return [{"id": f"s{s}-a{n}", "terms": note["terms"]}
+            for s, section in enumerate(doc["sections"], 1)
+            for n, note in enumerate(section.get("annotations", []), 1)]
+
+
 def truth_sections(doc: dict) -> list[dict]:
     """A structure document's sections as their truth: each table cell's lines, or each list line."""
     sections = []
@@ -486,8 +498,11 @@ def structure(page: Page, doc: dict, sections: list[dict]) -> None:
     left, right, pad = 110, PAGE[0] - 100, 12
     for section in sections:
         y += 20
-        page.text((left, y), section["title"], page.front_face, round(38 * scale),
-                  (30, 60, 120) if not page.handwritten else None)
+        heading = page.text((left, y), section["title"], page.front_face, round(38 * scale),
+                            (30, 60, 120) if not page.handwritten else None)
+        for note in section["notes"]:
+            if note["beside"]:
+                page.text((left + heading + 40, y), note["text"], ADDITION_FACE, size, MARK_COLOUR)
         y += round(38 * scale) * 1.7
         if section["table"] is None:
             for line in section["lines"]:
@@ -527,6 +542,11 @@ def structure(page: Page, doc: dict, sections: list[dict]) -> None:
                     page.text((xs[c] + pad, at), BULLET, page.front_face, size)
                     at += marked_line(page, (xs[c] + pad + bullet, at), line, size, inner - bullet)
             y += height
+        for note in section["notes"]:
+            if not note["beside"]:
+                y += size * 0.6
+                page.text((left + 30, y), note["text"], ADDITION_FACE, size, MARK_COLOUR)
+                y += size * 1.2
     if y > PAGE[1] - 60:
         raise SystemExit(f"the structure page {doc['title']} runs off the page")
 
@@ -536,6 +556,8 @@ def write_structure_samples(index: int, name: str, doc: dict) -> int:
     its truth: its sections, its lines as notes facts, each fact the spans its line should blank,
     and every line it prints; returns the last index."""
     sections = truth_sections(doc)
+    notes_in_pen = [[{"text": note["text"], "beside": note.get("beside", False)}
+                     for note in section.get("annotations", [])] for section in doc["sections"]]
     lines = [line for section in sections for line in section_lines(section)]
     facts = [{"id": line["id"], "step": 1 if line["marks"] else 2,
               "terms": [line["text"][b["start"]:b["end"]] for b in line["blanks"]]} for line in lines]
@@ -549,13 +571,15 @@ def write_structure_samples(index: int, name: str, doc: dict) -> int:
                 printed += [line["text"] for cell in row["cells"] for line in cell["lines"]]
         else:
             printed += [line["text"] for line in section["lines"]]
+    printed += [note["text"] for notes_of in notes_in_pen for note in notes_of]
+    annotations = truth_annotations(doc)
     for hand in NOTE_HANDS:
         for distortion in NOTE_DISTORTIONS:
             index += 1
             rng = np.random.default_rng([SEED, index])
             face = NOTE_FACES[hand]
             page = Page(rng, "", hand, (face, face))
-            structure(page, doc, sections)
+            structure(page, doc, [{**section, "notes": notes_of} for section, notes_of in zip(sections, notes_in_pen)])
             check_coverage(page.covered)
             d = HARSH if distortion == "harsh" else MILD
             photo = photograph(page.image, rng, d)
@@ -573,6 +597,8 @@ def write_structure_samples(index: int, name: str, doc: dict) -> int:
                 "lines": printed,
                 "sections": sections,
             }
+            if annotations:
+                truth["annotations"] = annotations
             (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                     encoding="utf-8")
     return index
@@ -674,6 +700,8 @@ def write_notes_samples(index: int, name: str, doc: dict) -> int:
             for key in ("tableBlanks", "clozeBlanks"):
                 if key in doc:
                     truth[key] = doc[key]
+            if "annotations" in doc:
+                truth["annotations"] = [{"id": note["id"], "terms": note["terms"]} for note in doc["annotations"]]
             (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
                                                     encoding="utf-8")
     return index
@@ -780,7 +808,7 @@ def main() -> None:
         entries = unlabelled(vocabulary[key]) if strip else vocabulary[key]
         index = write_word_book_samples(index, name, entries, languages, title)
     structures = json.loads((HERE / "structure.json").read_text(encoding="utf-8"))
-    for name in STRUCTURE_DOCUMENTS:
+    for name in STRUCTURE_DOCUMENTS + ANNOTATED_DOCUMENTS:
         index = write_structure_samples(index, name, structures[name])
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 

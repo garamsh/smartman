@@ -79,25 +79,6 @@
         "께서",
         "께"
       ]
-    },
-    {
-      "id": "indirect",
-      "step": 4,
-      "terms": [
-        "있으시다",
-        "간접"
-      ],
-      "examples": [
-        "할머니께서는 걱정이 있으시다"
-      ]
-    },
-    {
-      "id": "trap",
-      "step": 4,
-      "terms": [
-        "계시다",
-        "직접"
-      ]
     }
   ],
   "lines": [
@@ -153,6 +134,22 @@
       "id": "listener-target",
       "terms": [
         "듣는 사람"
+      ]
+    }
+  ],
+  "annotations": [
+    {
+      "id": "indirect",
+      "terms": [
+        "있으시다",
+        "간접"
+      ]
+    },
+    {
+      "id": "trap",
+      "terms": [
+        "계시다",
+        "직접"
       ]
     }
   ]

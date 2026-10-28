@@ -489,5 +489,167 @@
         ]
       }
     ]
+  },
+  "ko-early-states": {
+    "title": "초기 국가",
+    "language": "ko",
+    "scale": 0.7,
+    "sections": [
+      {
+        "title": "여러 나라의 성장",
+        "content_type": "comparison_table",
+        "annotations": [
+          { "text": "시험 빈출!", "terms": ["빈출"], "beside": true },
+          {
+            "text": "부여, 고구려 = 형사취수제 (둘 다)",
+            "terms": ["형사취수제"]
+          },
+          { "text": "삼한 = 마한, 진한, 변한", "terms": ["마한", "진한"] }
+        ],
+        "table": {
+          "columns": ["부여", "고구려", "옥저", "동예", "삼한"],
+          "rows": [
+            {
+              "header": "정치",
+              "cells": [
+                [
+                  {
+                    "text": "5부족 연맹체",
+                    "marks": [{ "span": "5부족 연맹체", "kind": "underline" }]
+                  },
+                  {
+                    "text": "마가, 우가 등이 사출도 다스림",
+                    "marks": [{ "span": "사출도", "kind": "circle" }]
+                  }
+                ],
+                [
+                  { "text": "5부 연맹", "blanks": ["5부 연맹"] },
+                  {
+                    "text": "제가 회의에서 중대사 결정",
+                    "marks": [{ "span": "제가 회의", "kind": "underline" }]
+                  }
+                ],
+                [{ "text": "왕 없이 군장이 다스림", "blanks": ["군장"] }],
+                [
+                  {
+                    "text": "읍군, 삼로가 다스림",
+                    "marks": [{ "span": "읍군, 삼로", "kind": "circle" }]
+                  }
+                ],
+                [
+                  {
+                    "text": "신지, 읍차 등 군장",
+                    "marks": [{ "span": "신지, 읍차", "kind": "underline" }]
+                  },
+                  {
+                    "text": "천군이 소도 관리",
+                    "marks": [{ "span": "소도", "kind": "circle" }]
+                  }
+                ]
+              ]
+            },
+            {
+              "header": "경제",
+              "cells": [
+                [
+                  { "text": "반농반목", "blanks": ["반농반목"] },
+                  {
+                    "text": "말, 주옥, 모피",
+                    "marks": [{ "span": "말, 주옥, 모피", "kind": "underline" }]
+                  }
+                ],
+                [
+                  { "text": "약탈 경제", "blanks": ["약탈 경제"] },
+                  {
+                    "text": "부경 (창고)",
+                    "marks": [{ "span": "부경", "kind": "circle" }]
+                  }
+                ],
+                [{ "text": "어물, 소금 풍부", "blanks": ["어물, 소금"] }],
+                [
+                  {
+                    "text": "단궁, 과하마, 반어피",
+                    "marks": [{ "span": "단궁", "kind": "underline" }],
+                    "blanks": ["과하마", "반어피"]
+                  }
+                ],
+                [
+                  { "text": "벼농사 발달", "blanks": ["벼농사"] },
+                  {
+                    "text": "변한은 철 수출",
+                    "marks": [{ "span": "철", "kind": "circle" }]
+                  }
+                ]
+              ]
+            },
+            {
+              "header": "풍습",
+              "cells": [
+                [
+                  {
+                    "text": "1책 12법",
+                    "marks": [{ "span": "1책 12법", "kind": "circle" }]
+                  },
+                  { "text": "순장", "blanks": ["순장"] }
+                ],
+                [
+                  {
+                    "text": "서옥제",
+                    "marks": [{ "span": "서옥제", "kind": "underline" }]
+                  }
+                ],
+                [
+                  {
+                    "text": "민며느리제",
+                    "marks": [{ "span": "민며느리제", "kind": "underline" }]
+                  },
+                  { "text": "가족 공동 무덤", "blanks": ["가족 공동 무덤"] }
+                ],
+                [
+                  { "text": "족외혼", "blanks": ["족외혼"] },
+                  {
+                    "text": "책화",
+                    "marks": [{ "span": "책화", "kind": "circle" }]
+                  }
+                ],
+                [{ "text": "두레 조직", "blanks": ["두레"] }]
+              ]
+            },
+            {
+              "header": "제천 행사",
+              "cells": [
+                [
+                  {
+                    "text": "영고 (12월)",
+                    "marks": [{ "span": "영고", "kind": "circle" }]
+                  }
+                ],
+                [
+                  {
+                    "text": "동맹 (10월)",
+                    "marks": [{ "span": "동맹", "kind": "circle" }]
+                  }
+                ],
+                [{ "text": "기록 없음", "blanks": ["기록 없음"] }],
+                [
+                  {
+                    "text": "무천 (10월)",
+                    "marks": [{ "span": "무천", "kind": "circle" }]
+                  }
+                ],
+                [
+                  {
+                    "text": "수릿날, 계절제",
+                    "marks": [{ "span": "계절제", "kind": "underline" }],
+                    "blanks": ["수릿날"]
+                  }
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    ]
   }
+
 }

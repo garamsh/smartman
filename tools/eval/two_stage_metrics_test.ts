@@ -204,6 +204,8 @@ const notes = (coverage: number, cards: number, unsupported: number) => ({
   tableBlanksCovered: 0,
   clozeBlanks: 0,
   clozeBlanksCovered: 0,
+  annotations: 0,
+  annotationsCarded: 0,
 });
 
 Deno.test("a configuration's row pools shape fidelity per shape, fabrication, cost per photo apart from spend, and latency to stage 1 and in total", () => {

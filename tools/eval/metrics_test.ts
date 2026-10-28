@@ -10,10 +10,12 @@ import {
   type Entry,
   entryOf,
   type FieldCounts,
+  type ImageResult,
   isBareException,
   listedItems,
   normalize,
   type NotesRow,
+  type NotesScore,
   percentile,
   recommend,
   type Row,
@@ -591,6 +593,7 @@ Deno.test("summarize averages notes coverage over the notes images and pools the
     bareExceptionRate: 0,
     tableBlankCoverage: null,
     clozeBlankCoverage: null,
+    annotationRate: null,
     pages: [
       { name: "02-notes", coverage: 1, completionTokens: 900 },
       { name: "03-notes", coverage: 0, completionTokens: 0 },
@@ -607,6 +610,7 @@ const notesRow = (coverage: number): NotesRow => ({
   bareExceptionRate: null,
   tableBlankCoverage: null,
   clozeBlankCoverage: null,
+  annotationRate: null,
   pages: [],
 });
 
@@ -696,6 +700,53 @@ Deno.test("a page whose truth names no blanks counts none", () => {
   const notes = scoreNotes([clozeCard("___", ["서술어"])], notesTruth);
   assert.equal(notes.tableBlanks, 0);
   assert.equal(notes.clozeBlanks, 0);
+});
+
+/** A page whose truth also names two notes the learner wrote in its margin. */
+const annotatedTruth = {
+  ...notesTruth,
+  annotations: [
+    { id: "tip", terms: ["스물", "스무"] },
+    { id: "trap", terms: ["셋 중", "수사"] },
+  ],
+};
+
+Deno.test("an annotation is carded when a card's front and answer hold each of its terms, and not by an example or a card of the page's content", () => {
+  const tip = noteCard("★ 스물", "관형사가 되면 스무로 바뀐다");
+  const content = noteCard("연역", "결론이 반드시 참");
+  const notes = scoreNotes([content, tip], annotatedTruth);
+  assert.equal(notes.annotations, 2);
+  assert.equal(notes.annotationsCarded, 1);
+  assert.equal(
+    scoreNotes(
+      [content, { ...content, examples: ["스물 -> 스무 살"] }],
+      annotatedTruth,
+    ).annotationsCarded,
+    0,
+    "an example holding the terms",
+  );
+  assert.equal(scoreNotes([content, tip], notesTruth).annotations, 0);
+
+  // Pooled over the pages that hold any, a dash without one.
+  const page = (name: string, notes: NotesScore): ImageResult => ({
+    name,
+    score: null,
+    notes,
+    latencyMs: 0,
+    costUsd: 0,
+    completionTokens: 0,
+  });
+  const row = summarize("m", [
+    page("01", notes),
+    page("02", scoreNotes([tip], notesTruth)),
+    page("03", scoreNotes([content], annotatedTruth)),
+  ]);
+  assert.equal(row.notes?.annotationRate, 1 / 4);
+  assert.equal(
+    summarize("m", [page("02", scoreNotes([tip], notesTruth))]).notes
+      ?.annotationRate,
+    null,
+  );
 });
 
 Deno.test("a card whose answer only names an exception is a bare exception, and one stating what the exception does is not", () => {

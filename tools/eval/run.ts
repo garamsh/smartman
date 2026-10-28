@@ -3,9 +3,10 @@
  *
  *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
- *     tools/eval/run.ts [--dry-run] [--prompt-version <id>]
+ *     tools/eval/run.ts [--dry-run] [--prompts <file>,<file>... | --prompt-version <id>]
  *
- * It runs prompt v9, the newest prompt file, unless
+ * It runs prompt v9, the active prompt's file, unless `--prompts` names prompt files, such as
+ * `--prompts v9,v10`, each run on every configuration as a row of its own, or
  * `--prompt-version` names a version saved in the admin area (ADR 0073), which it reads through
  * `public.prompt_version` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; that run also needs
  * both names in `--allow-env` and the project's host in `--allow-net`.
@@ -28,10 +29,8 @@ import {
   MAX_OUTPUT_TOKENS,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
-import {
-  PROMPT_VERSION,
-  SYSTEM_PROMPT,
-} from "../../supabase/functions/extract-cards/prompt_v9.ts";
+import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
+import * as v10 from "../../supabase/functions/extract-cards/prompt_v10.ts";
 import type {
   Image,
   LanguageHints,
@@ -133,16 +132,44 @@ export type Io = {
 /** The instructions a run gives the model, and how the ledger and the report name them. */
 export type EvalPrompt = { readonly label: string; readonly text: string };
 
+/** The prompt files `--prompts` may name, by their version. */
+export const PROMPT_FILES: readonly EvalPrompt[] = [v9, v10].map((file) => ({
+  label: file.PROMPT_VERSION,
+  text: file.SYSTEM_PROMPT,
+}));
+
 /**
- * The prompt `--prompt-version <id>` names, read from the database, or prompt v9 without it; a
- * sentence saying why when the flag or the read fails.
+ * The prompts a run gives the model: the files `--prompts` names, the version `--prompt-version
+ * <id>` names, read from the database, or prompt v9 without either; a sentence saying why when a
+ * flag or the read fails.
  */
-export async function readPrompt(
+export async function readPrompts(
   args: readonly string[],
   io: Pick<Io, "env" | "fetch">,
-): Promise<EvalPrompt | { readonly error: string }> {
+): Promise<readonly EvalPrompt[] | { readonly error: string }> {
+  const files = args.indexOf("--prompts");
   const at = args.indexOf("--prompt-version");
-  if (at === -1) return { label: PROMPT_VERSION, text: SYSTEM_PROMPT };
+  if (files !== -1 && at !== -1) {
+    return { error: "--prompts and --prompt-version cannot be given together" };
+  }
+  if (files !== -1) {
+    const names = (args[files + 1] ?? "").split(",");
+    const prompts = names.map((name) =>
+      PROMPT_FILES.find((file) => file.label === name)
+    );
+    if (
+      prompts.some((prompt) => prompt === undefined) ||
+      new Set(names).size !== names.length
+    ) {
+      return {
+        error: `--prompts takes distinct prompt files among ${
+          PROMPT_FILES.map((file) => file.label).join(", ")
+        }, separated by commas`,
+      };
+    }
+    return prompts.filter((prompt) => prompt !== undefined);
+  }
+  if (at === -1) return [{ label: v9.PROMPT_VERSION, text: v9.SYSTEM_PROMPT }];
   const id = args[at + 1];
   if (id === undefined || !/^[1-9]\d{0,15}$/.test(id)) {
     return {
@@ -178,17 +205,18 @@ export async function readPrompt(
   if (typeof text !== "string" || text.trim() === "") {
     return { error: "prompt_version answered a row it should not" };
   }
-  return { label: `version ${id}`, text };
+  return [{ label: `version ${id}`, text }];
 }
 
 /** Runs the eval and returns the process exit code. */
 export async function main(args: readonly string[], io: Io): Promise<number> {
   const dryRun = args.includes("--dry-run");
-  const prompt = await readPrompt(args, io);
-  if ("error" in prompt) {
-    io.print(prompt.error);
+  const prompts = await readPrompts(args, io);
+  if ("error" in prompts) {
+    io.print(prompts.error);
     return 1;
   }
+  const promptLabel = prompts.map((prompt) => prompt.label).join(" and ");
   const selectors = parseSelectors(
     JSON.parse(await io.readText(PATHS.candidates)),
   );
@@ -219,13 +247,14 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.print(`${candidate.label}: ${describe(candidate)}`);
   }
 
-  const estimate = estimateUsd(candidates, samples.map(sizeOf));
+  const estimate = estimateUsd(candidates, samples.map(sizeOf)) *
+    prompts.length;
   const notes = samples.filter((sample) => sample.kind === "notes").length;
   const left = remaining(ledger);
   io.print(
     `${samples.length} samples (${
       samples.length - notes
-    } vocabulary, ${notes} notes) x ${candidates.length} configurations: estimated ${
+    } vocabulary, ${notes} notes) x ${candidates.length} configurations x prompt ${promptLabel}: estimated ${
       usd(estimate)
     }, ` +
       `${usd(left)} of the ${usd(ledger.budgetUsd)} budget remaining`,
@@ -247,9 +276,8 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.startedAt().replace(/\.\d+/, "").replaceAll(":", "-")
   }`;
   io.print(`keeping every reply in ${replies}/`);
-  const run = await runEval(candidates, samples, ledger, {
+  const run = await runPrompts(prompts, candidates, samples, ledger, {
     apiKey,
-    prompt,
     fetch: io.fetch,
     now: io.now,
     print: io.print,
@@ -266,7 +294,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
       spentUsd: round(run.spentUsd),
       note: run.stopped
         ? "stopped before exceeding the budget"
-        : `prompt ${prompt.label}`,
+        : `prompt ${promptLabel}`,
     }],
   };
   io.print(
@@ -288,7 +316,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
           updated,
           io.today(),
           { replies, halted: run.halted },
-          prompt.label,
+          promptLabel,
         ),
       );
       io.print(`wrote ${PATHS.report}`);
@@ -303,6 +331,44 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     return 1;
   }
   return 0;
+}
+
+/**
+ * `runEval` once per prompt, each configuration labelled with its prompt when there are several,
+ * so the rows of one model compare the prompts; a prompt's budget is what the earlier left.
+ */
+export async function runPrompts(
+  prompts: readonly EvalPrompt[],
+  candidates: readonly Candidate[],
+  samples: readonly Sample[],
+  ledger: Ledger,
+  deps: Omit<RunDeps, "prompt">,
+): Promise<
+  { rows: Row[]; spentUsd: number; stopped: boolean; halted: Halt[] }
+> {
+  const total = {
+    rows: [] as Row[],
+    spentUsd: 0,
+    stopped: false,
+    halted: [] as Halt[],
+  };
+  for (const prompt of prompts) {
+    const labelled = prompts.length === 1 ? candidates : candidates.map((
+      candidate,
+    ) => ({
+      ...candidate,
+      label: `${candidate.label}, prompt ${prompt.label}`,
+    }));
+    const run = await runEval(labelled, samples, {
+      ...ledger,
+      budgetUsd: ledger.budgetUsd - total.spentUsd,
+    }, { ...deps, prompt });
+    total.rows.push(...run.rows);
+    total.spentUsd += run.spentUsd;
+    total.halted.push(...run.halted);
+    if (run.stopped) return { ...total, stopped: true };
+  }
+  return total;
 }
 
 /** One OpenRouter call as it answered: its HTTP status and body, or the error that ended it. */
@@ -486,7 +552,7 @@ export async function loadSamples(
       const notes = parseNotes(truth);
       if (notes === null) {
         throw new Error(
-          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines, tableBlanks?: [{id, terms}], clozeBlanks?: [{id, terms}]}`,
+          `${name} is not a notes ground truth of {facts: [{id, step, terms, examples?}], lines, tableBlanks?: [{id, terms}], clozeBlanks?: [{id, terms}], annotations?: [{id, terms}]}`,
         );
       }
       samples.push({ ...photo, kind: "notes", notes });
@@ -511,9 +577,12 @@ export async function loadSamples(
 
 function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
   const { facts, lines } = truth;
-  const tableBlanks = parseBlanks(truth.tableBlanks);
-  const clozeBlanks = parseBlanks(truth.clozeBlanks);
-  if (tableBlanks === null || clozeBlanks === null) return null;
+  const tableBlanks = parseTermed(truth.tableBlanks);
+  const clozeBlanks = parseTermed(truth.clozeBlanks);
+  const annotations = parseTermed(truth.annotations);
+  if (tableBlanks === null || clozeBlanks === null || annotations === null) {
+    return null;
+  }
   if (
     !Array.isArray(facts) || facts.length === 0 ||
     !Array.isArray(lines) || lines.length === 0 ||
@@ -537,11 +606,15 @@ function parseNotes(truth: Record<string, unknown>): NotesTruth | null {
     lines,
     ...(tableBlanks === undefined ? {} : { tableBlanks }),
     ...(clozeBlanks === undefined ? {} : { clozeBlanks }),
+    ...(annotations === undefined ? {} : { annotations }),
   };
 }
 
-/** A truth's blanks, undefined when it names none, or null when they are not [{id, terms}]. */
-function parseBlanks(value: unknown): Blank[] | null | undefined {
+/**
+ * A truth's blanks or annotations, undefined when it names none, or null when they are not
+ * [{id, terms}].
+ */
+function parseTermed(value: unknown): Blank[] | null | undefined {
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.length === 0) return null;
   const blanks: Blank[] = [];
@@ -638,7 +711,7 @@ export function report(
     "- Over the matched cards of every image, whose senses pair with the page's in order, in percent and after the same normalization: labels P is the share of returned labels whose text equals one the page prints for that sense, and labels R the share of printed labels so returned; category is the share of those equal labels whose kind and category are the page's too; unprinted labels is the share of the senses the page prints no label for that were given one, which must be 0; examples is the share of returned examples, on the card or a sense, the page prints for the entry; sense examples is the share of the examples printed under a sense that the returned sense holds; extras is the share of printed extras returned with an equal label and text; invented is the share of returned label lists, example lists and extras where the page prints none. A dash means the configuration returned no such field, or the pages printed none.",
     `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards; a table card's answer, its whole table, is not counted. Bare exceptions is the share of returned cards whose answer names an exception (${
       EXCEPTION_WORDS.map((word) => `"${word}"`).join(" or ")
-    }) yet covers no fact, which prompt v7 asks every exception card to avoid by stating what the exception does. Table blanks is the share of the pages' cells to memorise that a table card asks as a blank, one blank holding each of the cell's terms, and cloze blanks the same for the words a cloze card should ask, pooled over the pages that hold any; a dash means no page held any.`,
+    }) yet covers no fact, which prompt v7 asks every exception card to avoid by stating what the exception does. Table blanks is the share of the pages' cells to memorise that a table card asks as a blank, one blank holding each of the cell's terms, and cloze blanks the same for the words a cloze card should ask, pooled over the pages that hold any; a dash means no page held any. Annotations carded is the share of the learner's annotations on the pages, such as a note written in a margin, that a card's front and answer hold each of the terms of, pooled over the pages that hold any, which prompt v10 asks to be 0 (#474); a dash means no page held any.`,
     "- Latency is per image, one call each; cost per image is the mean of OpenRouter's reported cost, over every image.",
     `- Every reply, its parsed cards or its error body, is kept in \`${kept.replies}/\`, which git ignores.`,
     ...kept.halted.map((halt) =>
@@ -733,8 +806,8 @@ function notesSection(rows: readonly Row[]): string[] {
   return [
     "## Notes pages",
     "",
-    "| Configuration | Coverage | Unsupported | Invented examples | Long answers | Bare exceptions | Table blanks | Cloze blanks |",
-    "|---|---|---|---|---|---|---|---|",
+    "| Configuration | Coverage | Unsupported | Invented examples | Long answers | Bare exceptions | Table blanks | Cloze blanks | Annotations carded |",
+    "|---|---|---|---|---|---|---|---|---|",
     ...rows.map((row) => {
       const notes = row.notes;
       return `| ${row.label} | ${pct(notes?.coverage)} | ${
@@ -743,7 +816,7 @@ function notesSection(rows: readonly Row[]): string[] {
         pct(notes?.longAnswerRate)
       } | ${pct(notes?.bareExceptionRate)} | ${
         pct(notes?.tableBlankCoverage)
-      } | ${pct(notes?.clozeBlankCoverage)} |`;
+      } | ${pct(notes?.clozeBlankCoverage)} | ${pct(notes?.annotationRate)} |`;
     }),
     "",
   ];

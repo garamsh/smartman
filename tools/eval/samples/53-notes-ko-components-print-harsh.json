@@ -64,18 +64,6 @@
       "examples": [
         "새 옷을 입었다, 빨리 달렸다"
       ]
-    },
-    {
-      "id": "adverb-exception",
-      "step": 4,
-      "terms": [
-        "예외",
-        "부사어",
-        "체언"
-      ],
-      "examples": [
-        "바로 앞, 겨우 하나"
-      ]
     }
   ],
   "lines": [
@@ -133,6 +121,16 @@
       "id": "independent",
       "terms": [
         "독립어"
+      ]
+    }
+  ],
+  "annotations": [
+    {
+      "id": "adverb-exception",
+      "terms": [
+        "예외",
+        "부사어",
+        "체언"
       ]
     }
   ]

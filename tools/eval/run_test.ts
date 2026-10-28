@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
 import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v9.ts";
+import { SYSTEM_PROMPT as V10_PROMPT } from "../../supabase/functions/extract-cards/prompt_v10.ts";
 import { meaningOf, normalize } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
@@ -263,7 +264,7 @@ Deno.test("a dry run prints the resolved models and the estimate, and calls no m
   );
   assert.ok(
     w.printed.some((line) =>
-      /2 samples \(2 vocabulary, 0 notes\) x 2 configurations: estimated \$\d/
+      /2 samples \(2 vocabulary, 0 notes\) x 2 configurations x prompt v9: estimated \$\d/
         .test(line)
     ),
   );
@@ -476,12 +477,12 @@ Deno.test("a notes sample is scored by coverage, unsupported cards, invented exa
   // The one note card covers one of the page's two facts.
   assert.match(
     table,
-    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \| Bare exceptions \| Table blanks \| Cloze blanks \|\n/,
+    /\| Configuration \| Coverage \| Unsupported \| Invented examples \| Long answers \| Bare exceptions \| Table blanks \| Cloze blanks \| Annotations carded \|\n/,
   );
-  // No page names table or cloze blanks, so both read as a dash.
+  // No page names table or cloze blanks or annotations, so each reads as a dash.
   assert.match(
     table,
-    /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| — \| — \|\n/,
+    /\| Cheap \| 50\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| 0\.0 \| — \| — \| — \|\n/,
   );
   assert.doesNotMatch(table, /Step order|Coverage at/);
   assert.match(table, /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \|/);
@@ -586,7 +587,7 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
     );
     await assert.rejects(
       loadSamples(io(w)),
-      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines, tableBlanks\?: \[\{id, terms\}\], clozeBlanks\?: \[\{id, terms\}\]\}/,
+      /notes ground truth of \{facts: \[\{id, step, terms, examples\?\}\], lines, tableBlanks\?: \[\{id, terms\}\], clozeBlanks\?: \[\{id, terms\}\], annotations\?: \[\{id, terms\}\]\}/,
     );
   }
   for (
@@ -599,7 +600,7 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
       [{ id: 1, terms: ["x"] }],
     ]
   ) {
-    for (const key of ["tableBlanks", "clozeBlanks"]) {
+    for (const key of ["tableBlanks", "clozeBlanks", "annotations"]) {
       const w = world();
       w.files.set(
         `${PATHS.samples}/03-notes.json`,
@@ -620,6 +621,7 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
       ...notesTruth,
       tableBlanks: [{ id: "a", terms: ["x"] }],
       clozeBlanks: [{ id: "b", terms: ["y", "z"] }],
+      annotations: [{ id: "c", terms: ["w"] }],
     }),
   );
   const samples = await loadSamples(io(control));
@@ -627,8 +629,15 @@ Deno.test("a notes ground truth without facts, with a step outside 1 to 5, with 
   const notes = samples.find((sample) => sample.kind === "notes");
   assert.deepEqual(
     notes?.kind === "notes" &&
-      [notes.notes.tableBlanks, notes.notes.clozeBlanks],
-    [[{ id: "a", terms: ["x"] }], [{ id: "b", terms: ["y", "z"] }]],
+      [
+        notes.notes.tableBlanks,
+        notes.notes.clozeBlanks,
+        notes.notes.annotations,
+      ],
+    [[{ id: "a", terms: ["x"] }], [{ id: "b", terms: ["y", "z"] }], [{
+      id: "c",
+      terms: ["w"],
+    }]],
   );
 });
 
@@ -670,8 +679,98 @@ Deno.test("a notes page naming table and cloze blanks is scored on the blanks it
   // One of the two table cells is a blank, and the one cloze word is.
   assert.match(
     table,
-    /\| Cheap \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| 50\.0 \| 100\.0 \|\n/,
+    /\| Cheap \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| [^|]+ \| 50\.0 \| 100\.0 \| — \|\n/,
   );
+});
+
+Deno.test("a notes page naming the learner's annotations is scored on the share of them a card holds", async () => {
+  const w = world(undefined, [{ label: "Cheap", primary: "^vendor/cheap$" }]);
+  w.files.set(
+    `${PATHS.samples}/03-notes.json`,
+    JSON.stringify({
+      image: "03-notes.jpg",
+      ...notesTruth,
+      // The note card's answer holds the first annotation's terms, and none of the second's.
+      annotations: [
+        { id: "carded", terms: ["반드시", "전제"] },
+        { id: "left", terms: ["귀납"] },
+      ],
+    }),
+  );
+  assert.equal(await main([], io(w)), 0);
+  assert.match(
+    w.files.get(PATHS.report) ?? "",
+    /\| Cheap \| (?:[^|]+ \| ){7}50\.0 \|\n/,
+  );
+});
+
+Deno.test("--prompts runs each prompt file on every configuration as a row of its own, which the ledger and the report name", async () => {
+  const w = world({ budgetUsd: 10, runs: [] }, [{
+    label: "Cheap",
+    primary: "^vendor/cheap$",
+  }]);
+  const systems: string[] = [];
+  const base = io(w);
+  const recorded: Io = {
+    ...base,
+    fetch: (input, init) => {
+      if (String(input) === OPENROUTER_URL) {
+        systems.push(JSON.parse(String(init?.body)).messages[0].content);
+      }
+      return base.fetch(input, init);
+    },
+  };
+  assert.equal(await main(["--prompts", "v9,v10", "--dry-run"], recorded), 0);
+  const estimate = (line: string | undefined) =>
+    Number(line?.match(/estimated \$([\d.]+)/)?.[1]);
+  const both = w.printed.find((line) => line.includes("x prompt v9 and v10"));
+  assert.equal(systems.length, 0, "a dry run calls no model");
+
+  assert.equal(await main(["--prompts", "v9,v10"], recorded), 0);
+  assert.deepEqual(systems, [
+    SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    V10_PROMPT,
+    V10_PROMPT,
+  ]);
+  assert.equal(
+    JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).note,
+    "prompt v9 and v10",
+  );
+  const table = w.files.get(PATHS.report) ?? "";
+  assert.match(table, /with prompt v9 and v10, over/);
+  assert.match(table, /\| Cheap, prompt v9 \| 100\.0 \| 50\.0 \|/);
+  assert.match(table, /\| Cheap, prompt v10 \| 100\.0 \| 50\.0 \|/);
+
+  // Control: one prompt's run keeps the configuration's label, at half the estimate.
+  const one = world({ budgetUsd: 10, runs: [] }, [{
+    label: "Cheap",
+    primary: "^vendor/cheap$",
+  }]);
+  assert.equal(await main(["--prompts", "v10", "--dry-run"], io(one)), 0);
+  const single = one.printed.find((line) => line.includes("x prompt v10:"));
+  assert.ok(Math.abs(estimate(both) - 2 * estimate(single)) < 1e-4);
+  assert.equal(await main(["--prompts", "v10"], io(one)), 0);
+  assert.match(one.files.get(PATHS.report) ?? "", /\| Cheap \| 100\.0 \|/);
+});
+
+Deno.test("--prompts refuses an unknown or repeated prompt file, or --prompt-version beside it, before any call", async () => {
+  for (
+    const args of [
+      ["--prompts"],
+      ["--prompts", "v8"],
+      ["--prompts", "v9,v9"],
+      ["--prompts", "v9,", "--dry-run"],
+      ["--prompts", "v10", "--prompt-version", "5"],
+    ]
+  ) {
+    const w = world({ budgetUsd: 10, runs: [] });
+    assert.equal(await main(args, withStore(w, [])), 1, args.join(" "));
+    assert.equal(w.chatCalls.length, 0);
+  }
+  const control = world({ budgetUsd: 10, runs: [] });
+  assert.equal(await main(["--prompts", "v10,v9"], io(control)), 0);
+  assert.ok(control.chatCalls.length > 0);
 });
 
 Deno.test("the dry estimate prices a note card above a vocabulary card", () => {
@@ -952,7 +1051,7 @@ Deno.test("the committed pages for prompt v8 print the word book without labels,
   );
 });
 
-Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step from 1 to 4, and only terms and examples their page prints", async () => {
+Deno.test("the committed notes samples cover Korean and English, print and handwriting, each step from 1 to 4 or, with annotations, 1 to 3, and only terms and examples their page prints", async () => {
   // The pages of `notes.json`; the two-stage eval's pages of `structure.json` are tested apart.
   const notes = (await committedSamples()).flatMap((sample) =>
     sample.kind === "notes" && !sample.name.includes("-structure-")
@@ -991,7 +1090,12 @@ Deno.test("the committed notes samples cover Korean and English, print and handw
         line.text
       ).join("\n"),
     );
-    for (const step of [1, 2, 3, 4]) {
+    // The step-4 facts of the pages for prompt v7 were the writer's additions in pen, which are
+    // annotations since #474.
+    const steps = sample.notes.annotations === undefined
+      ? [1, 2, 3, 4]
+      : [1, 2, 3];
+    for (const step of steps) {
       assert.ok(
         sample.notes.facts.some((fact) => fact.step === step),
         `${sample.name} has a fact at step ${step}`,
@@ -1165,13 +1269,17 @@ Deno.test("the committed notes pages count rules and exceptions as facts, each w
       document.facts.every((fact: Fact) => !fact.id.endsWith("-example")),
       `${name} has no worked-example fact`,
     );
-    // Every example line belongs to the examples of exactly one fact.
+    // Every example line belongs to the examples of exactly one fact, or of an annotation it is
+    // printed under.
     for (
       const line of document.lines.filter((line: Line) =>
         line.kind === "example"
       )
     ) {
-      const owners = document.facts.filter((fact: Fact) =>
+      const owners = [
+        ...document.facts,
+        ...document.annotations ?? [],
+      ].filter((fact: Fact) =>
         (fact.examples ?? []).some((example) =>
           normalize(line.text).includes(normalize(example))
         )
@@ -1189,7 +1297,7 @@ Deno.test("the committed notes pages count rules and exceptions as facts, each w
   }
 });
 
-Deno.test("the committed page with the writer's additions holds a classification table, a definition with printed examples, and pen additions, and its truth makes each list one card", async () => {
+Deno.test("the committed page with the writer's additions holds a classification table, a definition with printed examples, and pen additions, and its truth makes each list one fact or annotation", async () => {
   const documents = JSON.parse(
     await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
   );
@@ -1239,6 +1347,12 @@ Deno.test("the committed page with the writer's additions holds a classification
     assert.ok(found, id);
     return found;
   };
+  const annotations: Fact[] = page.annotations;
+  const annotation = (id: string) => {
+    const found = annotations.find((note) => note.id === id);
+    assert.ok(found, id);
+    return found;
+  };
   const holds = (line: string, terms: string[]) =>
     terms.every((term) => normalize(line).includes(normalize(term)));
   // The definition, with its printed examples.
@@ -1246,21 +1360,128 @@ Deno.test("the committed page with the writer's additions holds a classification
     lines[definition + 1].text.replace(/^예\) /, ""),
   ]);
   // The starred list as one card: every member a term of one fact.
-  assert.ok(holds(starred[0].text, fact("always-auxiliary").terms));
-  assert.equal(fact("always-auxiliary").terms.length, 4);
+  assert.ok(holds(starred[0].text, annotation("always-auxiliary").terms));
+  assert.equal(annotation("always-auxiliary").terms.length, 4);
   // A table row's list as one card.
   assert.ok(
     rows.some((row) => holds(row.text, fact("auxiliary-verbs").terms)),
   );
   // Both judgment methods as one card.
-  const judgment = fact("judgment").terms;
+  const judgment = annotation("judgment").terms;
   assert.ok(
     methods.every((method) =>
       judgment.some((term) => holds(method.text, [term]))
     ),
   );
   // The rule beside the heading.
-  assert.ok(holds(lines[aside].text, fact("spacing-rule").terms));
+  assert.ok(holds(lines[aside].text, annotation("spacing-rule").terms));
+});
+
+Deno.test("the committed pages the writer annotated in pen name each addition as an annotation of terms only the additions print, and the owner's style of page carries its red notes", async () => {
+  const documents = JSON.parse(
+    await Deno.readTextFile(new URL("./notes.json", import.meta.url)),
+  );
+  type Line = { text: string; kind: string; hand?: boolean };
+  type Termed = { id: string; terms: string[] };
+  const holds = (text: string, terms: readonly string[]) =>
+    terms.every((term) => normalize(text).includes(normalize(term)));
+  const annotated = Object.keys(documents).filter((name) =>
+    documents[name].lines.some((line: Line) =>
+      line.hand || line.kind === "aside"
+    )
+  );
+  assert.deepEqual(annotated, [
+    "ko-auxiliary",
+    "ko-numerals",
+    "ko-honorifics",
+    "ko-components",
+  ]);
+  for (const name of Object.keys(documents)) {
+    const document = documents[name];
+    const added: Line[] = document.lines.filter((line: Line) =>
+      line.hand || line.kind === "aside"
+    );
+    const content: Line[] = document.lines.filter((line: Line) =>
+      !added.includes(line)
+    );
+    const notes: Termed[] = document.annotations ?? [];
+    assert.equal(notes.length > 0, annotated.includes(name), name);
+    for (const note of notes) {
+      // Every term is the additions' own; no line of the content holds them all.
+      assert.ok(
+        holds(added.map((line) => line.text).join("\n"), note.terms),
+        `${name}: ${note.id}`,
+      );
+      assert.ok(
+        content.every((line) => !holds(line.text, note.terms)),
+        `${name}: ${note.id} is not the content's`,
+      );
+      assert.ok(
+        document.facts.every((fact: Termed) => fact.id !== note.id),
+        `${name}: ${note.id} is no fact`,
+      );
+    }
+    // Every addition is some annotation's.
+    for (const line of added) {
+      assert.ok(
+        notes.some((note) =>
+          note.terms.some((term) => holds(line.text, [term]))
+        ),
+        `${name}: ${line.text}`,
+      );
+    }
+  }
+  const samples = await committedSamples();
+  for (const name of annotated) {
+    const drawn = samples.filter((sample) =>
+      sample.kind === "notes" && documentOf(sample.name) === name
+    );
+    assert.equal(drawn.length, 4, name);
+    for (const sample of drawn) {
+      assert.ok(sample.kind === "notes");
+      assert.deepEqual(
+        sample.notes.annotations,
+        documents[name].annotations.map((note: Termed) => ({
+          id: note.id,
+          terms: note.terms,
+        })),
+      );
+    }
+  }
+  // The owner's style of page (#412): a printed comparison table of five states, marked in pen,
+  // with red notes beside its heading and under its table, none of them a line of its sections.
+  const owners = samples.filter((sample) =>
+    sample.name.includes("-structure-ko-early-states-")
+  );
+  assert.deepEqual(owners.map((sample) => sample.name.slice(0, 2)), [
+    "88",
+    "89",
+    "90",
+    "91",
+  ]);
+  for (const sample of owners) {
+    assert.ok(sample.kind === "notes");
+    const notes = sample.notes.annotations ?? [];
+    assert.deepEqual(notes.map((note) => note.id), ["s1-a1", "s1-a2", "s1-a3"]);
+    const factTerms = sample.notes.facts.flatMap((fact) => fact.terms);
+    for (const note of notes) {
+      assert.ok(
+        sample.notes.lines.some((line) => holds(line, note.terms)),
+        `${sample.name}: ${note.id} is drawn`,
+      );
+      assert.ok(
+        note.terms.every((term) => !factTerms.includes(term)),
+        `${sample.name}: ${note.id} is no fact's`,
+      );
+    }
+  }
+  assert.equal(
+    samples.filter((sample) =>
+      sample.kind === "notes" && sample.notes.annotations !== undefined
+    ).length,
+    20,
+    "16 pages of notes.json and the owner's 4",
+  );
 });
 
 /** The committed samples, read from `tools/eval/samples/`. */

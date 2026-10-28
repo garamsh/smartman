@@ -773,7 +773,7 @@ Deno.test("the human check spreads its sentences evenly over the run", () => {
   assert.deepEqual(evenly([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 5), [0, 2, 4, 6, 8]);
 });
 
-Deno.test("the committed structure pages are 5 documents in print and handwriting, mild and harsh, each line with its blanks and marks inside it", async () => {
+Deno.test("the committed structure pages are 6 documents in print and handwriting, mild and harsh, each line with its blanks and marks inside it", async () => {
   const dir = new URL("./samples/", import.meta.url);
   const names = (await Array.fromAsync(Deno.readDir(dir))).map((entry) =>
     entry.name
@@ -786,7 +786,7 @@ Deno.test("the committed structure pages are 5 documents in print and handwritin
       Deno.readFile(new URL(path.slice(PATHS.samples.length + 1), dir)),
   });
   const structured = truths.filter((truth) => truth.sections !== null);
-  assert.equal(structured.length, 20);
+  assert.equal(structured.length, 24);
   assert.ok(
     structured.every((truth) => truth.sample.name.includes("-structure-")),
   );
@@ -794,7 +794,7 @@ Deno.test("the committed structure pages are 5 documents in print and handwritin
     assert.equal(
       structured.filter((truth) => truth.sample.name.includes(`-${part}`))
         .length,
-      10,
+      12,
       part,
     );
   }
@@ -841,8 +841,8 @@ Deno.test("the committed structure pages are 5 documents in print and handwritin
         section.content_type === "comparison_table"
       )
     ).length,
-    12,
-    "three documents of comparison tables",
+    16,
+    "four documents of comparison tables",
   );
   // The truth parser refuses a section whose line names no blank: the committed ones all do.
   assert.equal(
