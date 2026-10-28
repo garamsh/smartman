@@ -8,9 +8,11 @@ import '../../design/theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'extraction_client.dart';
 import 'import_list.dart';
+import 'round_check.dart';
 
 /// Opens the sheet that edits [row]: its front, and a vocabulary row's senses,
-/// each kept or dropped, edited and reordered, or a note's back. "완료"
+/// each kept or dropped by its round check, edited, and moved up or down
+/// through its ⋯ menu, or a note's back. "완료"
 /// applies the edits, and is disabled while every sense is dropped; a
 /// dismissal applies none. Resolves to whether the row changed.
 Future<bool> showCardEditSheet(BuildContext context, ImportRow row) async =>
@@ -94,59 +96,58 @@ class _CardEditSheetState extends State<_CardEditSheet> {
               l10n.editSenses,
               style: AppType.section.copyWith(color: colors.ink),
             ),
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              onReorderItem: (from, to) =>
-                  setState(() => _senses.insert(to, _senses.removeAt(from))),
-              children: [
-                for (final (i, draft) in _senses.indexed)
-                  Padding(
-                    key: ObjectKey(draft),
-                    padding: const EdgeInsets.only(bottom: AppSpace.s8),
-                    child: Row(
-                      children: [
-                        Semantics(
-                          label: l10n.editKeepSense(i + 1),
-                          excludeSemantics: true,
-                          checked: draft.kept,
-                          onTap: () => setState(() => draft.kept = !draft.kept),
-                          child: Checkbox(
-                            value: draft.kept,
-                            onChanged: (kept) =>
-                                setState(() => draft.kept = kept ?? false),
-                          ),
-                        ),
-                        Expanded(
-                          child: AppTextField(
-                            label: [
-                              l10n.editSense(i + 1),
-                              ?draft.sense.labelText,
-                            ].join(' · '),
-                            controller: draft.controller,
-                          ),
-                        ),
-                        ReorderableDragStartListener(
-                          index: i,
-                          child: Semantics(
-                            container: true,
-                            label: l10n.editMoveSense(i + 1),
-                            child: SizedBox(
-                              width: AppSize.tapTarget + AppSpace.s4,
-                              height: AppSize.tapTarget + AppSpace.s4,
-                              child: Icon(
-                                LucideIcons.gripVertical,
-                                color: colors.muted,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+            for (final (i, draft) in _senses.indexed)
+              Row(
+                key: ObjectKey(draft),
+                children: [
+                  // The list's round check, so a meaning is kept the way a
+                  // row is.
+                  Semantics(
+                    container: true,
+                    label: l10n.editKeepSense(i + 1),
+                    excludeSemantics: true,
+                    checked: draft.kept,
+                    onTap: () => setState(() => draft.kept = !draft.kept),
+                    child: InkResponse(
+                      onTap: () => setState(() => draft.kept = !draft.kept),
+                      radius: AppSize.tapTarget / 2,
+                      child: SizedBox.square(
+                        dimension: AppSize.tapTarget + AppSpace.s4,
+                        child: Center(child: RoundCheck(on: draft.kept)),
+                      ),
                     ),
                   ),
-              ],
-            ),
+                  Expanded(
+                    child: AppTextField(
+                      label: [
+                        l10n.editSense(i + 1),
+                        ?draft.sense.labelText,
+                      ].join(' · '),
+                      controller: draft.controller,
+                    ),
+                  ),
+                  // Moved through ⋯, as the card editor moves a meaning,
+                  // so nothing needs a drag.
+                  PopupMenuButton<int>(
+                    tooltip: l10n.editMoveSense(i + 1),
+                    icon: Icon(LucideIcons.ellipsis, color: colors.muted),
+                    onSelected: (to) =>
+                        setState(() => _senses.insert(to, _senses.removeAt(i))),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: i - 1,
+                        enabled: i > 0,
+                        child: Text(l10n.moveUp),
+                      ),
+                      PopupMenuItem(
+                        value: i + 1,
+                        enabled: i < _senses.length - 1,
+                        child: Text(l10n.moveDown),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
           ] else
             AppTextField(
               label: l10n.editBack,

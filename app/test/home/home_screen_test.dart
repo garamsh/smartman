@@ -335,16 +335,13 @@ void main() {
           fresh: {'Alpha': 1},
           due: {'Alpha': 1, 'Beta': 2},
         );
-        expect(
-          find.text('Chance you remember now', skipOffstage: false),
-          findsNothing,
-        );
+        expect(find.text('Memory', skipOffstage: false), findsNothing);
 
         await list.tap('Record');
         // Every deck's stored state, each recalled at the substituted 0.9.
         expect(
           find.bySemanticsLabel(
-            'Of 3 cards: solid 0, fair 3, fading soon 0, average 90%',
+            'Of 3 cards: good 0, fair 3, fading soon 0, average 90%',
           ),
           findsOneWidget,
         );
@@ -443,6 +440,30 @@ void main() {
             ),
           ),
         };
+    testWidgets(
+      'in Korean the backlog card\'s sentence breaks only between words on a phone, and reads as written (#454)',
+      (tester) async {
+        final list = await _open(
+          tester,
+          locale: const Locale('ko'),
+          fresh: {'Gamma': 1},
+          due: {'Alpha': 60, 'Beta': 60},
+          dueDays: 30,
+        );
+        // At a three-digit count the first line's end falls inside "것부터".
+        const sentence = '밀린 복습 120장을 급한 것부터 해요. 새 카드는 잠시 쉬어요.';
+        expectBreaksBetweenWords(tester, sentence);
+        final semantics = tester.ensureSemantics();
+        await tester.pump();
+        expect(
+          find.bySemanticsLabel(RegExp(RegExp.escape(sentence))),
+          findsOneWidget,
+        );
+        semantics.dispose();
+        await list.close();
+      },
+    );
+
     for (final locale in const [Locale('ko'), Locale('en')]) {
       for (final MapEntry(key: state, value: (title, open)) in states.entries) {
         testWidgets(
@@ -515,8 +536,14 @@ void main() {
         // Seven cards at 25 s each take 175 s, about 3 minutes; none done,
         // so nothing is said to be left.
         expect(find.text('About 3 min'), findsOneWidget);
-        // Nothing done yet, on a 1-day streak: the line waits.
-        expect(shownText("Waiting for today's first card"), findsOneWidget);
+        // The progress is stated once: no line under the bar restates it.
+        expect(_todayCardTexts(tester), {
+          "Today's cards",
+          '1-day streak',
+          '0 / 7',
+          'About 3 min',
+          'Study all',
+        });
         // The pace's answers were given the day before, which starts the
         // streak.
         // The today card's chip alone: the last seven days' card has no line.
@@ -621,8 +648,14 @@ void main() {
         );
         // Once a card is done the minutes are those left: two at 10 s.
         expect(find.text('About 1 min left'), findsOneWidget);
-        // Two cards left: almost there.
-        expect(shownText('Almost there'), findsOneWidget);
+        // Two cards left: nothing but the figure and the bar says so.
+        expect(_todayCardTexts(tester), {
+          "Today's cards",
+          '1-day streak',
+          '1 / 3',
+          'About 1 min left',
+          'Study all',
+        });
         // Answered today: the streak counts today.
         // The today card's chip alone: the last seven days' card has no line.
         expect(find.text('1-day streak'), findsOneWidget);
@@ -711,6 +744,23 @@ void main() {
         // The today card's chip alone: the last seven days' card has no line.
         expect(find.text('1-day streak'), findsOneWidget);
         expect(find.textContaining('This week'), findsNothing);
+        // Study is inside the done card, as every state's primary is in its
+        // card, and the last seven days follow the card.
+        final doneCard = find.ancestor(
+          of: find.text("You've done today's cards"),
+          matching: find.byType(DecoratedBox),
+        );
+        expect(
+          find.descendant(
+            of: doneCard.first,
+            matching: find.widgetWithText(AppButton, 'Study'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester.getRect(find.text('Study')).bottom,
+          lessThan(tester.getRect(find.text('Last 7 days')).top),
+        );
 
         await list.tap('Study');
 
@@ -748,12 +798,11 @@ void main() {
 
         expect(find.text(title), findsOneWidget);
         expect(
-          find.text(
+          shownText(
             '7 overdue reviews, most urgent first. New cards wait for now.',
           ),
           findsOneWidget,
         );
-        expect(find.text('Study all'), findsNothing);
         // Seven reviews after 30-day intervals ask for a quarter of a card
         // a day, so the catch-up runs at one a day.
         expect(find.text('At 1 a day you catch up in 7 days'), findsOneWidget);
@@ -764,12 +813,11 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(
-          find.text('The overdue reviews left at 1 a day'),
-          findsOneWidget,
-        );
-        // Seven cards at 10 s each, about 2 minutes.
-        await list.tap('Study 7 · about 2 min');
+        // The pace is the one plan for today: the button names no count,
+        // and no note under the chart says the pace again.
+        expect(find.textContaining('1 a day'), findsOneWidget);
+        expect(find.textContaining(RegExp(r'Study \d')), findsNothing);
+        await list.tap('Study all');
         expect(list.session, list.ids.values.toSet());
         await list.close();
 
@@ -1392,3 +1440,19 @@ void main() {
     );
   });
 }
+
+/// Every text on the 오늘 tab's today card, the card that holds its bar.
+Set<String> _todayCardTexts(WidgetTester tester) => {
+  for (final text in tester.widgetList<Text>(
+    find.descendant(
+      of: find
+          .ancestor(
+            of: find.byType(LinearProgressIndicator),
+            matching: find.byType(Column),
+          )
+          .first,
+      matching: find.byType(Text),
+    ),
+  ))
+    (text.data ?? text.textSpan!.toPlainText()).replaceAll('\u2060', ''),
+};

@@ -1542,6 +1542,9 @@ void main() {
       await shot(tester, '21-photo-deck-sheet');
       await dismissSheet(tester);
 
+      // The retake waits in the top bar's ⋯.
+      await tap(tester, find.byTooltip(ko.importActions));
+      await shot(tester, '22e-photo-list-actions');
       await tap(tester, find.text(ko.retake));
       await shot(tester, '22d-photo-discard');
       await shoot(find.text(ko.discardImport));
@@ -1571,6 +1574,7 @@ void main() {
       await tester.pumpAndSettle();
       await shot(tester, '23-photo-notes');
 
+      await tap(tester, find.byTooltip(ko.importActions));
       await tap(tester, find.text(ko.retake));
       await shoot(find.text(ko.discardImport));
       client.fail(const ModelFailed());
