@@ -10,32 +10,35 @@ import { EmptyDeck } from "./empty-home";
 import { WholeCard } from "./whole-card";
 
 /**
- * A deck's cards as one group of rows under a search that keeps the cards whose front or back
- * holds it, ignoring case (ADR 0118). Each row shows its front, and its back muted after it once
- * shown; nothing stands for a hidden back. "뒷면 보기", in a row pinned above the group under the
- * section label "카드", shows or hides every back, starting off each time the page opens. A click
- * on a row sets that card alone apart until the switch next changes. A whole card shows its front
- * with its blanks empty, filled in place where its back shows.
+ * A deck's cards as one group of rows under a search that keeps the cards whose drawn faces hold
+ * it, ignoring case (ADR 0118): a whole card's front alone, the one face study draws, and
+ * otherwise its front and back, so a back study never shows is not searched (ADR 0114). Each row
+ * shows its front, and its back muted after it once shown; nothing stands for a hidden back.
+ * "뒷면 보기", in a row pinned above the group under the section label "카드", shows or hides
+ * every back, starting off each time the page opens. A click on a row sets that card alone apart
+ * until the switch next changes. A whole card shows its front with its blanks empty, filled in
+ * place where its back shows, and is read the same way.
  */
 export function CardGrid({ cards }: { cards: Card[] }) {
   const [search, setSearch] = useState("");
   const [all, setAll] = useState(false);
   const [apart, setApart] = useState<ReadonlySet<string>>(new Set());
   const label = useId();
-  const rows = cards.map((card) => ({
-    id: card.id,
-    blocks: card.front,
-    backBlocks: card.back,
-    front: describeContent(card.front),
-    back: describeContent(card.back),
-  }));
+  const rows = cards.map((card) => {
+    const whole = isWholeCard(card.front);
+    return {
+      id: card.id,
+      blocks: card.front,
+      backBlocks: card.back,
+      whole,
+      faces: (whole ? [card.front] : [card.front, card.back]).map(describeContent),
+      // A whole card's stored back is never drawn: its front, filled, is read in its place.
+      back: whole ? spokenContent(card.front, true) : describeContent(card.back),
+    };
+  });
   const needle = search.trim().toLocaleLowerCase();
   const shown = needle
-    ? rows.filter(
-        (row) =>
-          row.front.toLocaleLowerCase().includes(needle) ||
-          row.back.toLocaleLowerCase().includes(needle),
-      )
+    ? rows.filter((row) => row.faces.some((face) => face.toLocaleLowerCase().includes(needle)))
     : rows;
 
   if (cards.length === 0) {
@@ -110,7 +113,7 @@ export function CardGrid({ cards }: { cards: Card[] }) {
                   }}
                   className="pressable flex min-h-cta w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
                 >
-                  {isWholeCard(row.blocks) ? (
+                  {row.whole ? (
                     <WholeCard blocks={row.blocks} revealed={open} inRow />
                   ) : (
                     <>

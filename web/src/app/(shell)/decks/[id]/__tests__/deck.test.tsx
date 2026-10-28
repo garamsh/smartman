@@ -400,6 +400,42 @@ describe("the deck page", () => {
     expect(rows()).toContain("Chat, 뒷면 가려짐");
   });
 
+  it("searches a former cloze card on the one face study draws, never its stale back, and reads that face for its back", async () => {
+    // Made as 빈칸 when the form wrote the back; its front edited since, the back not.
+    postgrest.seed("cards", {
+      ...cardRow("c-cloze", "d-fr", "cloze", day / 2),
+      front: [
+        { type: "cloze", payload: { text: "The capital of Italy is ___", answers: ["Rome"] } },
+      ],
+      back: side("The capital of France is Paris"),
+    });
+    await open("d-fr");
+    const user = userEvent.setup();
+    const search = screen.getByRole("searchbox", { name: "카드 검색" });
+    const cloze = "The capital of Italy is 빈칸, 뒷면 가려짐";
+
+    // Its front's words find it, the blank's answer among them.
+    for (const word of ["italy", "Rome"]) {
+      await user.clear(search);
+      await user.type(search, word);
+      expect(rows()).toEqual([cloze]);
+    }
+    // The stale back's word finds nothing.
+    await user.clear(search);
+    await user.type(search, "Paris");
+    expect(rows()).toEqual([]);
+    // Control: a split card's back is searched.
+    await user.clear(search);
+    await user.type(search, "chien back");
+    expect(rows()).toEqual(["chien, 뒷면 가려짐"]);
+
+    // Shown, it reads its one face filled, as study draws it, not the stored back.
+    await user.clear(search);
+    await user.click(screen.getByRole("switch", { name: "뒷면 보기" }));
+    expect(rows()).toContain("The capital of Italy is 빈칸, 뒷면 The capital of Italy is Rome");
+    expect(rows()).toContain("Chat, 뒷면 Chat back");
+  });
+
   it("shows or hides every back with 뒷면 보기, off when the page opens, resetting a card set apart by a click", async () => {
     await open("d-fr");
     const user = userEvent.setup();
