@@ -13,6 +13,7 @@ import '../contrast.dart';
 import '../home/deck_screens.dart';
 import '../word_breaks.dart';
 import 'editor.dart';
+import 'whole_cards.dart';
 
 /// The stored card, front and back.
 Future<Card> _stored(DeckScreens screens) async =>
@@ -260,7 +261,7 @@ void main() {
             paragraph.text.visitChildren((span) {
               if (span is TextSpan &&
                   span.style?.backgroundColor == colors.brandTint) {
-                blocks.add(span.text!.trim());
+                blocks.add(blankAnswer(span.text!));
               }
               return true;
             });
