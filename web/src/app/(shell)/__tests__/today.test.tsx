@@ -164,7 +164,7 @@ describe("the 오늘 and 덱 pages", () => {
     const card = within(backlog);
     // White with ink accents, as the phone's (ADR 0098).
     expect(backlog).toHaveClass("bg-surface", "shadow-card");
-    expect(card.getByRole("link", { name: /3장 학습/ })).toHaveClass("bg-ink", "text-on-primary");
+    expect(card.getByRole("link", { name: "모두 학습" })).toHaveClass("bg-ink", "text-on-primary");
     expectTextReadable(backlog);
     // The mascot with no badge: the card's one icon is play, on its button (ADR 0116).
     expect(backlog.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
@@ -176,7 +176,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(
       card.getByText("밀린 복습 3장을 급한 것부터 해요. 새 카드는 잠시 쉬어요."),
     ).toBeInTheDocument();
-    expect(card.getByRole("link", { name: /3장 학습 · 약 1분/ })).toHaveAttribute(
+    expect(card.getByRole("link", { name: "모두 학습" })).toHaveAttribute(
       "href",
       `/study?decks=${uuidOf("d-fr")}`,
     );
@@ -190,7 +190,7 @@ describe("the 오늘 and 덱 pages", () => {
         name: "밀린 복습 예상: 오늘 3장, 내일 2장, 토 1장, 일 0장, 월 0장, 화 0장, 수 0장",
       }),
     ).toBeInTheDocument();
-    expect(catchUp.getByText("하루 1장씩 했을 때 남는 밀린 복습이에요")).toBeInTheDocument();
+    expect(catchUp.queryByText("하루 1장씩 했을 때 남는 밀린 복습이에요")).not.toBeInTheDocument();
     expect(screen.queryByText("지난 7일")).not.toBeInTheDocument();
   });
 
@@ -611,7 +611,7 @@ describe("the 오늘 and 덱 pages", () => {
     expect(screen.queryByRole("button", { name: /하루 학습 시간/ })).not.toBeInTheDocument();
     // The today card's chip alone; the last seven days' card has no streak line.
     expect(screen.getAllByText("1일 연속")).toHaveLength(1);
-    expect(screen.getByText("좋은 출발이에요")).toBeInTheDocument();
+    expect(screen.queryByText("좋은 출발이에요")).not.toBeInTheDocument();
     cleanup();
 
     // Nothing answered today, after two study days in a row: the streak is the line.
@@ -624,7 +624,7 @@ describe("the 오늘 and 덱 pages", () => {
     // Before any card is done the minutes are the day's, not those left.
     expect(todayLine()).toBe("0 / 4장 · 약 1분");
     expect(screen.getAllByText("2일 연속")).toHaveLength(1);
-    expect(screen.getByText("2일째 이어 가는 중이에요")).toBeInTheDocument();
+    expect(screen.queryByText("2일째 이어 가는 중이에요")).not.toBeInTheDocument();
   });
 
   it("draws the today card white with ink accents and every text outside its button readable on it in both themes", async () => {
@@ -644,11 +644,11 @@ describe("the 오늘 and 덱 pages", () => {
     );
     expectTextReadable(card);
     // Control: the same check fails once the quiet status line takes the card's own colour.
-    const status = within(card).getByText("오늘의 첫 카드를 기다리고 있어요");
+    const status = within(card).getByText("오늘 할 카드");
     status.classList.replace("text-muted", "text-surface");
     expect(() => {
       expectTextReadable(card);
-    }).toThrow(/오늘의 첫 카드를 기다리고 있어요/);
+    }).toThrow(/오늘 할 카드/);
   });
 
   it("agrees with the study page on the day's cards: a card answered 모른다 today is left, one answered 안다 done", async () => {
@@ -815,7 +815,7 @@ describe("the 오늘 and 덱 pages", () => {
     await render(Today, {});
     expect(card().getByText("50%")).toBeInTheDocument();
     expect(card().getByText("목표 90%")).toBeInTheDocument();
-    expect(card().getByText("목표보다 40%p 낮아요")).toBeInTheDocument();
+    expect(card().getByText("목표보다 40% 낮아요")).toBeInTheDocument();
     expect(card().getByRole("img").getAttribute("aria-label")).toBe(
       "최근 30일 복습에서 맞힌 비율, 목표 90%: 1월 10일 50%",
     );
@@ -827,8 +827,7 @@ describe("the 오늘 and 덱 pages", () => {
 
   it("shows the first-run invitation in place of the today card on 오늘 and of the list on 덱 when there is no deck", async () => {
     const title = "첫 덱을 만들어 볼까요?";
-    const pointer =
-      "덱은 휴대폰 앱에서 만들어요. 단어장 사진을 찍거나 직접 입력하면 여기에도 보여요.";
+    const pointer = "단어장 사진을 찍거나 직접 입력해 시작해 보세요.";
     // Control: a user with one deck, its card not due, sees the done card and the list, and no
     // invitation.
     postgrest.seed("decks", deckRow("d-fr", "French"));
@@ -851,10 +850,9 @@ describe("the 오늘 and 덱 pages", () => {
       expect(document.querySelector('img[src*="smartman-symbol"]')).not.toBeNull();
       expect(screen.queryByRole("heading", { name: /^오늘 할 카드/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("region", { name: "덱 목록" })).not.toBeInTheDocument();
-      // The web creates nothing and has no public-deck browsing, so the invitation offers no
-      // action.
+      // First-run creation is available on the web.
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
-      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "새 덱 만들기" })).toBeInTheDocument();
       cleanup();
     }
   });
@@ -865,9 +863,7 @@ describe("the 오늘 and 덱 pages", () => {
     await render(Today, {});
 
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-    expect(
-      screen.getByText("카드는 휴대폰 앱에서 덱에 추가해요. 추가한 카드는 여기에도 보여요."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("카드를 추가해 시작해 보세요.")).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "오늘 할 카드를 다 했어요" }),
     ).not.toBeInTheDocument();

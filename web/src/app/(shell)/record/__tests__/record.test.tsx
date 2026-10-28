@@ -93,19 +93,19 @@ describe("the record page", () => {
     // 30 days: a's "안다" 20 days back, and a's and the deleted card's "안다" and b's "모른다" 3 days back.
     expect(screen.getByRole("radio", { name: "30일" })).toBeChecked();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(chipTone(screen.getByText("목표보다 15%p 낮아요"))).toBe("tint-amber");
+    expect(chipTone(screen.getByText("목표보다 15% 낮아요"))).toBe("tint-amber");
     expect(label("복습에서 맞힌 비율")).toBe(
       "복습에서 맞힌 비율, 목표 90%: 12월 26일 100%, 1월 12일 67%",
     );
 
     await userEvent.click(screen.getByRole("radio", { name: "7일" }));
     expect(screen.getByText("67%")).toBeInTheDocument();
-    expect(screen.getByText("목표보다 23%p 낮아요")).toBeInTheDocument();
+    expect(screen.getByText("목표보다 23% 낮아요")).toBeInTheDocument();
     expect(label("복습에서 맞힌 비율")).toBe("복습에서 맞힌 비율, 목표 90%: 1월 12일 67%");
 
     await userEvent.click(screen.getByRole("radio", { name: "전체" }));
     expect(screen.getByText("60%")).toBeInTheDocument();
-    expect(screen.getByText("목표보다 30%p 낮아요")).toBeInTheDocument();
+    expect(screen.getByText("목표보다 30% 낮아요")).toBeInTheDocument();
   });
 
   it("draws its charts below the page's title in two sizes, the body and the caption, the figures apart", async () => {
@@ -114,7 +114,7 @@ describe("the record page", () => {
 
     // The state it asked for: the retention with its target, which drew a fourth size.
     expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByText("90%")).toBeInTheDocument();
+    expect(screen.getByText("목표 90%")).toBeInTheDocument();
     expect(typeSizesOf(document.body)).toEqual([13, 16]);
   });
 
@@ -212,7 +212,7 @@ describe("the record page", () => {
     await render(RecordContent, {});
 
     // a, b, c and d: the deleted card's state is not one of them.
-    expect(label("\\d+장 중")).toMatch(/^4장 중 단단함 \d장, 보통 \d장, 곧 잊음 \d장, 평균 \d+%$/);
+    expect(label("\\d+장 중")).toMatch(/^4장 중 좋음 \d장, 보통 \d장, 곧 잊음 \d장, 평균 \d+%$/);
   });
 
   it("counts every stored answer in the study days and the streaks, the deleted card's included", async () => {

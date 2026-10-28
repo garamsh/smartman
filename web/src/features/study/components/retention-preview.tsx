@@ -70,9 +70,9 @@ export function RetentionPreview({ days, timeZone }: { days: RecordDay[]; timeZo
         <p>
           <Chip tone={gap < 0 ? "amber" : "brand"}>
             {gap < 0
-              ? `목표보다 ${String(-gap)}%p 낮아요`
+              ? `목표보다 ${String(-gap)}% 낮아요`
               : gap > 0
-                ? `목표보다 ${String(gap)}%p 높아요`
+                ? `목표보다 ${String(gap)}% 높아요`
                 : "목표만큼 맞혔어요"}
           </Chip>
         </p>

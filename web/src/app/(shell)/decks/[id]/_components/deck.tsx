@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  AuthoringButton,
   CardGrid,
   DeckTile,
   type LibraryFailure,
@@ -89,6 +90,9 @@ export async function Deck({ params }: { params: Promise<{ id: string }> }) {
         </section>
       )}
       <CardGrid cards={cards} />
+      <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] z-[2] bg-ground py-3 lg:bottom-0">
+        <AuthoringButton deck={deck} />
+      </div>
     </>
   );
 }

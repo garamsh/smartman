@@ -52,6 +52,11 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 - A request is checked in this order: method, configuration, user, body, suspension, the plan with its photo limit, model. A refused request never reaches the model, and one refused before the plan never reaches the count.
 - `config.toml` sets `verify_jwt = true` for the function, so the platform refuses a request without a valid JWT first. The function then asks Supabase Auth for the token's user, which refuses the anon key, and refuses a user with `is_anonymous`.
 
+### Web client
+
+- The web's `decks` feature reads the same signed-in allowance and calls the existing function directly with the current user session; it changes no model, plan, quota or function configuration. Returned cards remain candidates until the user reviews and explicitly adds them ([`web-decks.md`](web-decks.md), [ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md)).
+- Browser imports accept JPEG, PNG and WebP up to the contract's size limit and stay in the current browser window. Verification substitutes extraction responses; no test calls a paid model.
+
 ### Model call
 
 - OpenRouter chat completions, with the image as a data URL and `response_format` a strict JSON schema of the card list, generated from the same limits the parser enforces (`cards.ts`).
