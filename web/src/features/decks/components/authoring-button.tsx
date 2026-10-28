@@ -156,6 +156,7 @@ function ManualEntry({ deck, close }: { deck: Deck; close: () => void }) {
   const [draft, setDraft] = useState(emptyDraft);
   const [message, setMessage] = useState("");
   const [duplicate, setDuplicate] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const [pending, start] = useTransition();
   const busy = useRef(false);
   const router = useRouter();
@@ -188,7 +189,20 @@ function ManualEntry({ deck, close }: { deck: Deck; close: () => void }) {
     });
   }
   return (
-    <AuthoringSheet title="새 카드" close={close}>
+    <AuthoringSheet
+      title="새 카드"
+      close={() => {
+        if (busy.current) return;
+        const dirty =
+          draft.front.length !== 1 ||
+          draft.back.length !== 1 ||
+          [...draft.front, ...draft.back].some(
+            (item) => item.type !== "text" || item.payload.text !== "",
+          );
+        if (dirty) setDiscarding(true);
+        else close();
+      }}
+    >
       <p className="mb-4 text-caption text-muted">{deck.name}</p>
       <CardFields
         draft={draft}
@@ -237,6 +251,34 @@ function ManualEntry({ deck, close }: { deck: Deck; close: () => void }) {
           {pending ? "저장 중" : "저장하고 다음 카드"}
         </button>
       </div>
+      {discarding && (
+        <AuthoringSheet
+          title="작성 중인 카드를 버릴까요?"
+          close={() => {
+            setDiscarding(false);
+          }}
+        >
+          <p className="text-secondary text-muted">저장하지 않은 내용은 사라져요.</p>
+          <div className="mt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setDiscarding(false);
+              }}
+              className="pressable min-h-button text-body"
+            >
+              계속 쓰기
+            </button>
+            <button
+              type="button"
+              onClick={close}
+              className="pressable min-h-button rounded-button bg-dont-know px-4 text-label text-on-primary"
+            >
+              버리기
+            </button>
+          </div>
+        </AuthoringSheet>
+      )}
     </AuthoringSheet>
   );
 }

@@ -157,9 +157,8 @@ export function PhotoImport({
         </p>
         {photos.length === 0 && (
           <p className="text-caption break-keep text-muted">
-            브라우저에 따라 카메라 대신 파일 선택이 열려요. JPEG, PNG, WebP, 장당 6MB까지 읽어요.
-            창을 닫으면 저장하지 않은 카드는 사라져요. 읽기 중지는 다음 사진부터 적용되고, 이미
-            시작한 사진은 한도에 포함될 수 있어요.
+            JPEG·PNG·WebP 사진을 장당 6MB까지 읽고, 브라우저에 따라 카메라 대신 파일을 골라요. 창을
+            닫으면 저장하지 않은 카드는 사라져요.
           </p>
         )}
         <label className="pressable flex min-h-button cursor-pointer items-center justify-center rounded-button border border-outline bg-surface px-4 text-label">
@@ -332,29 +331,27 @@ export function PhotoImport({
                                   {card.selected ? "✓" : ""}
                                 </span>
                               </button>
-                              <button
-                                type="button"
-                                aria-label={`${describeContent(front)} 편집`}
-                                onClick={() => {
-                                  if (!whole) setEditing(structuredClone(card));
-                                }}
-                                className="pressable min-h-tap-target min-w-0 flex-1 py-2 text-left text-body break-words"
-                              >
-                                {whole ? (
-                                  <div className="overflow-x-auto">
-                                    <WholeCard blocks={front} revealed />
-                                  </div>
-                                ) : (
-                                  <>
-                                    <span className="block font-bold">
-                                      <SideText blocks={front} />
-                                    </span>
-                                    <span className="mt-1 block text-caption text-muted">
-                                      <SideText blocks={back} />
-                                    </span>
-                                  </>
-                                )}
-                              </button>
+                              {whole ? (
+                                <div className="min-w-0 flex-1 overflow-x-auto py-2">
+                                  <WholeCard blocks={front} revealed />
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  aria-label={`${describeContent(front)} 편집`}
+                                  onClick={() => {
+                                    setEditing(structuredClone(card));
+                                  }}
+                                  className="pressable min-h-tap-target min-w-0 flex-1 py-2 text-left text-body break-words"
+                                >
+                                  <span className="block font-bold">
+                                    <SideText blocks={front} />
+                                  </span>
+                                  <span className="mt-1 block text-caption text-muted">
+                                    <SideText blocks={back} />
+                                  </span>
+                                </button>
+                              )}
                             </li>
                           );
                         })}

@@ -32,9 +32,13 @@ export function AuthoringSheet({
       aria-modal="true"
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         close();
       }}
-      onKeyDown={keepFocusInside}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        keepFocusInside(event);
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) close();
       }}

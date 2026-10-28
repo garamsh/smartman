@@ -41,6 +41,25 @@ if (!deckId) throw new Error("fixture deck id");
 const deck = { id: deckId, name: "단어장", public: false };
 
 describe("authoring from the page", () => {
+  it("closes a pristine draft directly and confirms dirty dismissal without losing a kept draft", async () => {
+    await render(() => <AuthoringButton deck={deck} />, {});
+    await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
+    await userEvent.click(screen.getByRole("button", { name: "직접 입력" }));
+    await userEvent.click(screen.getByRole("button", { name: "닫기" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
+    await userEvent.click(screen.getByRole("button", { name: "직접 입력" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "앞면 글 1" }), "draft");
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(screen.getByRole("heading", { name: "작성 중인 카드를 버릴까요?" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "계속 쓰기" }));
+    expect(screen.getByRole("textbox", { name: "앞면 글 1" })).toHaveValue("draft");
+    await userEvent.click(screen.getByRole("button", { name: "닫기" }));
+    await userEvent.click(screen.getByRole("button", { name: "버리기" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(db.rows.cards).toHaveLength(0);
+  });
+
   it("keeps a manual draft after a failed save, then saves meanings and labels once", async () => {
     await render(() => <AuthoringButton deck={deck} />, {});
     await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));

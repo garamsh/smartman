@@ -1092,6 +1092,7 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
     "이 덱에 이미 있는 카드예요",
   );
   await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "버리기", exact: true }).click();
   expect((await client.from("cards").select("id").eq("user_id", userId)).data).toHaveLength(1);
   await page.getByRole("button", { name: "카드 추가", exact: true }).click();
   await page.getByRole("button", { name: "앨범에서 고르기", exact: true }).click();
