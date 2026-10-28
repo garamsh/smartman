@@ -346,12 +346,9 @@ export async function runPrompts(
 ): Promise<
   { rows: Row[]; spentUsd: number; stopped: boolean; halted: Halt[] }
 > {
-  const total = {
-    rows: [] as Row[],
-    spentUsd: 0,
-    stopped: false,
-    halted: [] as Halt[],
-  };
+  const rows: Row[] = [];
+  const halted: Halt[] = [];
+  let spentUsd = 0;
   for (const prompt of prompts) {
     const labelled = prompts.length === 1 ? candidates : candidates.map((
       candidate,
@@ -361,14 +358,14 @@ export async function runPrompts(
     }));
     const run = await runEval(labelled, samples, {
       ...ledger,
-      budgetUsd: ledger.budgetUsd - total.spentUsd,
+      budgetUsd: ledger.budgetUsd - spentUsd,
     }, { ...deps, prompt });
-    total.rows.push(...run.rows);
-    total.spentUsd += run.spentUsd;
-    total.halted.push(...run.halted);
-    if (run.stopped) return { ...total, stopped: true };
+    rows.push(...run.rows);
+    halted.push(...run.halted);
+    spentUsd += run.spentUsd;
+    if (run.stopped) return { rows, spentUsd, stopped: true, halted };
   }
-  return total;
+  return { rows, spentUsd, stopped: false, halted };
 }
 
 /** One OpenRouter call as it answered: its HTTP status and body, or the error that ended it. */
