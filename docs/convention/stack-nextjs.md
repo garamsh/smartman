@@ -154,6 +154,14 @@ Client Component's server render reads the real value. The prefix
 keeps a value out of the bundle, not out of the page: a secret read
 in a `'use client'` module reaches the HTML.
 
+A Server Component renders a `'use client'` module's exports only as
+components, and never calls one. Each export reaches the server as a
+client reference, so a call — a formatter, a helper — throws at
+render ("Attempted to call … from the server"), which neither `tsc`
+nor `next build` reports (Next.js 16.4.1,
+`dist/build/webpack/loaders/next-flight-loader/index.js`). A value
+both sides use lives in a module without the directive.
+
 ## 4. Server Components — pages and layouts
 
 - Pages are `async` Server Components that fetch their data inline:
