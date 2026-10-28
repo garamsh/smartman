@@ -356,7 +356,9 @@ describe("the 오늘 and 덱 pages", () => {
     await renderBoth();
 
     expect(rowNames()).toEqual(["French, 카드 1장, 공개, 오늘 1", "Spanish, 카드 1장, 오늘 1"]);
-    expect(within(row("French")).getByText("공개")).toBeInTheDocument();
+    // Both in the one chip, 공개 in its neutral tone and today's count in the brand's (ADR 0119).
+    expect(chipTone(within(row("French")).getByText("공개"))).toBe("surface");
+    expect(chipTone(within(row("French")).getByText("오늘 1"))).toBe("brand-tint");
     // Control: the private deck's row carries no chip.
     expect(within(row("Spanish")).queryByText("공개")).not.toBeInTheDocument();
   });
@@ -890,7 +892,12 @@ describe("the 오늘 and 덱 pages", () => {
     };
     const states: [string, () => void][] = [
       ["첫 덱을 만들어 볼까요?", () => undefined],
-      ["첫 카드를 만들어 볼까요?", () => postgrest.seed("decks", deckRow("d-fr", "French"))],
+      [
+        "첫 카드를 만들어 볼까요?",
+        () => {
+          postgrest.seed("decks", deckRow("d-fr", "French"));
+        },
+      ],
       [
         "오늘 할 카드",
         () => {

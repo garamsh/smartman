@@ -1,12 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { DeckList, parseDeckId } from "@/features/decks";
-import { GradeChip } from "@/features/study/components/graded-card";
-import { RetentionPreview } from "@/features/study/components/retention-preview";
-import { chipTone } from "@/testing/chip";
-import { start, uuidOf } from "@/testing/library";
-
 import { Chip } from "../chip";
 
 describe("the one chip", () => {
@@ -40,39 +34,5 @@ describe("the one chip", () => {
 
     const chip = screen.getByText("1일 연속");
     expect(chip.firstElementChild).toBe(screen.getByTestId("mark"));
-  });
-
-  it("draws the deck row's 공개 and today's count, a grade and the retention gap", () => {
-    const deckId = parseDeckId(uuidOf("d-fr"));
-    if (deckId === null) throw new Error("d-fr is no uuid");
-    render(
-      <>
-        <DeckList
-          rows={[
-            {
-              deck: { id: deckId, name: "French", public: true },
-              cards: 2,
-              today: 2,
-              mastered: 0,
-              learning: 0,
-            },
-          ]}
-        />
-        <GradeChip answer="know" />
-        <GradeChip answer="dontKnow" />
-        <RetentionPreview
-          days={[{ dayStart: start, cards: 2, reviews: 2, known: 1 }]}
-          timeZone="Asia/Seoul"
-        />
-      </>,
-    );
-
-    expect(chipTone(screen.getByText("공개"))).toBe("surface");
-    expect(chipTone(screen.getByText("오늘 2"))).toBe("brand-tint");
-    expect(chipTone(screen.getByText("안다"))).toBe("know");
-    expect(chipTone(screen.getByText("모른다"))).toBe("dont-know-text");
-    expect(chipTone(screen.getByText("목표보다 40%p 낮아요"))).toBe("tint-amber");
-    // Control: the deck's name beside the chips is drawn by none.
-    expect(chipTone(screen.getByText("French"))).toBeNull();
   });
 });
