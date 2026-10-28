@@ -1,6 +1,6 @@
 # ADR 0046: State where the user stands today on the today card, in place of the goal's numbers
 
-> Status: accepted; its goal's numbers in the ring superseded by ADR-0091
+> Status: accepted; its goal's numbers in the ring superseded by ADR-0091; its status line on the phone superseded by ADR-0120
 > Date: 2026-10-17
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.

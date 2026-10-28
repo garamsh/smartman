@@ -25,4 +25,3 @@ A sentence holding claims about two subjects is two claims; anchor each.
 
 1. Repeat the basis as written — the command, the file at the revision named — and confirm it returns what the claim says.
 2. Where the basis is a search, confirm the same expression matches something that is present, as `documentation.md` §GitHub artifacts, "A claim names a basis that could have contradicted it", states.
-3. Run `make lint` before pushing; it prints the count of Markdown files each script read and the command that selected them.

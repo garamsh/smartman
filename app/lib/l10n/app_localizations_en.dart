@@ -19,6 +19,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deckActions => 'Deck actions';
 
   @override
+  String get importActions => 'Photo actions';
+
+  @override
   String get renameDeck => 'Rename deck';
 
   @override
@@ -1424,23 +1427,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String statusStreak(int days) {
-    return 'On a $days-day streak';
-  }
-
-  @override
-  String get statusWaiting => 'Waiting for today\'s first card';
-
-  @override
-  String get statusAlmostDone => 'Almost there';
-
-  @override
-  String get statusPastHalf => 'Past the halfway mark';
-
-  @override
-  String get statusStarted => 'Off to a good start';
-
-  @override
   String goalReached(int goal) {
     return 'Goal of $goal reached';
   }
@@ -1491,18 +1477,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String backlogStudy(int count, int minutes) {
-    return 'Study $count · about $minutes min';
-  }
-
-  @override
   String catchUpTitle(int perDay, int days) {
     return 'At $perDay a day you catch up in $days days';
-  }
-
-  @override
-  String catchUpNote(int perDay) {
-    return 'The overdue reviews left at $perDay a day';
   }
 
   @override
@@ -1531,16 +1507,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get retentionTarget => 'Target';
-
-  @override
   String retentionBelow(int points) {
-    return '$points pt below target';
+    return '$points% below target';
   }
 
   @override
   String retentionAbove(int points) {
-    return '$points pt above target';
+    return '$points% above target';
   }
 
   @override
@@ -1573,7 +1546,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get recallTitle => 'Chance you remember now';
+  String get recallTitle => 'Memory';
 
   @override
   String recallMean(int percent) {
@@ -1581,7 +1554,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get recallStrong => 'Solid';
+  String get recallStrong => 'Good';
 
   @override
   String get recallFair => 'Fair';
@@ -1608,7 +1581,7 @@ class AppLocalizationsEn extends AppLocalizations {
     int fading,
     int mean,
   ) {
-    return 'Of $total cards: solid $strong, fair $fair, fading soon $fading, average $mean%';
+    return 'Of $total cards: good $strong, fair $fair, fading soon $fading, average $mean%';
   }
 
   @override
@@ -1618,8 +1591,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get masteredTitle => 'Mastered cards';
 
   @override
-  String masteredGain(int count) {
-    return '+$count in 4 weeks';
+  String masteredGain(int weeks, int count) {
+    return '+$count since $weeks weeks ago';
   }
 
   @override
@@ -1794,7 +1767,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String editMoveSense(int number) {
-    return 'Move meaning $number';
+    return 'Meaning $number menu';
   }
 
   @override

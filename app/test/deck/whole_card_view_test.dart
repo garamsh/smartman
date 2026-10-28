@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/deck/src/content.dart';
 import 'package:smartman/deck/src/whole_card_view.dart';
@@ -20,7 +21,9 @@ void main() {
       ),
     )) {
       paragraph.text.visitChildren((span) {
-        if (span is TextSpan && span.text?.trim() == 'Paris') found = span;
+        if (span is TextSpan && blankAnswer(span.text ?? '') == 'Paris') {
+          found = span;
+        }
         return true;
       });
     }
@@ -62,4 +65,50 @@ void main() {
       expect(filled, empty);
     });
   }
+
+  testWidgets('a Korean cloze sentence breaks only between words, its blank '
+      'included, and reads as written (#454)', (tester) async {
+    const korean = ClozeContent(
+      '낮에는 친구들과 함께 춤을 추고 밤에는 $clozeBlank 노래를 부르며 하루를 보냈어요',
+      ['조용히'],
+    );
+    await pumpComponent(
+      tester,
+      const SizedBox(
+        width: 180,
+        child: WholeCardView([korean], revealed: false, style: AppType.back),
+      ),
+      themeMode: ThemeMode.light,
+    );
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(
+        of: find.byType(WholeCardView),
+        matching: find.byType(RichText),
+      ),
+    );
+    final plain = paragraph.text.toPlainText();
+    final lines = TextPainter(
+      text: paragraph.text,
+      textDirection: paragraph.textDirection,
+      textScaler: paragraph.textScaler,
+    )..layout(maxWidth: paragraph.size.width);
+    addTearDown(lines.dispose);
+    final ends = <int>[];
+    for (var offset = 0; offset < plain.length;) {
+      offset = lines.getLineBoundary(TextPosition(offset: offset)).end;
+      ends.add(offset);
+    }
+    // It wraps at this width, so where it breaks is tested.
+    expect(ends.length, greaterThan(2));
+    bool space(String char) => char == ' ' || char == '\u00a0';
+    for (final end in ends.take(ends.length - 1)) {
+      expect(
+        space(plain[end - 1]) || space(plain[end]),
+        isTrue,
+        reason: 'a break at $end in "$plain"',
+      );
+    }
+    // The joiners are not read: the card reads as its words.
+    expect(find.bySemanticsLabel(RegExp('^낮에는 친구들과 함께 춤을')), findsOneWidget);
+  });
 }

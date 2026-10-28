@@ -314,32 +314,10 @@ class _RetentionCard extends StatelessWidget {
           spacing: AppSpace.s16,
           runSpacing: AppSpace.s8,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              spacing: AppSpace.s16,
-              children: [
-                Text(
-                  l10n.retentionPercent(value),
-                  style: AppType.figure.copyWith(color: colors.ink),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpace.s4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.retentionTarget,
-                        style: AppType.section.copyWith(color: colors.ink2),
-                      ),
-                      Text(
-                        l10n.retentionPercent(target),
-                        style: AppType.bodyStrong.copyWith(color: colors.ink2),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            // The target is named once, on the chart's dashed line.
+            Text(
+              l10n.retentionPercent(value),
+              style: AppType.figure.copyWith(color: colors.ink),
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpace.s8),
@@ -692,7 +670,7 @@ class _RecallCard extends StatelessWidget {
 
 /// The mastered cards now as the figure, then at the end of each of the last
 /// eight weeks, this week's in ink, the first and the last week named under
-/// them, with the gain over four weeks beside the heading.
+/// them, with the gain since the first of them beside the heading.
 class _MasteredCard extends StatelessWidget {
   const _MasteredCard({required this.weeks});
 
@@ -719,7 +697,7 @@ class _MasteredCard extends StatelessWidget {
     }
     return _StatsCard(
       title: l10n.masteredTitle,
-      trailing: gain == null ? null : l10n.masteredGain(gain),
+      trailing: gain == null ? null : l10n.masteredGain(weeks.length - 1, gain),
       content: [
         Text(
           l10n.statsCards(weeks.last),
