@@ -3,16 +3,7 @@ export { RecordView } from "./components/record-view";
 export { RetentionPreview } from "./components/retention-preview";
 export { StudyScreen } from "./components/study-screen";
 export { type CardStates, dailyLoad, newCards, streak, studyDayEnd, studyDayStart } from "./queue";
-export {
-  catchUp,
-  dailyGoal,
-  deckProgress,
-  lastWeek,
-  nextReviewOf,
-  statusLine,
-  todayStatus,
-  type WeekDay,
-} from "./overview";
+export { catchUp, dailyGoal, deckProgress, lastWeek, nextReviewOf, type WeekDay } from "./overview";
 export { readRecentRetention, readRecord } from "./read-record";
 export { loadEngine } from "./engine";
 export { readyServerEngine } from "./engine-server";

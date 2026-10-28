@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Chip } from "@/design/chip";
+
 import { calendarDate, type RecordDay, retentionOver, share, targetRetention } from "../stats";
 
 /** A share as whole percent. */
@@ -65,14 +67,14 @@ export function RetentionPreview({ days, timeZone }: { days: RecordDay[]; timeZo
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <p className="text-figure text-ink">{value}%</p>
         <p className="text-caption text-ink-2">목표 {target}%</p>
-        <p
-          className={`rounded-full px-2 py-1 text-micro font-bold text-ink ${gap < 0 ? "bg-tint-amber" : "bg-brand-tint"}`}
-        >
-          {gap < 0
-            ? `목표보다 ${String(-gap)}%p 낮아요`
-            : gap > 0
-              ? `목표보다 ${String(gap)}%p 높아요`
-              : "목표만큼 맞혔어요"}
+        <p>
+          <Chip tone={gap < 0 ? "amber" : "brand"}>
+            {gap < 0
+              ? `목표보다 ${String(-gap)}% 낮아요`
+              : gap > 0
+                ? `목표보다 ${String(gap)}% 높아요`
+                : "목표만큼 맞혔어요"}
+          </Chip>
         </p>
       </div>
       <svg

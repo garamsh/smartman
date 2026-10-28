@@ -22,7 +22,7 @@ import 'first_run.dart';
 /// The 오늘 tab over [decks]: the today card, the last seven study days, and
 /// the decks that hold cards for today; in a backlog, the backlog card and the
 /// catch-up at an average day's load; once today's cards are done, the done
-/// card, the last seven days and 학습하기. The last seven days open 기록
+/// card with 학습하기 and the last seven days. The last seven days open 기록
 /// through [onShowRecord]. While no deck holds a card, by
 /// [counts], how to start: with one deck, adding cards to it; with more,
 /// [onShowDecks], which shows the 덱 tab. Showing a day with cards, it asks for
@@ -69,16 +69,12 @@ class TodayTab extends StatelessWidget {
                   // cards.
                   TodayOverview(count: TodayCounted(total: 0)) => [
                     const FirstDailyMinutes(),
-                    _DoneCard(overview: overview),
+                    _DoneCard(
+                      overview: overview,
+                      onStudy: () => _study(context, all),
+                    ),
                     const SizedBox(height: AppSpace.s12),
                     _LastWeek(overview: overview, onOpen: onShowRecord),
-                    const SizedBox(height: AppSpace.s12),
-                    AppButton(
-                      label: l10n.todayStudy,
-                      icon: LucideIcons.play,
-                      size: AppButtonSize.cta,
-                      onPressed: () => _study(context, all),
-                    ),
                   ],
                   TodayOverview(count: TodayCounted(backlog: true)) => [
                     const FirstDailyMinutes(),
@@ -254,7 +250,8 @@ class _HeroCard extends StatelessWidget {
 
 /// Today's cards over every deck on the white card: "오늘 할 카드" with the
 /// streak, the cards done over the day's cards with their minutes, a bar of
-/// them, where the user stands today ([TodayStatus]), and 모두 학습.
+/// them, the cards studied past the day's plan, and 모두 학습. No line
+/// restates the figures and the bar.
 class _TodayCard extends StatelessWidget {
   const _TodayCard({required this.overview, required this.onStudy});
 
@@ -320,24 +317,11 @@ class _TodayCard extends StatelessWidget {
             backgroundColor: colors.hairline,
           ),
         ),
-        Wrap(
-          spacing: AppSpace.s8,
-          runSpacing: AppSpace.s8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              keepWords(switch (TodayStatus.of(goal, streak: streak)) {
-                StatusStreak(:final days) => l10n.statusStreak(days),
-                StatusWaiting() => l10n.statusWaiting,
-                StatusAlmostDone() => l10n.statusAlmostDone,
-                StatusPastHalf() => l10n.statusPastHalf,
-                StatusStarted() => l10n.statusStarted,
-              }),
-              style: quiet,
-            ),
-            if (overview.extra > 0) _ExtraPill(count: overview.extra),
-          ],
-        ),
+        if (overview.extra > 0)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _ExtraPill(count: overview.extra),
+          ),
         AppButton(
           label: l10n.studyAll,
           icon: LucideIcons.play,
@@ -350,7 +334,8 @@ class _TodayCard extends StatelessWidget {
 
 /// In a backlog of reviews, on the white card: the mascot, that the
 /// user can pick up again, how many reviews are overdue and that new cards
-/// pause, and the button that studies them, with their minutes.
+/// pause, and 모두 학습. The button names no count, so the catch-up's daily
+/// pace is the one plan for today the screen states.
 class _BacklogCard extends StatelessWidget {
   const _BacklogCard({required this.overview, required this.onStudy});
 
@@ -378,7 +363,8 @@ class _BacklogCard extends StatelessWidget {
                     child: Text(l10n.backlogTitle, style: AppType.headline),
                   ),
                   Text(
-                    l10n.backlogBody(count.total),
+                    keepWords(l10n.backlogBody(count.total)),
+                    semanticsLabel: l10n.backlogBody(count.total),
                     style: AppType.secondary.copyWith(color: colors.muted),
                   ),
                 ],
@@ -392,7 +378,7 @@ class _BacklogCard extends StatelessWidget {
             child: _StreakChip(days: overview.streak),
           ),
         AppButton(
-          label: l10n.backlogStudy(count.total, count.minutes),
+          label: l10n.studyAll,
           icon: LucideIcons.play,
           onPressed: onStudy,
         ),
@@ -427,11 +413,13 @@ class _ExtraPill extends StatelessWidget {
 }
 
 /// Once today's cards are done: the mascot, that the day is done, the
-/// next review, the streak and the goal reached.
+/// next review, the streak and the goal reached, and 학습하기, which goes on
+/// past today's cards.
 class _DoneCard extends StatelessWidget {
-  const _DoneCard({required this.overview});
+  const _DoneCard({required this.overview, required this.onStudy});
 
   final TodayOverview overview;
+  final VoidCallback onStudy;
 
   @override
   Widget build(BuildContext context) {
@@ -487,6 +475,15 @@ class _DoneCard extends StatelessWidget {
                   AppChip(label: l10n.goalReached(overview.goal.goal)),
                 if (overview.extra > 0) _ExtraPill(count: overview.extra),
               ],
+            ),
+            const SizedBox(height: AppSpace.s8),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: l10n.todayStudy,
+                icon: LucideIcons.play,
+                onPressed: onStudy,
+              ),
             ),
           ],
         ),
@@ -567,8 +564,8 @@ class _LastWeek extends StatelessWidget {
 }
 
 /// In a backlog: the overdue reviews left at the start of each of the next
-/// seven days at an average day's load, in the streak's amber, and how many
-/// days that takes.
+/// seven days at an average day's load, in the streak's amber, under how
+/// many days that takes at that pace, which the heading alone states.
 class _CatchUp extends StatelessWidget {
   const _CatchUp({required this.overview});
 
@@ -595,25 +592,20 @@ class _CatchUp extends StatelessWidget {
           ].join(', '),
         ),
       ),
-      note: l10n.catchUpNote(overview.load),
     );
   }
 }
 
-/// A chart on the surface: its [title], the [chart], and an optional [note]
-/// under it.
+/// A chart on the surface: its [title] over the [chart].
 class _ChartCard extends StatelessWidget {
-  const _ChartCard({required this.title, required this.chart, this.note});
+  const _ChartCard({required this.title, required this.chart});
 
   final String title;
   final Widget chart;
-  final String? note;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final quiet = AppType.caption.copyWith(color: colors.muted);
-    final note = this.note;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -627,7 +619,6 @@ class _ChartCard extends StatelessWidget {
           children: [
             Semantics(header: true, child: Text(title, style: AppType.label)),
             chart,
-            if (note != null) Text(note, style: quiet),
           ],
         ),
       ),

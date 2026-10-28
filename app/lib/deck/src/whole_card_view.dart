@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'audio_block.dart';
 import 'card_list.dart';
@@ -108,7 +109,8 @@ class WholeCardView extends StatelessWidget {
     final span = TextSpan(
       children: [
         for (final (index, part) in parts.indexed) ...[
-          TextSpan(text: part),
+          // Korean breaks only between words (#454).
+          TextSpan(text: keepWords(part)),
           if (index < cloze.answers.length)
             _blank(context, cloze.answers[index]),
         ],
@@ -181,7 +183,7 @@ class WholeCardView extends StatelessWidget {
   TextSpan _blank(BuildContext context, String answer) {
     final colors = AppColors.of(context);
     return TextSpan(
-      text: ' $answer ',
+      text: ' ${keepWords(answer)} ',
       style: revealed
           ? TextStyle(backgroundColor: colors.brandTint)
           : TextStyle(

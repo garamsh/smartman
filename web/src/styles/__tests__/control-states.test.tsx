@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { render, screen, within } from "@testing-library/react";
@@ -56,7 +56,7 @@ describe("the controls' pointer, hover and pressed states", () => {
     );
   });
 
-  it("draws the state as a layer of the control's text colour on hover and press, and presses only under motion-safe", () => {
+  it("dims a hovered or pressed control under a layer of its text colour, with no change of size", () => {
     const rule = /\.pressable \{([^}]*)\}/.exec(globalsCss)?.[1] ?? "";
     expect(rule).toContain("--state-layer: color-mix(in srgb, currentColor 4%, transparent);");
     for (const variant of ["not-disabled:hover:", "not-disabled:active:"]) {
@@ -64,8 +64,20 @@ describe("the controls' pointer, hover and pressed states", () => {
         `${variant}bg-[linear-gradient(var(--state-layer),var(--state-layer))]`,
       );
     }
-    expect(rule).toContain("motion-safe:not-disabled:active:scale-98");
-    expect(rule).not.toMatch(/(^|\s)active:scale/);
+    // No scale, under any variant, and nothing to animate one.
+    expect(rule).not.toMatch(/scale|transition|transform/);
+    // Nor does a control press with a scale of its own.
+    const src = path.join(import.meta.dirname, "../..");
+    const pressedScale = /active:[\w:-]*scale/;
+    const components = readdirSync(src, { recursive: true, encoding: "utf8" }).filter(
+      (file) => file.endsWith(".tsx") && !file.includes("__tests__"),
+    );
+    // Control: the walk reaches the components, and the pattern finds the scale it looks for.
+    expect(components).toContain(path.join("features", "decks", "components", "card-grid.tsx"));
+    expect("motion-safe:not-disabled:active:scale-98").toMatch(pressedScale);
+    expect(
+      components.filter((file) => pressedScale.test(readFileSync(path.join(src, file), "utf8"))),
+    ).toEqual([]);
   });
 
   it("is on the menus' items, 모두 학습, a deck row and a deck page's cards and switch", () => {

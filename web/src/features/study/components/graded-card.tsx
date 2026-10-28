@@ -3,24 +3,26 @@
 import { Check, X } from "lucide-react";
 import type { Ref } from "react";
 
+import { Chip } from "@/design/chip";
+
 import type { Answer } from "../answer-write";
 import { useSwipe } from "../hooks/use-swipe";
 import type { PreviousAnswer } from "../session";
 
-/** Each grade's name, its fill and line, its chip, and its mark. */
+/** Each grade's name, its fill and line, its chip's tone, and its mark. */
 export const grades = {
   know: {
     name: "안다",
     card: "border-know-line bg-know-card",
     line: "bg-know-line",
-    chip: "bg-know text-on-know",
+    tone: "know",
     Mark: Check,
   },
   dontKnow: {
     name: "모른다",
     card: "border-dont-know-line bg-dont-know-card",
     line: "bg-dont-know-line",
-    chip: "bg-dont-know-text text-on-dont-know-text",
+    tone: "dontKnow",
     Mark: X,
   },
 } as const;
@@ -42,15 +44,13 @@ export function answerLabel(answer: Graded): string {
  * A grade's chip, its mark and its word, beside an answer in the whole card's dialog and the
  * session's list. A previous card shows its grade by its fill and line alone (ADR 0105).
  */
-export function GradeChip({ answer, className = "" }: { answer: Answer; className?: string }) {
-  const { name, chip, Mark } = grades[answer];
+export function GradeChip({ answer }: { answer: Answer }) {
+  const { name, tone, Mark } = grades[answer];
   return (
-    <span
-      aria-hidden
-      className={`flex h-6 items-center gap-1 rounded-full px-2 text-micro font-bold ${chip} ${className}`}
-    >
-      <Mark className="size-3" strokeWidth={3} />
-      {name}
+    <span aria-hidden>
+      <Chip tone={tone} leading={<Mark className="size-3" strokeWidth={3} />}>
+        {name}
+      </Chip>
     </span>
   );
 }
