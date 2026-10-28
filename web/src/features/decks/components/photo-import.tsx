@@ -158,7 +158,8 @@ export function PhotoImport({
         {photos.length === 0 && (
           <p className="text-caption break-keep text-muted">
             브라우저에 따라 카메라 대신 파일 선택이 열려요. JPEG, PNG, WebP, 장당 6MB까지 읽어요.
-            창을 닫으면 저장하지 않은 카드는 사라져요.
+            창을 닫으면 저장하지 않은 카드는 사라져요. 읽기 중지는 다음 사진부터 적용되고, 이미
+            시작한 사진은 한도에 포함될 수 있어요.
           </p>
         )}
         <label className="pressable flex min-h-button cursor-pointer items-center justify-center rounded-button border border-outline bg-surface px-4 text-label">

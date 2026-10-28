@@ -11,17 +11,11 @@ import { setRequestCookies } from "@/testing/next-headers";
 import { signedInCookies } from "@/testing/session";
 import { AuthoringButton } from "../components/authoring-button";
 import { extractPhoto } from "../extract-photo";
+import { readPhoto } from "../read-photo";
 import { parseDeckId } from "../library";
 
 vi.mock("next/headers", () => import("@/testing/next-headers"));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/supabase/browser", () => ({
-  createClient: () => ({
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: { access_token: testAccessToken } } }),
-    },
-  }),
-}));
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () {
     this.setAttribute("open", "");
@@ -105,6 +99,33 @@ describe("authoring from the page", () => {
 });
 
 describe("photo request refusals", () => {
+  it("refuses empty, oversized and signed-out uploads before calling extraction beside a valid authenticated upload", async () => {
+    let calls = 0;
+    server.use(
+      http.post(`${supabaseUrl}/functions/v1/extract-cards`, async ({ request }) => {
+        calls += 1;
+        expect(request.headers.get("authorization")).toBe(`Bearer ${testAccessToken}`);
+        const body: unknown = await request.json();
+        expect(body).toEqual({ image: Buffer.from([255, 216, 255, 0]).toString("base64") });
+        return HttpResponse.json({
+          cards: [{ kind: "note", type: "concept", front: "수도", answer: "서울", topic: "도시" }],
+        });
+      }),
+    );
+    expect(await readPhoto(new FormData())).toHaveProperty("message");
+    const large = new FormData();
+    large.set("photo", new File([new Uint8Array(3 * 1024 * 1024 + 1)], "large.jpg"));
+    expect(await readPhoto(large)).toHaveProperty("message");
+    expect(calls).toBe(0);
+    const valid = new FormData();
+    valid.set("photo", photo());
+    expect(await readPhoto(valid)).toHaveProperty("cards");
+    expect(calls).toBe(1);
+    setRequestCookies([]);
+    expect(await readPhoto(valid)).toHaveProperty("message", "다시 로그인해 주세요");
+    expect(calls).toBe(1);
+  });
+
   const photo = () => {
     const file = new File([new Uint8Array([255, 216, 255, 0])], "photo.jpg", {
       type: "image/jpeg",
