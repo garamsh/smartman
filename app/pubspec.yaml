@@ -53,7 +53,7 @@ dependencies:
   http: ^1.6.0
   connectivity_plus: ^7.3.2
   # Lucide's 2 px, round-capped icons (docs/architecture/design.md).
-  lucide_icons_flutter: 3.1.25
+  lucide_icons_flutter: 4.0.1
   url_launcher: 6.3.3
   package_info_plus: 10.2.2
   record: 7.1.2
