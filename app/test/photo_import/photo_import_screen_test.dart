@@ -2183,6 +2183,17 @@ void main() {
       );
       await tester.tapAt(Offset.zero);
       await tester.pumpAndSettle();
+      await import.tap(find.byTooltip('Meaning 3 menu'));
+      expect(
+        tester
+            .widget<PopupMenuItem<int>>(
+              find.widgetWithText(PopupMenuItem<int>, 'Move down'),
+            )
+            .enabled,
+        isFalse,
+      );
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
       for (final number in [3, 2]) {
         await import.tap(find.byTooltip('Meaning $number menu'));
         await import.tap(_shown('Move up'));

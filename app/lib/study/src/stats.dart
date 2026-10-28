@@ -121,7 +121,7 @@ List<DayRetention> retentionIn(
         ];
 }
 
-/// The probability of recall from which a card's recall is strong (단단함).
+/// The probability of recall from which a card's recall is strong (좋음).
 const strongRecall = 0.95;
 
 /// The probability of recall below which a card is fading (곧 잊음).
@@ -129,7 +129,7 @@ const fadingRecall = 0.8;
 
 /// A band of the probability of recall.
 enum RecallBand {
-  /// At least [strongRecall] (단단함).
+  /// At least [strongRecall] (좋음).
   strong,
 
   /// From [fadingRecall] up to [strongRecall] (보통).
