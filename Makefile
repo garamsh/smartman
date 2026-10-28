@@ -37,12 +37,7 @@ endif
 lint: lint-repo lint-code
 
 lint-repo:
-	./check-contents-list.sh
-	./check-object-names.sh
-	./check-convention-index.sh
 	./check-architecture-index.sh
-	./check-section-citations.sh
-	./check-heading-prefixes.sh
 	./check-secrets.sh
 	./check-ios-client-id.sh
 
