@@ -86,7 +86,6 @@ docker run --rm -p 3000:3000 smartman-web
 ## Run the checks
 
 - `make lint` runs, in this order:
-  - `check-architecture-index.sh` — the index of `docs/architecture/README.md` against the responsibility documents and ADRs: one line each, every line naming a file, the ADRs in number order;
   - `check-secrets.sh` — fails on a Supabase secret or service-role key in any file;
   - `check-ios-client-id.sh` — the iOS URL scheme against the iOS client ID in `app/config/dev.json`;
   - `check-generated.sh` — the app's committed generated code (flutter_rust_bridge's included) and `engine-wasm/pkg/` against their generators;
