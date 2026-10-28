@@ -1042,6 +1042,8 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
   const password = "web-authoring-test-password";
   const signup = await auth.auth.signUp({ email, password });
   expect(signup.error).toBeNull();
+  const userId = signup.data.user?.id;
+  if (!userId) throw new Error("sign-up returned no fixture user");
   expect(jar.size).toBeGreaterThan(0);
   await context.addCookies([...jar].map(([name, value]) => ({ name, value, url: baseURL })));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1071,7 +1073,8 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
   expect((await client.auth.signInWithPassword({ email, password })).error).toBeNull();
   const read = await client
     .from("cards")
-    .select("id,front,back,template,template_version,card_key,revision");
+    .select("id,front,back,template,template_version,card_key,revision")
+    .eq("user_id", userId);
   expect(read.error).toBeNull();
   expect(read.data).toHaveLength(1);
   expect(read.data?.[0]).toMatchObject({
@@ -1089,7 +1092,7 @@ test("creates a deck and a card on mobile, warns on a duplicate and keeps saved 
     "이 덱에 이미 있는 카드예요",
   );
   await page.keyboard.press("Escape");
-  expect((await client.from("cards").select("id")).data).toHaveLength(1);
+  expect((await client.from("cards").select("id").eq("user_id", userId)).data).toHaveLength(1);
   await page.getByRole("button", { name: "카드 추가", exact: true }).click();
   await page.getByRole("button", { name: "앨범에서 고르기", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("이번 달");
