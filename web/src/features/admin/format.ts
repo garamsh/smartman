@@ -20,3 +20,8 @@ export function formatDate(time: number, timeZone: string): string {
     day: "2-digit",
   }).format(time);
 }
+
+/** Dollars with four decimals, as "$0.0540". */
+export function usd(value: number): string {
+  return `$${value.toFixed(4)}`;
+}

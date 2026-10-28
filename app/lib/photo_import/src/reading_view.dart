@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design/app_button.dart';
 import '../../design/app_list_row.dart';
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'failure.dart';
 import 'failure_message.dart';
@@ -159,7 +160,8 @@ class _PhotoRow extends StatelessWidget {
       PhotoReading() => (LucideIcons.loader, colors.ink, l10n.photoReading),
       PhotoRead(:final cards) => (
         LucideIcons.check,
-        colors.know,
+        // Green means 안다 alone: a photo read is ink, its words saying so.
+        colors.ink,
         l10n.cardCount(cards.length),
       ),
       PhotoFailed(:final failure) => (
@@ -204,7 +206,8 @@ class _PhotoRow extends StatelessWidget {
                               Semantics(
                                 liveRegion: failure != null,
                                 child: Text(
-                                  status,
+                                  keepWords(status),
+                                  semanticsLabel: status,
                                   style: AppType.body.copyWith(
                                     color: failure == null
                                         ? colors.ink2

@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import { usd } from "../format";
 import type { Amount, Stack, Usage } from "../usage";
-import { DailyUsageChart, StackedCostChart, usd } from "./usage-charts";
+import { DailyUsageChart, StackedCostChart } from "./usage-charts";
 
 /** An amount in words: its photos and estimated cost, and the photos no measured cost prices. */
 function amountWords({ photos, usd: cost, unpriced }: Amount): string {

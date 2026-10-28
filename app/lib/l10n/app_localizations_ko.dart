@@ -19,6 +19,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deckActions => '덱 작업';
 
   @override
+  String get importActions => '사진 작업';
+
+  @override
   String get renameDeck => '덱 이름 바꾸기';
 
   @override
@@ -1306,23 +1309,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String statusStreak(int days) {
-    return '$days일째 이어 가는 중이에요';
-  }
-
-  @override
-  String get statusWaiting => '오늘의 첫 카드를 기다리고 있어요';
-
-  @override
-  String get statusAlmostDone => '거의 다 왔어요';
-
-  @override
-  String get statusPastHalf => '절반을 넘었어요';
-
-  @override
-  String get statusStarted => '좋은 출발이에요';
-
-  @override
   String goalReached(int goal) {
     return '목표 $goal장 달성';
   }
@@ -1373,18 +1359,8 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String backlogStudy(int count, int minutes) {
-    return '$count장 학습 · 약 $minutes분';
-  }
-
-  @override
   String catchUpTitle(int perDay, int days) {
     return '하루 $perDay장씩 하면 $days일이면 따라잡아요';
-  }
-
-  @override
-  String catchUpNote(int perDay) {
-    return '하루 $perDay장씩 했을 때 남는 밀린 복습이에요';
   }
 
   @override
@@ -1413,16 +1389,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get retentionTarget => '목표';
-
-  @override
   String retentionBelow(int points) {
-    return '목표보다 $points%p 낮아요';
+    return '목표보다 $points% 낮아요';
   }
 
   @override
   String retentionAbove(int points) {
-    return '목표보다 $points%p 높아요';
+    return '목표보다 $points% 높아요';
   }
 
   @override
@@ -1455,7 +1428,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get recallTitle => '지금 기억하고 있을 확률';
+  String get recallTitle => '기억 상태';
 
   @override
   String recallMean(int percent) {
@@ -1463,7 +1436,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get recallStrong => '단단함';
+  String get recallStrong => '좋음';
 
   @override
   String get recallFair => '보통';
@@ -1484,7 +1457,7 @@ class AppLocalizationsKo extends AppLocalizations {
     int fading,
     int mean,
   ) {
-    return '$total장 중 단단함 $strong장, 보통 $fair장, 곧 잊음 $fading장, 평균 $mean%';
+    return '$total장 중 좋음 $strong장, 보통 $fair장, 곧 잊음 $fading장, 평균 $mean%';
   }
 
   @override
@@ -1494,8 +1467,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get masteredTitle => '익힌 카드';
 
   @override
-  String masteredGain(int count) {
-    return '4주 +$count장';
+  String masteredGain(int weeks, int count) {
+    return '$weeks주 전보다 +$count장';
   }
 
   @override
@@ -1658,7 +1631,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String editMoveSense(int number) {
-    return '$number번째 뜻 옮기기';
+    return '$number번째 뜻 메뉴';
   }
 
   @override

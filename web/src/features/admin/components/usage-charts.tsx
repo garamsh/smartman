@@ -5,11 +5,6 @@ import { Bar, BarChart, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 
 
 import type { Amount, Stack } from "../usage";
 
-/** Dollars with four decimals, as "$0.0540". */
-export function usd(value: number): string {
-  return `$${value.toFixed(4)}`;
-}
-
 const axis = { stroke: "var(--color-muted)", fontSize: 12 } as const;
 const shortDay = (day: string) => day.slice(5);
 

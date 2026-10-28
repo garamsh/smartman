@@ -1,6 +1,7 @@
 import { Flame, Play } from "lucide-react";
 import Link from "next/link";
 
+import { Chip } from "@/design/chip";
 import {
   type Deck,
   DeckTile,
@@ -23,9 +24,7 @@ import {
   readyServerEngine,
   RetentionPreview,
   sessionMinutes,
-  statusLine,
   studyHref,
-  todayStatus,
   type WeekDay,
 } from "@/features/study";
 
@@ -138,19 +137,12 @@ export async function Today() {
     const { mastered } = deckProgress(own, states);
     return [{ deck, today: n, mastered: mastered / own.length }];
   });
-  const extraPill = (border: string) =>
-    plan.extra.size > 0 && (
-      <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${border}`}>
-        오늘 {plan.extra.size}장 더 했어요
-      </span>
-    );
-  const streakChip = (border: string) =>
-    streak > 0 && (
-      <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ${border}`}>
-        <Flame aria-hidden className="size-4 text-streak" strokeWidth={2} />
-        {streak}일 연속
-      </span>
-    );
+  const extraChip = plan.extra.size > 0 && <Chip>오늘 {plan.extra.size}장 더 했어요</Chip>;
+  const streakChip = streak > 0 && (
+    <Chip leading={<Flame aria-hidden className="size-4 text-streak" strokeWidth={2} />}>
+      {streak}일 연속
+    </Chip>
+  );
 
   if (total === 0) {
     const next = nextReviewOf(stored, day, timeZone);
@@ -170,7 +162,7 @@ export async function Today() {
             className="flex flex-col items-center gap-2 rounded-card bg-brand-tint p-6 text-center text-ink lg:col-span-2"
           >
             <Mascot className="size-mascot-medium bg-surface" />
-            <h2 id="today-title" className="mt-1 text-title">
+            <h2 id="today-title" className="mt-1 text-body-strong">
               오늘 할 카드를 다 했어요
             </h2>
             <p className="text-secondary text-ink-2">
@@ -179,17 +171,13 @@ export async function Today() {
                 : "앞으로 7일 동안 복습할 카드가 없어요"}
             </p>
             <p className="flex flex-wrap items-center justify-center gap-2 text-secondary">
-              {streakChip("bg-surface")}
-              {goal.goal > 0 && (
-                <span className="flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 font-bold">
-                  목표 {goal.goal}장 달성
-                </span>
-              )}
-              {extraPill("bg-surface")}
+              {streakChip}
+              {goal.goal > 0 && <Chip>목표 {goal.goal}장 달성</Chip>}
+              {extraChip}
             </p>
+            <EnterLink href={href} label="학습하기" />
           </section>
           {week}
-          <EnterLink href={href} label="학습하기" onGround />
           <RetentionPreview days={retention.days} timeZone={retention.timeZone} />
         </div>
       </>
@@ -209,7 +197,7 @@ export async function Today() {
             <div className="flex items-center gap-4">
               <Mascot className="size-16 shrink-0 bg-brand-tint" />
               <div className="flex min-w-0 flex-col gap-1">
-                <h2 id="today-title" className="text-headline">
+                <h2 id="today-title" className="text-body-strong">
                   다시 시작하면 돼요
                 </h2>
                 <p className="text-secondary break-keep text-muted">
@@ -218,13 +206,11 @@ export async function Today() {
               </div>
             </div>
             {streak > 0 && (
-              <p className="flex flex-wrap items-center gap-2 text-secondary">
-                {streakChip("border border-outline")}
-              </p>
+              <p className="flex flex-wrap items-center gap-2 text-secondary">{streakChip}</p>
             )}
             {/* A row, so the link keeps its row sizes inside the card's column. */}
             <div className="flex flex-wrap">
-              <EnterLink href={href} label={`${String(total)}장 학습 · 약 ${String(minutes)}분`} />
+              <EnterLink href={href} label="모두 학습" />
             </div>
           </section>
           <CatchUp backlog={total} perDay={load} start={day.start} timeZone={timeZone} />
@@ -246,7 +232,7 @@ export async function Today() {
             <h2 id="today-title" className="text-label font-normal text-muted">
               오늘 할 카드
             </h2>
-            {streakChip("border border-outline")}
+            {streakChip}
           </div>
           <div className="flex flex-wrap items-end justify-between gap-x-3">
             {/* The bar under it reads the same figures. */}
@@ -271,10 +257,9 @@ export async function Today() {
               style={{ width: `${String(goal.goal === 0 ? 0 : (goal.done / goal.goal) * 100)}%` }}
             />
           </div>
-          <p className="flex flex-wrap items-center gap-2 text-secondary">
-            <span className="break-keep text-muted">{statusLine(todayStatus(goal, streak))}</span>
-            {extraPill("border border-outline")}
-          </p>
+          {extraChip && (
+            <p className="flex flex-wrap items-center gap-2 text-secondary">{extraChip}</p>
+          )}
           {/* A row, so the link keeps its row sizes inside the card's column. */}
           <div className="flex flex-wrap">
             <EnterLink href={href} label="모두 학습" />
@@ -335,7 +320,6 @@ function CatchUp({
           </div>
         ))}
       </div>
-      <p className="text-caption text-muted">하루 {perDay}장씩 했을 때 남는 밀린 복습이에요</p>
     </section>
   );
 }

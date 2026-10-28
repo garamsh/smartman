@@ -7,8 +7,8 @@
  * intrinsic size and the boxes over it (ADR 0109); or a sound by its media id, with how long it
  * plays in milliseconds (ADR 0112). A block of another type, or of a known
  * type at a version above the one this build reads, is shown as a placeholder naming it, so a
- * card a later version wrote is shown, not lost; the web never writes a card, so it stays as
- * stored.
+ * card a later version wrote is shown, not lost. Authoring inserts new cards and leaves stored
+ * cards unchanged.
  */
 export type Content =
   | { kind: "text"; text: string }
