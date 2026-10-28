@@ -17,17 +17,7 @@ export 'src/providers.dart'
         studyStorageKeys,
         studyStorageProvider,
         studyZoneProvider;
-export 'src/overview.dart'
-    show
-        DailyGoal,
-        DeckProgress,
-        StatusAlmostDone,
-        StatusPastHalf,
-        StatusStarted,
-        StatusStreak,
-        StatusWaiting,
-        TodayStatus,
-        WeekDay;
+export 'src/overview.dart' show DailyGoal, DeckProgress, WeekDay;
 export 'src/progress_counter.dart' show ProgressBuilder, ProgressCounter;
 export 'src/rust/api/engine.dart' show Answer;
 export 'src/queue.dart' show localOffsetAt;

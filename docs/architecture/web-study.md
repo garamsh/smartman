@@ -88,6 +88,7 @@ Each line names a file and what it covers; the file holds the cases.
 - `web/src/features/study/__tests__/record-shades.test.ts` — the 기록 shades' contrast against the tokens in both themes ([`design.md`](design.md)).
 - `web/src/features/study/__tests__/study-on.test.ts` — the session going on past today's cards, counted apart from the day's, a card answered past the plan before it opened left out of the day's count, a card put back after its re-show gap, and the session's own answers counted after 04:00.
 - `web/src/features/study/__tests__/study-address.test.ts` — the study page's address written and read back, and where a session returns to, never an address the parameter carries.
+- `web/src/features/study/__tests__/grade-chip.test.tsx` — 안다 and 모른다 drawn in the one chip, each in its grade's tone and hidden from screen readers.
 - `web/src/features/study/__tests__/retention-preview.test.tsx` — the 기억률 card's link to 기록 and its target.
 - `web/src/features/study/__tests__/live-regions.test.tsx` — the notice's and the coach's live regions, mounted empty and filled after.
 - `web/src/features/study/__tests__/engine-load.test.tsx` — the study screen's failure when the engine's module cannot load, and its retry.
