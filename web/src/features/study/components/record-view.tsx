@@ -2,6 +2,8 @@
 
 import { type ReactNode, useId, useState } from "react";
 
+import { Chip } from "@/design/chip";
+
 import { studyDayStart } from "../queue";
 import {
   calendarDate,
@@ -200,17 +202,17 @@ function RetentionCard({
           <p className="text-figure text-ink">{value}%</p>
           <p className="flex flex-col pb-1">
             <span className="text-section text-ink-2">목표</span>
-            <span className="text-headline text-ink-2">{target}%</span>
+            <span className="text-body-strong text-ink-2">{target}%</span>
           </p>
         </div>
-        <p
-          className={`mb-2 rounded-full px-2 py-1 text-micro font-bold text-ink ${gap < 0 ? "bg-tint-amber" : "bg-brand-tint"}`}
-        >
-          {gap < 0
-            ? `목표보다 ${String(-gap)}%p 낮아요`
-            : gap > 0
-              ? `목표보다 ${String(gap)}%p 높아요`
-              : "목표만큼 맞혔어요"}
+        <p className="mb-2">
+          <Chip tone={gap < 0 ? "amber" : "brand"}>
+            {gap < 0
+              ? `목표보다 ${String(-gap)}%p 낮아요`
+              : gap > 0
+                ? `목표보다 ${String(gap)}%p 높아요`
+                : "목표만큼 맞혔어요"}
+          </Chip>
         </p>
       </div>
       <figure role="img" aria-label={`복습에서 맞힌 비율, 목표 ${String(target)}%: ${description}`}>

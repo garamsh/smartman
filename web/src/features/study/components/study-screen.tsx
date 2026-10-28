@@ -13,6 +13,8 @@ import {
 } from "react";
 import { v7 } from "uuid";
 
+import { Chip } from "@/design/chip";
+
 import type { Answer, AnswerWrite } from "../answer-write";
 import { engineLoaded, loadEngine } from "../engine";
 import { saveAnswer } from "../save-answer";
@@ -430,10 +432,12 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
               </span>
               {/* Cards past the day's plan are counted apart, so the day's bar never shrinks. */}
               {view.extra > 0 && (
-                <span className="rounded-full bg-brand-tint px-2.5 py-0.5 text-micro font-bold whitespace-nowrap text-ink">
-                  <span aria-hidden>추가 {view.extra}장</span>
+                <Chip tone="brand">
+                  <span aria-hidden className="whitespace-nowrap">
+                    추가 {view.extra}장
+                  </span>
                   <span className="sr-only">오늘 계획 밖으로 {view.extra}장 더 학습함</span>
-                </span>
+                </Chip>
               )}
             </>
           )}

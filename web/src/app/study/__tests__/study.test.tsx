@@ -15,6 +15,7 @@ import {
   stateRow,
   uuidOf,
 } from "@/testing/library";
+import { chipTone } from "@/testing/chip";
 import { supabaseUrl, testUser } from "@/testing/mocks/handlers";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
 import { server } from "@/testing/mocks/server";
@@ -514,7 +515,7 @@ describe("the study page", () => {
       expect(progress.getAttribute("aria-valuetext")).toBe(
         `${String(todayNewCards)}장 중 ${String(todayNewCards)}장 끝냄`,
       );
-      expect(screen.getByText("추가 2장")).toBeInTheDocument();
+      expect(chipTone(screen.getByText("추가 2장"))).toBe("brand-tint");
       expect(screen.getByText("오늘 계획 밖으로 2장 더 학습함")).toHaveClass("sr-only");
       expect(screen.getByText("더 학습할 카드가 없어요")).toBeInTheDocument();
       await waitFor(() => {

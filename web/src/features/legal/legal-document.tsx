@@ -55,7 +55,7 @@ export function LegalDocument({
       </nav>
       {sections.map(({ id, heading, body }) => (
         <section key={id} aria-labelledby={id} className="flex flex-col gap-3">
-          <h2 id={id} className="scroll-mt-6 text-headline">
+          <h2 id={id} className="scroll-mt-6 text-body-strong">
             {heading}
           </h2>
           <div className="flex flex-col gap-3 text-body text-ink-2 [&_a]:underline [&_li]:ml-5 [&_ul]:flex [&_ul]:list-disc [&_ul]:flex-col [&_ul]:gap-1">
