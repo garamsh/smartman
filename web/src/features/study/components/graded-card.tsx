@@ -133,18 +133,20 @@ export function GradedCard({
         )}
         {answer.card.whole ? (
           <span className="col-span-3 flex items-center justify-center p-4 text-back text-ink lg:p-6">
-            {answer.card.whole.filled}
+            <span className="line-clamp-6 break-keep wrap-break-word">
+              {answer.card.whole.filled}
+            </span>
           </span>
         ) : (
           <>
             <span className="flex items-center justify-center p-4 text-front text-ink lg:p-6">
-              <span className="line-clamp-6 break-words">
+              <span className="line-clamp-6 break-keep wrap-break-word">
                 {answer.card.sides?.front ?? answer.card.text.front}
               </span>
             </span>
             <span aria-hidden className={`my-7 w-px ${grade.line}`} />
             <span className="flex items-center justify-center p-4 text-back text-ink-2 lg:p-6">
-              <span className="line-clamp-6 break-words">
+              <span className="line-clamp-6 break-keep wrap-break-word">
                 {answer.card.sides?.back ?? answer.card.text.back}
               </span>
             </span>

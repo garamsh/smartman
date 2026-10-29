@@ -746,7 +746,46 @@ test("a card of 100, 200 and 400 characters, and one of several senses, are stud
   await page.goto(`/study?decks=${deckId}`);
   const front = page.getByRole("group", { name: "앞면", exact: true });
   await expect(front).toBeVisible();
+  const face = page.locator("[data-card-step]");
+  const fade = page.locator("[data-card-fade]");
+  const seen = new Set<string>();
   for (const step of [1, 2, 3, 4]) {
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
+      // The face's step once it has stepped down for this width (ADR 0123).
+      await expect
+        .poll(() =>
+          face.evaluate(
+            (node) => node.scrollWidth <= node.clientWidth && node.getAttribute("data-card-step"),
+          ),
+        )
+        .toBeTruthy();
+      const sized = await face.evaluate((node) => ({
+        step: node.getAttribute("data-card-step") ?? "",
+        fits: node.scrollHeight <= node.clientHeight + 1,
+        breaks: getComputedStyle(node.firstElementChild ?? node).wordBreak,
+      }));
+      seen.add(sized.step);
+      // Lines break only between words; a size above the body's fits whole, and the body's
+      // scrolls with a fade when it does not.
+      expect(sized.breaks).toBe("keep-all");
+      if (sized.step === "text-card-body" && !sized.fits) {
+        await expect(fade).toBeVisible();
+        await face.evaluate((node) => {
+          node.scrollTop = node.scrollHeight;
+        });
+        await expect(fade).toHaveCount(0);
+        await face.evaluate((node) => {
+          node.scrollTop = 0;
+        });
+      } else {
+        expect(sized.fits, `${sized.step} at ${String(width)} px`).toBe(true);
+      }
+      // 모른다 and 안다 stay on screen whatever the card holds.
+      for (const name of ["모른다", "안다"]) {
+        await expect(page.getByRole("button", { name: new RegExp(`^${name}`) })).toBeInViewport();
+      }
+    }
     await shot(page, `07-long-study-${String(step)}`);
     const shown = (await front.textContent()) ?? "";
     await page.keyboard.press("ArrowRight");
@@ -754,6 +793,9 @@ test("a card of 100, 200 and 400 characters, and one of several senses, are stud
       .poll(async () => ((await front.count()) === 0 ? "" : await front.textContent()))
       .not.toBe(shown);
   }
+  // Control: the cards took the body size and a size above it, so both branches above ran.
+  expect(seen.has("text-card-body")).toBe(true);
+  expect(seen.size).toBeGreaterThan(1);
   await shot(page, "07-long-study-done");
 });
 

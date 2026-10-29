@@ -1,3 +1,4 @@
+import { cardHeight } from "@/features/study";
 import { Skeleton, SkeletonLine } from "@/design/skeleton";
 
 /**
@@ -14,8 +15,12 @@ export function StudySkeleton() {
           <span className="h-progress flex-1 rounded-full bg-hairline" />
           <span className="hidden min-h-button w-24 rounded-button border border-outline bg-surface lg:block" />
         </div>
-        <span className="mx-auto mt-6 min-h-52 w-full max-w-study rounded-previous border-[1.5px] border-dashed border-outline lg:min-h-75" />
-        <div className="mx-auto mt-1 flex min-h-52 w-full max-w-study items-center justify-center rounded-card bg-surface p-6 shadow-raised lg:min-h-75">
+        <span
+          className={`mx-auto mt-6 w-full max-w-study rounded-previous border-[1.5px] border-dashed border-outline ${cardHeight}`}
+        />
+        <div
+          className={`mx-auto mt-1 flex w-full max-w-study items-center justify-center rounded-card bg-surface p-6 shadow-raised ${cardHeight}`}
+        >
           <SkeletonLine text="text-front" width="w-1/3" />
         </div>
         <div className="mx-auto -mt-3 flex w-full max-w-study gap-3">
