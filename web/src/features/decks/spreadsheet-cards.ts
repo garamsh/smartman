@@ -11,18 +11,44 @@ export type RowCard = CardDraft & { row: number };
 /** The cards a sheet's rows make, and the rows that make none: skipped as empty, or refused as too long. */
 export type SheetCards = { cards: RowCard[]; skipped: number[]; tooLong: number[] };
 
+/** Column names that mark a first row as a header, compared trimmed, NFKC-normalized and case-folded. */
+const headerNames = new Set([
+  "단어",
+  "뜻",
+  "의미",
+  "앞면",
+  "뒷면",
+  "라벨",
+  "예문",
+  "품사",
+  "front",
+  "back",
+  "word",
+  "term",
+  "meaning",
+  "definition",
+  "example",
+  "label",
+]);
+
 /**
- * Whether the first row reads as a header by default: the sheet has another row, and every
- * non-empty cell of the first is text that no row below repeats in its column.
+ * Whether the first row reads as a header by default: the sheet has another row, and either a
+ * first-row cell is a common column name, or a first-row cell of text heads a column whose
+ * non-empty cells below are all numbers, dates or other values that are not text. Otherwise
+ * the first row is a card.
  */
 export function headerByDefault(rows: SheetRow[]): boolean {
   const [first, ...below] = rows;
   if (!first || below.length === 0) return false;
-  return first.cells.every(
-    (cell, column) =>
-      cell.text === "" ||
-      (cell.isText && below.every((row) => row.cells[column]?.text !== cell.text)),
-  );
+  return first.cells.some((cell, column) => {
+    if (cell.text === "" || !cell.isText) return false;
+    if (headerNames.has(cell.text.normalize("NFKC").trim().toLowerCase())) return true;
+    const values = below.flatMap((row) => {
+      const under = row.cells[column];
+      return under && under.text !== "" ? [under] : [];
+    });
+    return values.length > 0 && values.every((under) => !under.isText);
+  });
 }
 
 /**

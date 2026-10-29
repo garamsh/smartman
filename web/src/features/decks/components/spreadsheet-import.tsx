@@ -207,11 +207,9 @@ export function SpreadsheetImport({
       <div className="flex min-w-0 flex-col gap-4">
         {!opened && (
           <>
-            <ul className="flex flex-col gap-1 text-caption break-keep text-muted">
-              <li>엑셀(.xlsx)이나 CSV 파일의 한 행이 카드 한 장이 돼요</li>
-              <li>파일은 5MB, 1,000행까지 읽고, 이 브라우저에서만 읽어요</li>
-              <li>CSV는 UTF-8로 저장해 주세요</li>
-            </ul>
+            <p className="text-secondary break-keep text-muted">
+              엑셀(.xlsx)이나 CSV 파일의 한 행이 카드 한 장이 돼요. 파일은 5MB, 1,000행까지 읽어요.
+            </p>
             <label
               className={`pressable flex min-h-cta cursor-pointer items-center justify-center rounded-button bg-ink px-4 text-label text-on-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink ${opening ? "opacity-50" : ""}`}
             >

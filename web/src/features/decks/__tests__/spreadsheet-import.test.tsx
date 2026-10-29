@@ -38,7 +38,8 @@ async function openFile(file: File) {
   await render(() => <AuthoringButton deck={deck} />, {});
   await userEvent.click(screen.getByRole("button", { name: "카드 추가" }));
   await userEvent.click(screen.getByRole("button", { name: "파일에서 고르기" }));
-  expect(screen.getByText("파일은 5MB, 1,000행까지 읽고, 이 브라우저에서만 읽어요")).toBeVisible();
+  // The body's second sentence names both limits; the paragraph holds more, so this is presence.
+  expect(screen.getByText(/파일은 5MB, 1,000행까지 읽어요\./u)).toBeVisible();
   fireEvent.change(screen.getByLabelText("파일 고르기", { selector: "input" }), {
     target: { files: [file] },
   });

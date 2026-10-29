@@ -18,10 +18,20 @@ test.skip(
 // Where to save screenshots of the flow in both themes; none are taken unless it names a directory.
 async function capture(page: Page, name: string) {
   const directory = process.env.E2E_SCREENSHOTS;
+  // A theme change animates colours; the captures show the settled ones.
+  await page.addStyleTag({
+    content: "*, *::before, *::after { transition: none !important; }",
+  });
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: width < 1024 ? 844 : 900 });
     for (const colorScheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme });
+      // The brand's marks swap images by theme; the capture waits for the shown ones to load.
+      await page.waitForFunction(() =>
+        Array.from(document.images).every(
+          (image) => image.offsetParent === null || (image.complete && image.naturalWidth > 0),
+        ),
+      );
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);

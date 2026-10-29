@@ -179,19 +179,42 @@ describe("a cell's shown text", () => {
 });
 
 describe("the header toggle's default", () => {
-  it("is on for a first row of text that no row below repeats in its column", async () => {
+  it("is on for a first row holding a common column name, trimmed and case-folded", async () => {
     expect(headerByDefault(await csv("단어,뜻\napple,사과\nbanana,바나나"))).toBe(true);
-    expect(
-      headerByDefault(
-        await sheet([
-          ["단어", "번호"],
-          ["apple", 1],
-        ]),
-      ),
-    ).toBe(true);
+    expect(headerByDefault(await csv(" Word ,설명\napple,사과"))).toBe(true);
+    expect(headerByDefault(await csv("메모,DEFINITION\napple,사과"))).toBe(true);
   });
 
-  it("is off for a first row holding a number, one repeated below, or a sheet of one row, against the text header above", async () => {
+  it("is on for text over a column of numbers or dates, against the same row over text", async () => {
+    const over = (below: TestCell) =>
+      sheet([
+        ["이름", "날짜"],
+        ["kim", below],
+        ["lee", null],
+      ]);
+    expect(headerByDefault(await over({ number: 46324, format: 14 }))).toBe(true);
+    expect(headerByDefault(await over(90))).toBe(true);
+    expect(headerByDefault(await over("어제"))).toBe(false);
+    expect(headerByDefault(await csv("이름,점수\nkim,90\nlee,85"))).toBe(true);
+  });
+
+  it("is off for a headerless word list, whose first word becomes a card", async () => {
+    const rows = await csv("apple,사과\nbanana,바나나");
+    const header = headerByDefault(rows);
+    expect(header).toBe(false);
+    const result = cardsOfRows(
+      rows,
+      { front: 0, back: 1, label: null, example: null },
+      header,
+      ids,
+    );
+    expect(result.cards.map((card) => [card.row, parseContent(card.front)])).toEqual([
+      [1, [{ kind: "text", text: "apple" }]],
+      [2, [{ kind: "text", text: "banana" }]],
+    ]);
+  });
+
+  it("is off for a number over numbers and for a sheet of one row, against a named header", async () => {
     expect(
       headerByDefault(
         await sheet([
@@ -201,7 +224,6 @@ describe("the header toggle's default", () => {
       ),
     ).toBe(false);
     expect(headerByDefault(await csv("2026,연도\n2027,연도"))).toBe(false);
-    expect(headerByDefault(await csv("단어,뜻\n단어,낱말"))).toBe(false);
     expect(headerByDefault(await csv("단어,뜻"))).toBe(false);
     expect(headerByDefault(await csv("단어,뜻\napple,사과"))).toBe(true);
   });
