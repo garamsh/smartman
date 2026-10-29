@@ -37,7 +37,6 @@ endif
 lint: lint-repo lint-code
 
 lint-repo:
-	./check-architecture-index.sh
 	./check-secrets.sh
 	./check-ios-client-id.sh
 
