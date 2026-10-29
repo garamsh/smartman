@@ -7,6 +7,7 @@ import '../../design/app_section_label.dart';
 import '../../design/theme.dart';
 import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
+import 'card_text.dart';
 import 'content.dart';
 import 'content_view.dart';
 import 'whole_card_view.dart';
@@ -154,9 +155,10 @@ class _CardPreviewScreenState extends State<CardPreviewScreen>
 }
 
 /// One side of the card as study's current card draws it: on the surface
-/// with the study card's radius and shadow, its blocks centred, fitted to
-/// its width in the front's type, a back in the back's, scrolling inside
-/// where they are taller than the card.
+/// with the study card's radius and shadow, its blocks centred, in the
+/// largest of the card's three sizes at which they fit, from the front's
+/// type or a back's, scrolling inside where they are taller than the card at
+/// the last (ADR 0123).
 class _Face extends StatelessWidget {
   const _Face({
     required this.face,
@@ -184,44 +186,26 @@ class _Face extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.card),
         child: SizedBox.expand(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth - 2 * AppSpace.s16;
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpace.s16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: switch ((face, turned)) {
-                      (final face?, _) => WholeCardView(
-                        face,
-                        revealed: turned,
-                        style: AppType.front,
-                        minFontSize: AppType.frontFloor,
-                        width: width,
-                      ),
-                      (null, false) => ContentView(
-                        front,
-                        style: AppType.front,
-                        fit: (
-                          minFontSize: AppType.frontFloor,
-                          width: width,
-                          height: null,
-                        ),
-                      ),
-                      (null, true) => ContentView(
-                        back,
-                        style: AppType.back.copyWith(color: colors.ink),
-                        fit: (
-                          minFontSize: AppType.backFloor,
-                          width: width,
-                          height: null,
-                        ),
-                      ),
-                    },
-                  ),
-                ),
-              );
+          child: CardScroll(
+            padding: AppSpace.s16,
+            builder: (context, width, height) => switch ((face, turned)) {
+              (final face?, _) => SteppedWholeCardView(
+                face,
+                revealed: turned,
+                style: AppType.front,
+                width: width,
+                height: height,
+              ),
+              (null, false) => ContentView(
+                front,
+                style: AppType.front,
+                fit: StepFit(width: width, height: height),
+              ),
+              (null, true) => ContentView(
+                back,
+                style: AppType.back.copyWith(color: colors.ink),
+                fit: StepFit(width: width, height: height),
+              ),
             },
           ),
         ),

@@ -2,12 +2,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../design/theme.dart';
+
 /// A card side's text, centred, in [style] scaled down as far as
 /// [minFontSize] until its widest word fits [width], so lines break only
 /// between words. Only a word wider than [width] at [minFontSize] breaks
 /// inside itself. With [maxLines] the text is cut to that many lines with an
 /// ellipsis. With [span], that is drawn in place of [text] at the size [text]
-/// fits: a whole card's sentence with its blanks.
+/// fits: a whole card's sentence with its blanks. A screen reader reads
+/// [text].
 ///
 /// [width] is the width the text is laid out in; the caller passes it, since
 /// a card measures its halves' intrinsic heights, which a layout builder here
@@ -21,6 +24,7 @@ class CardText extends StatelessWidget {
     required this.width,
     this.maxLines,
     this.span,
+    this.textAlign = TextAlign.center,
   });
 
   final String text;
@@ -29,6 +33,7 @@ class CardText extends StatelessWidget {
   final double minFontSize;
   final double width;
   final int? maxLines;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -47,16 +52,17 @@ class CardText extends StatelessWidget {
         ? Text(
             text,
             style: fitted,
-            textAlign: TextAlign.center,
+            textAlign: textAlign,
             maxLines: maxLines,
             overflow: overflow,
           )
         : Text.rich(
             span,
             style: fitted,
-            textAlign: TextAlign.center,
+            textAlign: textAlign,
             maxLines: maxLines,
             overflow: overflow,
+            semanticsLabel: text,
           );
   }
 }
@@ -148,3 +154,136 @@ double _widestWord(
   }
   return widest;
 }
+
+/// The three sizes a card side steps down through, largest first, in
+/// [style]'s colour (ADR 0123): a front from [AppType.front], a back from
+/// [AppType.back], each down to [AppType.cardBody].
+List<TextStyle> cardSteps(TextStyle style) => [
+  if ((style.fontSize ?? 0) >= AppType.front.fontSize!) AppType.front,
+  AppType.back,
+  AppType.cardBody,
+].map((step) => step.copyWith(color: style.color)).toList();
+
+/// The largest of [steps] at which [span] fits a box [width] wide and
+/// [height] high, its widest word inside [width]; the last when none does,
+/// past which the side scrolls (ADR 0123). [plain] is the span's text.
+TextStyle steppedStyle(
+  InlineSpan span,
+  String plain, {
+  required List<TextStyle> steps,
+  required double width,
+  required double height,
+  required TextScaler textScaler,
+  required TextDirection textDirection,
+}) {
+  final words = plain.split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+  for (final step in steps.take(steps.length - 1)) {
+    if (_widestWord(words, step, textScaler, textDirection) > width) continue;
+    final painter = TextPainter(
+      text: TextSpan(style: step, children: [span]),
+      textDirection: textDirection,
+      textScaler: textScaler,
+    )..layout(maxWidth: width);
+    final fits = painter.height <= height;
+    painter.dispose();
+    if (fits) return step;
+  }
+  return steps.last;
+}
+
+/// How a side's text in [style] is aligned: start-aligned at
+/// [AppType.cardBody], read as a paragraph, and centred above it (ADR 0123).
+TextAlign cardAlign(TextStyle style) =>
+    style.fontSize == AppType.cardBody.fontSize
+    ? TextAlign.start
+    : TextAlign.center;
+
+/// A card face's content, centred in the face, given the width and height
+/// inside [padding], and scrolling inside the face from the top where it is
+/// taller; while more is below, the face's bottom edge fades into its
+/// `surface` (ADR 0123).
+class CardScroll extends StatefulWidget {
+  const CardScroll({super.key, required this.padding, required this.builder});
+
+  final double padding;
+  final Widget Function(BuildContext context, double width, double height)
+  builder;
+
+  @override
+  State<CardScroll> createState() => _CardScrollState();
+}
+
+class _CardScrollState extends State<CardScroll> {
+  var _more = false;
+
+  bool _measure(ScrollMetricsNotification notification) {
+    _update(notification.metrics);
+    return false;
+  }
+
+  bool _scrolled(ScrollUpdateNotification notification) {
+    _update(notification.metrics);
+    return false;
+  }
+
+  void _update(ScrollMetrics metrics) {
+    final more = metrics.extentAfter > 0;
+    if (more != _more) setState(() => _more = more);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = widget.padding;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scroll = NotificationListener<ScrollUpdateNotification>(
+          onNotification: _scrolled,
+          child: NotificationListener<ScrollMetricsNotification>(
+            onNotification: _measure,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(padding),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: widget.builder(
+                    context,
+                    constraints.maxWidth - 2 * padding,
+                    constraints.maxHeight - 2 * padding,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final surface = AppColors.of(context).surface;
+        return Stack(
+          children: [
+            scroll,
+            if (_more)
+              Positioned(
+                key: const Key('cardScrollFade'),
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: _fade,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [surface.withValues(alpha: 0), surface],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// How tall the fade at a scrolling face's bottom edge is.
+const _fade = AppSpace.s32;
