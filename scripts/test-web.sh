@@ -7,24 +7,25 @@
 # server.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. scripts/skip.sh
 
 spec=e2e/study.spec.ts
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "skipped the web e2e spec web/$spec: it needs Docker, and this host has no docker command"
+  skip "the web e2e spec web/$spec: it needs Docker, and this host has no docker command"
   exit 0
 fi
 if ! docker info >/dev/null 2>&1; then
-  echo "skipped the web e2e spec web/$spec: it needs Docker, and docker info reached no daemon on this host"
+  skip "the web e2e spec web/$spec: it needs Docker, and docker info reached no daemon on this host"
   exit 0
 fi
 if ! command -v node >/dev/null 2>&1; then
-  echo "skipped the web e2e spec web/$spec: this host has no node command"
+  skip "the web e2e spec web/$spec: this host has no node command"
   exit 0
 fi
 
 stack="the web e2e stack"
-. supabase/test-stack.sh
+. scripts/test-stack.sh
 reserve db_port 54400 54499 || exit 1
 reserve api_port 54500 54599 || exit 1
 

@@ -37,14 +37,14 @@ endif
 lint: lint-repo lint-code
 
 lint-repo:
-	./check-secrets.sh
-	./check-ios-client-id.sh
+	scripts/check-secrets.sh
+	scripts/check-ios-client-id.sh
 
 lint-code:
-	./check-generated.sh
-	./check-migration-order.sh
-	./deno.sh lint
-	./web.sh lint
+	scripts/check-generated.sh
+	scripts/check-migration-order.sh
+	scripts/deno.sh lint
+	scripts/web.sh lint
 	cd app && $(DART_FILES); \
 	flutter analyze $$files && \
 	echo "analyzed $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -57,8 +57,8 @@ lint-code:
 	done
 
 format:
-	./deno.sh format
-	./web.sh format
+	scripts/deno.sh format
+	scripts/web.sh format
 	cd app && $(DART_FILES); \
 	dart format --output=none --set-exit-if-changed $$files && \
 	echo "format checked $$(echo "$$files" | wc -l | tr -d ' ') Dart files in app/, selected by: $(DART_SCOPE)"
@@ -77,30 +77,31 @@ bridge:
 	echo "built the bridge library into app/rust/target/release/, where flutter_rust_bridge loads it under flutter test"
 
 test-app: bridge
-	./check-migration-order.test.sh
+	scripts/check-migration-order.test.sh
+	scripts/skip.test.sh
 	cd app && flutter test --reporter expanded $(APP_CONFIG) && \
 	echo "ran the tests flutter test selects by default: app/test/**/*_test.dart"
 	cd engine && cargo test --locked && \
 	echo "ran the tests cargo test selects by default in engine/: unit tests in src/, engine/tests/*.rs, doc tests"
-	./wasm-bindgen.sh test
+	scripts/wasm-bindgen.sh test
 
 test-db:
-	./supabase/test-db.sh
-	./supabase/migration-preview.test.sh
-	./deno.sh test
+	scripts/test-db.sh
+	scripts/migration-preview.test.sh
+	scripts/deno.sh test
 
 # Writes $(PREVIEW).json and $(PREVIEW).md: what the migrations this branch adds do to main's
 # schema holding supabase/preview-seed.sql (server.md). Not part of make ci: it reports, it checks nothing.
 PREVIEW := $(or $(TMPDIR),/tmp)/migration-preview
 preview-migrations:
-	./supabase/migration-preview.sh $(PREVIEW)
+	scripts/migration-preview.sh $(PREVIEW)
 
 test-sync: bridge
-	./supabase/test-sync.sh
+	scripts/test-sync.sh
 
 test-web:
-	./web.sh test
-	./supabase/test-web.sh
+	scripts/web.sh test
+	scripts/test-web.sh
 
 # build is the sum of its parts; CI runs build-apk and build-ios build-engine-web as parallel jobs.
 ifeq ($(BUILD),all)
@@ -135,6 +136,6 @@ build-engine-web:
 	cd engine-wasm && cargo build --locked --release && \
 	RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps && \
 	echo "built the crate smartman_engine_wasm for wasm32-unknown-unknown and its rustdoc from engine-wasm/Cargo.toml"
-	./web.sh build
+	scripts/web.sh build
 
 ci: lint format test build
