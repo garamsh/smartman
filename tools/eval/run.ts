@@ -29,6 +29,7 @@ import {
   extractCards,
   type Extraction,
   MAX_OUTPUT_TOKENS,
+  MODEL_TIMEOUT_MS,
   OPENROUTER_URL,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
 import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
@@ -284,6 +285,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     apiKey,
     fetch: io.fetch,
     now: io.now,
+    timeoutMs: MODEL_TIMEOUT_MS,
     print: io.print,
     keep: (path, reply) =>
       io.writeText(
@@ -423,6 +425,8 @@ type RunDeps = {
   prompt: EvalPrompt;
   fetch: typeof fetch;
   now: () => number;
+  /** How long one call may take before it is a model error, the function's `MODEL_TIMEOUT_MS`. */
+  timeoutMs: number;
   print: (line: string) => void;
   /** Stores one image's reply at [path], relative to the run's replies folder. */
   keep: (path: string, reply: Reply) => Promise<void>;
@@ -514,7 +518,9 @@ export async function runEval(
         dropped,
         calls: extraction.attempts.map((attempt, i) => ({
           model: attempt.model,
-          ...(calls[i] ?? { error: "no answer was recorded" }),
+          ...(attempt.timedOut
+            ? { error: `timed out after ${deps.timeoutMs} ms` }
+            : calls[i] ?? { error: "no answer was recorded" }),
         })),
       });
       results.push({
@@ -529,8 +535,12 @@ export async function runEval(
       });
       deps.print(
         `${candidate.label} ${sample.name}: ${extraction.kind}${
-          dropped.length === 0 ? "" : `, ${dropped.length} cards dropped`
-        }, ${usd(costUsd)}`,
+          extraction.attempts.some((attempt) => attempt.timedOut)
+            ? `, timed out after ${deps.timeoutMs} ms`
+            : ""
+        }${dropped.length === 0 ? "" : `, ${dropped.length} cards dropped`}, ${
+          usd(costUsd)
+        }`,
       );
     }
     rows.push(summarize(candidate.label, results));

@@ -18,8 +18,11 @@ const ENV: Record<string, string> = {
   OPENROUTER_API_KEY: "openrouter-key",
 };
 
-/** A model reply: the message text OpenRouter returns, or an HTTP failure. */
-type Reply = { content: string } | { status: number };
+/** A model reply: the message text OpenRouter returns, an HTTP failure, or none ever. */
+type Reply = { content: string } | { status: number } | { hang: true };
+
+/** The model timeout the handler is given in these tests. */
+const TIMEOUT_MS = 20;
 
 const cardsReply = (cards: unknown): Reply => ({
   content: JSON.stringify({ cards }),
@@ -72,6 +75,8 @@ function fakeFetch(fake: Fake): typeof fetch {
     if (url === OPENROUTER_URL) {
       const reply = fake.replies.shift();
       if (reply === undefined) throw new Error("no scripted model reply left");
+      // A call that never answers, and ignores its abort signal.
+      if ("hang" in reply) return new Promise<Response>(() => {});
       if ("status" in reply) {
         return Promise.resolve(
           Response.json({ error: { code: reply.status } }, {
@@ -180,6 +185,7 @@ async function run(
     fetch: fakeFetch(fake),
     log: (entry) => logs.push(entry),
     now: () => 0,
+    modelTimeoutMs: TIMEOUT_MS,
   });
   const headers = new Headers({ "Content-Type": "application/json" });
   const authorization = options.authorization === undefined
@@ -561,6 +567,26 @@ Deno.test("invalid output answers 502 after one call, with no retry", async () =
   }
   const control = await run({ replies: [cardsReply(twoCards)] });
   assert.equal(control.status, 200, "control: a valid first reply");
+});
+
+Deno.test("a model call that never answers is abandoned at its timeout and answered 502, with no retry", async () => {
+  const hung = await run({ replies: [{ hang: true }, cardsReply(twoCards)] });
+  assert.equal(hung.status, 502);
+  assert.deepEqual(hung.body, { error: "model_error" });
+  assert.equal(
+    hung.modelCalls.length,
+    1,
+    "the valid second reply is never asked for",
+  );
+  assert.equal(hung.logs[0].outcome, "model_error");
+  assert.equal(
+    hung.logs[0].prompt_tokens,
+    null,
+    "a call abandoned reports no usage",
+  );
+  // Control: the same request with an answer is served.
+  const answered = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(answered.status, 200);
 });
 
 Deno.test("the call uses the model of the caller's plan", async () => {

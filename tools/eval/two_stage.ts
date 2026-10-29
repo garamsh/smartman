@@ -12,6 +12,7 @@ import {
   type Attempt,
   extractCards,
   MAX_OUTPUT_TOKENS,
+  MODEL_TIMEOUT_MS,
   OPENROUTER_URL,
   type Usage,
 } from "../../supabase/functions/extract-cards/openrouter.ts";
@@ -278,6 +279,7 @@ async function send(
         model: model.id,
         latencyMs: deps.now() - started,
         usage: null,
+        timedOut: false,
       },
       reply: null,
       kept: { error: String(error) },
@@ -297,7 +299,12 @@ async function send(
   const usd = callUsd(model.pricing, usage);
   deps.wallet.spend(usd);
   return {
-    attempt: { model: model.id, latencyMs: deps.now() - started, usage },
+    attempt: {
+      model: model.id,
+      latencyMs: deps.now() - started,
+      usage,
+      timedOut: false,
+    },
     reply: response.ok ? readReply(body) ?? "" : null,
     kept: { status: response.status, body },
     usd,
@@ -516,7 +523,11 @@ export async function runSingle(
     sample.languages,
     configuration.model.id,
     deps.singlePrompt,
-    { ...deps, fetch: recording(deps.fetch, calls) },
+    {
+      ...deps,
+      fetch: recording(deps.fetch, calls),
+      timeoutMs: MODEL_TIMEOUT_MS,
+    },
   );
   const [attempt] = extraction.attempts;
   const usd = callUsd(configuration.model.pricing, attempt.usage);

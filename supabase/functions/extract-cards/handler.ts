@@ -54,6 +54,8 @@ export type HandlerDeps = {
   readonly log: (entry: LogEntry) => void;
   /** Milliseconds from a monotonic clock. */
   readonly now: () => number;
+  /** How long the model call may take before it is a model error. */
+  readonly modelTimeoutMs: number;
 };
 
 export function status(outcome: Outcome): number {
@@ -173,6 +175,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
       apiKey: config.openRouterApiKey,
       fetch: deps.fetch,
       now: deps.now,
+      timeoutMs: deps.modelTimeoutMs,
     },
   );
   switch (extraction.kind) {

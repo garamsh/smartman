@@ -130,6 +130,8 @@ type World = {
   notesReply?: unknown[];
   /** The cards the model writes for a vocabulary image, when a test sets its own. */
   vocabularyReply?: unknown[];
+  /** How many of the first chat calls never answer. */
+  hangs?: number;
   /** Each chat call's system prompt, in call order. */
   systems?: string[];
 };
@@ -182,6 +184,9 @@ function io(
         const body = JSON.parse(String(init?.body));
         w.chatCalls.push(body.model);
         w.systems?.push(body.messages[0].content);
+        if (w.chatCalls.length <= (w.hangs ?? 0)) {
+          return new Promise<Response>(() => {});
+        }
         if (
           body.model === "vendor/broken" ||
           (body.model === "vendor/flaky" &&
@@ -717,6 +722,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
       prompt: { label: "v9", text: SYSTEM_PROMPT },
       fetch: io(w).fetch,
       now: () => 0,
+      timeoutMs: 1000,
       print: () => {},
       keep: () => Promise.resolve(),
     },
@@ -741,6 +747,7 @@ Deno.test("a run stops before a call whose worst case could exceed the remaining
       prompt: { label: "v9", text: SYSTEM_PROMPT },
       fetch: io(world()).fetch,
       now: () => 0,
+      timeoutMs: 1000,
       print: () => {},
       keep: () => Promise.resolve(),
     },
@@ -1465,5 +1472,55 @@ Deno.test("a reply's cards that break a rule are dropped, kept by rule in its re
   assert.match(
     valid.files.get(PATHS.report) ?? "",
     /\| Cheap \| 2 \| 0 \| 0 \| 0 \| — \|/,
+  );
+});
+
+Deno.test("a call that never answers is a model error at the timeout, kept and reported as one, and the run goes on", async () => {
+  const w = world();
+  w.hangs = 1;
+  const cheap = newest("^vendor/cheap$", parseModels(MODEL_LIST));
+  assert.ok(cheap !== null);
+  const samples = await loadSamples(io(w));
+  const kept = new Map<string, unknown>();
+  const printed: string[] = [];
+  const run = await runEval(
+    [{ label: "Cheap", primary: cheap }],
+    samples,
+    { budgetUsd: 10, runs: [] },
+    {
+      apiKey: "key",
+      prompt: { label: "v10", text: SYSTEM_PROMPT },
+      fetch: io(w).fetch,
+      now: () => 0,
+      timeoutMs: 20,
+      print: (line) => printed.push(line),
+      keep: (path, reply) => {
+        kept.set(path, reply);
+        return Promise.resolve();
+      },
+    },
+  );
+  assert.equal(run.stopped, false);
+  assert.equal(w.chatCalls.length, 2, "the second image still ran");
+  assert.deepEqual(run.outcomes[0].modelErrors, 1);
+  assert.deepEqual(
+    run.halted,
+    [],
+    "one model error does not stop the candidate",
+  );
+  assert.ok(
+    printed.includes("Cheap 01-a: model_error, timed out after 20 ms, $0.0000"),
+    printed.join("\n"),
+  );
+  const first = kept.get("cheap/01-a.json") as {
+    outcome: string;
+    calls: { error?: string }[];
+  };
+  assert.equal(first.outcome, "model_error");
+  assert.deepEqual(first.calls[0].error, "timed out after 20 ms");
+  // Control: the image after it was answered.
+  assert.equal(
+    (kept.get("cheap/02-b.json") as { outcome: string }).outcome,
+    "cards",
   );
 });
