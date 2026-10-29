@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -6,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/app_text_field.dart';
+import 'package:smartman/design/keyboard_dismissal.dart';
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/photo_import/photo_import.dart';
@@ -67,7 +69,9 @@ class DeckScreens {
   /// are new. [unreadable] makes the deck's cards unreadable to the count, and
   /// [stalled] holds the count unread; [photoImport] enables the photo
   /// buttons. The app's text is in [locale]. [overrides] are applied last,
-  /// such as a media store.
+  /// such as a media store. [asAppRoot] wraps every route in
+  /// `KeyboardDismissal`, as the app root does, and draws the theme for the
+  /// test's target platform, which the shared themes fix at their first use.
   static Future<DeckScreens> open(
     WidgetTester tester, {
     Map<String, String> cards = const {},
@@ -81,6 +85,7 @@ class DeckScreens {
     bool minutesAsked = true,
     Locale locale = const Locale('en'),
     List<Override> overrides = const [],
+    bool asAppRoot = false,
   }) async {
     // A phone's screen, so every card of a short deck is on it under the
     // pinned row.
@@ -150,9 +155,16 @@ class DeckScreens {
         ],
         child: MaterialApp(
           navigatorKey: screens.navigator,
-          theme: lightTheme,
-          darkTheme: darkTheme,
+          theme: asAppRoot
+              ? lightTheme.copyWith(platform: defaultTargetPlatform)
+              : lightTheme,
+          darkTheme: asAppRoot
+              ? darkTheme.copyWith(platform: defaultTargetPlatform)
+              : darkTheme,
           themeMode: themeMode,
+          builder: asAppRoot
+              ? (context, child) => KeyboardDismissal(child: child)
+              : null,
           locale: locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
