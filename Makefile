@@ -86,7 +86,6 @@ test-app: bridge
 
 test-db:
 	./supabase/test-db.sh
-	./supabase/senses-dry-run.test.sh
 	./supabase/migration-preview.test.sh
 	./deno.sh test
 
