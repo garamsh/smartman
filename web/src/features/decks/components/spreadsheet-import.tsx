@@ -237,10 +237,14 @@ export function SpreadsheetImport({
                 {opened.book.sheets.length > 1 && (
                   <Choice
                     name="시트"
-                    value={sheet}
+                    value={String(sheet)}
                     disabled={locked}
-                    options={opened.book.sheets.map((sheetName, index) => [index, sheetName])}
-                    change={(index) => {
+                    options={opened.book.sheets.map((sheetName, index) => [
+                      String(index),
+                      sheetName,
+                    ])}
+                    change={(value) => {
+                      const index = Number(value);
                       setSheet(index);
                       show(opened.book.read(index));
                     }}
@@ -250,16 +254,17 @@ export function SpreadsheetImport({
                   <Choice
                     key={role}
                     name={roleName}
-                    value={columns[role] ?? -1}
+                    value={String(columns[role] ?? -1)}
                     disabled={locked || width === 0}
                     options={[
-                      ...(optional ? [[-1, "없음"] as [number, string]] : []),
-                      ...Array.from({ length: width }, (_, column): [number, string] => [
-                        column,
+                      ...(optional ? [["-1", "없음"] as [string, string]] : []),
+                      ...Array.from({ length: width }, (_, column): [string, string] => [
+                        String(column),
                         columnName(column),
                       ]),
                     ]}
-                    change={(column) => {
+                    change={(value) => {
+                      const column = Number(value);
                       setColumns({ ...columns, [role]: column === -1 ? null : column });
                       reset();
                     }}
@@ -356,43 +361,37 @@ export function SpreadsheetImport({
                 </section>
               )
             )}
-            {cards.length > 0 && (
-              <>
-                {!deck && (
-                  <label className="text-section text-muted">
-                    추가할 덱
-                    <select
-                      value={target}
-                      disabled={created || pending}
-                      onChange={(event) => {
-                        setTarget(event.target.value);
-                      }}
-                      className="mt-2 min-h-field w-full rounded-field bg-surface px-3 text-body text-ink"
-                    >
-                      <option value="new">새 덱 만들기</option>
-                      {decks.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {target === "new" && (
-                  <label className="text-section text-muted">
-                    이름
-                    <input
-                      value={name}
-                      disabled={created || pending}
-                      maxLength={500}
-                      onChange={(event) => {
-                        setName(event.target.value);
-                      }}
-                      className="mt-2 min-h-field w-full rounded-field border border-outline bg-surface px-3 text-body text-ink"
-                    />
-                  </label>
-                )}
-              </>
+            {cards.length > 0 && !deck && (
+              <section className="flex min-w-0 flex-col gap-2">
+                <h3 className="text-section text-muted">추가할 덱</h3>
+                <div className="divide-y divide-hairline overflow-hidden rounded-group bg-surface">
+                  <Choice
+                    name="덱"
+                    value={target}
+                    disabled={created || pending}
+                    options={[
+                      ["new", "새 덱 만들기"],
+                      ...decks.map((item): [string, string] => [item.id, item.name]),
+                    ]}
+                    change={setTarget}
+                  />
+                  {target === "new" && (
+                    <label className="flex min-h-button min-w-0 items-center justify-between gap-3 px-4">
+                      <span className="shrink-0 text-body">이름</span>
+                      <input
+                        value={name}
+                        disabled={created || pending}
+                        maxLength={500}
+                        placeholder="새 덱 이름"
+                        onChange={(event) => {
+                          setName(event.target.value);
+                        }}
+                        className="min-h-tap-target min-w-0 flex-1 rounded-chip bg-transparent px-2 text-right text-body text-ink placeholder:text-muted focus:outline-[1.5px] focus:outline-ink"
+                      />
+                    </label>
+                  )}
+                </div>
+              </section>
             )}
           </>
         )}
@@ -484,10 +483,10 @@ function Choice({
   change,
 }: {
   name: string;
-  value: number;
-  options: [number, string][];
+  value: string;
+  options: [string, string][];
   disabled: boolean;
-  change: (value: number) => void;
+  change: (value: string) => void;
 }) {
   return (
     <label className="flex min-h-button min-w-0 items-center justify-between gap-3 px-4">
@@ -496,7 +495,7 @@ function Choice({
         value={value}
         disabled={disabled}
         onChange={(event) => {
-          change(Number(event.target.value));
+          change(event.target.value);
         }}
         className="min-h-tap-target min-w-0 max-w-[60%] truncate rounded-chip bg-transparent text-right text-body text-ink-2 focus-visible:outline-2 focus-visible:outline-ink disabled:opacity-50"
       >

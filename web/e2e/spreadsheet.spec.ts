@@ -103,6 +103,14 @@ test("adds a deck's cards from a small .xlsx after review, and the server holds 
   ).toBeVisible();
   await page.getByRole("textbox", { name: "이름", exact: true }).fill("엑셀 단어");
   await capture(page, "review");
+  // The sheet's end: the deck it adds to and its one primary action.
+  await page
+    .getByRole("dialog")
+    .locator(".overflow-y-auto")
+    .evaluate((scroller) => {
+      scroller.scrollTop = scroller.scrollHeight;
+    });
+  await capture(page, "save");
   await page.getByRole("button", { name: "3장 추가", exact: true }).click();
   await expect(page.getByRole("heading", { name: "엑셀 단어", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "apple, 뒷면 가려짐", exact: true })).toBeVisible();
