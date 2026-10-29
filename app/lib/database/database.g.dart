@@ -4288,15 +4288,20 @@ class $$DecksTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (cardsRefs)
-                    await $_getPrefetchedData<DeckRow, $DecksTable, CardRow>(
+                    await $_getPrefetchedDataByColumns<
+                      DeckRow,
+                      $DecksTable,
+                      CardRow,
+                      $CardsTable
+                    >(
                       currentTable: table,
                       referencedTable: $$DecksTableReferences._cardsRefsTable(
                         db,
                       ),
                       managerFromTypedResult: (p0) =>
                           $$DecksTableReferences(db, table, p0).cardsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.deckId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'deck_id',
                       typedResults: items,
                     ),
                 ];
@@ -4917,27 +4922,27 @@ class $$CardsTableTableManager
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (reviewsRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           CardRow,
                           $CardsTable,
-                          ReviewRow
+                          ReviewRow,
+                          $ReviewsTable
                         >(
                           currentTable: table,
                           referencedTable: $$CardsTableReferences
                               ._reviewsRefsTable(db),
                           managerFromTypedResult: (p0) =>
                               $$CardsTableReferences(db, table, p0).reviewsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.cardId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'card_id',
                           typedResults: items,
                         ),
                       if (cardStatesRefs)
-                        await $_getPrefetchedData<
+                        await $_getPrefetchedDataByColumns<
                           CardRow,
                           $CardsTable,
-                          CardStateRow
+                          CardStateRow,
+                          $CardStatesTable
                         >(
                           currentTable: table,
                           referencedTable: $$CardsTableReferences
@@ -4948,10 +4953,8 @@ class $$CardsTableTableManager
                                 table,
                                 p0,
                               ).cardStatesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.cardId == item.id,
-                              ),
+                          currentColumn: 'id',
+                          referencedColumn: 'card_id',
                           typedResults: items,
                         ),
                     ];
