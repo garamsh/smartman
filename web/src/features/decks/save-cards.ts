@@ -10,9 +10,12 @@ import { cardKey, parseDraft } from "./authoring";
 import { parseContent } from "./card-content";
 import { parseCardId, parseDeckId } from "./library";
 
-/** A duplicate warning stores nothing, and a failed save leaves the caller's draft intact. */
+/**
+ * A duplicate warning stores nothing and names the stored or earlier card it repeats and the
+ * index of the input card that repeats it; a failed save leaves the caller's draft intact.
+ */
 export type SaveCardsResult =
-  { saved: true } | { saved: false; message: string; duplicate?: string };
+  { saved: true } | { saved: false; message: string; duplicate?: string; at?: number };
 /** Inserts explicit reviewed cards under the current owner, using stable ids for safe retries. */
 export async function saveCards(
   deckId: string,
@@ -69,7 +72,7 @@ export async function saveCards(
     }),
   );
   const seenIds = new Set<string>();
-  for (const card of cards) {
+  for (const [at, card] of cards.entries()) {
     if (!card || seenIds.has(card.id)) return malformed;
     seenIds.add(card.id);
     const front = parseContent(card.front);
@@ -77,7 +80,7 @@ export async function saveCards(
     const key = cardKey(front);
     const duplicate = keys.get(key);
     if (!allowDuplicate && duplicate && duplicate !== card.id)
-      return { saved: false, message: "이 덱에 이미 있는 카드예요", duplicate };
+      return { saved: false, message: "이 덱에 이미 있는 카드예요", duplicate, at };
     keys.set(key, card.id);
     rows.push({
       ...card,
