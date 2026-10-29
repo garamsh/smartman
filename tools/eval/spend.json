@@ -110,6 +110,11 @@
       "date": "2026-10-28",
       "spentUsd": 0.309944,
       "note": "prompt version 3"
+    },
+    {
+      "date": "2026-10-29",
+      "spentUsd": 0.5672,
+      "note": "prompt v9 and v10, stopped at a call that hung (no timeout)"
     }
   ]
 }
