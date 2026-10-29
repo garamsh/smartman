@@ -1259,16 +1259,19 @@ describe("the study page", () => {
     });
 
     it("names the swipes in the phone's words where the page is used by touch", async () => {
-      vi.stubGlobal("matchMedia", (query: string): MediaQueryList => ({
-        matches: query === "(pointer: coarse)",
-        media: query,
-        onchange: null,
-        addListener: () => undefined,
-        removeListener: () => undefined,
-        addEventListener: () => undefined,
-        removeEventListener: () => undefined,
-        dispatchEvent: () => false,
-      }));
+      // The code under test reads `matches` only; the deprecated addListener and removeListener
+      // are left out of the stand-in.
+      vi.stubGlobal(
+        "matchMedia",
+        (query: string): Omit<MediaQueryList, "addListener" | "removeListener"> => ({
+          matches: query === "(pointer: coarse)",
+          media: query,
+          onchange: null,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          dispatchEvent: () => false,
+        }),
+      );
       try {
         seedDeck(postgrest, "d1", ["un", "deux"]);
         await open("d1");
