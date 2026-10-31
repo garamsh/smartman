@@ -118,7 +118,7 @@
     },
     {
       "date": "2026-10-30",
-      "spentUsd": 0.0550,
+      "spentUsd": 0.055,
       "note": "prompt v9 and v10, stopped by host sleep"
     },
     {
@@ -130,6 +130,11 @@
       "date": "2026-11-01",
       "spentUsd": 0.3786,
       "note": "prompt v9 and v10, stopped for the scope change"
+    },
+    {
+      "date": "2026-10-31",
+      "spentUsd": 0.792989,
+      "note": "prompt v9 and v10"
     }
   ]
 }
