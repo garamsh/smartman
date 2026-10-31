@@ -760,6 +760,7 @@ export function report(
     "- Vocabulary pages: precision, recall and F1 are means of the per-image values, in percent; a card matches when its front and meaning (its answer, when it has no meaning) equal the ground truth after card key normalization.",
     "- Senses, in percent, over every card whose front matches an entry's after the same normalization: senses P is the share of returned senses equal to one of the entry's in labels and meaning, and senses R the share of the entry's senses so returned.",
     "- Over the matched cards of every image, whose senses pair with the page's in order, in percent and after the same normalization: labels P is the share of returned labels whose text equals one the page prints for that sense, and labels R the share of printed labels so returned; category is the share of those equal labels whose kind and category are the page's too; unprinted labels is the share of the senses the page prints no label for that were given one, which must be 0; examples is the share of returned examples, on the card or a sense, the page prints for the entry; sense examples is the share of the examples printed under a sense that the returned sense holds; extras is the share of printed extras returned with an equal label and text; invented is the share of returned label lists, example lists and extras where the page prints none. A dash means the configuration returned no such field, or the pages printed none.",
+    '- Numbered fronts, in percent, over every returned card of the vocabulary pages: the share whose front holds a list\'s number: a numeral alone, or one opening the front before "." or ")" or in brackets, such as "1. abandon"; it must be 0 (ADR 0128). A dash means no card was returned.',
     `- Notes pages, in percent: coverage is the share of the page's facts that a card covers, its front and answer holding each of the fact's terms after the same normalization, averaged over the images; the facts are the page's rules and exceptions, and its worked examples are not facts. It equals coverage at step 5 in reports before prompt v5, whose cards carry no step. Unsupported is the share of returned cards covering no fact, which also counts a fact the model paraphrased past its terms; invented examples is the share of returned examples the page does not print, a worked example printed inside its rule's line counting as printed. Long answers is the share of returned cards whose answer lists more than ${MAX_LISTED_ITEMS} items, its parts between commas, middle dots, slashes, semicolons and line breaks, which prompt v6 splits into several cards; a table card's answer, its whole table, is not counted. Bare exceptions is the share of returned cards whose answer names an exception (${
       EXCEPTION_WORDS.map((word) => `"${word}"`).join(" or ")
     }) yet covers no fact, which prompt v7 asks every exception card to avoid by stating what the exception does. Table blanks is the share of the pages' cells to memorise that a table card asks as a blank, one blank holding each of the cell's terms, and cloze blanks the same for the words a cloze card should ask, pooled over the pages that hold any; a dash means no page held any.`,
@@ -794,14 +795,14 @@ export function report(
     "",
     "## Vocabulary pages",
     "",
-    "| Configuration | Precision | Recall | F1 | Senses P | Senses R | Labels P | Labels R | Category | Unprinted labels | Examples | Sense examples | Extras | Invented | p50 latency | p90 latency | Cost per image | Total spend |",
-    "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    "| Configuration | Precision | Recall | F1 | Senses P | Senses R | Labels P | Labels R | Category | Unprinted labels | Examples | Sense examples | Extras | Invented | Numbered fronts | p50 latency | p90 latency | Cost per image | Total spend |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ...rows.map((row) =>
       `| ${row.label} | ${pct(row.precision)} | ${pct(row.recall)} | ${
         pct(row.f1)
       } | ${labelCells(row)} | ${pctOrNone(row.inventedRate)} | ${
-        seconds(row.p50Ms)
-      } | ` +
+        pctOrNone(row.numberedFrontRate)
+      } | ${seconds(row.p50Ms)} | ` +
       `${seconds(row.p90Ms)} | ${usd(row.costPerImageUsd)} | ${
         usd(row.spentUsd)
       } |`
@@ -853,12 +854,16 @@ function vocabularyPagesSection(rows: readonly Row[]): string[] {
   return [
     "## Vocabulary per page",
     "",
-    "| Page | Configuration | F1 | Senses P | Senses R | Labels P | Labels R | Category | Unprinted labels | Examples | Sense examples | Extras |",
-    "|---|---|---|---|---|---|---|---|---|---|---|---|",
+    "| Page | Configuration | F1 | Senses P | Senses R | Labels P | Labels R | Category | Unprinted labels | Examples | Sense examples | Extras | Numbered fronts |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ...rows.flatMap((row) =>
       row.vocabularyPages.map((page) =>
         `| ${page.name} | ${row.label} | ${(page.f1 * 100).toFixed(1)} | ${
           labelCells(page)
+        } | ${
+          page.numberedFrontRate === null
+            ? "—"
+            : (page.numberedFrontRate * 100).toFixed(1)
         } |`
       )
     ),

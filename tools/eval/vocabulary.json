@@ -1450,5 +1450,87 @@
         }
       ]
     }
+  ],
+  "numbered-list": [
+    {
+      "front": "abandon",
+      "back": "버리다"
+    },
+    {
+      "front": "ability",
+      "back": "능력"
+    },
+    {
+      "front": "absorb",
+      "back": "흡수하다"
+    },
+    {
+      "front": "accurate",
+      "back": "정확한"
+    },
+    {
+      "front": "achieve",
+      "back": "성취하다"
+    },
+    {
+      "front": "acquire",
+      "back": "얻다"
+    },
+    {
+      "front": "adapt",
+      "back": "적응하다"
+    },
+    {
+      "front": "admire",
+      "back": "존경하다"
+    },
+    {
+      "front": "advantage",
+      "back": "이점"
+    },
+    {
+      "front": "afford",
+      "back": "여유가 있다"
+    },
+    {
+      "front": "agriculture",
+      "back": "농업"
+    },
+    {
+      "front": "alternative",
+      "back": "대안"
+    },
+    {
+      "front": "ancient",
+      "back": "고대의"
+    },
+    {
+      "front": "anxious",
+      "back": "불안한"
+    },
+    {
+      "front": "apparent",
+      "back": "명백한"
+    },
+    {
+      "front": "appreciate",
+      "back": "감사하다"
+    },
+    {
+      "front": "approach",
+      "back": "접근하다"
+    },
+    {
+      "front": "arrange",
+      "back": "정리하다"
+    },
+    {
+      "front": "attempt",
+      "back": "시도하다"
+    },
+    {
+      "front": "avoid",
+      "back": "피하다"
+    }
   ]
 }

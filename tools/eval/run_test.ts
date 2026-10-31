@@ -4,7 +4,7 @@ import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openroute
 import { composeInstructions } from "../../supabase/functions/extract-cards/cards.ts";
 import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
 import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v10.ts";
-import { meaningOf, normalize } from "./metrics.ts";
+import { meaningOf, normalize, score } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
 import {
@@ -338,7 +338,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   const table = w.files.get(PATHS.report) ?? "";
   assert.match(
     table,
-    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| — \| 0\.0 \| — \| — \| 50\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
+    /\| Cheap \| 100\.0 \| 50\.0 \| 66\.7 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| 100\.0 \| — \| 0\.0 \| — \| — \| 50\.0 \| 0\.0 \| 0\.0 s \| 0\.0 s \| \$0\.0010 \| \$0\.0020 \|/,
   );
   assert.match(
     table,
@@ -839,6 +839,48 @@ Deno.test("the committed sample set has at least 20 vocabulary images in every l
     assert.ok(
       vocabulary.some((sample) => sample.name.includes(part)),
       `a sample has ${part}`,
+    );
+  }
+});
+
+Deno.test("the committed numbered word lists, print and harsh, hold each word without its number, and a reply keeping the numbers is counted", async () => {
+  const lists = (await committedSamples()).flatMap((sample) =>
+    sample.kind === "vocabulary" && /-numbered-list-en-ko-/.test(sample.name)
+      ? [sample]
+      : []
+  );
+  assert.deepEqual(lists.map((list) => list.name), [
+    "88-numbered-list-en-ko-print",
+    "89-numbered-list-en-ko-harsh",
+  ]);
+  const words = JSON.parse(
+    await Deno.readTextFile(new URL("./vocabulary.json", import.meta.url)),
+  )["numbered-list"];
+  for (const list of lists) {
+    assert.deepEqual(
+      list.cards.map((card) => [card.front, meaningOf(card.senses)]),
+      words.map((word: { front: string; back: string }) => [
+        word.front,
+        word.back,
+      ]),
+      `${list.name} holds each word and its meaning`,
+    );
+    const numbered = score(
+      list.cards.map((card, i) => ({
+        ...card,
+        front: `${i + 1}. ${card.front}`,
+      })),
+      list.cards,
+    );
+    assert.deepEqual(numbered.fronts, {
+      returned: words.length,
+      numbered: words.length,
+    });
+    assert.equal(numbered.f1, 0, "a numbered front matches no word");
+    assert.deepEqual(
+      score(list.cards, list.cards).fronts,
+      { returned: words.length, numbered: 0 },
+      "control: the truth's own fronts hold no number",
     );
   }
 });
