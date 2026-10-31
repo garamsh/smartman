@@ -4,13 +4,14 @@ import { RetryButton } from "@/design/retry-button";
 import { ThemeChoice } from "@/design/theme-choice";
 import { getSession, SignOutForm } from "@/features/account";
 
+import { AiConnection } from "./ai-connection";
 import { readStudySetting, StudySetting } from "./study-setting";
 
 /**
  * The settings read on the server, each section one group under its label, as the phone's 설정
- * draws them: "계정", the signed-in email and sign-out; "학습", the daily study minutes; and
- * "화면", the theme the web is drawn in. While the server cannot be reached, "다시 시도" and the
- * theme.
+ * draws them: "계정", the signed-in email and sign-out; "학습", the daily study minutes; "AI 연결",
+ * the MCP server's address; and "화면", the theme the web is drawn in. While the server cannot be
+ * reached, "다시 시도", AI 연결 and the theme.
  */
 export async function Profile() {
   const session = await getSession();
@@ -29,6 +30,7 @@ export async function Profile() {
             </div>
           </section>
           <StudySetting setting={study} />
+          <AiConnection />
           <Display />
         </>
       );
@@ -42,6 +44,7 @@ export async function Profile() {
             </p>
             <RetryButton />
           </div>
+          <AiConnection />
           <Display />
         </>
       );

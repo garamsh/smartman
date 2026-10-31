@@ -8,7 +8,7 @@ The `extract-cards` Edge Function that turns a photo of clear study material, su
 
 - Photo import is for clear material: a page whose entries it lists plainly, such as a printed word list, glossary, bilingual table or dictionary page ([ADR 0128](adr/0128-read-clear-material-in-photo-import-and-send-complex-material-to-the-external-ai-integration.md)).
 - The prompt analyses the material and finds what it teaches, its words, terms or facts, and makes a card of each. A list's numbering, ordinals and bullets place an entry and are never a card's front or part of it.
-- Complex material, such as handwriting, dense notes and pages marked up in pen, goes to the external-AI integration, where the user works through it with Claude or ChatGPT and adds the cards through the MCP server (#496, ADR 0126). The prompt holds no rule written for it; such a photo is still sent and read like any other.
+- Complex material, such as handwriting, dense notes and pages marked up in pen, goes to the external-AI integration, where the user works through it with Claude or ChatGPT and adds the cards through the MCP server (#496, [ADR 0126](adr/0126-connect-claude-and-chatgpt-through-one-remote-mcp-server-acting-as-the-signed-in-user.md), [`mcp.md`](mcp.md)). The prompt holds no rule written for it; such a photo is still sent and read like any other.
 - #412's research into a two-stage photo import was closed as out of scope on 2026-11-01. The two-stage experiment under §Eval and its report, `docs/eval/two-stage.md`, stay as the record.
 
 ### Location
@@ -62,7 +62,7 @@ The `extract-cards` Edge Function that turns a photo of clear study material, su
 ### Web client
 
 - The web's `decks` feature reads the same signed-in allowance and calls the existing function through an authenticated Server Action with the current user session; it changes no model, plan, quota or function configuration. Returned cards remain candidates until the user reviews and explicitly adds them ([`web-decks.md`](web-decks.md), [ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md)).
-- Browser imports accept JPEG, PNG and WebP up to the contract's size limit and stay in the current browser window. Verification substitutes extraction responses; no test calls a paid model.
+- Browser imports accept any image the browser decodes, prepare it as the app does, upright, at most 2048 px and JPEG, under a 3 MiB upload, and stay in the current browser window ([`web-decks.md`](web-decks.md), #506). Verification substitutes extraction responses; no test calls a paid model.
 
 ### Model call
 

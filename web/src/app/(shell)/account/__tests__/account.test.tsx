@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EmptyHome } from "@/features/decks";
 import { FakePostgrest } from "@/testing/mocks/postgrest";
-import { supabaseUnreachable, testUser } from "@/testing/mocks/handlers";
+import { supabaseUnreachable, supabaseUrl, testUser } from "@/testing/mocks/handlers";
 import { server } from "@/testing/mocks/server";
 import { setRequestCookies } from "@/testing/next-headers";
 import { redirectTarget } from "@/testing/redirect";
@@ -36,18 +36,20 @@ describe("the account page", () => {
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeEnabled();
   });
 
-  it("draws 계정, 학습 and 화면 in that order, each one group of hairline rows, its rows words alone", async () => {
+  it("draws 계정, 학습, AI 연결 and 화면 in that order, each one group of hairline rows, its rows words alone", async () => {
     await render(Profile, {});
 
     const sections = screen.getAllByRole("region");
     expect(sections.map((section) => section.getAttribute("aria-labelledby"))).toEqual([
       "account-section",
       "study-section",
+      "ai-section",
       "display-section",
     ]);
     expect(sections.map((section) => section.querySelector("h2")?.textContent)).toEqual([
       "계정",
       "학습",
+      "AI 연결",
       "화면",
     ]);
     for (const section of sections) {
@@ -77,6 +79,26 @@ describe("the account page", () => {
       within(screen.getByRole("alert")).getByRole("button", { name: "다시 시도" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "화면" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "AI 연결" })).toHaveTextContent(
+      `${supabaseUrl}/functions/v1/mcp`,
+    );
+  });
+
+  it("states the MCP server's address and how to add it in Claude and in ChatGPT under AI 연결", async () => {
+    await render(Profile, {});
+
+    const section = within(screen.getByRole("region", { name: "AI 연결" }));
+    expect(section.getByText("서버 주소").nextElementSibling).toHaveTextContent(
+      `${supabaseUrl}/functions/v1/mcp`,
+    );
+    expect(section.getByText("Claude").nextElementSibling).toHaveTextContent(
+      "커넥터 설정에서 커스텀 커넥터를 추가하고 서버 주소를 넣은 뒤 smartman으로 로그인해요",
+    );
+    expect(section.getByText("ChatGPT").nextElementSibling).toHaveTextContent(
+      "chatgpt.com/plugins에서 커스텀 MCP 서버를 추가하고 서버 주소를 넣은 뒤 smartman으로 로그인해요",
+    );
+    // What a connection may do, and that it deletes and edits nothing; substring, inside the note.
+    expect(section.getByText(/지우거나 고치지는 않아요/)).toBeVisible();
   });
 
   it("redirects to /login without a session", async () => {
