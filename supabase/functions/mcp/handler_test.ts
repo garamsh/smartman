@@ -183,7 +183,7 @@ function matches(row: Row, params: URLSearchParams, prefix = ""): boolean {
 }
 
 /** PostgREST over [fake], with row-level security's rules for [user]. */
-async function rest(
+function rest(
   fake: Fake,
   url: URL,
   method: string,
