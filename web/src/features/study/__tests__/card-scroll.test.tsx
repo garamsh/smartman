@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CardScroll } from "../components/card-scroll";
@@ -33,6 +33,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("a card's face", () => {
@@ -69,5 +70,35 @@ describe("a card's face", () => {
     scrollTop -= faceHeight;
     fireEvent.scroll(face());
     expect(document.querySelector("[data-card-fade]")).toBeNull();
+  });
+
+  it("fits a front again when the card narrows while it holds the front size", () => {
+    // jsdom has no ResizeObserver, so this one hands the test the callback a browser would call.
+    let resized: (() => void) | undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          resized = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    let frameWidth = 720;
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(() => frameWidth);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(() => faceHeight);
+    heights = { "text-front": 120, "text-back": 80, "text-card-body": 60 };
+    render(<CardScroll>좁아지는 앞면</CardScroll>);
+    expect(face().dataset.cardStep).toBe("text-front");
+
+    // At 350 px the front wraps to more lines than the face holds at the front size.
+    frameWidth = 350;
+    heights = { "text-front": 320, "text-back": 180, "text-card-body": 150 };
+    act(() => {
+      resized?.();
+    });
+
+    expect(face().dataset.cardStep).toBe("text-back");
   });
 });
