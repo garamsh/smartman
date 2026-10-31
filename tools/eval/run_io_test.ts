@@ -65,7 +65,7 @@ Deno.test("the documented command records the run in the ledger, writes the repo
     );
     assert.equal(ledger.runs.length, 1, output);
     assert.equal(ledger.runs[0].spentUsd, 0.001);
-    assert.equal(ledger.runs[0].note, "prompt v10");
+    assert.equal(ledger.runs[0].note, "prompt v11");
     assert.match(
       await Deno.readTextFile(`${dir}/docs/eval/extract-cards.md`),
       /\| Cheap \| 100\.0 \| 100\.0 \| 100\.0 \|/,

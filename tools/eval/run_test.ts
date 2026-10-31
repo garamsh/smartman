@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { OPENROUTER_URL } from "../../supabase/functions/extract-cards/openrouter.ts";
 import { composeInstructions } from "../../supabase/functions/extract-cards/cards.ts";
 import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
-import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v10.ts";
+import { SYSTEM_PROMPT } from "../../supabase/functions/extract-cards/prompt_v11.ts";
 import { meaningOf, normalize, score } from "./metrics.ts";
 import { MODELS_URL, newest, parseModels, parseSelectors } from "./models.ts";
 import { type Io, loadSamples, main, PATHS, runEval } from "./run.ts";
@@ -277,7 +277,7 @@ Deno.test("a dry run prints the resolved models and the estimate, and calls no m
   );
   assert.ok(
     w.printed.some((line) =>
-      /2 samples \(2 vocabulary, 0 notes\) x 2 configurations x prompt v10: estimated \$\d/
+      /2 samples \(2 vocabulary, 0 notes\) x 2 configurations x prompt v11: estimated \$\d/
         .test(line)
     ),
   );
@@ -327,7 +327,7 @@ Deno.test("a run records its spend in the ledger and writes the results table", 
   assert.deepEqual(ledger.runs.at(-1), {
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v10",
+    note: "prompt v11",
   });
   assert.ok(
     w.printed.includes(
@@ -381,7 +381,7 @@ Deno.test("a failed report write still records the run in the ledger", async () 
   assert.deepEqual(JSON.parse(w.files.get(PATHS.ledger) ?? "").runs, [{
     date: "2026-10-15",
     spentUsd: 0.004,
-    note: "prompt v10",
+    note: "prompt v11",
   }]);
 });
 
@@ -1380,7 +1380,7 @@ Deno.test("--prompt-version runs a version read from the database, which the led
   );
   assert.match(w.files.get(PATHS.report) ?? "", /with prompt version 5, over/);
 
-  // Control: without the flag, the run gives prompt v10.
+  // Control: without the flag, the run gives prompt v11.
   const plain: string[] = [];
   assert.equal(
     await main([], withStore(world({ budgetUsd: 10, runs: [] }), plain)),
@@ -1413,10 +1413,10 @@ Deno.test("--prompt-version refuses a missing or malformed id, an unknown versio
   assert.equal(w.chatCalls.length, 0);
 });
 
-Deno.test("--prompts v9,v10 runs each prompt file on every configuration, each a row of its own, instructed as the function instructs it", async () => {
+Deno.test("--prompts v9,v11 runs each prompt file on every configuration, each a row of its own, instructed as the function instructs it", async () => {
   const w = world({ budgetUsd: 10, runs: [] });
   w.systems = [];
-  assert.equal(await main(["--prompts", "v9,v10"], io(w)), 0);
+  assert.equal(await main(["--prompts", "v9,v11"], io(w)), 0);
   assert.deepEqual(w.chatCalls, [
     "vendor/cheap",
     "vendor/cheap",
@@ -1432,13 +1432,13 @@ Deno.test("--prompts v9,v10 runs each prompt file on every configuration, each a
     ...Array(4).fill(composeInstructions(SYSTEM_PROMPT)),
   ]);
   const report = w.files.get(PATHS.report) ?? "";
-  for (const label of ["Cheap, prompt v9", "Dear, prompt v10"]) {
+  for (const label of ["Cheap, prompt v9", "Dear, prompt v11"]) {
     assert.match(report, new RegExp(`\\| ${label} \\| 100\\.0 \\|`), label);
   }
-  assert.match(report, /with prompt v9 and v10, over/);
+  assert.match(report, /with prompt v9 and v11, over/);
   assert.equal(
     JSON.parse(w.files.get(PATHS.ledger) ?? "").runs.at(-1).note,
-    "prompt v9 and v10",
+    "prompt v9 and v11",
   );
 
   // The estimate covers both prompts: twice one prompt's, rounded apart.
@@ -1453,7 +1453,7 @@ Deno.test("--prompts v9,v10 runs each prompt file on every configuration, each a
   };
   const one = await estimate([]);
   assert.ok(one > 0);
-  const two = await estimate(["--prompts", "v9,v10"]);
+  const two = await estimate(["--prompts", "v9,v11"]);
   // Each is printed to four decimals.
   assert.ok(Math.abs(two - one * 2) <= 0.0001, `${two} against ${one}`);
 });
@@ -1531,7 +1531,7 @@ Deno.test("a call that never answers is a model error at the timeout, kept and r
     { budgetUsd: 10, runs: [] },
     {
       apiKey: "key",
-      prompt: { label: "v10", text: SYSTEM_PROMPT },
+      prompt: { label: "v11", text: SYSTEM_PROMPT },
       fetch: io(w).fetch,
       now: () => 0,
       timeoutMs: 20,

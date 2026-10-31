@@ -5,8 +5,8 @@
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
  *     tools/eval/run.ts [--dry-run] [--prompts <file>,<file>... | --prompt-version <id>]
  *
- * It runs prompt v10, the newest prompt file, unless `--prompts` names prompt files, such as
- * `--prompts v9,v10`, each run on every configuration as a row of its own, or
+ * It runs prompt v11, the newest prompt file, unless `--prompts` names prompt files, such as
+ * `--prompts v9,v11`, each run on every configuration as a row of its own, or
  * `--prompt-version` names a version saved in the admin area (ADR 0073), which it reads through
  * `public.prompt_version` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; that run also needs
  * both names in `--allow-env` and the project's host in `--allow-net`.
@@ -34,6 +34,7 @@ import {
 } from "../../supabase/functions/extract-cards/openrouter.ts";
 import * as v9 from "../../supabase/functions/extract-cards/prompt_v9.ts";
 import * as v10 from "../../supabase/functions/extract-cards/prompt_v10.ts";
+import * as v11 from "../../supabase/functions/extract-cards/prompt_v11.ts";
 import type {
   Image,
   LanguageHints,
@@ -136,14 +137,16 @@ export type Io = {
 export type EvalPrompt = { readonly label: string; readonly text: string };
 
 /** The prompt files `--prompts` may name, by their version. */
-export const PROMPT_FILES: readonly EvalPrompt[] = [v9, v10].map((file) => ({
+export const PROMPT_FILES: readonly EvalPrompt[] = [v9, v10, v11].map((
+  file,
+) => ({
   label: file.PROMPT_VERSION,
   text: file.SYSTEM_PROMPT,
 }));
 
 /**
  * The prompts a run gives the model: the files `--prompts` names, the version `--prompt-version
- * <id>` names, read from the database, or prompt v10 without either; a sentence saying why when a
+ * <id>` names, read from the database, or prompt v11 without either; a sentence saying why when a
  * flag or the read fails.
  */
 export async function readPrompts(
@@ -173,7 +176,7 @@ export async function readPrompts(
     return prompts.filter((prompt) => prompt !== undefined);
   }
   if (at === -1) {
-    return [{ label: v10.PROMPT_VERSION, text: v10.SYSTEM_PROMPT }];
+    return [{ label: v11.PROMPT_VERSION, text: v11.SYSTEM_PROMPT }];
   }
   const id = args[at + 1];
   if (id === undefined || !/^[1-9]\d{0,15}$/.test(id)) {
