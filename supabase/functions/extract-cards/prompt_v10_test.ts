@@ -35,7 +35,10 @@ Deno.test("prompt v10 drops version 3's lines for handwriting and complex notes"
   assert.doesNotMatch(SYSTEM_PROMPT, handwriting);
   assert.doesNotMatch(SYSTEM_PROMPT, complexInput);
   // Control: the expressions match version 3's lines.
-  assert.match("- 손글씨로 추가된 중요 내용은 별도의 학습 항목으로 고려한다.", handwriting);
+  assert.match(
+    "- 손글씨로 추가된 중요 내용은 별도의 학습 항목으로 고려한다.",
+    handwriting,
+  );
   assert.match(
     "입력은 인쇄물, 필기, 교재, 어휘 목록, 표, 강의 노트, 수식, 다이어그램, 코드 또는 이들이 혼합된 사진일 수 있다.",
     complexInput,
