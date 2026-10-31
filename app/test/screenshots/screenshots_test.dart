@@ -865,6 +865,123 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('long cards in $mode', skip: !_capture, (tester) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow.subtract(const Duration(days: 1)),
+        newId: () => 'id${ids++}',
+      );
+      await tester.runAsync(() async {
+        final deck = await repository.createDeck('생명과학');
+        for (final (front, back) in [
+          ([TextContent(_longKorean(100))], [const TextContent('광합성')]),
+          ([TextContent(_longKorean(200))], [TextContent(_longKorean(100))]),
+          ([TextContent(_longKorean(400))], [TextContent(_longKorean(200))]),
+          ([const TextContent('run')], [_runSenses]),
+        ]) {
+          await repository.addCard(deck.id, front: front, back: back);
+        }
+      });
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            accountServiceProvider.overrideWithValue(
+              FakeAccountService(
+                const SignedIn(userId: _ada, email: 'ada@example.com'),
+              ),
+            ),
+            studyRepositoryProvider.overrideWithValue(
+              StudyRepository(db, newId: () => 'review${ids++}'),
+            ),
+            schedulerProvider.overrideWithValue(scheduler),
+            studyClockProvider.overrideWithValue(() => homeNow),
+            studyZoneProvider.overrideWithValue((_) => Duration.zero),
+            studyRandomProvider.overrideWithValue((_) => Random(0)),
+            studyStorageProvider.overrideWithValue(storage),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.tabDecks));
+      await tap(tester, find.text('생명과학'));
+      await tap(tester, find.text(ko.studyDeck));
+      await shot(tester, '34-long-study-1');
+      for (final name in [
+        '34b-long-study-2',
+        '34c-long-study-3',
+        '34d-long-study-4',
+        '34e-long-study-done',
+      ]) {
+        await _swipeCurrent(tester, 200);
+        await shot(tester, name);
+      }
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await unmount(tester);
+    });
+
+    testWidgets('a long card\'s preview in $mode', skip: !_capture, (
+      tester,
+    ) async {
+      phone(tester);
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      var ids = 0;
+      final repository = DeckRepository(
+        db,
+        clock: () => homeNow,
+        newId: () => 'id${ids++}',
+      );
+      final deck = (await tester.runAsync(
+        () => repository.createDeck('생명과학'),
+      ))!;
+      final storage = await openStudyStorage(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deckRepositoryProvider.overrideWithValue(repository),
+            deckStorageProvider.overrideWithValue(storage),
+          ],
+          child: MaterialApp(
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: ThemeMode.values.byName(mode),
+            locale: const Locale('ko'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: CardEditorScreen(deck: deck),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), _longKorean(400));
+      await tester.enterText(fields.at(1), _longKorean(200));
+      await tester.pumpAndSettle();
+      await tap(tester, find.text(ko.previewCard));
+      await shot(tester, '35-long-preview-front');
+      await tap(tester, find.byType(Scaffold).last);
+      await shot(tester, '35b-long-preview-back');
+      await unmount(tester);
+    });
+
     testWidgets('the senses block in $mode', skip: !_capture, (tester) async {
       phone(tester);
       final db = AppDatabase(NativeDatabase.memory());
@@ -1901,3 +2018,44 @@ void main() {
     });
   }
 }
+
+/// A Korean paragraph of at least [length] characters, ending at a word.
+String _longKorean(int length) {
+  const text =
+      '광합성은 식물이 빛 에너지를 이용해 이산화탄소와 물로부터 포도당을 만드는 과정이다. '
+      '엽록체의 틸라코이드 막에서 일어나는 명반응은 빛을 흡수해 물을 분해하고 산소를 내보내며 '
+      'ATP와 NADPH를 만든다. 스트로마에서 일어나는 캘빈 회로는 이 에너지를 써서 이산화탄소를 '
+      '고정하고 포도당을 합성한다. 빛의 세기, 이산화탄소 농도, 온도는 광합성 속도를 결정하는 '
+      '주요 요인이며, 이 중 가장 부족한 요인이 전체 속도를 제한한다. 이를 최소량의 법칙이라고 '
+      '부른다. 따라서 온실에서 작물을 키울 때는 빛을 충분히 비추는 것만으로는 부족하고, '
+      '이산화탄소를 공급하고 온도를 알맞게 유지해야 수확량이 늘어난다. 또한 식물은 낮에 만든 '
+      '포도당을 녹말로 바꾸어 저장하고, 밤에는 이를 다시 분해해 호흡에 쓴다. '
+      '잎의 기공은 이산화탄소를 들이고 수증기를 내보내는 통로인데, 날이 가물면 기공이 닫혀 '
+      '광합성이 줄어든다.';
+  final end = text.indexOf(' ', length);
+  return end < 0 ? text : text.substring(0, end);
+}
+
+/// A vocabulary card's back of several senses, each with its examples.
+const _runSenses = SensesContent([
+  CardSense(
+    labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+    meaning: '달리다, 뛰다',
+    examples: ['She runs every morning.', 'He ran to catch the bus.'],
+  ),
+  CardSense(
+    labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+    meaning: '운영하다, 경영하다',
+    examples: ['They run a small bakery downtown.'],
+  ),
+  CardSense(
+    labels: [PartOfSpeechLabel(PartOfSpeech.verb, '동')],
+    meaning: '(기계가) 작동하다, 돌아가다',
+    examples: ['The engine is running smoothly.'],
+  ),
+  CardSense(
+    labels: [PartOfSpeechLabel(PartOfSpeech.noun, '명')],
+    meaning: '달리기, 뛰기; 연속, 연이은 기간',
+    examples: ['I go for a run after work.', 'a run of bad luck'],
+  ),
+]);

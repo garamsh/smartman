@@ -224,7 +224,7 @@ function cssType(): Map<string, TypeStyle> {
 describe("the web theme's type tokens", () => {
   it("are the styles of app/lib/design/theme.dart's AppType: size, line height, weight and tracking", () => {
     // Control: both sides read every style, the front's tracking among them.
-    expect(dartType().size).toBe(14);
+    expect(dartType().size).toBe(15);
     expect(dartType().get("front")).toEqual({
       size: 30,
       lineHeight: 38,

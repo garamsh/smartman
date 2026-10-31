@@ -415,7 +415,7 @@ class _GradedCard extends StatelessWidget {
               builder: (context, constraints) => ContentView(
                 front,
                 style: AppType.front.copyWith(color: colors.ink),
-                fit: (
+                fit: ShrinkFit(
                   minFontSize: AppType.frontFloor,
                   width: width,
                   height: constraints.maxHeight,
@@ -426,7 +426,7 @@ class _GradedCard extends StatelessWidget {
               builder: (context, constraints) => ContentView(
                 back,
                 style: AppType.back.copyWith(color: colors.ink2),
-                fit: (
+                fit: ShrinkFit(
                   minFontSize: AppType.backFloor,
                   width: width,
                   height: constraints.maxHeight,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/theme.dart';
+import '../../design/word_break.dart';
 import '../../l10n/app_localizations.dart';
 import 'audio_block.dart';
 import 'card_text.dart';
@@ -9,54 +10,115 @@ import 'content.dart';
 import 'image_block.dart';
 import 'whole_card_view.dart';
 
+/// How a card side's text is fitted to the box [width] wide and [height]
+/// high it is drawn in.
+sealed class CardFit {
+  const CardFit({required this.width, required this.height});
+
+  final double width;
+  final double height;
+}
+
+/// Scaled down from the style's size as far as [minFontSize] until it fits,
+/// and cut with an ellipsis past the lines that fit: the previous card.
+final class ShrinkFit extends CardFit {
+  const ShrinkFit({
+    required this.minFontSize,
+    required super.width,
+    required super.height,
+  });
+
+  final double minFontSize;
+}
+
+/// The largest of [cardSteps] at which it fits whole, past which it scrolls:
+/// the current card and the card preview (ADR 0123).
+final class StepFit extends CardFit {
+  const StepFit({required super.width, required super.height});
+}
+
 /// A card side's content blocks, in order, each through its block widget.
 ///
-/// With [fit], the text is centred and scaled down from [style]'s size as far
-/// as the fit's floor until its widest word fits the fit's width, so it
-/// breaks only between words ([CardText]). With the fit's height too, the
-/// blocks run together as one paragraph, scaled down further, as far as the
-/// floor, until it fits that height, and cut with an ellipsis past the lines
-/// that fit there ([fittedToBox]); a side that holds a photo or a sound is
-/// laid out block by block instead, its photo inside the fit and its sound
-/// as its play control, and scaled down as a whole to fit that height
-/// (ADR 0109, ADR 0112).
+/// With [fit], the blocks run together as one paragraph, centred, their
+/// lines broken only between words: with a [ShrinkFit] scaled down from
+/// [style]'s size as far as its floor until it fits the box, and cut with an
+/// ellipsis past the lines that fit there ([fittedToBox]); with a [StepFit]
+/// in the largest of [cardSteps] at which it fits whole, start-aligned at
+/// the last ([steppedStyle]). A side that holds a photo, a sound or a block
+/// this version cannot show is laid out block by block instead, each text
+/// block centred and scaled down until its widest word fits ([CardText]),
+/// its photo inside the fit, its sound as its play control and the block it
+/// cannot show as its placeholder, and with a [ShrinkFit] scaled down as a
+/// whole to fit the box (ADR 0109, ADR 0112).
 class ContentView extends StatelessWidget {
   const ContentView(this.blocks, {super.key, this.style, this.fit});
 
   final List<Content> blocks;
   final TextStyle? style;
-  final ({double minFontSize, double width, double? height})? fit;
+  final CardFit? fit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final fit = this.fit;
     final style = this.style;
-    final hasMedia = blocks.any(
-      (block) => block is ImageContent || block is AudioContent,
+    final byBlock = blocks.any(
+      (block) =>
+          block is ImageContent ||
+          block is AudioContent ||
+          block is UnsupportedContent,
     );
-    if (fit case (:final minFontSize, :final width, :final height?)
-        when !hasMedia) {
-      final span = contentSpan(l10n, blocks);
+    if (fit != null && !byBlock) {
+      // Korean breaks only between words (#454); a screen reader reads the
+      // words without the joiners.
+      final span = contentSpan(l10n, blocks, wrap: keepWords);
+      final plain = [for (final block in blocks) _plain(l10n, block)];
       final paragraph = DefaultTextStyle.of(context).style.merge(style);
-      final fitted = fittedToBox(
-        span,
-        [for (final block in blocks) _plain(l10n, block)].join(' '),
-        style: paragraph,
-        minFontSize: minFontSize,
-        width: width,
-        height: height,
-        textScaler: MediaQuery.textScalerOf(context),
-        textDirection: Directionality.of(context),
-      );
-      return Text.rich(
-        span,
-        style: fitted.style,
-        maxLines: fitted.maxLines,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-      );
+      final textScaler = MediaQuery.textScalerOf(context);
+      final textDirection = Directionality.of(context);
+      switch (fit) {
+        case ShrinkFit(:final minFontSize, :final width, :final height):
+          final fitted = fittedToBox(
+            span,
+            plain.join(' '),
+            style: paragraph,
+            minFontSize: minFontSize,
+            width: width,
+            height: height,
+            textScaler: textScaler,
+            textDirection: textDirection,
+          );
+          return Text.rich(
+            span,
+            style: fitted.style,
+            maxLines: fitted.maxLines,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            semanticsLabel: plain.join('\n'),
+          );
+        case StepFit(:final width, :final height):
+          final stepped = steppedStyle(
+            span,
+            plain.join(' '),
+            steps: cardSteps(paragraph),
+            width: width,
+            height: height,
+            textScaler: textScaler,
+            textDirection: textDirection,
+          );
+          return Text.rich(
+            span,
+            style: stepped,
+            textAlign: cardAlign(stepped),
+            semanticsLabel: plain.join('\n'),
+          );
+      }
     }
+    final minFontSize = switch (fit) {
+      ShrinkFit(:final minFontSize) => minFontSize,
+      StepFit() => cardSteps(style ?? AppType.front).last.fontSize!,
+      null => null,
+    };
     final column = Column(
       crossAxisAlignment: fit == null
           ? CrossAxisAlignment.start
@@ -65,20 +127,23 @@ class ContentView extends StatelessWidget {
       children: [
         for (final block in blocks)
           switch (block) {
-            TextContent(:final text) when fit != null && style != null =>
+            TextContent(:final text)
+                when fit != null && style != null && minFontSize != null =>
               CardText(
                 text,
+                span: TextSpan(text: keepWords(text)),
                 style: style,
-                minFontSize: fit.minFontSize,
+                minFontSize: minFontSize,
                 width: fit.width,
               ),
             TextContent(:final text) => Text(text, style: style),
-            SensesContent(:final lines) when fit != null && style != null =>
+            SensesContent(:final lines)
+                when fit != null && style != null && minFontSize != null =>
               CardText(
                 lines,
-                span: sensesSpan(block),
+                span: sensesSpan(block, wrap: keepWords),
                 style: style,
-                minFontSize: fit.minFontSize,
+                minFontSize: minFontSize,
                 width: fit.width,
               ),
             SensesContent() => Text.rich(sensesSpan(block), style: style),
@@ -101,7 +166,7 @@ class ContentView extends StatelessWidget {
       ],
     );
     return switch (fit) {
-      (:final width, height: _?, minFontSize: _) => FittedBox(
+      ShrinkFit(:final width) => FittedBox(
         fit: BoxFit.scaleDown,
         child: SizedBox(width: width, child: column),
       ),
