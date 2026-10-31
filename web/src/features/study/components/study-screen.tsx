@@ -23,6 +23,8 @@ import { useSwipe } from "../hooks/use-swipe";
 import { WriteQueue } from "../write-queue";
 import { AnswerList } from "./answer-list";
 import { CardDetail } from "./card-detail";
+import { cardHeight } from "./card-height";
+import { CardScroll } from "./card-scroll";
 import { CardSide } from "./card-side";
 import { CompletionCard } from "./completion-card";
 import { LeaveConfirm } from "./leave-confirm";
@@ -498,7 +500,9 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
                   last, or the day's last card from an earlier session, or while studying an
                   outline. */}
               <div className="grid w-full max-w-study auto-rows-fr gap-7">
-                <div className={`grid motion-safe:transition-opacity ${demo ? "opacity-45" : ""}`}>
+                <div
+                  className={`grid overflow-hidden ${cardHeight} motion-safe:transition-opacity ${demo ? "opacity-45" : ""}`}
+                >
                   {view.kind === "studying" && coach === "redecide" ? (
                     <CoachSample />
                   ) : newest ? (
@@ -587,11 +591,13 @@ function Session({ plan, back }: { plan: SessionPlan; back: string }) {
 }
 
 /**
- * The card under study: its front alone, centred, or a whole card's front with its blanks
- * empty, and the front's sounds' controls under it (ADR 0112); its back shows once answered,
- * above. A horizontal touch swipe ([useSwipe]) moves and
+ * The card under study, [cardHeight] high: its front alone, or a whole card's front with its
+ * blanks empty, and the front's sounds' controls under it (ADR 0112), in the largest of the
+ * front's three sizes at which it fits, scrolling inside past the last ([CardScroll],
+ * ADR 0123); its back shows once answered, above. A horizontal touch swipe ([useSwipe]) moves and
  * tilts it over the answer it would give, and released past the phone's distance, or flung,
- * gives [onAnswer] that answer; a vertical one scrolls the page, and a mouse drags nothing.
+ * gives [onAnswer] that answer; a vertical one scrolls the card's content where it is taller
+ * than the card, and the page otherwise, and a mouse drags nothing.
  */
 function CurrentCard({
   card,
@@ -605,7 +611,7 @@ function CurrentCard({
     <section
       aria-label="현재 카드"
       {...handlers}
-      className="relative flex min-h-52 touch-pan-y lg:min-h-75"
+      className={`relative flex touch-pan-y ${cardHeight}`}
     >
       {toward && (
         <div
@@ -621,21 +627,17 @@ function CurrentCard({
         }}
         className={`relative flex flex-1 rounded-card bg-surface shadow-raised ${dragging ? "" : "motion-safe:transition-transform motion-safe:duration-300"}`}
       >
-        <div
-          aria-label="앞면"
-          role="group"
-          className="flex flex-1 items-center justify-center p-6 text-center"
-        >
-          <div className="flex w-full flex-col items-center gap-4">
+        <div aria-label="앞면" role="group" className="flex min-h-0 flex-1 rounded-card">
+          <CardScroll>
             {card.whole ? (
-              <div className="w-full text-front">{card.whole.empty}</div>
+              <div className="w-full">{card.whole.empty}</div>
             ) : card.sides ? (
-              <div className="w-full text-front break-words">{card.sides.front}</div>
+              <div className="w-full">{card.sides.front}</div>
             ) : (
-              <CardSide blocks={card.front} size="front" />
+              <CardSide blocks={card.front} />
             )}
             {card.sounds && <SoundControls sounds={card.sounds.front} />}
-          </div>
+          </CardScroll>
         </div>
       </div>
     </section>

@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartman/database/database.dart';
 import 'package:smartman/deck/deck.dart';
 import 'package:smartman/design/theme.dart';
+import 'package:smartman/design/word_break.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/study/src/current_card.dart';
 import 'package:smartman/study/src/model.dart';
@@ -31,6 +32,10 @@ import 'study_storage.dart';
 /// A phone's width, as the study screen's tests use.
 const _phoneWidth = 390.0;
 
+/// About the height the study screen gives the current card, with its
+/// guide's row, on a 390 by 844 phone.
+const _cardHeight = 380.0;
+
 Card _card(String front) => Card(
   id: const CardId('c'),
   deckId: const DeckId('d'),
@@ -42,19 +47,79 @@ Card _card(String front) => Card(
   updatedAt: DateTime.utc(2026, 10, 16),
 );
 
-/// The widest word of [text] in the front's style at [size].
-double _widest(String text, double size) => text
+/// The widest word of [text] in [style].
+double _widest(String text, TextStyle style) => text
     .split(' ')
     .map(
       (word) => (TextPainter(
-        text: TextSpan(
-          text: word,
-          style: AppType.front.copyWith(fontSize: size),
-        ),
+        text: TextSpan(text: word, style: style),
         textDirection: TextDirection.ltr,
       )..layout()).width,
     )
     .reduce((a, b) => a > b ? a : b);
+
+/// Whether [text] fits whole a box [width] wide and [height] high in
+/// [style], its widest word inside [width] and its lines broken only between
+/// words.
+bool _fits(String text, TextStyle style, double width, double height) {
+  final painter = TextPainter(
+    text: TextSpan(text: keepWords(text), style: style),
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: width);
+  final fits = _widest(text, style) <= width && painter.height <= height;
+  painter.dispose();
+  return fits;
+}
+
+/// A Korean paragraph of at least [length] characters, ending at a word.
+String _korean(int length) {
+  const text =
+      '광합성은 식물이 빛 에너지를 이용해 이산화탄소와 물로부터 포도당을 만드는 과정이다. '
+      '엽록체의 틸라코이드 막에서 일어나는 명반응은 빛을 흡수해 물을 분해하고 산소를 내보내며 '
+      'ATP와 NADPH를 만든다. 스트로마에서 일어나는 캘빈 회로는 이 에너지를 써서 이산화탄소를 '
+      '고정하고 포도당을 합성한다. 빛의 세기, 이산화탄소 농도, 온도는 광합성 속도를 결정하는 '
+      '주요 요인이며, 이 중 가장 부족한 요인이 전체 속도를 제한한다. 이를 최소량의 법칙이라고 '
+      '부른다. 따라서 온실에서 작물을 키울 때는 빛을 충분히 비추는 것만으로는 부족하고, '
+      '이산화탄소를 공급하고 온도를 알맞게 유지해야 수확량이 늘어난다. 또한 식물은 낮에 만든 '
+      '포도당을 녹말로 바꾸어 저장하고, 밤에는 이를 다시 분해해 호흡에 쓴다. '
+      '잎의 기공은 이산화탄소를 들이고 수증기를 내보내는 통로인데, 날이 가물면 기공이 닫혀 '
+      '광합성이 줄어든다.';
+  final end = text.indexOf(' ', length);
+  return end < 0 ? text : text.substring(0, end);
+}
+
+/// The paragraph under [of] that draws [text], the joiners `keepWords` sets
+/// left out.
+RenderParagraph _drawn(WidgetTester tester, Finder of, String text) =>
+    tester.renderObject<RenderParagraph>(
+      find
+          .descendant(
+            of: of,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is RichText &&
+                  widget.text.toPlainText().replaceAll('\u2060', '') == text,
+            ),
+          )
+          .last,
+    );
+
+/// Where each line of [paragraph] ends, as offsets into its text.
+List<int> _lineEnds(RenderParagraph paragraph) {
+  final plain = paragraph.text.toPlainText();
+  final lines = TextPainter(
+    text: paragraph.text,
+    textDirection: paragraph.textDirection,
+    textScaler: paragraph.textScaler,
+  )..layout(maxWidth: paragraph.size.width);
+  final ends = <int>[];
+  for (var offset = 0; offset < plain.length;) {
+    offset = lines.getLineBoundary(TextPosition(offset: offset)).end;
+    ends.add(offset);
+  }
+  lines.dispose();
+  return ends;
+}
 
 /// Schedules every review one day out, at once.
 class _InstantScheduler implements Scheduler {
@@ -84,12 +149,6 @@ class _InstantScheduler implements Scheduler {
   );
 }
 
-/// The text of the back half's paragraph inside [card] that holds [text].
-RenderParagraph _paragraph(WidgetTester tester, Finder card, String text) =>
-    tester.renderObject<RenderParagraph>(
-      find.descendant(of: card, matching: find.textContaining(text)).last,
-    );
-
 void main() {
   setUpAll(() async {
     // Pretendard's own widths; the test font draws every glyph an em wide.
@@ -113,22 +172,26 @@ void main() {
   });
 
   testWidgets(
-    'a front shrinks until its widest word fits, breaks only between words above the floor, and sits centred on the current card',
+    'a front takes the largest of the three card sizes it fits whole, centred '
+    'above the body size and start-aligned at it, scrolling with a fading '
+    'edge past it, never cut and broken only between words (ADR 0123)',
     (tester) async {
       tester.view.physicalSize = const Size(_phoneWidth, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
 
+      const steps = [AppType.front, AppType.back, AppType.cardBody];
+      final seen = <double>{};
       for (final front in [
         'meticulous',
-        'antidisestablishmentarianism',
-        'pneumonoultramicroscopicsilicovolcanoconiosis',
-        'once in a blue moon',
+        _korean(100),
+        _korean(200),
+        _korean(400),
       ]) {
         await tester.pumpWidget(
           MaterialApp(
             theme: lightTheme,
-            locale: const Locale('en'),
+            locale: const Locale('ko'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -136,90 +199,85 @@ void main() {
                 padding: const EdgeInsets.symmetric(
                   horizontal: StudyStyle.cardMargin,
                 ),
+                // About the height the study screen gives the card.
                 child: Center(
-                  child: CurrentCard(
-                    key: ValueKey(front),
-                    card: _card(front),
-                    onAnswer: (_) {},
-                    onGuide: () {},
+                  child: SizedBox(
+                    height: _cardHeight,
+                    child: CurrentCard(
+                      key: ValueKey(front),
+                      card: _card(front),
+                      onAnswer: (_) {},
+                      onGuide: () {},
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         );
-        // The card's face, without the guide's row under it.
-        final card = tester.getRect(
-          find
-              .descendant(
-                of: find.byType(CurrentCard),
-                matching: find.byType(GestureDetector),
-              )
-              .first,
-        );
-        expect(card.width, _phoneWidth - 2 * StudyStyle.cardMargin);
-        final text = find.text(front);
-        final paragraph = tester.renderObject<RenderParagraph>(text);
-        final size = paragraph.text.style!.fontSize!;
+        // The scroll's measure lands after the first frame.
+        await tester.pumpAndSettle();
+        final face = find
+            .descendant(
+              of: find.byType(CurrentCard),
+              matching: find.byType(GestureDetector),
+            )
+            .first;
+        final card = tester.getRect(face);
         final width = card.width - StudyStyle.cardPadding * 2;
+        final height = card.height - StudyStyle.cardPadding * 2;
+        final paragraph = _drawn(tester, face, front);
 
-        expect(size, lessThanOrEqualTo(AppType.front.fontSize!));
-        expect(size, greaterThanOrEqualTo(AppType.frontFloor));
-        if (_widest(front, AppType.frontFloor) <= width) {
-          // The widest word fits at this size, and every word sits on one
-          // line.
-          expect(_widest(front, size), lessThanOrEqualTo(width), reason: front);
-          var start = 0;
-          for (final word in front.split(' ')) {
-            final boxes = paragraph.getBoxesForSelection(
-              TextSelection(
-                baseOffset: start,
-                extentOffset: start + word.length,
-              ),
+        // The first step it fits whole, or the last.
+        final size = paragraph.text.style!.fontSize!;
+        final step = steps
+            .take(steps.length - 1)
+            .firstWhere(
+              (step) => _fits(front, step, width, height),
+              orElse: () => steps.last,
             );
-            expect(
-              boxes.map((box) => box.top).toSet(),
-              hasLength(1),
-              reason: '"$word" of "$front" breaks across lines',
-            );
-            start += word.length + 1;
-          }
-        } else {
-          // Past the floor a word may break, at the floor's size.
-          expect(size, AppType.frontFloor, reason: front);
+        expect(size, step.fontSize, reason: front);
+        seen.add(size);
+        // Every line laid out, broken only at a space.
+        expect(paragraph.maxLines, isNull);
+        expect(paragraph.didExceedMaxLines, isFalse);
+        final plain = paragraph.text.toPlainText();
+        final ends = _lineEnds(paragraph);
+        for (final end in ends.take(ends.length - 1)) {
+          expect(
+            plain[end - 1] == ' ' || plain[end] == ' ',
+            isTrue,
+            reason: 'a break at $end in "$front"',
+          );
         }
-        // Centred on the card, across and down.
-        expect(
-          tester.getCenter(text).dx,
-          closeTo(card.center.dx, 1),
-          reason: front,
-        );
-        expect(
-          tester.getCenter(text).dy,
-          closeTo(card.center.dy, 1),
-          reason: front,
-        );
+        final fade = find.byKey(const Key('cardScrollFade'));
+        if (size == AppType.cardBody.fontSize) {
+          // Start-aligned, and taller than the card: it scrolls, its edge
+          // fading until its last line is in the card.
+          expect(paragraph.textAlign, TextAlign.start, reason: front);
+          expect(paragraph.size.height, greaterThan(height));
+          expect(fade, findsOneWidget);
+          await tester.drag(face, const Offset(0, -2000));
+          await tester.pumpAndSettle();
+          final bottom = paragraph
+              .localToGlobal(Offset(0, paragraph.size.height))
+              .dy;
+          expect(bottom, lessThanOrEqualTo(card.bottom));
+          expect(fade, findsNothing);
+        } else {
+          // Centred on the card, whole inside it, with no fade.
+          expect(paragraph.textAlign, TextAlign.center, reason: front);
+          expect(paragraph.size.height, lessThanOrEqualTo(height));
+          expect(
+            paragraph.localToGlobal(paragraph.size.center(Offset.zero)),
+            offsetMoreOrLessEquals(card.center, epsilon: 1),
+            reason: front,
+          );
+          expect(fade, findsNothing);
+        }
       }
-      // Control: "antidisestablishmentarianism" lands between the floor and
-      // the full size, and "pneumonoultramicroscopicsilicovolcanoconiosis"
-      // does not fit even at the floor, so both branches above ran.
-      final width =
-          _phoneWidth - 2 * StudyStyle.cardMargin - StudyStyle.cardPadding * 2;
-      expect(
-        _widest('antidisestablishmentarianism', AppType.front.fontSize!),
-        greaterThan(width),
-      );
-      expect(
-        _widest('antidisestablishmentarianism', AppType.frontFloor),
-        lessThanOrEqualTo(width),
-      );
-      expect(
-        _widest(
-          'pneumonoultramicroscopicsilicovolcanoconiosis',
-          AppType.frontFloor,
-        ),
-        greaterThan(width),
-      );
+      // Control: the fronts took every step, so each branch above ran.
+      expect(seen, {for (final step in steps) step.fontSize});
     },
   );
 
@@ -286,9 +344,8 @@ void main() {
       await tester.pumpAndSettle();
       final previous = find.byType(PreviousCardView);
       expect(previous, findsOneWidget);
-      final kept = _paragraph(tester, previous, '양도하다');
+      final kept = _drawn(tester, previous, longBack);
       expect(kept.text.style!.fontSize, AppType.back.fontSize);
-      expect(kept.text.toPlainText(), longBack);
       expect(kept.didExceedMaxLines, isFalse);
       // Control: it wraps, so the room the card gives it is what fits it.
       expect(
