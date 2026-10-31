@@ -101,6 +101,9 @@
   --text-back: 20px;
   --text-back--line-height: 28px;
   --text-back--font-weight: 600;
+  --text-card-body: 17px;
+  --text-card-body--line-height: 27px;
+  --text-card-body--font-weight: 500;
   /* Google's button label, GoogleButtonStyle.labelStyle. */
   --text-google: 14px;
   --text-google--line-height: 20px;

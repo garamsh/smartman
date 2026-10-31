@@ -14,3 +14,4 @@ export { recordDays } from "./stats";
 export { type MinutesPlan, sessionMinutes } from "./study-time";
 export { studyDecks, studyHref, studyReturn } from "./study-address";
 export { parseTimeZone, timeZoneCookie, timeZoneScript } from "./time-zone";
+export { cardHeight } from "./components/card-height";

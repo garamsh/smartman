@@ -1,0 +1,77 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:smartman/deck/deck.dart';
+import 'package:smartman/deck/src/card_preview_screen.dart';
+import 'package:smartman/design/theme.dart';
+import 'package:smartman/l10n/app_localizations.dart';
+
+/// [words] Korean words of four syllables, a space apart.
+String _korean(int words) => List.filled(words, '광합성은').join(' ');
+
+/// The paragraph that draws [text], the joiners `keepWords` sets left out.
+RenderParagraph _drawn(WidgetTester tester, String text) =>
+    tester.renderObject<RenderParagraph>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText &&
+            widget.text.toPlainText().replaceAll('⁠', '') == text,
+      ),
+    );
+
+/// The card's face: the surface the preview turns.
+Rect _face(WidgetTester tester) =>
+    tester.getRect(find.byType(CardScroll).first);
+
+void main() {
+  testWidgets(
+    'the preview steps a long front down to the body size, start-aligned and '
+    'scrolling with a fading edge to its last line, and a short back stays '
+    'at the back size, centred (ADR 0123)',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844) * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final front = _korean(60);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: lightTheme,
+          locale: const Locale('ko'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CardPreviewScreen(
+            front: [TextContent(front)],
+            back: const [TextContent('광합성')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final paragraph = _drawn(tester, front);
+      expect(paragraph.text.style!.fontSize, AppType.cardBody.fontSize);
+      expect(paragraph.textAlign, TextAlign.start);
+      expect(paragraph.didExceedMaxLines, isFalse);
+      final face = _face(tester);
+      // Taller than the face, so it scrolls; its edge fades until its last
+      // line is in the face.
+      expect(paragraph.size.height, greaterThan(face.height));
+      final fade = find.byKey(const Key('cardScrollFade'));
+      expect(fade, findsOneWidget);
+      await tester.drag(find.byType(CardScroll), const Offset(0, -4000));
+      await tester.pumpAndSettle();
+      expect(
+        paragraph.localToGlobal(Offset(0, paragraph.size.height)).dy,
+        lessThanOrEqualTo(face.bottom),
+      );
+      expect(fade, findsNothing);
+
+      // Control: the short back keeps the back size, centred, with no fade.
+      await tester.tap(find.byType(CardScroll));
+      await tester.pumpAndSettle();
+      final back = _drawn(tester, '광합성');
+      expect(back.text.style!.fontSize, AppType.back.fontSize);
+      expect(back.textAlign, TextAlign.center);
+      expect(fade, findsNothing);
+    },
+  );
+}
