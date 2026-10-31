@@ -55,7 +55,7 @@ The `extract-cards` Edge Function that turns a photo of a study page, a vocabula
 ### Web client
 
 - The web's `decks` feature reads the same signed-in allowance and calls the existing function through an authenticated Server Action with the current user session; it changes no model, plan, quota or function configuration. Returned cards remain candidates until the user reviews and explicitly adds them ([`web-decks.md`](web-decks.md), [ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md)).
-- Browser imports accept JPEG, PNG and WebP up to the contract's size limit and stay in the current browser window. Verification substitutes extraction responses; no test calls a paid model.
+- Browser imports accept any image the browser decodes, prepare it as the app does, upright, at most 2048 px and JPEG, under a 3 MiB upload, and stay in the current browser window ([`web-decks.md`](web-decks.md), #506). Verification substitutes extraction responses; no test calls a paid model.
 
 ### Model call
 

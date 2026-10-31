@@ -24,6 +24,7 @@ export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Dec
     null,
   );
   const [camera, setCamera] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
   const label = deck ? "카드 추가" : "새 덱 만들기";
   return (
     <>
@@ -44,25 +45,48 @@ export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Dec
           }}
         >
           <div className="divide-y divide-hairline overflow-hidden rounded-group bg-surface">
-            {choices.map(({ choice, line, open }) => (
-              <button
-                type="button"
-                key={choice}
-                aria-label={choice}
-                className="pressable flex min-h-button w-full flex-col items-start px-4 py-4 text-left text-body"
-                onClick={() => {
-                  if (open === "manual") setScreen(deck ? "manual" : "name");
-                  else if (open === "file") setScreen("file");
-                  else {
-                    setCamera(open === "camera");
-                    setScreen("photo");
-                  }
-                }}
-              >
-                {choice}
-                {line && <span className="text-caption text-muted">{line}</span>}
-              </button>
-            ))}
+            {choices.map(({ choice, line, open }) =>
+              open === "camera" || open === "album" ? (
+                // The picker opens from the row itself, as the phone's does; a cancel opens nothing.
+                <label
+                  key={choice}
+                  className="pressable flex min-h-button w-full cursor-pointer flex-col items-start px-4 py-4 text-left text-body focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-ink"
+                >
+                  {choice}
+                  <span className="text-caption text-muted">{line}</span>
+                  <input
+                    aria-label={choice}
+                    type="file"
+                    accept="image/*"
+                    capture={open === "camera" ? "environment" : undefined}
+                    multiple={open === "album"}
+                    onChange={(event) => {
+                      const chosen = Array.from(event.currentTarget.files ?? []);
+                      event.currentTarget.value = "";
+                      if (!chosen.length) return;
+                      setCamera(open === "camera");
+                      setPhotos(chosen);
+                      setScreen("photo");
+                    }}
+                    className="sr-only"
+                  />
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  key={choice}
+                  aria-label={choice}
+                  className="pressable flex min-h-button w-full flex-col items-start px-4 py-4 text-left text-body"
+                  onClick={() => {
+                    if (open === "manual") setScreen(deck ? "manual" : "name");
+                    else setScreen("file");
+                  }}
+                >
+                  {choice}
+                  {line && <span className="text-caption text-muted">{line}</span>}
+                </button>
+              ),
+            )}
           </div>
         </AuthoringSheet>
       )}
@@ -95,6 +119,7 @@ export function AuthoringButton({ deck, decks = [] }: { deck?: Deck; decks?: Dec
           deck={deck}
           decks={decks}
           camera={camera}
+          files={photos}
           close={() => {
             setScreen(null);
           }}
