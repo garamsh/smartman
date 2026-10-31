@@ -130,9 +130,12 @@ reset role;
 select pg_temp.sign_in('a');
 select results_eq(
   $$select usage_id, user_id, outcome, attempts, failures from public.admin_extraction_calls(null, 2)$$,
-  $$select p.usage_id, '00000000-0000-4000-8000-00000000000b'::uuid, c.outcome, c.attempts, c.failures
-    from photos as p join private.extraction_calls as c using (usage_id) where p.n in (5, 4)
-    order by p.usage_id desc$$,
+  $$select usage_id, '00000000-0000-4000-8000-00000000000b'::uuid, outcome, attempts, failures
+    from photos
+    join (values (5, 'model_error', 1::smallint, '{timeout}'::text[]),
+                 (4, 'invalid_output', 2::smallint, '{model_error,invalid_output}'::text[]))
+      as recorded (n, outcome, attempts, failures) using (n)
+    order by usage_id desc$$,
   'an admin reads the newest calls first, a page at a time');
 select results_eq(
   $$select usage_id from public.admin_extraction_calls((select usage_id from photos where n = 4), 2)$$,
