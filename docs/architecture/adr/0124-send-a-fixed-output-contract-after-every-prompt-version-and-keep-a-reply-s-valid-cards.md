@@ -46,3 +46,27 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - Dropped cards stay frequent under a prompt that keeps the contract: the contract is not read, or its rules are not the ones the model breaks.
 - Users notice cards missing from a page, the dropped cards being ones they wanted, so a dropped card should be repaired or reported rather than left out.
 - A future source needs a rule the contract states only for one kind of material.
+
+## Measured result
+
+The PM's paid run of `--prompts v9,v10` on 2026-10-31 (UTC), at `12ac92309378817bd3ed9d9b1881419ab8d4edf7`: Claude Haiku 5.5 over the 89 samples, $0.7930 (`docs/eval/extract-cards.md`, `tools/eval/spend.json`).
+
+- **The contract works.** Prompt v9 and prompt v10 each had 0 invalid outputs, 0 model errors and 0 dropped cards.
+- **The ship rule's two gates hold for v10.** Vocabulary F1 is 99.7 for both. Numbered fronts are 0 for both ([ADR 0128](0128-read-clear-material-in-photo-import-and-send-complex-material-to-the-external-ai-integration.md)).
+- **v10 is less faithful than v9.** Each pair below is v10 against v9:
+
+  | Measure | v10 | v9 |
+  |---|---|---|
+  | Invented | 7.8 | 0.0 |
+  | Unprinted labels | 6.3 | 0.0 |
+  | Senses P and R | 95.5 | 99.8 |
+  | Labels P | 88.9 | 100.0 |
+  | Notes table blanks | 70.8 | 95.8 |
+  | Notes cloze blanks | 0.0 | 100.0 |
+
+- **Notes coverage and unsupported cards both rise under v10.** Coverage is 94.1 against 92.3, and unsupported cards 11.3 against 9.7.
+- **The PM's decision: v10 is not activated.**
+  - The report recommends v10, since it is the cheaper per image within the F1 and coverage bounds. The PM decided against it on faithfulness.
+  - The served version stays store version 4, whose text is prompt v9's.
+  - The output contract, partial acceptance and the 60 s timeout apply to it once this change deploys.
+  - A follow-up issue retunes v10's faithfulness before any activation.
