@@ -115,6 +115,21 @@
       "date": "2026-10-29",
       "spentUsd": 0.5672,
       "note": "prompt v9 and v10, stopped at a call that hung (no timeout)"
+    },
+    {
+      "date": "2026-10-30",
+      "spentUsd": 0.0550,
+      "note": "prompt v9 and v10, stopped by host sleep"
+    },
+    {
+      "date": "2026-10-30",
+      "spentUsd": 0.0443,
+      "note": "prompt v9 and v10, stopped by host sleep"
+    },
+    {
+      "date": "2026-11-01",
+      "spentUsd": 0.3786,
+      "note": "prompt v9 and v10, stopped for the scope change"
     }
   ]
 }
