@@ -8,6 +8,7 @@ import '../../deck/deck.dart';
 import 'candidate_json.dart';
 import 'extraction_client.dart';
 import 'failure.dart';
+import 'failure_message.dart';
 import 'import_list.dart';
 import 'job_store.dart';
 import 'photo.dart';
@@ -177,6 +178,18 @@ final class ImportJob extends ChangeNotifier {
   /// Reads [photo] again after a failure.
   void retry(JobPhoto photo) {
     photo.state = const PhotoWaiting();
+    _changed();
+  }
+
+  /// Reads again, in pick order, every photo of the batch whose failure
+  /// [isRetryable]; a photo read or waiting is left as it is.
+  void retryFailed() {
+    for (final photo in batch) {
+      if (photo.state case PhotoFailed(:final failure)
+          when isRetryable(failure)) {
+        photo.state = const PhotoWaiting();
+      }
+    }
     _changed();
   }
 
