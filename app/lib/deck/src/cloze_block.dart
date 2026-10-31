@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../design/app_chip.dart';
 import '../../design/theme.dart';
@@ -97,7 +98,7 @@ class ClozeDraft {
 
   /// Makes [selection] a blank: exactly its characters when it holds any,
   /// replacing the blanks it overlaps; otherwise an empty blank at the
-  /// cursor, open to what is typed next. A cursor inside a blank adds none.
+  /// cursor, open to what is typed next. A cursor in a blank adds none.
   void insert(TextSelection selection) {
     final start = selection.isValid ? selection.start : _line.length;
     final end = selection.isValid ? selection.end : _line.length;
@@ -107,9 +108,7 @@ class ClozeDraft {
       _open = null;
       return;
     }
-    if (_blanks.any((blank) => blank.start < start && start < blank.end)) {
-      return;
-    }
+    if (_blanks.any((blank) => _holdsCaret(blank, start))) return;
     _closeOpen();
     final blank = (start: start, end: start);
     _place(blank);
@@ -121,11 +120,7 @@ class ClozeDraft {
   void track(TextSelection selection) {
     final open = _open;
     if (open == null) return;
-    if (selection.isCollapsed &&
-        open.start <= selection.start &&
-        selection.start <= open.end) {
-      return;
-    }
+    if (selection.isCollapsed && _holdsCaret(open, selection.start)) return;
     _closeOpen();
   }
 
@@ -136,27 +131,30 @@ class ClozeDraft {
     _open = null;
   }
 
-  /// The blank [selection] is inside, which "빈칸 풀기" acts on: the blank
-  /// that holds the whole selection, the open blank while the caret is in
-  /// it, or one the caret is strictly inside; null elsewhere.
+  /// The blank [selection] is in, which "빈칸 풀기" acts on: the blank that
+  /// holds the whole selection, the open blank while the caret is in it, or
+  /// one the caret is in, at either end included; null elsewhere.
   Span? blankAt(TextSelection selection) {
     if (!selection.isValid) return null;
     final (start, end) = (selection.start, selection.end);
     final open = _open;
-    if (selection.isCollapsed &&
-        open != null &&
-        open.start <= start &&
-        start <= open.end) {
+    if (selection.isCollapsed && open != null && _holdsCaret(open, start)) {
       return open;
     }
     for (final blank in _blanks) {
       final inside = selection.isCollapsed
-          ? blank.start < start && start < blank.end
+          ? _holdsCaret(blank, start)
           : blank.start <= start && end <= blank.end;
       if (inside) return blank;
     }
     return null;
   }
+
+  /// Whether a caret at [offset] is in [blank]: between its ends or at
+  /// either, so a tap on a blank of one character, which leaves the caret
+  /// on one side of it, reaches it.
+  static bool _holdsCaret(Span blank, int offset) =>
+      blank.start <= offset && offset <= blank.end;
 
   /// Turns [blank] back into text.
   void remove(Span blank) {
@@ -253,15 +251,139 @@ class ClozeLineController extends TextEditingController {
     final children = <TextSpan>[];
     var at = 0;
     for (final blank in blanks) {
-      children
-        ..add(TextSpan(text: text.substring(at, blank.start)))
-        ..add(
-          TextSpan(text: text.substring(blank.start, blank.end), style: block),
-        );
+      final before = text.substring(at, blank.start);
+      if (blank.start == blank.end && before.isNotEmpty) {
+        // The character before an empty blank is spaced out by the gap the
+        // blank is drawn in, so no character is added to the line.
+        final last = before.length > 1 && _trails(before) ? 2 : 1;
+        final split = before.length - last;
+        children
+          ..add(TextSpan(text: before.substring(0, split)))
+          ..add(
+            TextSpan(
+              text: before.substring(split),
+              style: const TextStyle(letterSpacing: emptyBlankWidth),
+            ),
+          );
+      } else {
+        children.add(TextSpan(text: before));
+      }
+      children.add(
+        TextSpan(text: text.substring(blank.start, blank.end), style: block),
+      );
       at = blank.end;
     }
     children.add(TextSpan(text: text.substring(at)));
     return TextSpan(style: style, children: children);
+  }
+
+  /// Whether [text] ends in the second half of a surrogate pair.
+  static bool _trails(String text) =>
+      text.codeUnitAt(text.length - 1) & 0xFC00 == 0xDC00;
+}
+
+/// How wide an empty blank is drawn in the line: its gap and the underline
+/// under it. At the line's start, where no character makes room, the gap is
+/// the field's own inset.
+const emptyBlankWidth = AppSpace.s12;
+
+/// The line's field, [child], with each empty blank of [controller] drawn
+/// in it as a hidden blank is drawn (ADR 0119): a gap, which the controller
+/// leaves before the blank, over a `muted` underline ending at the caret's
+/// place. Nothing is added to the line's text.
+class ClozeEmptyBlanks extends SingleChildRenderObjectWidget {
+  const ClozeEmptyBlanks({
+    super.key,
+    required this.controller,
+    required super.child,
+  });
+
+  final ClozeLineController controller;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      RenderClozeEmptyBlanks(controller, AppColors.of(context).muted);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderClozeEmptyBlanks renderObject,
+  ) => renderObject
+    ..controller = controller
+    ..color = AppColors.of(context).muted;
+}
+
+/// What [ClozeEmptyBlanks] draws with.
+class RenderClozeEmptyBlanks extends RenderProxyBox {
+  RenderClozeEmptyBlanks(this._controller, this._color);
+
+  ClozeLineController _controller;
+  set controller(ClozeLineController value) {
+    if (identical(value, _controller)) return;
+    if (attached) _controller.removeListener(markNeedsPaint);
+    _controller = value;
+    if (attached) _controller.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
+  Color _color;
+  set color(Color value) {
+    if (value == _color) return;
+    _color = value;
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _controller.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _controller.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  /// The field's text layout, the one render editable under it.
+  RenderEditable? get _editable {
+    RenderEditable? found;
+    void visit(RenderObject child) {
+      if (found != null) return;
+      if (child is RenderEditable) {
+        found = child;
+      } else {
+        child.visitChildren(visit);
+      }
+    }
+
+    child?.visitChildren(visit);
+    return found;
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+    final editable = _editable;
+    if (editable == null || !editable.hasSize) return;
+    final empty = [
+      for (final blank in _controller.blanks())
+        if (blank.start == blank.end) blank.start,
+    ];
+    if (empty.isEmpty) return;
+    final transform = editable.getTransformTo(this);
+    final paint = Paint()
+      ..color = _color
+      ..strokeWidth = 1;
+    for (final at in empty) {
+      final caret = editable.getLocalRectForCaret(TextPosition(offset: at));
+      final end = MatrixUtils.transformPoint(transform, caret.bottomLeft);
+      context.canvas.drawLine(
+        offset + end - const Offset(emptyBlankWidth, 0),
+        offset + end,
+        paint,
+      );
+    }
   }
 }
 
