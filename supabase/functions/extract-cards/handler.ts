@@ -2,11 +2,13 @@
 
 import type { Card } from "./cards.ts";
 import type { Config } from "./config.ts";
-import { type Attempt, extractCards } from "./openrouter.ts";
+import { type Attempt, extractCards, type Extraction } from "./openrouter.ts";
 import { parseRequest } from "./request.ts";
 import { authenticate, type UserId } from "../_shared/auth.ts";
 import {
+  type AttemptFailure,
   beginExtraction,
+  finishExtraction,
   type Period,
   type Plan,
   userSuspended,
@@ -45,6 +47,8 @@ export type LogEntry = {
   readonly completion_tokens: number | null;
   /** The reply's cards dropped for breaking a rule; null when no reply was read as the schema's. */
   readonly dropped_cards: number | null;
+  /** Whether the photo's outcome was recorded; null when no photo was counted. */
+  readonly outcome_recorded: boolean | null;
   readonly outcome: Outcome;
 };
 
@@ -57,6 +61,13 @@ export type HandlerDeps = {
   /** How long the model call may take before it is a model error. */
   readonly modelTimeoutMs: number;
 };
+
+/**
+ * How long into a request a failed model call may still be retried (ADR 0130): a retry starting
+ * by then ends, at the 60 s model timeout, by about 135 s, under the Edge Function's 150 s request
+ * idle timeout and free plan's wall clock (`supabase.com/docs/guides/functions/limits`).
+ */
+export const RETRY_START_LIMIT_MS = 75_000;
 
 export function status(outcome: Outcome): number {
   switch (outcome) {
@@ -98,6 +109,8 @@ type Result = {
   readonly cards?: readonly Card[];
   /** How many of the reply's cards were dropped, when a reply was read as the schema's. */
   readonly dropped?: number;
+  /** Whether the counted photo's outcome was recorded. */
+  readonly recorded?: boolean;
 };
 
 export function createHandler(
@@ -107,7 +120,7 @@ export function createHandler(
     const started = deps.now();
     let result: Result;
     try {
-      result = await handle(request, deps);
+      result = await handle(request, deps, started);
     } catch (error) {
       log(deps, started, { outcome: "internal", userId: null, attempts: [] });
       throw error;
@@ -126,7 +139,11 @@ export function createHandler(
   };
 }
 
-async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
+async function handle(
+  request: Request,
+  deps: HandlerDeps,
+  started: number,
+): Promise<Result> {
   const refused = (outcome: Outcome, userId: UserId | null = null): Result => ({
     outcome,
     userId,
@@ -166,57 +183,74 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
   const plan = start.plan;
   const promptVersion = start.prompt.versionId;
 
-  const extraction = await extractCards(
-    parsed.request.image,
-    parsed.request.languages,
-    start.model,
-    start.prompt.text,
-    {
-      apiKey: config.openRouterApiKey,
-      fetch: deps.fetch,
-      now: deps.now,
-      timeoutMs: deps.modelTimeoutMs,
-    },
-  );
+  const extract = () =>
+    extractCards(
+      parsed.request.image,
+      parsed.request.languages,
+      start.model,
+      start.prompt.text,
+      {
+        apiKey: config.openRouterApiKey,
+        fetch: deps.fetch,
+        now: deps.now,
+        timeoutMs: deps.modelTimeoutMs,
+      },
+    );
+  const first = await extract();
+  const firstFailure = failureOf(first);
+  // A retry starts only early enough to end, at its own timeout, inside the Edge Function's limit.
+  const retry = firstFailure !== null &&
+    deps.now() - started < RETRY_START_LIMIT_MS;
+  const extraction = retry ? await extract() : first;
+  const lastFailure = failureOf(extraction);
+  const attempts = retry
+    ? [...first.attempts, ...extraction.attempts]
+    : first.attempts;
+  const cards = extraction.kind === "cards" ? extraction.cards : [];
+  const dropped = extraction.kind === "cards" ||
+      extraction.kind === "invalid_output"
+    ? extraction.dropped.length
+    : 0;
+  const recorded = await finishExtraction(start.usageId, {
+    outcome: extraction.kind === "cards" ? "ok" : extraction.kind,
+    attempts: retry ? 2 : 1,
+    latencyMs: deps.now() - started,
+    cardsReturned: cards.length,
+    cardsDropped: dropped,
+    failures: [
+      ...(retry && firstFailure !== null ? [firstFailure] : []),
+      ...(lastFailure === null ? [] : [lastFailure]),
+    ],
+  }, supabase);
+  const served = { userId, plan, promptVersion, attempts, recorded };
   switch (extraction.kind) {
     case "cards":
-      return {
-        outcome: "ok",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
-        cards: extraction.cards,
-        dropped: extraction.dropped.length,
-      };
+      return { outcome: "ok", ...served, cards, dropped };
     case "no_cards":
-      return {
-        outcome: "no_cards",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
-        dropped: 0,
-      };
+      return { outcome: "no_cards", ...served, dropped: 0 };
     case "invalid_output":
       return {
         outcome: "model_error",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
-        ...(extraction.dropped.length === 0
-          ? {}
-          : { dropped: extraction.dropped.length }),
+        ...served,
+        ...(dropped === 0 ? {} : { dropped }),
       };
     case "model_error":
-      return {
-        outcome: "model_error",
-        userId,
-        plan,
-        promptVersion,
-        attempts: extraction.attempts,
-      };
+      return { outcome: "model_error", ...served };
+  }
+}
+
+/** How a model call failed, or null when it answered cards or a valid empty list. */
+function failureOf(extraction: Extraction): AttemptFailure | null {
+  switch (extraction.kind) {
+    case "cards":
+    case "no_cards":
+      return null;
+    case "invalid_output":
+      return "invalid_output";
+    case "model_error":
+      return extraction.attempts.some((attempt) => attempt.timedOut)
+        ? "timeout"
+        : "model_error";
   }
 }
 
@@ -237,6 +271,7 @@ function log(deps: HandlerDeps, started: number, result: Result): void {
     prompt_tokens: sum((usage) => usage.promptTokens),
     completion_tokens: sum((usage) => usage.completionTokens),
     dropped_cards: result.dropped ?? null,
+    outcome_recorded: result.recorded ?? null,
     outcome: result.outcome,
   });
 }
