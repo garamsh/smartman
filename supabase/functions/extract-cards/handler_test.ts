@@ -3,7 +3,11 @@
 import assert from "node:assert/strict";
 import { composeInstructions } from "./cards.ts";
 import { readConfig } from "./config.ts";
-import { createHandler, type LogEntry } from "./handler.ts";
+import {
+  createHandler,
+  type LogEntry,
+  RETRY_START_LIMIT_MS,
+} from "./handler.ts";
 import { OPENROUTER_URL } from "./openrouter.ts";
 import { SYSTEM_PROMPT } from "./prompt_v8.ts";
 import { MAX_IMAGE_BYTES } from "./request.ts";
@@ -11,6 +15,7 @@ import { MAX_IMAGE_BYTES } from "./request.ts";
 const SUPABASE_URL = "https://project.supabase.test";
 const USER_ID = "00000000-0000-4000-8000-00000000000a";
 const SIGNED_IN = "Bearer signed-in-token";
+const USAGE_ID = 41;
 
 const ENV: Record<string, string> = {
   SUPABASE_URL,
@@ -40,6 +45,11 @@ type Fake = {
   /** The prompt version begin_extraction serves; the seed, prompt v8, unless a test names another. */
   prompt: { prompt_version_id: unknown; prompt: unknown };
   calls: { url: string; init: RequestInit | undefined }[];
+  /** The bodies finish_extraction was called with. */
+  finishes: Record<string, unknown>[];
+  /** The clock the handler reads, advanced by `modelCallMs` at each model call. */
+  clock: number;
+  modelCallMs: number;
 };
 
 function fakeFetch(fake: Fake): typeof fetch {
@@ -66,13 +76,21 @@ function fakeFetch(fake: Fake): typeof fetch {
     if (url === `${SUPABASE_URL}/rest/v1/rpc/begin_extraction`) {
       return Promise.resolve(
         Response.json(
-          fake.plan === null
-            ? []
-            : [{ ...fake.plan, ...fake.prompt, allowed: fake.allowed }],
+          fake.plan === null ? [] : [{
+            ...fake.plan,
+            ...fake.prompt,
+            allowed: fake.allowed,
+            usage_id: fake.allowed ? USAGE_ID : null,
+          }],
         ),
       );
     }
+    if (url === `${SUPABASE_URL}/rest/v1/rpc/finish_extraction`) {
+      fake.finishes.push(JSON.parse(String(init?.body)));
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
     if (url === OPENROUTER_URL) {
+      fake.clock += fake.modelCallMs;
       const reply = fake.replies.shift();
       if (reply === undefined) throw new Error("no scripted model reply left");
       // A call that never answers, and ignores its abort signal.
@@ -161,6 +179,8 @@ async function run(
     plan?: Fake["plan"];
     prompt?: Fake["prompt"];
     env?: Record<string, string | undefined>;
+    /** How far the clock moves at each model call; 0 unless a test needs time to pass. */
+    modelCallMs?: number;
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
@@ -177,6 +197,9 @@ async function run(
       : options.plan,
     prompt: options.prompt ?? { prompt_version_id: 1, prompt: SYSTEM_PROMPT },
     calls: [],
+    finishes: [],
+    clock: 0,
+    modelCallMs: options.modelCallMs ?? 0,
   };
   const env = { ...ENV, ...options.env };
   const logs: LogEntry[] = [];
@@ -184,7 +207,7 @@ async function run(
     config: readConfig((name) => env[name]),
     fetch: fakeFetch(fake),
     log: (entry) => logs.push(entry),
-    now: () => 0,
+    now: () => fake.clock,
     modelTimeoutMs: TIMEOUT_MS,
   });
   const headers = new Headers({ "Content-Type": "application/json" });
@@ -365,7 +388,7 @@ Deno.test("a table card and a cloze card are answered with their table and blank
   }]);
 });
 
-Deno.test("a reply with a malformed table is invalid output, answered 502 after its one call", async () => {
+Deno.test("a reply with a malformed table is invalid output, answered 502 after its retry", async () => {
   const ragged = cardsReply([{
     ...twoCards[2],
     type: "table",
@@ -376,10 +399,10 @@ Deno.test("a reply with a malformed table is invalid output, answered 502 after 
       blanks: [{ row: 0, column: 1 }],
     },
   }]);
-  const r = await run({ replies: [ragged] });
+  const r = await run({ replies: [ragged, ragged] });
   assert.equal(r.status, 502);
   assert.deepEqual(r.body, { error: "model_error" });
-  assert.equal(r.modelCalls.length, 1);
+  assert.equal(r.modelCalls.length, 2);
   // Control: the same table with its rows as wide as its columns.
   const even = await run({
     replies: [cardsReply([{
@@ -415,7 +438,9 @@ Deno.test("a reply whose cards break a rule keeps the valid cards, drops the bro
   assert.equal(mixed.logs[0].outcome, "ok");
 
   // Every card broken saves none, as invalid output, and logs the count too.
-  const none = await run({ replies: [cardsReply(broken)] });
+  const none = await run({
+    replies: [cardsReply(broken), cardsReply(broken)],
+  });
   assert.equal(none.status, 502);
   assert.deepEqual(none.body, { error: "model_error" });
   assert.equal(none.logs[0].dropped_cards, 2);
@@ -536,7 +561,7 @@ Deno.test("a method other than POST is refused with 405", async () => {
   assert.equal(r.fake.calls.length, 0);
 });
 
-Deno.test("invalid output answers 502 after one call, with no retry", async () => {
+Deno.test("invalid output is retried once in the same request, and a valid retry is answered with one usage row", async () => {
   const card = twoCards[2];
   const tooLong = [{ ...card, answer: "a".repeat(1001) }];
   const sixExamples = [{ ...card, examples: ["a", "b", "c", "d", "e", "f"] }];
@@ -557,36 +582,121 @@ Deno.test("invalid output answers 502 after one call, with no retry", async () =
     ]
   ) {
     const r = await run({ replies: [reply, cardsReply(twoCards)] });
-    assert.equal(r.status, 502);
-    assert.deepEqual(r.body, { error: "model_error" });
-    assert.equal(
-      r.modelCalls.length,
-      1,
-      "the valid second reply is never asked for",
-    );
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, { cards: twoAnswered });
+    assert.equal(r.modelCalls.length, 2, "the retry is asked for");
+    assert.equal(usageCalls(r).length, 1, "the photo counts once");
+    assert.deepEqual(r.fake.finishes, [{
+      usage_id: USAGE_ID,
+      outcome: "ok",
+      attempts: 2,
+      latency_ms: 0,
+      cards_returned: 3,
+      cards_dropped: 0,
+      failures: ["invalid_output"],
+    }]);
+    assert.equal(r.logs[0].prompt_tokens, 2400, "both calls' tokens");
   }
-  const control = await run({ replies: [cardsReply(twoCards)] });
-  assert.equal(control.status, 200, "control: a valid first reply");
+  // Control: a valid first reply makes no second call.
+  const control = await run({
+    replies: [cardsReply(twoCards), cardsReply(twoCards)],
+  });
+  assert.equal(control.status, 200);
+  assert.equal(control.modelCalls.length, 1);
+  assert.deepEqual(control.fake.finishes[0].failures, []);
+  assert.equal(control.fake.finishes[0].attempts, 1);
 });
 
-Deno.test("a model call that never answers is abandoned at its timeout and answered 502, with no retry", async () => {
-  const hung = await run({ replies: [{ hang: true }, cardsReply(twoCards)] });
-  assert.equal(hung.status, 502);
-  assert.deepEqual(hung.body, { error: "model_error" });
+Deno.test("a photo that fails twice is answered 502 after two calls, with one usage row and each failure recorded", async () => {
+  const r = await run({ replies: [{ status: 500 }, { content: "{" }] });
+  assert.equal(r.status, 502);
+  assert.deepEqual(r.body, { error: "model_error" });
+  assert.equal(r.modelCalls.length, 2);
+  assert.equal(usageCalls(r).length, 1, "the photo counts once");
+  assert.deepEqual(r.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "invalid_output",
+    attempts: 2,
+    latency_ms: 0,
+    cards_returned: 0,
+    cards_dropped: 0,
+    failures: ["model_error", "invalid_output"],
+  }]);
+  assert.equal(r.logs[0].outcome, "model_error");
+  // Control: an HTTP failure retried into a valid reply is served.
+  const recovered = await run({
+    replies: [{ status: 500 }, cardsReply(twoCards)],
+  });
+  assert.equal(recovered.status, 200);
+  assert.deepEqual(recovered.fake.finishes[0].failures, ["model_error"]);
+});
+
+Deno.test("a model call that never answers is abandoned at its timeout and retried while the request is under the retry limit", async () => {
+  const hung = await run({
+    replies: [{ hang: true }, cardsReply(twoCards)],
+    modelCallMs: RETRY_START_LIMIT_MS - 1_000,
+  });
+  assert.equal(hung.status, 200);
+  assert.equal(hung.modelCalls.length, 2);
+  assert.deepEqual(hung.fake.finishes[0].failures, ["timeout"]);
+  assert.equal(hung.fake.finishes[0].outcome, "ok");
+  // Control: the same request with an answer is served at once.
+  const answered = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(answered.status, 200);
+  assert.equal(answered.modelCalls.length, 1);
+});
+
+Deno.test("a call that fails past the retry limit is answered 502 without a retry", async () => {
+  const late = await run({
+    replies: [{ hang: true }, cardsReply(twoCards)],
+    modelCallMs: RETRY_START_LIMIT_MS,
+  });
+  assert.equal(late.status, 502);
+  assert.deepEqual(late.body, { error: "model_error" });
   assert.equal(
-    hung.modelCalls.length,
+    late.modelCalls.length,
     1,
     "the valid second reply is never asked for",
   );
-  assert.equal(hung.logs[0].outcome, "model_error");
+  assert.equal(usageCalls(late).length, 1);
+  assert.deepEqual(late.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "model_error",
+    attempts: 1,
+    latency_ms: RETRY_START_LIMIT_MS,
+    cards_returned: 0,
+    cards_dropped: 0,
+    failures: ["timeout"],
+  }]);
   assert.equal(
-    hung.logs[0].prompt_tokens,
+    late.logs[0].prompt_tokens,
     null,
     "a call abandoned reports no usage",
   );
-  // Control: the same request with an answer is served.
-  const answered = await run({ replies: [cardsReply(twoCards)] });
-  assert.equal(answered.status, 200);
+  // Control: the same failure a millisecond earlier is retried.
+  const early = await run({
+    replies: [{ hang: true }, cardsReply(twoCards)],
+    modelCallMs: RETRY_START_LIMIT_MS - 1,
+  });
+  assert.equal(early.modelCalls.length, 2);
+});
+
+Deno.test("a photo refused before its count records no outcome", async () => {
+  const refused = await run({ allowed: false });
+  assert.equal(refused.status, 429);
+  assert.deepEqual(refused.fake.finishes, []);
+  // Control: a counted photo with no cards records its outcome.
+  const empty = await run({ replies: [cardsReply([])] });
+  assert.equal(empty.status, 422);
+  assert.deepEqual(empty.fake.finishes, [{
+    usage_id: USAGE_ID,
+    outcome: "no_cards",
+    attempts: 1,
+    latency_ms: 0,
+    cards_returned: 0,
+    cards_dropped: 0,
+    failures: [],
+  }]);
 });
 
 Deno.test("the call uses the model of the caller's plan", async () => {
@@ -625,13 +735,6 @@ Deno.test("missing plan settings, or a plan naming no model, answer 503 without 
     assert.deepEqual(r.body, { error: "not_configured" });
     assert.equal(r.modelCalls.length, 0);
   }
-});
-
-Deno.test("a model HTTP error answers 502 without a retry", async () => {
-  const r = await run({ replies: [{ status: 500 }, cardsReply(twoCards)] });
-  assert.equal(r.status, 502);
-  assert.deepEqual(r.body, { error: "model_error" });
-  assert.equal(r.modelCalls.length, 1);
 });
 
 Deno.test("a photo with no cards answers 422", async () => {

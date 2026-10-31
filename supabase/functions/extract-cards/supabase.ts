@@ -1,4 +1,4 @@
-/** The caller's plan, prompt and photo count, through `public.begin_extraction`. */
+/** The caller's plan, prompt and photo count, through `public.begin_extraction`, and its outcome. */
 
 import {
   type SupabaseDeps,
@@ -25,6 +25,8 @@ export type Prompt = { readonly versionId: number; readonly text: string };
 export type Start =
   | {
     readonly kind: "allowed";
+    /** The `extraction_usage` row recorded for the photo, which names its call record. */
+    readonly usageId: number;
     readonly plan: Plan;
     readonly model: ModelId;
     readonly prompt: Prompt;
@@ -104,6 +106,7 @@ export async function beginExtraction(
     allowed,
     prompt_version_id: versionId,
     prompt,
+    usage_id: usageId,
   } = row as Record<string, unknown>;
   if (
     (plan !== "free" && plan !== "pro" && plan !== "max") ||
@@ -115,11 +118,65 @@ export async function beginExtraction(
     throw new SupabaseError("begin_extraction answered a row it should not");
   }
   if (!allowed) return { kind: "rate_limited", plan, photoLimit, period };
+  if (typeof usageId !== "number" || !Number.isSafeInteger(usageId)) {
+    throw new SupabaseError(
+      "begin_extraction allowed a photo it did not record",
+    );
+  }
   const id = typeof model === "string" ? modelId(model) : null;
   return id === null ? { kind: "not_configured" } : {
     kind: "allowed",
+    usageId,
     plan,
     model: id,
     prompt: { versionId, text: prompt },
   };
+}
+
+/** How a counted photo's model calls failed, each attempt's kind in `Finish.failures`. */
+export type AttemptFailure = "invalid_output" | "model_error" | "timeout";
+
+/**
+ * How a counted photo's extraction ended (ADR 0130): its outcome, its model calls, the failure of
+ * each that failed, the request's milliseconds until then, and the last reply's cards answered and
+ * dropped.
+ */
+export type Finish = {
+  readonly outcome: "ok" | "no_cards" | "invalid_output" | "model_error";
+  readonly attempts: 1 | 2;
+  readonly latencyMs: number;
+  readonly cardsReturned: number;
+  readonly cardsDropped: number;
+  readonly failures: readonly AttemptFailure[];
+};
+
+/** Records [finish] on the call record of [usageId], through `public.finish_extraction`. */
+export async function finishExtraction(
+  usageId: number,
+  finish: Finish,
+  deps: SupabaseDeps,
+): Promise<void> {
+  const response = await deps.fetch(
+    `${deps.url}/rest/v1/rpc/finish_extraction`,
+    {
+      method: "POST",
+      headers: {
+        apikey: deps.serviceRoleKey,
+        Authorization: `Bearer ${deps.serviceRoleKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        usage_id: usageId,
+        outcome: finish.outcome,
+        attempts: finish.attempts,
+        latency_ms: Math.round(finish.latencyMs),
+        cards_returned: finish.cardsReturned,
+        cards_dropped: finish.cardsDropped,
+        failures: finish.failures,
+      }),
+    },
+  );
+  if (!response.ok) {
+    throw new SupabaseError(`finish_extraction answered ${response.status}`);
+  }
 }
