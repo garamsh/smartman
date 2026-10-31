@@ -718,6 +718,81 @@ void main() {
     );
 
     testWidgets(
+      '"Retry failed photos" sends again the two photos that failed, in order, and not the one read',
+      (tester) async {
+        final import = await _Import.open(tester);
+        import.photos.libraryPhotos = [
+          for (final width in [10, 20, 30]) Future.value(photoOfWidth(width)),
+        ];
+        await import.pick();
+        expect(
+          [for (final call in import.client.calls) call.photo.width],
+          [10, 20, 30],
+          reason: 'each photo told apart by its width',
+        );
+        expect(
+          _shown('Retry failed photos'),
+          findsNothing,
+          reason: 'none failed',
+        );
+
+        import.calls(0).answer.completeError(const ModelFailed());
+        await import.answerCall(1, {'chien': 'dog'});
+        import
+            .calls(2)
+            .answer
+            .completeError(ExtractionOffline(Exception('down')));
+        await import.frames();
+        expect(find.bySemanticsLabel("Couldn't read 2 photos"), findsOneWidget);
+
+        await import.tap(_shown('Retry failed photos'));
+        expect(
+          [for (final call in import.client.calls.skip(3)) call.photo.width],
+          [10, 30],
+        );
+        expect(_shown('Retry failed photos'), findsNothing);
+        await import.answerCall(3, {'chat': 'cat'});
+        await import.answerCall(4, {'oiseau': 'bird'});
+        await tester.pumpAndSettle();
+        expect(_shown('Words found'), findsOneWidget);
+        expect(import.client.calls, hasLength(5), reason: 'none sent again');
+        expect(import.imports.job?.list?.cardCount, 3);
+        await import.close();
+      },
+    );
+
+    testWidgets(
+      '"Retry failed photos" leaves a failure no retry can help, and is not offered for it alone',
+      (tester) async {
+        final import = await _Import.open(tester);
+        import.photos.libraryPhotos = [
+          for (final width in [10, 20, 30]) Future.value(photoOfWidth(width)),
+        ];
+        await import.pick();
+        import.calls(0).answer.completeError(const NoCardsFound());
+        import.calls(1).answer.completeError(const ModelFailed());
+        await import.answerCall(2, {'oiseau': 'bird'});
+        expect(find.bySemanticsLabel("Couldn't read 2 photos"), findsOneWidget);
+
+        await import.tap(_shown('Retry failed photos'));
+        expect(
+          [for (final call in import.client.calls.skip(3)) call.photo.width],
+          [20],
+          reason: 'the 502 alone',
+        );
+        import.calls(3).answer.completeError(const ModelFailed());
+        await import.frames();
+        expect(_shown('Retry failed photos'), findsOneWidget);
+
+        await import.tap(_shown('Remove').at(1));
+        expect(find.bySemanticsLabel("Couldn't read 1 photo"), findsOneWidget);
+        expect(_shownContaining('No cards found'), findsOneWidget);
+        expect(_shown('Retry failed photos'), findsNothing);
+        await import.close();
+      },
+    );
+
+    testWidgets(
       'a photo that fails can be left out, and the others make the list',
       (tester) async {
         final import = await _Import.open(tester);

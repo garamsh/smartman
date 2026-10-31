@@ -1657,6 +1657,12 @@ abstract class AppLocalizations {
   /// **'다시 시도'**
   String get retry;
 
+  /// Button that sends again every photo of the import whose failure a retry can help.
+  ///
+  /// In ko, this message translates to:
+  /// **'실패한 사진 다시 시도'**
+  String get retryFailedPhotos;
+
   /// Photo import failure: the server could not be reached.
   ///
   /// In ko, this message translates to:

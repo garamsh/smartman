@@ -942,6 +942,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get retry => '다시 시도';
 
   @override
+  String get retryFailedPhotos => '실패한 사진 다시 시도';
+
+  @override
   String get extractionOffline => '인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.';
 
   @override
