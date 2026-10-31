@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  CARD_RULES,
+  type CardRule,
   cardsSchema,
   CLOZE_BLANK,
   composeAnswer,
   composeClozeAnswer,
+  composeInstructions,
   composeTableAnswer,
   KINDS,
   LABEL_KINDS,
@@ -18,10 +21,15 @@ import {
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
   MAX_TOPIC_CHARS,
+  OUTPUT_CONTRACT,
+  parseCard,
   parseCards,
+  parseReply,
   PARTS_OF_SPEECH,
+  Refusal,
   TYPES,
 } from "./cards.ts";
+import { SYSTEM_PROMPT as V9 } from "./prompt_v9.ts";
 
 const reply = (cards: unknown) => JSON.stringify({ cards });
 
@@ -902,4 +910,142 @@ Deno.test("the schema sent to the model states the fields and the limits the par
   assert.equal(cards.items.additionalProperties, false);
   assert.equal(fields.senses.items.additionalProperties, false);
   assert.equal(fields.extras.items.additionalProperties, false);
+});
+
+/**
+ * For each rule, a card that breaks it and no rule checked before it. The type names every rule
+ * of `CARD_RULES`, so a rule added without a card here fails the type check.
+ */
+const BREAKING: Record<CardRule, unknown> = {
+  fields: item({ short: "x" }),
+  kind: item({ kind: "word" }),
+  type: item({ type: "flip" }),
+  front: item({ front: " " }),
+  answer: note({ answer: "a".repeat(MAX_ANSWER_CHARS + 1) }),
+  topic: item({ topic: "a".repeat(MAX_TOPIC_CHARS + 1) }),
+  pronunciation: item({ pronunciation: "" }),
+  examples: item({ examples: ["a", "b", "c", "d", "e", "f"] }),
+  senses: item({ senses: [{ pos: "n", meaning: "사과" }] }),
+  sense_meaning: item({ senses: [sense(" ")] }),
+  sense_examples: item({
+    senses: [{ labels: [], meaning: "사과", examples: [""] }],
+  }),
+  sense_labels: item({
+    senses: [sense("사과", [{ kind: "other", text: "x" }])],
+  }),
+  label_text: item({
+    senses: [sense("사과", [{ kind: "other", category: null, text: "[ ]" }])],
+  }),
+  label_kind: item({
+    senses: [sense("사과", [{
+      kind: "part_of_speech",
+      category: "gerund",
+      text: "x",
+    }])],
+  }),
+  extras: item({ extras: [{ label: "유의어", text: "" }] }),
+  table_fields: table({ table: { ...TABLE, note: "x" } }),
+  table_columns: tableWith({ columns: [] }),
+  table_rows: tableWith({ rows: [["1인칭", "저"]] }),
+  table_cells: tableWith({
+    rows: [
+      ["1인칭", "저, 저희", "a".repeat(MAX_FIELD_CHARS + 1)],
+      TABLE.rows[1],
+    ],
+  }),
+  table_blanks: tableWith({ blanks: [] }),
+  table_blank_cells: tableWith({ blanks: [{ row: 5, column: 1 }] }),
+  cloze_fields: cloze({ cloze: { answers: [] } }),
+  note_fields: note({ pronunciation: "[x]" }),
+  vocabulary_senses: item({ senses: [] }),
+  vocabulary_answer: item({ answer: "사과" }),
+  vocabulary_type: item({ type: "cloze" }),
+  table_card: table({ answer: "표" }),
+  cloze_card: cloze({ table: TABLE }),
+  cloze_blanks: cloze({ front: "3인칭 재귀칭: ___" }),
+  concept_card: note({ answer: null }),
+};
+
+Deno.test("every rule the parser refuses a card by is stated in the output contract, and each is reachable", () => {
+  const refusedBy = new Set<CardRule>();
+  for (const [rule, card] of Object.entries(BREAKING)) {
+    const parsed = parseCard(card);
+    assert.ok(parsed instanceof Refusal, `${rule}: refused`);
+    assert.equal(parsed.rule, rule);
+    refusedBy.add(parsed.rule);
+  }
+  assert.deepEqual([...refusedBy].sort(), Object.keys(CARD_RULES).sort());
+  const contractLines = OUTPUT_CONTRACT.split("\n");
+  for (const [rule, sentence] of Object.entries(CARD_RULES)) {
+    assert.ok(contractLines.includes(`- ${sentence}`), rule);
+  }
+  // Control: each kind of card the breaking ones are made from is accepted.
+  for (const card of [item(), note(), table(), cloze()]) {
+    assert.ok(!(parseCard(card) instanceof Refusal), JSON.stringify(card));
+  }
+});
+
+Deno.test("the output contract names every field of the schema, the card limit and every part of speech", () => {
+  for (
+    const key of Object.keys(cardsSchema.properties.cards.items.properties)
+  ) {
+    assert.ok(OUTPUT_CONTRACT.includes(`\n- "${key}": `), key);
+  }
+  assert.ok(OUTPUT_CONTRACT.includes(`at most ${MAX_CARDS} cards`));
+  for (const category of PARTS_OF_SPEECH) {
+    assert.ok(OUTPUT_CONTRACT.includes(`"${category}"`), category);
+  }
+});
+
+Deno.test("the output contract is written for the material, never for a photo or a page", () => {
+  const sourceWords = /photo|image|picture|page|사진/i;
+  assert.doesNotMatch(OUTPUT_CONTRACT, sourceWords);
+  assert.match(OUTPUT_CONTRACT, /the material/);
+  // Control: prompt v9, written for a photo of a page, matches the same expression.
+  assert.match(V9, sourceWords);
+});
+
+Deno.test("the model's instructions are the served prompt's text unchanged, then the output contract", () => {
+  const prompt = "  Saved instructions.\r\n";
+  assert.equal(composeInstructions(prompt), `${prompt}\n\n${OUTPUT_CONTRACT}`);
+  assert.ok(OUTPUT_CONTRACT.startsWith("# Output contract\n"));
+});
+
+Deno.test("parseReply keeps the cards that keep every rule, in order, and names the rule of each card it drops", () => {
+  const parsed = parseReply(reply([
+    BREAKING.vocabulary_answer,
+    item(),
+    BREAKING.cloze_blanks,
+    note(),
+  ]));
+  assert.deepEqual(parsed?.cards.map((card) => card.front), [
+    "apple",
+    "연역 논증과 귀납 논증의 차이",
+  ]);
+  assert.deepEqual(parsed?.dropped, ["vocabulary_answer", "cloze_blanks"]);
+  // The strict reading refuses the same reply whole.
+  assert.equal(parseCards(reply([BREAKING.vocabulary_answer, item()])), null);
+  // Control: a reply of valid cards drops none, read either way.
+  assert.deepEqual(parseReply(reply([item(), note()]))?.dropped, []);
+  assert.equal(parseCards(reply([item(), note()]))?.length, 2);
+});
+
+Deno.test("parseReply refuses a reply that is not the schema's envelope whatever its cards", () => {
+  for (
+    const text of [
+      "{",
+      reply("a"),
+      JSON.stringify({ cards: [item()], note: "x" }),
+      "[]",
+      reply(Array.from({ length: MAX_CARDS + 1 }, () => item())),
+    ]
+  ) {
+    assert.equal(parseReply(text), null, text.slice(0, 40));
+  }
+  // Control: the envelope of exactly the card limit is read.
+  assert.equal(
+    parseReply(reply(Array.from({ length: MAX_CARDS }, () => item())))?.cards
+      .length,
+    MAX_CARDS,
+  );
 });

@@ -1,6 +1,6 @@
 # ADR 0073: Keep the extraction prompt as append-only versions in the database, served by an active and an admin-only test label, and record what served each call
 
-> Status: accepted; its `start_extraction` and `consume_extraction` kept beside `begin_extraction` superseded by ADR-0078
+> Status: accepted; its `start_extraction` and `consume_extraction` kept beside `begin_extraction` superseded by ADR-0078; its invalid output saving no card, for a reply some of whose cards keep every rule, superseded by ADR-0124
 > Date: 2026-10-19
 
 Append-only: once merged, the body below is not rewritten. A fact later found wrong is corrected in an appended note, not edited out; a revised decision is a new ADR that supersedes this one.
