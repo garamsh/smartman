@@ -752,19 +752,23 @@ test("a card of 100, 200 and 400 characters, and one of several senses, are stud
   for (const step of [1, 2, 3, 4]) {
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
-      // The face's step once it has stepped down for this width (ADR 0123).
-      await expect
-        .poll(() =>
-          face.evaluate(
-            (node) => node.scrollWidth <= node.clientWidth && node.getAttribute("data-card-step"),
-          ),
-        )
-        .toBeTruthy();
-      const sized = await face.evaluate((node) => ({
-        step: node.getAttribute("data-card-step") ?? "",
-        fits: node.scrollHeight <= node.clientHeight + 1,
-        breaks: getComputedStyle(node.firstElementChild ?? node).wordBreak,
-      }));
+      // The face once it has stepped down for this width (ADR 0123): as wide as the face, and
+      // whole at a step above the body's. Read before the face has seen the resize, it holds the
+      // last width's step, so the read is taken again until the face has settled.
+      let sized = { step: "", fits: false, breaks: "" };
+      await expect(async () => {
+        const read = await face.evaluate((node) => ({
+          step: node.getAttribute("data-card-step") ?? "",
+          wide: node.scrollWidth <= node.clientWidth,
+          fits: node.scrollHeight <= node.clientHeight + 1,
+          breaks: getComputedStyle(node.firstElementChild ?? node).wordBreak,
+        }));
+        sized = read;
+        expect(read.wide, `${read.step} wider than the face at ${String(width)} px`).toBe(true);
+        if (read.step !== "text-card-body") {
+          expect(read.fits, `${read.step} at ${String(width)} px`).toBe(true);
+        }
+      }).toPass({ timeout: 5_000 });
       seen.add(sized.step);
       // Lines break only between words; a size above the body's fits whole, and the body's
       // scrolls with a fade when it does not.

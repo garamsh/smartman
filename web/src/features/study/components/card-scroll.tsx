@@ -16,6 +16,9 @@ export function CardScroll({ children }: { children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [more, setMore] = useState(false);
+  // The frame's size the step was fitted to. A resize sets it as well as the step, so the fit runs
+  // again where the step was already the largest and setting it alone would render nothing.
+  const [frameSize, setFrameSize] = useState("");
   const last = steps.length - 1;
   const step = steps[Math.min(index, last)] ?? "text-card-body";
 
@@ -30,7 +33,7 @@ export function CardScroll({ children }: { children: ReactNode }) {
       return;
     }
     setMore(face.scrollHeight - face.scrollTop - face.clientHeight > 1);
-  }, [index, last, children]);
+  }, [index, last, children, frameSize]);
 
   // A face of a new size fits its content again from the largest step. The frame is watched,
   // not the scrolling face, whose width changes as its own scrollbar comes and goes.
@@ -43,6 +46,7 @@ export function CardScroll({ children }: { children: ReactNode }) {
       if (outer.offsetWidth === width && outer.offsetHeight === height) return;
       width = outer.offsetWidth;
       height = outer.offsetHeight;
+      setFrameSize(`${String(width)}x${String(height)}`);
       setIndex(0);
     });
     observer.observe(outer);
