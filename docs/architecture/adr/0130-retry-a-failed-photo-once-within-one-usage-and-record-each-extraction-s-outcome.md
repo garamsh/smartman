@@ -31,7 +31,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - **This supersedes ADR 0071's "one model call per photo" in part**: a photo still makes one call when it answers, and at most two.
 - **The outcome.** `private.extraction_calls` gains, for each counted photo, `outcome` (`ok`, `no_cards`, `invalid_output` or `model_error`), `attempts` (1 or 2), `latency_ms`, `cards_returned` and `cards_dropped` of the last reply, and `failures`, the failure of each call that failed in order (`invalid_output`, `model_error` or `timeout`). No image, card or prompt text is recorded.
   - A check keeps the parts in agreement: all null, or all set with one failure per call, one fewer when the last call answered, and cards only on `ok`.
-  - `begin_extraction` returns the usage row it recorded as `usage_id`. `public.finish_extraction`, executable only by `service_role`, records the outcome on that row's call once, before the function answers. A row whose outcome stays null was counted before this change, or its request ended unexpectedly.
+  - `begin_extraction` returns the usage row it recorded as `usage_id`. `public.finish_extraction`, executable only by `service_role`, records the outcome on that row's call once, before the function answers. The record is telemetry: when it fails, the photo is answered as it would have been, and the log line's `outcome_recorded` is false. A row whose outcome stays null was counted before this change, or its request ended unexpectedly.
 - **The admin reads**, each checking the role as [ADR 0070](0070-run-the-service-from-a-web-admin-area-whose-role-and-audit-log-live-in-the-database-and-whose-every-read-and-write-is-checked-there.md) decides: `admin_extraction_calls(before, page_size)`, the recorded calls newest first, and `admin_extraction_failures(days)`, each UTC day's calls by prompt version with each outcome's count, the retried and recovered calls, the share failed and the unrecorded calls. #509 shows them.
 - **The migration** `20261031181717_extraction_outcomes.sql` adds six nullable columns and the check, replaces `begin_extraction` with its body unchanged and one returned column more, and adds the three functions. It changes no row.
 
@@ -41,7 +41,7 @@ Append-only: once merged, the body below is not rewritten. A fact later found wr
 - A failed photo's answer now takes up to about 135 s. The web's photo read aborts its request at 90 s (`web/src/features/decks/read-photo.ts`), so a retry after a first call timed out ends after the web has shown a failure, the photo counted and its cards lost.
 - Each failure is readable afterwards by its kind, day and prompt version, without the logs.
 - Merging deploys the migration and the function in no stated order. Should the function arrive first, `begin_extraction` names no usage row yet and each allowed photo answers `500` after it is counted, until the migration applies, as ADR 0073 accepted for its own deploy.
-- A database failure while recording the outcome answers `500` and loses the photo's cards, as any other database failure in the request does.
+- A failed record leaves the call without an outcome, under `unrecorded`, and only the log line, kept briefly, says why.
 
 ## Signs the decision was wrong
 

@@ -150,12 +150,15 @@ export type Finish = {
   readonly failures: readonly AttemptFailure[];
 };
 
-/** Records [finish] on the call record of [usageId], through `public.finish_extraction`. */
+/**
+ * Records [finish] on the call record of [usageId], through `public.finish_extraction`, answering
+ * whether it was recorded. The record is telemetry: its failure never decides the photo's answer.
+ */
 export async function finishExtraction(
   usageId: number,
   finish: Finish,
   deps: SupabaseDeps,
-): Promise<void> {
+): Promise<boolean> {
   const response = await deps.fetch(
     `${deps.url}/rest/v1/rpc/finish_extraction`,
     {
@@ -175,8 +178,6 @@ export async function finishExtraction(
         failures: finish.failures,
       }),
     },
-  );
-  if (!response.ok) {
-    throw new SupabaseError(`finish_extraction answered ${response.status}`);
-  }
+  ).catch(() => null);
+  return response?.ok ?? false;
 }

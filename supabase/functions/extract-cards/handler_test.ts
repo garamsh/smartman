@@ -47,6 +47,8 @@ type Fake = {
   calls: { url: string; init: RequestInit | undefined }[];
   /** The bodies finish_extraction was called with. */
   finishes: Record<string, unknown>[];
+  /** The status finish_extraction answers with. */
+  finishStatus: number;
   /** The clock the handler reads, advanced by `modelCallMs` at each model call. */
   clock: number;
   modelCallMs: number;
@@ -87,7 +89,9 @@ function fakeFetch(fake: Fake): typeof fetch {
     }
     if (url === `${SUPABASE_URL}/rest/v1/rpc/finish_extraction`) {
       fake.finishes.push(JSON.parse(String(init?.body)));
-      return Promise.resolve(new Response(null, { status: 204 }));
+      return Promise.resolve(
+        new Response(null, { status: fake.finishStatus }),
+      );
     }
     if (url === OPENROUTER_URL) {
       fake.clock += fake.modelCallMs;
@@ -181,6 +185,7 @@ async function run(
     env?: Record<string, string | undefined>;
     /** How far the clock moves at each model call; 0 unless a test needs time to pass. */
     modelCallMs?: number;
+    finishStatus?: number;
   } = {},
 ): Promise<Run> {
   const fake: Fake = {
@@ -198,6 +203,7 @@ async function run(
     prompt: options.prompt ?? { prompt_version_id: 1, prompt: SYSTEM_PROMPT },
     calls: [],
     finishes: [],
+    finishStatus: options.finishStatus ?? 204,
     clock: 0,
     modelCallMs: options.modelCallMs ?? 0,
   };
@@ -681,6 +687,21 @@ Deno.test("a call that fails past the retry limit is answered 502 without a retr
   assert.equal(early.modelCalls.length, 2);
 });
 
+Deno.test("a photo whose outcome cannot be recorded is still answered with its cards, and the log says so", async () => {
+  const unrecorded = await run({
+    replies: [cardsReply(twoCards)],
+    finishStatus: 500,
+  });
+  assert.equal(unrecorded.status, 200);
+  assert.deepEqual(unrecorded.body, { cards: twoAnswered });
+  assert.equal(unrecorded.fake.finishes.length, 1, "the record was tried");
+  assert.equal(unrecorded.logs[0].outcome, "ok");
+  assert.equal(unrecorded.logs[0].outcome_recorded, false);
+  // Control: a record that succeeds logs it.
+  const recorded = await run({ replies: [cardsReply(twoCards)] });
+  assert.equal(recorded.logs[0].outcome_recorded, true);
+});
+
 Deno.test("a photo refused before its count records no outcome", async () => {
   const refused = await run({ allowed: false });
   assert.equal(refused.status, 429);
@@ -1046,6 +1067,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
       "latency_ms",
       "model",
       "outcome",
+      "outcome_recorded",
       "plan",
       "prompt_tokens",
       "prompt_version",
@@ -1080,6 +1102,7 @@ Deno.test("each request logs one line of the allowed fields and never the image"
     prompt_tokens: 1200,
     completion_tokens: 80,
     dropped_cards: 0,
+    outcome_recorded: true,
     outcome: "ok",
   });
   assert.equal(outcomes[1].logs[0].prompt_tokens, 1200, "one call's tokens");

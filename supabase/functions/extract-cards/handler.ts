@@ -47,6 +47,8 @@ export type LogEntry = {
   readonly completion_tokens: number | null;
   /** The reply's cards dropped for breaking a rule; null when no reply was read as the schema's. */
   readonly dropped_cards: number | null;
+  /** Whether the photo's outcome was recorded; null when no photo was counted. */
+  readonly outcome_recorded: boolean | null;
   readonly outcome: Outcome;
 };
 
@@ -107,6 +109,8 @@ type Result = {
   readonly cards?: readonly Card[];
   /** How many of the reply's cards were dropped, when a reply was read as the schema's. */
   readonly dropped?: number;
+  /** Whether the counted photo's outcome was recorded. */
+  readonly recorded?: boolean;
 };
 
 export function createHandler(
@@ -207,7 +211,7 @@ async function handle(
       extraction.kind === "invalid_output"
     ? extraction.dropped.length
     : 0;
-  await finishExtraction(start.usageId, {
+  const recorded = await finishExtraction(start.usageId, {
     outcome: extraction.kind === "cards" ? "ok" : extraction.kind,
     attempts: retry ? 2 : 1,
     latencyMs: deps.now() - started,
@@ -218,7 +222,7 @@ async function handle(
       ...(lastFailure === null ? [] : [lastFailure]),
     ],
   }, supabase);
-  const served = { userId, plan, promptVersion, attempts };
+  const served = { userId, plan, promptVersion, attempts, recorded };
   switch (extraction.kind) {
     case "cards":
       return { outcome: "ok", ...served, cards, dropped };
@@ -267,6 +271,7 @@ function log(deps: HandlerDeps, started: number, result: Result): void {
     prompt_tokens: sum((usage) => usage.promptTokens),
     completion_tokens: sum((usage) => usage.completionTokens),
     dropped_cards: result.dropped ?? null,
+    outcome_recorded: result.recorded ?? null,
     outcome: result.outcome,
   });
 }
