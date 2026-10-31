@@ -16,6 +16,11 @@ import 'package:smartman/photo_import/src/photo.dart';
 /// A small prepared photo.
 final testPhoto = downscalePhoto(img.encodePng(img.Image(width: 8, height: 6)));
 
+/// A small prepared photo [width] wide, which a call's photo is told apart
+/// by.
+JpegPhoto photoOfWidth(int width) =>
+    downscalePhoto(img.encodePng(img.Image(width: width, height: 6)));
+
 /// A system camera and a library that hand over [testPhoto], or fail as
 /// told, and a settings page that opens as told.
 final class FakePhotoSource implements PhotoSource {
