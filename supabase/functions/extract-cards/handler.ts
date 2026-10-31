@@ -43,6 +43,8 @@ export type LogEntry = {
   /** The call's usage; null when it made none or reported none. */
   readonly prompt_tokens: number | null;
   readonly completion_tokens: number | null;
+  /** The reply's cards dropped for breaking a rule; null when no reply was read as the schema's. */
+  readonly dropped_cards: number | null;
   readonly outcome: Outcome;
 };
 
@@ -52,6 +54,8 @@ export type HandlerDeps = {
   readonly log: (entry: LogEntry) => void;
   /** Milliseconds from a monotonic clock. */
   readonly now: () => number;
+  /** How long the model call may take before it is a model error. */
+  readonly modelTimeoutMs: number;
 };
 
 export function status(outcome: Outcome): number {
@@ -92,6 +96,8 @@ type Result = {
   readonly limit?: { readonly photos: number; readonly period: Period };
   readonly attempts: readonly Attempt[];
   readonly cards?: readonly Card[];
+  /** How many of the reply's cards were dropped, when a reply was read as the schema's. */
+  readonly dropped?: number;
 };
 
 export function createHandler(
@@ -169,6 +175,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
       apiKey: config.openRouterApiKey,
       fetch: deps.fetch,
       now: deps.now,
+      timeoutMs: deps.modelTimeoutMs,
     },
   );
   switch (extraction.kind) {
@@ -180,6 +187,7 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
         promptVersion,
         attempts: extraction.attempts,
         cards: extraction.cards,
+        dropped: extraction.dropped.length,
       };
     case "no_cards":
       return {
@@ -188,8 +196,19 @@ async function handle(request: Request, deps: HandlerDeps): Promise<Result> {
         plan,
         promptVersion,
         attempts: extraction.attempts,
+        dropped: 0,
       };
     case "invalid_output":
+      return {
+        outcome: "model_error",
+        userId,
+        plan,
+        promptVersion,
+        attempts: extraction.attempts,
+        ...(extraction.dropped.length === 0
+          ? {}
+          : { dropped: extraction.dropped.length }),
+      };
     case "model_error":
       return {
         outcome: "model_error",
@@ -217,6 +236,7 @@ function log(deps: HandlerDeps, started: number, result: Result): void {
     latency_ms: Math.round(deps.now() - started),
     prompt_tokens: sum((usage) => usage.promptTokens),
     completion_tokens: sum((usage) => usage.completionTokens),
+    dropped_cards: result.dropped ?? null,
     outcome: result.outcome,
   });
 }

@@ -30,6 +30,7 @@ function extractWith(body: unknown, status = 200): Promise<Extraction> {
     apiKey: "key",
     now: () => 0,
     fetch: () => Promise.resolve(Response.json(body, { status })),
+    timeoutMs: 1000,
   });
 }
 
@@ -87,4 +88,45 @@ Deno.test("a reply reporting no cost records none, and one without usage records
   const unreported = await extractWith(reply());
   assert.equal(unreported.attempts[0].usage, null);
   assert.equal(unreported.kind, "cards", "control: the reply itself is valid");
+});
+
+Deno.test("a call whose request or reply body never ends is a model error at its timeout, marked timed out", async () => {
+  const deps = { apiKey: "key", now: () => 0, timeoutMs: 20 };
+  const neverAnswers = await extractCards(PHOTO, {}, MODEL, "instructions", {
+    ...deps,
+    fetch: () => new Promise<Response>(() => {}),
+  });
+  // Headers arrive, but the body never finishes.
+  const neverEnds = await extractCards(PHOTO, {}, MODEL, "instructions", {
+    ...deps,
+    fetch: () =>
+      Promise.resolve(new Response(new ReadableStream({ start() {} }))),
+  });
+  for (const extraction of [neverAnswers, neverEnds]) {
+    assert.equal(extraction.kind, "model_error");
+    assert.equal(extraction.attempts.length, 1);
+    assert.equal(extraction.attempts[0].timedOut, true);
+    assert.equal(extraction.attempts[0].usage, null);
+  }
+  // Control: a call that fails at once is a model error not marked timed out.
+  const refused = await extractCards(PHOTO, {}, MODEL, "instructions", {
+    ...deps,
+    fetch: () => Promise.reject(new TypeError("connection refused")),
+  });
+  assert.equal(refused.kind, "model_error");
+  assert.equal(refused.attempts[0].timedOut, false);
+});
+
+Deno.test("a call aborts its request at the timeout", async () => {
+  let signal: AbortSignal | null | undefined;
+  await extractCards(PHOTO, {}, MODEL, "instructions", {
+    apiKey: "key",
+    now: () => 0,
+    timeoutMs: 20,
+    fetch: (_input, init) => {
+      signal = init?.signal;
+      return new Promise<Response>(() => {});
+    },
+  });
+  assert.equal(signal?.aborted, true);
 });

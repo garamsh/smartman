@@ -531,6 +531,50 @@ def structure(page: Page, doc: dict, sections: list[dict]) -> None:
         raise SystemExit(f"the structure page {doc['title']} runs off the page")
 
 
+# The page for photo import's clear material (ADR 0128), after the pages for the two-stage eval:
+# a printed word list, each line its number, the word and its meaning, in print under the mild
+# distortion and in print under the harsh one.
+NUMBERED_LIST_STYLES = ["print", "harsh"]
+
+
+def numbered_list(page: Page, entries: list[dict]) -> None:
+    """A word list printed one entry a line, as "1. abandon 버리다"."""
+    page.text((110, 90), "Word List  단어장", LABEL_FACE, 44, (60, 60, 60))
+    y = 210.0
+    step = (PAGE[1] - 320) / len(entries)
+    for number, entry in enumerate(entries, 1):
+        x = 110 + page.text((110, y), f"{number}. {entry['front']}", page.front_face, 38) + 28
+        page.text((x, y), entry["back"], page.back_face, 38)
+        y += step
+
+
+def write_numbered_list_samples(index: int, entries: list[dict]) -> int:
+    """Writes the numbered word list in each of its styles, numbered after `index`, with its
+    truth; returns the last index."""
+    for style in NUMBERED_LIST_STYLES:
+        index += 1
+        rng = np.random.default_rng([SEED, index])
+        page = Page(rng, "en-ko", "print")
+        numbered_list(page, entries)
+        check_coverage(page.covered)
+        d = HARSH if style == "harsh" else MILD
+        photo = photograph(page.image, rng, d)
+        sample = f"{index:02d}-numbered-list-en-ko-{style}"
+        photo.save(SAMPLES / f"{sample}.jpg", quality=d.quality, optimize=False)
+        truth = {
+            "image": f"{sample}.jpg",
+            "layout": "numbered-list",
+            "languages": {"front": "en", "back": "ko"},
+            "hand": "print",
+            "distortion": style if style == "harsh" else "mild",
+            "fonts": sorted({page.front_face, page.back_face}),
+            "cards": [truth_card(entry, "numbered-list") for entry in entries],
+        }
+        (SAMPLES / f"{sample}.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n",
+                                                encoding="utf-8")
+    return index
+
+
 def write_structure_samples(index: int, name: str, doc: dict) -> int:
     """Writes the structure page `name` in every hand and distortion, numbered after `index`, with
     its truth: its sections, its lines as notes facts, each fact the spans its line should blank,
@@ -782,6 +826,7 @@ def main() -> None:
     structures = json.loads((HERE / "structure.json").read_text(encoding="utf-8"))
     for name in STRUCTURE_DOCUMENTS:
         index = write_structure_samples(index, name, structures[name])
+    index = write_numbered_list_samples(index, vocabulary["numbered-list"])
     print(f"wrote {index} samples to {SAMPLES.relative_to(HERE.parent.parent)}/ from seed {SEED}")
 
 

@@ -104,13 +104,29 @@ export type SenseCounts = {
   readonly matched: number;
 };
 
+/** The cards returned, and those whose front holds a list's number (`isNumberedFront`). */
+export type FrontCounts = {
+  readonly returned: number;
+  readonly numbered: number;
+};
+
 export type Score = {
   readonly precision: number;
   readonly recall: number;
   readonly f1: number;
   readonly fields: FieldCounts;
   readonly senses: SenseCounts;
+  readonly fronts: FrontCounts;
 };
+
+/**
+ * Whether [front] holds a list's number: it is a numeral alone, or opens with a numeral followed by
+ * "." or ")" or with one in brackets, such as "3", "1. abandon" or "(2) ability", which a list
+ * prints to place an entry and a card's front never holds (ADR 0128). "3.5" or "3D" is not one.
+ */
+export function isNumberedFront(front: string): boolean {
+  return /^\s*(?:\(\d+\)|\d+(?:[.)](?!\d)|\s*$))/.test(front.normalize("NFKC"));
+}
 
 /**
  * Precision and recall of one image's candidates, and the field counts of the matched ones.
@@ -144,6 +160,10 @@ export function score(
     f1,
     fields: countFields(pairs),
     senses: countSenses(candidates, truth),
+    fronts: {
+      returned: candidates.length,
+      numbered: candidates.filter((card) => isNumberedFront(card.front)).length,
+    },
   };
 }
 
@@ -521,6 +541,8 @@ export type VocabularyRates = {
    */
   readonly sensePrecision: number | null;
   readonly senseRecall: number | null;
+  /** Of the returned cards, the share whose front holds a list's number: 0 is required (ADR 0128). */
+  readonly numberedFrontRate: number | null;
 };
 
 /** One vocabulary image's F1 and shares. */
@@ -628,6 +650,10 @@ function vocabularyRates(scores: readonly Score[]): VocabularyRates {
       senses((s) => s.returned),
     ),
     senseRecall: share(senses((s) => s.matched), senses((s) => s.page)),
+    numberedFrontRate: share(
+      scores.reduce((total, score) => total + score.fronts.numbered, 0),
+      scores.reduce((total, score) => total + score.fronts.returned, 0),
+    ),
   };
 }
 
