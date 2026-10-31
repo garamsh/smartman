@@ -127,6 +127,22 @@ function upload() {
 }
 const card = { kind: "note", type: "concept", front: "수도", answer: "서울", topic: "도시" };
 
+/**
+ * Whether [value] holds the members `preparePhoto` uses of a 2D context. jsdom has no 2D context,
+ * so the stub holds only those members; this check is what lets it stand for one.
+ */
+function isDrawingContext(value: unknown): value is CanvasRenderingContext2D {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "fillStyle" in value &&
+    "fillRect" in value &&
+    typeof value.fillRect === "function" &&
+    "drawImage" in value &&
+    typeof value.drawImage === "function"
+  );
+}
+
 /** jsdom decodes and draws nothing: the browser's decoder and canvas, as far as preparation uses them. */
 function stubBrowserImages({
   width = 1200,
@@ -147,13 +163,15 @@ function stubBrowserImages({
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (
     this: HTMLCanvasElement,
   ) {
-    return {
+    const context: unknown = {
       fillStyle: "",
       fillRect: vi.fn(),
       drawImage: () => {
         drawn.push({ width: this.width, height: this.height });
       },
-    } as unknown as CanvasRenderingContext2D;
+    };
+    if (!isDrawingContext(context)) throw new Error("the stub lacks what preparePhoto draws with");
+    return context;
   });
   vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
     (callback: BlobCallback, type?: string, quality?: number) => {
