@@ -20,8 +20,9 @@ import 'image_block.dart';
 ///
 /// A cloze is in [style], centred, scaled down as far as [minFontSize] until
 /// its widest word fits [width]. A table is in the body size, [width] wide.
-/// Given [height] too, the whole front is scaled down to fit it. It reads as
-/// [spokenContent] says, each empty blank as "빈칸".
+/// Given [height] too, the whole front is scaled down to fit it. Its text
+/// blocks are aligned by [textAlign]. It reads as [spokenContent] says, each
+/// empty blank as "빈칸".
 class WholeCardView extends StatelessWidget {
   const WholeCardView(
     this.blocks, {
@@ -31,6 +32,7 @@ class WholeCardView extends StatelessWidget {
     this.minFontSize,
     this.width,
     this.height,
+    this.textAlign = TextAlign.center,
   });
 
   final List<Content> blocks;
@@ -39,6 +41,7 @@ class WholeCardView extends StatelessWidget {
   final double? minFontSize;
   final double? width;
   final double? height;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -52,14 +55,14 @@ class WholeCardView extends StatelessWidget {
           switch (block) {
             TextContent(:final text) => Text(
               text,
-              textAlign: TextAlign.center,
+              textAlign: textAlign,
               style: _titleStyle,
             ),
             ClozeContent() => _cloze(context, block),
             TableContent() => _table(context, block),
             SensesContent() => Text.rich(
               sensesSpan(block),
-              textAlign: TextAlign.center,
+              textAlign: textAlign,
               style: style,
             ),
             // Inside [width] and [height] itself, so the photo alone is
@@ -119,7 +122,7 @@ class WholeCardView extends StatelessWidget {
     final width = this.width;
     final minFontSize = this.minFontSize;
     if (width == null || minFontSize == null) {
-      return Text.rich(span, style: style, textAlign: TextAlign.center);
+      return Text.rich(span, style: style, textAlign: textAlign);
     }
     return CardText(
       cloze.filled,
@@ -127,6 +130,7 @@ class WholeCardView extends StatelessWidget {
       style: style,
       minFontSize: minFontSize,
       width: width,
+      textAlign: textAlign,
     );
   }
 
@@ -191,6 +195,51 @@ class WholeCardView extends StatelessWidget {
               decoration: TextDecoration.underline,
               decorationColor: colors.muted,
             ),
+    );
+  }
+}
+
+/// A whole card's face as the current card and the card preview draw it: in
+/// the largest of [cardSteps] from [style] at which its text fits a box
+/// [width] wide and [height] high, start-aligned at the last, past which the
+/// face scrolls ([CardScroll], ADR 0123).
+class SteppedWholeCardView extends StatelessWidget {
+  const SteppedWholeCardView(
+    this.face, {
+    super.key,
+    required this.revealed,
+    required this.style,
+    required this.width,
+    required this.height,
+  });
+
+  final List<Content> face;
+  final bool revealed;
+  final TextStyle style;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    // The face's text with each blank filled, whose width an empty blank's
+    // gap keeps.
+    final plain = describeContent(AppLocalizations.of(context), face);
+    final stepped = steppedStyle(
+      TextSpan(text: keepWords(plain)),
+      plain,
+      steps: cardSteps(style),
+      width: width,
+      height: height,
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+    );
+    return WholeCardView(
+      face,
+      revealed: revealed,
+      style: stepped,
+      minFontSize: stepped.fontSize,
+      width: width,
+      textAlign: cardAlign(stepped),
     );
   }
 }

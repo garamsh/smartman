@@ -1,15 +1,19 @@
 import type { Content } from "@/features/decks";
 
 /**
- * Every block of a card side, in the front's or the back's size: text as written, and a
- * block of an unknown type as a placeholder. A cloze or a table is drawn only whole, through the
- * card's faces, and a senses block through the card's sides, so a split side shows none.
+ * Every block of a card side: text as written, and a block of an unknown type as a placeholder,
+ * its lines broken only between words. With [size], centred in the front's or the back's size;
+ * without it, in the size, alignment and wrapping of the face around it ([CardScroll]). A cloze or a
+ * table is drawn only whole, through the card's faces, and a senses block through the card's
+ * sides, so a split side shows none.
  */
-export function CardSide({ blocks, size }: { blocks: Content[]; size: "front" | "back" }) {
+export function CardSide({ blocks, size }: { blocks: Content[]; size?: "front" | "back" }) {
   return (
     <div
-      className={`flex w-full flex-col gap-2 text-center break-words whitespace-pre-wrap ${
-        size === "front" ? "text-front" : "text-back"
+      className={`flex w-full flex-col gap-2 break-keep whitespace-pre-wrap ${
+        size === undefined
+          ? ""
+          : `text-center wrap-break-word ${size === "front" ? "text-front" : "text-back"}`
       }`}
     >
       {blocks.map((block, index) =>

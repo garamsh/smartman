@@ -620,16 +620,19 @@ class _ClozeFields extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppTextField(
+          ClozeEmptyBlanks(
             controller: draft.line,
-            focusNode: draft.focus,
-            hint: l10n.blockClozeDescription,
-            minLines: 2,
-            maxLines: null,
-            onChanged: (_) {
-              draft.edited = true;
-              onChanged();
-            },
+            child: AppTextField(
+              controller: draft.line,
+              focusNode: draft.focus,
+              hint: l10n.blockClozeDescription,
+              minLines: 2,
+              maxLines: null,
+              onChanged: (_) {
+                draft.edited = true;
+                onChanged();
+              },
+            ),
           ),
           if (draft.focus.hasFocus)
             Padding(

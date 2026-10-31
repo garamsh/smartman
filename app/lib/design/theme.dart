@@ -264,6 +264,15 @@ abstract final class AppType {
     fontWeight: FontWeight.w600,
   );
 
+  /// A study card's text too long for [back]: 17/27, medium, read as a
+  /// paragraph (ADR 0123).
+  static const cardBody = TextStyle(
+    fontFamily: appFontFamily,
+    fontSize: 17,
+    height: 27 / 17,
+    fontWeight: FontWeight.w500,
+  );
+
   /// The smallest a card's front and back shrink to so they fit their
   /// half.
   static const frontFloor = 18.0;
