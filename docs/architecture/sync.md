@@ -118,6 +118,7 @@ The `sync` domain: keeping the local database and the signed-in account's rows o
 - Either then upserts the card's `card_states` row with the state the engine computes, replaying the card's answers of the web session, each with its factor, from the state the session opened with.
 - Every row takes the time of the edit as `updated_at`; the server sets `revision`. Neither table has a tombstone, and the web app deletes nothing.
 - A phone pulls these rows like any other: the review is added to or changes the rating of its card's history, so the card's state is recomputed by the fold, and a pulled state replaces a synced one.
+- The `mcp` Edge Function writes `decks` and `cards` the same way for an AI app acting as the user: new rows only, with the user's token, its own times as `updated_at`, and the revision the server sets, so a phone pulls them like a web-made deck or card ([`mcp.md`](mcp.md) §Rows written).
 
 ### Tests
 
