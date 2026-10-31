@@ -34,19 +34,27 @@ type Cookie = { name: string; value: string };
 
 /** What a request for [pathname] meets: whether the proxy runs, and where it redirects. */
 async function visit(pathname: string, cookies: Cookie[] = []) {
+  const { matched, response } = await respond(pathname, cookies);
+  return { matched, location: response?.headers.get("location") ?? null };
+}
+
+/** The proxy's whole response to a request for [pathname], or null where it does not run. */
+async function respond(pathname: string, cookies: Cookie[] = []) {
   const url = `http://localhost:3000${pathname}`;
   const matched = unstable_doesMiddlewareMatch({
     config,
     url,
     cookies: Object.fromEntries(cookies.map(({ name, value }) => [name, value])),
   });
-  if (!matched) return { matched, location: null };
+  if (!matched) return { matched, response: null };
   const request = new NextRequest(url, {
     headers: { cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; ") },
   });
-  const response = await proxy(request);
-  return { matched, location: response.headers.get("location") };
+  return { matched, response: await proxy(request) };
 }
+
+/** The cookie the proxy keeps an AI app's consent in across sign-in. */
+const consentCookie = "smartman-oauth-consent";
 
 const routes = appRoutes();
 const gatedRoutes = [...routes.filter((route) => !publicRoutes.includes(route)), "/no-such-page"];
@@ -90,5 +98,48 @@ describe("the sign-in gate", () => {
   it("keeps a signed-in visitor on the page while Supabase is unreachable", async () => {
     server.use(supabaseUnreachable);
     expect((await visit("/", signedIn)).location).toBeNull();
+  });
+
+  it("keeps the consent a signed-out visitor was sent from to /login, and opens it once sign-in lands on /", async () => {
+    const { response: out } = await respond("/oauth/consent?authorization_id=abc_123-XYZ");
+    expect(out?.headers.get("location")).toBe("http://localhost:3000/login");
+    expect(out?.cookies.get(consentCookie)).toMatchObject({
+      value: "abc_123-XYZ",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 600,
+    });
+
+    const { response: back } = await respond("/", [
+      ...signedIn,
+      { name: consentCookie, value: "abc_123-XYZ" },
+    ]);
+    expect(back?.headers.get("location")).toBe(
+      "http://localhost:3000/oauth/consent?authorization_id=abc_123-XYZ",
+    );
+    expect(back?.cookies.get(consentCookie)?.value).toBe("");
+    // Control: without the cookie, a signed-in visitor stays on /.
+    expect((await visit("/", signedIn)).location).toBeNull();
+  });
+
+  it("keeps no consent for a malformed id, and drops a malformed cookie without leaving /", async () => {
+    const { response: out } = await respond("/oauth/consent?authorization_id=..%2Fadmin");
+    expect(out?.headers.get("location")).toBe("http://localhost:3000/login");
+    expect(out?.cookies.get(consentCookie)).toBeUndefined();
+
+    const { response: back } = await respond("/", [
+      ...signedIn,
+      { name: consentCookie, value: "../admin" },
+    ]);
+    expect(back?.headers.get("location")).toBeNull();
+    expect(back?.cookies.get(consentCookie)?.value).toBe("");
+  });
+
+  it("opens a kept consent from / alone, not from another page", async () => {
+    const { response } = await respond("/decks", [
+      ...signedIn,
+      { name: consentCookie, value: "abc_123-XYZ" },
+    ]);
+    expect(response?.headers.get("location")).toBeNull();
   });
 });
