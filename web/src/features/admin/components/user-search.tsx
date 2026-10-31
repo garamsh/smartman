@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { findUsers } from "../find-users";
 import { formatDate } from "../format";
 import type { UserMatch, UserPage } from "../read-admin";
+import { button, group } from "./admin-section";
 
 /** How long the search waits after the last keystroke before it asks the server. */
 export const searchDelayMs = 250;
@@ -114,12 +115,12 @@ export function UserSearch({
               ? "찾는 사용자가 없어요. 다른 단어로 검색해 보세요."
               : `${String(total)}명`)}
       </p>
-      <ul aria-busy={pending} className="flex flex-col gap-2">
+      <ul aria-busy={pending} className={`${group} overflow-hidden empty:hidden`}>
         {users.map((user) => (
           <li key={user.id}>
             <Link
               href={`/admin/users/${user.id}`}
-              className="pressable flex min-h-13 items-center justify-between gap-3 rounded-row bg-surface px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="pressable flex min-h-13 items-center justify-between gap-3 px-4 py-3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
             >
               <span className="truncate text-body-strong">{user.email}</span>
               <span className="text-caption whitespace-nowrap text-muted">
@@ -131,12 +132,7 @@ export function UserSearch({
         ))}
       </ul>
       {total !== null && users.length < total && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={more}
-          className="pressable flex min-h-button items-center justify-center self-start rounded-button border border-outline px-4 text-label font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
-        >
+        <button type="button" disabled={pending} onClick={more} className={button.secondary}>
           더 보기
         </button>
       )}

@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { ActionResult } from "../action-call";
-
-const button =
-  "pressable flex min-h-button items-center justify-center rounded-button px-4 text-label font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+import { button } from "./admin-section";
 
 /**
  * An admin action behind a confirmation: [label] asks [question], with "취소" to leave it and,
@@ -37,9 +35,9 @@ export function ConfirmAction({
         <div
           role="group"
           aria-label={question}
-          className="flex flex-col gap-2 rounded-field border border-outline p-3"
+          className="flex flex-col gap-3 rounded-group border border-outline bg-surface p-4"
         >
-          <p className="text-secondary">{question}</p>
+          <p className="text-body-strong">{question}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -47,7 +45,7 @@ export function ConfirmAction({
               onClick={() => {
                 setConfirming(false);
               }}
-              className={`${button} border border-outline text-ink`}
+              className={button.secondary}
             >
               취소
             </button>
@@ -62,7 +60,7 @@ export function ConfirmAction({
                   setConfirming(false);
                 });
               }}
-              className={`${button} bg-ink text-surface`}
+              className={button.primary}
             >
               {confirmLabel}
             </button>
@@ -75,7 +73,7 @@ export function ConfirmAction({
             setMessage(null);
             setConfirming(true);
           }}
-          className={`${button} border border-outline text-ink`}
+          className={button.secondary}
         >
           {label}
         </button>
