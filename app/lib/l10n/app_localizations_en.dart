@@ -1012,6 +1012,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Try again';
 
   @override
+  String get retryFailedPhotos => 'Retry failed photos';
+
+  @override
   String get extractionOffline =>
       'You\'re offline. Check your connection and try again.';
 

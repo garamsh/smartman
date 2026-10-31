@@ -598,6 +598,8 @@
   "@retake": {"description": "Button that offers the camera and the album again for a new photo."},
   "retry": "다시 시도",
   "@retry": {"description": "Button that sends the same photo again."},
+  "retryFailedPhotos": "실패한 사진 다시 시도",
+  "@retryFailedPhotos": {"description": "Button that sends again every photo of the import whose failure a retry can help."},
   "extractionOffline": "인터넷에 연결되지 않았어요. 연결을 확인하고 다시 시도해 주세요.",
   "@extractionOffline": {"description": "Photo import failure: the server could not be reached."},
   "photoRefused": "이 사진은 보낼 수 없어요. 다시 찍거나 다른 사진을 골라 주세요.",

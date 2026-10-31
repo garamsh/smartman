@@ -259,6 +259,7 @@
   "photoCameraBody": "Take a photo of a vocabulary page and we'll find the cards",
   "photoAlbumBody": "We'll find the cards in the photo you pick",
   "retry": "Try again",
+  "retryFailedPhotos": "Retry failed photos",
   "extractionOffline": "You're offline. Check your connection and try again.",
   "photoRefused": "This photo can't be sent. Retake it or choose another.",
   "noCardsFound": "No cards found. Try a brighter, straighter photo.",
