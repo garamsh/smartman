@@ -44,7 +44,9 @@ export 'src/content.dart'
         isWholeCard,
         oneFaceOf,
         plainText;
-export 'src/content_view.dart' show ContentView, contentSpan, sensesSpan;
+export 'src/card_text.dart' show CardScroll;
+export 'src/content_view.dart'
+    show CardFit, ContentView, ShrinkFit, StepFit, contentSpan, sensesSpan;
 export 'src/deck_repository.dart'
     show CardSaved, DeckRepository, DuplicateFront, SaveCardResult;
 export 'src/deck_row.dart' show DeckRow, DeckTile;
@@ -76,4 +78,4 @@ export 'src/providers.dart'
         deckRepositoryProvider,
         decksProvider;
 export 'src/split_card.dart' show SideBuilder, SplitCard;
-export 'src/whole_card_view.dart' show WholeCardView;
+export 'src/whole_card_view.dart' show SteppedWholeCardView, WholeCardView;

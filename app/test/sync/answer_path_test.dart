@@ -21,6 +21,7 @@ import '../photo_import/fakes.dart';
 import '../sharing/fakes.dart';
 import 'fake_sync_server.dart';
 import '../media/fakes.dart';
+import '../word_breaks.dart';
 
 const _ada = UserId('00000000-0000-4000-8000-00000000000a');
 
@@ -96,10 +97,10 @@ void main() {
     expect(sync.status.value, isA<Syncing>());
     expect(server.requests, isEmpty);
     expect(find.text('0/2'), findsOneWidget);
-    final first = find.text('Chat').evaluate().isEmpty ? 'Chien' : 'Chat';
+    final first = shownText('Chat').evaluate().isEmpty ? 'Chien' : 'Chat';
 
     await tester.timedDrag(
-      find.text(first),
+      shownText(first),
       const Offset(200, 0),
       const Duration(seconds: 1),
     );
