@@ -9,4 +9,15 @@ Deno.serve(createHandler({
   log: (entry) => console.log(JSON.stringify(entry)),
   now: () => Date.now(),
   random: (bytes) => crypto.getRandomValues(new Uint8Array(bytes)),
+  resolve: async (host, signal) => {
+    const found = await Promise.allSettled(
+      (["A", "AAAA"] as const).map((type) =>
+        Deno.resolveDns(host, type, { signal })
+      ),
+    );
+    return found.flatMap((lookup) =>
+      lookup.status === "fulfilled" ? lookup.value : []
+    );
+  },
+  timeout: (ms) => AbortSignal.timeout(ms),
 }));

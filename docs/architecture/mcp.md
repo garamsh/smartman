@@ -10,6 +10,7 @@ The `mcp` Edge Function, knowno's remote MCP server for Claude and ChatGPT: its 
 - It serves the protocol versions that open with `initialize`: 2025-11-25, 2025-06-18 and 2025-03-26. `initialize` answers the version offered when it is one of them and 2025-11-25 otherwise, with the `tools` capability, `serverInfo` naming it `knowno`, and a short instruction for the model. A request whose `MCP-Protocol-Version` names another version is refused with 400; one without the header is served.
 - A request carrying an `Origin` header is refused with 403: Claude and ChatGPT call from their servers, and no browser is a client.
 - It imports nothing but `supabase/functions/_shared/auth.ts`'s types; the MCP SDK is not used.
+- `initialize` also names the `resources` capability: `resources/list` and `resources/read` serve one resource, `knowno://guide/card-forms`, which says which form fits what ([ADR 0144](adr/0144-take-and-return-an-mcp-card-as-blocks-fetch-its-photo-from-a-public-https-url-and-store-png-and-webp-as-they-came.md)).
 
 ### Authorization
 
@@ -28,18 +29,28 @@ The `mcp` Edge Function, knowno's remote MCP server for Claude and ChatGPT: its 
 
 - Every read and write goes to PostgREST with the user's token and the anon key, never the service-role key, so row-level security decides each row. Each also filters on the caller's `user_id` and `deleted_at is null`, since the select policy lets a signed-in user read another's public deck.
 - `list_decks`: the user's live decks, oldest first, with their live card counts.
-- `list_cards`: one deck's live cards, oldest first, by `offset` and `limit` (1 to 100, 50 when absent), with the deck's total and `next_offset`, null on the last page.
-- `search_cards`: the user's live cards across their decks whose front or back holds the query, ignoring case, width and spacing, a cloze, table or boxed-photo card on its front alone, as the web's deck search reads them; at most `limit` (1 to 100, 20 when absent), with `truncated`. It reads every live card of the user's per call.
-- A side is returned as text: its blocks joined by spaces, a cloze filled, a table row by row with `|` between cells, a sense as its labels in brackets by their short forms, its meaning, and its examples on lines starting with `-`, a photo as `[photo]`, a sound as `[sound]` and an unknown block as its type in brackets. A whole card's back is returned empty.
+- `list_cards`: one deck's live cards, oldest first, by `offset` and `limit` (1 to 100, 50 when absent), each as its `id` and `blocks`, with the deck's total and `next_offset`, null on the last page.
+- `search_cards`: the user's live cards across their decks with a 칸 holding the query, revealed, an answer, an example and a box's answer included, ignoring case, width and spacing ([ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md)); at most `limit` (1 to 100, 20 when absent), each with its `blocks` and deck, with `truncated`. It reads every live card of the user's per call.
+- A card is returned as `blocks` in `add_cards`' union, a card of two sides converted as the clients read it. A label is its short form. A stored photo names `media`, `width` and `height` in place of `url`, a sound is an `audio` block of `media`, `duration_ms` and `side`, a block of a later version is `{"type": "unknown", "stored_type": …}`, and a card that does not parse is one such block of `unreadable`.
 - `create_deck`: a private deck of the given name, trimmed, 1 to 500 characters, under a version 7 id. Decks of the same name are not checked for.
-- `add_cards`: up to 100 cards for one live deck of the user's; a call with more is refused whole and writes nothing. A card is refused, by its index and why, when its front or back is not text of 1 to 2000 characters after trimming, or its labels (at most 10) or examples (at most 10) are not such texts. A card whose card key matches a live card in the deck, or one earlier in the call, is skipped as a duplicate, with the matching card's id, unless `allow_duplicates` is true. The answer lists the cards added, with their ids, skipped and refused.
+- `add_cards`: up to 100 cards for one live deck of the user's; a call with more is refused whole and writes nothing. Each card is `{"blocks": [칸, …]}`, 1 to 100 of them, a union on `type` of `text` (`front`, `back`), `senses` (`term`, `senses`, `ask`), `cloze` (`text`, `answers`), `table` (`columns`, `rows`, `blanks`, `spans`) and `image` (`url`, `boxes`, `side`); or the plain `front` and `back`, with labels and examples, which becomes one 글, or a 단어 when it has either.
+  - Each text is at most 2000 characters, a sense holds at most 10 labels and 10 examples, and a 단어 at most 20 senses.
+  - A card is refused, by its index and why, when a block breaks `deck.md`'s rules or the card shows nothing before the reveal or adds nothing by it, which the function reads as the clients do (`frame.ts`). A reason names the block by its index and says what its type must hold.
+  - A card whose card key matches a live card in the deck, or one earlier in the call, is skipped as a duplicate, with the matching card's id, unless `allow_duplicates` is true. The answer lists the cards added, with their ids, skipped and refused.
+- A photo is fetched from its `url`, at most 10 a call, a later card refused with what to do ([ADR 0144](adr/0144-take-and-return-an-mcp-card-as-blocks-fetch-its-photo-from-a-public-https-url-and-store-png-and-webp-as-they-came.md)):
+  - `https` only, no credential in the URL, and the user's token never sent;
+  - before every hop, a host's every address, or the literal it names, is public: IPv6 is held to global unicast, so IPv4-mapped and NAT64 forms are refused;
+  - at most 3 redirects, 10 seconds for the whole fetch and 10 MiB, by the header and by the bytes read;
+  - the `Content-Type` and the opening bytes both name the same one of JPEG, PNG and WebP, and the file's own header gives its width and height, a JPEG's turned by its Exif orientation;
+  - a failure refuses that card alone, with a sentence naming what to do, and a duplicate's photo on the back is not fetched.
 - Nothing edits or deletes. A refusal is a tool result with `isError: true` and a sentence the model can act on, naming the tool to call or the limit to keep; an unknown tool's names the five. A request PostgREST does not answer is such a result too, saying to try again.
 - Each request logs one line: the user's id, the JSON-RPC method, the tool, and the outcome; never the token or a card.
 
 ### Rows written
 
-- A card is written as the web's direct entry writes one ([`web-decks.md`](web-decks.md) §Authoring): the front a `text` block at v1, the back a `text` block, or a `senses` block of one sense when the card has labels or examples; each block with a version 7 id. A label that is a part of speech's short form, such as 명 or 동, is stored as that part of speech and any other as an `other` label, as direct entry reads typed labels.
-- Each card takes the phone's card key, `template` `free` at version 1, `source` `import`, as photo import's cards, and `created_at` and `updated_at` at the call's time, each card one millisecond after the one before, so a deck lists a call's cards in its order. The cards of a call are inserted in one statement.
+- A card is written as the web's `encodeCells` writes one ([`web-decks.md`](web-decks.md) §Authoring): `free` v2, its 칸 in `front`, `[]` in `back`, each block with a version 7 id, a box with one of its own. A label that is a part of speech's short form, such as 명 or 동, is stored as that part of speech and any other as an `other` label, as direct entry reads typed labels.
+- A photo is stored as it came, as the phone's upload stores one: its `media` row, then its file at `{owner}/{media id}` through the Storage API, with the user's token ([`server.md`](server.md) §Media storage). A file Storage refuses takes its row back and refuses the card. A card refused after an earlier photo of it was stored, and a call whose insert fails, leave files no card names.
+- Each card takes the card key `frameKey` gives on both clients, `source` `import`, as photo import's cards, and `created_at` and `updated_at` at the call's time, each card one millisecond after the one before, so a deck lists a call's cards in its order. The cards of a call are inserted in one statement.
 - A deck is written `private`, with the user's id and the call's time as both times.
 - The server sets every revision, so the phone pulls these rows as any other ([`sync.md`](sync.md)).
 
@@ -57,7 +68,9 @@ The `mcp` Edge Function, knowno's remote MCP server for Claude and ChatGPT: its 
 
 ### Tests
 
-- `supabase/functions/mcp/handler_test.ts` — the server end to end with Auth and PostgREST replaced by a fake applying row-level security's owner rule: the 401 challenges, a web session refused before Auth is asked, the metadata of a local-style `SUPABASE_URL`, the challenge and metadata with `MCP_PUBLIC_URL` set and Auth's issuer, the project's host named without it whatever the forwarded host, an `MCP_PUBLIC_URL` that is not an https URL ending in the function's path, a `SUPABASE_URL` that is not an http(s) URL, `initialize`, notifications, GET, `Origin`, the protocol version header, each tool, the 100-card cap, duplicates in the deck and in the call and `allow_duplicates`, refused cards, the rows' blocks, labels, key and template, another user's public deck refused for reading and writing, a call's order, and an unreachable database.
+- `supabase/functions/mcp/frame_test.ts` — every case of `supabase/fixtures/card-frame/` converted and held to validity as the app and the web read them, the card key of each 칸 type, a later block, and search reading every 칸 revealed.
+- `supabase/functions/mcp/photo_test.ts` — the fetch with the network and the lookup replaced: public and refused addresses, each refused form before any request, a host with any private address, a redirect refused at its hop against one followed, the redirect limit, the size cap by header and by stream, the type by header and by bytes, the deadline, and each format's size.
+- `supabase/functions/mcp/handler_test.ts` — the server end to end with Auth, PostgREST and Storage replaced by a fake applying row-level security's owner rule: the 401 challenges, a web session refused before Auth is asked, the metadata of a local-style `SUPABASE_URL`, the challenge and metadata with `MCP_PUBLIC_URL` set and Auth's issuer, the project's host named without it whatever the forwarded host, an `MCP_PUBLIC_URL` that is not an https URL ending in the function's path, a `SUPABASE_URL` that is not an http(s) URL, `initialize`, notifications, GET, `Origin`, the protocol version header, each tool, the guide resource, the 100-card cap, duplicates in the deck and in the call and `allow_duplicates`, refused cards with the fixtures' validity, the rows of every 칸 type, a stored photo's row, file and block, a refused fetch, a refused file taking its row back, the ten-photo limit, reading blocks back, another user's public deck refused for reading and writing, a call's order, and an unreachable database.
 
 Each line names a file and what it covers; the file holds the cases. The consent page's, the settings entry's and the proxy's tests are listed in [`web-account.md`](web-account.md) and [`web.md`](web.md).
 
@@ -68,15 +81,11 @@ Each line names a file and what it covers; the file holds the cases. The consent
 - [ADR 0134](adr/0134-name-the-app-knowno-serve-it-at-knowno-app-identify-it-as-app-knowno-and-reach-the-backend-at-api-knowno-app.md) records the server's name, `knowno`.
 - [ADR 0122](adr/0122-create-decks-and-reviewed-cards-on-the-web.md) records direct entry, whose rows and duplicate rule the tools follow.
 - [ADR 0114](adr/0114-write-every-card-as-a-free-block-list-remove-the-flip-cloze-and-table-forms-and-migrate-every-card-to-free.md) records the free template every new card takes.
+- [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) records the 칸 frame and its one input format.
+- [ADR 0144](adr/0144-take-and-return-an-mcp-card-as-blocks-fetch-its-photo-from-a-public-https-url-and-store-png-and-webp-as-they-came.md) records the union's read form, the photo fetch and its bounds, and why a PNG or WebP is stored as it came.
 
 ## Open questions
 
 - Whether a Custom Access Token Hook should set `aud` to the function's URL for tokens carrying `client_id`, in place of the claim check; it needs a migration.
 - Whether to serve protocol revision 2026-07-28 once Claude or ChatGPT speaks it.
-
-### Planned: the 칸 frame
-
-Accepted in [ADR 0137](adr/0137-frame-a-card-by-its-blocks-each-block-type-deciding-whether-it-has-a-front-and-a-back.md) (#488) and not built yet. Nothing below holds today; the implementation moves it into the current decisions it names.
-
-- **Tools.** `add_cards` takes each card as `{"blocks": [칸, …]}`, a union on `type` of `text` (`front`, `back`), `senses` (`term`, `senses`, `ask`), `cloze` (`text`, `answers`), `table` (`columns`, `rows`, `blanks`, `spans`) and `image` (an https `url`, `boxes`, `side`), validated by `deck.md`'s rules; the plain `front` and `back`, with labels and examples, stays accepted as one 글, or a 단어 when it has labels or examples (#531). `list_cards` and `search_cards` return each card's `blocks` in the same union.
-- **Rows written.** Each card records `free` v2, its 칸 list in `front` and `[]` in `back`.
+- Whether to pin a fetch to the address it checked: the check and the connection each look a host up ([ADR 0144](adr/0144-take-and-return-an-mcp-card-as-blocks-fetch-its-photo-from-a-public-https-url-and-store-png-and-webp-as-they-came.md)).
