@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="알아몰라"><rect width="1024" height="1024" fill="#12151D"/><g transform="translate(214.34 195.59) scale(9.3750)"><mask id="kc26" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+<rect width="64" height="64" fill="#fff"/>
+<path d="M8 58 Q8 45 22 45" stroke="#000" stroke-width="17" stroke-linecap="round" fill="none"/>
+<g stroke="#000" stroke-width="6" stroke-linecap="round"><path d="M33 20 V24"/><path d="M46 14 V23"/></g>
+</mask>
+<rect x="13" y="5" width="47" height="47" rx="17" fill="#F1F0EC" mask="url(#kc26)"/>
+<path d="M8 58 Q8 45 22 45" stroke="#F1F0EC" stroke-width="9" stroke-linecap="round" fill="none"/></g></svg>
