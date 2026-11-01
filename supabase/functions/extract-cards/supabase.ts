@@ -138,8 +138,8 @@ export type AttemptFailure = "invalid_output" | "model_error" | "timeout";
 
 /**
  * How a counted photo's extraction ended (ADR 0130): its outcome, its model calls, the failure of
- * each that failed, the request's milliseconds until then, and the last reply's cards answered and
- * dropped.
+ * each that failed, the request's milliseconds until then, the last reply's cards answered and
+ * dropped, and whether that reply was cut off at the output cap (ADR 0135).
  */
 export type Finish = {
   readonly outcome: "ok" | "no_cards" | "invalid_output" | "model_error";
@@ -148,6 +148,7 @@ export type Finish = {
   readonly cardsReturned: number;
   readonly cardsDropped: number;
   readonly failures: readonly AttemptFailure[];
+  readonly truncated: boolean;
 };
 
 /**
@@ -176,6 +177,7 @@ export async function finishExtraction(
         cards_returned: finish.cardsReturned,
         cards_dropped: finish.cardsDropped,
         failures: finish.failures,
+        truncated: finish.truncated,
       }),
     },
   ).catch(() => null);
