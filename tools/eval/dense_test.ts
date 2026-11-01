@@ -1,10 +1,15 @@
-// The ways of reading a dense page the eval measures (ADR 0135), with OpenRouter replaced by a fake.
+// The ways of reading a dense page the eval measures (ADR 0135, ADR 0138), with OpenRouter
+// replaced by a fake.
 import assert from "node:assert/strict";
 import {
   CARD_RULES,
   OUTPUT_CONTRACT,
   parseReply,
 } from "../../supabase/functions/extract-cards/cards.ts";
+import {
+  askForMissing,
+  CONFIRM_AFTER_CARDS,
+} from "../../supabase/functions/extract-cards/continuation.ts";
 import { RETRY_START_LIMIT_MS } from "../../supabase/functions/extract-cards/handler.ts";
 import {
   MAX_OUTPUT_TOKENS,
@@ -13,8 +18,7 @@ import {
 } from "../../supabase/functions/extract-cards/openrouter.ts";
 import {
   ALTERNATIVES,
-  continueAfter,
-  extractContinuing,
+  extractWhole,
   HIGHER_CAP_TOKENS,
   LEAN_CONTRACT,
   LEAN_FIELDS_RULE,
@@ -142,7 +146,6 @@ Deno.test("each way sends its own reply form and cap", async () => {
     today: MAX_OUTPUT_TOKENS,
     lean: MAX_OUTPUT_TOKENS,
     cap: HIGHER_CAP_TOKENS,
-    continue: MAX_OUTPUT_TOKENS,
   });
   const leanSent: Sent[] = [];
   await ALTERNATIVES[1].extract(
@@ -158,18 +161,25 @@ Deno.test("each way sends its own reply form and cap", async () => {
   assert.deepEqual(format.json_schema.schema, leanSchema);
 });
 
-Deno.test("a cut reply is continued once after its last card, and the cards read twice are kept once", async () => {
+Deno.test("the function's way reads a cut page on until a reply ends it, past a request's time, naming the entries read and keeping each once", async () => {
   const sent: Sent[] = [];
-  const extraction = await extractContinuing(
+  const clock = { now: 0, perCall: RETRY_START_LIMIT_MS };
+  const extraction = await extractWhole(
     PHOTO,
     {},
     MODEL,
     "prompt",
     deps(
-      fake([
-        cut([full("maison", "집"), full("chat", "고양이")]),
-        whole([full("chat", "고양이"), full("livre", "책")]),
-      ], sent),
+      fake(
+        [
+          cut([full("maison", "집"), full("chat", "고양이")]),
+          cut([full("chat", "고양이"), full("livre", "책")]),
+          whole([full("pomme", "사과")]),
+        ],
+        sent,
+        clock,
+      ),
+      () => clock.now,
     ),
   );
   assert.equal(extraction.kind, "cards");
@@ -178,18 +188,41 @@ Deno.test("a cut reply is continued once after its last card, and the cards read
     "maison",
     "chat",
     "livre",
+    "pomme",
   ]);
   assert.equal(extraction.cut, false);
-  assert.equal(extraction.attempts.length, 2);
-  assert.ok(
-    JSON.stringify(sent[1].body.messages).includes(
-      JSON.stringify(continueAfter("chat", 2)).slice(1, -1),
-    ),
-    "the second call asks for the entries after the last one read",
+  assert.equal(extraction.attempts.length, 3);
+  for (
+    const [call, text] of [
+      [1, askForMissing(2, ["maison", "chat"])],
+      [2, askForMissing(3, ["maison", "chat", "livre"])],
+    ] as const
+  ) {
+    assert.ok(
+      JSON.stringify(sent[call].body.messages).includes(
+        JSON.stringify(text).slice(1, -1),
+      ),
+      `call ${call} asks for the entries after those read`,
+    );
+  }
+  // A whole reply of many cards is read on once to confirm the page ends.
+  const many = Array.from(
+    { length: CONFIRM_AFTER_CARDS },
+    (_, i) => full(`mot${i}`, "뜻"),
   );
+  const confirming: Sent[] = [];
+  const confirmed = await extractWhole(
+    PHOTO,
+    {},
+    MODEL,
+    "prompt",
+    deps(fake([whole(many), whole([])], confirming)),
+  );
+  assert.equal(confirming.length, 2);
+  assert.equal(confirmed.kind === "cards" && confirmed.cards.length, 40);
   // Control: a whole first reply is answered after one call.
   const once: Sent[] = [];
-  const answered = await extractContinuing(
+  const answered = await extractWhole(
     PHOTO,
     {},
     MODEL,
@@ -198,39 +231,4 @@ Deno.test("a cut reply is continued once after its last card, and the cards read
   );
   assert.equal(answered.kind, "cards");
   assert.equal(once.length, 1);
-});
-
-Deno.test("a cut reply that ended past the retry limit is not continued", async () => {
-  const late: Sent[] = [];
-  const clock = { now: 0, perCall: RETRY_START_LIMIT_MS };
-  const extraction = await extractContinuing(
-    PHOTO,
-    {},
-    MODEL,
-    "prompt",
-    deps(
-      fake([cut([full("maison", "집")]), whole([])], late, clock),
-      () => clock.now,
-    ),
-  );
-  assert.equal(late.length, 1);
-  assert.equal(extraction.kind === "cards" && extraction.cut, true);
-  // Control: the same reply a millisecond sooner is continued.
-  const early: Sent[] = [];
-  const sooner = { now: 0, perCall: RETRY_START_LIMIT_MS - 1 };
-  await extractContinuing(
-    PHOTO,
-    {},
-    MODEL,
-    "prompt",
-    deps(
-      fake(
-        [cut([full("maison", "집")]), whole([full("chat", "고양이")])],
-        early,
-        sooner,
-      ),
-      () => sooner.now,
-    ),
-  );
-  assert.equal(early.length, 2);
 });

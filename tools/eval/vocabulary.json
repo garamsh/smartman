@@ -2149,5 +2149,622 @@
         "연주하다"
       ]
     }
+  ],
+  "dense-list-fr-first": [
+    {
+      "front": "arbre",
+      "senses": [
+        "나무"
+      ]
+    },
+    {
+      "front": "oiseau",
+      "senses": [
+        "새"
+      ]
+    },
+    {
+      "front": "cheval",
+      "senses": [
+        "말"
+      ]
+    },
+    {
+      "front": "vache",
+      "senses": [
+        "소"
+      ]
+    },
+    {
+      "front": "mouton",
+      "senses": [
+        "양"
+      ]
+    },
+    {
+      "front": "cochon",
+      "senses": [
+        "돼지"
+      ]
+    },
+    {
+      "front": "lapin",
+      "senses": [
+        "토끼"
+      ]
+    },
+    {
+      "front": "souris",
+      "senses": [
+        "쥐"
+      ]
+    },
+    {
+      "front": "poule",
+      "senses": [
+        "닭"
+      ]
+    },
+    {
+      "front": "canard",
+      "senses": [
+        "오리"
+      ]
+    },
+    {
+      "front": "loup",
+      "senses": [
+        "늑대"
+      ]
+    },
+    {
+      "front": "ours",
+      "senses": [
+        "곰"
+      ]
+    },
+    {
+      "front": "lion",
+      "senses": [
+        "사자"
+      ]
+    },
+    {
+      "front": "singe",
+      "senses": [
+        "원숭이"
+      ]
+    },
+    {
+      "front": "serpent",
+      "senses": [
+        "뱀"
+      ]
+    },
+    {
+      "front": "abeille",
+      "senses": [
+        "벌"
+      ]
+    },
+    {
+      "front": "fourmi",
+      "senses": [
+        "개미"
+      ]
+    },
+    {
+      "front": "papillon",
+      "senses": [
+        "나비"
+      ]
+    },
+    {
+      "front": "rose",
+      "senses": [
+        "장미"
+      ]
+    },
+    {
+      "front": "herbe",
+      "senses": [
+        "풀"
+      ]
+    },
+    {
+      "front": "bois",
+      "senses": [
+        "목재",
+        "숲"
+      ]
+    },
+    {
+      "front": "sable",
+      "senses": [
+        "모래"
+      ]
+    },
+    {
+      "front": "pierre",
+      "senses": [
+        "돌"
+      ]
+    },
+    {
+      "front": "colline",
+      "senses": [
+        "언덕"
+      ]
+    },
+    {
+      "front": "lac",
+      "senses": [
+        "호수"
+      ]
+    },
+    {
+      "front": "plage",
+      "senses": [
+        "해변"
+      ]
+    },
+    {
+      "front": "port",
+      "senses": [
+        "항구"
+      ]
+    },
+    {
+      "front": "pont",
+      "senses": [
+        "다리"
+      ]
+    },
+    {
+      "front": "rue",
+      "senses": [
+        "거리"
+      ]
+    },
+    {
+      "front": "gare",
+      "senses": [
+        "역"
+      ]
+    },
+    {
+      "front": "magasin",
+      "senses": [
+        "가게"
+      ]
+    },
+    {
+      "front": "banque",
+      "senses": [
+        "은행"
+      ]
+    },
+    {
+      "front": "parc",
+      "senses": [
+        "공원"
+      ]
+    },
+    {
+      "front": "salon",
+      "senses": [
+        "거실",
+        "박람회"
+      ]
+    },
+    {
+      "front": "couloir",
+      "senses": [
+        "복도"
+      ]
+    },
+    {
+      "front": "escalier",
+      "senses": [
+        "계단"
+      ]
+    },
+    {
+      "front": "plafond",
+      "senses": [
+        "천장"
+      ]
+    },
+    {
+      "front": "sol",
+      "senses": [
+        "바닥"
+      ]
+    },
+    {
+      "front": "lampe",
+      "senses": [
+        "전등"
+      ]
+    },
+    {
+      "front": "miroir",
+      "senses": [
+        "거울"
+      ]
+    },
+    {
+      "front": "tapis",
+      "senses": [
+        "양탄자"
+      ]
+    },
+    {
+      "front": "armoire",
+      "senses": [
+        "옷장"
+      ]
+    },
+    {
+      "front": "sac",
+      "senses": [
+        "가방"
+      ]
+    },
+    {
+      "front": "robe",
+      "senses": [
+        "원피스"
+      ]
+    },
+    {
+      "front": "chemise",
+      "senses": [
+        "셔츠"
+      ]
+    },
+    {
+      "front": "pantalon",
+      "senses": [
+        "바지"
+      ]
+    },
+    {
+      "front": "chapeau",
+      "senses": [
+        "모자"
+      ]
+    },
+    {
+      "front": "chaussure",
+      "senses": [
+        "신발"
+      ]
+    },
+    {
+      "front": "manteau",
+      "senses": [
+        "외투"
+      ]
+    },
+    {
+      "front": "jupe",
+      "senses": [
+        "치마"
+      ]
+    },
+    {
+      "front": "glace",
+      "senses": [
+        "얼음",
+        "아이스크림"
+      ]
+    },
+    {
+      "front": "carte",
+      "senses": [
+        "지도",
+        "카드"
+      ]
+    },
+    {
+      "front": "lettre",
+      "senses": [
+        "편지",
+        "글자"
+      ]
+    },
+    {
+      "front": "feuille",
+      "senses": [
+        "잎",
+        "종이 한 장"
+      ]
+    },
+    {
+      "front": "heure",
+      "senses": [
+        "시간",
+        "시"
+      ]
+    },
+    {
+      "front": "mois",
+      "senses": [
+        "월"
+      ]
+    },
+    {
+      "front": "printemps",
+      "senses": [
+        "봄"
+      ]
+    },
+    {
+      "front": "hiver",
+      "senses": [
+        "겨울"
+      ]
+    },
+    {
+      "front": "automne",
+      "senses": [
+        "가을"
+      ]
+    },
+    {
+      "front": "saison",
+      "senses": [
+        "계절"
+      ]
+    },
+    {
+      "front": "midi",
+      "senses": [
+        "정오"
+      ]
+    },
+    {
+      "front": "minuit",
+      "senses": [
+        "자정"
+      ]
+    },
+    {
+      "front": "riz",
+      "senses": [
+        "쌀"
+      ]
+    },
+    {
+      "front": "beurre",
+      "senses": [
+        "버터"
+      ]
+    },
+    {
+      "front": "huile",
+      "senses": [
+        "기름"
+      ]
+    },
+    {
+      "front": "farine",
+      "senses": [
+        "밀가루"
+      ]
+    },
+    {
+      "front": "soupe",
+      "senses": [
+        "수프"
+      ]
+    },
+    {
+      "front": "citron",
+      "senses": [
+        "레몬"
+      ]
+    },
+    {
+      "front": "fraise",
+      "senses": [
+        "딸기"
+      ]
+    },
+    {
+      "front": "raisin",
+      "senses": [
+        "포도"
+      ]
+    },
+    {
+      "front": "carotte",
+      "senses": [
+        "당근"
+      ]
+    },
+    {
+      "front": "oignon",
+      "senses": [
+        "양파"
+      ]
+    },
+    {
+      "front": "bouteille",
+      "senses": [
+        "병"
+      ]
+    },
+    {
+      "front": "verre",
+      "senses": [
+        "유리",
+        "유리잔"
+      ]
+    },
+    {
+      "front": "couleur",
+      "senses": [
+        "색"
+      ]
+    },
+    {
+      "front": "chiffre",
+      "senses": [
+        "숫자",
+        "암호"
+      ]
+    },
+    {
+      "front": "mot",
+      "senses": [
+        "단어"
+      ]
+    },
+    {
+      "front": "langue",
+      "senses": [
+        "혀",
+        "언어"
+      ]
+    },
+    {
+      "front": "histoire",
+      "senses": [
+        "역사",
+        "이야기"
+      ]
+    },
+    {
+      "front": "classe",
+      "senses": [
+        "교실",
+        "반"
+      ]
+    },
+    {
+      "front": "cours",
+      "senses": [
+        "수업",
+        "강의"
+      ]
+    },
+    {
+      "front": "stylo",
+      "senses": [
+        "펜"
+      ]
+    },
+    {
+      "front": "crayon",
+      "senses": [
+        "연필"
+      ]
+    },
+    {
+      "front": "cahier",
+      "senses": [
+        "공책"
+      ]
+    },
+    {
+      "front": "papier",
+      "senses": [
+        "종이"
+      ]
+    },
+    {
+      "front": "tableau",
+      "senses": [
+        "칠판",
+        "그림"
+      ]
+    },
+    {
+      "front": "musique",
+      "senses": [
+        "음악"
+      ]
+    },
+    {
+      "front": "chanson",
+      "senses": [
+        "노래"
+      ]
+    },
+    {
+      "front": "oreille",
+      "senses": [
+        "귀"
+      ]
+    },
+    {
+      "front": "genou",
+      "senses": [
+        "무릎"
+      ]
+    },
+    {
+      "front": "doigt",
+      "senses": [
+        "손가락"
+      ]
+    },
+    {
+      "front": "peau",
+      "senses": [
+        "피부"
+      ]
+    },
+    {
+      "front": "aimer",
+      "senses": [
+        "사랑하다"
+      ]
+    },
+    {
+      "front": "danser",
+      "senses": [
+        "춤추다"
+      ]
+    },
+    {
+      "front": "nager",
+      "senses": [
+        "수영하다"
+      ]
+    },
+    {
+      "front": "voler",
+      "senses": [
+        "날다",
+        "훔치다"
+      ]
+    },
+    {
+      "front": "laver",
+      "senses": [
+        "씻다"
+      ]
+    },
+    {
+      "front": "couper",
+      "senses": [
+        "자르다"
+      ]
+    },
+    {
+      "front": "payer",
+      "senses": [
+        "지불하다"
+      ]
+    },
+    {
+      "front": "oublier",
+      "senses": [
+        "잊다"
+      ]
+    }
   ]
 }

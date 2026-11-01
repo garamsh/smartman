@@ -4,7 +4,7 @@
  *   deno run --allow-read --allow-write=tools/eval/spend.json,docs/eval,tools/eval/replies \
  *     --allow-net=openrouter.ai --allow-env=OPENROUTER_API_KEY --env-file=supabase/functions/.env \
  *     tools/eval/run.ts [--dry-run] [--prompts <file>,<file>... | --prompt-version <id>]
- *     [--alternatives today,lean,cap,continue] [--samples <NN>,<NN>...]
+ *     [--alternatives today,lean,cap] [--samples <NN>,<NN>...]
  *
  * It runs prompt v10, the newest prompt file, unless `--prompts` names prompt files, such as
  * `--prompts v9,v10`, each run on every configuration as a row of its own, or
@@ -218,7 +218,7 @@ export async function readPrompts(
 
 /**
  * The ways of reading each photo a run measures (ADR 0135): those `--alternatives` names, such as
- * `--alternatives today,lean,cap,continue`, or the function's own call without it; a sentence
+ * `--alternatives today,lean,cap`, or the function's own way without it; a sentence
  * saying why when the flag names none it knows.
  */
 export function readAlternatives(
@@ -312,7 +312,7 @@ export async function main(args: readonly string[], io: Io): Promise<number> {
     io.print(`${candidate.label}: ${describe(candidate)}`);
   }
 
-  // A way that may make two calls an image is priced at two.
+  // A way that may make several calls an image is priced at the most it may make.
   const estimate = estimateUsd(candidates, samples.map(sizeOf)) *
     prompts.length *
     alternatives.reduce((calls, alternative) => calls + alternative.calls, 0);

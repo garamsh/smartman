@@ -1,18 +1,22 @@
 /**
- * The ways of reading a dense page whole that the eval measures against the function's own call
- * (ADR 0135): a leaner reply shape, a higher output cap, and one call continuing after a cut reply.
- * None is deployed; the PM's paid run chooses which, if any, the function takes.
+ * The function's own way of reading a photo, read on to the page's end as the function and its
+ * clients do (ADR 0138), and the two ways the eval measured against it (ADR 0135): a leaner reply
+ * shape and a higher output cap, neither deployed.
  */
 
 import {
   CARD_RULES,
   cardsSchema,
-  MAX_CARDS,
   OUTPUT_CONTRACT,
   type ParsedReply,
   parseReply,
 } from "../../supabase/functions/extract-cards/cards.ts";
-import { RETRY_START_LIMIT_MS } from "../../supabase/functions/extract-cards/handler.ts";
+import {
+  lastFronts,
+  MAX_CONTINUATIONS,
+  readOn,
+  readsOn,
+} from "../../supabase/functions/extract-cards/continuation.ts";
 import {
   CARD_LIST,
   extractCards,
@@ -26,12 +30,10 @@ import type {
   Image,
   LanguageHints,
 } from "../../supabase/functions/extract-cards/request.ts";
-import { normalize } from "./metrics.ts";
-
 /** One way of reading a photo: its label, the most calls and reply tokens an image may take. */
 export type Alternative = {
   readonly label: string;
-  readonly calls: 1 | 2;
+  readonly calls: number;
   readonly maxTokens: number;
   readonly extract: (
     image: Image,
@@ -129,18 +131,12 @@ export const LEAN_LIST: ReplyForm = {
  */
 export const HIGHER_CAP_TOKENS = 18_000;
 
-/** The text asking for the entries after the one a cut reply ended at. */
-export function continueAfter(front: string, read: number): string {
-  return `A reply to this material was cut off at the output limit after ${read} cards, the last for "${front}". Answer with the cards of the entries that come after that entry only, in the material's order, and none for the ${read} entries up to it.`;
-}
-
 /**
- * The function's call, then, when its reply was cut and it ended before the retry limit, one more
- * call asking for the entries after the last card read, as the one retry a photo may make. The
- * second reply's cards whose front a first card has are left out, and the list is cut at
- * `MAX_CARDS`; when the second call keeps no card, the first call's cards are the answer.
+ * The function's call, then, when its reply was cut, the calls that read on after it until the page
+ * is done, as the function goes on within a request and its client with each cursor after it: with
+ * no time budget, the most continuing calls a photo may make, and a failed call asked again once.
  */
-export async function extractContinuing(
+export async function extractWhole(
   image: Image,
   languages: LanguageHints,
   model: ModelId,
@@ -148,35 +144,35 @@ export async function extractContinuing(
   deps: ExtractDeps,
 ): Promise<Extraction> {
   const first = await extractCards(image, languages, model, prompt, deps);
-  if (
-    first.kind !== "cards" || !first.cut ||
-    first.attempts[0].latencyMs >= RETRY_START_LIMIT_MS
-  ) return first;
-  const last = first.cards[first.cards.length - 1];
-  const second = await extractCards(image, languages, model, prompt, deps, {
-    followUp: continueAfter(last.front, first.cards.length),
-  });
-  const attempts = [...first.attempts, ...second.attempts];
-  if (second.kind !== "cards") return { ...first, attempts };
-  const read = new Set(first.cards.map((one) => normalize(one.front)));
-  const added = second.cards.filter((one) => !read.has(normalize(one.front)));
+  if (first.kind !== "cards" || !readsOn(first.cut, first.cards.length)) {
+    return first;
+  }
+  const on = await readOn(
+    (followUp) =>
+      extractCards(image, languages, model, prompt, deps, { followUp }),
+    {
+      read: first.cards.length,
+      fronts: lastFronts(first.cards.map((card) => card.front)),
+      calls: MAX_CONTINUATIONS,
+    },
+    () => true,
+  );
   return {
     kind: "cards",
-    cards: [...first.cards, ...added].slice(0, MAX_CARDS),
-    dropped: [...first.dropped, ...second.dropped],
-    cut: second.cut,
-    attempts,
+    cards: [...first.cards, ...on.cards],
+    dropped: [...first.dropped, ...on.dropped],
+    cut: !on.done,
+    attempts: [...first.attempts, ...on.attempts],
   };
 }
 
-/** The function's own call, and the three ways `--alternatives` may name beside it. */
+/** The function's own way, and the two ways `--alternatives` may name beside it. */
 export const ALTERNATIVES: readonly Alternative[] = [
   {
     label: "today",
-    calls: 1,
+    calls: 1 + MAX_CONTINUATIONS,
     maxTokens: MAX_OUTPUT_TOKENS,
-    extract: (image, languages, model, prompt, deps) =>
-      extractCards(image, languages, model, prompt, deps),
+    extract: extractWhole,
   },
   {
     label: "lean",
@@ -193,12 +189,6 @@ export const ALTERNATIVES: readonly Alternative[] = [
       extractCards(image, languages, model, prompt, deps, {
         form: { ...CARD_LIST, maxTokens: HIGHER_CAP_TOKENS },
       }),
-  },
-  {
-    label: "continue",
-    calls: 2,
-    maxTokens: MAX_OUTPUT_TOKENS,
-    extract: extractContinuing,
   },
 ];
 
