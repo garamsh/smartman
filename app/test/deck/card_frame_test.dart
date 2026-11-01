@@ -14,7 +14,6 @@ import 'package:smartman/deck/src/content.dart' show hasBlank, mediaOf;
 import 'package:smartman/design/theme.dart';
 import 'package:smartman/l10n/app_localizations.dart';
 import 'package:smartman/media/media.dart';
-import 'package:smartman/study/src/current_card.dart';
 
 import '../media/fakes.dart';
 
@@ -244,14 +243,6 @@ void main() {
                   children: [
                     CardSplitRow(front: card.front, back: card.back),
                     CardPreview(front: card.front, back: card.back),
-                    SizedBox(
-                      height: 320,
-                      child: CurrentCard(
-                        card: card,
-                        onAnswer: (_) {},
-                        onGuide: () {},
-                      ),
-                    ),
                   ],
                 ),
               ),
